@@ -7,7 +7,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.runtime': {'children': ('zipzi.modelin
  'zipzi.modeling.runtime.EditorContext': {'children': ('zipzi.modeling.runtime.EditorContext.__repr__',
                                                        'zipzi.modeling.runtime.EditorContext.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('version',
                                                       'Exact SDK version captured for this value; not a best-effort '
                                                       'latest-version marker.'),

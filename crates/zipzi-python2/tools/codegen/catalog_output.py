@@ -1,16 +1,14 @@
 """Render lazy catalog shards and navigable reference pages."""
 import json
 import pprint
+import inspect
+from codegen.reference_routing import SPLITS, page_group
+from codegen.model import validate_rules
 
-SPLITS = {
-    'scene': {'edits': ('SceneOperation', 'SceneEdit', 'SceneContentEdit', 'OrganizationEdit', 'ReparentEdit', 'AttachmentEdit')},
-    'bindings': {'edits': ('BindingAuthoringEdit', 'BindingGridEdit', 'BlendAuthoringEdit', 'MeshGridEdit')},
-    'addressing': {'kinds': ('ObjectKind',), 'patches': ('AddressPatch',), 'selectors': ('AddressSelector',)},
-    'deletion': {'decisions': ('DeletionChoice', 'DeletionDecision', 'DeletionEffect', 'DeletionReason')},
-}
-
-
-def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header, projections=(), introductions=None):
+def render(entries, contract, contract_hash, domains, common, package_version, source_sha, prefix, header, projections=(), introductions=None, rules=None):
+    rules={} if rules is None else rules
+    validate_rules(rules,tuple(rules))
+    for entry in entries:validate_rules(rules,entry.rule_refs)
     entry_index = {entry.path: entry for entry in entries}
     catalog = {entry.path: entry.row() for entry in entries}
     catalog['zipzi']['documentation'] += ' Package '+package_version+'; protocol '+contract['protocol']+'; client source SHA-256 '+source_sha+'.'
@@ -20,20 +18,23 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
             row['documentation'] = row['documentation'].partition('\n\nFields:\n')[0]
 
     def group(path):
-        parts=path.split('.')
-        segment = parts[1] if len(parts)>1 else ''
-        if segment=='modeling' and len(parts)>2 and parts[2] in modeling_domains:
-            if len(parts)>3:
-                for suffix,prefixes in SPLITS.get(parts[2],{}).items():
-                    if parts[3].startswith(prefixes):return 'modeling_'+parts[2]+'_'+suffix
-            return 'modeling_'+parts[2]
-        if segment in {'Session','Edit'}:return 'runtime_'+segment.lower()
-        return segment if segment in domains else 'runtime'
+        return page_group(path,domains,modeling_domains)
 
     modeling_domains={entry.path.rsplit('.',1)[-1] for entry in entries
                       if entry.kind=='module' and entry.path.startswith('zipzi.modeling.')
                       and entry.path.count('.')==2}
     groups = sorted({group(path) for path in catalog})
+    page_labels={}
+    for name in groups:
+        refs=sorted({ref for path,row in catalog.items() if group(path)==name for ref in row.get('type_refs',())})
+        labels={}
+        for ref in refs:
+            parts=ref.split('.')
+            for size in range(1,len(parts)+1):
+                label='.'.join(parts[-size:])
+                if sum(other.lower().endswith('.'+label.lower()) or other.lower()==label.lower() for other in refs)==1:break
+            labels[ref]=label
+        page_labels[name]=labels
     pages = {name: [header.rstrip(), '# '+name.title()+' API', '',
                     'See [common behavior](common.md) for owned-value conventions and inherited methods.', '']
              for name in groups}
@@ -45,9 +46,11 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
                  '## API domains', '']
     reference.extend('- ['+name.title()+'](reference/'+name+'.md)' for name in groups)
     reference.append('')
-    common_page = [header.rstrip(), '# Common owned-value behavior', '']
+    common_page = [header.rstrip(), '# Common API behavior', '']
     for name, doc in sorted(common.items()):
         common_page.extend(['## '+name, '', doc, ''])
+    for key, rule in sorted(rules.items()):
+        common_page.extend(['## '+key,'',rule.documentation,''])
 
     # Only combine entries with identical content and relative child navigation.
     canonical = {}
@@ -84,23 +87,26 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
         page.extend(['**'+row['kind'].capitalize()+'**', ''])
         if row.get('signature'):page.extend(['`'+row['signature']+'`',''])
         if row.get('documentation'):page.extend([row['documentation'], ''])
+        if row.get('rule_refs'):
+            page.extend(['See '+', '.join('['+rules[key].title+'](common.md#'+key+')' for key in row['rule_refs'])+'.',''])
+        if row.get('type_refs'):
+            links=[]
+            for ref in row['type_refs']:
+                link='['+page_labels[group(path)][ref]+']'
+                if group(ref)==group(path):link+='(#'+ref.lower().replace('.','')+')'
+                links.append(link)
+            page.extend(['Types: '+', '.join(links)+'.',''])
         if row.get('fields'):page.extend(['**'+('Members' if row['kind']=='enum' else 'Fields')+'**',''])
         page.extend('- `'+field+'`: '+text for field, text in row.get('fields', ()))
         page.append('')
-        if row.get('example') and row['example']!='docs/recipes.py':
+        if row.get('example'):
             page.extend(['Example: [example](../'+row['example'].removeprefix('docs/')+').',''])
 
     for name,page in pages.items():
         refs=sorted({ref for path,row in catalog.items() if group(path)==name for ref in row.get('type_refs',()) if group(ref)!=name})
         if refs:
             # Markdown IDs are page-local; choose the shortest unambiguous suffix.
-            labels={}
-            for ref in refs:
-                parts=ref.split('.')
-                for size in range(1,len(parts)+1):
-                    label='.'.join(parts[-size:])
-                    if sum(other.lower().endswith('.'+label.lower()) or other.lower()==label.lower() for other in refs)==1:break
-                labels[ref]=label
+            labels=page_labels[name]
             declaration=['## Type references','',', '.join('['+labels[ref]+']' for ref in refs), '']
             page[3:3]=declaration
             page.extend('['+labels[ref]+']: '+group(ref)+'.md#'+ref.lower().replace('.','') for ref in refs)
@@ -117,14 +123,17 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
         if any(entry.summary.strip() for entry in definitions):continue
         paths=sorted(entry.path for entry in definitions)
         source=next((entry.documentation_source for entry in definitions if entry.documentation_source),'')
-        missing.append({'paths':paths,'source':source})
+        missing.append({'identity':definitions[0].identity or definitions[0].path,'paths':paths,'source':source,
+                        'pages':sorted({group(path) for path in paths})})
     coverage={'_generated_by':'zipzi-python2/tools/generate.py', 'type_count':len(type_groups),
               'documented_type_count':len(type_groups)-len(missing),
               'missing_type_count':len(missing),'missing':sorted(missing,key=lambda item:item['paths'])}
 
     catalog_prefix = prefix+'_generated/catalog/'
+    from codegen.documentation_audit import quality_report, validate_reference_declarations
     result = {
         prefix+'docs/type-documentation.json': json.dumps(coverage,indent=2,ensure_ascii=False)+'\n',
+        prefix+'docs/documentation-quality.json': json.dumps(quality_report(entries,domains,modeling_domains),indent=2,ensure_ascii=False)+'\n',
         prefix+'_generated/metadata.py': header+'"""Protocol and build metadata without help data."""\n'
             +'CONTRACT = '+repr(contract['protocol'])+'\nPACKAGE_VERSION = '+repr(package_version)
             +'\nCLIENT_SOURCE_SHA256 = '+repr(source_sha)+'\nCONTRACT_SHA256 = '
@@ -133,9 +142,11 @@ def render(entries, contract, contract_hash, domains, common, package_version, s
         prefix+'docs/reference/common.md': '\n'.join(common_page).rstrip()+'\n',
         catalog_prefix+'__init__.py': header+'"""Lazy offline API directory."""\nfrom .index import lookup as lookup, iter_paths as iter_paths\n',
         catalog_prefix+'common.py': header+'COMMON: dict[str, str] = '+pprint.pformat(common, sort_dicts=True)+'\n',
+        catalog_prefix+'rules.py': header+'RULES: dict[str, tuple[str, str, str]] = '+pprint.pformat({key:(r.title,r.documentation,r.source) for key,r in sorted(rules.items())},sort_dicts=True)+'\n',
     }
     for name, page in pages.items():
         result[prefix+'docs/reference/'+name+'.md'] = '\n'.join(page).rstrip()+'\n'
+    validate_reference_declarations(result)
     for name, rows in shards.items():
         result[catalog_prefix+name+'.py'] = header+'from .index import Entry\nDATA: dict[str, Entry] = '+pprint.pformat(rows, width=120, sort_dicts=True)+'\n'
     result[catalog_prefix+'index.py'] = (header+'"""Deterministic path routing; shards load only on demand."""\n'
@@ -152,6 +163,8 @@ class Entry(TypedDict, total=False):
     example: str
     alias: str
     common: str
+    rule_refs: tuple[str, ...]
+    field_roles: tuple[tuple[str, str, str], ...]
 
 class Resolved(TypedDict, total=False):
     kind: Required[str]
@@ -162,19 +175,12 @@ class Resolved(TypedDict, total=False):
     type_refs: tuple[str, ...]
     example: str
     common: str
-
+    rule_refs: tuple[str, ...]
+    rules: tuple[tuple[str, str], ...]
+    field_roles: tuple[tuple[str, str, str], ...]
+'''+ '\n'+inspect.getsource(page_group)+'''
 def _group(path: str) -> str:
-    parts = path.split('.')
-    segment = parts[1] if len(parts)>1 else ''
-    if segment == 'modeling' and len(parts)>2 and parts[2] in MODELING_DOMAINS:
-        if len(parts)>3:
-            for suffix, prefixes in SPLITS.get(parts[2], {}).items():
-                if parts[3].startswith(prefixes):
-                    return 'modeling_' + parts[2] + '_' + suffix
-        return 'modeling_' + parts[2]
-    if segment in {'Session', 'Edit'}:
-        return 'runtime_' + segment.lower()
-    return segment if segment in DOMAINS else 'runtime'
+    return page_group(path, DOMAINS, MODELING_DOMAINS)
 
 def _data(name: str) -> dict[str, Entry]:
     return cast(dict[str, Entry], import_module('.' + name, __package__).DATA)
@@ -193,6 +199,12 @@ def lookup(path: str) -> Resolved:
                 from .common import COMMON
                 result['documentation'] = COMMON[result['common']]
                 del result['common']
+            refs = result.get('rule_refs', ())
+            if refs:
+                from .rules import RULES
+                if len(refs) != len(set(refs)) or any(key not in RULES for key in refs):
+                    raise ValueError('Invalid documentation rule reference')
+                result['rules'] = tuple((RULES[key][0], RULES[key][1]) for key in refs)
             result['children'] = tuple(requested + c[len(path):] if c.startswith(path + '.') else c for c in result.get('children', ()))
             return result
         path = row['alias']

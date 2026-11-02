@@ -20,13 +20,17 @@ Parameter values and operations projected from the shared Rust declarations.
 
 `(spec: ParameterSpec) -> None`
 
-Owned parameters Create value; reading fields, repr and summary performs no IO.
+Create a parameter from its specification, allocating an ID when none is supplied.
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [ParameterSpec](#zipziparametersparameterspec).
 
 **Fields**
 
 - `spec`: Creation specification; native admission supplies identities/defaults and rejects
 invalid input.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'create_parameter' (read-only).
 
 ## zipzi.parameters.Kind
 
@@ -38,7 +42,7 @@ Alias of [zipzi.modeling.parameters.ParameterKind](modeling_parameters.md#zipzim
 
 `(id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int, kind: Kind, repeat: bool) -> None`
 
-Owned parameters Parameter value; reading fields, repr and summary performs no IO.
+Types: [ParameterKind].
 
 **Fields**
 
@@ -58,7 +62,10 @@ Owned parameters Parameter value; reading fields, repr and summary performs no I
 
 `(name: str | None=None, minimum: float | None=None, maximum: float | None=None, default_value: float | None=None, runtime_id: str | None=None, kind: Kind | None=None, decimal_places: int | None=None, repeat: bool | None=None) -> None`
 
-Owned parameters ParameterPatch value; reading fields, repr and summary performs no IO.
+Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.
+Omitted or None fields preserve their current values; empty text and false are explicit replacements.
+
+Types: [ParameterKind].
 
 **Fields**
 
@@ -86,7 +93,7 @@ value; it does not reset the field to its default.
 
 `(name: str, minimum: float, maximum: float, default_value: float, id: str | None=None, runtime_id: str | None=None, kind: Kind | None=None, decimal_places: int | None=None, repeat: bool | None=None) -> None`
 
-Owned parameters ParameterSpec value; reading fields, repr and summary performs no IO.
+Types: [ParameterKind].
 
 **Fields**
 
@@ -96,7 +103,8 @@ Owned parameters ParameterSpec value; reading fields, repr and summary performs 
 - `default_value`: Default parameter value in its declared domain; native validation checks it against
 minimum and maximum.
 - `id`: Optional new parameter UUID; None allocates a fresh UUID when the create operation executes.
-- `runtime_id`: Optional external runtime identifier; None uses the native default empty string.
+- `runtime_id`: Optional external runtime identifier; None or an empty string uses the parameter's
+stable ID when creation executes.
 - `kind`: Optional parameter kind; None uses Normal.
 - `decimal_places`: Optional decimal precision for runtime parameter handling; None uses the native default
 of 6.
@@ -108,14 +116,18 @@ of 6.
 
 `(id: str, patch: ParameterPatch) -> None`
 
-Owned parameters Patch value; reading fields, repr and summary performs no IO.
+Replace only the supplied fields of the parameter selected by stable document ID.
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [ParameterPatch](#zipziparametersparameterpatch).
 
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `patch`: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'patch_parameter' (read-only).
 
 ## zipzi.parameters.Summary
 

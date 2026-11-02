@@ -20,19 +20,25 @@ Prepared images own independent leases; pixel snapshots are immutable values.
 
 `(name: str, image: resources.PreparedImage, id: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [PreparedImage].
+
 **Fields**
 
 - `id`: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `image`: Client-owned prepared-image handle; creating an operation value does not transfer
 ownership.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'create_image' (read-only).
 
 ## zipzi.resources.Image
 
 **Type**
 
 `(id: str, name: str, pixels: ImagePixels)`
+
+Types: [ImagePixels](#zipziresourcesimagepixels).
 
 **Fields**
 
@@ -50,6 +56,8 @@ Explicit host lease that pins captured pixels across replacement/history evictio
 
 Close the lease or use its context manager when finished with the pixels.
 
+Types: [Source].
+
 **Fields**
 
 - `source`: Exact formal or candidate source captured with the pixels; reading this cached value performs no IO.
@@ -61,6 +69,8 @@ Close the lease or use its context manager when finished with the pixels.
 `() -> ImageLease`
 
 Check the owning client/lease locally and return this ImageLease without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+Types: [ImageLease](#zipziresourcesimagelease).
 
 
 ## zipzi.resources.ImageLease.__exit__
@@ -138,13 +148,15 @@ Alias of [zipzi.PreparedImage.width](runtime.md#zipzipreparedimagewidth).
 
 `(id: str, name: str, *, expected_name: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `expected_name`: Required current display name; None disables this name precondition.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'rename_image' (read-only).
 
 ## zipzi.resources.ReplaceImage
 
@@ -152,13 +164,17 @@ runtime_id.
 
 `(id: str, image: resources.PreparedImage)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [PreparedImage].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `image`: Client-owned prepared-image handle; creating an operation value does not transfer
 ownership.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'replace_image' (read-only).
 
 ## zipzi.resources.Summary
 

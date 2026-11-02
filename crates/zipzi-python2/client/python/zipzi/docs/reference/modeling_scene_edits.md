@@ -13,6 +13,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `AttachmentEditCreate | AttachmentEditReplace | AttachmentEditDuplicate | AttachmentEditDelete | AttachmentEditDeleteWithReplacement | AttachmentEditReorder | AttachmentEditSetSound | AttachmentEditSetUserData`
 
+Types: [AttachmentEditCreate](#zipzimodelingsceneattachmenteditcreate), [AttachmentEditDelete](#zipzimodelingsceneattachmenteditdelete), [AttachmentEditDeleteWithReplacement](#zipzimodelingsceneattachmenteditdeletewithreplacement), [AttachmentEditDuplicate](#zipzimodelingsceneattachmenteditduplicate), [AttachmentEditReorder](#zipzimodelingsceneattachmenteditreorder), [AttachmentEditReplace](#zipzimodelingsceneattachmenteditreplace), [AttachmentEditSetSound](#zipzimodelingsceneattachmenteditsetsound), [AttachmentEditSetUserData](#zipzimodelingsceneattachmenteditsetuserdata).
+
 
 ## zipzi.modeling.scene.AttachmentEditCreate
 
@@ -82,6 +84,8 @@ the selected destination.
 
 `(*, expected: PackageAttachment, attachment: PackageAttachment)`
 
+Types: [PackageAttachment].
+
 **Fields**
 
 - `expected`: Exact current field value used as an optimistic precondition; stale values reject
@@ -94,6 +98,8 @@ the edit.
 
 `(*, registration: str, reference: AttachmentRef | None = None)`
 
+Types: [AttachmentRef].
+
 **Fields**
 
 - `registration`: Motion-registration ID whose sound attachment is being changed.
@@ -105,6 +111,8 @@ the edit.
 
 `(*, reference: AttachmentRef | None = None)`
 
+Types: [AttachmentRef].
+
 **Fields**
 
 - `reference`: Resolved attachment identity or explicitly unresolved package path.
@@ -115,12 +123,16 @@ the edit.
 
 `OrganizationEditCreateParameter | OrganizationEditCreateGroup | OrganizationEditCreatePart | OrganizationEditSetParameterGroup | OrganizationEditPatchGroup | OrganizationEditMove | OrganizationEditDuplicate | OrganizationEditDelete`
 
+Types: [OrganizationEditCreateGroup](#zipzimodelingsceneorganizationeditcreategroup), [OrganizationEditCreateParameter](#zipzimodelingsceneorganizationeditcreateparameter), [OrganizationEditCreatePart](#zipzimodelingsceneorganizationeditcreatepart), [OrganizationEditDelete](#zipzimodelingsceneorganizationeditdelete), [OrganizationEditDuplicate](#zipzimodelingsceneorganizationeditduplicate), [OrganizationEditMove](#zipzimodelingsceneorganizationeditmove), [OrganizationEditPatchGroup](#zipzimodelingsceneorganizationeditpatchgroup), [OrganizationEditSetParameterGroup](#zipzimodelingsceneorganizationeditsetparametergroup).
+
 
 ## zipzi.modeling.scene.OrganizationEditCreateGroup
 
 **Type**
 
 `(*, group: CdiParameterGroup, before: str | None = None)`
+
+Types: [CdiParameterGroup].
 
 **Fields**
 
@@ -133,6 +145,8 @@ the selected destination.
 **Type**
 
 `(*, parameter: Parameter, group_id: str | None = None, before: str | None = None)`
+
+Types: [Parameter].
 
 **Fields**
 
@@ -148,6 +162,8 @@ the selected destination.
 
 `(*, part: Part, before: str | None = None)`
 
+Types: [Part].
+
 **Fields**
 
 - `part`: Complete Part record, including identity, hierarchy context and enabled/drawing state.
@@ -159,6 +175,8 @@ the selected destination.
 **Type**
 
 `(*, ids: tuple[str, ...], policy: OrganizationDeletePolicy)`
+
+Types: [OrganizationDeletePolicy].
 
 **Fields**
 
@@ -172,6 +190,8 @@ requested.
 **Type**
 
 `(*, ids: tuple[str, ...], destination: OrganizationCollection, before: str | None = None)`
+
+Types: [OrganizationCollection].
 
 **Fields**
 
@@ -188,6 +208,8 @@ the selected destination.
 
 `(*, ids: tuple[str, ...], destination: OrganizationCollection, before: str | None = None)`
 
+Types: [OrganizationCollection].
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
@@ -202,6 +224,8 @@ the selected destination.
 **Type**
 
 `(*, expected: CdiParameterGroup, group: CdiParameterGroup)`
+
+Types: [CdiParameterGroup].
 
 **Fields**
 
@@ -227,6 +251,8 @@ root/unassigned container.
 
 `(*, sources: tuple[str, ...], parent_id: str, strategy: ReparentStrategy, placement: ReparentPlacement | None = None, tolerance: float, relative_tolerance: float = 1e-06, context: ReparentContext | None = None)`
 
+Types: [ReparentContext], [ReparentPlacement], [ReparentStrategy].
+
 **Fields**
 
 - `sources`: Stable IDs of objects to reparent; source order is retained in the planned selection.
@@ -245,12 +271,16 @@ Motion/Physics must first be resolved to parameters by the caller.
 
 `SceneContentEditDeformerOriginal | SceneContentEditMeshVertices | SceneContentEditInsertMeshVertices | SceneContentEditDeleteMeshVertices | SceneContentEditReorderMeshVertices | SceneContentEditInsertTriangle | SceneContentEditPatchTriangle | SceneContentEditDeleteTriangles | SceneContentEditReplaceTriangles | SceneContentEditWarpPoints | SceneContentEditWarpBezier | SceneContentEditWarpBezierControls | SceneContentEditWarpAuthoring | SceneContentEditWarpShape | SceneContentEditWarpKeepChildren | SceneContentEditRotationKeepChildren | SceneContentEditResizeWarp | SceneContentEditInsertGluePair | SceneContentEditPatchGluePair | SceneContentEditMoveGluePairs | SceneContentEditTransferGluePairs | SceneContentEditDuplicateGluePairs | SceneContentEditDeleteGluePairs | SceneContentEditInsertOffscreenKeyform | SceneContentEditPatchOffscreenKeyform | SceneContentEditDuplicateOffscreenKeyforms | SceneContentEditReorderOffscreenKeyforms | SceneContentEditDeleteOffscreenKeyforms | SceneContentEditSetOffscreenMapping`
 
+Types: [SceneContentEditDeformerOriginal](#zipzimodelingscenescenecontenteditdeformeroriginal), [SceneContentEditDeleteGluePairs](#zipzimodelingscenescenecontenteditdeletegluepairs), [SceneContentEditDeleteMeshVertices](#zipzimodelingscenescenecontenteditdeletemeshvertices), [SceneContentEditDeleteOffscreenKeyforms](#zipzimodelingscenescenecontenteditdeleteoffscreenkeyforms), [SceneContentEditDeleteTriangles](#zipzimodelingscenescenecontenteditdeletetriangles), [SceneContentEditDuplicateGluePairs](#zipzimodelingscenescenecontenteditduplicategluepairs), [SceneContentEditDuplicateOffscreenKeyforms](#zipzimodelingscenescenecontenteditduplicateoffscreenkeyforms), [SceneContentEditInsertGluePair](#zipzimodelingscenescenecontenteditinsertgluepair), [SceneContentEditInsertMeshVertices](#zipzimodelingscenescenecontenteditinsertmeshvertices), [SceneContentEditInsertOffscreenKeyform](#zipzimodelingscenescenecontenteditinsertoffscreenkeyform), [SceneContentEditInsertTriangle](#zipzimodelingscenescenecontenteditinserttriangle), [SceneContentEditMeshVertices](#zipzimodelingscenescenecontenteditmeshvertices), [SceneContentEditMoveGluePairs](#zipzimodelingscenescenecontenteditmovegluepairs), [SceneContentEditPatchGluePair](#zipzimodelingscenescenecontenteditpatchgluepair), [SceneContentEditPatchOffscreenKeyform](#zipzimodelingscenescenecontenteditpatchoffscreenkeyform), [SceneContentEditPatchTriangle](#zipzimodelingscenescenecontenteditpatchtriangle), [SceneContentEditReorderMeshVertices](#zipzimodelingscenescenecontenteditreordermeshvertices), [SceneContentEditReorderOffscreenKeyforms](#zipzimodelingscenescenecontenteditreorderoffscreenkeyforms), [SceneContentEditReplaceTriangles](#zipzimodelingscenescenecontenteditreplacetriangles), [SceneContentEditResizeWarp](#zipzimodelingscenescenecontenteditresizewarp), [SceneContentEditRotationKeepChildren](#zipzimodelingscenescenecontenteditrotationkeepchildren), [SceneContentEditSetOffscreenMapping](#zipzimodelingscenescenecontenteditsetoffscreenmapping), [SceneContentEditTransferGluePairs](#zipzimodelingscenescenecontentedittransfergluepairs), [SceneContentEditWarpAuthoring](#zipzimodelingscenescenecontenteditwarpauthoring), [SceneContentEditWarpBezier](#zipzimodelingscenescenecontenteditwarpbezier), [SceneContentEditWarpBezierControls](#zipzimodelingscenescenecontenteditwarpbeziercontrols), [SceneContentEditWarpKeepChildren](#zipzimodelingscenescenecontenteditwarpkeepchildren), [SceneContentEditWarpPoints](#zipzimodelingscenescenecontenteditwarppoints), [SceneContentEditWarpShape](#zipzimodelingscenescenecontenteditwarpshape).
+
 
 ## zipzi.modeling.scene.SceneContentEditDeformerOriginal
 
 **Type**
 
 `(*, transform_id: str, target: ShapeTarget = <factory>, action: DeformerOriginalAction, context: _Mapping[str, float] = <factory>)`
+
+Types: [DeformerOriginalAction], [ShapeTarget].
 
 **Fields**
 
@@ -277,6 +307,8 @@ are not identities.
 
 `(*, mesh_id: str, vertices: tuple[int, ...], policy: VertexDeletePolicy)`
 
+Types: [VertexDeletePolicy].
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
@@ -289,6 +321,8 @@ requested.
 **Type**
 
 `(*, offscreen_id: str, slots: tuple[int, ...], policy: OffscreenDeletePolicy)`
+
+Types: [OffscreenDeletePolicy].
 
 **Fields**
 
@@ -343,6 +377,8 @@ belong to the selected destination.
 
 `(*, glue_id: str, pair: GlueVertexPair, before: str | None = None)`
 
+Types: [GlueVertexPair].
+
 **Fields**
 
 - `glue_id`: Stable Glue object ID owning the affected vertex pairs.
@@ -357,6 +393,8 @@ the selected destination.
 
 `(*, mesh_id: str, vertices: tuple[NewMeshVertex, ...], before: int | None = None)`
 
+Types: [NewMeshVertex].
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
@@ -370,6 +408,8 @@ not a position-array index.
 **Type**
 
 `(*, offscreen_id: str, value: OffscreenKeyform, before: int | None = None)`
+
+Types: [OffscreenKeyform].
 
 **Fields**
 
@@ -396,6 +436,8 @@ belong to the selected destination.
 **Type**
 
 `(*, mesh_id: str, target: ShapeTarget = <factory>, updates: tuple[VertexContentPatch, ...])`
+
+Types: [VertexContentPatch], [ShapeTarget].
 
 **Fields**
 
@@ -424,6 +466,8 @@ the selected destination.
 
 `(*, glue_id: str, pair: GlueVertexPair)`
 
+Types: [GlueVertexPair].
+
 **Fields**
 
 - `glue_id`: Stable Glue object ID owning the affected vertex pairs.
@@ -435,6 +479,8 @@ meshes.
 **Type**
 
 `(*, offscreen_id: str, slot: int, value: OffscreenKeyform)`
+
+Types: [OffscreenKeyform].
 
 **Fields**
 
@@ -510,6 +556,8 @@ position-array offsets.
 
 `(*, transform_id: str, rotation: RotationTransform)`
 
+Types: [RotationTransform].
+
 **Fields**
 
 - `transform_id`: Stable ID of a static Rotation. Driven maps and ancestors are unsupported.
@@ -522,6 +570,8 @@ stored child shape channel atomically while retaining the hierarchy.
 
 `(*, offscreen_id: str, updates: tuple[OffscreenMappingPatch, ...])`
 
+Types: [OffscreenMappingPatch].
+
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
@@ -532,6 +582,8 @@ stored child shape channel atomically while retaining the hierarchy.
 **Type**
 
 `(*, glue_id: str, destination: str, pairs: tuple[GlueVertexPair, ...], before: str | None = None)`
+
+Types: [GlueVertexPair].
 
 **Fields**
 
@@ -548,6 +600,8 @@ the selected destination.
 
 `(*, transform_id: str, settings: WarpAuthoringSettings)`
 
+Types: [WarpAuthoringSettings].
+
 **Fields**
 
 - `transform_id`: Stable Warp transform ID.
@@ -558,6 +612,8 @@ the selected destination.
 **Type**
 
 `(*, transform_id: str, target: ShapeTarget = <factory>, controller: WarpBezier | None = None)`
+
+Types: [ShapeTarget], [WarpBezier].
 
 **Fields**
 
@@ -572,6 +628,8 @@ undeformed base shape.
 
 `(*, transform_id: str, target: ShapeTarget = <factory>, updates: tuple[WarpBezierControlPatch, ...])`
 
+Types: [ShapeTarget], [WarpBezierControlPatch].
+
 **Fields**
 
 - `transform_id`: Stable Warp transform ID.
@@ -584,6 +642,8 @@ undeformed base shape.
 
 `(*, transform_id: str, warp: WarpTransform)`
 
+Types: [WarpTransform].
+
 **Fields**
 
 - `transform_id`: Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.
@@ -595,6 +655,8 @@ The shared plan compensates all child shape channels atomically.
 **Type**
 
 `(*, transform_id: str, target: ShapeTarget = <factory>, updates: tuple[WarpPointPatch, ...], clear_bezier: bool = False)`
+
+Types: [ShapeTarget], [WarpPointPatch].
 
 **Fields**
 
@@ -611,6 +673,8 @@ False preserves the controller and retains lattice detail for subsequent delta e
 
 `(*, transform_id: str, target: ShapeTarget = <factory>, action: WarpShapeAction)`
 
+Types: [ShapeTarget], [WarpShapeAction].
+
 **Fields**
 
 - `transform_id`: Stable Warp transform ID.
@@ -623,12 +687,16 @@ False preserves the controller and retains lattice detail for subsequent delta e
 
 `SceneEditCreate | SceneEditPatch | SceneEditMove | SceneEditReparent | SceneEditDuplicate | SceneEditDelete | SceneEditTransferOffscreen | SceneEditEnsureDrawingGroup | SceneEditSetDrawingRange | SceneEditDissolveDrawingGroup | SceneEditDuplicateDrawingGroup`
 
+Types: [SceneEditCreate](#zipzimodelingscenesceneeditcreate), [SceneEditDelete](#zipzimodelingscenesceneeditdelete), [SceneEditDissolveDrawingGroup](#zipzimodelingscenesceneeditdissolvedrawinggroup), [SceneEditDuplicate](#zipzimodelingscenesceneeditduplicate), [SceneEditDuplicateDrawingGroup](#zipzimodelingscenesceneeditduplicatedrawinggroup), [SceneEditEnsureDrawingGroup](#zipzimodelingscenesceneeditensuredrawinggroup), [SceneEditMove](#zipzimodelingscenesceneeditmove), [SceneEditPatch](#zipzimodelingscenesceneeditpatch), [SceneEditReparent](#zipzimodelingscenesceneeditreparent), [SceneEditSetDrawingRange](#zipzimodelingscenesceneeditsetdrawingrange), [SceneEditTransferOffscreen](#zipzimodelingscenesceneedittransferoffscreen).
+
 
 ## zipzi.modeling.scene.SceneEditCreate
 
 **Type**
 
 `(*, id: str, name: str, object: SceneCreate, part_id: str | None = None, parent_id: str | None = None, before: str | None = None, deformation_before: str | None = None)`
+
+Types: [SceneCreate].
 
 **Fields**
 
@@ -649,6 +717,8 @@ Only Mesh/Warp/Rotation support this position; None appends.
 **Type**
 
 `(*, ids: tuple[str, ...], scope: SceneCopyScope = SceneCopyScope.SELECTED)`
+
+Types: [SceneCopyScope].
 
 **Fields**
 
@@ -672,6 +742,8 @@ included.
 **Type**
 
 `(*, ids: tuple[str, ...], scope: SceneCopyScope = SceneCopyScope.SELECTED, destination: OrganizationCollection | None = None, before: str | None = None)`
+
+Types: [OrganizationCollection], [SceneCopyScope].
 
 **Fields**
 
@@ -716,6 +788,8 @@ the selected destination.
 
 `(*, ids: tuple[str, ...], destination: SceneCollection, before: str | None = None)`
 
+Types: [SceneCollection].
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
@@ -731,6 +805,8 @@ the selected destination.
 
 `(*, id: str, expected: SceneFieldValue, value: SceneFieldValue, clear_glue_pairs: bool = False)`
 
+Types: [SceneFieldValue].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -745,6 +821,8 @@ the edit.
 **Type**
 
 `(*, edit: ReparentEdit)`
+
+Types: [ReparentEdit](#zipzimodelingscenereparentedit).
 
 **Fields**
 

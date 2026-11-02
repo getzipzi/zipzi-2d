@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateAsset(CompactValue):
-    '\n\nFields:\nasset: Complete asset record to create with native identity validation; this DTO alone does\nnot publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nasset: Complete asset record to create with native identity validation; this DTO alone does\nnot publish.'
     _variant: _ClassVar[str] = 'create_asset'
     kind: _ClassVar[str] = "modeling"
     asset: ImageAsset
@@ -58,7 +58,7 @@ ModelingCommandCreateAsset.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceAsset(CompactValue):
-    '\n\nFields:\nasset: Complete asset record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nasset: Complete asset record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_asset'
     kind: _ClassVar[str] = "modeling"
     asset: ImageAsset
@@ -67,7 +67,7 @@ ModelingCommandReplaceAsset.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateMesh(CompactValue):
-    '\n\nFields:\nmesh: Complete mesh record to create with native identity validation; this DTO alone does\nnot publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nmesh: Complete mesh record to create with native identity validation; this DTO alone does\nnot publish.'
     _variant: _ClassVar[str] = 'create_mesh'
     kind: _ClassVar[str] = "modeling"
     mesh: Mesh
@@ -76,7 +76,7 @@ ModelingCommandCreateMesh.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceMesh(CompactValue):
-    '\n\nFields:\nmesh: Complete mesh record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nmesh: Complete mesh record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_mesh'
     kind: _ClassVar[str] = "modeling"
     mesh: Mesh
@@ -85,7 +85,7 @@ ModelingCommandReplaceMesh.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateParameter(CompactValue):
-    '\n\nFields:\nparameter: Complete parameter record to create with native identity validation; this DTO alone\ndoes not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nparameter: Complete parameter record to create with native identity validation; this DTO alone\ndoes not publish.'
     _variant: _ClassVar[str] = 'create_parameter'
     kind: _ClassVar[str] = "modeling"
     parameter: Parameter
@@ -94,7 +94,7 @@ ModelingCommandCreateParameter.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceParameter(CompactValue):
-    '\n\nFields:\nparameter: Complete parameter record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nparameter: Complete parameter record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_parameter'
     kind: _ClassVar[str] = "modeling"
     parameter: Parameter
@@ -103,7 +103,7 @@ ModelingCommandReplaceParameter.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreatePart(CompactValue):
-    '\n\nFields:\npart: Complete part record to create with native identity validation; this DTO alone does\nnot publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\npart: Complete part record to create with native identity validation; this DTO alone does\nnot publish.'
     _variant: _ClassVar[str] = 'create_part'
     kind: _ClassVar[str] = "modeling"
     part: Part
@@ -112,7 +112,7 @@ ModelingCommandCreatePart.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplacePart(CompactValue):
-    '\n\nFields:\npart: Complete part record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\npart: Complete part record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_part'
     kind: _ClassVar[str] = "modeling"
     part: Part
@@ -121,7 +121,7 @@ ModelingCommandReplacePart.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateTransform(CompactValue):
-    '\n\nFields:\ntransform: Complete transform record to create with native identity validation; this DTO alone\ndoes not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\ntransform: Complete transform record to create with native identity validation; this DTO alone\ndoes not publish.'
     _variant: _ClassVar[str] = 'create_transform'
     kind: _ClassVar[str] = "modeling"
     transform: Transform
@@ -130,7 +130,7 @@ ModelingCommandCreateTransform.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceTransform(CompactValue):
-    '\n\nFields:\ntransform: Complete transform record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\ntransform: Complete transform record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_transform'
     kind: _ClassVar[str] = "modeling"
     transform: Transform
@@ -139,7 +139,7 @@ ModelingCommandReplaceTransform.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateBinding(CompactValue):
-    '\n\nFields:\nbinding: Complete binding record to create with native identity validation; this DTO alone\ndoes not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nbinding: Complete binding record to create with native identity validation; this DTO alone\ndoes not publish.'
     _variant: _ClassVar[str] = 'create_binding'
     kind: _ClassVar[str] = "modeling"
     binding: MeshBinding
@@ -148,7 +148,7 @@ ModelingCommandCreateBinding.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceBinding(CompactValue):
-    '\n\nFields:\nbinding: Complete binding record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nbinding: Complete binding record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_binding'
     kind: _ClassVar[str] = "modeling"
     binding: MeshBinding
@@ -157,7 +157,7 @@ ModelingCommandReplaceBinding.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateSceneBinding(CompactValue):
-    '\n\nFields:\nbinding: Complete scene binding record to create with native identity validation; this DTO\nalone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nbinding: Complete scene binding record to create with native identity validation; this DTO\nalone does not publish.'
     _variant: _ClassVar[str] = 'create_scene_binding'
     kind: _ClassVar[str] = "modeling"
     binding: SceneBinding
@@ -166,7 +166,7 @@ ModelingCommandCreateSceneBinding.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceSceneBinding(CompactValue):
-    '\n\nFields:\nbinding: Complete scene binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nbinding: Complete scene binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_scene_binding'
     kind: _ClassVar[str] = "modeling"
     binding: SceneBinding
@@ -175,7 +175,7 @@ ModelingCommandReplaceSceneBinding.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateBlendKeyTable(CompactValue):
-    '\n\nFields:\ntable: Complete blend key table record to create with native identity validation; this DTO\nalone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\ntable: Complete blend key table record to create with native identity validation; this DTO\nalone does not publish.'
     _variant: _ClassVar[str] = 'create_blend_key_table'
     kind: _ClassVar[str] = "modeling"
     table: BlendShapeKeyTable
@@ -184,7 +184,7 @@ ModelingCommandCreateBlendKeyTable.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceBlendKeyTable(CompactValue):
-    '\n\nFields:\ntable: Complete blend key table record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\ntable: Complete blend key table record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_blend_key_table'
     kind: _ClassVar[str] = "modeling"
     table: BlendShapeKeyTable
@@ -193,7 +193,7 @@ ModelingCommandReplaceBlendKeyTable.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateBlendConstraint(CompactValue):
-    '\n\nFields:\nconstraint: Complete blend constraint record to create with native identity validation; this DTO\nalone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nconstraint: Complete blend constraint record to create with native identity validation; this DTO\nalone does not publish.'
     _variant: _ClassVar[str] = 'create_blend_constraint'
     kind: _ClassVar[str] = "modeling"
     constraint: BlendShapeConstraint
@@ -202,7 +202,7 @@ ModelingCommandCreateBlendConstraint.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceBlendConstraint(CompactValue):
-    '\n\nFields:\nconstraint: Complete blend constraint record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nconstraint: Complete blend constraint record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_blend_constraint'
     kind: _ClassVar[str] = "modeling"
     constraint: BlendShapeConstraint
@@ -211,7 +211,7 @@ ModelingCommandReplaceBlendConstraint.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateBlendBinding(CompactValue):
-    '\n\nFields:\nbinding: Complete blend binding record to create with native identity validation; this DTO\nalone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nbinding: Complete blend binding record to create with native identity validation; this DTO\nalone does not publish.'
     _variant: _ClassVar[str] = 'create_blend_binding'
     kind: _ClassVar[str] = "modeling"
     binding: BlendShapeBinding
@@ -220,7 +220,7 @@ ModelingCommandCreateBlendBinding.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceBlendBinding(CompactValue):
-    '\n\nFields:\nbinding: Complete blend binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nbinding: Complete blend binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_blend_binding'
     kind: _ClassVar[str] = "modeling"
     binding: BlendShapeBinding
@@ -229,7 +229,7 @@ ModelingCommandReplaceBlendBinding.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateGlue(CompactValue):
-    '\n\nFields:\nglue: Complete glue record to create with native identity validation; this DTO alone does\nnot publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nglue: Complete glue record to create with native identity validation; this DTO alone does\nnot publish.'
     _variant: _ClassVar[str] = 'create_glue'
     kind: _ClassVar[str] = "modeling"
     glue: Glue
@@ -238,7 +238,7 @@ ModelingCommandCreateGlue.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceGlue(CompactValue):
-    '\n\nFields:\nglue: Complete glue record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nglue: Complete glue record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_glue'
     kind: _ClassVar[str] = "modeling"
     glue: Glue
@@ -247,7 +247,7 @@ ModelingCommandReplaceGlue.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateOffscreen(CompactValue):
-    '\n\nFields:\noffscreen: Complete offscreen record to create with native identity validation; this DTO alone\ndoes not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\noffscreen: Complete offscreen record to create with native identity validation; this DTO alone\ndoes not publish.'
     _variant: _ClassVar[str] = 'create_offscreen'
     kind: _ClassVar[str] = "modeling"
     offscreen: Offscreen
@@ -256,7 +256,7 @@ ModelingCommandCreateOffscreen.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceOffscreen(CompactValue):
-    '\n\nFields:\noffscreen: Complete offscreen record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\noffscreen: Complete offscreen record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.'
     _variant: _ClassVar[str] = 'replace_offscreen'
     kind: _ClassVar[str] = "modeling"
     offscreen: Offscreen
@@ -265,7 +265,7 @@ ModelingCommandReplaceOffscreen.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandDeletion(CompactValue):
-    '\n\nFields:\nintent: Dependency-cleaning deletion request; plan first to inspect choices and bounded report pages.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Dependency-cleaning deletion request; plan first to inspect choices and bounded report pages.'
     _variant: _ClassVar[str] = 'deletion'
     kind: _ClassVar[str] = "modeling"
     intent: DeletionIntent
@@ -274,7 +274,7 @@ ModelingCommandDeletion.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandScene(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'scene'
     kind: _ClassVar[str] = "modeling"
     intent: SceneEdit
@@ -283,7 +283,7 @@ ModelingCommandScene.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandOrganization(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'organization'
     kind: _ClassVar[str] = "modeling"
     intent: OrganizationEdit
@@ -292,7 +292,7 @@ ModelingCommandOrganization.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandBinding(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'binding'
     kind: _ClassVar[str] = "modeling"
     intent: BindingAuthoringEdit
@@ -301,7 +301,7 @@ ModelingCommandBinding.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandContent(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'content'
     kind: _ClassVar[str] = "modeling"
     intent: SceneContentEdit
@@ -310,7 +310,7 @@ ModelingCommandContent.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReferences(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'references'
     kind: _ClassVar[str] = "modeling"
     intent: ReferenceEdit
@@ -319,7 +319,7 @@ ModelingCommandReferences.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandResource(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'resource'
     kind: _ClassVar[str] = "modeling"
     intent: ResourceEdit
@@ -328,7 +328,7 @@ ModelingCommandResource.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandDocument(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'document'
     kind: _ClassVar[str] = "modeling"
     intent: DocumentAuthoringEdit
@@ -337,7 +337,7 @@ ModelingCommandDocument.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandAttachment(CompactValue):
-    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.'
     _variant: _ClassVar[str] = 'attachment'
     kind: _ClassVar[str] = "modeling"
     intent: AttachmentEdit
@@ -346,7 +346,7 @@ ModelingCommandAttachment.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandMotion(CompactValue):
-    '\n\nFields:\nintent: Motion library/track/key/event intent; use a Plan or apply to an Edit.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Motion library/track/key/event intent; use a Plan or apply to an Edit.'
     _variant: _ClassVar[str] = 'motion'
     kind: _ClassVar[str] = "modeling"
     intent: MotionEdit
@@ -355,7 +355,7 @@ ModelingCommandMotion.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandExpression(CompactValue):
-    '\n\nFields:\nintent: Expression asset/entry intent, validated by the shared SDK planner.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Expression asset/entry intent, validated by the shared SDK planner.'
     _variant: _ClassVar[str] = 'expression'
     kind: _ClassVar[str] = "modeling"
     intent: ExpressionEdit
@@ -364,7 +364,7 @@ ModelingCommandExpression.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandPhysics(CompactValue):
-    '\n\nFields:\nintent: Physics rig/row/node intent with native ownership and reference checks.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Physics rig/row/node intent with native ownership and reference checks.'
     _variant: _ClassVar[str] = 'physics'
     kind: _ClassVar[str] = "modeling"
     intent: PhysicsEdit
@@ -373,7 +373,7 @@ ModelingCommandPhysics.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandPose(CompactValue):
-    '\n\nFields:\nintent: Pose singleton/group/entry/link intent, independent of playback state.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nintent: Pose singleton/group/entry/link intent, independent of playback state.'
     _variant: _ClassVar[str] = 'pose'
     kind: _ClassVar[str] = "modeling"
     intent: PoseEdit
@@ -382,7 +382,7 @@ ModelingCommandPose.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateMotion(CompactValue):
-    '\n\nFields:\nclip: Complete owned clip with stable track/key/event identities.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nclip: Complete owned clip with stable track/key/event identities.'
     _variant: _ClassVar[str] = 'create_motion'
     kind: _ClassVar[str] = "modeling"
     clip: MotionClip
@@ -391,7 +391,7 @@ ModelingCommandCreateMotion.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceMotion(CompactValue):
-    '\n\nFields:\nclip: Complete replacement clip preserving its stable object ID.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nclip: Complete replacement clip preserving its stable object ID.'
     _variant: _ClassVar[str] = 'replace_motion'
     kind: _ClassVar[str] = "modeling"
     clip: MotionClip
@@ -400,7 +400,7 @@ ModelingCommandReplaceMotion.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandCreateExpression(CompactValue):
-    '\n\nFields:\nexpression: Complete expression asset with ordered owned entries.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nexpression: Complete expression asset with ordered owned entries.'
     _variant: _ClassVar[str] = 'create_expression'
     kind: _ClassVar[str] = "modeling"
     expression: ExpressionAsset
@@ -409,7 +409,7 @@ ModelingCommandCreateExpression.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceExpression(CompactValue):
-    '\n\nFields:\nexpression: Complete replacement expression preserving its object ID.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nexpression: Complete replacement expression preserving its object ID.'
     _variant: _ClassVar[str] = 'replace_expression'
     kind: _ClassVar[str] = "modeling"
     expression: ExpressionAsset
@@ -418,7 +418,7 @@ ModelingCommandReplaceExpression.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandSetPhysics(CompactValue):
-    '\n\nFields:\nphysics: Complete Physics singleton and ordered rig data.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nphysics: Complete Physics singleton and ordered rig data.'
     _variant: _ClassVar[str] = 'set_physics'
     kind: _ClassVar[str] = "modeling"
     physics: PhysicsAsset
@@ -427,7 +427,7 @@ ModelingCommandSetPhysics.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandSetPose(CompactValue):
-    '\n\nFields:\npose: Complete Pose singleton and owned part/link references.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\npose: Complete Pose singleton and owned part/link references.'
     _variant: _ClassVar[str] = 'set_pose'
     kind: _ClassVar[str] = "modeling"
     pose: PoseAsset
@@ -436,7 +436,7 @@ ModelingCommandSetPose.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceModelSetup(CompactValue):
-    '\n\nFields:\nsetup: Model source-canvas and export-frame configuration.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nsetup: Model source-canvas and export-frame configuration.'
     _variant: _ClassVar[str] = 'replace_model_setup'
     kind: _ClassVar[str] = "modeling"
     setup: ModelSetup
@@ -445,7 +445,7 @@ ModelingCommandReplaceModelSetup.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceHierarchyOrder(CompactValue):
-    '\n\nFields:\norder: Replacement organization/deformation palette order; not runtime draw order.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\norder: Replacement organization/deformation palette order; not runtime draw order.'
     _variant: _ClassVar[str] = 'replace_hierarchy_order'
     kind: _ClassVar[str] = "modeling"
     order: HierarchyOrder
@@ -454,7 +454,7 @@ ModelingCommandReplaceHierarchyOrder.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceEditorState(CompactValue):
-    '\n\nFields:\nstate: Complete Editor visibility/lock metadata to replace.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nstate: Complete Editor visibility/lock metadata to replace.'
     _variant: _ClassVar[str] = 'replace_editor_state'
     kind: _ClassVar[str] = "modeling"
     state: EditorState
@@ -463,7 +463,7 @@ ModelingCommandReplaceEditorState.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceDrawOrderGroups(CompactValue):
-    '\n\nFields:\ngroups: Complete drawing-order group list; native validation checks root/owner membership\nand ranges. This is a required list, not an optional grouping override.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\ngroups: Complete drawing-order group list; native validation checks root/owner membership\nand ranges. This is a required list, not an optional grouping override.'
     _variant: _ClassVar[str] = 'replace_draw_order_groups'
     kind: _ClassVar[str] = "modeling"
     groups: tuple[DrawOrderGroup, ...]
@@ -475,7 +475,7 @@ ModelingCommandReplaceDrawOrderGroups.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandEraseObject(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'erase_object'
     kind: _ClassVar[str] = "modeling"
     id: str
@@ -484,7 +484,7 @@ ModelingCommandEraseObject.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandRenameMesh(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.'
     _variant: _ClassVar[str] = 'rename_mesh'
     kind: _ClassVar[str] = "modeling"
     id: str
@@ -494,7 +494,7 @@ ModelingCommandRenameMesh.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandUpdatePositions(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nvertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with\npositions in the supplied order.\npositions: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nvertex_ids: Stable vertex IDs selecting which positions to replace; values are paired with\npositions in the supplied order.\npositions: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.'
     _variant: _ClassVar[str] = 'update_positions'
     kind: _ClassVar[str] = "modeling"
     id: str
@@ -509,7 +509,7 @@ ModelingCommandUpdatePositions.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandSetMeshKeyform(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkeyform: Complete shape sample to insert or replace; unrelated samples are retained.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkeyform: Complete shape sample to insert or replace; unrelated samples are retained.'
     _variant: _ClassVar[str] = 'set_mesh_keyform'
     kind: _ClassVar[str] = "modeling"
     id: str
@@ -519,7 +519,7 @@ ModelingCommandSetMeshKeyform.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandSetSceneKeyform(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkeyform: Complete shape sample to insert or replace; unrelated samples are retained.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nkeyform: Complete shape sample to insert or replace; unrelated samples are retained.'
     _variant: _ClassVar[str] = 'set_scene_keyform'
     kind: _ClassVar[str] = "modeling"
     id: str
@@ -529,7 +529,7 @@ ModelingCommandSetSceneKeyform.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandRemeshRectangleGrid(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\ncolumns: Positive rectangle-grid subdivision count horizontally; resulting geometry must\nsatisfy native vertex/working-set limits.\nrows: Positive rectangle-grid subdivision count vertically; resulting geometry must\nsatisfy native vertex/working-set limits.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\ncolumns: Positive rectangle-grid subdivision count horizontally; resulting geometry must\nsatisfy native vertex/working-set limits.\nrows: Positive rectangle-grid subdivision count vertically; resulting geometry must\nsatisfy native vertex/working-set limits.'
     _variant: _ClassVar[str] = 'remesh_rectangle_grid'
     kind: _ClassVar[str] = "modeling"
     id: str
@@ -540,7 +540,7 @@ ModelingCommandRemeshRectangleGrid.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandReplaceTopology(CompactValue):
-    '\n\nFields:\nsource: Exact geometry snapshot the topology replacement was planned against; stale source\nversions are rejected.\nreplacement: Coordinated replacement geometry, bindings, Glues and vertex mapping from the\nremeshing plan.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nsource: Exact geometry snapshot the topology replacement was planned against; stale source\nversions are rejected.\nreplacement: Coordinated replacement geometry, bindings, Glues and vertex mapping from the\nremeshing plan.'
     _variant: _ClassVar[str] = 'replace_topology'
     kind: _ClassVar[str] = "modeling"
     source: GeometrySnapshot
@@ -550,7 +550,7 @@ ModelingCommandReplaceTopology.__module__ = "zipzi.modeling.commands"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelingCommandManualMesh(CompactValue):
-    '\n\nFields:\nmesh_id: Stable mesh UUID whose editable UV triangulation is changed.\nexpected: Exact candidate source before this operation; submit it alone in a batch.\noperation: Atomic UV topology intent; the SDK preserves dependent geometry and identities.\nkind: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.'
+    '\n\nFields:\nmesh_id: Stable mesh UUID whose editable UV triangulation is changed.\nexpected: Exact candidate source before this operation; submit it alone in a batch.\noperation: Atomic UV topology intent; the SDK preserves dependent geometry and identities.'
     _variant: _ClassVar[str] = 'manual_mesh'
     kind: _ClassVar[str] = "modeling"
     mesh_id: str

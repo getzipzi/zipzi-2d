@@ -21,7 +21,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.queries.CollectionQuery': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'CollectionQueryScene | CollectionQueryOrganization | '
@@ -47,7 +46,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryAttachments': {'children': ('zipzi.modeling.queries.CollectionQueryAttachments.__repr__',
                                                                     'zipzi.modeling.queries.CollectionQueryAttachments.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -56,7 +54,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryClips': {'children': ('zipzi.modeling.queries.CollectionQueryClips.__repr__',
                                                               'zipzi.modeling.queries.CollectionQueryClips.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [],
                                                  'kind': 'type',
                                                  'signature': '()'},
@@ -65,7 +62,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryDocument': {'children': ('zipzi.modeling.queries.CollectionQueryDocument.__repr__',
                                                                  'zipzi.modeling.queries.CollectionQueryDocument.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('field',
                                                                 'Explicit field discriminator; must match the '
                                                                 'addressed object/domain.')],
@@ -77,7 +73,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryExpressionEntries': {'children': ('zipzi.modeling.queries.CollectionQueryExpressionEntries.__repr__',
                                                                           'zipzi.modeling.queries.CollectionQueryExpressionEntries.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('expression_id',
                                                                          'Stable expression asset ID owning the entry '
                                                                          'collection.')],
@@ -88,7 +83,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryExpressions': {'children': ('zipzi.modeling.queries.CollectionQueryExpressions.__repr__',
                                                                     'zipzi.modeling.queries.CollectionQueryExpressions.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -97,7 +91,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryMotion': {'children': ('zipzi.modeling.queries.CollectionQueryMotion.__repr__',
                                                                'zipzi.modeling.queries.CollectionQueryMotion.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('collection',
                                                               'Root or stable motion-group container for library '
                                                               'registrations.')],
@@ -109,7 +102,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryMotionGroups': {'children': ('zipzi.modeling.queries.CollectionQueryMotionGroups.__repr__',
                                                                      'zipzi.modeling.queries.CollectionQueryMotionGroups.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',
                                                         'signature': '()'},
@@ -118,7 +110,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryOrganization': {'children': ('zipzi.modeling.queries.CollectionQueryOrganization.__repr__',
                                                                      'zipzi.modeling.queries.CollectionQueryOrganization.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('collection',
                                                                     'Explicit native collection selector; it does not '
                                                                     'imply loading every object payload.')],
@@ -130,7 +121,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryPhysics': {'children': ('zipzi.modeling.queries.CollectionQueryPhysics.__repr__',
                                                                 'zipzi.modeling.queries.CollectionQueryPhysics.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('collection',
                                                                'Native Physics group/input/output/node collection '
                                                                'selector.')],
@@ -142,7 +132,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryPose': {'children': ('zipzi.modeling.queries.CollectionQueryPose.__repr__',
                                                              'zipzi.modeling.queries.CollectionQueryPose.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('collection',
                                                             'Native Pose group/entry/link collection selector.')],
                                                 'kind': 'type',
@@ -153,7 +142,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryReferences': {'children': ('zipzi.modeling.queries.CollectionQueryReferences.__repr__',
                                                                    'zipzi.modeling.queries.CollectionQueryReferences.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('collection',
                                                                   'Explicit native collection selector; it does not '
                                                                   'imply loading every object payload.')],
@@ -165,7 +153,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryResources': {'children': ('zipzi.modeling.queries.CollectionQueryResources.__repr__',
                                                                   'zipzi.modeling.queries.CollectionQueryResources.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [],
                                                      'kind': 'type',
                                                      'signature': '()'},
@@ -174,7 +161,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryScene': {'children': ('zipzi.modeling.queries.CollectionQueryScene.__repr__',
                                                               'zipzi.modeling.queries.CollectionQueryScene.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('collection',
                                                              'Explicit native collection selector; it does not imply '
                                                              'loading every object payload.')],
@@ -187,7 +173,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                        'zipzi.modeling.queries.ModelingQuery.summary'),
                                           'documentation': 'Select explicit record IDs; empty lists return collection '
                                                            'identities only.',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('assets',
                                                       'Explicit IDs of image assets to read, in result-slot order; an '
                                                       'empty list requests no\n'
@@ -288,7 +273,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                               'zipzi.modeling.queries.OwnedModelingRecords.summary'),
                                                  'documentation': 'Owned selected query results. No mutation or query '
                                                                   'behavior lives in this DTO.',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('document_id',
                                                              'Stable document UUID; not a Runtime Session handle.'),
                                                             ('setup',

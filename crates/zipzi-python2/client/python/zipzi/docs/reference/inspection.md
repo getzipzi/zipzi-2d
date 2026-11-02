@@ -44,6 +44,8 @@ IO errors can leave partial output. No host write, device probing, image
 recomputation or implicit request recovery occurs. Retain the original result
 if file IO needs to be retried into a new directory.
 
+Types: [Snapshot], [Report](#zipziinspectionreport), [ObservationBatch], [PreviewBatch].
+
 
 [Snapshot]: runtime.md#zipzisnapshot
 [ObservationBatch]: modeling_observation.md#zipzimodelingobservationobservationbatch

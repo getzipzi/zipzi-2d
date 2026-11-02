@@ -20,6 +20,8 @@ Canonical project modeling values.
 
 `(*, id: str, members: tuple[ReferenceEntryCdiParameterRef, ...])`
 
+Types: [ReferenceEntryCdiParameterRef].
+
 **Fields**
 
 - `id`: Stable UUID of this CDI combined set; not the identity of its target.
@@ -43,6 +45,8 @@ object identity.
 **Alias**
 
 `CdiParameterEntryResolved | CdiParameterEntryUnresolved`
+
+Types: [CdiParameterEntryResolved](#zipzimodelingprojectcdiparameterentryresolved), [CdiParameterEntryUnresolved](#zipzimodelingprojectcdiparameterentryunresolved).
 
 
 ## zipzi.modeling.project.CdiParameterEntryResolved
@@ -97,6 +101,8 @@ fields.
 
 `CdiParameterRefUnspecified | CdiParameterRefResolved | CdiParameterRefUnresolved`
 
+Types: [CdiParameterRefResolved](#zipzimodelingprojectcdiparameterrefresolved), [CdiParameterRefUnresolved](#zipzimodelingprojectcdiparameterrefunresolved), [CdiParameterRefUnspecified](#zipzimodelingprojectcdiparameterrefunspecified).
+
 
 ## zipzi.modeling.project.CdiParameterRefResolved
 
@@ -132,6 +138,8 @@ object ID.
 
 `CdiPartEntryResolved | CdiPartEntryUnresolved`
 
+Types: [CdiPartEntryResolved](#zipzimodelingprojectcdipartentryresolved), [CdiPartEntryUnresolved](#zipzimodelingprojectcdipartentryunresolved).
+
 
 ## zipzi.modeling.project.CdiPartEntryResolved
 
@@ -165,6 +173,8 @@ known fields.
 
 `(*, origin: DisplayInfoOrigin, parameters: tuple[CdiParameterEntry, ...] | None = None, parameter_groups: tuple[CdiParameterGroup, ...] | None = None, parts: tuple[CdiPartEntry, ...] | None = None, combined_parameters: tuple[CdiCombinedSet, ...] | None = None, extensions: _Mapping[str, ExtensionValue], opaque_source_ids: CdiNamespaceIds | None = None)`
 
+Types: [CdiCombinedSet](#zipzimodelingprojectcdicombinedset), [CdiNamespaceIds](#zipzimodelingprojectcdinamespaceids), [CdiParameterEntry](#zipzimodelingprojectcdiparameterentry), [CdiParameterGroup](#zipzimodelingprojectcdiparametergroup), [CdiPartEntry](#zipzimodelingprojectcdipartentry), [DisplayInfoOrigin](#zipzimodelingprojectdisplayinfoorigin).
+
 **Fields**
 
 - `origin`: Import/generation provenance of these display metadata records.
@@ -194,12 +204,16 @@ fields.
 
 `DocumentAuthoringEditPatch | DocumentAuthoringEditRepairMissingAttachment | DocumentAuthoringEditRepairCdiParameter | DocumentAuthoringEditRepairCdiPart`
 
+Types: [DocumentAuthoringEditPatch](#zipzimodelingprojectdocumentauthoringeditpatch), [DocumentAuthoringEditRepairCdiParameter](#zipzimodelingprojectdocumentauthoringeditrepaircdiparameter), [DocumentAuthoringEditRepairCdiPart](#zipzimodelingprojectdocumentauthoringeditrepaircdipart), [DocumentAuthoringEditRepairMissingAttachment](#zipzimodelingprojectdocumentauthoringeditrepairmissingattachment).
+
 
 ## zipzi.modeling.project.DocumentAuthoringEditPatch
 
 **Type**
 
 `(*, expected: DocumentValue, value: DocumentValue)`
+
+Types: [DocumentValue](#zipzimodelingprojectdocumentvalue).
 
 **Fields**
 
@@ -263,12 +277,16 @@ side files.
 
 `DocumentValueLayout | DocumentValueExportSettings | DocumentValueSourceCanvas`
 
+Types: [DocumentValueExportSettings](#zipzimodelingprojectdocumentvalueexportsettings), [DocumentValueLayout](#zipzimodelingprojectdocumentvaluelayout), [DocumentValueSourceCanvas](#zipzimodelingprojectdocumentvaluesourcecanvas).
+
 
 ## zipzi.modeling.project.DocumentValueExportSettings
 
 **Type**
 
 `(*, value: ExportSettings)`
+
+Types: [ExportSettings](#zipzimodelingprojectexportsettings).
 
 **Fields**
 
@@ -290,6 +308,8 @@ side files.
 
 `(*, value: Canvas | None = None)`
 
+Types: [Canvas].
+
 **Fields**
 
 - `value`: Replacement source-canvas metadata; None explicitly removes the canvas provenance.
@@ -299,6 +319,8 @@ side files.
 **Type**
 
 `(*, objects: _Mapping[str, ObjectEditorState] = <factory>)`
+
+Types: [ObjectEditorState](#zipzimodelingprojectobjecteditorstate).
 
 **Fields**
 
@@ -356,6 +378,8 @@ Specified bounds bypass automatic padding; pixel edges round outwards.
 
 `(*, groups: tuple[ModelParameterGroup, ...] | None = None, layout: _Mapping[str, float] | None = None, hit_areas: tuple[ModelHitArea, ...] | None = None, user_data: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue], source_runtime_ids: _Mapping[str, str] | None = None, source_content: str | None = None)`
 
+Types: [ModelHitArea](#zipzimodelingprojectmodelhitarea), [ModelParameterGroup](#zipzimodelingprojectmodelparametergroup), [AttachmentRef].
+
 **Fields**
 
 - `groups`: Optional ordered model3 parameter groups; None preserves omission rather than an empty list.
@@ -375,6 +399,8 @@ fields.
 
 `(*, id: str, name: str, mesh: ModelTargetRef, extensions: _Mapping[str, ExtensionValue] = <factory>)`
 
+Types: [ModelTargetRef](#zipzimodelingprojectmodeltargetref).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
@@ -388,6 +414,8 @@ fields.
 **Type**
 
 `(*, id: str, name: str, parameters: tuple[ReferenceEntryModelTargetRef, ...], extensions: _Mapping[str, ExtensionValue] = <factory>)`
+
+Types: [ReferenceEntryModelTargetRef].
 
 **Fields**
 
@@ -403,6 +431,8 @@ fields.
 **Alias**
 
 `ModelTargetRefUnspecified | ModelTargetRefResolved | ModelTargetRefUnresolved`
+
+Types: [ModelTargetRefResolved](#zipzimodelingprojectmodeltargetrefresolved), [ModelTargetRefUnresolved](#zipzimodelingprojectmodeltargetrefunresolved), [ModelTargetRefUnspecified](#zipzimodelingprojectmodeltargetrefunspecified).
 
 
 ## zipzi.modeling.project.ModelTargetRefResolved
@@ -450,12 +480,16 @@ object ID.
 
 `OpaqueExportIssueModel3NamespaceChanged | OpaqueExportIssueCdi | OpaqueExportIssueMotion | OpaqueExportIssueExpression | OpaqueExportIssuePose | OpaqueExportIssuePhysics`
 
+Types: [OpaqueExportIssueCdi](#zipzimodelingprojectopaqueexportissuecdi), [OpaqueExportIssueExpression](#zipzimodelingprojectopaqueexportissueexpression), [OpaqueExportIssueModel3NamespaceChanged](#zipzimodelingprojectopaqueexportissuemodel3namespacechanged), [OpaqueExportIssueMotion](#zipzimodelingprojectopaqueexportissuemotion), [OpaqueExportIssuePhysics](#zipzimodelingprojectopaqueexportissuephysics), [OpaqueExportIssuePose](#zipzimodelingprojectopaqueexportissuepose).
+
 
 ## zipzi.modeling.project.OpaqueExportIssueCdi
 
 **Type**
 
 `(*, problem: OpaqueExportProblem)`
+
+Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 **Fields**
 
@@ -466,6 +500,8 @@ object ID.
 **Type**
 
 `(*, id: str, problem: OpaqueExportProblem)`
+
+Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 **Fields**
 
@@ -485,6 +521,8 @@ object ID.
 
 `(*, id: str, problem: OpaqueExportProblem)`
 
+Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
+
 **Fields**
 
 - `id`: Persistent retained resource UUID in the frozen source.
@@ -496,6 +534,8 @@ object ID.
 
 `(*, id: str, problem: OpaqueExportProblem)`
 
+Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
+
 **Fields**
 
 - `id`: Persistent retained resource UUID in the frozen source.
@@ -506,6 +546,8 @@ object ID.
 **Type**
 
 `(*, id: str, problem: OpaqueExportProblem)`
+
+Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 **Fields**
 
@@ -554,6 +596,8 @@ and .. are invalid.
 
 `(*, before: _Version, after: _Version, warnings: tuple[str, ...], diagnostics: tuple[ProjectDiagnostic, ...], published: bool, durable: bool, paths: tuple[str, ...])`
 
+Types: [Version], [ProjectDiagnostic](#zipzimodelingprojectprojectdiagnostic).
+
 **Fields**
 
 - `before`: Exact SDK version before the operation.
@@ -574,6 +618,8 @@ translation is implied.
 
 `ProjectRequestDiagnose | ProjectRequestImport | ProjectRequestOpen | ProjectRequestNew | ProjectRequestExport`
 
+Types: [ProjectRequestDiagnose](#zipzimodelingprojectprojectrequestdiagnose), [ProjectRequestExport](#zipzimodelingprojectprojectrequestexport), [ProjectRequestImport](#zipzimodelingprojectprojectrequestimport), [ProjectRequestNew](#zipzimodelingprojectprojectrequestnew), [ProjectRequestOpen](#zipzimodelingprojectprojectrequestopen).
+
 
 ## zipzi.modeling.project.ProjectRequestDiagnose
 
@@ -587,6 +633,8 @@ translation is implied.
 **Type**
 
 `(*, path: str, format: ExportFormat, name: str, object_id: str | None = None, allow_loss: bool, bake_animation: bool, auto_frame_rate: bool)`
+
+Types: [ExportFormat](#zipzimodelingprojectexportformat).
 
 **Fields**
 
@@ -606,6 +654,8 @@ explicit one.
 
 `(*, path: str, format: ImportFormat, textures: tuple[TextureSlot, ...])`
 
+Types: [ImportFormat](#zipzimodelingprojectimportformat), [TextureSlot](#zipzimodelingprojecttextureslot).
+
 **Fields**
 
 - `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
@@ -618,6 +668,8 @@ separate images.
 **Type**
 
 `(*, document_id: str, setup: ModelSetup)`
+
+Types: [ModelSetup].
 
 **Fields**
 

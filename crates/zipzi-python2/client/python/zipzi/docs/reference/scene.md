@@ -16,6 +16,10 @@ Typed scene/organization intentions and immutable metadata projections.
 
 `(parameter_id: str, samples: tuple[Sample, ...], base_sample_id: str, id: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [Sample](#zipziscenesample).
+
 **Fields**
 
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
@@ -23,13 +27,15 @@ Typed scene/organization intentions and immutable metadata projections.
 must name one of them.
 - `base_sample_id`: Sample ID defining the neutral/base shape in this key table.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_blend_table' (read-only).
 
 ## zipzi.scene.CreateGlue
 
 **Type**
 
 `(name: str, a: str, b: str, part_id: str | None = None, id: str | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
@@ -42,7 +48,7 @@ unresolved references retain runtime identifiers.
 - `part_id`: Organizational Part owner ID; independent of the deformation parent. None
 selects the root/unassigned container.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_glue' (read-only).
 
 ## zipzi.scene.CreateMeshBlend
 
@@ -50,12 +56,14 @@ selects the root/unassigned container.
 
 `(mesh_id: str, table_id: str, id: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `table_id`: Stable BlendShape key-table ID in this document.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_mesh_blend' (read-only).
 
 ## zipzi.scene.CreateOffscreen
 
@@ -63,13 +71,15 @@ selects the root/unassigned container.
 
 `(name: str, part_id: str, id: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `name`: Human-readable display name; use the stable ID for identity because names can
 change.
 - `part_id`: Owning Part object ID; it must name an existing Part.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_offscreen' (read-only).
 
 ## zipzi.scene.CreateParameterGroup
 
@@ -77,11 +87,15 @@ change.
 
 `(spec: ParameterGroupSpec)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [ParameterGroupSpec](#zipzisceneparametergroupspec).
+
 **Fields**
 
 - `spec`: Creation specification; native admission supplies identities/defaults and
 rejects invalid input.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_parameter_group' (read-only).
 
 ## zipzi.scene.CreatePart
 
@@ -89,17 +103,25 @@ rejects invalid input.
 
 `(spec: PartSpec)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [PartSpec](#zipziscenepartspec).
+
 **Fields**
 
 - `spec`: Creation specification; native admission supplies identities/defaults and
 rejects invalid input.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_part' (read-only).
 
 ## zipzi.scene.CreateRotation
 
 **Type**
 
 `(name: str, placement: Placement, id: str | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [Placement](#zipzisceneplacement).
 
 **Fields**
 
@@ -108,13 +130,17 @@ change.
 - `placement`: Explicit organizational and deformation placement, with independent ordering
 anchors.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_rotation' (read-only).
 
 ## zipzi.scene.CreateWarp
 
 **Type**
 
 `(name: str, placement: Placement, bounds: tuple[float, float, float, float] | None = None, id: str | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [Placement](#zipzisceneplacement).
 
 **Fields**
 
@@ -125,7 +151,7 @@ anchors.
 - `bounds`: Optional [left, bottom, right, top] warp bounds in parent coordinates; None
 requests native defaults.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_create_warp' (read-only).
 
 ## zipzi.scene.DeleteGluePairs
 
@@ -133,12 +159,14 @@ requests native defaults.
 
 `(glue_id: str, ids: tuple[str, ...])`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `glue_id`: Stable Glue object ID owning the affected vertex pairs.
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row
 numbers are not identities.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_delete_glue_pairs' (read-only).
 
 ## zipzi.scene.DeleteMeshVertices
 
@@ -146,13 +174,15 @@ numbers are not identities.
 
 `(mesh_id: str, vertices: tuple[int, ...], remove_dependents: bool)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `vertices`: Stable vertex IDs in this mesh, not offsets into positions.
 - `remove_dependents`: Explicitly remove dependent topology/keyform/Glue content; false rejects
 referenced-vertex deletion.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_delete_mesh_vertices' (read-only).
 
 ## zipzi.scene.DeleteOrganization
 
@@ -160,13 +190,15 @@ referenced-vertex deletion.
 
 `(ids: tuple[str, ...], dissolve: bool)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row
 numbers are not identities.
 - `dissolve`: Preserve contained objects by dissolving their organization container instead of
 deleting its contents.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_delete_organization' (read-only).
 
 ## zipzi.scene.DeleteScene
 
@@ -174,18 +206,22 @@ deleting its contents.
 
 `(ids: tuple[str, ...], subtree: bool)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row
 numbers are not identities.
 - `subtree`: Include the deformation subtree when true; false affects only the selected objects.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_delete_scene' (read-only).
 
 ## zipzi.scene.DuplicateScene
 
 **Type**
 
 `(ids: tuple[str, ...], subtree: bool, part_id: str | None = None, before: str | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
@@ -196,7 +232,7 @@ numbers are not identities.
 selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_duplicate_scene' (read-only).
 
 ## zipzi.scene.GluePair
 
@@ -218,6 +254,10 @@ to the selected destination.
 
 `(glue_id: str, pair: GluePair, before: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [GluePair](#zipziscenegluepair).
+
 **Fields**
 
 - `glue_id`: Stable Glue object ID owning the affected vertex pairs.
@@ -225,13 +265,17 @@ to the selected destination.
 connected meshes.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_insert_glue_pair' (read-only).
 
 ## zipzi.scene.InsertMeshVertex
 
 **Type**
 
 `(mesh_id: str, vertex_id: int, position: tuple[float, float], uv: tuple[float, float], weights: tuple[VertexWeight, ...], before: int | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [VertexWeight](#zipziscenevertexweight).
 
 **Fields**
 
@@ -242,7 +286,7 @@ to the selected destination.
 - `weights`: Source vertex IDs and interpolation weights used to seed dependent shape content.
 - `before`: Optional stable vertex ID before which to insert new vertices; None appends.
 This is not a position-array index.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_insert_mesh_vertex' (read-only).
 
 ## zipzi.scene.InsertOffscreenKeyform
 
@@ -250,13 +294,17 @@ This is not a position-array index.
 
 `(offscreen_id: str, value: OffscreenForm, before: int | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [OffscreenForm](#zipzisceneoffscreenform).
+
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 - `value`: Scalar value in the referenced parameter domain.
 - `before`: Optional stable vertex ID before which to insert new vertices; None appends.
 This is not a position-array index.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_insert_offscreen_keyform' (read-only).
 
 ## zipzi.scene.MoveDeformation
 
@@ -264,6 +312,8 @@ This is not a position-array index.
 
 `(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row
@@ -272,7 +322,7 @@ numbers are not identities.
 None selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_move_deformation' (read-only).
 
 ## zipzi.scene.MoveParameterGroups
 
@@ -280,6 +330,8 @@ to the selected destination.
 
 `(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row
@@ -288,13 +340,15 @@ numbers are not identities.
 None selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_move_parameter_groups' (read-only).
 
 ## zipzi.scene.MoveParameters
 
 **Type**
 
 `(ids: tuple[str, ...], group_id: str | None = None, before: str | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
@@ -304,13 +358,15 @@ numbers are not identities.
 root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_move_parameters' (read-only).
 
 ## zipzi.scene.MoveToPart
 
 **Type**
 
 `(ids: tuple[str, ...], part_id: str | None = None, before: str | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
@@ -320,7 +376,7 @@ numbers are not identities.
 selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_move_to_part' (read-only).
 
 ## zipzi.scene.OffscreenForm
 
@@ -340,6 +396,8 @@ above 1 are retained without clamping.
 **Alias**
 
 `CreatePart | CreateParameterGroup | CreateWarp | CreateRotation | CreateGlue | CreateOffscreen | MoveToPart | MoveDeformation | MoveParameters | MoveParameterGroups | DuplicateScene | DeleteScene | DeleteOrganization | SetSceneLabel | SetSceneEnabled | ReparentLocal | ReplaceTriangles | ReorderMeshVertices | InsertMeshVertex | DeleteMeshVertices | CreateBlendTable | CreateMeshBlend | SetMeshBlendVertices | InsertGluePair | DeleteGluePairs | PatchOffscreenKeyform | InsertOffscreenKeyform | SetOffscreenStaticKeyform`
+
+Types: [CreateBlendTable](#zipziscenecreateblendtable), [CreateGlue](#zipziscenecreateglue), [CreateMeshBlend](#zipziscenecreatemeshblend), [CreateOffscreen](#zipziscenecreateoffscreen), [CreateParameterGroup](#zipziscenecreateparametergroup), [CreatePart](#zipziscenecreatepart), [CreateRotation](#zipziscenecreaterotation), [CreateWarp](#zipziscenecreatewarp), [DeleteGluePairs](#zipziscenedeletegluepairs), [DeleteMeshVertices](#zipziscenedeletemeshvertices), [DeleteOrganization](#zipziscenedeleteorganization), [DeleteScene](#zipziscenedeletescene), [DuplicateScene](#zipzisceneduplicatescene), [InsertGluePair](#zipzisceneinsertgluepair), [InsertMeshVertex](#zipzisceneinsertmeshvertex), [InsertOffscreenKeyform](#zipzisceneinsertoffscreenkeyform), [MoveDeformation](#zipziscenemovedeformation), [MoveParameterGroups](#zipziscenemoveparametergroups), [MoveParameters](#zipziscenemoveparameters), [MoveToPart](#zipziscenemovetopart), [PatchOffscreenKeyform](#zipziscenepatchoffscreenkeyform), [ReorderMeshVertices](#zipziscenereordermeshvertices), [ReparentLocal](#zipziscenereparentlocal), [ReplaceTriangles](#zipziscenereplacetriangles), [SetMeshBlendVertices](#zipziscenesetmeshblendvertices), [SetOffscreenStaticKeyform](#zipziscenesetoffscreenstatickeyform), [SetSceneEnabled](#zipziscenesetsceneenabled), [SetSceneLabel](#zipziscenesetscenelabel).
 
 
 ## zipzi.scene.ParameterGroupSpec
@@ -379,13 +437,17 @@ the selected destination.
 
 `(offscreen_id: str, slot: int, value: OffscreenForm)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [OffscreenForm](#zipzisceneoffscreenform).
+
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 - `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
 object ID.
 - `value`: Scalar value in the referenced parameter domain.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_patch_offscreen_keyform' (read-only).
 
 ## zipzi.scene.Placement
 
@@ -408,18 +470,22 @@ collection.
 
 `(mesh_id: str, order: tuple[int, ...])`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `order`: Complete new order of stable vertex IDs; preserves identities and associated
 per-vertex payload.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_reorder_mesh_vertices' (read-only).
 
 ## zipzi.scene.ReparentLocal
 
 **Type**
 
 `(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
@@ -429,7 +495,7 @@ numbers are not identities.
 None selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong
 to the selected destination.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_reparent_local' (read-only).
 
 ## zipzi.scene.ReplaceTriangles
 
@@ -437,12 +503,14 @@ to the selected destination.
 
 `(mesh_id: str, triangles: tuple[tuple[int, int, int], ...])`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
 - `triangles`: Triangle triples of stable vertex IDs; preserve winding and do not substitute
 position-array offsets.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_replace_triangles' (read-only).
 
 ## zipzi.scene.Sample
 
@@ -461,6 +529,10 @@ position-array offsets.
 
 `(mesh_id: str, binding_id: str, sample_id: str, updates: tuple[VertexPatch, ...])`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [VertexPatch](#zipziscenevertexpatch).
+
 **Fields**
 
 - `mesh_id`: Stable ID of the target mesh in this document.
@@ -468,7 +540,7 @@ position-array offsets.
 - `sample_id`: Stable sample ID from the associated axis or BlendShape key table; not a numeric
 parameter value.
 - `updates`: Ordered content patches applied together by the native edit.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_set_mesh_blend_vertices' (read-only).
 
 ## zipzi.scene.SetOffscreenStaticKeyform
 
@@ -476,17 +548,21 @@ parameter value.
 
 `(offscreen_id: str, keyform: int)`
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_set_offscreen_static_keyform' (read-only).
 
 ## zipzi.scene.SetSceneEnabled
 
 **Type**
 
 `(id: str, expected: bool, enabled: bool)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
@@ -495,13 +571,15 @@ runtime_id.
 - `expected`: Exact current field value used as an optimistic precondition; stale values
 reject the edit.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_set_scene_enabled' (read-only).
 
 ## zipzi.scene.SetSceneLabel
 
 **Type**
 
 `(id: str, expected: str, name: str)`
+
+See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
@@ -511,7 +589,7 @@ runtime_id.
 reject the edit.
 - `name`: Human-readable display name; use the stable ID for identity because names can
 change.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'scene_set_scene_label' (read-only).
 
 ## zipzi.scene.Summary
 

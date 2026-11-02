@@ -21,9 +21,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
                     'signature': ''},
  'zipzi.sampling.BlendMode': {'alias': 'zipzi.modeling.scene.BlendMode'},
  'zipzi.sampling.Checks': {'children': ('zipzi.sampling.Checks.__repr__', 'zipzi.sampling.Checks.summary'),
-                           'documentation': 'Owned sampling Checks value; reading fields, repr and summary performs no '
-                                            'IO.',
-                           'example': 'docs/recipes.py',
+                           'documentation': '',
                            'fields': [('min_triangle_area',
                                        'Area in authored coordinates: model units squared at the root, or\n'
                                        'the appropriate rotation-local / Warp-parameter units under a parent.'),
@@ -38,9 +36,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Checks.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Checks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Deformer': {'children': ('zipzi.sampling.Deformer.__repr__', 'zipzi.sampling.Deformer.summary'),
-                             'documentation': 'Owned sampling Deformer value; reading fields, repr and summary '
-                                              'performs no IO.',
-                             'example': 'docs/recipes.py',
+                             'documentation': '',
                              'fields': [('id',
                                          'Stable document object ID used by references; it is distinct from the '
                                          'exported runtime_id.'),
@@ -64,9 +60,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Deformer.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Deformer.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Diagnostic': {'children': ('zipzi.sampling.Diagnostic.__repr__', 'zipzi.sampling.Diagnostic.summary'),
-                               'documentation': 'Owned sampling Diagnostic value; reading fields, repr and summary '
-                                                'performs no IO.',
-                               'example': 'docs/recipes.py',
+                               'documentation': '',
                                'fields': [('kind', 'Typed geometry diagnostic category.'),
                                           ('mesh_id', 'Stable ID of the target mesh in this document.'),
                                           ('triangle_index',
@@ -80,9 +74,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Diagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.DiagnosticKind': {'alias': 'zipzi.modeling.sampling.GeometryDiagnosticKind'},
  'zipzi.sampling.Drawable': {'children': ('zipzi.sampling.Drawable.__repr__', 'zipzi.sampling.Drawable.summary'),
-                             'documentation': 'Owned sampling Drawable value; reading fields, repr and summary '
-                                              'performs no IO.',
-                             'example': 'docs/recipes.py',
+                             'documentation': '',
                              'fields': [('id',
                                          'Stable document object ID used by references; it is distinct from the '
                                          'exported runtime_id.'),
@@ -147,9 +139,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Drawable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Drawable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Frame': {'children': ('zipzi.sampling.Frame.__repr__', 'zipzi.sampling.Frame.summary'),
-                          'documentation': 'Owned sampling Frame value; reading fields, repr and summary performs no '
-                                           'IO.',
-                          'example': 'docs/recipes.py',
+                          'documentation': '',
                           'fields': [('source_revision',
                                       'Revision used to evaluate this immutable snapshot; later name edits may reuse '
                                       'it.'),
@@ -177,9 +167,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.MeshQuality.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.MeshQuality.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Offscreen': {'children': ('zipzi.sampling.Offscreen.__repr__', 'zipzi.sampling.Offscreen.summary'),
-                              'documentation': 'Owned sampling Offscreen value; reading fields, repr and summary '
-                                               'performs no IO.',
-                              'example': 'docs/recipes.py',
+                              'documentation': '',
                               'fields': [('renderable',
                                           'Whether required content is available for rendering; unavailable textures '
                                           'do not make\n'
@@ -219,9 +207,7 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Offscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.sampling.Offscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Parameter': {'children': ('zipzi.sampling.Parameter.__repr__', 'zipzi.sampling.Parameter.summary'),
-                              'documentation': 'Owned sampling Parameter value; reading fields, repr and summary '
-                                               'performs no IO.',
-                              'example': 'docs/recipes.py',
+                              'documentation': '',
                               'fields': [('id',
                                           'Stable document object ID used by references; it is distinct from the '
                                           'exported runtime_id.'),
@@ -239,7 +225,6 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.Parameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.Pose': {'children': ('zipzi.sampling.Pose.__repr__', 'zipzi.sampling.Pose.summary'),
                          'documentation': 'Owned effective parameter pose; reading it performs no IO.',
-                         'example': 'docs/recipes.py',
                          'fields': [('values',
                                      'Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document '
                                      'parameter IDs and values use each parameter domain.')],
@@ -250,7 +235,6 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.RenderCommand': {'children': ('zipzi.sampling.RenderCommand.__repr__',
                                                'zipzi.sampling.RenderCommand.summary'),
                                   'documentation': 'One ordered native render-plan command.',
-                                  'example': 'docs/recipes.py',
                                   'fields': [('kind',
                                               'BeginOffscreen, DrawMesh or EndOffscreen; begin/end commands delimit '
                                               'compositing scopes.'),
@@ -263,16 +247,13 @@ DATA: dict[str, Entry] = {'zipzi.sampling': {'children': ('zipzi.sampling.BlendM
  'zipzi.sampling.RenderCommand.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.sampling.RenderKind': {'children': (),
                                'documentation': '',
-                               'example': 'docs/recipes.py',
                                'fields': [('BEGIN_OFFSCREEN', "'BeginOffscreen'"),
                                           ('DRAW_MESH', "'DrawMesh'"),
                                           ('END_OFFSCREEN', "'EndOffscreen'")],
                                'kind': 'enum',
                                'signature': ''},
  'zipzi.sampling.Result': {'children': ('zipzi.sampling.Result.__repr__', 'zipzi.sampling.Result.summary'),
-                           'documentation': 'Owned sampling Result value; reading fields, repr and summary performs no '
-                                            'IO.',
-                           'example': 'docs/recipes.py',
+                           'documentation': '',
                            'fields': [('version',
                                        'Exact SDK version captured for this value; not a best-effort latest-version '
                                        'marker.'),

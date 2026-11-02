@@ -35,6 +35,8 @@ above 1 are retained without clamping.
 
 Imported paths remain explicitly unresolved until a matching attachment is loaded.
 
+Types: [AttachmentRefResolved](#zipzimodelingsceneattachmentrefresolved), [AttachmentRefUnresolved](#zipzimodelingsceneattachmentrefunresolved).
+
 
 ## zipzi.modeling.scene.AttachmentRefResolved
 
@@ -75,6 +77,8 @@ and .. components are invalid.
 
 A finite rectangle carried by an import/export format, not the model space.
 
+Types: [Vec2].
+
 **Fields**
 
 - `width`: Source canvas width in pixels.
@@ -91,6 +95,8 @@ this metadata does not rescale model geometry or change evaluation.
 
 `(*, auto_update: bool, first_key_seen: bool, snapshot: DeformerOriginalSnapshot | None = None, capture_error: str | None = None)`
 
+Types: [DeformerOriginalSnapshot](#zipzimodelingscenedeformeroriginalsnapshot).
+
 **Fields**
 
 - `auto_update`: Update once when the first ordinary keyform is created. Manual update disables this.
@@ -103,6 +109,8 @@ this metadata does not rescale model geometry or change evaluation.
 **Alias**
 
 `DeformerOriginalActionUpdate | DeformerOriginalActionRestore | DeformerOriginalActionAutoUpdate`
+
+Types: [DeformerOriginalActionAutoUpdate](#zipzimodelingscenedeformeroriginalactionautoupdate), [DeformerOriginalActionRestore](#zipzimodelingscenedeformeroriginalactionrestore), [DeformerOriginalActionUpdate](#zipzimodelingscenedeformeroriginalactionupdate).
 
 
 ## zipzi.modeling.scene.DeformerOriginalActionAutoUpdate
@@ -138,12 +146,16 @@ this metadata does not rescale model geometry or change evaluation.
 
 `DeformerOriginalShapeWarp | DeformerOriginalShapeRotation`
 
+Types: [DeformerOriginalShapeRotation](#zipzimodelingscenedeformeroriginalshaperotation), [DeformerOriginalShapeWarp](#zipzimodelingscenedeformeroriginalshapewarp).
+
 
 ## zipzi.modeling.scene.DeformerOriginalShapeRotation
 
 **Type**
 
 `(*, pose: RotationPose)`
+
+Types: [RotationPose](#zipzimodelingscenerotationpose).
 
 **Fields**
 
@@ -155,6 +167,8 @@ this metadata does not rescale model geometry or change evaluation.
 
 `(*, warp: WarpTransform, controller_canvas_exact: bool)`
 
+Types: [WarpTransform](#zipzimodelingscenewarptransform).
+
 **Fields**
 
 - `warp`: Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.
@@ -165,6 +179,8 @@ this metadata does not rescale model geometry or change evaluation.
 **Type**
 
 `(*, source: DeformerOriginalSource, shape: DeformerOriginalShape)`
+
+Types: [DeformerOriginalShape](#zipzimodelingscenedeformeroriginalshape), [DeformerOriginalSource](#zipzimodelingscenedeformeroriginalsource).
 
 **Fields**
 
@@ -199,6 +215,8 @@ this metadata does not rescale model geometry or change evaluation.
 **Type**
 
 `(*, id: str, runtime_id: str, name: str, mesh_a_id: SceneReference, mesh_b_id: SceneReference, pairs: tuple[GlueVertexPair, ...], intensity: float, binding: GlueBinding | None = None)`
+
+Types: [GlueBinding], [GlueVertexPair](#zipzimodelingscenegluevertexpair), [SceneReference](#zipzimodelingscenescenereference).
 
 **Fields**
 
@@ -250,6 +268,8 @@ source order.
 
 Source-format provenance and independent output settings. Neither affects evaluation.
 
+Types: [ExportSettings], [Canvas](#zipzimodelingscenecanvas).
+
 **Fields**
 
 - `source_canvas`: Optional imported canvas metadata; None means this model has no source-canvas provenance.
@@ -260,6 +280,8 @@ Source-format provenance and independent output settings. Neither affects evalua
 **Type**
 
 `(*, id: str, runtime_id: str, name: str, part_id: str, enabled: bool = True, blend_mode: int, flags: int, masks: tuple[str, ...], part_keyform_indices: tuple[int, ...], keyforms: tuple[OffscreenKeyform, ...])`
+
+Types: [OffscreenKeyform].
 
 **Fields**
 
@@ -280,6 +302,8 @@ table.
 **Alias**
 
 `OffscreenDeletePolicyRejectReferences | OffscreenDeletePolicyNeutral | OffscreenDeletePolicyRemap`
+
+Types: [OffscreenDeletePolicyNeutral](#zipzimodelingsceneoffscreendeletepolicyneutral), [OffscreenDeletePolicyRejectReferences](#zipzimodelingsceneoffscreendeletepolicyrejectreferences), [OffscreenDeletePolicyRemap](#zipzimodelingsceneoffscreendeletepolicyremap).
 
 
 ## zipzi.modeling.scene.OffscreenDeletePolicyNeutral
@@ -313,6 +337,8 @@ slot.
 
 `(*, slot: PartKeyformSlot, keyform: int)`
 
+Types: [PartKeyformSlot].
+
 **Fields**
 
 - `slot`: Static Part slot or stable Part-binding sample combination to remap.
@@ -323,6 +349,8 @@ slot.
 **Alias**
 
 `OrganizationCollectionParameters | OrganizationCollectionParameterGroups | OrganizationCollectionPartMembers`
+
+Types: [OrganizationCollectionParameterGroups](#zipzimodelingsceneorganizationcollectionparametergroups), [OrganizationCollectionParameters](#zipzimodelingsceneorganizationcollectionparameters), [OrganizationCollectionPartMembers](#zipzimodelingsceneorganizationcollectionpartmembers).
 
 
 ## zipzi.modeling.scene.OrganizationCollectionParameterGroups
@@ -401,6 +429,8 @@ Persistent scene object identifier.
 
 `(*, parameter_values: _Mapping[str, float], parameter_domain: tuple[ConversionDomain, ...], edit_time_seconds: float)`
 
+Types: [ConversionDomain].
+
 **Fields**
 
 - `parameter_values`: Parameter-ID-to-value map used for the reparenting reference pose; values use each
@@ -435,6 +465,8 @@ dependency must have an explicit finite interval.
 
 `(*, origin: PreciseVec2, angle: float, scale: float, reflect_x: bool, reflect_y: bool)`
 
+Types: [PreciseVec2].
+
 **Fields**
 
 - `origin`: Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).
@@ -449,6 +481,8 @@ dependency must have an explicit finite interval.
 
 `(*, base_angle: float, pose: RotationPose)`
 
+Types: [RotationPose](#zipzimodelingscenerotationpose).
+
 **Fields**
 
 - `base_angle`: Reference angle in degrees used to orient the rotation control.
@@ -459,6 +493,8 @@ dependency must have an explicit finite interval.
 **Alias**
 
 `SceneCollectionOrganization | SceneCollectionDeformation | SceneCollectionGlues | SceneCollectionDrawingGroups | SceneCollectionDrawing`
+
+Types: [SceneCollectionDeformation](#zipzimodelingscenescenecollectiondeformation), [SceneCollectionDrawing](#zipzimodelingscenescenecollectiondrawing), [SceneCollectionDrawingGroups](#zipzimodelingscenescenecollectiondrawinggroups), [SceneCollectionGlues](#zipzimodelingscenescenecollectionglues), [SceneCollectionOrganization](#zipzimodelingscenescenecollectionorganization).
 
 
 ## zipzi.modeling.scene.SceneCollectionDeformation
@@ -513,6 +549,8 @@ the root/unassigned container.
 
 `SceneContentTargetVertexPosition | SceneContentTargetVertexUv | SceneContentTargetTriangle | SceneContentTargetWarpPoint | SceneContentTargetWarpBezierControl | SceneContentTargetGluePair | SceneContentTargetOffscreenKeyform | SceneContentTargetOffscreenMapping`
 
+Types: [SceneContentTargetGluePair](#zipzimodelingscenescenecontenttargetgluepair), [SceneContentTargetOffscreenKeyform](#zipzimodelingscenescenecontenttargetoffscreenkeyform), [SceneContentTargetOffscreenMapping](#zipzimodelingscenescenecontenttargetoffscreenmapping), [SceneContentTargetTriangle](#zipzimodelingscenescenecontenttargettriangle), [SceneContentTargetVertexPosition](#zipzimodelingscenescenecontenttargetvertexposition), [SceneContentTargetVertexUv](#zipzimodelingscenescenecontenttargetvertexuv), [SceneContentTargetWarpBezierControl](#zipzimodelingscenescenecontenttargetwarpbeziercontrol), [SceneContentTargetWarpPoint](#zipzimodelingscenescenecontenttargetwarppoint).
+
 
 ## zipzi.modeling.scene.SceneContentTargetGluePair
 
@@ -541,6 +579,8 @@ object ID.
 
 `(*, slot: PartKeyformSlot)`
 
+Types: [PartKeyformSlot].
+
 **Fields**
 
 - `slot`: Static Part slot or stable Part-binding sample combination, not an Offscreen array
@@ -562,6 +602,8 @@ object ID.
 **Type**
 
 `(*, vertex_id: int, shape: ShapeTarget = <factory>)`
+
+Types: [ShapeTarget](#zipzimodelingsceneshapetarget).
 
 **Fields**
 
@@ -587,6 +629,8 @@ shape.
 
 Component 0 is the anchor; 1..4 are left, right, up, down handles.
 
+Types: [ShapeTarget](#zipzimodelingsceneshapetarget).
+
 **Fields**
 
 - `node`: Zero-based Bezier node offset in the row-major controller array.
@@ -599,6 +643,8 @@ shape.
 **Type**
 
 `(*, row: int, column: int, shape: ShapeTarget = <factory>)`
+
+Types: [ShapeTarget](#zipzimodelingsceneshapetarget).
 
 **Fields**
 
@@ -613,12 +659,16 @@ shape.
 
 `SceneContentValuePoint | SceneContentValueTriangle | SceneContentValueGluePair | SceneContentValueOffscreenKeyform | SceneContentValueMapping`
 
+Types: [SceneContentValueGluePair](#zipzimodelingscenescenecontentvaluegluepair), [SceneContentValueMapping](#zipzimodelingscenescenecontentvaluemapping), [SceneContentValueOffscreenKeyform](#zipzimodelingscenescenecontentvalueoffscreenkeyform), [SceneContentValuePoint](#zipzimodelingscenescenecontentvaluepoint), [SceneContentValueTriangle](#zipzimodelingscenescenecontentvaluetriangle).
+
 
 ## zipzi.modeling.scene.SceneContentValueGluePair
 
 **Type**
 
 `(*, value: GlueVertexPair)`
+
+Types: [GlueVertexPair](#zipzimodelingscenegluevertexpair).
 
 **Fields**
 
@@ -640,6 +690,8 @@ shape.
 
 `(*, value: OffscreenKeyform)`
 
+Types: [OffscreenKeyform].
+
 **Fields**
 
 - `value`: Complete replacement Offscreen appearance sample.
@@ -649,6 +701,8 @@ shape.
 **Type**
 
 `(*, value: Vec2)`
+
+Types: [Vec2].
 
 **Fields**
 
@@ -679,12 +733,16 @@ shape.
 
 `SceneCreateMesh | SceneCreateWarp | SceneCreateRotation | SceneCreateOffscreen | SceneCreateGlue`
 
+Types: [SceneCreateGlue](#zipzimodelingscenescenecreateglue), [SceneCreateMesh](#zipzimodelingscenescenecreatemesh), [SceneCreateOffscreen](#zipzimodelingscenescenecreateoffscreen), [SceneCreateRotation](#zipzimodelingscenescenecreaterotation), [SceneCreateWarp](#zipzimodelingscenescenecreatewarp).
+
 
 ## zipzi.modeling.scene.SceneCreateGlue
 
 **Type**
 
 `(*, a: SceneReference = <factory>, b: SceneReference = <factory>)`
+
+Types: [SceneReference](#zipzimodelingscenescenereference).
 
 **Fields**
 
@@ -698,6 +756,8 @@ references retain runtime identifiers.
 **Type**
 
 `(*, texture: SceneReference = <factory>)`
+
+Types: [SceneReference](#zipzimodelingscenescenereference).
 
 **Fields**
 
@@ -716,6 +776,8 @@ external texture identifiers.
 **Type**
 
 `(*, origin: PreciseVec2 | None = None)`
+
+Types: [PreciseVec2].
 
 **Fields**
 
@@ -759,12 +821,16 @@ native defaults.
 
 `SceneFieldValueLabel | SceneFieldValueRuntimeId | SceneFieldValueEnabled | SceneFieldValueAppearance | SceneFieldValueTexture | SceneFieldValueMasks | SceneFieldValueMeshDrawing | SceneFieldValueWarp | SceneFieldValueRotation | SceneFieldValueGlueEndpoints | SceneFieldValueGlueIntensity | SceneFieldValueOffscreen | SceneFieldValueContext`
 
+Types: [SceneFieldValueAppearance](#zipzimodelingscenescenefieldvalueappearance), [SceneFieldValueContext](#zipzimodelingscenescenefieldvaluecontext), [SceneFieldValueEnabled](#zipzimodelingscenescenefieldvalueenabled), [SceneFieldValueGlueEndpoints](#zipzimodelingscenescenefieldvalueglueendpoints), [SceneFieldValueGlueIntensity](#zipzimodelingscenescenefieldvalueglueintensity), [SceneFieldValueLabel](#zipzimodelingscenescenefieldvaluelabel), [SceneFieldValueMasks](#zipzimodelingscenescenefieldvaluemasks), [SceneFieldValueMeshDrawing](#zipzimodelingscenescenefieldvaluemeshdrawing), [SceneFieldValueOffscreen](#zipzimodelingscenescenefieldvalueoffscreen), [SceneFieldValueRotation](#zipzimodelingscenescenefieldvaluerotation), [SceneFieldValueRuntimeId](#zipzimodelingscenescenefieldvalueruntimeid), [SceneFieldValueTexture](#zipzimodelingscenescenefieldvaluetexture), [SceneFieldValueWarp](#zipzimodelingscenescenefieldvaluewarp).
+
 
 ## zipzi.modeling.scene.SceneFieldValueAppearance
 
 **Type**
 
 `(*, value: Appearance)`
+
+Types: [Appearance](#zipzimodelingsceneappearance).
 
 **Fields**
 
@@ -798,6 +864,8 @@ selects the root/unassigned container.
 **Type**
 
 `(*, a: SceneReference, b: SceneReference)`
+
+Types: [SceneReference](#zipzimodelingscenescenereference).
 
 **Fields**
 
@@ -842,6 +910,8 @@ references retain runtime identifiers.
 
 `(*, draw_order: float | None = None, blend_mode: BlendMode, raw_blend_mode: int | None = None, double_sided: bool, inverted_mask: bool)`
 
+Types: [BlendMode](#zipzimodelingsceneblendmode).
+
 **Fields**
 
 - `draw_order`: Drawing-order coordinate; distinct from the final evaluated render_order. None
@@ -857,6 +927,8 @@ leaves this channel unspecified for native evaluation.
 
 `(*, blend_mode: int, flags: int, keyforms: tuple[OffscreenKeyform, ...], part_keyform_indices: tuple[int, ...])`
 
+Types: [OffscreenKeyform].
+
 **Fields**
 
 - `blend_mode`: Compositing mode used when drawing this object.
@@ -870,6 +942,8 @@ key table.
 **Type**
 
 `(*, value: RotationTransform)`
+
+Types: [RotationTransform](#zipzimodelingscenerotationtransform).
 
 **Fields**
 
@@ -891,6 +965,8 @@ key table.
 
 `(*, value: SceneReference)`
 
+Types: [SceneReference](#zipzimodelingscenescenereference).
+
 **Fields**
 
 - `value`: Resolved image-asset reference or explicitly unresolved texture runtime identifier.
@@ -901,6 +977,8 @@ key table.
 
 `(*, value: WarpTransform)`
 
+Types: [WarpTransform](#zipzimodelingscenewarptransform).
+
 **Fields**
 
 - `value`: Complete replacement warp lattice and controller definition.
@@ -910,6 +988,8 @@ key table.
 **Alias**
 
 `SceneReferenceUnspecified | SceneReferenceResolved | SceneReferenceUnresolved`
+
+Types: [SceneReferenceResolved](#zipzimodelingscenescenereferenceresolved), [SceneReferenceUnresolved](#zipzimodelingscenescenereferenceunresolved), [SceneReferenceUnspecified](#zipzimodelingscenescenereferenceunspecified).
 
 
 ## zipzi.modeling.scene.SceneReferenceResolved
@@ -945,6 +1025,8 @@ object ID.
 **Alias**
 
 `ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlend`
+
+Types: [ShapeTargetBase](#zipzimodelingsceneshapetargetbase), [ShapeTargetBlend](#zipzimodelingsceneshapetargetblend), [ShapeTargetOrdinary](#zipzimodelingsceneshapetargetordinary).
 
 
 ## zipzi.modeling.scene.ShapeTargetBase
@@ -983,6 +1065,8 @@ parameter value.
 
 `(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance, warp_authoring: WarpAuthoringSettings | None = None, original_shape: DeformerOriginal | None = None)`
 
+Types: [Appearance](#zipzimodelingsceneappearance), [DeformerOriginal](#zipzimodelingscenedeformeroriginal), [PartId](#zipzimodelingscenepartid), [TransformData](#zipzimodelingscenetransformdata), [TransformId](#zipzimodelingscenetransformid), [WarpAuthoringSettings](#zipzimodelingscenewarpauthoringsettings).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
@@ -1005,12 +1089,16 @@ rotation-pose interpretation.
 
 `TransformDataWarp | TransformDataRotation`
 
+Types: [TransformDataRotation](#zipzimodelingscenetransformdatarotation), [TransformDataWarp](#zipzimodelingscenetransformdatawarp).
+
 
 ## zipzi.modeling.scene.TransformDataRotation
 
 **Type**
 
 `(*, value: RotationTransform)`
+
+Types: [RotationTransform](#zipzimodelingscenerotationtransform).
 
 **Fields**
 
@@ -1021,6 +1109,8 @@ rotation-pose interpretation.
 **Type**
 
 `(*, value: WarpTransform)`
+
+Types: [WarpTransform](#zipzimodelingscenewarptransform).
 
 **Fields**
 
@@ -1044,6 +1134,8 @@ Persistent scene object identifier.
 
 `(*, auto_reform: bool = False, edit_mode: WarpBezierEditMode = WarpBezierEditMode.LOCAL, bezier_grid: WarpBezierGrid | None = None)`
 
+Types: [WarpBezierEditMode](#zipzimodelingscenewarpbeziereditmode), [WarpBezierGrid](#zipzimodelingscenewarpbeziergrid).
+
 **Fields**
 
 - `auto_reform`: Rebuild the edited shape's baked grid on subsequent Bezier edits.
@@ -1056,6 +1148,8 @@ Persistent scene object identifier.
 
 `(*, rows: int, columns: int, nodes: tuple[WarpBezierNode, ...])`
 
+Types: [WarpBezierNode](#zipzimodelingscenewarpbeziernode).
+
 **Fields**
 
 - `rows`: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
@@ -1067,6 +1161,8 @@ Persistent scene object identifier.
 **Type**
 
 `(*, node: int, component: int, point: Vec2)`
+
+Types: [Vec2].
 
 **Fields**
 
@@ -1104,6 +1200,8 @@ Editor influence semantics, independent of runtime Warp interpolation.
 
 `(*, position: Vec2, handles: tuple[Vec2, Vec2, Vec2, Vec2])`
 
+Types: [Vec2].
+
 **Fields**
 
 - `position`: Absolute Bezier anchor position in lattice coordinates; not a handle offset.
@@ -1114,6 +1212,8 @@ Editor influence semantics, independent of runtime Warp interpolation.
 **Type**
 
 `(*, row: int, column: int, point: Vec2)`
+
+Types: [Vec2].
 
 **Fields**
 
@@ -1135,6 +1235,8 @@ Editor influence semantics, independent of runtime Warp interpolation.
 **Type**
 
 `(*, bezier: WarpBezier | None = None, rows: int, columns: int, quad: bool, points: tuple[Vec2, ...])`
+
+Types: [Vec2], [WarpBezier](#zipzimodelingscenewarpbezier).
 
 **Fields**
 

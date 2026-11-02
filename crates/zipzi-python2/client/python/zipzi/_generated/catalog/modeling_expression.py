@@ -24,7 +24,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionAsset': {'children': ('zipzi.modeling.expression.ExpressionAsset.__repr__',
                                                             'zipzi.modeling.expression.ExpressionAsset.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable identity in the owning authoring domain; exported '
                                                            'metadata IDs retain their source text.'),
@@ -65,7 +64,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionBlend': {'children': (),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('ADD', "'add'"),
                                                           ('MULTIPLY', "'multiply'"),
                                                           ('OVERWRITE', "'overwrite'")],
@@ -74,7 +72,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEdit': {'children': (),
                                               'documentation': 'All positions use stable entry IDs; None appends to '
                                                                'the destination.',
-                                              'example': 'docs/recipes.py',
                                               'fields': [],
                                               'kind': 'alias',
                                               'signature': 'ExpressionEditCreate | ExpressionEditCreateEntry | '
@@ -94,7 +91,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditCreate': {'children': ('zipzi.modeling.expression.ExpressionEditCreate.__repr__',
                                                                  'zipzi.modeling.expression.ExpressionEditCreate.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
                                                                 'exported metadata IDs retain their source text.'),
@@ -108,7 +104,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditCreateEntry': {'children': ('zipzi.modeling.expression.ExpressionEditCreateEntry.__repr__',
                                                                       'zipzi.modeling.expression.ExpressionEditCreateEntry.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('owner',
                                                                      'Stable expression asset ID owning the selected '
                                                                      'entries.'),
@@ -126,7 +121,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDelete': {'children': ('zipzi.modeling.expression.ExpressionEditDelete.__repr__',
                                                                  'zipzi.modeling.expression.ExpressionEditDelete.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
                                                                 'exported metadata IDs retain their source text.')],
@@ -137,7 +131,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDeleteEntries': {'children': ('zipzi.modeling.expression.ExpressionEditDeleteEntries.__repr__',
                                                                         'zipzi.modeling.expression.ExpressionEditDeleteEntries.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('ids',
                                                                        'Ordered stable IDs selected by this operation; '
                                                                        'names and row numbers are not identities.')],
@@ -148,7 +141,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDuplicate': {'children': ('zipzi.modeling.expression.ExpressionEditDuplicate.__repr__',
                                                                     'zipzi.modeling.expression.ExpressionEditDuplicate.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('source',
                                                                    'Typed parameter reference or stable source object '
                                                                    'ID, as declared by the enclosing operation.'),
@@ -169,7 +161,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditDuplicateEntries': {'children': ('zipzi.modeling.expression.ExpressionEditDuplicateEntries.__repr__',
                                                                            'zipzi.modeling.expression.ExpressionEditDuplicateEntries.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('ids',
                                                                           'Ordered stable IDs selected by this '
                                                                           'operation; names and row numbers are not '
@@ -192,7 +183,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditMoveEntries': {'children': ('zipzi.modeling.expression.ExpressionEditMoveEntries.__repr__',
                                                                       'zipzi.modeling.expression.ExpressionEditMoveEntries.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('ids',
                                                                      'Ordered stable IDs selected by this operation; '
                                                                      'names and row numbers are not identities.'),
@@ -210,7 +200,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditPatchEntry': {'children': ('zipzi.modeling.expression.ExpressionEditPatchEntry.__repr__',
                                                                      'zipzi.modeling.expression.ExpressionEditPatchEntry.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
@@ -229,7 +218,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEditReorder': {'children': ('zipzi.modeling.expression.ExpressionEditReorder.__repr__',
                                                                   'zipzi.modeling.expression.ExpressionEditReorder.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('ids',
                                                                  'Ordered stable IDs selected by this operation; names '
                                                                  'and row numbers are not identities.')],
@@ -240,7 +228,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEntry': {'children': ('zipzi.modeling.expression.ExpressionEntry.__repr__',
                                                             'zipzi.modeling.expression.ExpressionEntry.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable identity in the owning authoring domain; exported '
                                                            'metadata IDs retain their source text.'),
@@ -265,7 +252,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEntryFields': {'children': ('zipzi.modeling.expression.ExpressionEntryFields.__repr__',
                                                                   'zipzi.modeling.expression.ExpressionEntryFields.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('target',
                                                                  'Typed target reference; unresolved imported runtime '
                                                                  'labels remain explicit.'),
@@ -284,7 +270,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionEntryFields.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionTarget': {'children': (),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'alias',
                                                 'signature': 'ExpressionTargetUnspecified | ExpressionTargetResolved | '
@@ -295,7 +280,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionTargetResolved': {'children': ('zipzi.modeling.expression.ExpressionTargetResolved.__repr__',
                                                                      'zipzi.modeling.expression.ExpressionTargetResolved.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('parameter_id',
                                                                     'Stable document parameter UUID; evaluation uses '
                                                                     'its declared range and default.')],
@@ -306,7 +290,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionTargetUnresolved': {'children': ('zipzi.modeling.expression.ExpressionTargetUnresolved.__repr__',
                                                                        'zipzi.modeling.expression.ExpressionTargetUnresolved.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('runtime_id',
                                                                       'Imported/exported runtime label, distinct from '
                                                                       'the document object UUID.')],
@@ -317,7 +300,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
  'zipzi.modeling.expression.ExpressionTargetUnspecified': {'children': ('zipzi.modeling.expression.ExpressionTargetUnspecified.__repr__',
                                                                         'zipzi.modeling.expression.ExpressionTargetUnspecified.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [],
                                                            'kind': 'type',
                                                            'signature': '()'},

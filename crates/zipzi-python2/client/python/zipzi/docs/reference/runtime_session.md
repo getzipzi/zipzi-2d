@@ -3,7 +3,7 @@
 
 ## Type references
 
-[Batch], [Edit], [Job], [ObjectSummary], [Page], [PageCursor], [Plan], [Receipt], [Runtime], [SaveReceipt], [SessionId], [SessionInfo], [Snapshot], [Source], [Preview], [MeshBinding], [SessionSubscription], [Mesh], [AddressSelector], [Capabilities], [ObservationBatch], [ObservationEstimate], [ObservationView], [ExportFormat], [ImportFormat], [ProjectReport], [ProjectRequest], [TextureSlot], [CollectionQuery], [ModelingQuery], [OwnedModelingRecords], [EditorContext], [SpatialQuery], [SpatialSamples], [PlannableOperation], [Parameter], [FieldAddress], [ObjectKind], [ObjectRef], [Image], [ImageLease], [Checks], [Result], [Summary]
+[Batch], [Edit], [Job], [ObjectSummary], [Page], [PageCursor], [Plan], [Receipt], [SaveReceipt], [SessionId], [SessionInfo], [Snapshot], [Source], [Preview], [MeshBinding], [SessionSubscription], [Mesh], [AddressSelector], [Capabilities], [ObservationBatch], [ObservationEstimate], [ObservationView], [ExportFormat], [ImportFormat], [ProjectReport], [ProjectRequest], [TextureSlot], [CollectionQuery], [ModelingQuery], [OwnedModelingRecords], [EditorContext], [SpatialQuery], [SpatialSamples], [PlannableOperation], [Parameter], [FieldAddress], [ObjectKind], [ObjectRef], [Image], [ImageLease], [Checks], [Result], [Summary]
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
@@ -28,6 +28,8 @@ One client binding to a resident document. Use runtime.sessions factories; alias
 
 Capture a field address with incarnation, context and field epochs. The returned handle owns a lease and must be closed; recreated IDs cannot revive an old address.
 
+Types: [AddressSelector], [FieldAddress].
+
 
 ## zipzi.Session.bindings
 
@@ -37,6 +39,8 @@ Capture a field address with incarnation, context and field epochs. The returned
 
 Read bindings through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
+Types: [Edit], [Session](#zipzisession).
+
 
 ## zipzi.Session.bindings.get
 
@@ -44,11 +48,13 @@ Read bindings through a Session or Edit. Session reads committed document conten
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[bindings.MeshBinding]`
 
-Read one owned value at an exact formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
 
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.bindings.get(id); value = snapshot.value.
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Snapshot], [Source], [MeshBinding].
 
 
 ## zipzi.Session.bindings.get_many
@@ -57,11 +63,13 @@ id is the stable document object ID, not a name. expected=None reads current con
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[bindings.MeshBinding]`
 
-Read all selected IDs atomically from one formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.bindings.get_many((id, id)).
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Batch], [Source], [MeshBinding].
 
 
 ## zipzi.Session.bindings.list
@@ -70,11 +78,13 @@ ids is copied before execution; requested order and duplicates are preserved. ex
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[bindings.Summary]`
 
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.bindings.list(name="Face", limit=128).
+See [Collection paging and recovery](common.md#collection-page).
+
+Types: [ObjectSummary], [Page], [PageCursor].
 
 
 ## zipzi.Session.capabilities
@@ -84,6 +94,8 @@ name=None disables filtering; a string matches exactly and case-sensitively, pre
 `(query: modeling.queries.CollectionQuery) -> Snapshot[modeling.addressing.Capabilities]`
 
 Query selected collection capabilities at the captured formal Source. Results explain available/unavailable/unsupported states and do not reserve future admission.
+
+Types: [Snapshot], [Capabilities], [CollectionQuery].
 
 
 ## zipzi.Session.close
@@ -103,6 +115,8 @@ keep their own leases. Confirmed close is cached/idempotent; a lost response
 must recover the original close and returns the same final metadata.
 Example: session.close(discard_modified=True) when discarding is intended.
 
+Types: [SessionInfo].
+
 
 ## zipzi.Session.detach
 
@@ -121,6 +135,8 @@ Release this client's binding and its references. Active work refuses detach; th
 
 Begin an explicit candidate with a history label. Reads see candidate changes; normal context exit commits and waits. Confirmed write failures require a new Edit and unknown outcomes require original-call recovery.
 
+Types: [Edit].
+
 
 ## zipzi.Session.editor_context
 
@@ -129,6 +145,8 @@ Begin an explicit candidate with a history label. Reads see candidate changes; n
 `() -> Snapshot[modeling.runtime.EditorContext | None]`
 
 Read an owned optional Editor context and exact formal Source. Local or non-Editor hosts can return None; no Editor object is exposed.
+
+Types: [Snapshot], [EditorContext].
 
 
 ## zipzi.Session.id
@@ -139,6 +157,8 @@ Read an owned optional Editor context and exact formal Source. Local or non-Edit
 
 Return cached Runtime-scoped identity without IO. Persistent object IDs belong to this session and do not substitute for a SessionId.
 
+Types: [SessionId].
+
 
 ## zipzi.Session.info
 
@@ -147,6 +167,8 @@ Return cached Runtime-scoped identity without IO. Persistent object IDs belong t
 `() -> SessionInfo`
 
 Read current version, modified state, history lengths, path and host state. Returns an owned value; a lost response recovers the original query.
+
+Types: [SessionInfo].
 
 
 ## zipzi.Session.meshes
@@ -157,6 +179,8 @@ Read current version, modified state, history lengths, path and host state. Retu
 
 Read meshes through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
+Types: [Edit], [Session](#zipzisession).
+
 
 ## zipzi.Session.meshes.get
 
@@ -164,11 +188,13 @@ Read meshes through a Session or Edit. Session reads committed document content;
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[meshes.Mesh]`
 
-Read one owned value at an exact formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
 
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.meshes.get(id); value = snapshot.value.
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Snapshot], [Source], [Mesh].
 
 
 ## zipzi.Session.meshes.get_many
@@ -177,11 +203,13 @@ id is the stable document object ID, not a name. expected=None reads current con
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[meshes.Mesh]`
 
-Read all selected IDs atomically from one formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.meshes.get_many((id, id)).
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Batch], [Source], [Mesh].
 
 
 ## zipzi.Session.meshes.list
@@ -190,11 +218,13 @@ ids is copied before execution; requested order and duplicates are preserved. ex
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[meshes.Summary]`
 
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.meshes.list(name="Face", limit=128).
+See [Collection paging and recovery](common.md#collection-page).
+
+Types: [ObjectSummary], [Page], [PageCursor].
 
 
 ## zipzi.Session.modeling
@@ -202,6 +232,8 @@ name=None disables filtering; a string matches exactly and case-sensitively, pre
 **Property**
 
 `session.modeling`
+
+Types: [Edit], [Session](#zipzisession).
 
 
 ## zipzi.Session.modeling.estimate_observation
@@ -212,6 +244,8 @@ name=None disables filtering; a string matches exactly and case-sensitively, pre
 
 Estimate an observation from metadata and return its exact Source, texture plan, logical bytes, workspace, static feasibility and current Runtime capacity. No images are decoded, no GPU is initialized and no Job or plan handle is reserved. Source freezes document/candidate identity, not external file bytes; declared identities remain unverified until capture. Use estimate.source as observe(expected=...) to reject document changes. Host and resource conditions are checked again on submission and execution.
 
+Types: [ObservationEstimate], [ObservationView].
+
 
 ## zipzi.Session.modeling.observe
 
@@ -220,6 +254,8 @@ Estimate an observation from metadata and return its exact Source, texture plan,
 `(poses: Sequence[Mapping[str, float]], view: observation.View, *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[observation.Batch]]'`
 
 Render explicit parameter poses within host observation limits from an exact frozen Source. The explicit Y-up model ROI preserves aspect ratio; frames contain GPU RGBA8, Rust-encoded PNG, view mapping, actual adapter and texture hashes. view.quality includes per-mesh geometry and sampled source-alpha coverage; view.topology enables wireframe, persistent vertex IDs, constraints and strain overlays with the same frozen mapping. Rendering resolves one immutable texture set per batch, never publishes history and does not abort an Edit on failure. Device initialization occurs on the worker; missing GPU produces a structured failure, independently of CPU operations. Runtime count/byte/device budgets apply. Recover a lost submission or result through its original Call; wait/close the Job to release its result slot.
+
+Types: [Job], [Snapshot], [Source], [ObservationBatch], [ObservationView].
 
 
 ## zipzi.Session.modeling.records
@@ -230,6 +266,8 @@ Render explicit parameter poses within host observation limits from an exact fro
 
 Read selected canonical records from one exact source without editing. query lists stable IDs per domain; empty lists request no payloads, while the ids directory still exposes collection identities. Returns an owned Snapshot; payload slots follow query order and None marks a missing requested ID. This synchronous query may reject count/byte budgets but does not abort an Edit. Recover a lost response through its original Call; results need no close. Example: result = session.modeling.records(modeling.ModelingQuery(meshes=(id,))).
 
+Types: [Snapshot], [ModelingQuery], [OwnedModelingRecords].
+
 
 ## zipzi.Session.modeling.sample
 
@@ -238,6 +276,8 @@ Read selected canonical records from one exact source without editing. query lis
 `(poses: Sequence[Mapping[str, float]], *, checks: sampling.Checks=sampling.Checks(), expected: Source | None=None) -> Snapshot[sampling.Result]`
 
 Synchronously evaluate CPU poses without editing or GPU work. poses is an ordered sequence of parameter-ID/value maps in each parameter domain; inputs are owned before execution. checks supplies authored validity diagnostics and, with quality=True, per-pose model-space mesh quality relative to this frozen source at default parameters; quality reports do not cover unsampled intervals. expected=None accepts current content while an explicit Source rejects changes atomically. Returns Snapshot[sampling.Result] with frames in pose order. Native count/byte/work budgets apply; query/diagnostic failure does not abort an Edit. A lost result recovers through its original multi-stage Call, never by silently resampling current content. Owned results need no close. Example: sampled = session.modeling.sample(({parameter_id: 0.5},)).
+
+Types: [Snapshot], [Source], [Checks], [Result].
 
 
 ## zipzi.Session.modeling.sample_async
@@ -248,6 +288,8 @@ Synchronously evaluate CPU poses without editing or GPU work. poses is an ordere
 
 Submit CPU evaluation of poses at the captured exact Source and return Job[Snapshot[sampling.Result]]. poses, checks and expected have the same semantics as sample; this named API always returns a Job rather than switching by input size. Native admission can reject work/count/byte budgets before acceptance. After an unknown submission recover the original Job instead of submitting another. Wait for the actual owned result and close/wait the Job to release its bounded result slot; JobTimeout keeps it pending. Example: with session.modeling.sample_async(({parameter_id: 0.5},)) as job: sampled = job.wait().
 
+Types: [Job], [Snapshot], [Source], [Checks], [Result].
+
 
 ## zipzi.Session.modeling.spatial
 
@@ -256,6 +298,8 @@ Submit CPU evaluation of poses at the captured exact Source and return Job[Snaps
 `(poses: Sequence[Mapping[str, float]], queries: Sequence[_spatial.Query], *, expected: Source | None=None) -> '_lifecycle.Job[Snapshot[_spatial.Batch]]'`
 
 Submit frozen CPU geometry queries for explicit parameter poses. Returns Job[Snapshot[spatial.Batch]] with effective parameters, exact Source, requested queries and ordered bounds/hit results. Coordinates are Y-up model units, never screen pixels; hidden geometry is explicitly selectable. Candidate reads do not publish or abort an Edit. A lost submission/result recovers the original call rather than querying newer content. No textures, masks, occlusion or GPU are used.
+
+Types: [Job], [Snapshot], [Source], [SpatialQuery], [SpatialSamples].
 
 
 ## zipzi.Session.parameters
@@ -266,6 +310,8 @@ Submit frozen CPU geometry queries for explicit parameter poses. Returns Job[Sna
 
 Read parameters through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
+Types: [Edit], [Session](#zipzisession).
+
 
 ## zipzi.Session.parameters.get
 
@@ -273,11 +319,13 @@ Read parameters through a Session or Edit. Session reads committed document cont
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[parameters.Parameter]`
 
-Read one owned value at an exact formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
 
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.parameters.get(id); value = snapshot.value.
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Snapshot], [Source], [Parameter].
 
 
 ## zipzi.Session.parameters.get_many
@@ -286,11 +334,13 @@ id is the stable document object ID, not a name. expected=None reads current con
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[parameters.Parameter]`
 
-Read all selected IDs atomically from one formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.parameters.get_many((id, id)).
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Batch], [Source], [Parameter].
 
 
 ## zipzi.Session.parameters.list
@@ -299,11 +349,13 @@ ids is copied before execution; requested order and duplicates are preserved. ex
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[parameters.Summary]`
 
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.parameters.list(name="Face", limit=128).
+See [Collection paging and recovery](common.md#collection-page).
+
+Types: [ObjectSummary], [Page], [PageCursor].
 
 
 ## zipzi.Session.plan
@@ -314,6 +366,8 @@ name=None disables filtering; a string matches exactly and case-sensitively, pre
 
 Plan a registered typed domain operation against the exact formal Source. Read cost/losses, apply through an Edit, then close the Plan. Planning failures do not abort another candidate.
 
+Types: [Plan], [PlannableOperation].
+
 
 ## zipzi.Session.plan_async
 
@@ -322,6 +376,8 @@ Plan a registered typed domain operation against the exact formal Source. Read c
 `(operation: ModelingPlanOperation) -> Job[plans.Plan]`
 
 Submit a registered expensive modeling plan at the captured Source. Returns Job[Plan]; wait before applying and close the resulting Plan. Input type determines this explicit Job API.
+
+Types: [Job], [Plan].
 
 
 ## zipzi.Session.preview
@@ -332,6 +388,8 @@ Submit a registered expensive modeling plan at the captured Source. Returns Job[
 
 Capture an independent frozen formal animation Preview. Close it explicitly; later edits never refresh it, and playback never changes document history.
 
+Types: [Source], [Preview].
+
 
 ## zipzi.Session.project
 
@@ -340,6 +398,8 @@ Capture an independent frozen formal animation Preview. Close it explicitly; lat
 `session.project`
 
 Host-side format and persistence operations. Every path is absolute on the selected execution host; IO returns explicit Jobs.
+
+Types: [Session](#zipzisession).
 
 
 ## zipzi.Session.project.diagnose
@@ -350,6 +410,8 @@ Host-side format and persistence operations. Every path is absolute on the selec
 
 Submit SDK project diagnostics without publishing edited model content. Returns Job[ProjectReport] with owned diagnostics; wait releases the result slot.
 
+Types: [Job], [ProjectReport].
+
 
 ## zipzi.Session.project.export
 
@@ -358,6 +420,8 @@ Submit SDK project diagnostics without publishing edited model content. Returns 
 `(path: Path, format: modeling.project.ExportFormat, *, name: str='model', object_id: str | None=None, allow_loss: bool=False, bake_animation: bool=False, auto_frame_rate: bool=False) -> Job[modeling.project.ProjectReport]`
 
 Submit a selected export to a host-absolute path. allow_loss, animation baking and frame-rate choices are explicit. Read report losses/published and wait for the durable IO outcome.
+
+Types: [Job], [ExportFormat], [ProjectReport].
 
 
 ## zipzi.Session.project.open
@@ -368,6 +432,8 @@ Submit a selected export to a host-absolute path. allow_loss, animation baking a
 
 Replace this session from an absolute host project path through an explicit Job. Successful replacement advances generation and invalidates old source-bound addresses/plans.
 
+Types: [Job], [ProjectReport].
+
 
 ## zipzi.Session.project.replace
 
@@ -376,6 +442,8 @@ Replace this session from an absolute host project path through an explicit Job.
 `(path: Path, format: modeling.project.ImportFormat, *, textures: tuple[modeling.project.TextureSlot, ...]=()) -> Job[modeling.project.ProjectReport]`
 
 Submit explicit format import to replace this session. Textures are host-absolute slots. Wait for the real report; generation changes only after confirmed publication.
+
+Types: [Job], [ImportFormat], [ProjectReport], [TextureSlot].
 
 
 ## zipzi.Session.project.run
@@ -386,6 +454,8 @@ Submit explicit format import to replace this session. Textures are host-absolut
 
 Submit one typed ProjectRequest and return Job[ProjectReport]. Input selects explicit format/IO policy; losses and notices belong to the report. Wait and verify before claiming publication.
 
+Types: [Job], [ProjectReport], [ProjectRequest].
+
 
 ## zipzi.Session.project.save
 
@@ -394,6 +464,8 @@ Submit one typed ProjectRequest and return Job[ProjectReport]. Input selects exp
 `(path: Path) -> Job[SaveReceipt]`
 
 Submit saving to host-absolute project folder path and return Job[SaveReceipt]. Wait for the receipt, then inspect durable and its before/after versions before claiming persistence. A client-side Path.exists is not evidence of host persistence. Recover an unknown submission/wait through its original Call; do not submit another save to probe its outcome. The Job owns a bounded result slot released by wait/close. Example: saved = session.project.save(absolute_folder).wait(); assert saved.durable.
+
+Types: [Job], [SaveReceipt].
 
 
 ## zipzi.Session.redo
@@ -404,6 +476,8 @@ Submit saving to host-absolute project folder path and return Job[SaveReceipt]. 
 
 Submit one formal history redo and return Job[Receipt]. Wait for the actual receipt. Cancelling or a no-op Edit preserves redo according to SDK history rules.
 
+Types: [Job], [Receipt].
+
 
 ## zipzi.Session.reference
 
@@ -412,6 +486,8 @@ Submit one formal history redo and return Job[Receipt]. Wait for the actual rece
 `(kind: references.ObjectKind, id: str) -> references.ObjectRef`
 
 Capture an SDK object reference for the declared kind and canonical UUID. Runtime validates session ownership and incarnation. Close the returned reference after use.
+
+Types: [ObjectKind], [ObjectRef].
 
 
 ## zipzi.Session.resources
@@ -422,6 +498,8 @@ Capture an SDK object reference for the declared kind and canonical UUID. Runtim
 
 Read resources through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
+Types: [Edit], [Session](#zipzisession).
+
 
 ## zipzi.Session.resources.get
 
@@ -429,11 +507,13 @@ Read resources through a Session or Edit. Session reads committed document conte
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[resources.Image]`
 
-Read one owned value at an exact formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
 
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.resources.get(id); value = snapshot.value.
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Snapshot], [Source], [Image].
 
 
 ## zipzi.Session.resources.get_many
@@ -442,11 +522,13 @@ id is the stable document object ID, not a name. expected=None reads current con
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[resources.Image]`
 
-Read all selected IDs atomically from one formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.resources.get_many((id, id)).
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Batch], [Source], [Image].
 
 
 ## zipzi.Session.resources.list
@@ -455,11 +537,13 @@ ids is copied before execution; requested order and duplicates are preserved. ex
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[resources.Summary]`
 
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.resources.list(name="Face", limit=128).
+See [Collection paging and recovery](common.md#collection-page).
+
+Types: [ObjectSummary], [Page], [PageCursor].
 
 
 ## zipzi.Session.resources.snapshot
@@ -470,6 +554,8 @@ name=None disables filtering; a string matches exactly and case-sensitively, pre
 
 Capture pixels of image id at this exact formal/candidate source into an independent ImageLease. This synchronous request can reject a missing image or lease/byte budget; queries do not abort an Edit. The lease pins pixels across replacement and history eviction: close it or use with. Its source is cached, and pixels() returns owned ImagePixels. Recover an unknown capture through its original Call. Example: with session.resources.snapshot(id) as lease: pixels = lease.pixels().
 
+Types: [ImageLease].
+
 
 ## zipzi.Session.scene
 
@@ -479,6 +565,8 @@ Capture pixels of image id at this exact formal/candidate source into an indepen
 
 Read scene through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.
 
+Types: [Edit], [Session](#zipzisession).
+
 
 ## zipzi.Session.scene.get
 
@@ -486,11 +574,13 @@ Read scene through a Session or Edit. Session reads committed document content; 
 
 `(id: str, *, expected: Source | None=None) -> Snapshot[scene.Summary]`
 
-Read one owned value at an exact formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read one value synchronously by stable document ID, not name. Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. Recover OutcomeUnknown through the original Call.
 
-id is the stable document object ID, not a name. expected=None reads current content; an explicit Source is checked atomically and stale sources raise STALE_SOURCE. Returns Snapshot[value] with the captured Source; reading its fields performs no IO. This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the original captured result; do not replace it with a fresh read. The result owns no host lease. Example: snapshot = session.scene.get(id); value = snapshot.value.
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Snapshot], [Source], [Summary].
 
 
 ## zipzi.Session.scene.get_many
@@ -499,11 +589,13 @@ id is the stable document object ID, not a name. expected=None reads current con
 
 `(ids: Sequence[str], *, expected: Source | None=None) -> Batch[scene.Summary]`
 
-Read all selected IDs atomically from one formal or candidate Source.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read selected stable IDs synchronously from one Source. Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-ids is copied before execution; requested order and duplicates are preserved. expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte budgets reject the whole read without partial values or an aborted Edit. This call is synchronous and has no host-owned result lease. Recover a lost response through its original Call to retain the captured source. Example: batch = session.scene.get_many((id, id)).
+See [Collection reads and recovery](common.md#collection-read).
+
+Types: [Batch], [Source], [Summary].
 
 
 ## zipzi.Session.scene.list
@@ -512,11 +604,13 @@ ids is copied before execution; requested order and duplicates are preserved. ex
 
 `(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) -> Page[scene.Summary]`
 
-Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.
+Reads committed Session content.
 
-Through Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.
+Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.
 
-name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging versions. A lost response recovers the original page, even after a peer publication. This is a synchronous query; read failure does not abort an Edit and the Page needs no close. Example: page = session.scene.list(name="Face", limit=128).
+See [Collection paging and recovery](common.md#collection-page).
+
+Types: [Page], [PageCursor], [Summary].
 
 
 ## zipzi.Session.show_window
@@ -542,6 +636,8 @@ Example: session.show_window().
 
 Capture SessionInfo and an independent exact event cursor. Poll explicit bounded pages and resync on gaps; subscribed metadata does not hold a model mirror.
 
+Types: [SessionSubscription].
+
 
 ## zipzi.Session.undo
 
@@ -550,6 +646,8 @@ Capture SessionInfo and an independent exact event cursor. Poll explicit bounded
 `() -> Job[Receipt]`
 
 Submit one formal history undo and return Job[Receipt]. Wait for confirmed content/version/history; conflicting or busy sessions reject without silently changing the target.
+
+Types: [Job], [Receipt].
 
 
 [Batch]: runtime.md#zipzibatch
@@ -560,7 +658,6 @@ Submit one formal history undo and return Job[Receipt]. Wait for confirmed conte
 [PageCursor]: runtime.md#zipzipagecursor
 [Plan]: runtime.md#zipziplan
 [Receipt]: runtime.md#zipzireceipt
-[Runtime]: runtime.md#zipziruntime
 [SaveReceipt]: runtime.md#zipzisavereceipt
 [SessionId]: runtime.md#zipzisessionid
 [SessionInfo]: runtime.md#zipzisessioninfo

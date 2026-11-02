@@ -15,7 +15,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.CreateImage': {'children': ('zipzi.resources.CreateImage.__repr__',
                                               'zipzi.resources.CreateImage.summary'),
                                  'documentation': '',
-                                 'example': 'docs/recipes.py',
+                                 'field_roles': (('kind', 'fixed-discriminator', "'create_image'"),),
                                  'fields': [('id',
                                              'Optional new object UUID; None allocates a fresh UUID in the SDK when '
                                              'creation executes.'),
@@ -26,17 +26,15 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                              'Client-owned prepared-image handle; creating an operation value does not '
                                              'transfer\n'
                                              'ownership.'),
-                                            ('kind',
-                                             'Fixed operation discriminator supplied by this value type; not a '
-                                             'constructor argument or a mutable object field.')],
+                                            ('kind', "Fixed value 'create_image' (read-only).")],
                                  'kind': 'type',
+                                 'rule_refs': ('fixed-discriminator',),
                                  'signature': '(name: str, image: resources.PreparedImage, id: str | None = None)',
                                  'type_refs': ('zipzi.PreparedImage',)},
  'zipzi.resources.CreateImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.CreateImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Image': {'children': ('zipzi.resources.Image.__repr__', 'zipzi.resources.Image.summary'),
                            'documentation': '',
-                           'example': 'docs/recipes.py',
                            'fields': [('id',
                                        'Stable document object ID used by references; it is distinct from the exported '
                                        'runtime_id.'),
@@ -63,7 +61,6 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                                  '\n'
                                                  'Close the lease or use its context manager when finished with the '
                                                  'pixels.',
-                                'example': 'docs/recipes.py',
                                 'fields': [('source',
                                             'Exact formal or candidate source captured with the pixels; reading this '
                                             'cached value performs no IO.')],
@@ -75,7 +72,6 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                                            'ImageLease without IO. Use with to close on exit; pending '
                                                            'work must recover on its original owner. Entering does not '
                                                            'refresh or rebind stale SDK identity.',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'callable',
                                           'signature': '() -> ImageLease',
@@ -89,7 +85,6 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.ImagePixels': {'children': ('zipzi.resources.ImagePixels.__repr__',
                                               'zipzi.resources.ImagePixels.summary'),
                                  'documentation': '',
-                                 'example': 'docs/recipes.py',
                                  'fields': [('width',
                                              'Image width in pixels; prepared image content requires a positive '
                                              'dimension.'),
@@ -115,7 +110,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.RenameImage': {'children': ('zipzi.resources.RenameImage.__repr__',
                                               'zipzi.resources.RenameImage.summary'),
                                  'documentation': '',
-                                 'example': 'docs/recipes.py',
+                                 'field_roles': (('kind', 'fixed-discriminator', "'rename_image'"),),
                                  'fields': [('id',
                                              'Stable document object ID used by references; it is distinct from the '
                                              'exported\n'
@@ -125,17 +120,16 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                              'names can change.'),
                                             ('expected_name',
                                              'Required current display name; None disables this name precondition.'),
-                                            ('kind',
-                                             'Fixed operation discriminator supplied by this value type; not a '
-                                             'constructor argument or a mutable object field.')],
+                                            ('kind', "Fixed value 'rename_image' (read-only).")],
                                  'kind': 'type',
+                                 'rule_refs': ('fixed-discriminator',),
                                  'signature': '(id: str, name: str, *, expected_name: str | None = None)'},
  'zipzi.resources.RenameImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.RenameImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.ReplaceImage': {'children': ('zipzi.resources.ReplaceImage.__repr__',
                                                'zipzi.resources.ReplaceImage.summary'),
                                   'documentation': '',
-                                  'example': 'docs/recipes.py',
+                                  'field_roles': (('kind', 'fixed-discriminator', "'replace_image'"),),
                                   'fields': [('id',
                                               'Stable document object ID used by references; it is distinct from the '
                                               'exported\n'
@@ -144,10 +138,9 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                                               'Client-owned prepared-image handle; creating an operation value does '
                                               'not transfer\n'
                                               'ownership.'),
-                                             ('kind',
-                                              'Fixed operation discriminator supplied by this value type; not a '
-                                              'constructor argument or a mutable object field.')],
+                                             ('kind', "Fixed value 'replace_image' (read-only).")],
                                   'kind': 'type',
+                                  'rule_refs': ('fixed-discriminator',),
                                   'signature': '(id: str, image: resources.PreparedImage)',
                                   'type_refs': ('zipzi.PreparedImage',)},
  'zipzi.resources.ReplaceImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -157,7 +150,6 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.Summary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Usage': {'children': ('zipzi.resources.Usage.__repr__', 'zipzi.resources.Usage.summary'),
                            'documentation': '',
-                           'example': 'docs/recipes.py',
                            'fields': [('previews',
                                        'Runtime-wide retained independent Preview leases; active Jobs can retain '
                                        'workspace after release.'),

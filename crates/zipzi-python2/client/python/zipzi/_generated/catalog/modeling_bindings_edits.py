@@ -2,7 +2,6 @@
 from .index import Entry
 DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'children': (),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [],
                                                   'kind': 'alias',
                                                   'signature': 'BindingAuthoringEditGrid | BindingAuthoringEditBlend | '
@@ -17,7 +16,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingAuthoringEditBlend': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditBlend.__repr__',
                                                                     'zipzi.modeling.bindings.BindingAuthoringEditBlend.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('value',
                                                                    'Typed intent for BlendShape authoring; apply/plan '
                                                                    'it against a Session/Edit source\n'
@@ -30,7 +28,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingAuthoringEditGrid': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditGrid.__repr__',
                                                                    'zipzi.modeling.bindings.BindingAuthoringEditGrid.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Typed intent for ordinary binding-grid edits; '
                                                                   'apply/plan it against a Session/Edit\n'
@@ -43,7 +40,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingAuthoringEditMeshGrid': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditMeshGrid.__repr__',
                                                                        'zipzi.modeling.bindings.BindingAuthoringEditMeshGrid.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('value',
                                                                       'Typed intent for mesh binding grid edits; '
                                                                       'apply/plan it against a Session/Edit\n'
@@ -56,7 +52,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingAuthoringEditParameterRange': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditParameterRange.__repr__',
                                                                              'zipzi.modeling.bindings.BindingAuthoringEditParameterRange.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('value',
                                                                             'Typed intent for parameter range '
                                                                             'conversion; apply/plan it against a '
@@ -70,7 +65,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingAuthoringEditReparent': {'children': ('zipzi.modeling.bindings.BindingAuthoringEditReparent.__repr__',
                                                                        'zipzi.modeling.bindings.BindingAuthoringEditReparent.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('value',
                                                                       'Typed intent for deformation reparenting; '
                                                                       'apply/plan it against a Session/Edit\n'
@@ -82,7 +76,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingAuthoringEditReparent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridEdit': {'children': (),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'BindingGridEditDelete | BindingGridEditCreate | '
@@ -93,7 +86,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingGridEditCreate': {'children': ('zipzi.modeling.bindings.BindingGridEditCreate.__repr__',
                                                                 'zipzi.modeling.bindings.BindingGridEditCreate.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('id',
                                                                'New stable UUID for this object; it must not conflict '
                                                                'with an existing identity.'),
@@ -110,7 +102,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                 'zipzi.modeling.bindings.BindingGridEditDelete.summary'),
                                                    'documentation': 'Explicitly discard owned shapes and return to the '
                                                                     'unchanged base target.',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('owner',
                                                                'Stable owner ID for the addressed drawing group, '
                                                                'collection or reference selection.')],
@@ -121,7 +112,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingGridEditEdit': {'children': ('zipzi.modeling.bindings.BindingGridEditEdit.__repr__',
                                                               'zipzi.modeling.bindings.BindingGridEditEdit.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('owner',
                                                              'Stable owner ID for the addressed drawing group, '
                                                              'collection or reference selection.'),
@@ -135,7 +125,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BindingGridEditEdit.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendAuthoringEdit': {'children': (),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'alias',
                                                 'signature': 'BlendAuthoringEditCreateTable | '
@@ -152,7 +141,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BlendAuthoringEditConstraint': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditConstraint.__repr__',
                                                                        'zipzi.modeling.bindings.BlendAuthoringEditConstraint.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('id',
                                                                       'Stable document object ID used by references; '
                                                                       'it is distinct from the exported\n'
@@ -172,7 +160,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BlendAuthoringEditCreateBinding': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditCreateBinding.__repr__',
                                                                           'zipzi.modeling.bindings.BlendAuthoringEditCreateBinding.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('id',
                                                                          'New stable UUID for this object; it must not '
                                                                          'conflict with an existing identity.'),
@@ -195,7 +182,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint.__repr__',
                                                                              'zipzi.modeling.bindings.BlendAuthoringEditCreateConstraint.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('constraint',
                                                                             'Complete BlendShape constraint with its '
                                                                             'driving parameter and weighted samples.')],
@@ -207,7 +193,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BlendAuthoringEditCreateTable': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditCreateTable.__repr__',
                                                                         'zipzi.modeling.bindings.BlendAuthoringEditCreateTable.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('table',
                                                                        'Complete BlendShape key table with stable '
                                                                        'sample IDs and an explicit base sample.')],
@@ -219,7 +204,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable.__repr__',
                                                                             'zipzi.modeling.bindings.BlendAuthoringEditSetBindingTable.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('id',
                                                                            'Stable document object ID used by '
                                                                            'references; it is distinct from the '
@@ -239,7 +223,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BlendAuthoringEditTable': {'children': ('zipzi.modeling.bindings.BlendAuthoringEditTable.__repr__',
                                                                   'zipzi.modeling.bindings.BlendAuthoringEditTable.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable document object ID used by references; it is '
                                                                  'distinct from the exported\n'
@@ -254,7 +237,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.BlendAuthoringEditTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.MeshGridEdit': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'MeshGridEditCreate | MeshGridEditAddAxis | '
@@ -271,7 +253,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.MeshGridEditAddAxis': {'children': ('zipzi.modeling.bindings.MeshGridEditAddAxis.__repr__',
                                                               'zipzi.modeling.bindings.MeshGridEditAddAxis.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('binding_id',
                                                              'Stable binding ID owning the addressed axes or '
                                                              'keyforms.'),
@@ -287,7 +268,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.MeshGridEditCreate': {'children': ('zipzi.modeling.bindings.MeshGridEditCreate.__repr__',
                                                              'zipzi.modeling.bindings.MeshGridEditCreate.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'New stable UUID for this object; it must not conflict '
                                                             'with an existing identity.'),
@@ -300,7 +280,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.MeshGridEditDeleteSample': {'children': ('zipzi.modeling.bindings.MeshGridEditDeleteSample.__repr__',
                                                                    'zipzi.modeling.bindings.MeshGridEditDeleteSample.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('binding_id',
                                                                   'Stable binding ID owning the addressed axes or '
                                                                   'keyforms.'),
@@ -317,7 +296,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.MeshGridEditInsertSample': {'children': ('zipzi.modeling.bindings.MeshGridEditInsertSample.__repr__',
                                                                    'zipzi.modeling.bindings.MeshGridEditInsertSample.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('binding_id',
                                                                   'Stable binding ID owning the addressed axes or '
                                                                   'keyforms.'),
@@ -334,7 +312,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.MeshGridEditMoveSample': {'children': ('zipzi.modeling.bindings.MeshGridEditMoveSample.__repr__',
                                                                  'zipzi.modeling.bindings.MeshGridEditMoveSample.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('binding_id',
                                                                 'Stable binding ID owning the addressed axes or '
                                                                 'keyforms.'),
@@ -354,7 +331,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.MeshGridEditRemoveAxis': {'children': ('zipzi.modeling.bindings.MeshGridEditRemoveAxis.__repr__',
                                                                  'zipzi.modeling.bindings.MeshGridEditRemoveAxis.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('binding_id',
                                                                 'Stable binding ID owning the addressed axes or '
                                                                 'keyforms.'),
@@ -373,7 +349,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
  'zipzi.modeling.bindings.MeshGridEditReorderAxes': {'children': ('zipzi.modeling.bindings.MeshGridEditReorderAxes.__repr__',
                                                                   'zipzi.modeling.bindings.MeshGridEditReorderAxes.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('binding_id',
                                                                  'Stable binding ID owning the addressed axes or '
                                                                  'keyforms.'),

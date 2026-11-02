@@ -16,6 +16,8 @@ Canonical expression modeling values.
 
 `(*, id: str, name: str, file_type: str | None = None, fade_in: float | None = None, fade_out: float | None = None, entries: tuple[ExpressionEntry, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
+Types: [ExpressionEntry](#zipzimodelingexpressionexpressionentry).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -46,6 +48,8 @@ cannot silently change the meaning of those fields.
 `ExpressionEditCreate | ExpressionEditCreateEntry | ExpressionEditPatchEntry | ExpressionEditMoveEntries | ExpressionEditDuplicateEntries | ExpressionEditDeleteEntries | ExpressionEditDuplicate | ExpressionEditDelete | ExpressionEditReorder`
 
 All positions use stable entry IDs; None appends to the destination.
+
+Types: [ExpressionEditCreate](#zipzimodelingexpressionexpressioneditcreate), [ExpressionEditCreateEntry](#zipzimodelingexpressionexpressioneditcreateentry), [ExpressionEditDelete](#zipzimodelingexpressionexpressioneditdelete), [ExpressionEditDeleteEntries](#zipzimodelingexpressionexpressioneditdeleteentries), [ExpressionEditDuplicate](#zipzimodelingexpressionexpressioneditduplicate), [ExpressionEditDuplicateEntries](#zipzimodelingexpressionexpressioneditduplicateentries), [ExpressionEditMoveEntries](#zipzimodelingexpressionexpressioneditmoveentries), [ExpressionEditPatchEntry](#zipzimodelingexpressionexpressioneditpatchentry), [ExpressionEditReorder](#zipzimodelingexpressionexpressioneditreorder).
 
 
 ## zipzi.modeling.expression.ExpressionEditCreate
@@ -135,6 +139,8 @@ All positions use stable entry IDs; None appends to the destination.
 
 `(*, id: str, expected: ExpressionEntryFields, fields: ExpressionEntryFields)`
 
+Types: [ExpressionEntryFields](#zipzimodelingexpressionexpressionentryfields).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -157,6 +163,8 @@ All positions use stable entry IDs; None appends to the destination.
 
 `(*, id: str, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None, extensions: _Mapping[str, ExtensionValue])`
 
+Types: [ExpressionBlend](#zipzimodelingexpressionexpressionblend), [ExpressionTarget](#zipzimodelingexpressionexpressiontarget).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -171,6 +179,8 @@ All positions use stable entry IDs; None appends to the destination.
 
 `(*, target: ExpressionTarget, value: float, blend: ExpressionBlend | None = None)`
 
+Types: [ExpressionBlend](#zipzimodelingexpressionexpressionblend), [ExpressionTarget](#zipzimodelingexpressionexpressiontarget).
+
 **Fields**
 
 - `target`: Typed target reference; unresolved imported runtime labels remain explicit.
@@ -182,6 +192,8 @@ All positions use stable entry IDs; None appends to the destination.
 **Alias**
 
 `ExpressionTargetUnspecified | ExpressionTargetResolved | ExpressionTargetUnresolved`
+
+Types: [ExpressionTargetResolved](#zipzimodelingexpressionexpressiontargetresolved), [ExpressionTargetUnresolved](#zipzimodelingexpressionexpressiontargetunresolved), [ExpressionTargetUnspecified](#zipzimodelingexpressionexpressiontargetunspecified).
 
 
 ## zipzi.modeling.expression.ExpressionTargetResolved

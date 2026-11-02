@@ -25,7 +25,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                          'A hit is a geometric candidate, not proof that the mesh '
                                                          'painted a visible\n'
                                                          'pixel. `part_path` and `part_names` run from root to leaf.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('mesh_id', 'Stable authoring mesh ID.'),
                                                    ('name', 'Authoring mesh display name.'),
                                                    ('part_path', 'Ancestor Part IDs, from root to leaf.'),
@@ -54,7 +53,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                        'zipzi.modeling.spatial.GeometryQuery.summary'),
                                           'documentation': 'Mesh candidates for a model-space point, ordered by '
                                                            'descending draw order.',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('hits', 'Candidates retained after applying `max_candidates`.'),
                                                      ('total', 'Number of candidates before applying the limit.'),
                                                      ('truncated',
@@ -72,7 +70,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                           'These geometric bounds can extend outside the canvas and do '
                                                           'not account for\n'
                                                           'textures, masks, or occlusion.',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('mesh_ids',
                                                      'Resolved mesh IDs in authoring order, including meshes filtered '
                                                      'from the bounds.'),
@@ -98,7 +95,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
                                                           '\n'
                                                           'A Part selects every descendant mesh, including meshes in '
                                                           'nested Parts.',
-                                         'example': 'docs/recipes.py',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'ObjectTargetMesh | ObjectTargetPart',
@@ -107,7 +103,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.ObjectTargetMesh': {'children': ('zipzi.modeling.spatial.ObjectTargetMesh.__repr__',
                                                           'zipzi.modeling.spatial.ObjectTargetMesh.summary'),
                                              'documentation': 'Select exactly one mesh.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('value', 'Persistent authoring mesh UUID.')],
                                              'kind': 'type',
                                              'signature': '(*, value: str)'},
@@ -116,7 +111,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.ObjectTargetPart': {'children': ('zipzi.modeling.spatial.ObjectTargetPart.__repr__',
                                                           'zipzi.modeling.spatial.ObjectTargetPart.summary'),
                                              'documentation': 'Select all descendant meshes of a Part.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('value', 'Persistent Part UUID selecting descendant meshes.')],
                                              'kind': 'type',
                                              'signature': '(*, value: str)'},
@@ -125,7 +119,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialFrame': {'children': ('zipzi.modeling.spatial.SpatialFrame.__repr__',
                                                       'zipzi.modeling.spatial.SpatialFrame.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('parameters',
                                                      'Effective evaluated parameter values keyed by document UUID, '
                                                      'including defaults/clamps.'),
@@ -141,7 +134,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialQuery': {'children': (),
                                          'documentation': 'CPU geometric queries; masks, textures and occlusion are '
                                                           'not pixel-tested.',
-                                         'example': 'docs/recipes.py',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'SpatialQueryBounds | SpatialQueryHits',
@@ -150,7 +142,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialQueryBounds': {'children': ('zipzi.modeling.spatial.SpatialQueryBounds.__repr__',
                                                             'zipzi.modeling.spatial.SpatialQueryBounds.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('targets',
                                                            'Mesh/Part UUID selectors; an empty selection selects no '
                                                            'meshes.'),
@@ -166,7 +157,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialQueryHits': {'children': ('zipzi.modeling.spatial.SpatialQueryHits.__repr__',
                                                           'zipzi.modeling.spatial.SpatialQueryHits.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('point',
                                                          'Finite XY point in evaluated Y-up model coordinates, not '
                                                          'screen pixels.'),
@@ -186,7 +176,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialQueryHits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.spatial.SpatialResult': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'SpatialResultBounds | SpatialResultHits',
@@ -195,7 +184,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialResultBounds': {'children': ('zipzi.modeling.spatial.SpatialResultBounds.__repr__',
                                                              'zipzi.modeling.spatial.SpatialResultBounds.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Bounds and resolved mesh IDs for the corresponding '
                                                             'selector request.')],
@@ -207,7 +195,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialResultHits': {'children': ('zipzi.modeling.spatial.SpatialResultHits.__repr__',
                                                            'zipzi.modeling.spatial.SpatialResultHits.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Geometric candidates in SDK order, including total and '
                                                           'truncation metadata.')],
@@ -219,7 +206,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.SpatialSamples': {'children': ('zipzi.modeling.spatial.SpatialSamples.__repr__',
                                                         'zipzi.modeling.spatial.SpatialSamples.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('version',
                                                        'Exact SDK version of the immutable formal or candidate '
                                                        'snapshot.'),
@@ -243,7 +229,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.spatial': {'children': ('zipzi.modelin
  'zipzi.modeling.spatial.TriangleHit': {'children': ('zipzi.modeling.spatial.TriangleHit.__repr__',
                                                      'zipzi.modeling.spatial.TriangleHit.summary'),
                                         'documentation': 'One evaluated triangle containing the query point.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('triangle_index',
                                                     "The triangle's zero-based position in the drawable's index "
                                                     'buffer.'),

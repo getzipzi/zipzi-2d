@@ -33,6 +33,41 @@ GEOMETRY = meshes.Geometry((42, 7, 99), ((0., 0.), (1., 0.), (0., 1.)),
     ((0., 0.), (1., 0.), (0., 1.)), ((42, 7, 99),))
 
 class PythonSdk(unittest.TestCase):
+    def test_generated_reference_pilot_examples_on_both_backends(self):
+        """Execute the installed source snippets with Local/Connected CPU fixtures."""
+        for mode in ('local','connected'):
+            with self.subTest(mode=mode), self.runtime(mode) as runtime:
+                session=runtime.sessions.create()
+                with session.edit('Parameter fixture') as edit:
+                    parameter_id=edit.parameters.create(parameters.ParameterSpec('Before',-1.,1.,0.,runtime_id='ParamAngle',repeat=True))
+                before=session.parameters.get(parameter_id).value
+                with session.edit('Reference examples') as edit:
+                    scope={'edit':edit,'meshes':meshes,'parameters':parameters,'geometry':GEOMETRY,'parameter_id':parameter_id}
+                    for collection,method in ((edit.meshes,'create'),(edit.meshes,'rename'),(edit.meshes,'set_positions'),(edit.parameters,'patch')):
+                        doc=getattr(collection,method).__doc__
+                        assert doc is not None
+                        snippet=doc.partition('Example: ')[2].split('\n\n',1)[0].removesuffix('.')
+                        self.assertTrue(snippet,method)
+                        if method=='create':
+                            exec(compile(snippet,'<reference '+method+'>','exec'),scope)
+                            self.assertIsInstance(scope['mesh_id'],str)
+                        else:
+                            result=eval(compile(snippet,'<reference '+method+'>','eval'),scope)
+                            self.assertIsInstance(result,zipzi.WriteResult)
+                    mesh_id=scope['mesh_id']
+                    candidate=edit.meshes.get(mesh_id)
+                    self.assertEqual(candidate.value.name,'Face')
+                    self.assertEqual(candidate.value.geometry.positions[1],(2.,0.))
+                    self.assertIsNotNone(candidate.source.edit)
+                    self.assertEqual(session.meshes.list().items,())
+                    self.assertEqual(session.parameters.get(parameter_id).value.name,'Before')
+                    patched=edit.parameters.get(parameter_id).value
+                    self.assertEqual(patched,replace(before,name='Angle'))
+                formal=session.meshes.get(mesh_id)
+                self.assertEqual(formal.value,candidate.value)
+                self.assertIsNone(formal.source.edit)
+                self.assertEqual(session.parameters.get(parameter_id).value,patched)
+
     def test_deformer_original_history_on_both_backends(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode), self.runtime(mode) as runtime:

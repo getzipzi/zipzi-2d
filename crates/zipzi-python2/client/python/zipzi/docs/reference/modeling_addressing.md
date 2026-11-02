@@ -20,6 +20,8 @@ Canonical addressing modeling values.
 
 `(*, inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, load_content: CapabilityState)`
 
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
+
 **Fields**
 
 - `inspect`: Current capability to read the current typed record; inspect its state/reason before
@@ -38,6 +40,8 @@ before invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -62,12 +66,16 @@ invoking the operation.
 
 `CapabilitiesScene | CapabilitiesOrganization | CapabilitiesBinding | CapabilitiesContent | CapabilitiesReferences | CapabilitiesResource | CapabilitiesAttachment | CapabilitiesCollection | CapabilitiesDocument | CapabilitiesMotion | CapabilitiesExpression | CapabilitiesPhysics | CapabilitiesPose`
 
+Types: [CapabilitiesAttachment](#zipzimodelingaddressingcapabilitiesattachment), [CapabilitiesBinding](#zipzimodelingaddressingcapabilitiesbinding), [CapabilitiesCollection](#zipzimodelingaddressingcapabilitiescollection), [CapabilitiesContent](#zipzimodelingaddressingcapabilitiescontent), [CapabilitiesDocument](#zipzimodelingaddressingcapabilitiesdocument), [CapabilitiesExpression](#zipzimodelingaddressingcapabilitiesexpression), [CapabilitiesMotion](#zipzimodelingaddressingcapabilitiesmotion), [CapabilitiesOrganization](#zipzimodelingaddressingcapabilitiesorganization), [CapabilitiesPhysics](#zipzimodelingaddressingcapabilitiesphysics), [CapabilitiesPose](#zipzimodelingaddressingcapabilitiespose), [CapabilitiesReferences](#zipzimodelingaddressingcapabilitiesreferences), [CapabilitiesResource](#zipzimodelingaddressingcapabilitiesresource), [CapabilitiesScene](#zipzimodelingaddressingcapabilitiesscene).
+
 
 ## zipzi.modeling.addressing.CapabilitiesAttachment
 
 **Type**
 
 `(*, value: AttachmentCapabilities)`
+
+Types: [AttachmentCapabilities](#zipzimodelingaddressingattachmentcapabilities).
 
 **Fields**
 
@@ -80,6 +88,8 @@ not infer support from method presence.
 
 `(*, value: BindingCapabilities)`
 
+Types: [BindingCapabilities](#zipzimodelingaddressingbindingcapabilities).
+
 **Fields**
 
 - `value`: Current parameter bindings and grid conversions capability states and reasons; do
@@ -90,6 +100,8 @@ not infer support from method presence.
 **Type**
 
 `(*, value: CollectionCapabilities)`
+
+Types: [CollectionCapabilities](#zipzimodelingaddressingcollectioncapabilities).
 
 **Fields**
 
@@ -102,6 +114,8 @@ presence.
 
 `(*, value: SceneContentCapabilities)`
 
+Types: [SceneContentCapabilities](#zipzimodelingaddressingscenecontentcapabilities).
+
 **Fields**
 
 - `value`: Current geometry and topology content capability states and reasons; do not infer
@@ -112,6 +126,8 @@ support from method presence.
 **Type**
 
 `(*, value: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -124,6 +140,8 @@ not infer support from method presence.
 
 `(*, value: ExpressionCapabilities)`
 
+Types: [ExpressionCapabilities](#zipzimodelingaddressingexpressioncapabilities).
+
 **Fields**
 
 - `value`: Current native expression eligibility; host Preview support is advertised separately.
@@ -134,6 +152,8 @@ not infer support from method presence.
 
 `(*, value: MotionCapabilities)`
 
+Types: [MotionCapabilities](#zipzimodelingaddressingmotioncapabilities).
+
 **Fields**
 
 - `value`: Current native motion eligibility; host Preview support is advertised separately.
@@ -143,6 +163,8 @@ not infer support from method presence.
 **Type**
 
 `(*, value: OrganizationCapabilities)`
+
+Types: [OrganizationCapabilities](#zipzimodelingaddressingorganizationcapabilities).
 
 **Fields**
 
@@ -155,6 +177,8 @@ infer support from method presence.
 
 `(*, value: PhysicsCapabilities)`
 
+Types: [PhysicsCapabilities](#zipzimodelingaddressingphysicscapabilities).
+
 **Fields**
 
 - `value`: Current native physics eligibility; host Preview support is advertised separately.
@@ -165,6 +189,8 @@ infer support from method presence.
 
 `(*, value: PoseCapabilities)`
 
+Types: [PoseCapabilities](#zipzimodelingaddressingposecapabilities).
+
 **Fields**
 
 - `value`: Current native pose eligibility; host Preview support is advertised separately.
@@ -174,6 +200,8 @@ infer support from method presence.
 **Type**
 
 `(*, value: ReferenceCapabilities)`
+
+Types: [ReferenceCapabilities](#zipzimodelingaddressingreferencecapabilities).
 
 **Fields**
 
@@ -186,6 +214,8 @@ infer support from method presence.
 
 `(*, value: ResourceCapabilities)`
 
+Types: [ResourceCapabilities](#zipzimodelingaddressingresourcecapabilities).
+
 **Fields**
 
 - `value`: Current image asset metadata and references capability states and reasons; do not
@@ -196,6 +226,8 @@ infer support from method presence.
 **Type**
 
 `(*, value: SceneCapabilities)`
+
+Types: [SceneCapabilities](#zipzimodelingaddressingscenecapabilities).
 
 **Fields**
 
@@ -225,6 +257,8 @@ infer support from method presence.
 **Alias**
 
 `CapabilityStateAvailable | CapabilityStateUnsupported | CapabilityStateUnavailable`
+
+Types: [CapabilityStateAvailable](#zipzimodelingaddressingcapabilitystateavailable), [CapabilityStateUnavailable](#zipzimodelingaddressingcapabilitystateunavailable), [CapabilityStateUnsupported](#zipzimodelingaddressingcapabilitystateunsupported).
 
 
 ## zipzi.modeling.addressing.CapabilityStateAvailable
@@ -260,6 +294,8 @@ infer support from method presence.
 
 `(*, create: CapabilityState, move_into: CapabilityState, reorder: CapabilityState)`
 
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
+
 **Fields**
 
 - `create`: Current capability to create objects in this collection; inspect its state/reason before
@@ -274,6 +310,8 @@ invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, create_entry: CapabilityState, patch: CapabilityState, move_entry: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -291,6 +329,8 @@ invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, preview: CapabilityState, create_child: CapabilityState, reorder: CapabilityState, repair: CapabilityState, edit_content: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -310,6 +350,8 @@ invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -336,6 +378,8 @@ state/reason before invoking the operation.
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, preview: CapabilityState)`
 
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
+
 **Fields**
 
 - `inspect`: Read this object while its identity/context remains valid.
@@ -353,6 +397,8 @@ state/reason before invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, move_object: CapabilityState, reorder: CapabilityState, repair: CapabilityState, dissolve: CapabilityState, preview: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -372,6 +418,8 @@ state/reason before invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, create_child: CapabilityState, move_object: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -395,6 +443,8 @@ state/reason before invoking the operation.
 **Alias**
 
 `ReferenceCollectionModelParameterGroups | ReferenceCollectionModelHitAreas | ReferenceCollectionCdiCombinedSets | ReferenceCollectionModelParameterMembers | ReferenceCollectionCdiCombinedMembers`
+
+Types: [ReferenceCollectionCdiCombinedMembers](#zipzimodelingaddressingreferencecollectioncdicombinedmembers), [ReferenceCollectionCdiCombinedSets](#zipzimodelingaddressingreferencecollectioncdicombinedsets), [ReferenceCollectionModelHitAreas](#zipzimodelingaddressingreferencecollectionmodelhitareas), [ReferenceCollectionModelParameterGroups](#zipzimodelingaddressingreferencecollectionmodelparametergroups), [ReferenceCollectionModelParameterMembers](#zipzimodelingaddressingreferencecollectionmodelparametermembers).
 
 
 ## zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers
@@ -444,6 +494,8 @@ state/reason before invoking the operation.
 
 `ReferenceEditCreateModelParameterGroup | ReferenceEditCreateModelHitArea | ReferenceEditCreateCdiCombinedSet | ReferenceEditCreateMember | ReferenceEditPatch | ReferenceEditMove | ReferenceEditDuplicate | ReferenceEditDelete | ReferenceEditDissolve | ReferenceEditReplaceSelection`
 
+Types: [ReferenceEditCreateCdiCombinedSet](#zipzimodelingaddressingreferenceeditcreatecdicombinedset), [ReferenceEditCreateMember](#zipzimodelingaddressingreferenceeditcreatemember), [ReferenceEditCreateModelHitArea](#zipzimodelingaddressingreferenceeditcreatemodelhitarea), [ReferenceEditCreateModelParameterGroup](#zipzimodelingaddressingreferenceeditcreatemodelparametergroup), [ReferenceEditDelete](#zipzimodelingaddressingreferenceeditdelete), [ReferenceEditDissolve](#zipzimodelingaddressingreferenceeditdissolve), [ReferenceEditDuplicate](#zipzimodelingaddressingreferenceeditduplicate), [ReferenceEditMove](#zipzimodelingaddressingreferenceeditmove), [ReferenceEditPatch](#zipzimodelingaddressingreferenceeditpatch), [ReferenceEditReplaceSelection](#zipzimodelingaddressingreferenceeditreplaceselection).
+
 
 ## zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet
 
@@ -462,6 +514,8 @@ the selected destination.
 **Type**
 
 `(*, id: str, collection: ReferenceCollection, before: str | None = None)`
+
+Types: [ReferenceCollection](#zipzimodelingaddressingreferencecollection).
 
 **Fields**
 
@@ -528,6 +582,8 @@ the selected destination.
 
 `(*, ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
 
+Types: [ReferenceCollection](#zipzimodelingaddressingreferencecollection).
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
@@ -542,6 +598,8 @@ the selected destination.
 **Type**
 
 `(*, ids: tuple[str, ...], destination: ReferenceCollection, before: str | None = None)`
+
+Types: [ReferenceCollection](#zipzimodelingaddressingreferencecollection).
 
 **Fields**
 
@@ -558,6 +616,8 @@ the selected destination.
 
 `(*, id: str, expected: ReferenceFields, fields: ReferenceFields)`
 
+Types: [ReferenceFields](#zipzimodelingaddressingreferencefields).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -573,6 +633,8 @@ kind.
 
 `(*, owner: str, field: ReferenceSelectionField, expected: tuple[str, ...], targets: tuple[str, ...])`
 
+Types: [ReferenceSelectionField](#zipzimodelingaddressingreferenceselectionfield).
+
 **Fields**
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
@@ -586,6 +648,8 @@ kind.
 
 `(*, id: str, target: CdiParameterRef)`
 
+Types: [CdiParameterRef].
+
 **Fields**
 
 - `id`: Stable UUID of this reference entry; not the identity of its target.
@@ -597,6 +661,8 @@ remains independent of the target.
 **Type**
 
 `(*, id: str, target: ModelTargetRef)`
+
+Types: [ModelTargetRef].
 
 **Fields**
 
@@ -610,12 +676,16 @@ remains independent of the target.
 
 `ReferenceFieldsModelParameterGroup | ReferenceFieldsModelHitArea | ReferenceFieldsModelParameterMember | ReferenceFieldsCdiCombinedMember`
 
+Types: [ReferenceFieldsCdiCombinedMember](#zipzimodelingaddressingreferencefieldscdicombinedmember), [ReferenceFieldsModelHitArea](#zipzimodelingaddressingreferencefieldsmodelhitarea), [ReferenceFieldsModelParameterGroup](#zipzimodelingaddressingreferencefieldsmodelparametergroup), [ReferenceFieldsModelParameterMember](#zipzimodelingaddressingreferencefieldsmodelparametermember).
+
 
 ## zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember
 
 **Type**
 
 `(*, target: CdiParameterRef)`
+
+Types: [CdiParameterRef].
 
 **Fields**
 
@@ -627,6 +697,8 @@ remains independent of the target.
 **Type**
 
 `(*, name: str, mesh: ModelTargetRef)`
+
+Types: [ModelTargetRef].
 
 **Fields**
 
@@ -649,6 +721,8 @@ remains independent of the target.
 
 `(*, target: ModelTargetRef)`
 
+Types: [ModelTargetRef].
+
 **Fields**
 
 - `target`: Resolved document target or preserved unresolved runtime identifier; entry identity
@@ -670,6 +744,8 @@ remains independent of the target.
 
 `(*, inspect: CapabilityState, patch: CapabilityState, load_content: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, reorder: CapabilityState)`
 
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
+
 **Fields**
 
 - `inspect`: Current capability to read the current typed record; inspect its state/reason before
@@ -690,6 +766,8 @@ invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, patch: CapabilityState, move_object: CapabilityState, reparent: CapabilityState, reorder: CapabilityState, duplicate: CapabilityState, delete: CapabilityState, dissolve: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 
@@ -715,6 +793,8 @@ state/reason before invoking the operation.
 **Type**
 
 `(*, inspect: CapabilityState, edit: CapabilityState, topology: CapabilityState)`
+
+Types: [CapabilityState](#zipzimodelingaddressingcapabilitystate).
 
 **Fields**
 

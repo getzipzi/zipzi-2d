@@ -2,7 +2,6 @@
 from .index import Entry
 DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'AddressPatchScene | AddressPatchDrawingRange | '
@@ -29,7 +28,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchAttachmentPath': {'children': ('zipzi.modeling.addressing.AddressPatchAttachmentPath.__repr__',
                                                                        'zipzi.modeling.addressing.AddressPatchAttachmentPath.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('path',
                                                                       'Normalized package-relative attachment path '
                                                                       'using forward slashes; absolute paths\n'
@@ -41,7 +39,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchBinding': {'children': ('zipzi.modeling.addressing.AddressPatchBinding.__repr__',
                                                                 'zipzi.modeling.addressing.AddressPatchBinding.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('patch',
                                                                'Typed patch for the addressed object; apply through '
                                                                'the Edit to mutate candidate state.')],
@@ -53,7 +50,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchContent': {'children': ('zipzi.modeling.addressing.AddressPatchContent.__repr__',
                                                                 'zipzi.modeling.addressing.AddressPatchContent.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Scalar value in the referenced parameter domain.')],
                                                    'kind': 'type',
@@ -64,7 +60,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchDocument': {'children': ('zipzi.modeling.addressing.AddressPatchDocument.__repr__',
                                                                  'zipzi.modeling.addressing.AddressPatchDocument.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Scalar value in the referenced parameter domain.')],
                                                     'kind': 'type',
@@ -75,7 +70,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchDrawingRange': {'children': ('zipzi.modeling.addressing.AddressPatchDrawingRange.__repr__',
                                                                      'zipzi.modeling.addressing.AddressPatchDrawingRange.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('range',
                                                                     'Inclusive lower and upper drawing-order bounds, '
                                                                     'in that order.')],
@@ -86,7 +80,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchExpressionEntry': {'children': ('zipzi.modeling.addressing.AddressPatchExpressionEntry.__repr__',
                                                                         'zipzi.modeling.addressing.AddressPatchExpressionEntry.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('fields',
                                                                        'Replacement expression target/value/blend '
                                                                        'fields, under captured owner epochs.')],
@@ -98,7 +91,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchMotionRegistration': {'children': ('zipzi.modeling.addressing.AddressPatchMotionRegistration.__repr__',
                                                                            'zipzi.modeling.addressing.AddressPatchMotionRegistration.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('entry',
                                                                           'Complete replacement registration with its '
                                                                           'existing stable identity.')],
@@ -110,7 +102,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchOrganization': {'children': ('zipzi.modeling.addressing.AddressPatchOrganization.__repr__',
                                                                      'zipzi.modeling.addressing.AddressPatchOrganization.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('intent',
                                                                     'Typed domain edit executed against the candidate; '
                                                                     'constructing this intent does not\n'
@@ -123,7 +114,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchPhysics': {'children': ('zipzi.modeling.addressing.AddressPatchPhysics.__repr__',
                                                                 'zipzi.modeling.addressing.AddressPatchPhysics.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('changes',
                                                                'Atomic property changes targeting only the captured '
                                                                'Physics entity.')],
@@ -135,7 +125,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchPose': {'children': ('zipzi.modeling.addressing.AddressPatchPose.__repr__',
                                                              'zipzi.modeling.addressing.AddressPatchPose.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('fields',
                                                             'Replacement fields for the captured Pose '
                                                             'singleton/group/entry/link.')],
@@ -147,7 +136,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchReference': {'children': ('zipzi.modeling.addressing.AddressPatchReference.__repr__',
                                                                   'zipzi.modeling.addressing.AddressPatchReference.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('fields',
                                                                  'Typed replacement metadata fields; their variant '
                                                                  'must match the addressed reference\n'
@@ -160,7 +148,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchResourceName': {'children': ('zipzi.modeling.addressing.AddressPatchResourceName.__repr__',
                                                                      'zipzi.modeling.addressing.AddressPatchResourceName.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('name',
                                                                     'Human-readable display name; use the stable ID '
                                                                     'for identity because names can change.')],
@@ -171,7 +158,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchScene': {'children': ('zipzi.modeling.addressing.AddressPatchScene.__repr__',
                                                               'zipzi.modeling.addressing.AddressPatchScene.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Scalar value in the referenced parameter domain.'),
                                                             ('clear_glue_pairs',
@@ -185,7 +171,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressPatch': {'children':
  'zipzi.modeling.addressing.AddressPatchSelection': {'children': ('zipzi.modeling.addressing.AddressPatchSelection.__repr__',
                                                                   'zipzi.modeling.addressing.AddressPatchSelection.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('targets',
                                                                  'Complete replacement ordered target-ID selection; an '
                                                                  'empty list explicitly clears it.')],

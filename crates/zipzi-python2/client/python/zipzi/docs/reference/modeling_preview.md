@@ -20,6 +20,8 @@ Canonical preview modeling values.
 
 `(*, texture_report: ObservationTextureReport | None = None, view: ObservationView | None = None, queries: tuple[SpatialQuery, ...], sequence: int, frames: tuple[PreviewFrame, ...])`
 
+Types: [ObservationTextureReport], [ObservationView], [PreviewFrame](#zipzimodelingpreviewpreviewframe), [SpatialQuery].
+
 **Fields**
 
 - `texture_report`: Verified texture content for a View; None for CPU-only sampling.
@@ -33,6 +35,8 @@ Canonical preview modeling values.
 **Alias**
 
 `PreviewCommandSetParameter | PreviewCommandScheduleMotion | PreviewCommandScheduleRegistration | PreviewCommandScheduleExpression | PreviewCommandScheduleParameter | PreviewCommandSetPhysics | PreviewCommandReset`
+
+Types: [PreviewCommandReset](#zipzimodelingpreviewpreviewcommandreset), [PreviewCommandScheduleExpression](#zipzimodelingpreviewpreviewcommandscheduleexpression), [PreviewCommandScheduleMotion](#zipzimodelingpreviewpreviewcommandschedulemotion), [PreviewCommandScheduleParameter](#zipzimodelingpreviewpreviewcommandscheduleparameter), [PreviewCommandScheduleRegistration](#zipzimodelingpreviewpreviewcommandscheduleregistration), [PreviewCommandSetParameter](#zipzimodelingpreviewpreviewcommandsetparameter), [PreviewCommandSetPhysics](#zipzimodelingpreviewpreviewcommandsetphysics).
 
 
 ## zipzi.modeling.preview.PreviewCommandReset
@@ -114,6 +118,8 @@ Canonical preview modeling values.
 **Type**
 
 `(*, observation: ObservationImage | None = None, spatial: tuple[SpatialResult, ...], preview_id: int, sequence: int, index: int, motion: MotionSnapshot, geometry: DrawableFrame | None = None)`
+
+Types: [MotionSnapshot], [ObservationImage], [DrawableFrame], [SpatialResult].
 
 **Fields**
 

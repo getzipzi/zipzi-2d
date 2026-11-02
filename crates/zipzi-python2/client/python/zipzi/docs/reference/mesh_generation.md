@@ -38,6 +38,8 @@ Controls for one interior fill strategy, validated by the Editor host.
 
 Retained controls for each available interior fill strategy.
 
+Types: [FillParameters](#zipzimesh_generationfillparameters).
+
 **Fields**
 
 - `poisson`: Controls shared by graded Poisson and simple triangle fill.
@@ -85,6 +87,8 @@ Generation does not edit the document. apply() checks the captured Source and
 lets the host validate complete binding/BlendShape/Glue replacements. It never
 silently drops dependencies. Inspect the Edit candidate before committing.
 
+Types: [Source], [Geometry], [Mesh], [GeometrySpace].
+
 **Fields**
 
 - `source`: Exact document Source captured before generation; later edits invalidate the draft.
@@ -104,6 +108,8 @@ Supply the complete existing dependency records with resampled shapes.
 Omitted dependencies are rejected by the host. vertex_mapping explicitly
 maps every old ID to a new ID or None; new IDs do not imply correspondence.
 
+Types: [Edit], [WriteResult], [BlendShapeBinding], [MeshBinding], [Glue].
+
 
 ## zipzi.mesh_generation.MeshSettings
 
@@ -112,6 +118,8 @@ maps every old ID to a new ID or None; new IDs do not imply correspondence.
 `(edge_mode: Literal['single', 'double', 'triple'] = 'single', edge_spacing: float = 6.0, edge_width: float = 10.0, outer_margin: float = 1.0, fill_algorithm: Literal['graded_poisson', 'simple_triangles', 'adaptive_quadtree', 'triangle_fractal', 'contour_paving'] = 'graded_poisson', interior_spacing: float = 40.0, fill_parameters: FillSettings = <factory>, suppress_boundary_diagonals: bool = False, alpha_threshold: int = 8, wrap: float = 0.0, unit_scale: float = 1.0, detail: float = 1.0, clip_to_image: bool = True, max_vertices: int = 65534)`
 
 Editor mesh generation controls; lengths use mesh units unless stated.
+
+Types: [FillSettings](#zipzimesh_generationfillsettings).
 
 **Fields**
 
@@ -147,6 +155,8 @@ Host errors distinguish INVALID_ARGUMENT, MESH_EMPTY_FOREGROUND,
 MESH_GENERATION_LIMIT and MESH_GENERATION_FAILED. The latter means the
 contour/triangulation pipeline failed, rather than invalid settings.
 
+Types: [Runtime], [MeshSettings](#zipzimesh_generationmeshsettings), [Geometry].
+
 
 ## zipzi.mesh_generation.generate_for_mesh
 
@@ -160,6 +170,8 @@ Requires a connected Editor and an affine UV-to-authoring map. Validates all
 source vertices, including deformed meshes; rejects non-affine mappings rather
 than guessing. The draft retains original metadata and authoring space.
 
+Types: [Session], [MeshDraft](#zipzimesh_generationmeshdraft), [MeshSettings](#zipzimesh_generationmeshsettings).
+
 
 ## zipzi.mesh_generation.inspect_geometry
 
@@ -172,6 +184,8 @@ Inspect generated/mapped geometry without an Edit, Runtime or GPU.
 Coverage uses a grid with step ceil(max(width,height)/256), matching observation
 sampling. At most 4194304 source pixels, 131068 triangles and 8 million triangle
 scanlines are accepted. Malformed/nonfinite geometry raises ValueError.
+
+Types: [GeometryQuality](#zipzimesh_generationgeometryquality), [Geometry].
 
 
 [Edit]: runtime_edit.md#zipziedit

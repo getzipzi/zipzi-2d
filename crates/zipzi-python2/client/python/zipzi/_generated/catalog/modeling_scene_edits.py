@@ -2,7 +2,6 @@
 from .index import Entry
 DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': (),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'AttachmentEditCreate | AttachmentEditReplace | '
@@ -20,7 +19,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditCreate': {'children': ('zipzi.modeling.scene.AttachmentEditCreate.__repr__',
                                                             'zipzi.modeling.scene.AttachmentEditCreate.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'New stable UUID for this object; it must not conflict with '
                                                            'an existing identity.'),
@@ -35,7 +33,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditDelete': {'children': ('zipzi.modeling.scene.AttachmentEditDelete.__repr__',
                                                             'zipzi.modeling.scene.AttachmentEditDelete.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable document object ID used by references; it is '
                                                            'distinct from the exported\n'
@@ -47,7 +44,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditDeleteWithReplacement': {'children': ('zipzi.modeling.scene.AttachmentEditDeleteWithReplacement.__repr__',
                                                                            'zipzi.modeling.scene.AttachmentEditDeleteWithReplacement.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('id',
                                                                           'Stable document object ID used by '
                                                                           'references; it is distinct from the '
@@ -65,7 +61,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditDuplicate': {'children': ('zipzi.modeling.scene.AttachmentEditDuplicate.__repr__',
                                                                'zipzi.modeling.scene.AttachmentEditDuplicate.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('source',
                                                               'Stable ID of the existing source object to duplicate, '
                                                               'not a filesystem path.'),
@@ -83,7 +78,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditReorder': {'children': ('zipzi.modeling.scene.AttachmentEditReorder.__repr__',
                                                              'zipzi.modeling.scene.AttachmentEditReorder.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('ids',
                                                             'Ordered stable object IDs selected for this operation; '
                                                             'visible names and row numbers\n'
@@ -99,7 +93,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditReplace': {'children': ('zipzi.modeling.scene.AttachmentEditReplace.__repr__',
                                                              'zipzi.modeling.scene.AttachmentEditReplace.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('expected',
                                                             'Exact current field value used as an optimistic '
                                                             'precondition; stale values reject\n'
@@ -116,7 +109,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditSetSound': {'children': ('zipzi.modeling.scene.AttachmentEditSetSound.__repr__',
                                                               'zipzi.modeling.scene.AttachmentEditSetSound.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('registration',
                                                              'Motion-registration ID whose sound attachment is being '
                                                              'changed.'),
@@ -132,7 +124,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditSetUserData': {'children': ('zipzi.modeling.scene.AttachmentEditSetUserData.__repr__',
                                                                  'zipzi.modeling.scene.AttachmentEditSetUserData.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('reference',
                                                                 'Resolved attachment identity or explicitly unresolved '
                                                                 'package path.')],
@@ -143,7 +134,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.AttachmentEditSetUserData.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationEdit': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'OrganizationEditCreateParameter | OrganizationEditCreateGroup '
@@ -162,7 +152,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditCreateGroup': {'children': ('zipzi.modeling.scene.OrganizationEditCreateGroup.__repr__',
                                                                    'zipzi.modeling.scene.OrganizationEditCreateGroup.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('group',
                                                                   'Complete CDI parameter-group metadata record to '
                                                                   'create or replace.'),
@@ -179,7 +168,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditCreateParameter': {'children': ('zipzi.modeling.scene.OrganizationEditCreateParameter.__repr__',
                                                                        'zipzi.modeling.scene.OrganizationEditCreateParameter.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('parameter',
                                                                       'Complete parameter record with identity, finite '
                                                                       'range, default and runtime behavior.'),
@@ -200,7 +188,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditCreatePart': {'children': ('zipzi.modeling.scene.OrganizationEditCreatePart.__repr__',
                                                                   'zipzi.modeling.scene.OrganizationEditCreatePart.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('part',
                                                                  'Complete Part record, including identity, hierarchy '
                                                                  'context and enabled/drawing state.'),
@@ -216,7 +203,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditDelete': {'children': ('zipzi.modeling.scene.OrganizationEditDelete.__repr__',
                                                               'zipzi.modeling.scene.OrganizationEditDelete.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('ids',
                                                              'Ordered stable object IDs selected for this operation; '
                                                              'visible names and row numbers\n'
@@ -234,7 +220,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditDuplicate': {'children': ('zipzi.modeling.scene.OrganizationEditDuplicate.__repr__',
                                                                  'zipzi.modeling.scene.OrganizationEditDuplicate.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('ids',
                                                                 'Ordered stable object IDs selected for this '
                                                                 'operation; visible names and row numbers\n'
@@ -256,7 +241,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditMove': {'children': ('zipzi.modeling.scene.OrganizationEditMove.__repr__',
                                                             'zipzi.modeling.scene.OrganizationEditMove.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('ids',
                                                            'Ordered stable object IDs selected for this operation; '
                                                            'visible names and row numbers\n'
@@ -278,7 +262,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditPatchGroup': {'children': ('zipzi.modeling.scene.OrganizationEditPatchGroup.__repr__',
                                                                   'zipzi.modeling.scene.OrganizationEditPatchGroup.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('expected',
                                                                  'Exact current field value used as an optimistic '
                                                                  'precondition; stale values reject\n'
@@ -295,7 +278,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.OrganizationEditSetParameterGroup': {'children': ('zipzi.modeling.scene.OrganizationEditSetParameterGroup.__repr__',
                                                                          'zipzi.modeling.scene.OrganizationEditSetParameterGroup.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('parameter_id',
                                                                         'Stable document parameter ID, not its '
                                                                         'exported runtime identifier.'),
@@ -311,7 +293,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.ReparentEdit': {'children': ('zipzi.modeling.scene.ReparentEdit.__repr__',
                                                     'zipzi.modeling.scene.ReparentEdit.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('sources',
                                                    'Stable IDs of objects to reparent; source order is retained in the '
                                                    'planned selection.'),
@@ -347,7 +328,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.ReparentEdit.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentEdit': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'SceneContentEditDeformerOriginal | '
@@ -407,7 +387,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditDeformerOriginal': {'children': ('zipzi.modeling.scene.SceneContentEditDeformerOriginal.__repr__',
                                                                         'zipzi.modeling.scene.SceneContentEditDeformerOriginal.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('transform_id',
                                                                        'Stable Warp or Rotation transform ID.'),
                                                                       ('target',
@@ -431,7 +410,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditDeleteGluePairs': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteGluePairs.__repr__',
                                                                        'zipzi.modeling.scene.SceneContentEditDeleteGluePairs.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('glue_id',
                                                                       'Stable Glue object ID owning the affected '
                                                                       'vertex pairs.'),
@@ -446,7 +424,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditDeleteMeshVertices': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteMeshVertices.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentEditDeleteMeshVertices.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('mesh_id',
                                                                          'Stable ID of the target mesh in this '
                                                                          'document.'),
@@ -466,7 +443,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms.__repr__',
                                                                                'zipzi.modeling.scene.SceneContentEditDeleteOffscreenKeyforms.summary'),
                                                                   'documentation': '',
-                                                                  'example': 'docs/recipes.py',
                                                                   'fields': [('offscreen_id',
                                                                               'Stable Offscreen object ID; not a '
                                                                               'texture asset ID.'),
@@ -490,7 +466,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditDeleteTriangles': {'children': ('zipzi.modeling.scene.SceneContentEditDeleteTriangles.__repr__',
                                                                        'zipzi.modeling.scene.SceneContentEditDeleteTriangles.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('mesh_id',
                                                                       'Stable ID of the target mesh in this document.'),
                                                                      ('slots',
@@ -503,7 +478,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditDuplicateGluePairs': {'children': ('zipzi.modeling.scene.SceneContentEditDuplicateGluePairs.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentEditDuplicateGluePairs.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('glue_id',
                                                                          'Stable Glue object ID owning the affected '
                                                                          'vertex pairs.'),
@@ -523,7 +497,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditDuplicateOffscreenKeyforms': {'children': ('zipzi.modeling.scene.SceneContentEditDuplicateOffscreenKeyforms.__repr__',
                                                                                   'zipzi.modeling.scene.SceneContentEditDuplicateOffscreenKeyforms.summary'),
                                                                      'documentation': '',
-                                                                     'example': 'docs/recipes.py',
                                                                      'fields': [('offscreen_id',
                                                                                  'Stable Offscreen object ID; not a '
                                                                                  'texture asset ID.'),
@@ -547,7 +520,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditInsertGluePair': {'children': ('zipzi.modeling.scene.SceneContentEditInsertGluePair.__repr__',
                                                                       'zipzi.modeling.scene.SceneContentEditInsertGluePair.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('glue_id',
                                                                      'Stable Glue object ID owning the affected vertex '
                                                                      'pairs.'),
@@ -568,7 +540,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditInsertMeshVertices': {'children': ('zipzi.modeling.scene.SceneContentEditInsertMeshVertices.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentEditInsertMeshVertices.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('mesh_id',
                                                                          'Stable ID of the target mesh in this '
                                                                          'document.'),
@@ -590,7 +561,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditInsertOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentEditInsertOffscreenKeyform.__repr__',
                                                                               'zipzi.modeling.scene.SceneContentEditInsertOffscreenKeyform.summary'),
                                                                  'documentation': '',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [('offscreen_id',
                                                                              'Stable Offscreen object ID; not a '
                                                                              'texture asset ID.'),
@@ -612,7 +582,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditInsertTriangle': {'children': ('zipzi.modeling.scene.SceneContentEditInsertTriangle.__repr__',
                                                                       'zipzi.modeling.scene.SceneContentEditInsertTriangle.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('mesh_id',
                                                                      'Stable ID of the target mesh in this document.'),
                                                                     ('vertices',
@@ -630,7 +599,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditMeshVertices': {'children': ('zipzi.modeling.scene.SceneContentEditMeshVertices.__repr__',
                                                                     'zipzi.modeling.scene.SceneContentEditMeshVertices.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('mesh_id',
                                                                    'Stable ID of the target mesh in this document.'),
                                                                   ('target',
@@ -651,7 +619,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditMoveGluePairs': {'children': ('zipzi.modeling.scene.SceneContentEditMoveGluePairs.__repr__',
                                                                      'zipzi.modeling.scene.SceneContentEditMoveGluePairs.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('glue_id',
                                                                     'Stable Glue object ID owning the affected vertex '
                                                                     'pairs.'),
@@ -671,7 +638,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditPatchGluePair': {'children': ('zipzi.modeling.scene.SceneContentEditPatchGluePair.__repr__',
                                                                      'zipzi.modeling.scene.SceneContentEditPatchGluePair.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('glue_id',
                                                                     'Stable Glue object ID owning the affected vertex '
                                                                     'pairs.'),
@@ -687,7 +653,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform.__repr__',
                                                                              'zipzi.modeling.scene.SceneContentEditPatchOffscreenKeyform.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('offscreen_id',
                                                                             'Stable Offscreen object ID; not a texture '
                                                                             'asset ID.'),
@@ -707,7 +672,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditPatchTriangle': {'children': ('zipzi.modeling.scene.SceneContentEditPatchTriangle.__repr__',
                                                                      'zipzi.modeling.scene.SceneContentEditPatchTriangle.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('mesh_id',
                                                                     'Stable ID of the target mesh in this document.'),
                                                                    ('slot',
@@ -724,7 +688,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditReorderMeshVertices': {'children': ('zipzi.modeling.scene.SceneContentEditReorderMeshVertices.__repr__',
                                                                            'zipzi.modeling.scene.SceneContentEditReorderMeshVertices.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('mesh_id',
                                                                           'Stable ID of the target mesh in this '
                                                                           'document.'),
@@ -739,7 +702,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms': {'children': ('zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms.__repr__',
                                                                                 'zipzi.modeling.scene.SceneContentEditReorderOffscreenKeyforms.summary'),
                                                                    'documentation': '',
-                                                                   'example': 'docs/recipes.py',
                                                                    'fields': [('offscreen_id',
                                                                                'Stable Offscreen object ID; not a '
                                                                                'texture asset ID.'),
@@ -756,7 +718,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditReplaceTriangles': {'children': ('zipzi.modeling.scene.SceneContentEditReplaceTriangles.__repr__',
                                                                         'zipzi.modeling.scene.SceneContentEditReplaceTriangles.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('mesh_id',
                                                                        'Stable ID of the target mesh in this '
                                                                        'document.'),
@@ -772,7 +733,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditResizeWarp': {'children': ('zipzi.modeling.scene.SceneContentEditResizeWarp.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentEditResizeWarp.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('transform_id',
                                                                  'Stable deformation-transform ID in this document.'),
                                                                 ('rows',
@@ -792,7 +752,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditRotationKeepChildren': {'children': ('zipzi.modeling.scene.SceneContentEditRotationKeepChildren.__repr__',
                                                                             'zipzi.modeling.scene.SceneContentEditRotationKeepChildren.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('transform_id',
                                                                            'Stable ID of a static Rotation. Driven '
                                                                            'maps and ancestors are unsupported.'),
@@ -810,7 +769,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping': {'children': ('zipzi.modeling.scene.SceneContentEditSetOffscreenMapping.__repr__',
                                                                            'zipzi.modeling.scene.SceneContentEditSetOffscreenMapping.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('offscreen_id',
                                                                           'Stable Offscreen object ID; not a texture '
                                                                           'asset ID.'),
@@ -826,7 +784,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditTransferGluePairs': {'children': ('zipzi.modeling.scene.SceneContentEditTransferGluePairs.__repr__',
                                                                          'zipzi.modeling.scene.SceneContentEditTransferGluePairs.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('glue_id',
                                                                         'Stable Glue object ID owning the affected '
                                                                         'vertex pairs.'),
@@ -852,7 +809,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditWarpAuthoring': {'children': ('zipzi.modeling.scene.SceneContentEditWarpAuthoring.__repr__',
                                                                      'zipzi.modeling.scene.SceneContentEditWarpAuthoring.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('transform_id', 'Stable Warp transform ID.'),
                                                                    ('settings',
                                                                     'Object editing settings. An explicit grid refits '
@@ -867,7 +823,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditWarpBezier': {'children': ('zipzi.modeling.scene.SceneContentEditWarpBezier.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentEditWarpBezier.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('transform_id',
                                                                  'Stable deformation-transform ID in this document.'),
                                                                 ('target',
@@ -887,7 +842,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditWarpBezierControls': {'children': ('zipzi.modeling.scene.SceneContentEditWarpBezierControls.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentEditWarpBezierControls.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('transform_id', 'Stable Warp transform ID.'),
                                                                         ('target',
                                                                          'Explicit base or ordinary stored shape; '
@@ -907,7 +861,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditWarpKeepChildren': {'children': ('zipzi.modeling.scene.SceneContentEditWarpKeepChildren.__repr__',
                                                                         'zipzi.modeling.scene.SceneContentEditWarpKeepChildren.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('transform_id',
                                                                        'Stable ID of a static Warp. Driven Warp maps '
                                                                        'are explicitly unsupported.'),
@@ -924,7 +877,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditWarpPoints': {'children': ('zipzi.modeling.scene.SceneContentEditWarpPoints.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentEditWarpPoints.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('transform_id',
                                                                  'Stable deformation-transform ID in this document.'),
                                                                 ('target',
@@ -950,7 +902,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditWarpShape': {'children': ('zipzi.modeling.scene.SceneContentEditWarpShape.__repr__',
                                                                  'zipzi.modeling.scene.SceneContentEditWarpShape.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('transform_id', 'Stable Warp transform ID.'),
                                                                ('target',
                                                                 'Explicit base or ordinary stored shape; other stored '
@@ -967,7 +918,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneContentEditWarpShape.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneEdit': {'children': (),
                                     'documentation': '',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'alias',
                                     'signature': 'SceneEditCreate | SceneEditPatch | SceneEditMove | SceneEditReparent '
@@ -988,7 +938,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditCreate': {'children': ('zipzi.modeling.scene.SceneEditCreate.__repr__',
                                                        'zipzi.modeling.scene.SceneEditCreate.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('id',
                                                       'New stable UUID for this object; it must not conflict with an '
                                                       'existing identity.'),
@@ -1025,7 +974,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditDelete': {'children': ('zipzi.modeling.scene.SceneEditDelete.__repr__',
                                                        'zipzi.modeling.scene.SceneEditDelete.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('ids',
                                                       'Ordered stable object IDs selected for this operation; visible '
                                                       'names and row numbers\n'
@@ -1043,7 +991,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditDissolveDrawingGroup': {'children': ('zipzi.modeling.scene.SceneEditDissolveDrawingGroup.__repr__',
                                                                      'zipzi.modeling.scene.SceneEditDissolveDrawingGroup.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('owner',
                                                                     'Stable owner ID for the addressed drawing group, '
                                                                     'collection or reference selection.')],
@@ -1054,7 +1001,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditDuplicate': {'children': ('zipzi.modeling.scene.SceneEditDuplicate.__repr__',
                                                           'zipzi.modeling.scene.SceneEditDuplicate.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('ids',
                                                          'Ordered stable object IDs selected for this operation; '
                                                          'visible names and row numbers\n'
@@ -1083,7 +1029,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditDuplicateDrawingGroup': {'children': ('zipzi.modeling.scene.SceneEditDuplicateDrawingGroup.__repr__',
                                                                       'zipzi.modeling.scene.SceneEditDuplicateDrawingGroup.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('source',
                                                                      'Exact formal or candidate source captured for '
                                                                      'this result; later host changes do not\n'
@@ -1099,7 +1044,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditEnsureDrawingGroup': {'children': ('zipzi.modeling.scene.SceneEditEnsureDrawingGroup.__repr__',
                                                                    'zipzi.modeling.scene.SceneEditEnsureDrawingGroup.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('owner',
                                                                   'Stable owner ID for the addressed drawing group, '
                                                                   'collection or reference selection.'),
@@ -1118,7 +1062,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditMove': {'children': ('zipzi.modeling.scene.SceneEditMove.__repr__',
                                                      'zipzi.modeling.scene.SceneEditMove.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('ids',
                                                     'Ordered stable object IDs selected for this operation; visible '
                                                     'names and row numbers\n'
@@ -1140,7 +1083,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditPatch': {'children': ('zipzi.modeling.scene.SceneEditPatch.__repr__',
                                                       'zipzi.modeling.scene.SceneEditPatch.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
                                                      'from the exported\n'
@@ -1162,7 +1104,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditReparent': {'children': ('zipzi.modeling.scene.SceneEditReparent.__repr__',
                                                          'zipzi.modeling.scene.SceneEditReparent.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('edit',
                                                         'Edit candidate handle; None selects formal document state.')],
                                             'kind': 'type',
@@ -1173,7 +1114,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditSetDrawingRange': {'children': ('zipzi.modeling.scene.SceneEditSetDrawingRange.__repr__',
                                                                 'zipzi.modeling.scene.SceneEditSetDrawingRange.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('owner',
                                                                'Stable owner ID for the addressed drawing group, '
                                                                'collection or reference selection.'),
@@ -1192,7 +1132,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
  'zipzi.modeling.scene.SceneEditTransferOffscreen': {'children': ('zipzi.modeling.scene.SceneEditTransferOffscreen.__repr__',
                                                                   'zipzi.modeling.scene.SceneEditTransferOffscreen.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable document object ID used by references; it is '
                                                                  'distinct from the exported\n'

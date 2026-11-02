@@ -45,6 +45,8 @@ Canonical commands modeling values.
 
 `ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandDeletion | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandMotion | ModelingCommandExpression | ModelingCommandPhysics | ModelingCommandPose | ModelingCommandCreateMotion | ModelingCommandReplaceMotion | ModelingCommandCreateExpression | ModelingCommandReplaceExpression | ModelingCommandSetPhysics | ModelingCommandSetPose | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology | ModelingCommandManualMesh`
 
+Types: [ModelingCommandAttachment](#zipzimodelingcommandsmodelingcommandattachment), [ModelingCommandBinding](#zipzimodelingcommandsmodelingcommandbinding), [ModelingCommandContent](#zipzimodelingcommandsmodelingcommandcontent), [ModelingCommandCreateAsset](#zipzimodelingcommandsmodelingcommandcreateasset), [ModelingCommandCreateBinding](#zipzimodelingcommandsmodelingcommandcreatebinding), [ModelingCommandCreateBlendBinding](#zipzimodelingcommandsmodelingcommandcreateblendbinding), [ModelingCommandCreateBlendConstraint](#zipzimodelingcommandsmodelingcommandcreateblendconstraint), [ModelingCommandCreateBlendKeyTable](#zipzimodelingcommandsmodelingcommandcreateblendkeytable), [ModelingCommandCreateExpression](#zipzimodelingcommandsmodelingcommandcreateexpression), [ModelingCommandCreateGlue](#zipzimodelingcommandsmodelingcommandcreateglue), [ModelingCommandCreateMesh](#zipzimodelingcommandsmodelingcommandcreatemesh), [ModelingCommandCreateMotion](#zipzimodelingcommandsmodelingcommandcreatemotion), [ModelingCommandCreateOffscreen](#zipzimodelingcommandsmodelingcommandcreateoffscreen), [ModelingCommandCreateParameter](#zipzimodelingcommandsmodelingcommandcreateparameter), [ModelingCommandCreatePart](#zipzimodelingcommandsmodelingcommandcreatepart), [ModelingCommandCreateSceneBinding](#zipzimodelingcommandsmodelingcommandcreatescenebinding), [ModelingCommandCreateTransform](#zipzimodelingcommandsmodelingcommandcreatetransform), [ModelingCommandDeletion](#zipzimodelingcommandsmodelingcommanddeletion), [ModelingCommandDocument](#zipzimodelingcommandsmodelingcommanddocument), [ModelingCommandEraseObject](#zipzimodelingcommandsmodelingcommanderaseobject), [ModelingCommandExpression](#zipzimodelingcommandsmodelingcommandexpression), [ModelingCommandManualMesh](#zipzimodelingcommandsmodelingcommandmanualmesh), [ModelingCommandMotion](#zipzimodelingcommandsmodelingcommandmotion), [ModelingCommandOrganization](#zipzimodelingcommandsmodelingcommandorganization), [ModelingCommandPhysics](#zipzimodelingcommandsmodelingcommandphysics), [ModelingCommandPose](#zipzimodelingcommandsmodelingcommandpose), [ModelingCommandReferences](#zipzimodelingcommandsmodelingcommandreferences), [ModelingCommandRemeshRectangleGrid](#zipzimodelingcommandsmodelingcommandremeshrectanglegrid), [ModelingCommandRenameMesh](#zipzimodelingcommandsmodelingcommandrenamemesh), [ModelingCommandReplaceAsset](#zipzimodelingcommandsmodelingcommandreplaceasset), [ModelingCommandReplaceBinding](#zipzimodelingcommandsmodelingcommandreplacebinding), [ModelingCommandReplaceBlendBinding](#zipzimodelingcommandsmodelingcommandreplaceblendbinding), [ModelingCommandReplaceBlendConstraint](#zipzimodelingcommandsmodelingcommandreplaceblendconstraint), [ModelingCommandReplaceBlendKeyTable](#zipzimodelingcommandsmodelingcommandreplaceblendkeytable), [ModelingCommandReplaceDrawOrderGroups](#zipzimodelingcommandsmodelingcommandreplacedrawordergroups), [ModelingCommandReplaceEditorState](#zipzimodelingcommandsmodelingcommandreplaceeditorstate), [ModelingCommandReplaceExpression](#zipzimodelingcommandsmodelingcommandreplaceexpression), [ModelingCommandReplaceGlue](#zipzimodelingcommandsmodelingcommandreplaceglue), [ModelingCommandReplaceHierarchyOrder](#zipzimodelingcommandsmodelingcommandreplacehierarchyorder), [ModelingCommandReplaceMesh](#zipzimodelingcommandsmodelingcommandreplacemesh), [ModelingCommandReplaceModelSetup](#zipzimodelingcommandsmodelingcommandreplacemodelsetup), [ModelingCommandReplaceMotion](#zipzimodelingcommandsmodelingcommandreplacemotion), [ModelingCommandReplaceOffscreen](#zipzimodelingcommandsmodelingcommandreplaceoffscreen), [ModelingCommandReplaceParameter](#zipzimodelingcommandsmodelingcommandreplaceparameter), [ModelingCommandReplacePart](#zipzimodelingcommandsmodelingcommandreplacepart), [ModelingCommandReplaceSceneBinding](#zipzimodelingcommandsmodelingcommandreplacescenebinding), [ModelingCommandReplaceTopology](#zipzimodelingcommandsmodelingcommandreplacetopology), [ModelingCommandReplaceTransform](#zipzimodelingcommandsmodelingcommandreplacetransform), [ModelingCommandResource](#zipzimodelingcommandsmodelingcommandresource), [ModelingCommandScene](#zipzimodelingcommandsmodelingcommandscene), [ModelingCommandSetMeshKeyform](#zipzimodelingcommandsmodelingcommandsetmeshkeyform), [ModelingCommandSetPhysics](#zipzimodelingcommandsmodelingcommandsetphysics), [ModelingCommandSetPose](#zipzimodelingcommandsmodelingcommandsetpose), [ModelingCommandSetSceneKeyform](#zipzimodelingcommandsmodelingcommandsetscenekeyform), [ModelingCommandUpdatePositions](#zipzimodelingcommandsmodelingcommandupdatepositions).
+
 
 ## zipzi.modeling.commands.ModelingCommandAttachment
 
@@ -52,11 +54,12 @@ Canonical commands modeling values.
 
 `(*, intent: AttachmentEdit)`
 
+Types: [AttachmentEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandBinding
 
@@ -64,11 +67,12 @@ mutate or publish.
 
 `(*, intent: BindingAuthoringEdit)`
 
+Types: [BindingAuthoringEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandContent
 
@@ -76,11 +80,12 @@ mutate or publish.
 
 `(*, intent: SceneContentEdit)`
 
+Types: [SceneContentEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateAsset
 
@@ -88,11 +93,12 @@ mutate or publish.
 
 `(*, asset: ImageAsset)`
 
+Types: [ImageAsset].
+
 **Fields**
 
 - `asset`: Complete asset record to create with native identity validation; this DTO alone does
 not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBinding
 
@@ -100,11 +106,12 @@ not publish.
 
 `(*, binding: MeshBinding)`
 
+Types: [MeshBinding].
+
 **Fields**
 
 - `binding`: Complete binding record to create with native identity validation; this DTO alone
 does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBlendBinding
 
@@ -112,11 +119,12 @@ does not publish.
 
 `(*, binding: BlendShapeBinding)`
 
+Types: [BlendShapeBinding].
+
 **Fields**
 
 - `binding`: Complete blend binding record to create with native identity validation; this DTO
 alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBlendConstraint
 
@@ -124,11 +132,12 @@ alone does not publish.
 
 `(*, constraint: BlendShapeConstraint)`
 
+Types: [BlendShapeConstraint].
+
 **Fields**
 
 - `constraint`: Complete blend constraint record to create with native identity validation; this DTO
 alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable
 
@@ -136,11 +145,12 @@ alone does not publish.
 
 `(*, table: BlendShapeKeyTable)`
 
+Types: [BlendShapeKeyTable].
+
 **Fields**
 
 - `table`: Complete blend key table record to create with native identity validation; this DTO
 alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateExpression
 
@@ -148,10 +158,11 @@ alone does not publish.
 
 `(*, expression: ExpressionAsset)`
 
+Types: [ExpressionAsset].
+
 **Fields**
 
 - `expression`: Complete expression asset with ordered owned entries.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateGlue
 
@@ -159,11 +170,12 @@ alone does not publish.
 
 `(*, glue: Glue)`
 
+Types: [Glue].
+
 **Fields**
 
 - `glue`: Complete glue record to create with native identity validation; this DTO alone does
 not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateMesh
 
@@ -171,11 +183,12 @@ not publish.
 
 `(*, mesh: Mesh)`
 
+Types: [Mesh].
+
 **Fields**
 
 - `mesh`: Complete mesh record to create with native identity validation; this DTO alone does
 not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateMotion
 
@@ -183,10 +196,11 @@ not publish.
 
 `(*, clip: MotionClip)`
 
+Types: [MotionClip].
+
 **Fields**
 
 - `clip`: Complete owned clip with stable track/key/event identities.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateOffscreen
 
@@ -194,11 +208,12 @@ not publish.
 
 `(*, offscreen: Offscreen)`
 
+Types: [Offscreen].
+
 **Fields**
 
 - `offscreen`: Complete offscreen record to create with native identity validation; this DTO alone
 does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateParameter
 
@@ -206,11 +221,12 @@ does not publish.
 
 `(*, parameter: Parameter)`
 
+Types: [Parameter].
+
 **Fields**
 
 - `parameter`: Complete parameter record to create with native identity validation; this DTO alone
 does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreatePart
 
@@ -218,11 +234,12 @@ does not publish.
 
 `(*, part: Part)`
 
+Types: [Part].
+
 **Fields**
 
 - `part`: Complete part record to create with native identity validation; this DTO alone does
 not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateSceneBinding
 
@@ -230,11 +247,12 @@ not publish.
 
 `(*, binding: SceneBinding)`
 
+Types: [SceneBinding].
+
 **Fields**
 
 - `binding`: Complete scene binding record to create with native identity validation; this DTO
 alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandCreateTransform
 
@@ -242,11 +260,12 @@ alone does not publish.
 
 `(*, transform: Transform)`
 
+Types: [Transform].
+
 **Fields**
 
 - `transform`: Complete transform record to create with native identity validation; this DTO alone
 does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandDeletion
 
@@ -254,10 +273,11 @@ does not publish.
 
 `(*, intent: DeletionIntent)`
 
+Types: [DeletionIntent].
+
 **Fields**
 
 - `intent`: Dependency-cleaning deletion request; plan first to inspect choices and bounded report pages.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandDocument
 
@@ -265,11 +285,12 @@ does not publish.
 
 `(*, intent: DocumentAuthoringEdit)`
 
+Types: [DocumentAuthoringEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandEraseObject
 
@@ -281,7 +302,6 @@ mutate or publish.
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandExpression
 
@@ -289,10 +309,11 @@ runtime_id.
 
 `(*, intent: ExpressionEdit)`
 
+Types: [ExpressionEdit].
+
 **Fields**
 
 - `intent`: Expression asset/entry intent, validated by the shared SDK planner.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandManualMesh
 
@@ -300,12 +321,13 @@ runtime_id.
 
 `(*, mesh_id: str, expected: _Source, operation: ManualMeshOperation)`
 
+Types: [Source], [ManualMeshOperation].
+
 **Fields**
 
 - `mesh_id`: Stable mesh UUID whose editable UV triangulation is changed.
 - `expected`: Exact candidate source before this operation; submit it alone in a batch.
 - `operation`: Atomic UV topology intent; the SDK preserves dependent geometry and identities.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandMotion
 
@@ -313,10 +335,11 @@ runtime_id.
 
 `(*, intent: MotionEdit)`
 
+Types: [MotionEdit].
+
 **Fields**
 
 - `intent`: Motion library/track/key/event intent; use a Plan or apply to an Edit.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandOrganization
 
@@ -324,11 +347,12 @@ runtime_id.
 
 `(*, intent: OrganizationEdit)`
 
+Types: [OrganizationEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandPhysics
 
@@ -336,10 +360,11 @@ mutate or publish.
 
 `(*, intent: PhysicsEdit)`
 
+Types: [PhysicsEdit].
+
 **Fields**
 
 - `intent`: Physics rig/row/node intent with native ownership and reference checks.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandPose
 
@@ -347,10 +372,11 @@ mutate or publish.
 
 `(*, intent: PoseEdit)`
 
+Types: [PoseEdit].
+
 **Fields**
 
 - `intent`: Pose singleton/group/entry/link intent, independent of playback state.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReferences
 
@@ -358,11 +384,12 @@ mutate or publish.
 
 `(*, intent: ReferenceEdit)`
 
+Types: [ReferenceEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid
 
@@ -378,7 +405,6 @@ runtime_id.
 satisfy native vertex/working-set limits.
 - `rows`: Positive rectangle-grid subdivision count vertically; resulting geometry must
 satisfy native vertex/working-set limits.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandRenameMesh
 
@@ -391,7 +417,6 @@ satisfy native vertex/working-set limits.
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceAsset
 
@@ -399,11 +424,12 @@ runtime_id.
 
 `(*, asset: ImageAsset)`
 
+Types: [ImageAsset].
+
 **Fields**
 
 - `asset`: Complete asset record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBinding
 
@@ -411,11 +437,12 @@ identity; this DTO alone does not publish.
 
 `(*, binding: MeshBinding)`
 
+Types: [MeshBinding].
+
 **Fields**
 
 - `binding`: Complete binding record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBlendBinding
 
@@ -423,11 +450,12 @@ identity; this DTO alone does not publish.
 
 `(*, binding: BlendShapeBinding)`
 
+Types: [BlendShapeBinding].
+
 **Fields**
 
 - `binding`: Complete blend binding record to replace the existing object while preserving its
 stable identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint
 
@@ -435,11 +463,12 @@ stable identity; this DTO alone does not publish.
 
 `(*, constraint: BlendShapeConstraint)`
 
+Types: [BlendShapeConstraint].
+
 **Fields**
 
 - `constraint`: Complete blend constraint record to replace the existing object while preserving its
 stable identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable
 
@@ -447,11 +476,12 @@ stable identity; this DTO alone does not publish.
 
 `(*, table: BlendShapeKeyTable)`
 
+Types: [BlendShapeKeyTable].
+
 **Fields**
 
 - `table`: Complete blend key table record to replace the existing object while preserving its
 stable identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups
 
@@ -459,11 +489,12 @@ stable identity; this DTO alone does not publish.
 
 `(*, groups: tuple[DrawOrderGroup, ...])`
 
+Types: [DrawOrderGroup].
+
 **Fields**
 
 - `groups`: Complete drawing-order group list; native validation checks root/owner membership
 and ranges. This is a required list, not an optional grouping override.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceEditorState
 
@@ -471,10 +502,11 @@ and ranges. This is a required list, not an optional grouping override.
 
 `(*, state: EditorState)`
 
+Types: [EditorState].
+
 **Fields**
 
 - `state`: Complete Editor visibility/lock metadata to replace.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceExpression
 
@@ -482,10 +514,11 @@ and ranges. This is a required list, not an optional grouping override.
 
 `(*, expression: ExpressionAsset)`
 
+Types: [ExpressionAsset].
+
 **Fields**
 
 - `expression`: Complete replacement expression preserving its object ID.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceGlue
 
@@ -493,11 +526,12 @@ and ranges. This is a required list, not an optional grouping override.
 
 `(*, glue: Glue)`
 
+Types: [Glue].
+
 **Fields**
 
 - `glue`: Complete glue record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder
 
@@ -505,10 +539,11 @@ identity; this DTO alone does not publish.
 
 `(*, order: HierarchyOrder)`
 
+Types: [HierarchyOrder].
+
 **Fields**
 
 - `order`: Replacement organization/deformation palette order; not runtime draw order.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceMesh
 
@@ -516,11 +551,12 @@ identity; this DTO alone does not publish.
 
 `(*, mesh: Mesh)`
 
+Types: [Mesh].
+
 **Fields**
 
 - `mesh`: Complete mesh record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceModelSetup
 
@@ -528,10 +564,11 @@ identity; this DTO alone does not publish.
 
 `(*, setup: ModelSetup)`
 
+Types: [ModelSetup].
+
 **Fields**
 
 - `setup`: Model source-canvas and export-frame configuration.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceMotion
 
@@ -539,10 +576,11 @@ identity; this DTO alone does not publish.
 
 `(*, clip: MotionClip)`
 
+Types: [MotionClip].
+
 **Fields**
 
 - `clip`: Complete replacement clip preserving its stable object ID.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceOffscreen
 
@@ -550,11 +588,12 @@ identity; this DTO alone does not publish.
 
 `(*, offscreen: Offscreen)`
 
+Types: [Offscreen].
+
 **Fields**
 
 - `offscreen`: Complete offscreen record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceParameter
 
@@ -562,11 +601,12 @@ identity; this DTO alone does not publish.
 
 `(*, parameter: Parameter)`
 
+Types: [Parameter].
+
 **Fields**
 
 - `parameter`: Complete parameter record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplacePart
 
@@ -574,11 +614,12 @@ identity; this DTO alone does not publish.
 
 `(*, part: Part)`
 
+Types: [Part].
+
 **Fields**
 
 - `part`: Complete part record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceSceneBinding
 
@@ -586,11 +627,12 @@ identity; this DTO alone does not publish.
 
 `(*, binding: SceneBinding)`
 
+Types: [SceneBinding].
+
 **Fields**
 
 - `binding`: Complete scene binding record to replace the existing object while preserving its
 stable identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceTopology
 
@@ -598,13 +640,14 @@ stable identity; this DTO alone does not publish.
 
 `(*, source: GeometrySnapshot, replacement: TopologyReplacement)`
 
+Types: [TopologyReplacement], [GeometrySnapshot].
+
 **Fields**
 
 - `source`: Exact geometry snapshot the topology replacement was planned against; stale source
 versions are rejected.
 - `replacement`: Coordinated replacement geometry, bindings, Glues and vertex mapping from the
 remeshing plan.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandReplaceTransform
 
@@ -612,11 +655,12 @@ remeshing plan.
 
 `(*, transform: Transform)`
 
+Types: [Transform].
+
 **Fields**
 
 - `transform`: Complete transform record to replace the existing object while preserving its stable
 identity; this DTO alone does not publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandResource
 
@@ -624,11 +668,12 @@ identity; this DTO alone does not publish.
 
 `(*, intent: ResourceEdit)`
 
+Types: [ResourceEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandScene
 
@@ -636,11 +681,12 @@ mutate or publish.
 
 `(*, intent: SceneEdit)`
 
+Types: [SceneEdit].
+
 **Fields**
 
 - `intent`: Typed domain edit executed against the candidate; constructing this intent does not
 mutate or publish.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandSetMeshKeyform
 
@@ -648,12 +694,13 @@ mutate or publish.
 
 `(*, id: str, keyform: MeshKeyform)`
 
+Types: [MeshKeyform].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandSetPhysics
 
@@ -661,10 +708,11 @@ runtime_id.
 
 `(*, physics: PhysicsAsset)`
 
+Types: [PhysicsAsset].
+
 **Fields**
 
 - `physics`: Complete Physics singleton and ordered rig data.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandSetPose
 
@@ -672,10 +720,11 @@ runtime_id.
 
 `(*, pose: PoseAsset)`
 
+Types: [PoseAsset].
+
 **Fields**
 
 - `pose`: Complete Pose singleton and owned part/link references.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandSetSceneKeyform
 
@@ -683,18 +732,21 @@ runtime_id.
 
 `(*, id: str, keyform: SceneKeyform)`
 
+Types: [SceneKeyform].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 ## zipzi.modeling.commands.ModelingCommandUpdatePositions
 
 **Type**
 
 `(*, id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...])`
+
+Types: [Vec2].
 
 **Fields**
 
@@ -703,7 +755,6 @@ runtime_id.
 - `vertex_ids`: Stable vertex IDs selecting which positions to replace; values are paired with
 positions in the supplied order.
 - `positions`: Absolute XY shape positions in mesh vertex order; these are positions, not vertex IDs.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
 
 [Source]: runtime.md#zipzisource
 [ReferenceEdit]: modeling_addressing.md#zipzimodelingaddressingreferenceedit

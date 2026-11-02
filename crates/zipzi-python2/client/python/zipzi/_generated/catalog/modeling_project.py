@@ -61,7 +61,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiCombinedSet': {'children': ('zipzi.modeling.project.CdiCombinedSet.__repr__',
                                                         'zipzi.modeling.project.CdiCombinedSet.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('id',
                                                        'Stable UUID of this CDI combined set; not the identity of its '
                                                        'target.'),
@@ -78,7 +77,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiNamespaceIds': {'children': ('zipzi.modeling.project.CdiNamespaceIds.__repr__',
                                                          'zipzi.modeling.project.CdiNamespaceIds.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('parameters',
                                                         'Imported parameter document-ID to runtime-ID map, retained to '
                                                         'validate opaque metadata.'),
@@ -95,7 +93,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiNamespaceIds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterEntry': {'children': (),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [],
                                               'kind': 'alias',
                                               'signature': 'CdiParameterEntryResolved | CdiParameterEntryUnresolved',
@@ -104,7 +101,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterEntryResolved': {'children': ('zipzi.modeling.project.CdiParameterEntryResolved.__repr__',
                                                                    'zipzi.modeling.project.CdiParameterEntryResolved.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('parameter_id',
                                                                   'Stable document parameter ID, not its exported '
                                                                   'runtime identifier.'),
@@ -124,7 +120,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterEntryUnresolved': {'children': ('zipzi.modeling.project.CdiParameterEntryUnresolved.__repr__',
                                                                      'zipzi.modeling.project.CdiParameterEntryUnresolved.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('runtime_id',
                                                                     'External format/runtime identifier retained for '
                                                                     'import/export; not the document\n'
@@ -149,7 +144,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterGroup': {'children': ('zipzi.modeling.project.CdiParameterGroup.__repr__',
                                                            'zipzi.modeling.project.CdiParameterGroup.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('id',
                                                           'Stable document object ID used by references; it is '
                                                           'distinct from the exported runtime_id.'),
@@ -174,7 +168,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRef': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'CdiParameterRefUnspecified | CdiParameterRefResolved | '
@@ -185,7 +178,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefResolved': {'children': ('zipzi.modeling.project.CdiParameterRefResolved.__repr__',
                                                                  'zipzi.modeling.project.CdiParameterRefResolved.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('parameter_id',
                                                                 'Stable document parameter ID, not its exported '
                                                                 'runtime identifier.')],
@@ -196,7 +188,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefUnresolved': {'children': ('zipzi.modeling.project.CdiParameterRefUnresolved.__repr__',
                                                                    'zipzi.modeling.project.CdiParameterRefUnresolved.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('runtime_id',
                                                                   'External format/runtime identifier retained for '
                                                                   'import/export; not the document\n'
@@ -208,7 +199,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefUnspecified': {'children': ('zipzi.modeling.project.CdiParameterRefUnspecified.__repr__',
                                                                     'zipzi.modeling.project.CdiParameterRefUnspecified.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -216,7 +206,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiPartEntry': {'children': (),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'CdiPartEntryResolved | CdiPartEntryUnresolved',
@@ -225,7 +214,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiPartEntryResolved': {'children': ('zipzi.modeling.project.CdiPartEntryResolved.__repr__',
                                                               'zipzi.modeling.project.CdiPartEntryResolved.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('part_id',
                                                              'Resolved stable document Part ID; use an Unresolved '
                                                              'entry to preserve an external runtime identifier.'),
@@ -241,7 +229,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiPartEntryUnresolved': {'children': ('zipzi.modeling.project.CdiPartEntryUnresolved.__repr__',
                                                                 'zipzi.modeling.project.CdiPartEntryUnresolved.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('runtime_id',
                                                                'External format/runtime identifier retained for '
                                                                'import/export; not the document\n'
@@ -261,7 +248,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DisplayInfo': {'children': ('zipzi.modeling.project.DisplayInfo.__repr__',
                                                      'zipzi.modeling.project.DisplayInfo.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('origin',
                                                     'Import/generation provenance of these display metadata records.'),
                                                    ('parameters',
@@ -304,13 +290,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DisplayInfo.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DisplayInfoOrigin': {'children': (),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('GENERATED', "'generated'"), ('IMPORTED', "'imported'")],
                                               'kind': 'enum',
                                               'signature': ''},
  'zipzi.modeling.project.DocumentAuthoringEdit': {'children': (),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [],
                                                   'kind': 'alias',
                                                   'signature': 'DocumentAuthoringEditPatch | '
@@ -324,7 +308,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditPatch': {'children': ('zipzi.modeling.project.DocumentAuthoringEditPatch.__repr__',
                                                                     'zipzi.modeling.project.DocumentAuthoringEditPatch.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('expected',
                                                                    'Exact current field value used as an optimistic '
                                                                    'precondition; stale values reject\n'
@@ -340,7 +323,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.__repr__',
                                                                                  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.summary'),
                                                                     'documentation': '',
-                                                                    'example': 'docs/recipes.py',
                                                                     'fields': [('runtime_id',
                                                                                 'External format/runtime identifier '
                                                                                 'retained for import/export; not the '
@@ -357,7 +339,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.__repr__',
                                                                             'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('runtime_id',
                                                                            'External format/runtime identifier '
                                                                            'retained for import/export; not the '
@@ -375,7 +356,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.__repr__',
                                                                                       'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.summary'),
                                                                          'documentation': '',
-                                                                         'example': 'docs/recipes.py',
                                                                          'fields': [('path',
                                                                                      'Unresolved imported attachment '
                                                                                      'path to repair; this command '
@@ -392,7 +372,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentField': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('LAYOUT', "'layout'"),
                                                      ('EXPORT_SETTINGS', "'export_settings'"),
                                                      ('SOURCE_CANVAS', "'source_canvas'"),
@@ -403,7 +382,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                           'signature': ''},
  'zipzi.modeling.project.DocumentValue': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'DocumentValueLayout | DocumentValueExportSettings | '
@@ -414,7 +392,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueExportSettings': {'children': ('zipzi.modeling.project.DocumentValueExportSettings.__repr__',
                                                                      'zipzi.modeling.project.DocumentValueExportSettings.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Replacement export-frame scale and padding '
                                                                     'settings.')],
@@ -426,7 +403,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueLayout': {'children': ('zipzi.modeling.project.DocumentValueLayout.__repr__',
                                                              'zipzi.modeling.project.DocumentValueLayout.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Replacement model3 layout map; None explicitly removes '
                                                             'the layout.')],
@@ -437,7 +413,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueSourceCanvas': {'children': ('zipzi.modeling.project.DocumentValueSourceCanvas.__repr__',
                                                                    'zipzi.modeling.project.DocumentValueSourceCanvas.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Replacement source-canvas metadata; None explicitly '
                                                                   'removes the canvas provenance.')],
@@ -449,7 +424,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.EditorState': {'children': ('zipzi.modeling.project.EditorState.__repr__',
                                                      'zipzi.modeling.project.EditorState.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('objects',
                                                     'Explicit flags only, keyed by globally unique object ID. Defaults '
                                                     'are omitted.')],
@@ -460,7 +434,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.EditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ExportFormat': {'children': (),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('PACKAGE', "'package'"),
                                                     ('CMO3', "'cmo3'"),
                                                     ('CAN3', "'can3'"),
@@ -478,7 +451,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                             'canvas pixel; PPU\n'
                                                             'converts those lengths into Cubism runtime units only at '
                                                             'the file boundary.',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('pixels_per_unit',
                                                        'Positive model-length to Cubism-runtime-unit conversion scale '
                                                        'at the file boundary;\n'
@@ -504,7 +476,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ExportSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ImportFormat': {'children': (),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('MODEL3', "'model3'"),
                                                     ('PSD', "'psd'"),
                                                     ('CUBISM', "'cubism'"),
@@ -514,7 +485,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.Model3Settings': {'children': ('zipzi.modeling.project.Model3Settings.__repr__',
                                                         'zipzi.modeling.project.Model3Settings.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('groups',
                                                        'Optional ordered model3 parameter groups; None preserves '
                                                        'omission rather than an empty list.'),
@@ -554,7 +524,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelHitArea': {'children': ('zipzi.modeling.project.ModelHitArea.__repr__',
                                                       'zipzi.modeling.project.ModelHitArea.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
                                                      'from the exported runtime_id.'),
@@ -577,7 +546,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelParameterGroup': {'children': ('zipzi.modeling.project.ModelParameterGroup.__repr__',
                                                              'zipzi.modeling.project.ModelParameterGroup.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable document object ID used by references; it is '
                                                             'distinct from the exported runtime_id.'),
@@ -601,7 +569,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRef': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'ModelTargetRefUnspecified | ModelTargetRefResolved | '
@@ -612,7 +579,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefResolved': {'children': ('zipzi.modeling.project.ModelTargetRefResolved.__repr__',
                                                                 'zipzi.modeling.project.ModelTargetRefResolved.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('object_id',
                                                                'Stable document ID of the object described or selected '
                                                                'by this value.')],
@@ -623,7 +589,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefUnresolved': {'children': ('zipzi.modeling.project.ModelTargetRefUnresolved.__repr__',
                                                                   'zipzi.modeling.project.ModelTargetRefUnresolved.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('runtime_id',
                                                                  'External format/runtime identifier retained for '
                                                                  'import/export; not the document\n'
@@ -635,7 +600,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefUnspecified': {'children': ('zipzi.modeling.project.ModelTargetRefUnspecified.__repr__',
                                                                    'zipzi.modeling.project.ModelTargetRefUnspecified.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [],
                                                       'kind': 'type',
                                                       'signature': '()'},
@@ -644,7 +608,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ObjectEditorState': {'children': ('zipzi.modeling.project.ObjectEditorState.__repr__',
                                                            'zipzi.modeling.project.ObjectEditorState.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('hidden_in_editor',
                                                           'Editor-only hiding flag; does not replace the model '
                                                           'enabled/visibility state.'),
@@ -657,7 +620,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ObjectEditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssue': {'children': (),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [],
                                               'kind': 'alias',
                                               'signature': 'OpaqueExportIssueModel3NamespaceChanged | '
@@ -673,7 +635,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueCdi': {'children': ('zipzi.modeling.project.OpaqueExportIssueCdi.__repr__',
                                                               'zipzi.modeling.project.OpaqueExportIssueCdi.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('problem',
                                                              'Exact native opaque-field guard violated by this '
                                                              'retained resource.')],
@@ -685,7 +646,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueExpression': {'children': ('zipzi.modeling.project.OpaqueExportIssueExpression.__repr__',
                                                                      'zipzi.modeling.project.OpaqueExportIssueExpression.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Persistent retained resource UUID in the frozen '
                                                                     'source.'),
@@ -700,7 +660,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged': {'children': ('zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.__repr__',
                                                                                  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.summary'),
                                                                     'documentation': '',
-                                                                    'example': 'docs/recipes.py',
                                                                     'fields': [],
                                                                     'kind': 'type',
                                                                     'signature': '()'},
@@ -709,7 +668,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueMotion': {'children': ('zipzi.modeling.project.OpaqueExportIssueMotion.__repr__',
                                                                  'zipzi.modeling.project.OpaqueExportIssueMotion.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Persistent retained resource UUID in the frozen '
                                                                 'source.'),
@@ -724,7 +682,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssuePhysics': {'children': ('zipzi.modeling.project.OpaqueExportIssuePhysics.__repr__',
                                                                   'zipzi.modeling.project.OpaqueExportIssuePhysics.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Persistent retained resource UUID in the frozen '
                                                                  'source.'),
@@ -739,7 +696,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssuePose': {'children': ('zipzi.modeling.project.OpaqueExportIssuePose.__repr__',
                                                                'zipzi.modeling.project.OpaqueExportIssuePose.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('id',
                                                               'Persistent retained resource UUID in the frozen '
                                                               'source.'),
@@ -753,7 +709,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssuePose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportProblem': {'children': (),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('NAMESPACE_CHANGED', "'NamespaceChanged'"),
                                                            ('CONTENT_CHANGED', "'ContentChanged'"),
                                                            ('PROVENANCE_MISSING', "'ProvenanceMissing'")],
@@ -762,7 +717,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.PackageAttachment': {'children': ('zipzi.modeling.project.PackageAttachment.__repr__',
                                                            'zipzi.modeling.project.PackageAttachment.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('id',
                                                           'Stable document object ID used by references; it is '
                                                           'distinct from the exported runtime_id.'),
@@ -780,7 +734,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectDiagnostic': {'children': ('zipzi.modeling.project.ProjectDiagnostic.__repr__',
                                                            'zipzi.modeling.project.ProjectDiagnostic.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('severity',
                                                           'Diagnostic severity label; inspect code for stable '
                                                           'programmatic handling.'),
@@ -801,7 +754,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectReport': {'children': ('zipzi.modeling.project.ProjectReport.__repr__',
                                                        'zipzi.modeling.project.ProjectReport.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('before', 'Exact SDK version before the operation.'),
                                                      ('after',
                                                       'Exact SDK version after the operation; may equal before for a '
@@ -834,7 +786,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectReport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequest': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'ProjectRequestDiagnose | ProjectRequestImport | '
@@ -847,7 +798,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestDiagnose': {'children': ('zipzi.modeling.project.ProjectRequestDiagnose.__repr__',
                                                                 'zipzi.modeling.project.ProjectRequestDiagnose.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'type',
                                                    'signature': '()'},
@@ -856,7 +806,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestExport': {'children': ('zipzi.modeling.project.ProjectRequestExport.__repr__',
                                                               'zipzi.modeling.project.ProjectRequestExport.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('path',
                                                              'Host-side filesystem path for this IO request; resolve '
                                                              'it explicitly on the host.'),
@@ -890,7 +839,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestImport': {'children': ('zipzi.modeling.project.ProjectRequestImport.__repr__',
                                                               'zipzi.modeling.project.ProjectRequestImport.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('path',
                                                              'Host-side filesystem path for this IO request; resolve '
                                                              'it explicitly on the host.'),
@@ -911,7 +859,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestNew': {'children': ('zipzi.modeling.project.ProjectRequestNew.__repr__',
                                                            'zipzi.modeling.project.ProjectRequestNew.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('document_id',
                                                           'Stable document UUID; not a Runtime Session handle.'),
                                                          ('setup',
@@ -924,7 +871,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestOpen': {'children': ('zipzi.modeling.project.ProjectRequestOpen.__repr__',
                                                             'zipzi.modeling.project.ProjectRequestOpen.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('path',
                                                            'Host-side filesystem path for this IO request; resolve it '
                                                            'explicitly on the host.')],
@@ -935,7 +881,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.TextureSlot': {'children': ('zipzi.modeling.project.TextureSlot.__repr__',
                                                      'zipzi.modeling.project.TextureSlot.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('slot',
                                                     'Zero-based external texture slot number used by the import '
                                                     'format.'),

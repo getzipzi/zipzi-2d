@@ -7,9 +7,10 @@
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
-Create meshes with edit.meshes.create(MeshSpec(...)); read them with session.meshes.get(id). Mesh IDs and vertex IDs are separate identities, and triangle entries contain vertex IDs. Positions use model space without a deformation parent, otherwise the parent local/parameter space. UVs describe texture coordinates.
-
-Values own their collections; constructing or reading them performs no host IO.
+Start with [MeshSpec](meshes.md#zipzimeshesmeshspec) and [Geometry](meshes.md#zipzimeshesgeometry).
+Use [Edit.meshes](runtime_edit.md#zipzieditmeshes) to author and
+[Session.meshes](runtime_session.md#zipzisessionmeshes) to read committed content.
+See the field definitions for coordinates and identities.
 
 ## zipzi.meshes
 
@@ -26,6 +27,8 @@ Mesh geometry, creation specifications and typed operations. Read through sessio
 
 An internal mesh edge identified by two stable vertex IDs and its origin.
 The edge must exist in the triangulation; boundary edges belong to MeshMeshing.boundary.
+
+Types: [MeshConstraintKind].
 
 **Fields**
 
@@ -44,11 +47,15 @@ Alias of [zipzi.modeling.mesh.MeshConstraintKind](modeling_mesh.md#zipzimodeling
 
 Create a mesh from its creation specification in the edit candidate.
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [MeshSpec](#zipzimeshesmeshspec).
+
 **Fields**
 
 - `spec`: Creation specification; native admission supplies identities/defaults and
 rejects invalid input.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'create' (read-only).
 
 ## zipzi.meshes.Geometry
 
@@ -60,6 +67,8 @@ Vertex IDs, authoring-space positions, texture UVs and triangle connectivity for
 Positions and UVs follow vertex_ids order; triangles contain vertex IDs.
 Positions use model space without a deformation parent, otherwise the parent's
 local/parameter space.
+
+Types: [Meshing](#zipzimeshesmeshing).
 
 **Fields**
 
@@ -79,6 +88,8 @@ parent, otherwise the parent's local/parameter space), ordered by vertex_ids.
 A mesh read at one captured formal or candidate source. Later document changes
 do not rewrite its ID, name or geometry.
 
+Types: [Geometry](#zipzimeshesgeometry).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
@@ -94,6 +105,8 @@ position offsets.
 
 Specification for creating a mesh. An omitted ID allocates a fresh UUID when
 creation executes; an empty texture_asset_id leaves the texture unassigned.
+
+Types: [Geometry](#zipzimeshesgeometry).
 
 **Fields**
 
@@ -112,6 +125,8 @@ operation executes.
 `(boundary: Sequence[int], constraints: Sequence[Constraint]) -> None`
 
 A canonical counterclockwise outer boundary and the internal edges retained by remeshing.
+
+Types: [Constraint](#zipzimeshesconstraint).
 
 **Fields**
 
@@ -136,6 +151,8 @@ A pair of float coordinates (x, y); Geometry uses it for positions and UVs. The 
 Change a mesh display name by stable ID. An expected_name precondition
 must match the current name; None disables that precondition.
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -143,7 +160,7 @@ runtime_id.
 - `name`: Human-readable display name; use the stable ID for identity because names can
 change.
 - `expected_name`: Required current display name; None disables this name precondition.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'rename' (read-only).
 
 ## zipzi.meshes.SetPositions
 
@@ -155,6 +172,10 @@ Replace selected vertex positions, pairing vertex_ids and positions in
 supplied order. Positions are absolute in the mesh authoring space,
 not additive offsets.
 
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [Point](#zipzimeshespoint).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -163,7 +184,7 @@ runtime_id.
 positions in the supplied order.
 - `positions`: Replacement absolute mesh-local XY positions aligned with the supplied
 vertex_ids selection.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'set_positions' (read-only).
 
 ## zipzi.meshes.Summary
 

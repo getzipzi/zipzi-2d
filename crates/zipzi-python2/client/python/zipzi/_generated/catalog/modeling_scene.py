@@ -171,7 +171,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Appearance': {'children': ('zipzi.modeling.scene.Appearance.__repr__',
                                                   'zipzi.modeling.scene.Appearance.summary'),
                                      'documentation': '',
-                                     'example': 'docs/recipes.py',
                                      'fields': [('opacity',
                                                  'Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. '
                                                  'Imported values\n'
@@ -189,7 +188,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRef': {'children': (),
                                         'documentation': 'Imported paths remain explicitly unresolved until a matching '
                                                          'attachment is loaded.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'alias',
                                         'signature': 'AttachmentRefResolved | AttachmentRefUnresolved',
@@ -198,7 +196,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRefResolved': {'children': ('zipzi.modeling.scene.AttachmentRefResolved.__repr__',
                                                              'zipzi.modeling.scene.AttachmentRefResolved.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('attachment_id',
                                                             'Stable package-attachment ID, distinct from its relative '
                                                             'package path.')],
@@ -209,7 +206,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRefUnresolved': {'children': ('zipzi.modeling.scene.AttachmentRefUnresolved.__repr__',
                                                                'zipzi.modeling.scene.AttachmentRefUnresolved.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('path',
                                                               'Normalized package-relative attachment path using '
                                                               'forward slashes; absolute paths\n'
@@ -220,7 +216,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.BlendMode': {'children': (),
                                     'documentation': '',
-                                    'example': 'docs/recipes.py',
                                     'fields': [('NORMAL', "'normal'"),
                                                ('ADDITIVE', "'additive'"),
                                                ('MULTIPLICATIVE', "'multiplicative'")],
@@ -230,7 +225,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                               'zipzi.modeling.scene.Canvas.summary'),
                                  'documentation': 'A finite rectangle carried by an import/export format, not the '
                                                   'model space.',
-                                 'example': 'docs/recipes.py',
                                  'fields': [('width', 'Source canvas width in pixels.'),
                                             ('height', 'Source canvas height in pixels.'),
                                             ('origin',
@@ -253,7 +247,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginal': {'children': ('zipzi.modeling.scene.DeformerOriginal.__repr__',
                                                         'zipzi.modeling.scene.DeformerOriginal.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('auto_update',
                                                        'Update once when the first ordinary keyform is created. Manual '
                                                        'update disables this.'),
@@ -275,7 +268,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalAction': {'children': (),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [],
                                                  'kind': 'alias',
                                                  'signature': 'DeformerOriginalActionUpdate | '
@@ -287,7 +279,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.__repr__',
                                                                         'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('enabled',
                                                                        'Changes the future first-key policy without '
                                                                        'changing geometry or immediately replacing the '
@@ -299,7 +290,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionRestore': {'children': ('zipzi.modeling.scene.DeformerOriginalActionRestore.__repr__',
                                                                      'zipzi.modeling.scene.DeformerOriginalActionRestore.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('allow_resize',
                                                                     'Explicit permission to resample every stored Warp '
                                                                     'shape when the saved conversion density '
@@ -311,7 +301,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionUpdate.__repr__',
                                                                     'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -319,7 +308,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalShape': {'children': (),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'alias',
                                                 'signature': 'DeformerOriginalShapeWarp | '
@@ -329,7 +317,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalShapeRotation': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeRotation.__repr__',
                                                                      'zipzi.modeling.scene.DeformerOriginalShapeRotation.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('pose',
                                                                     'Canvas origin, absolute direction (including '
                                                                     'reference angle), inherited scale and '
@@ -342,7 +329,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalShapeWarp': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeWarp.__repr__',
                                                                  'zipzi.modeling.scene.DeformerOriginalShapeWarp.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('warp',
                                                                 'Baked Warp lattice and optional controller in canvas '
                                                                 'coordinates, X right/Y up.'),
@@ -358,7 +344,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalSnapshot': {'children': ('zipzi.modeling.scene.DeformerOriginalSnapshot.__repr__',
                                                                 'zipzi.modeling.scene.DeformerOriginalSnapshot.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('source',
                                                                'Creation, first ordinary keyform transition, or '
                                                                'explicit manual update.'),
@@ -374,7 +359,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalSource': {'children': (),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('CREATED', "'created'"),
                                                             ('FIRST_KEY', "'first_key'"),
                                                             ('MANUAL', "'manual'")],
@@ -383,7 +367,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DrawOrderGroup': {'children': ('zipzi.modeling.scene.DrawOrderGroup.__repr__',
                                                       'zipzi.modeling.scene.DrawOrderGroup.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('owner',
                                                      'Empty for the root; otherwise the stable ID of the Part driving '
                                                      'this group.'),
@@ -401,7 +384,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DrawOrderGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.Glue': {'children': ('zipzi.modeling.scene.Glue.__repr__', 'zipzi.modeling.scene.Glue.summary'),
                                'documentation': '',
-                               'example': 'docs/recipes.py',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
                                            'exported runtime_id.'),
@@ -434,7 +416,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.GlueVertexPair': {'children': ('zipzi.modeling.scene.GlueVertexPair.__repr__',
                                                       'zipzi.modeling.scene.GlueVertexPair.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable UUID of this Glue pair; not the identity of its target.'),
                                                     ('vertex_a',
@@ -462,7 +443,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                           'for unlisted objects.\n'
                                                           'Entries use globally unique scene object IDs, never visible '
                                                           'row indices.',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('organization',
                                                      'Partial organization-palette order expressed as object IDs; '
                                                      'unlisted IDs keep their\n'
@@ -482,7 +462,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                   'zipzi.modeling.scene.ModelSetup.summary'),
                                      'documentation': 'Source-format provenance and independent output settings. '
                                                       'Neither affects evaluation.',
-                                     'example': 'docs/recipes.py',
                                      'fields': [('source_canvas',
                                                  'Optional imported canvas metadata; None means this model has no '
                                                  'source-canvas provenance.'),
@@ -498,7 +477,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Offscreen': {'children': ('zipzi.modeling.scene.Offscreen.__repr__',
                                                  'zipzi.modeling.scene.Offscreen.summary'),
                                     'documentation': '',
-                                    'example': 'docs/recipes.py',
                                     'fields': [('id',
                                                 'Stable document object ID used by references; it is distinct from the '
                                                 'exported runtime_id.'),
@@ -536,7 +514,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Offscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenDeletePolicy': {'children': (),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'alias',
                                                 'signature': 'OffscreenDeletePolicyRejectReferences | '
@@ -548,7 +525,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyNeutral': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyNeutral.__repr__',
                                                                     'zipzi.modeling.scene.OffscreenDeletePolicyNeutral.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -557,7 +533,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.__repr__',
                                                                              'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [],
                                                                 'kind': 'type',
                                                                 'signature': '()'},
@@ -566,7 +541,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyRemap': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyRemap.__repr__',
                                                                   'zipzi.modeling.scene.OffscreenDeletePolicyRemap.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('replacements',
                                                                  'Deleted-keyform-slot to replacement-slot map; None '
                                                                  'selects neutral/unmapped for that\n'
@@ -578,7 +552,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenMappingPatch': {'children': ('zipzi.modeling.scene.OffscreenMappingPatch.__repr__',
                                                              'zipzi.modeling.scene.OffscreenMappingPatch.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('slot',
                                                             'Static Part slot or stable Part-binding sample '
                                                             'combination to remap.'),
@@ -592,7 +565,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenMappingPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationCollection': {'children': (),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [],
                                                  'kind': 'alias',
                                                  'signature': 'OrganizationCollectionParameters | '
@@ -604,7 +576,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionParameterGroups': {'children': ('zipzi.modeling.scene.OrganizationCollectionParameterGroups.__repr__',
                                                                              'zipzi.modeling.scene.OrganizationCollectionParameterGroups.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('parent_id',
                                                                             'Parent object ID in this hierarchy; '
                                                                             'independent of storage and drawing order. '
@@ -617,7 +588,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionParameters': {'children': ('zipzi.modeling.scene.OrganizationCollectionParameters.__repr__',
                                                                         'zipzi.modeling.scene.OrganizationCollectionParameters.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('group_id',
                                                                        'Parameter-group ID in the document metadata '
                                                                        'hierarchy. None selects the\n'
@@ -629,7 +599,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionPartMembers': {'children': ('zipzi.modeling.scene.OrganizationCollectionPartMembers.__repr__',
                                                                          'zipzi.modeling.scene.OrganizationCollectionPartMembers.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('part_id',
                                                                         'Organizational Part owner ID; independent of '
                                                                         'the deformation parent. None selects\n'
@@ -640,13 +609,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionPartMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationDeletePolicy': {'children': (),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('CONTENTS', "'contents'"), ('DISSOLVE', "'dissolve'")],
                                                    'kind': 'enum',
                                                    'signature': ''},
  'zipzi.modeling.scene.Part': {'children': ('zipzi.modeling.scene.Part.__repr__', 'zipzi.modeling.scene.Part.summary'),
                                'documentation': '',
-                               'example': 'docs/recipes.py',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
                                            'exported runtime_id.'),
@@ -674,7 +641,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.PartId': {'children': ('zipzi.modeling.scene.PartId.__repr__',
                                               'zipzi.modeling.scene.PartId.summary'),
                                  'documentation': 'Persistent scene object identifier.',
-                                 'example': 'docs/recipes.py',
                                  'fields': [('value', 'Persistent scene object identifier.')],
                                  'kind': 'type',
                                  'signature': '(*, value: str)'},
@@ -683,7 +649,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ReparentContext': {'children': ('zipzi.modeling.scene.ReparentContext.__repr__',
                                                        'zipzi.modeling.scene.ReparentContext.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('parameter_values',
                                                       'Parameter-ID-to-value map used for the reparenting reference '
                                                       'pose; values use each\n'
@@ -704,7 +669,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ReparentPlacement': {'children': ('zipzi.modeling.scene.ReparentPlacement.__repr__',
                                                          'zipzi.modeling.scene.ReparentPlacement.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('before',
                                                         'None appends; Some names an unselected member of the '
                                                         'destination.')],
@@ -714,7 +678,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ReparentPlacement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentStrategy': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('KEEP_LOCAL_DATA', "'KeepLocalData'"),
                                                       ('PRESERVE_EDIT_STATE', "'PreserveEditState'"),
                                                       ('PRESERVE_PARAMETER_DOMAIN', "'PreserveParameterDomain'")],
@@ -723,7 +686,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.RotationPose': {'children': ('zipzi.modeling.scene.RotationPose.__repr__',
                                                     'zipzi.modeling.scene.RotationPose.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('origin',
                                                    'Rotation origin in parent authoring coordinates, stored at f64 '
                                                    'precision; default is (0, 0).'),
@@ -742,7 +704,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.RotationTransform': {'children': ('zipzi.modeling.scene.RotationTransform.__repr__',
                                                          'zipzi.modeling.scene.RotationTransform.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('base_angle',
                                                         'Reference angle in degrees used to orient the rotation '
                                                         'control.'),
@@ -756,7 +717,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.RotationTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollection': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'SceneCollectionOrganization | SceneCollectionDeformation | '
@@ -770,7 +730,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDeformation': {'children': ('zipzi.modeling.scene.SceneCollectionDeformation.__repr__',
                                                                   'zipzi.modeling.scene.SceneCollectionDeformation.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('parent_id',
                                                                  'Parent object ID in this hierarchy; independent of '
                                                                  'storage and drawing order. None\n'
@@ -782,7 +741,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDrawing': {'children': ('zipzi.modeling.scene.SceneCollectionDrawing.__repr__',
                                                               'zipzi.modeling.scene.SceneCollectionDrawing.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('owner',
                                                              'Stable owner ID for the addressed drawing group, '
                                                              'collection or reference selection.')],
@@ -793,7 +751,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDrawingGroups': {'children': ('zipzi.modeling.scene.SceneCollectionDrawingGroups.__repr__',
                                                                     'zipzi.modeling.scene.SceneCollectionDrawingGroups.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -802,7 +759,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionGlues': {'children': ('zipzi.modeling.scene.SceneCollectionGlues.__repr__',
                                                             'zipzi.modeling.scene.SceneCollectionGlues.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'type',
                                                'signature': '()'},
@@ -811,7 +767,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionOrganization': {'children': ('zipzi.modeling.scene.SceneCollectionOrganization.__repr__',
                                                                    'zipzi.modeling.scene.SceneCollectionOrganization.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('part_id',
                                                                   'Organizational Part owner ID; independent of the '
                                                                   'deformation parent. None selects\n'
@@ -822,7 +777,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTarget': {'children': (),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'SceneContentTargetVertexPosition | '
@@ -843,7 +797,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetGluePair': {'children': ('zipzi.modeling.scene.SceneContentTargetGluePair.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetGluePair.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('pair_id',
                                                                  'Stable Glue pair ID, not its offset in the pair '
                                                                  'array.')],
@@ -854,7 +807,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('slot',
                                                                          'Zero-based slot in the addressed triangle or '
                                                                          'Offscreen keyform array; never an\n'
@@ -866,7 +818,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetOffscreenMapping': {'children': ('zipzi.modeling.scene.SceneContentTargetOffscreenMapping.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenMapping.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('slot',
                                                                          'Static Part slot or stable Part-binding '
                                                                          'sample combination, not an Offscreen array\n'
@@ -879,7 +830,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetTriangle': {'children': ('zipzi.modeling.scene.SceneContentTargetTriangle.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetTriangle.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('slot',
                                                                  'Zero-based slot in the addressed triangle or '
                                                                  'Offscreen keyform array; never an\n'
@@ -891,7 +841,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetVertexPosition': {'children': ('zipzi.modeling.scene.SceneContentTargetVertexPosition.__repr__',
                                                                         'zipzi.modeling.scene.SceneContentTargetVertexPosition.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('vertex_id',
                                                                        'Stable u32 vertex ID within the mesh, not an '
                                                                        'offset into its position array.'),
@@ -908,7 +857,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetVertexUv': {'children': ('zipzi.modeling.scene.SceneContentTargetVertexUv.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetVertexUv.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('vertex_id',
                                                                  'Stable u32 vertex ID within the mesh, not an offset '
                                                                  'into its position array.')],
@@ -920,7 +868,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                            'zipzi.modeling.scene.SceneContentTargetWarpBezierControl.summary'),
                                                               'documentation': 'Component 0 is the anchor; 1..4 are '
                                                                                'left, right, up, down handles.',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('node',
                                                                           'Zero-based Bezier node offset in the '
                                                                           'row-major controller array.'),
@@ -940,7 +887,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetWarpPoint': {'children': ('zipzi.modeling.scene.SceneContentTargetWarpPoint.__repr__',
                                                                    'zipzi.modeling.scene.SceneContentTargetWarpPoint.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('row',
                                                                   'Zero-based lattice point row, in the inclusive '
                                                                   'range 0..rows.'),
@@ -959,7 +905,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetWarpPoint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValue': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'SceneContentValuePoint | SceneContentValueTriangle | '
@@ -973,7 +918,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueGluePair': {'children': ('zipzi.modeling.scene.SceneContentValueGluePair.__repr__',
                                                                  'zipzi.modeling.scene.SceneContentValueGluePair.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Complete replacement Glue pair with its identity and '
                                                                 'endpoint vertices.')],
@@ -985,7 +929,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueMapping': {'children': ('zipzi.modeling.scene.SceneContentValueMapping.__repr__',
                                                                 'zipzi.modeling.scene.SceneContentValueMapping.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Replacement Offscreen keyform-array index; -1 selects '
                                                                'neutral/unmapped.')],
@@ -996,7 +939,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentValueOffscreenKeyform.__repr__',
                                                                          'zipzi.modeling.scene.SceneContentValueOffscreenKeyform.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('value',
                                                                         'Complete replacement Offscreen appearance '
                                                                         'sample.')],
@@ -1008,7 +950,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValuePoint': {'children': ('zipzi.modeling.scene.SceneContentValuePoint.__repr__',
                                                               'zipzi.modeling.scene.SceneContentValuePoint.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Replacement XY value in the selected shape/UV space; '
                                                              'BlendShape targets use deltas.')],
@@ -1020,7 +961,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueTriangle': {'children': ('zipzi.modeling.scene.SceneContentValueTriangle.__repr__',
                                                                  'zipzi.modeling.scene.SceneContentValueTriangle.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Replacement triangle as three stable vertex IDs, not '
                                                                 'position-array indices.')],
@@ -1030,14 +970,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueTriangle.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCopyScope': {'children': (),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('SELECTED', "'selected'"),
                                                     ('DEFORMATION_SUBTREE', "'deformation_subtree'")],
                                          'kind': 'enum',
                                          'signature': ''},
  'zipzi.modeling.scene.SceneCreate': {'children': (),
                                       'documentation': '',
-                                      'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'alias',
                                       'signature': 'SceneCreateMesh | SceneCreateWarp | SceneCreateRotation | '
@@ -1050,7 +988,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateGlue': {'children': ('zipzi.modeling.scene.SceneCreateGlue.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateGlue.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('a',
                                                       'Mesh A endpoint of the Glue; resolved references use stable '
                                                       'mesh IDs and unresolved\n'
@@ -1068,7 +1005,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateMesh': {'children': ('zipzi.modeling.scene.SceneCreateMesh.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateMesh.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('texture',
                                                       'Image-asset reference; resolved values use asset IDs and '
                                                       'unresolved values retain\n'
@@ -1081,7 +1017,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateOffscreen': {'children': ('zipzi.modeling.scene.SceneCreateOffscreen.__repr__',
                                                             'zipzi.modeling.scene.SceneCreateOffscreen.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'type',
                                                'signature': '()'},
@@ -1090,7 +1025,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateRotation': {'children': ('zipzi.modeling.scene.SceneCreateRotation.__repr__',
                                                            'zipzi.modeling.scene.SceneCreateRotation.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('origin',
                                                           'Optional rotation origin in parent coordinates. None uses '
                                                           '(0, 0) for an empty\n'
@@ -1104,7 +1038,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateWarp': {'children': ('zipzi.modeling.scene.SceneCreateWarp.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateWarp.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('bounds',
                                                       'Optional [left, bottom, right, top] warp bounds in parent '
                                                       'coordinates; None requests\n'
@@ -1115,7 +1048,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneField': {'children': (),
                                      'documentation': '',
-                                     'example': 'docs/recipes.py',
                                      'fields': [('LABEL', "'label'"),
                                                 ('RUNTIME_ID', "'runtime_id'"),
                                                 ('ENABLED', "'enabled'"),
@@ -1133,7 +1065,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                      'signature': ''},
  'zipzi.modeling.scene.SceneFieldValue': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'SceneFieldValueLabel | SceneFieldValueRuntimeId | '
@@ -1159,7 +1090,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueAppearance': {'children': ('zipzi.modeling.scene.SceneFieldValueAppearance.__repr__',
                                                                  'zipzi.modeling.scene.SceneFieldValueAppearance.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value', 'Replacement opacity and RGB color factors.')],
                                                     'kind': 'type',
                                                     'signature': '(*, value: Appearance)',
@@ -1169,7 +1099,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueContext': {'children': ('zipzi.modeling.scene.SceneFieldValueContext.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueContext.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('part_id',
                                                              'Organizational Part owner ID; independent of the '
                                                              'deformation parent. None selects\n'
@@ -1186,7 +1115,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueEnabled': {'children': ('zipzi.modeling.scene.SceneFieldValueEnabled.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueEnabled.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('value', 'Replacement model evaluation enabled flag.')],
                                                  'kind': 'type',
                                                  'signature': '(*, value: bool)'},
@@ -1195,7 +1123,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueGlueEndpoints': {'children': ('zipzi.modeling.scene.SceneFieldValueGlueEndpoints.__repr__',
                                                                     'zipzi.modeling.scene.SceneFieldValueGlueEndpoints.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('a',
                                                                    'Mesh A endpoint of the Glue; resolved references '
                                                                    'use stable mesh IDs and unresolved\n'
@@ -1212,7 +1139,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueGlueIntensity': {'children': ('zipzi.modeling.scene.SceneFieldValueGlueIntensity.__repr__',
                                                                     'zipzi.modeling.scene.SceneFieldValueGlueIntensity.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('value', 'Replacement Glue influence factor.')],
                                                        'kind': 'type',
                                                        'signature': '(*, value: float)'},
@@ -1221,7 +1147,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueLabel': {'children': ('zipzi.modeling.scene.SceneFieldValueLabel.__repr__',
                                                             'zipzi.modeling.scene.SceneFieldValueLabel.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('value', 'Replacement display label.')],
                                                'kind': 'type',
                                                'signature': '(*, value: str)'},
@@ -1230,7 +1155,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueMasks': {'children': ('zipzi.modeling.scene.SceneFieldValueMasks.__repr__',
                                                             'zipzi.modeling.scene.SceneFieldValueMasks.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('value', 'Complete ordered clipping-mask mesh selection.')],
                                                'kind': 'type',
                                                'signature': '(*, value: tuple[str, ...])'},
@@ -1239,7 +1163,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueMeshDrawing': {'children': ('zipzi.modeling.scene.SceneFieldValueMeshDrawing.__repr__',
                                                                   'zipzi.modeling.scene.SceneFieldValueMeshDrawing.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('draw_order',
                                                                  'Drawing-order coordinate; distinct from the final '
                                                                  'evaluated render_order. None\n'
@@ -1265,7 +1188,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueOffscreen': {'children': ('zipzi.modeling.scene.SceneFieldValueOffscreen.__repr__',
                                                                 'zipzi.modeling.scene.SceneFieldValueOffscreen.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('blend_mode',
                                                                'Compositing mode used when drawing this object.'),
                                                               ('flags',
@@ -1288,7 +1210,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueRotation': {'children': ('zipzi.modeling.scene.SceneFieldValueRotation.__repr__',
                                                                'zipzi.modeling.scene.SceneFieldValueRotation.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('value', 'Complete replacement rotation definition.')],
                                                   'kind': 'type',
                                                   'signature': '(*, value: RotationTransform)',
@@ -1298,7 +1219,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueRuntimeId': {'children': ('zipzi.modeling.scene.SceneFieldValueRuntimeId.__repr__',
                                                                 'zipzi.modeling.scene.SceneFieldValueRuntimeId.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Replacement external runtime identifier; an empty '
                                                                'string explicitly clears it.')],
@@ -1309,7 +1229,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueTexture': {'children': ('zipzi.modeling.scene.SceneFieldValueTexture.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueTexture.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Resolved image-asset reference or explicitly unresolved '
                                                              'texture runtime identifier.')],
@@ -1321,7 +1240,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueWarp': {'children': ('zipzi.modeling.scene.SceneFieldValueWarp.__repr__',
                                                            'zipzi.modeling.scene.SceneFieldValueWarp.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Complete replacement warp lattice and controller '
                                                           'definition.')],
@@ -1332,7 +1250,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneReference': {'children': (),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'SceneReferenceUnspecified | SceneReferenceResolved | '
@@ -1343,7 +1260,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceResolved': {'children': ('zipzi.modeling.scene.SceneReferenceResolved.__repr__',
                                                               'zipzi.modeling.scene.SceneReferenceResolved.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('object_id',
                                                              'Stable document ID of the object described or selected '
                                                              'by this value.')],
@@ -1354,7 +1270,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceUnresolved': {'children': ('zipzi.modeling.scene.SceneReferenceUnresolved.__repr__',
                                                                 'zipzi.modeling.scene.SceneReferenceUnresolved.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('runtime_id',
                                                                'External format/runtime identifier retained for '
                                                                'import/export; not the document\n'
@@ -1366,7 +1281,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceUnspecified': {'children': ('zipzi.modeling.scene.SceneReferenceUnspecified.__repr__',
                                                                  'zipzi.modeling.scene.SceneReferenceUnspecified.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [],
                                                     'kind': 'type',
                                                     'signature': '()'},
@@ -1374,7 +1288,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ShapeTarget': {'children': (),
                                       'documentation': '',
-                                      'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'alias',
                                       'signature': 'ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlend',
@@ -1384,7 +1297,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetBase': {'children': ('zipzi.modeling.scene.ShapeTargetBase.__repr__',
                                                        'zipzi.modeling.scene.ShapeTargetBase.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'type',
                                           'signature': '()'},
@@ -1393,7 +1305,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetBlend': {'children': ('zipzi.modeling.scene.ShapeTargetBlend.__repr__',
                                                         'zipzi.modeling.scene.ShapeTargetBlend.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('binding_id',
                                                        'Stable binding ID owning the addressed axes or keyforms.'),
                                                       ('sample_id',
@@ -1407,7 +1318,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetOrdinary': {'children': ('zipzi.modeling.scene.ShapeTargetOrdinary.__repr__',
                                                            'zipzi.modeling.scene.ShapeTargetOrdinary.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('binding_id',
                                                           'Stable binding ID owning the addressed axes or keyforms.'),
                                                          ('samples',
@@ -1420,7 +1330,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Transform': {'children': ('zipzi.modeling.scene.Transform.__repr__',
                                                  'zipzi.modeling.scene.Transform.summary'),
                                     'documentation': '',
-                                    'example': 'docs/recipes.py',
                                     'fields': [('id',
                                                 'Stable document object ID used by references; it is distinct from the '
                                                 'exported runtime_id.'),
@@ -1469,7 +1378,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Transform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformData': {'children': (),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'alias',
                                         'signature': 'TransformDataWarp | TransformDataRotation',
@@ -1478,7 +1386,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.TransformDataRotation': {'children': ('zipzi.modeling.scene.TransformDataRotation.__repr__',
                                                              'zipzi.modeling.scene.TransformDataRotation.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Rotation deformation definition with its reference angle '
                                                             'and base pose.')],
@@ -1490,7 +1397,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.TransformDataWarp': {'children': ('zipzi.modeling.scene.TransformDataWarp.__repr__',
                                                          'zipzi.modeling.scene.TransformDataWarp.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('value',
                                                         'Warp deformation definition with its baked lattice and '
                                                         'optional authoring controller.')],
@@ -1502,7 +1408,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.TransformId': {'children': ('zipzi.modeling.scene.TransformId.__repr__',
                                                    'zipzi.modeling.scene.TransformId.summary'),
                                       'documentation': 'Persistent scene object identifier.',
-                                      'example': 'docs/recipes.py',
                                       'fields': [('value', 'Persistent scene object identifier.')],
                                       'kind': 'type',
                                       'signature': '(*, value: str)'},
@@ -1511,7 +1416,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpAuthoringSettings': {'children': ('zipzi.modeling.scene.WarpAuthoringSettings.__repr__',
                                                              'zipzi.modeling.scene.WarpAuthoringSettings.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('auto_reform',
                                                             "Rebuild the edited shape's baked grid on subsequent "
                                                             'Bezier edits.'),
@@ -1532,7 +1436,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezier': {'children': ('zipzi.modeling.scene.WarpBezier.__repr__',
                                                   'zipzi.modeling.scene.WarpBezier.summary'),
                                      'documentation': '',
-                                     'example': 'docs/recipes.py',
                                      'fields': [('rows',
                                                  'Number of warp lattice cells vertically; a lattice has rows + 1 '
                                                  'point rows.'),
@@ -1550,7 +1453,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezierControlPatch': {'children': ('zipzi.modeling.scene.WarpBezierControlPatch.__repr__',
                                                               'zipzi.modeling.scene.WarpBezierControlPatch.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('node', 'Zero-based controller node in row-major order.'),
                                                             ('component',
                                                              '0 is the anchor; 1..4 are left, right, up and down '
@@ -1566,7 +1468,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezierEditMode': {'children': (),
                                              'documentation': 'Editor influence semantics, independent of runtime Warp '
                                                               'interpolation.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('LOCAL',
                                                          "'local' — Edit explicit controls; anchors carry their own "
                                                          'handles.'),
@@ -1584,7 +1485,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezierGrid': {'children': ('zipzi.modeling.scene.WarpBezierGrid.__repr__',
                                                       'zipzi.modeling.scene.WarpBezierGrid.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('rows', 'Vertical controller cell count, from 1 to 32.'),
                                                     ('columns', 'Horizontal controller cell count, from 1 to 32.')],
                                          'kind': 'type',
@@ -1594,7 +1494,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezierNode': {'children': ('zipzi.modeling.scene.WarpBezierNode.__repr__',
                                                       'zipzi.modeling.scene.WarpBezierNode.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('position',
                                                      'Absolute Bezier anchor position in lattice coordinates; not a '
                                                      'handle offset.'),
@@ -1609,7 +1508,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpPointPatch': {'children': ('zipzi.modeling.scene.WarpPointPatch.__repr__',
                                                       'zipzi.modeling.scene.WarpPointPatch.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('row',
                                                      'Zero-based lattice point row, in the inclusive range 0..rows.'),
                                                     ('column',
@@ -1625,7 +1523,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpPointPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpShapeAction': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('RESET_CONTROLLER', "'reset_controller'"),
                                                      ('REFORM', "'reform'")],
                                           'kind': 'enum',
@@ -1633,7 +1530,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpTransform': {'children': ('zipzi.modeling.scene.WarpTransform.__repr__',
                                                      'zipzi.modeling.scene.WarpTransform.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('bezier',
                                                     'Optional authoring Bezier controller; None leaves the baked '
                                                     'lattice without a controller.'),

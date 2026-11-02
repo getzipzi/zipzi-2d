@@ -20,6 +20,8 @@ Canonical motion modeling values.
 
 `(*, id: str, name: str, duration: float, fps: float, looping: bool, restricted_beziers: bool, fade_in: float | None = None, fade_out: float | None = None, track_order: tuple[str, ...], tracks: tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], extensions: _Mapping[str, ExtensionValue], meta_extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
+Types: [MotionEvent](#zipzimodelingmotionmotionevent), [MotionTrack](#zipzimodelingmotionmotiontrack).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -43,6 +45,8 @@ Canonical motion modeling values.
 **Alias**
 
 `MotionContainerRoot | MotionContainerGroup`
+
+Types: [MotionContainerGroup](#zipzimodelingmotionmotioncontainergroup), [MotionContainerRoot](#zipzimodelingmotionmotioncontainerroot).
 
 
 ## zipzi.modeling.motion.MotionContainerGroup
@@ -68,12 +72,16 @@ Canonical motion modeling values.
 
 `MotionEditCreate | MotionEditCreateGroup | MotionEditRenameGroup | MotionEditReorderGroups | MotionEditRegister | MotionEditPatchRegistration | MotionEditMoveRegistrations | MotionEditDuplicateRegistrations | MotionEditDeleteRegistrations | MotionEditDissolveGroup | MotionEditDeleteGroup | MotionEditDuplicateGroup | MotionEditDuplicateClip | MotionEditDeleteClip | MotionEditReorderTracks | MotionEditCreateTrack | MotionEditSetTrackTarget | MotionEditMoveTracks | MotionEditDeleteTracks | MotionEditTransferKeys | MotionEditSetEvent | MotionEditDeleteEvents | MotionEditMoveEvents`
 
+Types: [MotionEditCreate](#zipzimodelingmotionmotioneditcreate), [MotionEditCreateGroup](#zipzimodelingmotionmotioneditcreategroup), [MotionEditCreateTrack](#zipzimodelingmotionmotioneditcreatetrack), [MotionEditDeleteClip](#zipzimodelingmotionmotioneditdeleteclip), [MotionEditDeleteEvents](#zipzimodelingmotionmotioneditdeleteevents), [MotionEditDeleteGroup](#zipzimodelingmotionmotioneditdeletegroup), [MotionEditDeleteRegistrations](#zipzimodelingmotionmotioneditdeleteregistrations), [MotionEditDeleteTracks](#zipzimodelingmotionmotioneditdeletetracks), [MotionEditDissolveGroup](#zipzimodelingmotionmotioneditdissolvegroup), [MotionEditDuplicateClip](#zipzimodelingmotionmotioneditduplicateclip), [MotionEditDuplicateGroup](#zipzimodelingmotionmotioneditduplicategroup), [MotionEditDuplicateRegistrations](#zipzimodelingmotionmotioneditduplicateregistrations), [MotionEditMoveEvents](#zipzimodelingmotionmotioneditmoveevents), [MotionEditMoveRegistrations](#zipzimodelingmotionmotioneditmoveregistrations), [MotionEditMoveTracks](#zipzimodelingmotionmotioneditmovetracks), [MotionEditPatchRegistration](#zipzimodelingmotionmotioneditpatchregistration), [MotionEditRegister](#zipzimodelingmotionmotioneditregister), [MotionEditRenameGroup](#zipzimodelingmotionmotioneditrenamegroup), [MotionEditReorderGroups](#zipzimodelingmotionmotioneditreordergroups), [MotionEditReorderTracks](#zipzimodelingmotionmotioneditreordertracks), [MotionEditSetEvent](#zipzimodelingmotionmotioneditsetevent), [MotionEditSetTrackTarget](#zipzimodelingmotionmotioneditsettracktarget), [MotionEditTransferKeys](#zipzimodelingmotionmotionedittransferkeys).
+
 
 ## zipzi.modeling.motion.MotionEditCreate
 
 **Type**
 
 `(*, id: str, name: str, registration_id: str, destination: MotionContainer)`
+
+Types: [MotionContainer](#zipzimodelingmotionmotioncontainer).
 
 **Fields**
 
@@ -172,6 +180,8 @@ Canonical motion modeling values.
 
 `(*, source: str, id: str, name: str, registration_id: str, destination: MotionContainer)`
 
+Types: [MotionContainer](#zipzimodelingmotionmotioncontainer).
+
 **Fields**
 
 - `source`: Typed parameter reference or stable source object ID, as declared by the enclosing operation.
@@ -198,6 +208,8 @@ Canonical motion modeling values.
 
 `(*, ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
 
+Types: [MotionContainer](#zipzimodelingmotionmotioncontainer).
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -222,6 +234,8 @@ Canonical motion modeling values.
 **Type**
 
 `(*, ids: tuple[str, ...], destination: MotionContainer, before: str | None = None)`
+
+Types: [MotionContainer](#zipzimodelingmotionmotioncontainer).
 
 **Fields**
 
@@ -248,6 +262,8 @@ Canonical motion modeling values.
 
 `(*, id: str, expected: MotionRegistration, entry: MotionRegistration)`
 
+Types: [MotionRegistration](#zipzimodelingmotionmotionregistration).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -259,6 +275,8 @@ Canonical motion modeling values.
 **Type**
 
 `(*, entry: MotionRegistration, destination: MotionContainer, before: str | None = None)`
+
+Types: [MotionContainer](#zipzimodelingmotionmotioncontainer), [MotionRegistration](#zipzimodelingmotionmotionregistration).
 
 **Fields**
 
@@ -304,6 +322,8 @@ Canonical motion modeling values.
 
 `(*, clip: str, event: MotionEvent)`
 
+Types: [MotionEvent](#zipzimodelingmotionmotionevent).
+
 **Fields**
 
 - `clip`: Stable ID of the motion clip owning the affected track or event.
@@ -314,6 +334,8 @@ Canonical motion modeling values.
 **Type**
 
 `(*, id: str, target: MotionTrackTarget)`
+
+Types: [MotionTrackTarget](#zipzimodelingmotionmotiontracktarget).
 
 **Fields**
 
@@ -365,6 +387,8 @@ A motion event crossed during the last update, returned without side effects.
 **Type**
 
 `(*, id: str, name: str, entries: tuple[MotionRegistration, ...])`
+
+Types: [MotionRegistration](#zipzimodelingmotionmotionregistration).
 
 **Fields**
 
@@ -419,6 +443,8 @@ Persistent identity belongs to keys, never to Bezier control points.
 
 model3 registration is separate from a clip: one file may appear in multiple groups.
 
+Types: [AttachmentRef].
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -434,12 +460,16 @@ model3 registration is separate from a clip: one file may appear in multiple gro
 
 `MotionSegmentLinear | MotionSegmentBezier | MotionSegmentStepped | MotionSegmentInverseStepped`
 
+Types: [MotionSegmentBezier](#zipzimodelingmotionmotionsegmentbezier), [MotionSegmentInverseStepped](#zipzimodelingmotionmotionsegmentinversestepped), [MotionSegmentLinear](#zipzimodelingmotionmotionsegmentlinear), [MotionSegmentStepped](#zipzimodelingmotionmotionsegmentstepped).
+
 
 ## zipzi.modeling.motion.MotionSegmentBezier
 
 **Type**
 
 `(*, control1: MotionPoint, control2: MotionPoint, end: MotionKey)`
+
+Types: [MotionKey](#zipzimodelingmotionmotionkey), [MotionPoint](#zipzimodelingmotionmotionpoint).
 
 **Fields**
 
@@ -453,6 +483,8 @@ model3 registration is separate from a clip: one file may appear in multiple gro
 
 `(*, end: MotionKey)`
 
+Types: [MotionKey](#zipzimodelingmotionmotionkey).
+
 **Fields**
 
 - `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
@@ -463,6 +495,8 @@ model3 registration is separate from a clip: one file may appear in multiple gro
 
 `(*, end: MotionKey)`
 
+Types: [MotionKey](#zipzimodelingmotionmotionkey).
+
 **Fields**
 
 - `end`: Segment endpoint key or source-range end time, as declared by the enclosing type.
@@ -472,6 +506,8 @@ model3 registration is separate from a clip: one file may appear in multiple gro
 **Type**
 
 `(*, end: MotionKey)`
+
+Types: [MotionKey](#zipzimodelingmotionmotionkey).
 
 **Fields**
 
@@ -484,6 +520,8 @@ model3 registration is separate from a clip: one file may appear in multiple gro
 `(*, physics: tuple[PhysicsRigSnapshot, ...] = (), time: float, parameters: _Mapping[str, float], part_opacity_channels: _Mapping[str, float], part_opacities: _Mapping[str, float], model_opacity: float, active_motions: tuple[str, ...], active_expressions: tuple[str, ...], fired_events: tuple[MotionEventFired, ...], coverage: tuple[str, ...], motion_positions: tuple[MotionPlaybackPosition, ...])`
 
 Combined values after Motion, Expression, Physics and Pose evaluation.
+
+Types: [MotionEventFired](#zipzimodelingmotionmotioneventfired), [MotionPlaybackPosition](#zipzimodelingmotionmotionplaybackposition), [PhysicsRigSnapshot].
 
 **Fields**
 
@@ -508,6 +546,8 @@ Internal observations are retained in replay checkpoints for consistent seeks.
 
 `(*, id: str, target: MotionTrackTarget, initial: MotionKey, segments: tuple[MotionSegment, ...], fade_in: float | None = None, fade_out: float | None = None, extensions: _Mapping[str, ExtensionValue])`
 
+Types: [MotionKey](#zipzimodelingmotionmotionkey), [MotionSegment](#zipzimodelingmotionmotionsegment), [MotionTrackTarget](#zipzimodelingmotionmotiontracktarget).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -523,6 +563,8 @@ Internal observations are retained in replay checkpoints for consistent seeks.
 **Alias**
 
 `MotionTrackTargetUnspecified | MotionTrackTargetModel | MotionTrackTargetParameter | MotionTrackTargetPartOpacity | MotionTrackTargetUnresolved`
+
+Types: [MotionTrackTargetModel](#zipzimodelingmotionmotiontracktargetmodel), [MotionTrackTargetParameter](#zipzimodelingmotionmotiontracktargetparameter), [MotionTrackTargetPartOpacity](#zipzimodelingmotionmotiontracktargetpartopacity), [MotionTrackTargetUnresolved](#zipzimodelingmotionmotiontracktargetunresolved), [MotionTrackTargetUnspecified](#zipzimodelingmotionmotiontracktargetunspecified).
 
 
 ## zipzi.modeling.motion.MotionTrackTargetModel

@@ -1,5 +1,6 @@
 """Finite Python binding declarations; lifecycle/transport hooks remain handwritten."""
 import ast
+from codegen.model import DocBinding, collection_rules, full_documentation
 import json
 import re
 import importlib.util
@@ -170,7 +171,10 @@ WRITES = {'Meshes': [('create',
                  'id: str, patch: parameters.ParameterPatch',
                  'WriteResult',
                  'parameters.Patch(id,patch)',
-                 '(id,patch)')],
+                 '(id,patch)',
+                 'Apply the typed patch synchronously and return WriteResult with the resulting candidate Source and ordered result IDs. '
+                 'None or omitted patch fields preserve current values; see parameters.ParameterPatch for field constraints. '
+                 'Example: edit.parameters.patch(parameter_id, parameters.ParameterPatch(name="Angle")).')],
  'Bindings': [('create',
                'spec: bindings.MeshBindingSpec',
                'str',
@@ -191,7 +195,16 @@ LIFECYCLE_REQUESTS={
 }
 OWNED_REQUESTS={'resources.Resources':'prepare_image prepare_buffer load_png prepare_png usage','resources.PreparedImage':'pixels','Buffer':'read','Owned':'close','animation.Preview':'info apply sample seek advance_to estimate_observation','references.ObjectRef':'resolve label capabilities scene_capabilities','references.LabelAddress':'plan','references.FieldAddress':'plan','events.SessionSubscription':'poll resync','events.RegistrySubscription':'poll resync'}
 
-def render_api(contract,header,rust_header,resolve,codec_domains):
+def render_api(contract,header,rust_header,resolve,codec_domains,*,documentation=None):
+    doc_bindings = {} if documentation is None else documentation
+    rules = collection_rules(Path(__file__).parents[1])
+    def documented(cls, name, summary, *refs):
+        binding = DocBinding(summary, refs)
+        doc_bindings['python:zipzi._generated.facades.'+cls+'.'+name] = binding
+        text = full_documentation(binding, rules)
+        if any(ref in {'collection-read','collection-page'} for ref in refs):
+            text = 'Session reads committed Session content; Edit reads this Edit candidate, including pending writes.\n\n'+text
+        return repr(text)
     runtime=contract['runtime']
     operation_docs={}
     for binding in contract['bindings']:
@@ -199,6 +212,12 @@ def render_api(contract,header,rust_header,resolve,codec_domains):
         shape=resolve({'kind':'ref','name':binding['rust']})
         for variant in shape['variants']:
             operation_docs['meshes.'+variant['rust_name']]=variant.get('doc','').strip()
+    for domain in ('parameters','bindings'):
+        for root in contract['dtos'][domain]:
+            shape=resolve(root)
+            if shape['kind'] not in {'union','serde_enum'} or all(not v['fields'] for v in shape['variants']):continue
+            for variant in shape['variants']:
+                operation_docs[domain+'.'+variant['rust_name']]=variant.get('doc','').strip()
     writes={key:list(value) for key,value in WRITES.items()}
     # Public resource constructors flatten the selected SDK spec and replace
     # only the runtime ImageId leaf with its ownership wrapper.
@@ -271,34 +290,21 @@ def render_api(contract,header,rust_header,resolve,codec_domains):
         summary='scene.Summary' if domain=='scene' else domain+'.Summary'
         facade+=['class '+cls+'(Collection['+domain+'.'+value+']):','    '+repr('Read '+domain+' through a Session or Edit. Session reads committed document content; Edit reads include its pending writes.'),'    def __init__(self, session: "_lifecycle.Session", edit: "_lifecycle.Edit | None" = None):','        super().__init__(session,edit,'+repr(domain)+','+domain+'.'+value+'.read,'+repr(key)+')',
          '    def get(self, id: str, *, expected: Source | None = None) -> Snapshot['+domain+'.'+value+']:',
-         '        '+repr('Read one owned value at an exact formal or candidate Source.\n\nThrough Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.\n\n'
-             'id is the stable document object ID, not a name. expected=None reads current content; '
-             'an explicit Source is checked atomically and stale sources raise STALE_SOURCE. '
-             'Returns Snapshot[value] with the captured Source; reading its fields performs no IO. '
-             'This synchronous call uses one bounded selected read and may reject missing IDs or response budgets. '
-             'Query failures do not abort an Edit. After OutcomeUnknown recover the original call to get the '
-             'original captured result; do not replace it with a fresh read. The result owns no host lease. '
-             'Example: snapshot = session.'+domain+'.get(id); value = snapshot.value.'),
+         '        '+documented(cls, 'get',
+             'Read one value synchronously by stable document ID, not name. '
+             'Returns Snapshot[value] with the captured Source; no lease needs closing. Query failures preserve the Edit. '
+             'Recover OutcomeUnknown through the original Call.', 'collection-read'),
          '        return project(lambda: self._read((id,),expected), self._single, operation='+repr(domain+'.get')+', inputs=(id,expected))',
          '    def get_many(self, ids: Sequence[str], *, expected: Source | None = None) -> Batch['+domain+'.'+value+']:',
-         '        '+repr('Read all selected IDs atomically from one formal or candidate Source.\n\nThrough Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.\n\n'
-             'ids is copied before execution; requested order and duplicates are preserved. '
-             'expected=None accepts current content; an explicit Source rejects changes with STALE_SOURCE. '
-             'Returns Batch[value], including a valid Source for empty ids. Missing objects or total-byte '
-             'budgets reject the whole read without partial values or an aborted Edit. This call is synchronous '
-             'and has no host-owned result lease. Recover a lost response through its original Call to retain '
-             'the captured source. Example: batch = session.'+domain+'.get_many((id, id)).'),
+         '        '+documented(cls, 'get_many',
+             'Read selected stable IDs synchronously from one Source. '
+             'Copies ids and preserves requested order and duplicates. Returns Batch[value], with a valid Source even for empty ids; no lease needs closing. '
+             'Query failures preserve the Edit; recover OutcomeUnknown through the original Call.', 'collection-read'),
          '        return self._read(tuple(ids),expected)',
          '    def list(self, *, name: str | None = None, limit: int = 128, cursor: PageCursor | None = None) -> Page['+summary+']:',
-         '        '+repr('Read a bounded metadata Page in SDK storage order, without geometry/keyform/pixel payloads.\n\nThrough Session, reads committed Session content. Through Edit, reads this Edit candidate, including pending writes.\n\n'
-             'name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate '
-             'names. limit defaults to 128 and must fit the host collection-record limit; count/byte/scan '
-             'budgets can produce shorter or empty pages. cursor=None starts a scan; otherwise use the '
-             'previous Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. '
-             'A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart rather than merging '
-             'versions. A lost response recovers the original page, even after a peer publication. This is a '
-             'synchronous query; read failure does not abort an Edit and the Page needs no close. '
-             'Example: page = session.'+domain+'.list(name="Face", limit=128).'),
+         '        '+documented(cls, 'list',
+             'Read a bounded metadata Page synchronously in SDK storage order, without geometry/keyform/pixel payloads. '
+             'The Page captures its Source and needs no close. Query failures preserve the Edit; recover OutcomeUnknown through the original Call.', 'collection-page'),
          '        return self._page(name,limit,cursor,'+summary+'.read)','']
         if cls=='Images':facade+=['    def snapshot(self, id: str) -> resources.ImageLease:',
             '        '+repr('Capture pixels of image id at this exact formal/candidate source into an independent ImageLease. '
@@ -311,19 +317,16 @@ def render_api(contract,header,rust_header,resolve,codec_domains):
         facade+=['class Editable'+cls+'('+cls+'):', '    '+repr('Read and author '+domain+' in this Edit candidate. Reads include pending writes; commit publishes changes separately.')]
         for name,args,result,expr,inputs,*documentation in writes[cls]:
             operation=expr.split('(',1)[0]
-            returns='the stable object ID as str' if result=='str' else 'WriteResult with the new candidate Source and ordered result IDs'
+            returns='the stable object ID as str' if result=='str' else 'WriteResult with the resulting candidate Source and ordered result IDs'
             detail='Arguments have the semantics of '+operation+'; inspect that operation and its input DTO fields with zipzi.describe. '
             if cls=='Images' and name in {'create_image','replace_image'}:detail+='image must be a live PreparedImage from this Runtime; close that independent lease after acceptance, while native candidate/history owners retain the pixels. '
             summary=(documentation[0] if documentation else 'Apply '+operation+' synchronously to this Edit and return '+returns+'.\n\n'+detail).rstrip()
             shared=operation_docs.get(operation,'')
             if shared:summary=shared+'\n\n'+summary
+            summary += ('\n\nThis synchronous write changes only the candidate, without file IO; ordinary write failures abort the candidate. '
+                        'Recover OutcomeUnknown through the original Call. No result lease needs closing.')
             facade+=['    def '+name+'(self, '+args+') -> '+result+':',
-                '        '+repr(summary+'\n\n'+
-                    'This changes candidate state only; commit publishes separately. Ordinary write failures '
-                    'abort the candidate even when caught, so repair inputs and start a new Edit. Confirmed Busy '
-                    'or pre-execution admission refusal preserves it; act on recovery_action. OutcomeUnknown '
-                    'retains the original Call and exact return type: recover it instead of replaying the write.'
-                    + ('' if documentation else ' Example: result = edit.'+domain+'.'+name+'(...), using the arguments shown in its signature.'))]
+                     '        '+documented('Editable'+cls, name, summary, 'edit-write')]
             if result=='str':facade+=['        return project(lambda: self._write(lambda: '+expr+'),single_id,operation='+repr(domain+'.'+name)+',inputs='+inputs+')']
             else:facade+=['        return self._write(lambda: '+expr+')']
         facade+=['']

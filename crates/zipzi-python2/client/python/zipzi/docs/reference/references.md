@@ -3,7 +3,7 @@
 
 ## Type references
 
-[PendingRequest], [Plan], [Snapshot], [Source], [AddressPatch], [Capabilities], [CapabilityDomain], [ObjectKind]
+[PendingRequest], [Plan], [Snapshot], [Source], [AddressPatch], [Capabilities], [CapabilityDomain], [addressing.ObjectKind]
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
@@ -44,6 +44,8 @@ An SDK address with incarnation and monotonic epoch validation.
 
 Check the owning client/lease locally and return this FieldAddress without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
 
+Types: [FieldAddress](#zipzireferencesfieldaddress).
+
 
 ## zipzi.references.FieldAddress.__exit__
 
@@ -65,6 +67,8 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 Plan a typed address patch under captured SDK epochs and context. Stale fields or recreated objects fail explicitly. Returns the same owned Plan form used by Edit.apply.
 
+Types: [Plan], [AddressPatch].
+
 
 ## zipzi.references.LabelAddress
 
@@ -80,6 +84,8 @@ Plan a typed address patch under captured SDK epochs and context. Stale fields o
 `() -> LabelAddress`
 
 Check the owning client/lease locally and return this LabelAddress without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+Types: [LabelAddress](#zipzireferenceslabeladdress).
 
 
 ## zipzi.references.LabelAddress.__exit__
@@ -120,12 +126,16 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 Plan the label change using captured incarnation/context/field epochs. Returns an owned Plan and cached report; apply through Edit and close the Plan after use.
 
+Types: [Plan].
+
 
 ## zipzi.references.ObjectKind
 
 **Alias**
 
 `Literal['asset', 'mesh', 'parameter', 'mesh_binding', 'binding_axis', 'binding_sample', 'part', 'transform', 'scene_binding', 'blend_key_table', 'blend_constraint', 'blend_binding', 'glue', 'glue_vertex_pair', 'offscreen', 'draw_order_group', 'cdi_parameter_group', 'cdi_combined_set', 'cdi_combined_member', 'model_parameter_group', 'model_parameter_member', 'model_hit_area', 'expression', 'expression_entry', 'motion', 'motion_group', 'motion_registration', 'motion_track', 'motion_key', 'motion_event', 'attachment', 'pose', 'pose_group', 'pose_entry', 'pose_link', 'physics', 'physics_group', 'physics_input', 'physics_output', 'physics_node'] | _ObjectKind`
+
+Types: [addressing.ObjectKind].
 
 
 ## zipzi.references.ObjectRef
@@ -143,6 +153,8 @@ Plan the label change using captured incarnation/context/field epochs. Returns a
 
 Check the owning client/lease locally and return this ObjectRef without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
 
+Types: [ObjectRef](#zipzireferencesobjectref).
+
 
 ## zipzi.references.ObjectRef.__exit__
 
@@ -155,6 +167,8 @@ Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 `(domain: modeling.addressing.CapabilityDomain) -> Snapshot[modeling.addressing.Capabilities]`
 
 Query a declared capability domain for this live reference. Returns an owned source-bearing capability result, without reserving future execution.
+
+Types: [Snapshot], [Capabilities], [CapabilityDomain].
 
 
 ## zipzi.references.ObjectRef.close
@@ -178,6 +192,8 @@ Read the cached persistent UUID without IO. It is distinct from the reference in
 
 Read the cached SDK object-kind tag without IO.
 
+Types: [references.ObjectKind](#zipzireferencesobjectkind).
+
 
 ## zipzi.references.ObjectRef.label
 
@@ -186,6 +202,8 @@ Read the cached SDK object-kind tag without IO.
 `() -> LabelAddress`
 
 Capture a label address bound to this reference incarnation and field epoch. Close the address independently; do not replace its plan with an ID-only rename.
+
+Types: [LabelAddress](#zipzireferenceslabeladdress).
 
 
 ## zipzi.references.ObjectRef.pending_request
@@ -200,6 +218,8 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 Validate the SDK reference against current incarnation/context and return exact formal Source. Deletion or recreation does not silently rebind the reference.
 
+Types: [Source].
+
 
 ## zipzi.references.ObjectRef.scene_capabilities
 
@@ -209,6 +229,8 @@ Validate the SDK reference against current incarnation/context and return exact 
 
 Query SDK scene capability states for this live reference. Unavailable and unsupported states retain their stable reason code.
 
+Types: [SceneCapabilities](#zipzireferencesscenecapabilities).
+
 
 ## zipzi.references.SceneCapabilities
 
@@ -216,7 +238,7 @@ Query SDK scene capability states for this live reference. Unavailable and unsup
 
 `(inspect: Capability, patch: Capability, move_object: Capability, reparent: Capability, reorder: Capability, duplicate: Capability, delete: Capability, dissolve: Capability) -> None`
 
-Owned references SceneCapabilities value; reading fields, repr and summary performs no IO.
+Types: [Capability](#zipzireferencescapability).
 
 **Fields**
 
@@ -244,4 +266,4 @@ state/reason before invoking the operation.
 [AddressPatch]: modeling_addressing_patches.md#zipzimodelingaddressingaddresspatch
 [Capabilities]: modeling_addressing.md#zipzimodelingaddressingcapabilities
 [CapabilityDomain]: modeling_addressing.md#zipzimodelingaddressingcapabilitydomain
-[ObjectKind]: modeling_addressing_kinds.md#zipzimodelingaddressingobjectkind
+[addressing.ObjectKind]: modeling_addressing_kinds.md#zipzimodelingaddressingobjectkind

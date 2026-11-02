@@ -25,7 +25,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.Drawable': {'children': ('zipzi.modeling.sampling.Drawable.__repr__',
                                                    'zipzi.modeling.sampling.Drawable.summary'),
                                       'documentation': '',
-                                      'example': 'docs/recipes.py',
                                       'fields': [('id',
                                                   'Stable document object ID used by references; it is distinct from '
                                                   'the exported runtime_id.'),
@@ -101,7 +100,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.DrawableFrame': {'children': ('zipzi.modeling.sampling.DrawableFrame.__repr__',
                                                         'zipzi.modeling.sampling.DrawableFrame.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('source_revision',
                                                        'Revision used to evaluate this immutable snapshot; later name '
                                                        'edits may reuse it.'),
@@ -134,7 +132,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.EvaluatedDeformer': {'children': ('zipzi.modeling.sampling.EvaluatedDeformer.__repr__',
                                                             'zipzi.modeling.sampling.EvaluatedDeformer.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable document object ID used by references; it is '
                                                            'distinct from the exported runtime_id.'),
@@ -167,7 +164,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.EvaluatedParameter': {'children': ('zipzi.modeling.sampling.EvaluatedParameter.__repr__',
                                                              'zipzi.modeling.sampling.EvaluatedParameter.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable document object ID used by references; it is '
                                                             'distinct from the exported runtime_id.'),
@@ -188,7 +184,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometryDiagnostic': {'children': ('zipzi.modeling.sampling.GeometryDiagnostic.__repr__',
                                                              'zipzi.modeling.sampling.GeometryDiagnostic.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('kind', 'Typed geometry diagnostic category.'),
                                                            ('mesh_id',
                                                             'Stable ID of the target mesh in this document.'),
@@ -204,7 +199,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometryDiagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometryDiagnosticKind': {'children': (),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('SMALL_TRIANGLE', "'SmallTriangle'"),
                                                                ('INCONSISTENT_WINDING', "'InconsistentWinding'"),
                                                                ('OUTSIDE_MODEL_BOUNDS', "'OutsideModelBounds'")],
@@ -213,7 +207,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySnapshot': {'children': ('zipzi.modeling.sampling.GeometrySnapshot.__repr__',
                                                            'zipzi.modeling.sampling.GeometrySnapshot.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('version',
                                                           'Exact SDK version captured for this value; not a '
                                                           'best-effort latest-version marker.'),
@@ -251,7 +244,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.GeometrySpace': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'GeometrySpaceModel | GeometrySpaceRotationLocal | '
@@ -262,7 +254,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceModel': {'children': ('zipzi.modeling.sampling.GeometrySpaceModel.__repr__',
                                                              'zipzi.modeling.sampling.GeometrySpaceModel.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'type',
                                                 'signature': '()'},
@@ -271,7 +262,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceRotationLocal': {'children': ('zipzi.modeling.sampling.GeometrySpaceRotationLocal.__repr__',
                                                                      'zipzi.modeling.sampling.GeometrySpaceRotationLocal.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Stable rotation-transform ID defining the local '
                                                                     'position space.')],
@@ -282,7 +272,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.GeometrySpaceWarpParameter': {'children': ('zipzi.modeling.sampling.GeometrySpaceWarpParameter.__repr__',
                                                                      'zipzi.modeling.sampling.GeometrySpaceWarpParameter.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Stable warp-transform ID defining the '
                                                                     'parameter/lattice position space.')],
@@ -293,7 +282,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.MeshQuality': {'children': ('zipzi.modeling.sampling.MeshQuality.__repr__',
                                                       'zipzi.modeling.sampling.MeshQuality.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('mesh_id',
                                                      'Stable document mesh ID, in evaluated drawable order.'),
                                                     ('visible',
@@ -335,7 +323,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.ModelingSamples': {'children': ('zipzi.modeling.sampling.ModelingSamples.__repr__',
                                                           'zipzi.modeling.sampling.ModelingSamples.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('version',
                                                          'Exact SDK version captured for this value; not a best-effort '
                                                          'latest-version marker.'),
@@ -368,7 +355,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.OffscreenFrame': {'children': ('zipzi.modeling.sampling.OffscreenFrame.__repr__',
                                                          'zipzi.modeling.sampling.OffscreenFrame.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('renderable',
                                                         'Whether required content is available for rendering; '
                                                         'unavailable textures do not make\n'
@@ -417,7 +403,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.OffscreenFrame.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.sampling.RenderCommand': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'RenderCommandBeginOffscreen | RenderCommandDrawMesh | '
@@ -428,7 +413,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandBeginOffscreen': {'children': ('zipzi.modeling.sampling.RenderCommandBeginOffscreen.__repr__',
                                                                       'zipzi.modeling.sampling.RenderCommandBeginOffscreen.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('offscreen_id',
                                                                      'Stable Offscreen object ID; not a texture asset '
                                                                      'ID.')],
@@ -439,7 +423,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandDrawMesh': {'children': ('zipzi.modeling.sampling.RenderCommandDrawMesh.__repr__',
                                                                 'zipzi.modeling.sampling.RenderCommandDrawMesh.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('mesh_id',
                                                                'Stable ID of the target mesh in this document.')],
                                                    'kind': 'type',
@@ -449,7 +432,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.RenderCommandEndOffscreen': {'children': ('zipzi.modeling.sampling.RenderCommandEndOffscreen.__repr__',
                                                                     'zipzi.modeling.sampling.RenderCommandEndOffscreen.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('offscreen_id',
                                                                    'Stable Offscreen object ID; not a texture asset '
                                                                    'ID.')],
@@ -460,7 +442,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.sampling': {'children': ('zipzi.modeli
  'zipzi.modeling.sampling.TriangleQuality': {'children': ('zipzi.modeling.sampling.TriangleQuality.__repr__',
                                                           'zipzi.modeling.sampling.TriangleQuality.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('triangle_index',
                                                          "Zero-based triangle offset, in the sampled drawable's index "
                                                          'order.'),

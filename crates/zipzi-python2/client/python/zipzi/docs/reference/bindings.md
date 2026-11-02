@@ -16,8 +16,6 @@ Numeric binding inputs and canonical values from one Rust declaration.
 
 `(opacity: float, multiply: Sequence[float], screen: Sequence[float]) -> None`
 
-Owned bindings Appearance value; reading fields, repr and summary performs no IO.
-
 **Fields**
 
 - `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
@@ -31,8 +29,6 @@ above 1 are retained without clamping.
 
 `(parameter_id: str, keys: Sequence[float]) -> None`
 
-Owned bindings Axis value; reading fields, repr and summary performs no IO.
-
 **Fields**
 
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
@@ -45,7 +41,7 @@ not sample indices.
 
 `(id: str, samples: Sequence[Sample], parameter_id: str) -> None`
 
-Owned bindings AxisSnapshot value; reading fields, repr and summary performs no IO.
+Types: [Sample](#zipzibindingssample).
 
 **Fields**
 
@@ -60,21 +56,21 @@ axis.
 
 `(spec: MeshBindingSpec) -> None`
 
-Owned bindings Create value; reading fields, repr and summary performs no IO.
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [MeshBindingSpec](#zipzibindingsmeshbindingspec).
 
 **Fields**
 
 - `spec`: Creation specification; native admission supplies identities/defaults and rejects
 invalid input.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'create_mesh_binding' (read-only).
 
 ## zipzi.bindings.Keyform
 
 **Type**
 
 `(keys: Sequence[float], positions: Sequence[Point], opacity: float | None=None, multiply: Sequence[float] | None=None, screen: Sequence[float] | None=None, draw_order: float | None=None) -> None`
-
-Owned bindings Keyform value; reading fields, repr and summary performs no IO.
 
 **Fields**
 
@@ -95,7 +91,7 @@ evaluation.
 
 `(samples: Sequence[str], positions: Sequence[Point], appearance: Appearance, draw_order: float | None) -> None`
 
-Owned bindings KeyformSnapshot value; reading fields, repr and summary performs no IO.
+Types: [Appearance](#zipzibindingsappearance).
 
 **Fields**
 
@@ -112,7 +108,7 @@ unoverridden order.
 
 `(id: str, mesh_id: str, axes: Sequence[AxisSnapshot], keyforms: Sequence[KeyformSnapshot]) -> None`
 
-Owned bindings MeshBinding value; reading fields, repr and summary performs no IO.
+Types: [AxisSnapshot](#zipzibindingsaxissnapshot), [KeyformSnapshot](#zipzibindingskeyformsnapshot).
 
 **Fields**
 
@@ -129,7 +125,7 @@ table.
 
 `(mesh_id: str, axes: Sequence[Axis], keyforms: Sequence[Keyform], id: str | None=None) -> None`
 
-Owned bindings MeshBindingSpec value; reading fields, repr and summary performs no IO.
+Types: [Axis](#zipzibindingsaxis), [Keyform](#zipzibindingskeyform).
 
 **Fields**
 
@@ -146,8 +142,6 @@ table.
 
 `(id: str, value: float) -> None`
 
-Owned bindings Sample value; reading fields, repr and summary performs no IO.
-
 **Fields**
 
 - `id`: Stable sample UUID within the binding axis; distinct from its numeric value.
@@ -160,14 +154,16 @@ increasing.
 
 `(id: str, keyform: Keyform) -> None`
 
-Owned bindings SetKeyform value; reading fields, repr and summary performs no IO.
+See [Fixed operation discriminators](common.md#fixed-discriminator).
+
+Types: [Keyform](#zipzibindingskeyform).
 
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
 - `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
-- `kind`: Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.
+- `kind`: Fixed value 'set_mesh_keyform' (read-only).
 
 ## zipzi.bindings.Summary
 

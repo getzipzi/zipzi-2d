@@ -30,6 +30,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `(*, object: DeletionObject, reason: DeletionDecisionReason, choices: tuple[DeletionChoice, ...])`
 
+Types: [DeletionChoice](#zipzimodelingdeletiondeletionchoice), [DeletionDecisionReason](#zipzimodelingdeletiondeletiondecisionreason), [DeletionObject].
+
 **Fields**
 
 - `object`: Affected surviving object that needs an explicit resolution.
@@ -41,6 +43,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 **Alias**
 
 `DeletionDecisionReasonConversionUnproven | DeletionDecisionReasonOffscreenOwnerUnavailable | DeletionDecisionReasonOffscreenMappingRequired | DeletionDecisionReasonPartStateUnpreserved | DeletionDecisionReasonTextureReplacementRequired | DeletionDecisionReasonBlendBaseReplacementRequired | DeletionDecisionReasonPhysicsNodeReplacementRequired | DeletionDecisionReasonInvalidContainer`
+
+Types: [DeletionDecisionReasonBlendBaseReplacementRequired](#zipzimodelingdeletiondeletiondecisionreasonblendbasereplacementrequired), [DeletionDecisionReasonConversionUnproven](#zipzimodelingdeletiondeletiondecisionreasonconversionunproven), [DeletionDecisionReasonInvalidContainer](#zipzimodelingdeletiondeletiondecisionreasoninvalidcontainer), [DeletionDecisionReasonOffscreenMappingRequired](#zipzimodelingdeletiondeletiondecisionreasonoffscreenmappingrequired), [DeletionDecisionReasonOffscreenOwnerUnavailable](#zipzimodelingdeletiondeletiondecisionreasonoffscreenownerunavailable), [DeletionDecisionReasonPartStateUnpreserved](#zipzimodelingdeletiondeletiondecisionreasonpartstateunpreserved), [DeletionDecisionReasonPhysicsNodeReplacementRequired](#zipzimodelingdeletiondeletiondecisionreasonphysicsnodereplacementrequired), [DeletionDecisionReasonTextureReplacementRequired](#zipzimodelingdeletiondeletiondecisionreasontexturereplacementrequired).
 
 
 ## zipzi.modeling.deletion.DeletionDecisionReasonBlendBaseReplacementRequired
@@ -111,12 +115,16 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `DeletionEffectMotionRegistrationMoved | DeletionEffectContentChanged | DeletionEffectParameterDimensionRemoved | DeletionEffectBindingContributionRemoved | DeletionEffectResourceReplaced | DeletionEffectParameterAnimationRemoved | DeletionEffectPhysicsChannelRemoved | DeletionEffectMaskChanged | DeletionEffectGlueRemoved | DeletionEffectHitAreaRemoved | DeletionEffectCompositionChanged | DeletionEffectPartAnimationRemoved | DeletionEffectDrawingGroupFlattened | DeletionEffectOrganizationChanged | DeletionEffectDeformationChanged | DeletionEffectUnpreservedChannels | DeletionEffectPartStateRemoved`
 
+Types: [DeletionEffectBindingContributionRemoved](#zipzimodelingdeletiondeletioneffectbindingcontributionremoved), [DeletionEffectCompositionChanged](#zipzimodelingdeletiondeletioneffectcompositionchanged), [DeletionEffectContentChanged](#zipzimodelingdeletiondeletioneffectcontentchanged), [DeletionEffectDeformationChanged](#zipzimodelingdeletiondeletioneffectdeformationchanged), [DeletionEffectDrawingGroupFlattened](#zipzimodelingdeletiondeletioneffectdrawinggroupflattened), [DeletionEffectGlueRemoved](#zipzimodelingdeletiondeletioneffectglueremoved), [DeletionEffectHitAreaRemoved](#zipzimodelingdeletiondeletioneffecthitarearemoved), [DeletionEffectMaskChanged](#zipzimodelingdeletiondeletioneffectmaskchanged), [DeletionEffectMotionRegistrationMoved](#zipzimodelingdeletiondeletioneffectmotionregistrationmoved), [DeletionEffectOrganizationChanged](#zipzimodelingdeletiondeletioneffectorganizationchanged), [DeletionEffectParameterAnimationRemoved](#zipzimodelingdeletiondeletioneffectparameteranimationremoved), [DeletionEffectParameterDimensionRemoved](#zipzimodelingdeletiondeletioneffectparameterdimensionremoved), [DeletionEffectPartAnimationRemoved](#zipzimodelingdeletiondeletioneffectpartanimationremoved), [DeletionEffectPartStateRemoved](#zipzimodelingdeletiondeletioneffectpartstateremoved), [DeletionEffectPhysicsChannelRemoved](#zipzimodelingdeletiondeletioneffectphysicschannelremoved), [DeletionEffectResourceReplaced](#zipzimodelingdeletiondeletioneffectresourcereplaced), [DeletionEffectUnpreservedChannels](#zipzimodelingdeletiondeletioneffectunpreservedchannels).
+
 
 ## zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved
 
 **Type**
 
 `(*, object: DeletionObject, binding: DeletionObject)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -128,6 +136,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 **Type**
 
 `(*, value: DeletionObject)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -141,6 +151,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 A retained native record loses selected samples, pairs or keys.
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `value`: Retained owner whose selected stable content identities disappear.
@@ -151,6 +163,8 @@ A retained native record loses selected samples, pairs or keys.
 
 `(*, value: DeletionObject)`
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `value`: Surviving object whose deformation is not fully preserved.
@@ -160,6 +174,8 @@ A retained native record loses selected samples, pairs or keys.
 **Type**
 
 `(*, group: DeletionObject, destination: DeletionObject, source_range: tuple[int, int], destination_range: tuple[int, int], dynamic_order: bool, offscreen: DeletionObject | None = None)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -176,6 +192,8 @@ A retained native record loses selected samples, pairs or keys.
 
 `(*, value: DeletionObject)`
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `value`: Deleted connection whose seam or postprocessing contribution disappears.
@@ -185,6 +203,8 @@ A retained native record loses selected samples, pairs or keys.
 **Type**
 
 `(*, value: DeletionObject)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -196,6 +216,8 @@ A retained native record loses selected samples, pairs or keys.
 
 `(*, value: DeletionObject)`
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `value`: Retained Mask consumer whose clipping effect changes.
@@ -205,6 +227,8 @@ A retained native record loses selected samples, pairs or keys.
 **Type**
 
 `(*, registration: DeletionObject, group: DeletionObject)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -217,6 +241,8 @@ A retained native record loses selected samples, pairs or keys.
 
 `(*, value: DeletionObject)`
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `value`: Surviving member whose organization owner changes.
@@ -227,6 +253,8 @@ A retained native record loses selected samples, pairs or keys.
 
 `(*, value: DeletionObject)`
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `value`: Removed Motion/Expression parameter record; other tracks, events and resource registrations remain.
@@ -236,6 +264,8 @@ A retained native record loses selected samples, pairs or keys.
 **Type**
 
 `(*, object: DeletionObject, parameter: DeletionObject, value: float, effective_value: float, disabled: bool)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -251,6 +281,8 @@ A retained native record loses selected samples, pairs or keys.
 
 `(*, value: DeletionObject)`
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `value`: Removed Part animation/Pose record; its container remains.
@@ -260,6 +292,8 @@ A retained native record loses selected samples, pairs or keys.
 **Type**
 
 `(*, part: DeletionObject, enabled: bool, animated_order: bool)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -273,6 +307,8 @@ A retained native record loses selected samples, pairs or keys.
 
 `(*, object: DeletionObject, group: DeletionObject)`
 
+Types: [DeletionObject].
+
 **Fields**
 
 - `object`: Removed input or output channel, with a stable native identity.
@@ -283,6 +319,8 @@ A retained native record loses selected samples, pairs or keys.
 **Type**
 
 `(*, object: DeletionObject, source: DeletionObject, replacement: DeletionObject | None = None)`
+
+Types: [DeletionObject].
 
 **Fields**
 
@@ -295,6 +333,8 @@ A retained native record loses selected samples, pairs or keys.
 **Type**
 
 `(*, object: DeletionObject, channels: tuple[DeletionChannel, ...])`
+
+Types: [DeletionChannel], [DeletionObject].
 
 **Fields**
 

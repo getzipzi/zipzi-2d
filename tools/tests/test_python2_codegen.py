@@ -94,7 +94,7 @@ class Python2Codegen(unittest.TestCase):
         page = output['client/python/zipzi/docs/reference/runtime_session.md']
         section = page.split('## zipzi.Session.meshes.get\n', 1)[1].split('\n## ', 1)[0]
         self.assertNotIn('Alias of', section)
-        self.assertNotIn('Types:', section)
+        self.assertIn('[Mesh]', section)
         self.assertEqual(page.count('## Type references'),1)
         self.assertIn('[Mesh]: meshes.md#zipzimeshesmesh',page)
         self.assertIn('zipzi.meshes.Mesh',catalog['zipzi.Session.meshes.get']['type_refs'])
@@ -175,6 +175,8 @@ class Python2Codegen(unittest.TestCase):
                 if name.endswith('::ManualMeshOperation'):node['doc']='Updated mesh operation union meaning.'
                 if name.endswith('::MeshOperation'):
                     next(v for v in node['variants'] if v['rust_name']=='Rename')['doc']='Updated rename meaning.'
+                if name.endswith('::ParameterOperation'):
+                    next(v for v in node['variants'] if v['rust_name']=='Patch')['doc']='Updated partial parameter replacement meaning.'
                 if name.endswith('::MeshConstraintKind'):
                     next(v for v in node['variants'] if v['rust_name']=='User')['doc']='Updated constraint meaning.'
                 for child in node.values():mutate(child)
@@ -194,11 +196,24 @@ class Python2Codegen(unittest.TestCase):
         self.assertIn('Updated mesh operation union meaning.',output['client/python/zipzi/docs/reference/modeling_mesh.md'])
         self.assertIn('Updated constraint meaning.',str(catalog['zipzi.meshes.ConstraintKind']['fields']))
         self.assertIn('Updated constraint meaning.',output['client/python/zipzi/docs/reference/modeling_mesh.md'])
+        for path in ('zipzi.parameters.Patch','zipzi.Edit.parameters.patch'):
+            self.assertIn('Updated partial parameter replacement meaning.',catalog[path]['documentation'])
+        self.assertIn('Updated partial parameter replacement meaning.',output['client/python/zipzi/_generated/parameter_values.py'])
+        self.assertIn('Updated partial parameter replacement meaning.',output['client/python/zipzi/_generated/facades.py'])
+        self.assertIn('Updated partial parameter replacement meaning.',output['client/python/zipzi/docs/reference/parameters.md'])
+        self.assertNotIn('Updated partial parameter replacement meaning.',catalog['zipzi.Edit.meshes.rename']['documentation'])
 
     def test_reference_rejects_missing_example_target(self):
-        original = Path.is_file
-        with patch.object(Path, 'is_file', lambda path: False if path.name == 'recipes.py' else original(path)):
-            with self.assertRaisesRegex(ValueError, 'Missing API example: docs/recipes.py'):
+        from dataclasses import replace
+        original=gen._api_codegen.render_api
+        def explicit_example(*args,**kwargs):
+            output=original(*args,**kwargs)
+            bindings=kwargs['documentation']
+            key='python:zipzi._generated.facades.Meshes.get'
+            bindings[key]=replace(bindings[key],example='docs/missing-example.py')
+            return output
+        with patch.object(gen._api_codegen,'render_api',side_effect=explicit_example):
+            with self.assertRaisesRegex(ValueError, 'Missing API example: docs/missing-example.py'):
                 render_fixture(self.contract())
 
     def test_reference_links_and_fragments_resolve(self):
@@ -879,6 +894,206 @@ class Python2Codegen(unittest.TestCase):
             mutate(contract)
             with self.assertRaises(ValueError):
                 render_fixture(contract)
+
+class PythonReference(unittest.TestCase):
+    # Pages only enter this set after full page acceptance. Cross-page pilots
+    # are exact paths; accepting modeling does not accept modeling.* domains.
+    ACCEPTED_PAGES = frozenset({'meshes'})
+    BATCH_PAGES = {
+        'S': 'meshes',
+        'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
+        'P2': 'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits',
+        'P3': 'resources scene modeling_resources modeling_scene modeling_scene_edits modeling_mesh',
+        'P4': 'references modeling_addressing modeling_addressing_kinds modeling_addressing_patches modeling_addressing_selectors modeling_deletion modeling_deletion_decisions',
+        'P5': 'modeling_project',
+        'P6': 'animation sampling modeling_motion modeling_expression modeling_physics modeling_pose modeling_preview modeling_sampling',
+        'P7': 'spatial observation inspection mesh_generation modeling_observation modeling_spatial',
+    }
+    PILOT_PATHS = frozenset({
+        'zipzi.ApiDescription', 'zipzi.ApiDescription.format',
+        'zipzi.Session.meshes', 'zipzi.Edit.meshes',
+        *(f'zipzi.{owner}.meshes.{method}' for owner in ('Session','Edit') for method in ('get','get_many','list')),
+        *(f'zipzi.Edit.meshes.{method}' for method in ('create','rename','set_positions')),
+        'zipzi.Edit.parameters.patch', 'zipzi.parameters.ParameterPatch', 'zipzi.parameters.Patch',
+        'zipzi.modeling.mesh.MeshConstraintKind', 'zipzi.meshes.ConstraintKind',
+        'zipzi.modeling.spatial.ObjectTarget', 'zipzi.modeling.spatial.ObjectTargetMesh',
+        'zipzi.modeling.spatial.ObjectTargetPart', 'zipzi.spatial.Target',
+    })
+
+    @classmethod
+    def setUpClass(cls):
+        original=gen._api_codegen.document_model
+        def capture(*args,**kwargs):
+            cls.model=original(*args,**kwargs)
+            return cls.model
+        with patch.object(gen._api_codegen,'document_model',side_effect=capture):
+            cls.output=gen.render(gen.schema.read(PACKAGE/'schema/authoring.json'))
+        cls.catalog=catalog_from_output(cls.output)
+        cls.coverage=json.loads(cls.output['client/python/zipzi/docs/type-documentation.json'])
+        cls.quality=json.loads(cls.output['client/python/zipzi/docs/documentation-quality.json'])
+
+    def test_reference_scoped_coverage_and_stable_debt(self):
+        from codegen.documentation_audit import scoped_missing, debt_keys, validate_debt
+        self.assertTrue(self.PILOT_PATHS<=self.catalog.keys(),self.PILOT_PATHS-self.catalog.keys())
+        self.assertFalse(scoped_missing(self.coverage,self.quality,self.ACCEPTED_PAGES,self.PILOT_PATHS))
+        baseline=json.loads((ROOT/'tools/python/python-reference-debt.json').read_text())
+        validate_debt(debt_keys(self.coverage,self.quality),{tuple(key) for key in baseline['debt']})
+        current={('type-summary','rust:example::Old|projection:canonical','')}
+        with self.assertRaisesRegex(ValueError,'New documentation debt'):
+            validate_debt({('type-summary','rust:example::New|projection:canonical','')},current)
+        with self.assertRaisesRegex(ValueError,'Remove resolved'):
+            validate_debt(set(),current)
+        for item in self.coverage['missing']:
+            self.assertIsInstance(item['identity'],str)
+            self.assertTrue(item['identity'].startswith(('python:','rust:')))
+
+    def test_reference_routing_uses_exact_pages(self):
+        from codegen.reference_routing import page_group
+        domains=self.model[1]
+        modeling=tuple(path.rsplit('.',1)[-1] for path,row in self.catalog.items()
+                       if row['kind']=='module' and path.startswith('zipzi.modeling.') and path.count('.')==2)
+        self.assertEqual(page_group('zipzi.modeling',domains,modeling),'modeling')
+        self.assertEqual(page_group('zipzi.modeling.mesh.ManualMeshOperation',domains,modeling),'modeling_mesh')
+        self.assertEqual(page_group('zipzi.modeling.addressing.AddressPatch',domains,modeling),'modeling_addressing_patches')
+        assigned=[page for pages in self.BATCH_PAGES.values() for page in pages.split()]
+        self.assertEqual(len(assigned),len(set(assigned)))
+        self.assertEqual(set(assigned),set(self.quality['pages']))
+        self.assertTrue(self.ACCEPTED_PAGES<=set(assigned))
+        from codegen.documentation_audit import scoped_missing
+        missing=scoped_missing(self.coverage,self.quality,{'modeling'})
+        self.assertFalse(any('modeling_mesh' in row.get('pages',()) and row.get('pages')==['modeling_mesh'] for _,row in missing))
+        self.assertTrue(set(self.quality['pages'])-self.ACCEPTED_PAGES)  # Future batches remain visible.
+
+    def test_reference_rule_bodies_aliases_and_examples_are_deduplicated(self):
+        from codegen.documentation_audit import PLACEHOLDERS,validate_reference_declarations
+        rules=self.model[-2]
+        pages={path:text for path,text in self.output.items() if '/docs/reference/' in path}
+        validate_reference_declarations(pages)
+        for rule in rules.values():
+            for path,text in pages.items():
+                self.assertEqual(text.count(rule.documentation),int(path.endswith('/common.md')),(path,rule.key))
+        for row in self.catalog.values():self.assertFalse(row.get('example'))
+        for pattern in PLACEHOLDERS:
+            self.assertFalse(any(pattern in text for text in pages.values()),pattern)
+        for path,source in self.output.items():
+            if '/_generated/catalog/' not in path or not path.endswith('.py'):continue
+            data=next((ast.literal_eval(n.value) for n in ast.parse(source).body
+                       if isinstance(n,ast.AnnAssign) and getattr(n.target,'id','')=='DATA'),{})
+            for name,row in data.items():
+                if 'alias' not in row or self.catalog[name]['kind'] not in {'type','enum','alias'}:continue
+                section=next(text for text in pages.values() if '## '+name+'\n' in text).split('## '+name+'\n',1)[1].split('\n## ',1)[0]
+                self.assertIn('Alias of',section,name)
+                self.assertNotIn('**Fields**',section,name)
+        with self.assertRaisesRegex(ValueError,'Duplicate/ambiguous'):
+            validate_reference_declarations({'example.md':'[Mesh]: a.md\n[mesh]: b.md\n'})
+
+    def test_reference_pilot_preserves_effects_fields_and_projection_roles(self):
+        for owner in ('Session','Edit'):
+            for method,result in (('get','Snapshot'),('get_many','Batch'),('list','Page')):
+                row=self.catalog[f'zipzi.{owner}.meshes.{method}']
+                self.assertIn(result,row['signature'])
+                self.assertIn('committed Session' if owner=='Session' else 'this Edit candidate',row['documentation'])
+                self.assertNotIn('session.meshes',row['documentation'])
+                self.assertTrue(row['rules'])
+        for method,result in (('create','str'),('rename','WriteResult'),('set_positions','WriteResult')):
+            row=self.catalog[f'zipzi.Edit.meshes.{method}']
+            text=row['documentation']+' '.join(body for _,body in row['rules'])
+            for fact in ('candidate','abort the candidate','OutcomeUnknown','Job[Receipt]','recovery_action'):
+                self.assertIn(fact,text)
+            self.assertTrue(row['signature'].endswith('-> '+result))
+        patch=self.catalog['zipzi.parameters.ParameterPatch']
+        self.assertIn('None',patch['documentation'])
+        self.assertIn('preserve',patch['documentation'])
+        self.assertIn('None preserves',dict(patch['fields'])['kind'])
+        self.assertNotIn('kind',{name for name,_,_ in patch.get('field_roles',())})
+        create=self.catalog['zipzi.meshes.Create']
+        self.assertEqual(create['field_roles'],(('kind','fixed-discriminator',"'create'"),))
+        self.assertNotIn('kind:',create['signature'])
+        self.assertIn('fixed-discriminator',create['rule_refs'])
+        self.assertIn('persistent',dict(self.catalog['zipzi.modeling.spatial.ObjectTargetMesh']['fields'])['value'].lower())
+
+    def test_reference_missing_branches_and_unknown_sdk_types_are_diagnosed(self):
+        contract=gen.schema.read(PACKAGE/'schema/authoring.json')
+        contract['definitions']['zipzi_contract::model::MeshConstraintKind']['variants'][0]['doc']=''
+        contract['definitions']['zipzi_contract::spatial::ObjectTarget']['variants'][0]['doc']=''
+        original=gen._api_codegen.render_api
+        def unknown(*args,**kwargs):
+            output=original(*args,**kwargs)
+            path='client/python/zipzi/_generated/facades.py'
+            output[path]=output[path].replace('-> Snapshot[meshes.Mesh]:','-> Snapshot[meshes.UnknownSdkType]:')
+            return output
+        with patch.object(gen._api_codegen,'render_api',side_effect=unknown):
+            output=gen.render(contract)
+        quality=json.loads(output['client/python/zipzi/docs/documentation-quality.json'])
+        categories={row['category'] for row in quality['diagnostics']
+                    if any(path in self.PILOT_PATHS for path in row['paths'])}
+        self.assertTrue({'enum-member','union-branch','type-reference'}<=categories)
+        self.assertTrue({'builtin','typing','type-variable','public-sdk'}<=self.quality['reference_classifications'].keys())
+        self.assertTrue(any(row['status']=='review_required' and row['category']=='callable-return' for row in self.quality['semantic_review']))
+        self.assertTrue(any(row['status']=='not_applicable' for row in self.quality['semantic_review']))
+
+    def test_reference_rule_and_descriptor_changes_reach_all_consumers(self):
+        from dataclasses import replace
+        from codegen.model import DocRule,validate_rules
+        marker='Changed collection source rule.'
+        original_rule=gen._api_codegen.collection_rules
+        original_api=gen._api_codegen.render_api
+        def changed_rules(package):
+            rules=original_rule(package)
+            rules['collection-read']=replace(rules['collection-read'],documentation=marker)
+            return rules
+        def changed_api(*args,**kwargs):
+            saved=gen._api_codegen.WRITES['Meshes']
+            rows=deepcopy(saved)
+            rows[0]=(*rows[0][:-1],'Changed Python create projection.')
+            with patch.dict(gen._api_codegen.WRITES,{'Meshes':rows}):
+                return original_api(*args,**kwargs)
+        with patch.object(gen._api_codegen,'collection_rules',side_effect=changed_rules), \
+             patch.object(gen._api_codegen._python_api,'collection_rules',side_effect=changed_rules), \
+             patch.object(gen._api_codegen,'render_api',side_effect=changed_api):
+            changed=gen.render(gen.schema.read(PACKAGE/'schema/authoring.json'))
+        catalog=catalog_from_output(changed)
+        self.assertIn(marker,changed['client/python/zipzi/_generated/facades.py'])
+        self.assertEqual(catalog['zipzi.Session.meshes.get']['rules'][0][1],marker)
+        self.assertIn(marker,changed['client/python/zipzi/docs/reference/common.md'])
+        self.assertIn('Changed Python create projection.',catalog['zipzi.Edit.meshes.create']['documentation'])
+        self.assertEqual(catalog['zipzi.Edit.parameters.create'],self.catalog['zipzi.Edit.parameters.create'])
+        with self.assertRaisesRegex(ValueError,'Missing documentation rule'):
+            validate_rules({},('absent',))
+        with self.assertRaisesRegex(ValueError,'must be leaves'):
+            validate_rules({'cycle':DocRule('cycle','Cycle','Body','python:source',('cycle',))},('cycle',))
+        with self.assertRaisesRegex(ValueError,'Duplicate documentation rule'):
+            validate_rules(self.model[-2],('collection-read','collection-read'))
+
+    def test_reference_projection_binding_mistakes_fail(self):
+        original=gen._api_codegen.render_api
+        def wrong(*args,**kwargs):
+            output=original(*args,**kwargs)
+            bindings=kwargs['documentation']
+            bindings['python:zipzi._generated.facades.Parameters.wrong']=bindings.pop('python:zipzi._generated.facades.Meshes.get')
+            return output
+        with patch.object(gen._api_codegen,'render_api',side_effect=wrong):
+            with self.assertRaisesRegex(ValueError,'Unbound documentation projection'):
+                gen.render(gen.schema.read(PACKAGE/'schema/authoring.json'))
+
+    def test_reference_offline_format_is_complete_and_loads_only_direct_rules(self):
+        code='''import sys
+sys.path.insert(0, {package!r})
+import zipzi
+assert not any(name.startswith('zipzi._generated.catalog.') for name in sys.modules)
+entry=zipzi.describe('Edit.meshes.create')
+assert entry.rule_refs == ('edit-write',)
+text=entry.format()
+for fact in ('candidate', 'abort the candidate', 'OutcomeUnknown', 'Job[Receipt]'):
+    assert fact in text, fact
+assert text.count(entry.rules[0][1]) == 1
+assert not entry.example
+assert set(name.removeprefix('zipzi._generated.catalog.') for name in sys.modules if name.startswith('zipzi._generated.catalog.')) == {{'index','runtime_edit','rules'}}
+assert not any(name.startswith(('zipzi_native','wgpu')) for name in sys.modules)
+'''.format(package=str(PACKAGE/'client/python'))
+        result=subprocess.run([__import__('sys').executable,'-I','-c',code],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -15,9 +15,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                     'kind': 'module',
                     'signature': ''},
  'zipzi.bindings.Appearance': {'children': ('zipzi.bindings.Appearance.__repr__', 'zipzi.bindings.Appearance.summary'),
-                               'documentation': 'Owned bindings Appearance value; reading fields, repr and summary '
-                                                'performs no IO.',
-                               'example': 'docs/recipes.py',
+                               'documentation': '',
                                'fields': [('opacity',
                                            'Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. '
                                            'Imported values\n'
@@ -32,8 +30,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Appearance.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.Appearance.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Axis': {'children': ('zipzi.bindings.Axis.__repr__', 'zipzi.bindings.Axis.summary'),
-                         'documentation': 'Owned bindings Axis value; reading fields, repr and summary performs no IO.',
-                         'example': 'docs/recipes.py',
+                         'documentation': '',
                          'fields': [('parameter_id',
                                      'Stable document parameter ID, not its exported runtime identifier.'),
                                     ('keys',
@@ -46,9 +43,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Axis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.AxisSnapshot': {'children': ('zipzi.bindings.AxisSnapshot.__repr__',
                                               'zipzi.bindings.AxisSnapshot.summary'),
-                                 'documentation': 'Owned bindings AxisSnapshot value; reading fields, repr and summary '
-                                                  'performs no IO.',
-                                 'example': 'docs/recipes.py',
+                                 'documentation': '',
                                  'fields': [('id',
                                              'Stable axis UUID; an empty ID is allocated during native binding '
                                              'normalization.'),
@@ -65,25 +60,21 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.AxisSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.AxisSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Create': {'children': ('zipzi.bindings.Create.__repr__', 'zipzi.bindings.Create.summary'),
-                           'documentation': 'Owned bindings Create value; reading fields, repr and summary performs no '
-                                            'IO.',
-                           'example': 'docs/recipes.py',
+                           'documentation': '',
+                           'field_roles': (('kind', 'fixed-discriminator', "'create_mesh_binding'"),),
                            'fields': [('spec',
                                        'Creation specification; native admission supplies identities/defaults and '
                                        'rejects\n'
                                        'invalid input.'),
-                                      ('kind',
-                                       'Fixed operation discriminator supplied by this value type; not a constructor '
-                                       'argument or a mutable object field.')],
+                                      ('kind', "Fixed value 'create_mesh_binding' (read-only).")],
                            'kind': 'type',
+                           'rule_refs': ('fixed-discriminator',),
                            'signature': '(spec: MeshBindingSpec) -> None',
                            'type_refs': ('zipzi.bindings.MeshBindingSpec',)},
  'zipzi.bindings.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.Create.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Keyform': {'children': ('zipzi.bindings.Keyform.__repr__', 'zipzi.bindings.Keyform.summary'),
-                            'documentation': 'Owned bindings Keyform value; reading fields, repr and summary performs '
-                                             'no IO.',
-                            'example': 'docs/recipes.py',
+                            'documentation': '',
                             'fields': [('keys',
                                         'One actual parameter sample value per binding axis, in axis order; each must '
                                         'match a\n'
@@ -110,9 +101,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Keyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.KeyformSnapshot': {'children': ('zipzi.bindings.KeyformSnapshot.__repr__',
                                                  'zipzi.bindings.KeyformSnapshot.summary'),
-                                    'documentation': 'Owned bindings KeyformSnapshot value; reading fields, repr and '
-                                                     'summary performs no IO.',
-                                    'example': 'docs/recipes.py',
+                                    'documentation': '',
                                     'fields': [('samples',
                                                 'Stable sample IDs, one per active binding axis in axis order; not '
                                                 'numeric sample\n'
@@ -134,9 +123,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.KeyformSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.MeshBinding': {'children': ('zipzi.bindings.MeshBinding.__repr__',
                                              'zipzi.bindings.MeshBinding.summary'),
-                                'documentation': 'Owned bindings MeshBinding value; reading fields, repr and summary '
-                                                 'performs no IO.',
-                                'example': 'docs/recipes.py',
+                                'documentation': '',
                                 'fields': [('id',
                                             'Stable document object ID used by references; it is distinct from the '
                                             'exported runtime_id.'),
@@ -157,9 +144,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.MeshBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.MeshBindingSpec': {'children': ('zipzi.bindings.MeshBindingSpec.__repr__',
                                                  'zipzi.bindings.MeshBindingSpec.summary'),
-                                    'documentation': 'Owned bindings MeshBindingSpec value; reading fields, repr and '
-                                                     'summary performs no IO.',
-                                    'example': 'docs/recipes.py',
+                                    'documentation': '',
                                     'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                                ('axes',
                                                 'Ordered parameter axes; keyform coordinates follow this order and '
@@ -179,9 +164,7 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.MeshBindingSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.MeshBindingSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.Sample': {'children': ('zipzi.bindings.Sample.__repr__', 'zipzi.bindings.Sample.summary'),
-                           'documentation': 'Owned bindings Sample value; reading fields, repr and summary performs no '
-                                            'IO.',
-                           'example': 'docs/recipes.py',
+                           'documentation': '',
                            'fields': [('id',
                                        'Stable sample UUID within the binding axis; distinct from its numeric value.'),
                                       ('value',
@@ -193,9 +176,8 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
  'zipzi.bindings.Sample.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.bindings.Sample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.bindings.SetKeyform': {'children': ('zipzi.bindings.SetKeyform.__repr__', 'zipzi.bindings.SetKeyform.summary'),
-                               'documentation': 'Owned bindings SetKeyform value; reading fields, repr and summary '
-                                                'performs no IO.',
-                               'example': 'docs/recipes.py',
+                               'documentation': '',
+                               'field_roles': (('kind', 'fixed-discriminator', "'set_mesh_keyform'"),),
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
                                            'exported\n'
@@ -203,10 +185,9 @@ DATA: dict[str, Entry] = {'zipzi.bindings': {'children': ('zipzi.bindings.Appear
                                           ('keyform',
                                            'Complete shape sample to insert or replace; unrelated samples are '
                                            'retained.'),
-                                          ('kind',
-                                           'Fixed operation discriminator supplied by this value type; not a '
-                                           'constructor argument or a mutable object field.')],
+                                          ('kind', "Fixed value 'set_mesh_keyform' (read-only).")],
                                'kind': 'type',
+                               'rule_refs': ('fixed-discriminator',),
                                'signature': '(id: str, keyform: Keyform) -> None',
                                'type_refs': ('zipzi.bindings.Keyform',)},
  'zipzi.bindings.SetKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

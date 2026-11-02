@@ -97,7 +97,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                              'signature': ''},
  'zipzi.modeling.bindings.AxisReduction': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'AxisReductionSlice | AxisReductionResample',
@@ -106,7 +105,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.AxisReductionResample': {'children': ('zipzi.modeling.bindings.AxisReductionResample.__repr__',
                                                                 'zipzi.modeling.bindings.AxisReductionResample.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Parameter coordinate used to resample the old grid '
                                                                'while reducing an axis.')],
@@ -117,7 +115,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.AxisReductionSlice': {'children': ('zipzi.modeling.bindings.AxisReductionSlice.__repr__',
                                                              'zipzi.modeling.bindings.AxisReductionSlice.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Parameter coordinate at which to slice the old grid while '
                                                             'removing an axis.')],
@@ -128,7 +125,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingAxis': {'children': ('zipzi.modeling.bindings.BindingAxis.__repr__',
                                                       'zipzi.modeling.bindings.BindingAxis.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable axis UUID; an empty ID is allocated during native binding '
                                                      'normalization.'),
@@ -147,7 +143,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingAxis.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingFieldPatch': {'children': (),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'alias',
                                                'signature': 'BindingFieldPatchSampleValue | '
@@ -159,7 +154,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingFieldPatchAxisParameter': {'children': ('zipzi.modeling.bindings.BindingFieldPatchAxisParameter.__repr__',
                                                                          'zipzi.modeling.bindings.BindingFieldPatchAxisParameter.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('parameter_id',
                                                                         'Stable document parameter ID, not its '
                                                                         'exported runtime identifier.'),
@@ -175,7 +169,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingFieldPatchConstraintSample': {'children': ('zipzi.modeling.bindings.BindingFieldPatchConstraintSample.__repr__',
                                                                             'zipzi.modeling.bindings.BindingFieldPatchConstraintSample.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('value',
                                                                            'Scalar value in the referenced parameter '
                                                                            'domain.'),
@@ -189,7 +182,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingFieldPatchSampleValue': {'children': ('zipzi.modeling.bindings.BindingFieldPatchSampleValue.__repr__',
                                                                        'zipzi.modeling.bindings.BindingFieldPatchSampleValue.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('value',
                                                                       'Scalar value in the referenced parameter '
                                                                       'domain.')],
@@ -199,7 +191,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingFieldPatchSampleValue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BindingGridTarget': {'children': (),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'alias',
                                                'signature': 'BindingGridTargetMesh | BindingGridTargetScene | '
@@ -210,7 +201,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingGridTargetGlue': {'children': ('zipzi.modeling.bindings.BindingGridTargetGlue.__repr__',
                                                                 'zipzi.modeling.bindings.BindingGridTargetGlue.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Stable ID of the target Glue whose ordinary grid is '
                                                                'being created.')],
@@ -221,7 +211,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingGridTargetMesh': {'children': ('zipzi.modeling.bindings.BindingGridTargetMesh.__repr__',
                                                                 'zipzi.modeling.bindings.BindingGridTargetMesh.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Stable ID of the target mesh whose ordinary grid is '
                                                                'being created.')],
@@ -232,7 +221,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingGridTargetScene': {'children': ('zipzi.modeling.bindings.BindingGridTargetScene.__repr__',
                                                                  'zipzi.modeling.bindings.BindingGridTargetScene.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Stable ID of the target scene transform or Part whose '
                                                                 'ordinary grid is being created.')],
@@ -243,7 +231,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BindingSample': {'children': ('zipzi.modeling.bindings.BindingSample.__repr__',
                                                         'zipzi.modeling.bindings.BindingSample.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('id',
                                                        'Stable sample UUID within the binding axis; distinct from its '
                                                        'numeric value.'),
@@ -258,7 +245,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendShapeBinding': {'children': ('zipzi.modeling.bindings.BlendShapeBinding.__repr__',
                                                             'zipzi.modeling.bindings.BlendShapeBinding.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable document object ID used by references; it is '
                                                            'distinct from the exported runtime_id.'),
@@ -288,7 +274,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendShapeConstraint': {'children': ('zipzi.modeling.bindings.BlendShapeConstraint.__repr__',
                                                                'zipzi.modeling.bindings.BlendShapeConstraint.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('samples',
                                                               'Ordered parameter samples with weights used to '
                                                               'attenuate the BlendShape contribution.'),
@@ -307,7 +292,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendShapeKeyTable': {'children': ('zipzi.modeling.bindings.BlendShapeKeyTable.__repr__',
                                                              'zipzi.modeling.bindings.BlendShapeKeyTable.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('samples',
                                                             'Ordered stable parameter samples with strictly increasing '
                                                             'finite values; base_sample_id\n'
@@ -329,7 +313,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendShapeKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.BlendShapeTargetKind': {'children': (),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('MESH', "'mesh'"),
                                                              ('WARP', "'warp'"),
                                                              ('ROTATION', "'rotation'"),
@@ -340,7 +323,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                   'signature': ''},
  'zipzi.modeling.bindings.BlendTableOperation': {'children': (),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [],
                                                  'kind': 'alias',
                                                  'signature': 'BlendTableOperationInsert | BlendTableOperationMove | '
@@ -356,7 +338,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationDelete': {'children': ('zipzi.modeling.bindings.BlendTableOperationDelete.__repr__',
                                                                     'zipzi.modeling.bindings.BlendTableOperationDelete.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('sample_id',
                                                                    'Stable sample ID from the associated axis or '
                                                                    'BlendShape key table; not a numeric\n'
@@ -372,7 +353,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationInsert': {'children': ('zipzi.modeling.bindings.BlendTableOperationInsert.__repr__',
                                                                     'zipzi.modeling.bindings.BlendTableOperationInsert.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('sample',
                                                                    'New stable sample UUID and finite parameter '
                                                                    'coordinate to insert into this key table.')],
@@ -384,7 +364,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationMove': {'children': ('zipzi.modeling.bindings.BlendTableOperationMove.__repr__',
                                                                   'zipzi.modeling.bindings.BlendTableOperationMove.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('sample_id',
                                                                  'Stable sample ID from the associated axis or '
                                                                  'BlendShape key table; not a numeric\n'
@@ -398,7 +377,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationRemapParameter': {'children': ('zipzi.modeling.bindings.BlendTableOperationRemapParameter.__repr__',
                                                                             'zipzi.modeling.bindings.BlendTableOperationRemapParameter.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('parameter_id',
                                                                            'Stable document parameter ID, not its '
                                                                            'exported runtime identifier.'),
@@ -416,7 +394,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationSetBase': {'children': ('zipzi.modeling.bindings.BlendTableOperationSetBase.__repr__',
                                                                      'zipzi.modeling.bindings.BlendTableOperationSetBase.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('sample_id',
                                                                     'Stable sample ID from the associated axis or '
                                                                     'BlendShape key table; not a numeric\n'
@@ -428,7 +405,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.BlendTableOperationSetParameter': {'children': ('zipzi.modeling.bindings.BlendTableOperationSetParameter.__repr__',
                                                                           'zipzi.modeling.bindings.BlendTableOperationSetParameter.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('parameter_id',
                                                                          'Stable document parameter ID, not its '
                                                                          'exported runtime identifier.')],
@@ -439,7 +415,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.ConstraintSample': {'children': ('zipzi.modeling.bindings.ConstraintSample.__repr__',
                                                            'zipzi.modeling.bindings.ConstraintSample.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('id', 'Stable constraint-sample UUID.'),
                                                          ('value',
                                                           'Finite parameter coordinate for this constraint sample.'),
@@ -453,7 +428,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaGlueKeyform': {'children': ('zipzi.modeling.bindings.DeltaGlueKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaGlueKeyform.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
                                                           'not a numeric parameter value.'),
@@ -465,7 +439,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaGlueKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.DeltaKeyforms': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'DeltaKeyformsMesh | DeltaKeyformsWarp | DeltaKeyformsRotation '
@@ -480,7 +453,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaKeyformsGlue': {'children': ('zipzi.modeling.bindings.DeltaKeyformsGlue.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsGlue.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Glue BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
@@ -493,7 +465,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaKeyformsMesh': {'children': ('zipzi.modeling.bindings.DeltaKeyformsMesh.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsMesh.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Mesh BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
@@ -506,7 +477,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaKeyformsOffscreen': {'children': ('zipzi.modeling.bindings.DeltaKeyformsOffscreen.__repr__',
                                                                  'zipzi.modeling.bindings.DeltaKeyformsOffscreen.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Ordered Offscreen BlendShape displacement keyforms, '
                                                                 'each keyed by stable sample_id;\n'
@@ -519,7 +489,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaKeyformsPart': {'children': ('zipzi.modeling.bindings.DeltaKeyformsPart.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsPart.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Part BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
@@ -532,7 +501,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaKeyformsRotation': {'children': ('zipzi.modeling.bindings.DeltaKeyformsRotation.__repr__',
                                                                 'zipzi.modeling.bindings.DeltaKeyformsRotation.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Ordered Rotation BlendShape displacement keyforms, '
                                                                'each keyed by stable sample_id;\n'
@@ -545,7 +513,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaKeyformsWarp': {'children': ('zipzi.modeling.bindings.DeltaKeyformsWarp.__repr__',
                                                             'zipzi.modeling.bindings.DeltaKeyformsWarp.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('value',
                                                            'Ordered Warp BlendShape displacement keyforms, each keyed '
                                                            'by stable sample_id;\n'
@@ -558,7 +525,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaMeshKeyform': {'children': ('zipzi.modeling.bindings.DeltaMeshKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaMeshKeyform.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
                                                           'not a numeric parameter value.'),
@@ -589,7 +555,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaOffscreenKeyform': {'children': ('zipzi.modeling.bindings.DeltaOffscreenKeyform.__repr__',
                                                                 'zipzi.modeling.bindings.DeltaOffscreenKeyform.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('sample_id',
                                                                'Stable sample ID in the referenced BlendShape key '
                                                                'table, not a numeric parameter value.'),
@@ -612,7 +577,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaPartKeyform': {'children': ('zipzi.modeling.bindings.DeltaPartKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaPartKeyform.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
                                                           'not a numeric parameter value.'),
@@ -625,7 +589,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaRotationKeyform': {'children': ('zipzi.modeling.bindings.DeltaRotationKeyform.__repr__',
                                                                'zipzi.modeling.bindings.DeltaRotationKeyform.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('sample_id',
                                                               'Stable sample ID in the referenced BlendShape key '
                                                               'table, not a numeric parameter value.'),
@@ -662,7 +625,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.DeltaWarpKeyform': {'children': ('zipzi.modeling.bindings.DeltaWarpKeyform.__repr__',
                                                            'zipzi.modeling.bindings.DeltaWarpKeyform.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('sample_id',
                                                           'Stable sample ID in the referenced BlendShape key table, '
                                                           'not a numeric parameter value.'),
@@ -692,7 +654,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                       'zipzi.modeling.bindings.GlueBinding.summary'),
                                          'documentation': 'Ordinary parameter grid for Glue intensity, owned and '
                                                           'edited atomically with its Glue.',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('axes',
                                                      'Ordered parameter axes; keyform coordinates follow this order '
                                                      'and samples retain their\n'
@@ -709,7 +670,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GlueKeyform': {'children': ('zipzi.modeling.bindings.GlueKeyform.__repr__',
                                                       'zipzi.modeling.bindings.GlueKeyform.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('samples',
                                                      'Stable sample IDs in active binding-axis order; not numeric '
                                                      'coordinates.'),
@@ -722,7 +682,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GlueKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.GridOperation': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'GridOperationAddAxis | GridOperationRemapParameter | '
@@ -740,7 +699,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationAddAxis': {'children': ('zipzi.modeling.bindings.GridOperationAddAxis.__repr__',
                                                                'zipzi.modeling.bindings.GridOperationAddAxis.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('axis',
                                                               'Axis definition with a parameter ID and ordered '
                                                               'samples; axis identity is distinct\n'
@@ -753,7 +711,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationDeleteSample': {'children': ('zipzi.modeling.bindings.GridOperationDeleteSample.__repr__',
                                                                     'zipzi.modeling.bindings.GridOperationDeleteSample.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('sample_id',
                                                                    'Stable sample ID from the associated axis or '
                                                                    'BlendShape key table; not a numeric\n'
@@ -765,7 +722,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationInsertSample': {'children': ('zipzi.modeling.bindings.GridOperationInsertSample.__repr__',
                                                                     'zipzi.modeling.bindings.GridOperationInsertSample.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('axis_id',
                                                                    'Stable axis ID owned by this binding, not a '
                                                                    'parameter or sample ID.'),
@@ -781,7 +737,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationMoveSample': {'children': ('zipzi.modeling.bindings.GridOperationMoveSample.__repr__',
                                                                   'zipzi.modeling.bindings.GridOperationMoveSample.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('sample_id',
                                                                  'Stable sample ID from the associated axis or '
                                                                  'BlendShape key table; not a numeric\n'
@@ -795,7 +750,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationRemapParameter': {'children': ('zipzi.modeling.bindings.GridOperationRemapParameter.__repr__',
                                                                       'zipzi.modeling.bindings.GridOperationRemapParameter.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('axis_id',
                                                                      'Stable axis ID owned by this binding, not a '
                                                                      'parameter or sample ID.'),
@@ -815,7 +769,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationRemoveAxis': {'children': ('zipzi.modeling.bindings.GridOperationRemoveAxis.__repr__',
                                                                   'zipzi.modeling.bindings.GridOperationRemoveAxis.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('axis_id',
                                                                  'Stable axis ID owned by this binding, not a '
                                                                  'parameter or sample ID.'),
@@ -834,7 +787,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationReorderAxes': {'children': ('zipzi.modeling.bindings.GridOperationReorderAxes.__repr__',
                                                                    'zipzi.modeling.bindings.GridOperationReorderAxes.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('axis_ids',
                                                                   'Axis IDs in the requested new axis order; IDs refer '
                                                                   'to axes, not parameters.')],
@@ -845,7 +797,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.GridOperationSetParameter': {'children': ('zipzi.modeling.bindings.GridOperationSetParameter.__repr__',
                                                                     'zipzi.modeling.bindings.GridOperationSetParameter.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('axis_id',
                                                                    'Stable axis ID owned by this binding, not a '
                                                                    'parameter or sample ID.'),
@@ -864,7 +815,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.MeshBinding': {'children': ('zipzi.modeling.bindings.MeshBinding.__repr__',
                                                       'zipzi.modeling.bindings.MeshBinding.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
                                                      'from the exported runtime_id.'),
@@ -887,7 +837,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.MeshKeyform': {'children': ('zipzi.modeling.bindings.MeshKeyform.__repr__',
                                                       'zipzi.modeling.bindings.MeshKeyform.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('samples',
                                                      'Stable sample IDs, one per active binding axis in axis order; '
                                                      'not numeric sample\n'
@@ -912,7 +861,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.OffscreenKeyform': {'children': ('zipzi.modeling.bindings.OffscreenKeyform.__repr__',
                                                            'zipzi.modeling.bindings.OffscreenKeyform.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('opacity',
                                                           'Finite nonnegative opacity factor; 0 is transparent and 1 '
                                                           'is opaque. Imported values\n'
@@ -932,7 +880,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.PartKeyform': {'children': ('zipzi.modeling.bindings.PartKeyform.__repr__',
                                                       'zipzi.modeling.bindings.PartKeyform.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('samples',
                                                      'Stable sample IDs in active binding-axis order; not numeric '
                                                      'coordinates.'),
@@ -945,7 +892,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.PartKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.PartKeyformSlot': {'children': (),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'PartKeyformSlotStatic | PartKeyformSlotSamples',
@@ -954,7 +900,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.PartKeyformSlotSamples': {'children': ('zipzi.modeling.bindings.PartKeyformSlotSamples.__repr__',
                                                                  'zipzi.modeling.bindings.PartKeyformSlotSamples.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('samples',
                                                                 'Stable sample IDs selecting one ordinary-binding '
                                                                 'combination, in active axis order.')],
@@ -965,7 +910,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.PartKeyformSlotStatic': {'children': ('zipzi.modeling.bindings.PartKeyformSlotStatic.__repr__',
                                                                 'zipzi.modeling.bindings.PartKeyformSlotStatic.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'type',
                                                    'signature': '()'},
@@ -974,7 +918,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.RotationKeyform': {'children': ('zipzi.modeling.bindings.RotationKeyform.__repr__',
                                                           'zipzi.modeling.bindings.RotationKeyform.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('samples',
                                                          'Stable sample IDs in active binding-axis order; not numeric '
                                                          'coordinates.'),
@@ -994,7 +937,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneBinding': {'children': ('zipzi.modeling.bindings.SceneBinding.__repr__',
                                                        'zipzi.modeling.bindings.SceneBinding.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('id',
                                                       'Stable document object ID used by references; it is distinct '
                                                       'from the exported runtime_id.'),
@@ -1015,7 +957,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneKeyform': {'children': (),
                                           'documentation': 'A single typed replacement; a track only accepts its '
                                                            'matching variant.',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'SceneKeyformWarp | SceneKeyformRotation | SceneKeyformPart',
@@ -1025,7 +966,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneKeyformPart': {'children': ('zipzi.modeling.bindings.SceneKeyformPart.__repr__',
                                                            'zipzi.modeling.bindings.SceneKeyformPart.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Complete Part ordinary-binding keyform; samples identify '
                                                           'the active axis combination.')],
@@ -1037,7 +977,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneKeyformRotation': {'children': ('zipzi.modeling.bindings.SceneKeyformRotation.__repr__',
                                                                'zipzi.modeling.bindings.SceneKeyformRotation.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('value',
                                                               'Complete Rotation ordinary-binding keyform; samples '
                                                               'identify the active axis\n'
@@ -1050,7 +989,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneKeyformWarp': {'children': ('zipzi.modeling.bindings.SceneKeyformWarp.__repr__',
                                                            'zipzi.modeling.bindings.SceneKeyformWarp.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('value',
                                                           'Complete Warp ordinary-binding keyform; samples identify '
                                                           'the active axis combination.')],
@@ -1061,7 +999,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneKeyformWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.bindings.SceneTrack': {'children': (),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'alias',
                                         'signature': 'SceneTrackWarp | SceneTrackRotation | SceneTrackPart',
@@ -1071,7 +1008,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneTrackPart': {'children': ('zipzi.modeling.bindings.SceneTrackPart.__repr__',
                                                          'zipzi.modeling.bindings.SceneTrackPart.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('target_id', 'Stable Part ID driven by this ordinary binding.'),
                                                        ('keyforms',
                                                         'Ordered Part shape records whose samples refer to this '
@@ -1085,7 +1021,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneTrackRotation': {'children': ('zipzi.modeling.bindings.SceneTrackRotation.__repr__',
                                                              'zipzi.modeling.bindings.SceneTrackRotation.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('target_id',
                                                             'Stable rotation transform ID driven by this ordinary '
                                                             'binding.'),
@@ -1102,7 +1037,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.SceneTrackWarp': {'children': ('zipzi.modeling.bindings.SceneTrackWarp.__repr__',
                                                          'zipzi.modeling.bindings.SceneTrackWarp.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('target_id',
                                                         'Stable warp transform ID driven by this ordinary binding.'),
                                                        ('keyforms',
@@ -1118,7 +1052,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
  'zipzi.modeling.bindings.WarpKeyform': {'children': ('zipzi.modeling.bindings.WarpKeyform.__repr__',
                                                       'zipzi.modeling.bindings.WarpKeyform.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('bezier',
                                                      'Optional Bezier controller for this warp shape; None means this '
                                                      'shape has no controller.'),

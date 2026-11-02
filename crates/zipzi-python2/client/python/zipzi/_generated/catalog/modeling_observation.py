@@ -30,7 +30,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationBatch': {'children': ('zipzi.modeling.observation.ObservationBatch.__repr__',
                                                               'zipzi.modeling.observation.ObservationBatch.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('texture_report',
                                                              'Verified once-per-batch source and rendering texture '
                                                              'content.'),
@@ -56,7 +55,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                             'representation. A PNG byte digest\n'
                                                                             'and a domain-separated straight RGBA8 '
                                                                             'pixel digest are not interchangeable.',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [],
                                                            'kind': 'alias',
                                                            'signature': 'ObservationContentIdentityPngSha256 | '
@@ -66,7 +64,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationContentIdentityPngSha256': {'children': ('zipzi.modeling.observation.ObservationContentIdentityPngSha256.__repr__',
                                                                                  'zipzi.modeling.observation.ObservationContentIdentityPngSha256.summary'),
                                                                     'documentation': '',
-                                                                    'example': 'docs/recipes.py',
                                                                     'fields': [('hash',
                                                                                 'SHA256 of encoded source PNG bytes; '
                                                                                 'verification is a separate state.')],
@@ -77,7 +74,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256': {'children': ('zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256.__repr__',
                                                                                    'zipzi.modeling.observation.ObservationContentIdentityRgba8Sha256.summary'),
                                                                       'documentation': '',
-                                                                      'example': 'docs/recipes.py',
                                                                       'fields': [('hash',
                                                                                   'Domain-separated hash including '
                                                                                   'dimensions and pixel conventions.')],
@@ -91,7 +87,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                      'plan, reserve a task, decode\n'
                                                                      'resources, evaluate poses, replay animation or '
                                                                      'initialize a GPU.',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('source',
                                                                 'Formal/candidate snapshot identity; external file '
                                                                 'bytes are not frozen.'),
@@ -155,7 +150,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationEstimateIssue': {'children': ('zipzi.modeling.observation.ObservationEstimateIssue.__repr__',
                                                                       'zipzi.modeling.observation.ObservationEstimateIssue.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('code',
                                                                      'Structured feasibility category, using '
                                                                      'observation execution error codes.'),
@@ -179,7 +173,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationImage': {'children': ('zipzi.modeling.observation.ObservationImage.__repr__',
                                                               'zipzi.modeling.observation.ObservationImage.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('width', 'Output image width in pixels.'),
                                                             ('height', 'Output image height in pixels.'),
                                                             ('rgba',
@@ -253,7 +246,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                         'execution plan. Mipmap bytes exclude the base '
                                                                         'level and are logical bytes,\n'
                                                                         'not GPU allocation measurements.',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('policy',
                                                                    'Requested policy; equivalent actual pixels may '
                                                                    'have different policies.'),
@@ -299,7 +291,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                             'infeasible. Retain source dimensions for\n'
                                                                             'diagnosis instead of treating a budget '
                                                                             'shortfall as malformed input.',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [],
                                                            'kind': 'alias',
                                                            'signature': 'ObservationTexturePlanningReady | '
@@ -309,7 +300,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget': {'children': ('zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget.__repr__',
                                                                                           'zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget.summary'),
                                                                              'documentation': '',
-                                                                             'example': 'docs/recipes.py',
                                                                              'fields': [('policy', 'Requested policy.'),
                                                                                         ('effective_max_rgba_bytes',
                                                                                          'Effective base RGBA bound.'),
@@ -341,7 +331,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTexturePlanningReady': {'children': ('zipzi.modeling.observation.ObservationTexturePlanningReady.__repr__',
                                                                              'zipzi.modeling.observation.ObservationTexturePlanningReady.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('plan',
                                                                             'Feasible CPU dimensions; device limits '
                                                                             'remain unverified.')],
@@ -355,7 +344,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                           'count logical straight RGBA8\n'
                                                                           'bytes per referenced asset ID, '
                                                                           'independently of physical buffer sharing.',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [],
                                                          'kind': 'alias',
                                                          'signature': 'ObservationTexturePolicyOriginal | '
@@ -365,7 +353,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTexturePolicyFitBudget': {'children': ('zipzi.modeling.observation.ObservationTexturePolicyFitBudget.__repr__',
                                                                                'zipzi.modeling.observation.ObservationTexturePolicyFitBudget.summary'),
                                                                   'documentation': '',
-                                                                  'example': 'docs/recipes.py',
                                                                   'fields': [('max_rgba_bytes',
                                                                               'Positive integer no greater than the '
                                                                               "host's base RGBA limit.")],
@@ -377,7 +364,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                               'zipzi.modeling.observation.ObservationTexturePolicyOriginal.summary'),
                                                                  'documentation': 'Preserve the source dimensions and '
                                                                                   'every source byte.',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [],
                                                                  'kind': 'type',
                                                                  'signature': '()'},
@@ -386,7 +372,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTextureReport': {'children': ('zipzi.modeling.observation.ObservationTextureReport.__repr__',
                                                                       'zipzi.modeling.observation.ObservationTextureReport.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('policy',
                                                                      'Requested texture policy; not part of '
                                                                      'rendering-content digests.'),
@@ -437,7 +422,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTextureReportEntry': {'children': ('zipzi.modeling.observation.ObservationTextureReportEntry.__repr__',
                                                                            'zipzi.modeling.observation.ObservationTextureReportEntry.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('asset_id',
                                                                           'Stable image asset ID; distinct IDs count '
                                                                           'separately even for equal pixels.'),
@@ -468,7 +452,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                     'zipzi.modeling.observation.ObservationTextureSize.summary'),
                                                        'documentation': 'Pixel dimensions; zero axes are invalid '
                                                                         'resource metadata.',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('width', 'Width in pixels.'),
                                                                   ('height', 'Height in pixels.')],
                                                        'kind': 'type',
@@ -481,7 +464,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                           'declared identity has not been verified\n'
                                                                           'by estimation; Source freezes the document, '
                                                                           'not external file bytes.',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('asset_id',
                                                                      'Stable image asset ID, counted once across all '
                                                                      'batch frames.'),
@@ -503,7 +485,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationTextureTarget': {'children': ('zipzi.modeling.observation.ObservationTextureTarget.__repr__',
                                                                       'zipzi.modeling.observation.ObservationTextureTarget.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('source',
                                                                      'Declared source metadata; the executor must '
                                                                      'validate it again.'),
@@ -519,7 +500,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservationView': {'children': ('zipzi.modeling.observation.ObservationView.__repr__',
                                                              'zipzi.modeling.observation.ObservationView.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('texture_policy',
                                                             'Explicit texture policy; Original preserves source pixels '
                                                             'and dimensions.'),
@@ -558,7 +538,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.ObservedBounds': {'children': ('zipzi.modeling.observation.ObservedBounds.__repr__',
                                                             'zipzi.modeling.observation.ObservedBounds.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id', 'Stable authoring drawable UUID.'),
                                                           ('visible',
                                                            'Evaluated visibility; geometric bounds do not prove '
@@ -574,7 +553,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
  'zipzi.modeling.observation.TextureCoverage': {'children': ('zipzi.modeling.observation.TextureCoverage.__repr__',
                                                              'zipzi.modeling.observation.TextureCoverage.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('alpha_threshold',
                                                             'Alpha >= this value counts as painted. Coverage ignores '
                                                             'filtering, masks and occlusion.'),
@@ -619,7 +597,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                              'zipzi.modeling.observation.TopologyOverlay.summary'),
                                                 'documentation': 'Explicit diagnostic drawing options; overlays ignore '
                                                                  'masks and occlusion.',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('targets',
                                                             'Diagnostic selection only; the textured context image is '
                                                             'unchanged. None selects all\n'
@@ -689,7 +666,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.observation': {'children': ('zipzi.mod
                                                                 'zipzi.modeling.observation.TopologyThresholds.summary'),
                                                    'documentation': 'Advisory anomaly thresholds in evaluated model '
                                                                     'space, relative to the default pose.',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('min_angle_degrees',
                                                                'An angle below this value is anomalous; finite degrees '
                                                                'in [0,60]. Default 10.'),

@@ -48,6 +48,8 @@ cancelled request. A busy Preview refuses controls and concurrent samples.
 
 Validate this owned Preview and return it; scope exit closes it and cancels pending playback work.
 
+Types: [Preview](#zipzianimationpreview).
+
 
 ## zipzi.animation.Preview.__exit__
 
@@ -61,6 +63,8 @@ Alias of [zipzi.Buffer.__exit__](runtime.md#zipzibuffer__exit__).
 
 Submit SDK canonical incremental playback. Cancellation may retain completed simulation steps; discard cancelled output. Backward targets use canonical seek.
 
+Types: [Job], [Snapshot], [ObservationView], [PreviewBatch], [SpatialQuery].
+
 
 ## zipzi.animation.Preview.apply
 
@@ -69,6 +73,8 @@ Submit SDK canonical incremental playback. Cancellation may retain completed sim
 `(command: m.PreviewCommand) -> Snapshot[m.PreviewState]`
 
 Apply one typed animation control in this Preview. SDK validation errors preserve its usable state; commands never publish model history.
+
+Types: [Snapshot], [PreviewCommand], [PreviewState].
 
 
 ## zipzi.animation.Preview.close
@@ -88,6 +94,8 @@ images, initialize a device or reserve a Job. Busy Previews refuse it.
 The result reports static feasibility and current availability separately;
 it does not reserve capacity for a later sample/seek/advance_to.
 
+Types: [ObservationEstimate], [ObservationView], [SpatialQuery].
+
 
 ## zipzi.animation.Preview.id
 
@@ -105,6 +113,8 @@ Read the Runtime-wide serial without IO; combine with source.runtime to compare 
 `() -> Snapshot[m.PreviewState]`
 
 Read this Preview's accepted ordinal and actual SDK clock. Busy work refuses this read.
+
+Types: [Snapshot], [PreviewState].
 
 
 ## zipzi.animation.Preview.pending_request
@@ -131,6 +141,8 @@ seek is transactional when interrupted; cancellation after the whole batch
 completes reports success. Close/wait the Job to release its
 result slot. Cancellation never changes authored content or another view.
 
+Types: [Job], [Snapshot], [ObservationView], [PreviewBatch], [SpatialQuery].
+
 
 ## zipzi.animation.Preview.seek
 
@@ -140,6 +152,8 @@ result slot. Cancellation never changes authored content or another view.
 
 Submit one canonical seek and return a one-frame batch Job; an interrupted SDK seek preserves its prior state; late cancellation reports the completed outcome.
 
+Types: [Job], [Snapshot], [ObservationView], [PreviewBatch], [SpatialQuery].
+
 
 ## zipzi.animation.Preview.source
 
@@ -148,6 +162,8 @@ Submit one canonical seek and return a one-frame batch Job; an interrupted SDK s
 `: Source`
 
 Read the cached exact frozen Source without IO or refreshing the model.
+
+Types: [Source].
 
 
 ## zipzi.animation.Reset

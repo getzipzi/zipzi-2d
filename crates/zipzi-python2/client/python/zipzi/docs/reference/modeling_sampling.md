@@ -20,6 +20,8 @@ Canonical sampling modeling values.
 
 `(*, id: str, runtime_id: str, part_id: str, raw_blend_mode: int | None = None, texture_asset_id: str, texture_slot: int, renderable: bool = True, positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], indices: tuple[int, ...], draw_order: int, render_order: int, opacity: float, multiply_color: tuple[float, float, float, float], screen_color: tuple[float, float, float, float], blend_mode: BlendMode, enabled: bool, visible: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...])`
 
+Types: [Vec2], [BlendMode].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
@@ -54,6 +56,8 @@ above 1 are retained without clamping.
 
 `(*, source_revision: int, parameters: tuple[EvaluatedParameter, ...], drawables: tuple[Drawable, ...], offscreens: tuple[OffscreenFrame, ...], render_plan: tuple[RenderCommand, ...], deformers: tuple[EvaluatedDeformer, ...])`
 
+Types: [Drawable](#zipzimodelingsamplingdrawable), [EvaluatedDeformer](#zipzimodelingsamplingevaluateddeformer), [EvaluatedParameter](#zipzimodelingsamplingevaluatedparameter), [OffscreenFrame](#zipzimodelingsamplingoffscreenframe), [RenderCommand](#zipzimodelingsamplingrendercommand).
+
 **Fields**
 
 - `source_revision`: Revision used to evaluate this immutable snapshot; later name edits may reuse it.
@@ -68,6 +72,8 @@ above 1 are retained without clamping.
 **Type**
 
 `(*, id: str, enabled: bool, points: tuple[Vec2, ...], rotation_axis: Vec2 | None = None, rotation_basis: tuple[Vec2, Vec2] | None = None)`
+
+Types: [Vec2].
 
 **Fields**
 
@@ -101,6 +107,8 @@ coefficients at large model origins.
 
 `(*, kind: GeometryDiagnosticKind, mesh_id: str, triangle_index: int | None = None)`
 
+Types: [GeometryDiagnosticKind](#zipzimodelingsamplinggeometrydiagnostickind).
+
 **Fields**
 
 - `kind`: Typed geometry diagnostic category.
@@ -124,6 +132,8 @@ triangle-specific.
 
 `(*, version: _Version, mesh_id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, space: GeometrySpace)`
 
+Types: [Version], [Vec2], [MeshMeshing], [GeometrySpace](#zipzimodelingsamplinggeometryspace).
+
 **Fields**
 
 - `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.
@@ -141,6 +151,8 @@ array offsets.
 **Alias**
 
 `GeometrySpaceModel | GeometrySpaceRotationLocal | GeometrySpaceWarpParameter`
+
+Types: [GeometrySpaceModel](#zipzimodelingsamplinggeometryspacemodel), [GeometrySpaceRotationLocal](#zipzimodelingsamplinggeometryspacerotationlocal), [GeometrySpaceWarpParameter](#zipzimodelingsamplinggeometryspacewarpparameter).
 
 
 ## zipzi.modeling.sampling.GeometrySpaceModel
@@ -176,6 +188,8 @@ array offsets.
 
 `(*, mesh_id: str, visible: bool, vertex_count: int, triangles: tuple[TriangleQuality, ...], min_angle_degrees: float | None = None, max_aspect_ratio: float | None = None, max_edge_stretch: float | None = None, degenerate_triangles: int, flipped_triangles: int, texture_coverage: TextureCoverage | None = None)`
 
+Types: [TextureCoverage], [TriangleQuality](#zipzimodelingsamplingtrianglequality).
+
 **Fields**
 
 - `mesh_id`: Stable document mesh ID, in evaluated drawable order.
@@ -195,6 +209,8 @@ of the same frozen authoring source. This does not certify unsampled parameter i
 **Type**
 
 `(*, version: _Version, parameters: tuple[_Mapping[str, float], ...], frames: tuple[DrawableFrame, ...], diagnostics: tuple[GeometryDiagnostic, ...], quality: tuple[tuple[MeshQuality, ...], ...])`
+
+Types: [Version], [DrawableFrame](#zipzimodelingsamplingdrawableframe), [GeometryDiagnostic](#zipzimodelingsamplinggeometrydiagnostic), [MeshQuality](#zipzimodelingsamplingmeshquality).
 
 **Fields**
 
@@ -235,6 +251,8 @@ above 1 are retained without clamping.
 **Alias**
 
 `RenderCommandBeginOffscreen | RenderCommandDrawMesh | RenderCommandEndOffscreen`
+
+Types: [RenderCommandBeginOffscreen](#zipzimodelingsamplingrendercommandbeginoffscreen), [RenderCommandDrawMesh](#zipzimodelingsamplingrendercommanddrawmesh), [RenderCommandEndOffscreen](#zipzimodelingsamplingrendercommandendoffscreen).
 
 
 ## zipzi.modeling.sampling.RenderCommandBeginOffscreen

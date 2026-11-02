@@ -14,6 +14,28 @@ class _DomainOwner(Protocol):
 
 T=TypeVar('T')
 S=TypeVar('S')
+
+# These leaf rules describe the complete-call implementation below. Codegen
+# reads the literals statically; offline discovery never imports this module.
+_COLLECTION_READ_DOCUMENTATION = {
+    'key': 'collection-read',
+    'title': 'Collection reads and recovery',
+    'documentation': 'expected=None reads current content; an explicit Source is checked atomically and STALE_SOURCE rejects a changed source. '
+        'Selected reads reject missing IDs or response budgets as a whole. Query failures do not abort an Edit. '
+        'After OutcomeUnknown recover the original Call to obtain its captured result instead of submitting a fresh read. '
+        'Snapshot and Batch own their values, perform no IO when inspected and have no host lease to close.',
+}
+_COLLECTION_PAGE_DOCUMENTATION = {
+    'key': 'collection-page',
+    'title': 'Collection paging and recovery',
+    'documentation': 'name=None disables filtering; a string matches exactly and case-sensitively, preserving duplicate names. '
+        'limit is 1..256, defaults to 128 and must fit the host collection-record limit; count/byte/scan budgets can yield shorter or empty pages. '
+        'cursor=None starts a scan; otherwise pass Page.next_cursor with the same collection and filter. None as next_cursor ends the scan. '
+        'A changed formal/candidate Source or Undo/Redo raises STALE_SOURCE: restart the scan without merging versions. '
+        'After OutcomeUnknown recover the original Call to retain the captured page, even after peer publication. '
+        'Query failures do not abort an Edit; Page owns its metadata and needs no close.',
+}
+
 class Collection(Generic[T]):
     def __init__(self,session:'Session',edit:'Edit | None',domain:str,read:Callable[[object],T],key:str):
         self._session,self._edit,self._domain,self._decode,self._key=session,edit,domain,read,key

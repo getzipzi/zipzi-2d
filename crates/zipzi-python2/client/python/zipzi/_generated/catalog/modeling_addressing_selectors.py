@@ -2,7 +2,6 @@
 from .index import Entry
 DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'children': (),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'alias',
                                                'signature': 'AddressSelectorScene | AddressSelectorDrawingGroup | '
@@ -30,7 +29,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorAttachmentPath': {'children': ('zipzi.modeling.addressing.AddressSelectorAttachmentPath.__repr__',
                                                                           'zipzi.modeling.addressing.AddressSelectorAttachmentPath.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('id',
                                                                          'Stable document object ID used by '
                                                                          'references; it is distinct from the '
@@ -43,7 +41,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorBinding': {'children': ('zipzi.modeling.addressing.AddressSelectorBinding.__repr__',
                                                                    'zipzi.modeling.addressing.AddressSelectorBinding.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('id',
                                                                   'Stable document object ID used by references; it is '
                                                                   'distinct from the exported\n'
@@ -55,7 +52,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorContent': {'children': ('zipzi.modeling.addressing.AddressSelectorContent.__repr__',
                                                                    'zipzi.modeling.addressing.AddressSelectorContent.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('id',
                                                                   'Stable document object ID used by references; it is '
                                                                   'distinct from the exported\n'
@@ -72,7 +68,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorDocument': {'children': ('zipzi.modeling.addressing.AddressSelectorDocument.__repr__',
                                                                     'zipzi.modeling.addressing.AddressSelectorDocument.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('field',
                                                                    'Explicit field discriminator; must match the '
                                                                    'addressed object/domain.')],
@@ -84,7 +79,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorDrawingGroup': {'children': ('zipzi.modeling.addressing.AddressSelectorDrawingGroup.__repr__',
                                                                         'zipzi.modeling.addressing.AddressSelectorDrawingGroup.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('owner',
                                                                        'Stable owner ID for the addressed drawing '
                                                                        'group, collection or reference selection.')],
@@ -95,7 +89,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorExpressionEntry': {'children': ('zipzi.modeling.addressing.AddressSelectorExpressionEntry.__repr__',
                                                                            'zipzi.modeling.addressing.AddressSelectorExpressionEntry.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('id',
                                                                           'Stable identity of the addressed native '
                                                                           'animation object.')],
@@ -106,7 +99,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorMotionRegistration': {'children': ('zipzi.modeling.addressing.AddressSelectorMotionRegistration.__repr__',
                                                                               'zipzi.modeling.addressing.AddressSelectorMotionRegistration.summary'),
                                                                  'documentation': '',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [('id',
                                                                              'Stable identity of the addressed native '
                                                                              'animation object.')],
@@ -117,7 +109,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorOrganization': {'children': ('zipzi.modeling.addressing.AddressSelectorOrganization.__repr__',
                                                                         'zipzi.modeling.addressing.AddressSelectorOrganization.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('id',
                                                                        'Stable document object ID used by references; '
                                                                        'it is distinct from the exported\n'
@@ -129,7 +120,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorPhysics': {'children': ('zipzi.modeling.addressing.AddressSelectorPhysics.__repr__',
                                                                    'zipzi.modeling.addressing.AddressSelectorPhysics.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('id',
                                                                   'Stable identity of the addressed native animation '
                                                                   'object.')],
@@ -140,7 +130,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorPose': {'children': ('zipzi.modeling.addressing.AddressSelectorPose.__repr__',
                                                                 'zipzi.modeling.addressing.AddressSelectorPose.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('id',
                                                                'Stable identity of the addressed native animation '
                                                                'object.')],
@@ -151,7 +140,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorReference': {'children': ('zipzi.modeling.addressing.AddressSelectorReference.__repr__',
                                                                      'zipzi.modeling.addressing.AddressSelectorReference.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable document object ID used by references; it '
                                                                     'is distinct from the exported\n'
@@ -163,7 +151,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorResourceName': {'children': ('zipzi.modeling.addressing.AddressSelectorResourceName.__repr__',
                                                                         'zipzi.modeling.addressing.AddressSelectorResourceName.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('id',
                                                                        'Stable document object ID used by references; '
                                                                        'it is distinct from the exported\n'
@@ -175,7 +162,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorScene': {'children': ('zipzi.modeling.addressing.AddressSelectorScene.__repr__',
                                                                  'zipzi.modeling.addressing.AddressSelectorScene.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable document object ID used by references; it is '
                                                                 'distinct from the exported\n'
@@ -191,7 +177,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing.AddressSelector': {'childre
  'zipzi.modeling.addressing.AddressSelectorSelection': {'children': ('zipzi.modeling.addressing.AddressSelectorSelection.__repr__',
                                                                      'zipzi.modeling.addressing.AddressSelectorSelection.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('owner',
                                                                     'Stable owner ID for the addressed drawing group, '
                                                                     'collection or reference selection.'),

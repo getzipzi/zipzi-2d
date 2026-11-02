@@ -45,14 +45,12 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                               'including a\n'
                                               'cancelled request. A busy Preview refuses controls and concurrent '
                                               'samples.',
-                             'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'type',
                              'signature': '(factory-owned; use the documented public entry)'},
  'zipzi.animation.Preview.__enter__': {'children': (),
                                        'documentation': 'Validate this owned Preview and return it; scope exit closes '
                                                         'it and cancels pending playback work.',
-                                       'example': 'docs/recipes.py',
                                        'fields': [],
                                        'kind': 'callable',
                                        'signature': '() -> Preview',
@@ -62,7 +60,6 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                         'documentation': 'Submit SDK canonical incremental playback. Cancellation may '
                                                          'retain completed simulation steps; discard cancelled output. '
                                                          'Backward targets use canonical seek.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '(time: float, *, geometry: bool=True, queries: '
@@ -77,7 +74,6 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                    'documentation': 'Apply one typed animation control in this Preview. SDK validation '
                                                     'errors preserve its usable state; commands never publish model '
                                                     'history.',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '(command: m.PreviewCommand) -> Snapshot[m.PreviewState]',
@@ -97,7 +93,6 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                                                    'availability separately;\n'
                                                                    'it does not reserve capacity for a later '
                                                                    'sample/seek/advance_to.',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [],
                                                   'kind': 'callable',
                                                   'signature': '(times: Sequence[float], *, view: m.ObservationView, '
@@ -109,14 +104,12 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
  'zipzi.animation.Preview.id': {'children': (),
                                 'documentation': 'Read the Runtime-wide serial without IO; combine with source.runtime '
                                                  'to compare returned frames across views.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'property',
                                 'signature': ': int'},
  'zipzi.animation.Preview.info': {'children': (),
                                   'documentation': "Read this Preview's accepted ordinal and actual SDK clock. Busy "
                                                    'work refuses this read.',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '() -> Snapshot[m.PreviewState]',
@@ -147,7 +140,6 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                                      'completes reports success. Close/wait the Job to release its\n'
                                                      'result slot. Cancellation never changes authored content or '
                                                      'another view.',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'callable',
                                     'signature': '(times: Sequence[float], *, geometry: bool=True, queries: '
@@ -162,7 +154,6 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
                                   'documentation': 'Submit one canonical seek and return a one-frame batch Job; an '
                                                    'interrupted SDK seek preserves its prior state; late cancellation '
                                                    'reports the completed outcome.',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '(time: float, *, geometry: bool=True, queries: '
@@ -176,7 +167,6 @@ DATA: dict[str, Entry] = {'zipzi.animation': {'children': ('zipzi.animation.Batc
  'zipzi.animation.Preview.source': {'children': (),
                                     'documentation': 'Read the cached exact frozen Source without IO or refreshing the '
                                                      'model.',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'property',
                                     'signature': ': Source',

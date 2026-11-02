@@ -17,7 +17,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewBatch': {'children': ('zipzi.modeling.preview.PreviewBatch.__repr__',
                                                       'zipzi.modeling.preview.PreviewBatch.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('texture_report',
                                                      'Verified texture content for a View; None for CPU-only '
                                                      'sampling.'),
@@ -45,7 +44,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewBatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.preview.PreviewCommand': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'PreviewCommandSetParameter | PreviewCommandScheduleMotion | '
@@ -63,7 +61,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandReset': {'children': ('zipzi.modeling.preview.PreviewCommandReset.__repr__',
                                                              'zipzi.modeling.preview.PreviewCommandReset.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'type',
                                                 'signature': '()'},
@@ -72,7 +69,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleExpression': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleExpression.__repr__',
                                                                           'zipzi.modeling.preview.PreviewCommandScheduleExpression.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('id', 'Native expression asset UUID.'),
                                                                         ('time',
                                                                          'Absolute activation time in seconds on this '
@@ -84,7 +80,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleMotion': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleMotion.__repr__',
                                                                       'zipzi.modeling.preview.PreviewCommandScheduleMotion.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('id', "Clip UUID; uses the clip's own fades."),
                                                                     ('time',
                                                                      'Absolute activation time in seconds on this '
@@ -96,7 +91,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleParameter': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleParameter.__repr__',
                                                                          'zipzi.modeling.preview.PreviewCommandScheduleParameter.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Document parameter UUID for an SDK input '
                                                                         'activation.'),
@@ -113,7 +107,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandScheduleRegistration': {'children': ('zipzi.modeling.preview.PreviewCommandScheduleRegistration.__repr__',
                                                                             'zipzi.modeling.preview.PreviewCommandScheduleRegistration.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('id',
                                                                            "Registration UUID; uses the registration's "
                                                                            'SDK fade overrides.'),
@@ -127,7 +120,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandSetParameter': {'children': ('zipzi.modeling.preview.PreviewCommandSetParameter.__repr__',
                                                                     'zipzi.modeling.preview.PreviewCommandSetParameter.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Document parameter UUID; the SDK validates '
                                                                    'existence and domain.'),
@@ -141,7 +133,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewCommandSetPhysics': {'children': ('zipzi.modeling.preview.PreviewCommandSetPhysics.__repr__',
                                                                   'zipzi.modeling.preview.PreviewCommandSetPhysics.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('enabled',
                                                                  'Enable the SDK Physics stage in this Preview only.'),
                                                                 ('stabilized_start',
@@ -154,7 +145,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewFrame': {'children': ('zipzi.modeling.preview.PreviewFrame.__repr__',
                                                       'zipzi.modeling.preview.PreviewFrame.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('observation',
                                                      'Optional GPU image from this exact animation state and '
                                                      'once-resolved batch textures.'),
@@ -188,7 +178,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.preview': {'children': ('zipzi.modelin
  'zipzi.modeling.preview.PreviewState': {'children': ('zipzi.modeling.preview.PreviewState.__repr__',
                                                       'zipzi.modeling.preview.PreviewState.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('sequence',
                                                      'Monotonic accepted operation ordinal, including cancelled sample '
                                                      'requests.'),

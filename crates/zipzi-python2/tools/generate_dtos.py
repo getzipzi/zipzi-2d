@@ -150,11 +150,11 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
                       '    values: tuple[tuple[str, '+typ(params['value'])+'], ...]', '', '    def __post_init__(self) -> None:', '        object.__setattr__(self, "values", tuple(tuple(item) for item in self.values))', '',
                       '    @classmethod', '    def read(cls, value: object) -> "Pose":', '        return cls(tuple(sorted((key, '+read(params['value'],'item')+') for key, item in _mapping(value).items())))','']
             lines.insert(lines.index('class Pose:')+1,'    '+repr('Owned effective parameter pose; reading it performs no IO.\n\nFields:\nvalues: Immutable parameter-ID/value pairs sorted by parameter ID; IDs are document parameter IDs and values use each parameter domain.'))
-        def record_class(n,fs,kind=None,variant=None):
+        def record_class(n,fs,kind=None,variant=None,doc=''):
             lines.extend(['@dataclass(frozen=True, init=False)', 'class '+n+':','    __module__ = "zipzi.'+domain+'"'])
             missing=[f['name'] for f in fs if not f.get('doc','').strip()]
             if missing:raise ValueError('Missing semantic field documentation: '+n+'.'+', '.join(missing))
-            text='Owned '+domain+' '+n+' value; reading fields, repr and summary performs no IO.\n\nFields:\n'+'\n'.join(f['name']+': '+f['doc'] for f in fs)
+            text=doc.strip()+'\n\nFields:\n'+'\n'.join(f['name']+': '+f['doc'] for f in fs)
             lines.insert(len(lines)-1,'    '+repr(text))
             if kind is not None:lines.extend(['    kind: ClassVar[Literal['+repr(kind)+']] = '+repr(kind)])
             if variant is not None:lines.append('    _variant: ClassVar[str] = '+repr(variant))
@@ -224,7 +224,7 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
                 for v in vs:
                     cls=v['rust_name'];classes.append(cls)
                     kind={'parameters':{'Create':'create_parameter','Patch':'patch_parameter'},'bindings':{'Create':'create_mesh_binding','SetKeyform':'set_mesh_keyform'}}[domain][cls]
-                    record_class(cls,deepcopy(v['fields']),kind,v['name'])
+                    record_class(cls,deepcopy(v['fields']),kind,v['name'],v.get('doc',''))
                 lines+=['Operation: TypeAlias = '+' | '.join(classes),'OPERATION_TYPES = ('+', '.join(classes)+',)','', 'def validate_Operation(value: Operation) -> None:']
                 for cls in classes:lines+=['    if isinstance(value, '+cls+'): return validate_'+cls+'(value)']
                 lines+=['    raise TypeError("Expected domain operation")','','def encode_Operation(value: Operation) -> dict[str, object]:']
@@ -243,7 +243,7 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
                 default=f.get('default')
                 if default=={'kind':'null'}:f['default']=None
                 elif default=={'kind':'empty_string'}:f['default']=''
-            record_class(n,fs)
+            record_class(n,fs,doc=s.get('doc',''))
         if domain in {'sampling','references'}:
             lines+=['def _variant(value: object) -> tuple[str, object]:','    if isinstance(value, str): return value, {}','    tag = getattr(value, "_variant", None)','    if isinstance(tag, str): return tag, value','    raw = _mapping(value)','    if len(raw) != 1: raise ValueError("Expected a tagged value")','    tag = next(iter(raw))','    return tag, raw[tag]','']
         if domain=='sampling':

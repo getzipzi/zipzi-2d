@@ -1,6 +1,6 @@
 # Python generated reference 质量与去重实施计划
 
-日期：2026-11-02。状态：待实施；基础生成能力和 meshes 便捷接口样板已落地，其余领域尚未逐项完成语义审阅。
+日期：2026-11-02。状态：P0 已实施并通过试点验收，见第 10 节；P1–P8 待实施，其余领域尚未逐项完成语义审阅。
 
 目标是让读者从一个公开入口判断如何调用、会产生什么结果和有哪些约束，同时减少重复维护和重复阅读。
 类型摘要缺口清零是完整性门禁，不是文档质量的替代指标；不把当前样板的长段落直接推广到全部 API。
@@ -429,4 +429,85 @@ uv run --locked python crates/zipzi-python2/tools/generate.py --check-docs --no-
 - 状态分别记录结构门禁、语义审阅、行为证据；跨批或平台证据未完成时列明剩余项。
 
 先提交通过试点的 P0，再从 P1/P2 开始；每批保留 P0 的信息完整性和去重门禁，
-再扩大到场景、删除和动画等类型较多的领域。此文档本身只制定实施与验收步骤，不标记这些批次已完成。
+再扩大到场景、删除和动画等类型较多的领域。阶段定义不代表完成；实际进度以追加的验收记录为准。
+
+## 10. P0 验收记录（2026-11-02）
+
+状态：结构门禁通过；以下试点的页面与单条离线帮助语义审阅通过；CPU Local/Connected 行为证据通过。
+未验收整个 runtime、parameters、modeling_mesh 或 spatial 领域，P1–P8 状态不变。
+比较基线为开始实施时的 `e4ad1c35`；原文可从该版本重现，不把整页快照加入测试。
+
+**范围与来源**：
+
+- 已验收分片集合先登记 `meshes`；跨页精确路径见 tooling 测试 `PythonReference.PILOT_PATHS`。
+  包含 Session/Edit.meshes 的入口及 get/get_many/list、Edit.meshes.create/rename/set_positions，
+  Edit.parameters.patch、parameters.ParameterPatch/Patch，以及 ApiDescription/format。
+- enum 为 `modeling.mesh.MeshConstraintKind`；公开别名为 `meshes.ConstraintKind`。
+  union 为 `modeling.spatial.ObjectTarget` 的 Mesh/Part 分支，另检查公开别名 `spatial.Target`。
+  这些分支已有 contract 说明，本批没有扩展空间查询业务。
+- 规则分别维护在 `_facade_support.Collection`、`_lifecycle.Edit` 旁及 discriminator 投影模板旁。
+  原文集合方法各含一份 “Through Session … Through Edit …” 段落；候选写方法各含完整失败/恢复段落；
+  现在条目保留各自 Source、返回、同步、候选效果及失败短提示，完整规则只在 common 展开。
+  docstring 保持完整；catalog 存直接规则身份；format 只展开该入口直接绑定的叶规则。
+- `DocEntry` 增加规则引用和字段展示角色；身份改为稳定的 Python 定义或 Rust 类型/分支与投影身份。
+  固定 discriminator 展示固定值和只读角色，ParameterPatch.kind 仍保留普通业务字段说明。
+  外部类型使用处引用每页唯一声明，同页类型链接已有标题；Session/Edit 保留独立 Source 语境。
+- Rust `authoring/parameter_binding.rs` 补 ParameterPatch、ParameterOperation 及其分支说明。
+  同时纠正创建参数的 runtime_id 默认值：None/空字符串在创建时采用稳定 ID；
+  依据 `zipzi-core/src/document/parameters.rs` 的实际行为和既有数值测试，没有改变执行行为或 wire。
+  Python patch 用法及示例保留在同一 WRITES 描述符中；网格描述符继续绑定各自 contract 分支。
+
+**覆盖与门禁**：
+
+- 991 个类型身份不变。旧报告 140 个非空摘要、851 个缺口；新报告 112 个真实摘要、879 个缺口。
+  原有 DTO 模板有 31 个 “Owned … value; reading fields …” 套话摘要；
+  取消套话后，3 个改由本批真实源说明覆盖，另 28 个既有缺口被如实暴露。
+  旧的 851 组缺口全部仍可见，试点及已验收 meshes 范围缺口为零。
+- 新 `documentation-quality.json` 独立暴露 1,121 条 union 分支缺口、217 条 enum 成员缺口、
+  37 条未解析 SDK 类型诊断及 877 条空摘要诊断；这些按定义/投影记账，不能理解为独立 Rust 类型数。
+  callable 参数和返回另列待人工审阅/不适用状态，非空摘要不代替其验收。
+- `tools/python/python-reference-debt.json` 只存 3,131 个身份/类别/成员键，不存业务说明。
+  新增缺口失败；已修复键必须从基线移除，之后不能回退，不能用总数互相抵消。
+  每个实际导出页面均在 S/P1–P7 中恰好归属一次；modeling 根页按共享路由精确筛选。
+- 已加入缺失/重复规则、非叶规则（含循环）、错误投影绑定、缺失分支、未知 SDK 类型、
+  Markdown 重复/歧义声明、真正别名重复正文及 recipes 默认绑定的门禁。
+  graph 测试以非 opaque 定义及归属集合验证，不再固定 311/331。
+
+**体积与阅读比较**：
+
+比较包含 runtime、runtime_session、runtime_edit、meshes、parameters、modeling_mesh、
+modeling_parameters、spatial、modeling_spatial 和 common 共 10 页，覆盖 268 个相同公开标题，
+包括搬出的规则和新增类型导航。该范围正文字符数为 141,330 → 136,944。
+runtime_session 为 31,880 → 26,835，runtime_edit 为 35,487 → 28,947，
+common 为 1,584 → 3,609。
+
+全库 reference 正文为 550,613 → 607,335；增加主要来自全领域使用处的可定位类型链接，
+本批不据此宣称全库变短，也不把导航新增当作各领域已语义验收。
+30 处正式/候选双语境长段落改为条目各自的 Source；10 处候选写入完整恢复段落改为 1 个公共正文。
+原有 93 处 discriminator 通用字段套话归零，公共解释只展开一次，固定值仍留在各字段旁。
+占位调用示例 7 → 0；catalog 的无条件 recipes 示例绑定 1,140 → 0，模块入口仍有 guide/recipes 导航。
+真正别名均只展示定义导航，特殊投影保留正文。
+
+页面及 format 可直接回答：Session 读取正式内容，Edit 读取自己的候选；patch 省略/None 保留；
+create 返回 ID、rename/set_positions/patch 返回 WriteResult，显式 commit 返回需等待/关闭的 Job[Receipt]；
+普通失败中止候选，Confirmed Busy/准入拒绝按 recovery_action 处理，OutcomeUnknown 恢复原 Call。
+字段身份、坐标空间、顺序、默认值和分支选择仍在类型定义旁。
+
+**实际验证**：
+
+- `generate.py` 重新生成 351 个文件；`generate.py --check --no-cache` 通过。
+- `uv run --locked python tools/test_tools.py -p test_python2_codegen.py -k Python2Codegen`：40 项通过；
+  `-k reference`：17 项通过，含 8 项新增 P0 门禁。
+  原有摘要/分支/字段来源变更测试和新增参数分支、描述符及公共规则变更测试覆盖三种消费端，
+  并检查同名的其他领域操作不变。离线子进程只加载目标 catalog 分片及直接规则，不加载 native/GPU。
+- `test_python2_codegen_graph.py`：8 项通过；`test_python2_codegen_outputs.py`：7 项通过；
+  `cargo test --locked -p zipzi-contract`：16 项通过；pyright 正反例通过。
+- `./tools/test-sdk.sh python2 PythonSdk.test_generated_reference_pilot_examples_on_both_backends PythonSdk.test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields` 通过。
+  新用例从实际 docstring 读取同一份示例，fixture 提供 Runtime/Geometry/参数，验证候选、正式内容及发布后的结果。
+- `./tools/test-sdk.sh python2 --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection P3ADiscovery.test_candidate_cursor_undo_and_wrong_collection_fail_without_aborting_reads P3ADiscovery.test_recovered_page_keeps_captured_source_after_peer_publication` 通过。
+- `./tools/test-sdk.sh python2 --recovery P3ARecovery.test_confirmed_busy_and_domain_failure_have_distinct_guidance_without_retry P3ARecovery.test_typed_helper_executes_public_write_once_and_retains_complete_projection` 通过。
+- `git diff --check` 及受影响 Rust 文件的 rustfmt 检查通过。
+
+未运行全局 `--check-docs` 成功门禁、完整 SDK、隔离 checkout 构建接受测试或真实 Editor/GPU 门禁；
+本批复用既有 exporter，针对修改运行生成、contract、CPU 行为与离线检查。
+全局摘要、分支、callable 和剩余未解析类型继续由 P1–P8 处理；Editor/GPU 的领域验收仍留在 P7/P8。

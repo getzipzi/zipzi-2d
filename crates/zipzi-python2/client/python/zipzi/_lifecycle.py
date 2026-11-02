@@ -276,6 +276,17 @@ class EditState(str, Enum):
     unknown = "unknown"
 
 
+_EDIT_WRITE_DOCUMENTATION = {
+    'key': 'edit-write',
+    'title': 'Candidate writes and recovery',
+    'documentation': 'Writes change candidate state only, without file IO; commit publishes separately and returns Job[Receipt]. '
+        'Normal Edit context exit commits and waits; an exceptional exit cancels ordinary candidates. Explicit commit Jobs must be waited for or closed. '
+        'Ordinary write failures abort the candidate even when caught: repair inputs and start a new Edit. '
+        'Confirmed Busy or pre-execution admission refusal preserves the candidate; follow recovery_action. '
+        'OutcomeUnknown retains the original Call and exact return type: recover it instead of replaying the write, before cleanup.',
+}
+
+
 class Edit(RecoveryOwner):
     'One mutable candidate owned by one sequential caller. Use session.edit. Successful writes advance sequence; publication is a separate Job and ordinary failures cannot be caught into a successful commit. Reads through this Edit include its pending writes. Normal context exit commits and waits; an exceptional exit cancels ordinary candidates. Recover unknown calls before cleanup.'
     def __init__(self, session: Session, label: str):

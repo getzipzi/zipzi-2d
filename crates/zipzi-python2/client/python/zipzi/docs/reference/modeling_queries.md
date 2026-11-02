@@ -20,6 +20,8 @@ Canonical queries modeling values.
 
 `CollectionQueryScene | CollectionQueryOrganization | CollectionQueryReferences | CollectionQueryResources | CollectionQueryAttachments | CollectionQueryDocument | CollectionQueryMotion | CollectionQueryMotionGroups | CollectionQueryClips | CollectionQueryExpressions | CollectionQueryExpressionEntries | CollectionQueryPhysics | CollectionQueryPose`
 
+Types: [CollectionQueryAttachments](#zipzimodelingqueriescollectionqueryattachments), [CollectionQueryClips](#zipzimodelingqueriescollectionqueryclips), [CollectionQueryDocument](#zipzimodelingqueriescollectionquerydocument), [CollectionQueryExpressionEntries](#zipzimodelingqueriescollectionqueryexpressionentries), [CollectionQueryExpressions](#zipzimodelingqueriescollectionqueryexpressions), [CollectionQueryMotion](#zipzimodelingqueriescollectionquerymotion), [CollectionQueryMotionGroups](#zipzimodelingqueriescollectionquerymotiongroups), [CollectionQueryOrganization](#zipzimodelingqueriescollectionqueryorganization), [CollectionQueryPhysics](#zipzimodelingqueriescollectionqueryphysics), [CollectionQueryPose](#zipzimodelingqueriescollectionquerypose), [CollectionQueryReferences](#zipzimodelingqueriescollectionqueryreferences), [CollectionQueryResources](#zipzimodelingqueriescollectionqueryresources), [CollectionQueryScene](#zipzimodelingqueriescollectionqueryscene).
+
 
 ## zipzi.modeling.queries.CollectionQueryAttachments
 
@@ -40,6 +42,8 @@ Canonical queries modeling values.
 **Type**
 
 `(*, field: DocumentField)`
+
+Types: [DocumentField].
 
 **Fields**
 
@@ -68,6 +72,8 @@ Canonical queries modeling values.
 
 `(*, collection: MotionContainer)`
 
+Types: [MotionContainer].
+
 **Fields**
 
 - `collection`: Root or stable motion-group container for library registrations.
@@ -85,6 +91,8 @@ Canonical queries modeling values.
 
 `(*, collection: OrganizationCollection)`
 
+Types: [OrganizationCollection].
+
 **Fields**
 
 - `collection`: Explicit native collection selector; it does not imply loading every object payload.
@@ -94,6 +102,8 @@ Canonical queries modeling values.
 **Type**
 
 `(*, collection: PhysicsCollection)`
+
+Types: [PhysicsCollection].
 
 **Fields**
 
@@ -105,6 +115,8 @@ Canonical queries modeling values.
 
 `(*, collection: PoseCollection)`
 
+Types: [PoseCollection].
+
 **Fields**
 
 - `collection`: Native Pose group/entry/link collection selector.
@@ -114,6 +126,8 @@ Canonical queries modeling values.
 **Type**
 
 `(*, collection: ReferenceCollection)`
+
+Types: [ReferenceCollection].
 
 **Fields**
 
@@ -131,6 +145,8 @@ Canonical queries modeling values.
 **Type**
 
 `(*, collection: SceneCollection)`
+
+Types: [SceneCollection].
 
 **Fields**
 
@@ -188,6 +204,8 @@ requests no payloads, while collection IDs remain discoverable.
 `(*, document_id: str, setup: ModelSetup, hierarchy_order: HierarchyOrder, editor_state: EditorState, display_info: DisplayInfo, model3_settings: Model3Settings, draw_order_groups: tuple[DrawOrderGroup, ...] | None = None, ids: _Mapping[str, tuple[str, ...]], assets: tuple[ImageAsset | None, ...], meshes: tuple[Mesh | None, ...], parameters: tuple[Parameter | None, ...], parts: tuple[Part | None, ...], transforms: tuple[Transform | None, ...], bindings: tuple[MeshBinding | None, ...], scene_bindings: tuple[SceneBinding | None, ...], blend_key_tables: tuple[BlendShapeKeyTable | None, ...], blend_constraints: tuple[BlendShapeConstraint | None, ...], blend_bindings: tuple[BlendShapeBinding | None, ...], glues: tuple[Glue | None, ...], offscreens: tuple[Offscreen | None, ...], parameter_groups: tuple[CdiParameterGroup | None, ...], attachments: tuple[PackageAttachment | None, ...], motions: tuple[MotionClip | None, ...], motion_groups: tuple[MotionGroup | None, ...], motion_registrations: tuple[MotionRegistration | None, ...], expressions: tuple[ExpressionAsset | None, ...], physics: PhysicsAsset | None = None, pose: PoseAsset | None = None)`
 
 Owned selected query results. No mutation or query behavior lives in this DTO.
+
+Types: [BlendShapeBinding], [BlendShapeConstraint], [BlendShapeKeyTable], [MeshBinding], [SceneBinding], [ExpressionAsset], [Mesh], [MotionClip], [MotionGroup], [MotionRegistration], [Parameter], [PhysicsAsset], [PoseAsset], [CdiParameterGroup], [DisplayInfo], [EditorState], [Model3Settings], [PackageAttachment], [ImageAsset], [DrawOrderGroup], [Glue], [HierarchyOrder], [ModelSetup], [Offscreen], [Part], [Transform].
 
 **Fields**
 

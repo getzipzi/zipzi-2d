@@ -56,8 +56,7 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 '
-                            'aa38fee04aafa0c64af1232f7235e430327252b3d7577f21520e5fc0b9bb73ff.',
-           'example': 'docs/recipes.py',
+                            '74fc19a3f04c7d2f34bcdefc4e14b0dd267cb2012db4f07763ce18f186b61e2c.',
            'kind': 'module',
            'signature': ''},
  'zipzi.ApiDescription': {'children': ('zipzi.ApiDescription.__repr__',
@@ -65,13 +64,14 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        'zipzi.ApiDescription.summary'),
                           'documentation': 'One installed offline API entry; it describes the client package rather '
                                            'than probing host support.',
-                          'example': 'docs/recipes.py',
                           'fields': [('path', 'Canonical public API path under zipzi.'),
                                      ('kind', 'Directory entry category such as module, type, callable or value.'),
                                      ('signature',
                                       'Rendered public signature; empty for entries without a callable/type '
                                       'signature.'),
-                                     ('documentation', 'Semantic docstring for this installed entry.'),
+                                     ('documentation',
+                                      'Entry-specific semantics; rules contains the directly referenced shared '
+                                      'explanations.'),
                                      ('fields',
                                       'Ordered pairs of public field name and semantic description; empty when no '
                                       'value fields are declared.'),
@@ -79,14 +79,24 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      ('example',
                                       'Package-relative workflow/example reference; empty when no example is '
                                       'assigned.'),
-                                     ('type_refs', 'Referenced public type paths resolved from source annotations.')],
+                                     ('type_refs', 'Referenced public type paths resolved from source annotations.'),
+                                     ('rule_refs',
+                                      'Direct shared rule identities; rules are leaves and never query children or '
+                                      'referenced types.'),
+                                     ('rules',
+                                      'Resolved title/text pairs for the directly referenced rules, expanded once by '
+                                      'format().'),
+                                     ('field_roles',
+                                      'Field name, projection display role and fixed value for explicitly declared '
+                                      'projections.')],
                           'kind': 'type',
                           'signature': '(path: str, kind: str, signature: str, documentation: str, fields: '
                                        'tuple[tuple[str, str], ...] = (), children: tuple[str, ...] = (), example: str '
-                                       "= '', type_refs: tuple[str, ...] = ())"},
+                                       "= '', type_refs: tuple[str, ...] = (), rule_refs: tuple[str, ...] = (), rules: "
+                                       'tuple[tuple[str, str], ...] = (), field_roles: tuple[tuple[str, str, str], '
+                                       '...] = ())'},
  'zipzi.ApiDescription.__repr__': {'children': (),
                                    'common': '__repr__',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '() -> str'},
@@ -95,22 +105,20 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                   '\n'
                                                   'Use print(description.format()) for full help. repr, str and '
                                                   'summary\n'
-                                                  'remain bounded previews; formatting does not recursively query '
-                                                  'children.',
-                                 'example': 'docs/recipes.py',
+                                                  'remain bounded previews. Direct shared rules expand once; children '
+                                                  'and\n'
+                                                  'type references remain paths and are never recursively queried.',
                                  'fields': [],
                                  'kind': 'callable',
                                  'signature': '() -> str'},
  'zipzi.ApiDescription.summary': {'children': (),
                                   'common': 'summary',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '() -> str'},
  'zipzi.Batch': {'children': ('zipzi.Batch.__repr__', 'zipzi.Batch.summary'),
                  'documentation': 'Ordered owned values sharing one exact source; duplicates and empty selections '
                                   'retain their semantics.',
-                 'example': 'docs/recipes.py',
                  'fields': [('source', 'Exact source shared by the whole selection, including an empty batch.'),
                             ('items',
                              'Owned payloads in requested-ID order, preserving duplicates; a missing item rejects a '
@@ -127,7 +135,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                'zipzi.Buffer.read',
                                'zipzi.Buffer.size'),
                   'documentation': '',
-                  'example': 'docs/recipes.py',
                   'fields': [],
                   'kind': 'type',
                   'signature': '(factory-owned; use the documented public entry)'},
@@ -135,7 +142,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                             'documentation': 'Check the owning client/lease locally and return this Buffer without IO. '
                                              'Use with to close on exit; pending work must recover on its original '
                                              'owner. Entering does not refresh or rebind stale SDK identity.',
-                            'example': 'docs/recipes.py',
                             'fields': [],
                             'kind': 'callable',
                             'signature': '() -> Buffer',
@@ -147,7 +153,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'the host. On normal exit an unknown release remains recoverable and is\n'
                                             'raised; during an existing exception cleanup failure is added as a note.\n'
                                             'Retain the handle for pending cleanup. No formal document write occurs.',
-                           'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
                            'signature': '(kind: object, exception: BaseException | None, traceback: object) -> None'},
@@ -155,7 +160,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                         'documentation': 'Release this owned handle once, without mutating formal model content. A '
                                          'lost release response keeps the original recovery owner; confirmed close is '
                                          'idempotent and later use fails.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': '() -> None'},
@@ -163,7 +167,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                   'documentation': "Return cached metadata for this owner's original pending request, "
                                                    'or None. Reading does not send IO or recover work; retain the '
                                                    'original OutcomeUnknown to resume it.',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'property',
                                   'signature': ': PendingRequest | None',
@@ -172,27 +175,23 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                        'documentation': 'Read immutable bytes from offset for length bytes; None reads the remaining '
                                         'bytes. Bounds and transfer budgets apply before download. Recover the '
                                         'original multi-stage read after transport loss; close the Buffer after use.',
-                       'example': 'docs/recipes.py',
                        'fields': [],
                        'kind': 'callable',
                        'signature': '(offset: int=0, length: int | None=None) -> bytes'},
  'zipzi.Buffer.size': {'children': (),
                        'documentation': 'Return the cached immutable byte length without reading the host buffer or '
                                         'allocating a copy.',
-                       'example': 'docs/recipes.py',
                        'fields': [],
                        'kind': 'property',
                        'signature': ': int'},
  'zipzi.Busy': {'children': (),
                 'documentation': 'Confirmed refusal before execution; the caller may submit a new request.',
-                'example': 'docs/recipes.py',
                 'fields': [],
                 'kind': 'type',
                 'signature': '()'},
  'zipzi.ConnectionInfo': {'children': ('zipzi.ConnectionInfo.__repr__', 'zipzi.ConnectionInfo.summary'),
                           'documentation': 'Immutable successful connection handshake; reading fields does not query '
                                            'the host again.',
-                          'example': 'docs/recipes.py',
                           'fields': [('runtime', 'Canonical UUID of the connected Runtime instance.'),
                                      ('host_pid', 'Operating-system process ID of the host, not the client.'),
                                      ('sdk_build',
@@ -211,7 +210,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.ConnectionLimits': {'children': ('zipzi.ConnectionLimits.__repr__', 'zipzi.ConnectionLimits.summary'),
                             'documentation': 'Handshake limits reported by the connected host; values are facts, not '
                                              'client-side overrides.',
-                            'example': 'docs/recipes.py',
                             'fields': [('frame_bytes', 'Maximum encoded control frame length in bytes.'),
                                        ('reconnect_seconds', 'Connection reconnection/grace window in seconds.'),
                                        ('result_seconds',
@@ -231,7 +229,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.ConnectionLimits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.EditState': {'children': (),
                      'documentation': '',
-                     'example': 'docs/recipes.py',
                      'fields': [('editing', "'editing'"),
                                 ('committing', "'committing'"),
                                 ('committed', "'committed'"),
@@ -255,13 +252,11 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                 'outcome. A known JobTimeout keeps this Job pending. After OutcomeUnknown,\n'
                                 'retain and recover its original Call before issuing another Job action.\n'
                                 'Use with for close-on-exit; it waits rather than cancelling entered IO.',
-               'example': 'docs/recipes.py',
                'fields': [],
                'kind': 'type',
                'signature': '(factory-owned; use the documented public entry)'},
  'zipzi.Job.__enter__': {'children': (),
                          'documentation': 'Return this accepted Job without polling or IO; exit waits through close().',
-                         'example': 'docs/recipes.py',
                          'fields': [],
                          'kind': 'callable',
                          'signature': "() -> 'Job[T]'",
@@ -273,19 +268,16 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'failure or OutcomeUnknown; during an existing exception cleanup failure\n'
                                          'is attached as a note and the owning Job retains pending recovery.\n'
                                          'Returns None and may block for entered work; it never implies cancel.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': '(kind: object, exception: BaseException | None, traceback: object) -> None'},
  'zipzi.Job.cancel': {'children': (),
                       'documentation': 'Request cancellation. Wait still reports the actual entered-IO result.',
-                      'example': 'docs/recipes.py',
                       'fields': [],
                       'kind': 'callable',
                       'signature': '() -> None'},
  'zipzi.Job.close': {'children': (),
                      'documentation': 'Wait for the actual outcome and release its Runtime result slot.',
-                     'example': 'docs/recipes.py',
                      'fields': [],
                      'kind': 'callable',
                      'signature': '() -> None'},
@@ -294,7 +286,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                      'documentation': 'Query the accepted Job status without consuming its result slot. Confirmed '
                                       'terminal status is cached. A lost status response must be recovered before wait '
                                       'or cancel; this does not imply publication success.',
-                     'example': 'docs/recipes.py',
                      'fields': [],
                      'kind': 'callable',
                      'signature': '() -> JobState',
@@ -306,13 +297,11 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      'while preserving the accepted Job. Transport loss raises OutcomeUnknown\n'
                                      'for the complete original wait, which can be recovered without replay.\n'
                                      'A pending cancel/status request must be recovered before waiting.',
-                    'example': 'docs/recipes.py',
                     'fields': [],
                     'kind': 'callable',
                     'signature': '(*, timeout: float | None=None) -> T'},
  'zipzi.JobState': {'children': (),
                     'documentation': '',
-                    'example': 'docs/recipes.py',
                     'fields': [],
                     'kind': 'alias',
                     'signature': "Literal['queued', 'running', 'cancelling', 'succeeded', 'failed', 'cancelled']"},
@@ -321,7 +310,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        '\n'
                                        'This confirmed nonterminal status has no PendingRequest and is distinct\n'
                                        'from a lost transport reply. A timeout does not cancel the task.',
-                      'example': 'docs/recipes.py',
                       'fields': [],
                       'kind': 'type',
                       'signature': "(message: str='Accepted Job is still pending')"},
@@ -329,7 +317,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                          'documentation': 'Discovery metadata for a document object, without its full payload. Use '
                                           'its\n'
                                           'stable ID for a selected read; display names can be duplicated or changed.',
-                         'example': 'docs/recipes.py',
                          'fields': [('id', 'Persistent canonical UUID in the selected document.'),
                                     ('name', 'Exact, case-sensitive display name; binding names use their mesh name.'),
                                     ('object_kind',
@@ -363,7 +350,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                            'Recovery is synchronous, bounded by host retention/timeouts; expiration is '
                                            'a\n'
                                            'structured failure rather than proof the write did not happen.',
-                          'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'type',
                           'signature': '(pending: PendingRequest, message: str)',
@@ -379,14 +365,12 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                    'This never invokes the original method again. Repeated recovery '
                                                    'after\n'
                                                    'resolution raises NO_PENDING_REQUEST.',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '() -> object'},
  'zipzi.Page': {'children': ('zipzi.Page.__repr__', 'zipzi.Page.summary'),
                 'documentation': 'Bounded metadata page from one exact source; an empty page may still have a '
                                  'continuation.',
-                'example': 'docs/recipes.py',
                 'fields': [('source', 'Exact formal version or candidate sequence captured for this page.'),
                            ('items',
                             'Metadata records in native storage order; excludes geometry, keyforms and pixel '
@@ -401,7 +385,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Page.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.PageCursor': {'children': ('zipzi.PageCursor.__repr__', 'zipzi.PageCursor.summary'),
                       'documentation': 'Opaque continuation issued by a Runtime collection query.',
-                      'example': 'docs/recipes.py',
                       'fields': [],
                       'kind': 'type',
                       'signature': '()'},
@@ -410,7 +393,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.PendingRequest': {'children': (),
                           'documentation': 'Immutable identity of the original request whose outcome is unknown; '
                                            'recover through its owning call.',
-                          'example': 'docs/recipes.py',
                           'fields': [('request_id',
                                       'Original client request number; do not allocate a fresh write request to probe '
                                       'the outcome.'),
@@ -434,7 +416,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'later writes, replacement or Undo can make it stale. Apply as the first and\n'
                                  'only Plan in a batch. Close the lease or use with after inspection/application;\n'
                                  'closing does not publish or revoke an already accepted document change.',
-                'example': 'docs/recipes.py',
                 'fields': [],
                 'kind': 'type',
                 'signature': '(factory-owned; use the documented public entry)'},
@@ -442,7 +423,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                           'documentation': 'Check the owning client/lease locally and return this Plan without IO. Use '
                                            'with to close on exit; pending work must recover on its original owner. '
                                            'Entering does not refresh or rebind stale SDK identity.',
-                          'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'callable',
                           'signature': '() -> Plan',
@@ -455,7 +435,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                'Source changes do not change these rows. The live Plan lease and its\n'
                                                'original recovery owner are required; each page contains 1 to 256 '
                                                'rows.',
-                              'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'callable',
                               'signature': '(section: modeling.deletion.DeletionSection, *, offset: int=0, limit: '
@@ -467,14 +446,12 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                        'documentation': 'Return the immutable cached report, exact Source, SDK version, '
                                         'affected/copied IDs, cost, losses and no-op state. No IO occurs; the report '
                                         'remains readable after Plan close or invalidation.',
-                       'example': 'docs/recipes.py',
                        'fields': [],
                        'kind': 'property',
                        'signature': ': PlanReport',
                        'type_refs': ('zipzi.PlanReport',)},
  'zipzi.PlanCost': {'children': ('zipzi.PlanCost.__repr__', 'zipzi.PlanCost.summary'),
                     'documentation': '',
-                    'example': 'docs/recipes.py',
                     'fields': [('sample_combinations',
                                 'Number of shape-sample combinations the conversion must process.'),
                                ('payload_bytes', 'Estimated owned result payload in bytes; not total process RSS.'),
@@ -488,7 +465,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.PlanCost.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.PlanReport': {'children': ('zipzi.PlanReport.__repr__', 'zipzi.PlanReport.summary'),
                       'documentation': '',
-                      'example': 'docs/recipes.py',
                       'fields': [('source',
                                   'Exact formal or candidate source captured for this result; later host changes do '
                                   'not\n'
@@ -534,7 +510,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'pixels() synchronously downloads owned bytes. A pending request must '
                                           'recover\n'
                                           'on this original owner. Handles cannot cross Runtime/client boundaries.',
-                         'example': 'docs/recipes.py',
                          'fields': [],
                          'kind': 'type',
                          'signature': '(factory-owned; use the documented public entry)'},
@@ -543,7 +518,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                     'PreparedImage without IO. Use with to close on exit; pending work '
                                                     'must recover on its original owner. Entering does not refresh or '
                                                     'rebind stale SDK identity.',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '() -> PreparedImage',
@@ -552,7 +526,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.PreparedImage.close': {'alias': 'zipzi.Buffer.close'},
  'zipzi.PreparedImage.height': {'children': (),
                                 'documentation': 'Cached image height in pixels; no IO.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'property',
                                 'signature': ': int'},
@@ -561,21 +534,18 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                 'documentation': 'Read immutable RGBA8 pixels without joining a document. The result '
                                                  'owns bytes; the image lease remains independent. Recover a lost read '
                                                  'through its original Call.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '() -> ImagePixels',
                                 'type_refs': ('zipzi.resources.ImagePixels',)},
  'zipzi.PreparedImage.width': {'children': (),
                                'documentation': 'Cached image width in pixels; no IO.',
-                               'example': 'docs/recipes.py',
                                'fields': [],
                                'kind': 'property',
                                'signature': ': int'},
  'zipzi.Receipt': {'children': ('zipzi.Receipt.__repr__', 'zipzi.Receipt.summary'),
                    'documentation': 'Confirmed publication result returned by a completed commit; constructing a DTO '
                                     'does not publish.',
-                   'example': 'docs/recipes.py',
                    'fields': [('before', 'Exact formal SDK version before publication.'),
                               ('after',
                                'Exact formal SDK version after publication; may equal before when changed is false.'),
@@ -591,7 +561,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Receipt.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.RecoveryAction': {'children': (),
                           'documentation': '',
-                          'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'alias',
                           'signature': "Literal['retry', 'reduce_request', 'release_resources', 'recover_original', "
@@ -607,14 +576,12 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                 'zipzi.Runtime.sessions'),
                    'documentation': 'Explicit client lifetime. Construct with zipzi.local() or zipzi.connect(); '
                                     'Connected keeps formal sessions resident after client close.',
-                   'example': 'docs/recipes.py',
                    'fields': [],
                    'kind': 'type',
                    'signature': '(factory-owned; use the documented public entry)'},
  'zipzi.Runtime.__enter__': {'children': (),
                              'documentation': 'Return this factory-created Runtime; no new host/client or IO is '
                                               'started.',
-                             'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'callable',
                              'signature': "() -> 'Runtime'",
@@ -626,14 +593,12 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                              'or raise Busy/OutcomeUnknown for pending ownership. With an existing\n'
                                              'exception, cleanup failure is added as a note. Connected documents stay\n'
                                              'resident; Local releases its Runtime sessions. Returns None.',
-                            'example': 'docs/recipes.py',
                             'fields': [],
                             'kind': 'callable',
                             'signature': '(kind: object, exception: BaseException | None, traceback: object) -> None'},
  'zipzi.Runtime.capabilities': {'children': (),
                                 'documentation': 'Query actual implementation and environment capabilities; this does '
                                                  'not reserve future admission.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '() -> RuntimeCapabilities',
@@ -644,13 +609,11 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'Explicit abandon_pending disconnects and forfeits pending recovery.\n'
                                           'It never changes identity to replay an unknown write. Connected sessions\n'
                                           'remain resident; entered host Jobs retain their actual outcome.',
-                         'example': 'docs/recipes.py',
                          'fields': [],
                          'kind': 'callable',
                          'signature': '(*, abandon_pending: bool=False) -> None'},
  'zipzi.Runtime.connection': {'children': (),
                               'documentation': 'Immutable negotiated host metadata; local runtimes return None.',
-                              'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'property',
                               'signature': ': ConnectionInfo | None',
@@ -660,7 +623,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                  'Limit is 1..256; Runtime identity or retained-history gaps raise '
                                                  'RESYNC_REQUIRED. Recover a lost response to obtain its original '
                                                  'page.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '(cursor: events.Cursor, *, limit: int=128) -> tuple[events.Event, ...]',
@@ -668,7 +630,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Runtime.limits': {'children': (),
                           'documentation': 'Query current Runtime count, byte and scan budgets. Values are estimates, '
                                            'not process RSS limits.',
-                          'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'callable',
                           'signature': '() -> RuntimeLimits',
@@ -679,7 +640,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                           'zipzi.Runtime.resources.prepare_png',
                                           'zipzi.Runtime.resources.usage'),
                              'documentation': '',
-                             'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'property',
                              'signature': 'runtime.resources'},
@@ -687,7 +647,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                       'documentation': 'Submit decoding a host-absolute PNG into a PreparedImage Job. '
                                                        'Wait for the accepted job and close the resulting lease; '
                                                        'decoder failures do not poison an unrelated Edit.',
-                                      'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'callable',
                                       'signature': '(path: Path) -> Job[PreparedImage]',
@@ -697,7 +656,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                              'bounded upload and original-request recovery. '
                                                              'Preparation does not edit a document; explicitly close '
                                                              'the Buffer after use.',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'callable',
                                             'signature': '(data: bytes | bytearray | memoryview) -> Buffer',
@@ -707,7 +665,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                             'width-by-height image lease. Preparation does not edit a '
                                                             'document. Close the lease after candidate acceptance; '
                                                             'SDK/history owners retain their references.',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'callable',
                                            'signature': '(width: int, height: int, rgba: bytes | bytearray | '
@@ -717,7 +674,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'documentation': 'Submit decoding PNG bytes from an existing same-client '
                                                           'immutable Buffer. The Job returns a PreparedImage lease, '
                                                           'independent of document publication.',
-                                         'example': 'docs/recipes.py',
                                          'fields': [],
                                          'kind': 'callable',
                                          'signature': '(buffer: Buffer) -> Job[PreparedImage]',
@@ -726,7 +682,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                    'documentation': 'Query owned resource usage and actual shared image buffer '
                                                     'counters. These are scoped Runtime estimates, not process RSS or '
                                                     'a promise of later admission.',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '() -> Usage',
@@ -739,7 +694,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'zipzi.Runtime.sessions.subscribe'),
                             'documentation': 'Bounded host registry. Listing and attaching share the resident '
                                              'document; neither creates a Python mirror.',
-                            'example': 'docs/recipes.py',
                             'fields': [],
                             'kind': 'property',
                             'signature': 'runtime.sessions',
@@ -749,7 +703,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                     'copying content. Detached old wrappers stay invalid; a successful '
                                                     'attach creates a fresh binding. Wrong Runtime or missing IDs '
                                                     'fail.',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': "(id: SessionId) -> 'Session'",
@@ -764,7 +717,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                                     'original call, never create another Session. Use session.close() '
                                                     'to free the host document, or detach() to keep it resident. '
                                                     'Example: session = runtime.sessions.create().',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': "(document_id: str | None=None) -> 'Session'",
@@ -773,7 +725,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                     'documentation': 'Submit an explicit host format import into a new session. '
                                                      'Textures are explicit host paths. Wait for Job[Session]; '
                                                      'cancellation reports the real outcome if IO has already entered.',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'callable',
                                     'signature': '(path: Path, format: modeling.project.ImportFormat, *, textures: '
@@ -786,7 +737,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'documentation': 'Read one bounded tuple of resident SessionInfo values. Registry '
                                                   'order uses SessionId. No object geometry or pixel payload is '
                                                   'returned; transport loss recovers the captured tuple.',
-                                 'example': 'docs/recipes.py',
                                  'fields': [],
                                  'kind': 'callable',
                                  'signature': '() -> tuple[SessionInfo, ...]',
@@ -795,7 +745,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                  'documentation': 'Submit host-absolute project open and return Job[Session], '
                                                   'including already-open paths through a cached completed Job. Wait '
                                                   'for the actual outcome; recover a lost start before waiting.',
-                                 'example': 'docs/recipes.py',
                                  'fields': [],
                                  'kind': 'callable',
                                  'signature': "(path: Path) -> Job['Session']",
@@ -804,14 +753,12 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                       'documentation': 'Capture current registry metadata and an independent cursor. '
                                                        'Poll bounded pages; resync explicitly after RESYNC_REQUIRED. '
                                                        'This does not drain another subscriber.',
-                                      'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'callable',
                                       'signature': '() -> events.RegistrySubscription',
                                       'type_refs': ('zipzi.events.RegistrySubscription',)},
  'zipzi.RuntimeCapabilities': {'children': ('zipzi.RuntimeCapabilities.__repr__', 'zipzi.RuntimeCapabilities.summary'),
                                'documentation': '',
-                               'example': 'docs/recipes.py',
                                'fields': [('domains',
                                            'Finite domain names supported by this host; absence means the domain is '
                                            'unavailable.'),
@@ -845,7 +792,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.RuntimeLimits': {'children': ('zipzi.RuntimeLimits.__repr__', 'zipzi.RuntimeLimits.summary'),
                          'documentation': 'R0 defaults for the objects enabled in R1. Estimates conservatively count\n'
                                           'shared document content per holder; these are not RSS or GPU limits.',
-                         'example': 'docs/recipes.py',
                          'fields': [('observation_texture_rgba_bytes',
                                      'Maximum logical observation base RGBA bytes per referenced asset set.'),
                                     ('observation_output_bytes',
@@ -947,7 +893,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.RuntimeLimits.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.SaveReceipt': {'children': ('zipzi.SaveReceipt.__repr__', 'zipzi.SaveReceipt.summary'),
                        'documentation': 'Confirmed save outcome; inspect durable and the actual host manifest path.',
-                       'example': 'docs/recipes.py',
                        'fields': [('manifest',
                                    'Absolute manifest path reported by the host; not a path resolved on the client.'),
                                   ('durable',
@@ -974,7 +919,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                        'This value alone performs no IO and owns no resource lease. Catch outside a\n'
                                        'failed Edit, inspect code/recovery_action, and start a fresh candidate when\n'
                                        'required. See docs/guide.md for the error/recovery workflow.',
-                      'example': 'docs/recipes.py',
                       'fields': [],
                       'kind': 'type',
                       'signature': "(code: str, message: str, *, operation: str='', object_ids: tuple[str, ...]=(), "
@@ -987,7 +931,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.SessionId': {'children': ('zipzi.SessionId.__repr__', 'zipzi.SessionId.summary'),
                      'documentation': 'Runtime-scoped Session identity, independent of paths and persistent document '
                                       'UUIDs.',
-                     'example': 'docs/recipes.py',
                      'fields': [('runtime', 'Canonical UUID of the Runtime instance that allocated the handle.'),
                                 ('serial',
                                  'Positive u64 Session serial within that Runtime; not the document UUID or SDK '
@@ -999,7 +942,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.SessionInfo': {'children': ('zipzi.SessionInfo.__repr__', 'zipzi.SessionInfo.summary'),
                        'documentation': 'Immutable Session metadata captured by the host; reading it does not refresh '
                                         'the Session.',
-                       'example': 'docs/recipes.py',
                        'fields': [('version', 'Exact SDK version captured with this metadata.'),
                                   ('modified',
                                    'Whether the document has unsaved changes; default Session.close refuses a modified '
@@ -1018,7 +960,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Snapshot': {'children': ('zipzi.Snapshot.__repr__', 'zipzi.Snapshot.summary'),
                     'documentation': 'One owned domain value at an exact formal or candidate source; field access '
                                      'performs no IO.',
-                    'example': 'docs/recipes.py',
                     'fields': [('source', 'Exact source captured atomically with the payload.'),
                                ('value',
                                 'Owned immutable domain payload; retain source separately when planning or checking '
@@ -1031,7 +972,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Source': {'children': ('zipzi.Source.__repr__', 'zipzi.Source.summary'),
                   'documentation': 'Exact immutable formal or candidate source used by a read or plan; copying it '
                                    'performs no IO.',
-                  'example': 'docs/recipes.py',
                   'fields': [('runtime', 'Canonical UUID of the Runtime instance owning the source.'),
                              ('session',
                               'Runtime Session serial; together with runtime identifies the resident document.'),
@@ -1049,7 +989,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Version': {'children': ('zipzi.Version.__repr__', 'zipzi.Version.summary'),
                    'documentation': 'Exact SDK document version; compare the complete value rather than revision '
                                     'alone.',
-                   'example': 'docs/recipes.py',
                    'fields': [('session_id',
                                'SDK authoring-session identity, distinct from the Runtime Session serial.'),
                               ('generation',
@@ -1064,7 +1003,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
  'zipzi.Version.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.WriteResult': {'children': ('zipzi.WriteResult.__repr__', 'zipzi.WriteResult.summary'),
                        'documentation': 'Confirmed candidate write result; it is not a formal commit receipt.',
-                       'example': 'docs/recipes.py',
                        'fields': [('source', 'Exact candidate source after the accepted write call.'),
                                   ('ids',
                                    'Operation result IDs in operation order; may name newly created or existing '
@@ -1103,7 +1041,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                     'calling connect again does not replay or resolve that request.\n'
                                     '\n'
                                     'Example: with zipzi.connect(endpoint=absolute_socket_path) as runtime: ...',
-                   'example': 'docs/recipes.py',
                    'fields': [],
                    'kind': 'callable',
                    'signature': '(*, endpoint: Path | None=None, start: bool=False, host: Path | None=None, timeout: '
@@ -1118,7 +1055,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                      'bounded preview. Fields and child paths are also available individually.\n'
                                      'This describes the installed API, while runtime.capabilities() describes\n'
                                      'the connected host. No resource is constructed or RPC sent by this query.',
-                    'example': 'docs/recipes.py',
                     'fields': [],
                     'kind': 'callable',
                     'signature': '(path: str) -> ApiDescription',
@@ -1127,7 +1063,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                  'documentation': 'Explicitly create an owned in-process Runtime with the paired optional native '
                                   'wheel. Importing zipzi alone does not start it. Use as a context manager; close '
                                   'releases its sessions without saving or connecting to another host.',
-                 'example': 'docs/recipes.py',
                  'fields': [],
                  'kind': 'callable',
                  'signature': '() -> Runtime',
@@ -1141,7 +1076,6 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                          'execution. Busy, ordinary failures, budgets and JobTimeout are propagated.\n'
                                          'If recovery is still unknown, retain that exception and its owner to resume\n'
                                          'later; this helper never replays a user function or loops on recovery.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': '(method: Callable[P, U], /, *args: P.args, **kwargs: P.kwargs) -> U'}}

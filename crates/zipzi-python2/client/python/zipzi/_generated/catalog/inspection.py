@@ -11,7 +11,6 @@ DATA: dict[str, Entry] = {'zipzi.inspection': {'children': ('zipzi.inspection.Re
  'zipzi.inspection.Report': {'children': ('zipzi.inspection.Report.__repr__', 'zipzi.inspection.Report.summary'),
                              'documentation': 'Paths to an exported local inspection, readable without a live SDK '
                                               'host.',
-                             'example': 'docs/recipes.py',
                              'fields': [('directory',
                                          'Client-side output directory created by save; not a remote host path.'),
                                         ('manifest',
@@ -35,7 +34,6 @@ DATA: dict[str, Entry] = {'zipzi.inspection': {'children': ('zipzi.inspection.Re
                                             'recomputation or implicit request recovery occurs. Retain the original '
                                             'result\n'
                                             'if file IO needs to be retried into a new directory.',
-                           'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
                            'signature': '(result: Snapshot[m.ObservationBatch] | Snapshot[m.PreviewBatch], directory: '

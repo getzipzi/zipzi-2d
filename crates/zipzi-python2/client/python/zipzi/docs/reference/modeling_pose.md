@@ -16,6 +16,8 @@ Canonical pose modeling values.
 
 `(*, id: str, file_type: str | None = None, fade_in: float | None = None, groups: tuple[PoseGroup, ...], extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
+Types: [PoseGroup](#zipzimodelingposeposegroup).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -31,6 +33,8 @@ Canonical pose modeling values.
 **Alias**
 
 `PoseCollectionGroups | PoseCollectionEntries | PoseCollectionLinks`
+
+Types: [PoseCollectionEntries](#zipzimodelingposeposecollectionentries), [PoseCollectionGroups](#zipzimodelingposeposecollectiongroups), [PoseCollectionLinks](#zipzimodelingposeposecollectionlinks).
 
 
 ## zipzi.modeling.pose.PoseCollectionEntries
@@ -65,6 +69,8 @@ Canonical pose modeling values.
 **Alias**
 
 `PoseEditCreate | PoseEditCreateGroup | PoseEditCreateEntry | PoseEditCreateLink | PoseEditPatch | PoseEditMove | PoseEditDuplicate | PoseEditDelete | PoseEditDissolveGroup`
+
+Types: [PoseEditCreate](#zipzimodelingposeposeeditcreate), [PoseEditCreateEntry](#zipzimodelingposeposeeditcreateentry), [PoseEditCreateGroup](#zipzimodelingposeposeeditcreategroup), [PoseEditCreateLink](#zipzimodelingposeposeeditcreatelink), [PoseEditDelete](#zipzimodelingposeposeeditdelete), [PoseEditDissolveGroup](#zipzimodelingposeposeeditdissolvegroup), [PoseEditDuplicate](#zipzimodelingposeposeeditduplicate), [PoseEditMove](#zipzimodelingposeposeeditmove), [PoseEditPatch](#zipzimodelingposeposeeditpatch).
 
 
 ## zipzi.modeling.pose.PoseEditCreate
@@ -146,6 +152,8 @@ A Pose group has no root member container; a receiving group is required.
 
 `(*, ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
 
+Types: [PoseCollection](#zipzimodelingposeposecollection).
+
 **Fields**
 
 - `ids`: Ordered stable IDs selected by this operation; names and row numbers are not identities.
@@ -157,6 +165,8 @@ A Pose group has no root member container; a receiving group is required.
 **Type**
 
 `(*, ids: tuple[str, ...], destination: PoseCollection, before: str | None = None)`
+
+Types: [PoseCollection](#zipzimodelingposeposecollection).
 
 **Fields**
 
@@ -170,6 +180,8 @@ A Pose group has no root member container; a receiving group is required.
 
 `(*, id: str, expected: PoseFields, fields: PoseFields)`
 
+Types: [PoseFields](#zipzimodelingposeposefields).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -181,6 +193,8 @@ A Pose group has no root member container; a receiving group is required.
 **Type**
 
 `(*, id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Types: [PoseLink](#zipzimodelingposeposelink), [PosePartRef](#zipzimodelingposeposepartref).
 
 **Fields**
 
@@ -194,6 +208,8 @@ A Pose group has no root member container; a receiving group is required.
 **Alias**
 
 `PoseFieldsAsset | PoseFieldsGroup | PoseFieldsEntry | PoseFieldsLink`
+
+Types: [PoseFieldsAsset](#zipzimodelingposeposefieldsasset), [PoseFieldsEntry](#zipzimodelingposeposefieldsentry), [PoseFieldsGroup](#zipzimodelingposeposefieldsgroup), [PoseFieldsLink](#zipzimodelingposeposefieldslink).
 
 
 ## zipzi.modeling.pose.PoseFieldsAsset
@@ -211,6 +227,8 @@ A Pose group has no root member container; a receiving group is required.
 **Type**
 
 `(*, part: PosePartRef)`
+
+Types: [PosePartRef](#zipzimodelingposeposepartref).
 
 **Fields**
 
@@ -232,6 +250,8 @@ A Pose group has no root member container; a receiving group is required.
 
 `(*, target: PosePartRef)`
 
+Types: [PosePartRef](#zipzimodelingposeposepartref).
+
 **Fields**
 
 - `target`: Typed target reference; unresolved imported runtime labels remain explicit.
@@ -241,6 +261,8 @@ A Pose group has no root member container; a receiving group is required.
 **Type**
 
 `(*, id: str, name: str, entries: tuple[PoseEntry, ...])`
+
+Types: [PoseEntry](#zipzimodelingposeposeentry).
 
 **Fields**
 
@@ -254,6 +276,8 @@ A Pose group has no root member container; a receiving group is required.
 
 `(*, id: str, target: PosePartRef)`
 
+Types: [PosePartRef](#zipzimodelingposeposepartref).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -264,6 +288,8 @@ A Pose group has no root member container; a receiving group is required.
 **Alias**
 
 `PosePartRefUnspecified | PosePartRefResolved | PosePartRefUnresolved`
+
+Types: [PosePartRefResolved](#zipzimodelingposeposepartrefresolved), [PosePartRefUnresolved](#zipzimodelingposeposepartrefunresolved), [PosePartRefUnspecified](#zipzimodelingposeposepartrefunspecified).
 
 
 ## zipzi.modeling.pose.PosePartRefResolved

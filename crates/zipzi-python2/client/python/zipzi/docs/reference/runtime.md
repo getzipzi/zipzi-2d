@@ -11,14 +11,14 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Module**
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 aa38fee04aafa0c64af1232f7235e430327252b3d7577f21520e5fc0b9bb73ff.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 74fc19a3f04c7d2f34bcdefc4e14b0dd267cb2012db4f07763ce18f186b61e2c.
 
 
 ## zipzi.ApiDescription
 
 **Type**
 
-`(path: str, kind: str, signature: str, documentation: str, fields: tuple[tuple[str, str], ...] = (), children: tuple[str, ...] = (), example: str = '', type_refs: tuple[str, ...] = ())`
+`(path: str, kind: str, signature: str, documentation: str, fields: tuple[tuple[str, str], ...] = (), children: tuple[str, ...] = (), example: str = '', type_refs: tuple[str, ...] = (), rule_refs: tuple[str, ...] = (), rules: tuple[tuple[str, str], ...] = (), field_roles: tuple[tuple[str, str, str], ...] = ())`
 
 One installed offline API entry; it describes the client package rather than probing host support.
 
@@ -27,11 +27,14 @@ One installed offline API entry; it describes the client package rather than pro
 - `path`: Canonical public API path under zipzi.
 - `kind`: Directory entry category such as module, type, callable or value.
 - `signature`: Rendered public signature; empty for entries without a callable/type signature.
-- `documentation`: Semantic docstring for this installed entry.
+- `documentation`: Entry-specific semantics; rules contains the directly referenced shared explanations.
 - `fields`: Ordered pairs of public field name and semantic description; empty when no value fields are declared.
 - `children`: Canonical child entry paths for further bounded describe queries.
 - `example`: Package-relative workflow/example reference; empty when no example is assigned.
 - `type_refs`: Referenced public type paths resolved from source annotations.
+- `rule_refs`: Direct shared rule identities; rules are leaves and never query children or referenced types.
+- `rules`: Resolved title/text pairs for the directly referenced rules, expanded once by format().
+- `field_roles`: Field name, projection display role and fixed value for explicitly declared projections.
 
 ## zipzi.ApiDescription.format
 
@@ -42,7 +45,8 @@ One installed offline API entry; it describes the client package rather than pro
 Return complete help text without truncation or IO.
 
 Use print(description.format()) for full help. repr, str and summary
-remain bounded previews; formatting does not recursively query children.
+remain bounded previews. Direct shared rules expand once; children and
+type references remain paths and are never recursively queried.
 
 
 ## zipzi.Batch
@@ -52,6 +56,8 @@ remain bounded previews; formatting does not recursively query children.
 `(source: Source, items: tuple[T, ...])`
 
 Ordered owned values sharing one exact source; duplicates and empty selections retain their semantics.
+
+Types: [Source](#zipzisource).
 
 **Fields**
 
@@ -72,6 +78,8 @@ Ordered owned values sharing one exact source; duplicates and empty selections r
 `() -> Buffer`
 
 Check the owning client/lease locally and return this Buffer without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
+
+Types: [Buffer](#zipzibuffer).
 
 
 ## zipzi.Buffer.__exit__
@@ -104,6 +112,8 @@ Release this owned handle once, without mutating formal model content. A lost re
 `: PendingRequest | None`
 
 Return cached metadata for this owner's original pending request, or None. Reading does not send IO or recover work; retain the original OutcomeUnknown to resume it.
+
+Types: [PendingRequest](#zipzipendingrequest).
 
 
 ## zipzi.Buffer.read
@@ -140,6 +150,8 @@ Confirmed refusal before execution; the caller may submit a new request.
 `(runtime: str, host_pid: int, sdk_build: str, protocol: str, capabilities: tuple[str, ...], limits: ConnectionLimits)`
 
 Immutable successful connection handshake; reading fields does not query the host again.
+
+Types: [ConnectionLimits](#zipziconnectionlimits).
 
 **Fields**
 
@@ -206,6 +218,8 @@ Use with for close-on-exit; it waits rather than cancelling entered IO.
 
 Return this accepted Job without polling or IO; exit waits through close().
 
+Types: [Job](#zipzijob).
+
 
 ## zipzi.Job.__exit__
 
@@ -250,6 +264,8 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 `() -> JobState`
 
 Query the accepted Job status without consuming its result slot. Confirmed terminal status is cached. A lost status response must be recovered before wait or cancel; this does not imply publication success.
+
+Types: [JobState](#zipzijobstate).
 
 
 ## zipzi.Job.wait
@@ -323,6 +339,8 @@ recoverable OutcomeUnknown. Never repeat a write under a new request ID.
 Recovery is synchronous, bounded by host retention/timeouts; expiration is a
 structured failure rather than proof the write did not happen.
 
+Types: [PendingRequest](#zipzipendingrequest).
+
 
 ## zipzi.OutcomeUnknown.recover
 
@@ -345,6 +363,8 @@ resolution raises NO_PENDING_REQUEST.
 `(source: Source, items: tuple[T, ...], next_cursor: PageCursor | None = None)`
 
 Bounded metadata page from one exact source; an empty page may still have a continuation.
+
+Types: [PageCursor](#zipzipagecursor), [Source](#zipzisource).
 
 **Fields**
 
@@ -398,6 +418,8 @@ closing does not publish or revoke an already accepted document change.
 
 Check the owning client/lease locally and return this Plan without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
 
+Types: [Plan](#zipziplan).
+
 
 ## zipzi.Plan.__exit__
 
@@ -418,6 +440,8 @@ Read a bounded section of this immutable deletion report.
 Source changes do not change these rows. The live Plan lease and its
 original recovery owner are required; each page contains 1 to 256 rows.
 
+Types: [DeletionPage], [DeletionSection].
+
 
 ## zipzi.Plan.pending_request
 
@@ -430,6 +454,8 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 `: PlanReport`
 
 Return the immutable cached report, exact Source, SDK version, affected/copied IDs, cost, losses and no-op state. No IO occurs; the report remains readable after Plan close or invalidation.
+
+Types: [PlanReport](#zipziplanreport).
 
 
 ## zipzi.PlanCost
@@ -450,6 +476,8 @@ Return the immutable cached report, exact Source, SDK version, affected/copied I
 **Type**
 
 `(source: Source, version: Version, affected_ids: tuple[str, ...], copied_ids: tuple[tuple[str, str], ...], cost: PlanCost | None, losses: tuple[str, ...], no_op: bool | None, deletion: modeling.DeletionSummary | None)`
+
+Types: [PlanCost](#zipziplancost), [Source](#zipzisource), [Version](#zipziversion), [DeletionSummary].
 
 **Fields**
 
@@ -486,6 +514,8 @@ on this original owner. Handles cannot cross Runtime/client boundaries.
 
 Check the owning client/lease locally and return this PreparedImage without IO. Use with to close on exit; pending work must recover on its original owner. Entering does not refresh or rebind stale SDK identity.
 
+Types: [PreparedImage](#zipzipreparedimage).
+
 
 ## zipzi.PreparedImage.__exit__
 
@@ -516,6 +546,8 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 
 Read immutable RGBA8 pixels without joining a document. The result owns bytes; the image lease remains independent. Recover a lost read through its original Call.
 
+Types: [ImagePixels].
+
 
 ## zipzi.PreparedImage.width
 
@@ -533,6 +565,8 @@ Cached image width in pixels; no IO.
 `(before: Version, after: Version, changed: bool, label: str, object_ids: tuple[str, ...])`
 
 Confirmed publication result returned by a completed commit; constructing a DTO does not publish.
+
+Types: [Version](#zipziversion).
 
 **Fields**
 
@@ -566,6 +600,8 @@ Explicit client lifetime. Construct with zipzi.local() or zipzi.connect(); Conne
 
 Return this factory-created Runtime; no new host/client or IO is started.
 
+Types: [Runtime](#zipziruntime).
+
 
 ## zipzi.Runtime.__exit__
 
@@ -589,6 +625,8 @@ resident; Local releases its Runtime sessions. Returns None.
 
 Query actual implementation and environment capabilities; this does not reserve future admission.
 
+Types: [RuntimeCapabilities](#zipziruntimecapabilities).
+
 
 ## zipzi.Runtime.close
 
@@ -611,6 +649,8 @@ remain resident; entered host Jobs retain their actual outcome.
 
 Immutable negotiated host metadata; local runtimes return None.
 
+Types: [ConnectionInfo](#zipziconnectioninfo).
+
 
 ## zipzi.Runtime.events_since
 
@@ -620,6 +660,8 @@ Immutable negotiated host metadata; local runtimes return None.
 
 Read a bounded event page after an exact registry/session Cursor. Limit is 1..256; Runtime identity or retained-history gaps raise RESYNC_REQUIRED. Recover a lost response to obtain its original page.
 
+Types: [Cursor], [Event].
+
 
 ## zipzi.Runtime.limits
 
@@ -628,6 +670,8 @@ Read a bounded event page after an exact registry/session Cursor. Limit is 1..25
 `() -> RuntimeLimits`
 
 Query current Runtime count, byte and scan budgets. Values are estimates, not process RSS limits.
+
+Types: [RuntimeLimits](#zipziruntimelimits).
 
 
 ## zipzi.Runtime.resources
@@ -645,6 +689,8 @@ Query current Runtime count, byte and scan budgets. Values are estimates, not pr
 
 Submit decoding a host-absolute PNG into a PreparedImage Job. Wait for the accepted job and close the resulting lease; decoder failures do not poison an unrelated Edit.
 
+Types: [Job](#zipzijob), [PreparedImage](#zipzipreparedimage).
+
 
 ## zipzi.Runtime.resources.prepare_buffer
 
@@ -653,6 +699,8 @@ Submit decoding a host-absolute PNG into a PreparedImage Job. Wait for the accep
 `(data: bytes | bytearray | memoryview) -> Buffer`
 
 Own bytes in a reusable immutable host Buffer, with bounded upload and original-request recovery. Preparation does not edit a document; explicitly close the Buffer after use.
+
+Types: [Buffer](#zipzibuffer).
 
 
 ## zipzi.Runtime.resources.prepare_image
@@ -663,6 +711,8 @@ Own bytes in a reusable immutable host Buffer, with bounded upload and original-
 
 Own RGBA8 bytes or an immutable Buffer and prepare a width-by-height image lease. Preparation does not edit a document. Close the lease after candidate acceptance; SDK/history owners retain their references.
 
+Types: [Buffer](#zipzibuffer), [PreparedImage](#zipzipreparedimage).
+
 
 ## zipzi.Runtime.resources.prepare_png
 
@@ -671,6 +721,8 @@ Own RGBA8 bytes or an immutable Buffer and prepare a width-by-height image lease
 `(buffer: Buffer) -> Job[PreparedImage]`
 
 Submit decoding PNG bytes from an existing same-client immutable Buffer. The Job returns a PreparedImage lease, independent of document publication.
+
+Types: [Buffer](#zipzibuffer), [Job](#zipzijob), [PreparedImage](#zipzipreparedimage).
 
 
 ## zipzi.Runtime.resources.usage
@@ -681,6 +733,8 @@ Submit decoding PNG bytes from an existing same-client immutable Buffer. The Job
 
 Query owned resource usage and actual shared image buffer counters. These are scoped Runtime estimates, not process RSS or a promise of later admission.
 
+Types: [Usage].
+
 
 ## zipzi.Runtime.sessions
 
@@ -689,6 +743,8 @@ Query owned resource usage and actual shared image buffer counters. These are sc
 `runtime.sessions`
 
 Bounded host registry. Listing and attaching share the resident document; neither creates a Python mirror.
+
+Types: [Runtime](#zipziruntime).
 
 
 ## zipzi.Runtime.sessions.attach
@@ -699,6 +755,8 @@ Bounded host registry. Listing and attaching share the resident document; neithe
 
 Bind this client to an existing Runtime-scoped SessionId without copying content. Detached old wrappers stay invalid; a successful attach creates a fresh binding. Wrong Runtime or missing IDs fail.
 
+Types: [Session], [SessionId](#zipzisessionid).
+
 
 ## zipzi.Runtime.sessions.create
 
@@ -707,6 +765,8 @@ Bind this client to an existing Runtime-scoped SessionId without copying content
 `(document_id: str | None=None) -> 'Session'`
 
 Synchronously create a resident document with SDK defaults and return its client Session binding. document_id=None allocates a canonical UUID in Rust; an explicit value must be a valid document UUID. Host Session/client-slot and memory budgets apply. A new document is unsaved and modified: save it or explicitly permit discard when closing. A lost reply must recover this original call, never create another Session. Use session.close() to free the host document, or detach() to keep it resident. Example: session = runtime.sessions.create().
+
+Types: [Session].
 
 
 ## zipzi.Runtime.sessions.import_
@@ -717,6 +777,8 @@ Synchronously create a resident document with SDK defaults and return its client
 
 Submit an explicit host format import into a new session. Textures are explicit host paths. Wait for Job[Session]; cancellation reports the real outcome if IO has already entered.
 
+Types: [Job](#zipzijob), [Session], [ImportFormat], [TextureSlot].
+
 
 ## zipzi.Runtime.sessions.list
 
@@ -725,6 +787,8 @@ Submit an explicit host format import into a new session. Textures are explicit 
 `() -> tuple[SessionInfo, ...]`
 
 Read one bounded tuple of resident SessionInfo values. Registry order uses SessionId. No object geometry or pixel payload is returned; transport loss recovers the captured tuple.
+
+Types: [SessionInfo](#zipzisessioninfo).
 
 
 ## zipzi.Runtime.sessions.open
@@ -735,6 +799,8 @@ Read one bounded tuple of resident SessionInfo values. Registry order uses Sessi
 
 Submit host-absolute project open and return Job[Session], including already-open paths through a cached completed Job. Wait for the actual outcome; recover a lost start before waiting.
 
+Types: [Job](#zipzijob), [Session].
+
 
 ## zipzi.Runtime.sessions.subscribe
 
@@ -743,6 +809,8 @@ Submit host-absolute project open and return Job[Session], including already-ope
 `() -> events.RegistrySubscription`
 
 Capture current registry metadata and an independent cursor. Poll bounded pages; resync explicitly after RESYNC_REQUIRED. This does not drain another subscriber.
+
+Types: [RegistrySubscription].
 
 
 ## zipzi.RuntimeCapabilities
@@ -821,6 +889,8 @@ shared document content per holder; these are not RSS or GPU limits.
 
 Confirmed save outcome; inspect durable and the actual host manifest path.
 
+Types: [Version](#zipziversion).
+
 **Fields**
 
 - `manifest`: Absolute manifest path reported by the host; not a path resolved on the client.
@@ -848,6 +918,8 @@ This value alone performs no IO and owns no resource lease. Catch outside a
 failed Edit, inspect code/recovery_action, and start a fresh candidate when
 required. See docs/guide.md for the error/recovery workflow.
 
+Types: [RecoveryAction](#zipzirecoveryaction), [Version](#zipziversion), [ProjectReport].
+
 
 ## zipzi.SessionId
 
@@ -870,6 +942,8 @@ Runtime-scoped Session identity, independent of paths and persistent document UU
 
 Immutable Session metadata captured by the host; reading it does not refresh the Session.
 
+Types: [SessionId](#zipzisessionid), [Version](#zipziversion).
+
 **Fields**
 
 - `version`: Exact SDK version captured with this metadata.
@@ -887,6 +961,8 @@ Immutable Session metadata captured by the host; reading it does not refresh the
 
 One owned domain value at an exact formal or candidate source; field access performs no IO.
 
+Types: [Source](#zipzisource).
+
 **Fields**
 
 - `source`: Exact source captured atomically with the payload.
@@ -899,6 +975,8 @@ One owned domain value at an exact formal or candidate source; field access perf
 `(runtime: str, session: int, version: Version, edit: int | None = None, sequence: int = 0)`
 
 Exact immutable formal or candidate source used by a read or plan; copying it performs no IO.
+
+Types: [Version](#zipziversion).
 
 **Fields**
 
@@ -929,6 +1007,8 @@ Exact SDK document version; compare the complete value rather than revision alon
 `(source: Source, ids: tuple[str, ...], mesh_transfer: 'ManualMeshTransferReport | None' = None)`
 
 Confirmed candidate write result; it is not a formal commit receipt.
+
+Types: [Source](#zipzisource), [ManualMeshTransferReport].
 
 **Fields**
 
@@ -967,6 +1047,8 @@ calling connect again does not replay or resolve that request.
 
 Example: with zipzi.connect(endpoint=absolute_socket_path) as runtime: ...
 
+Types: [Runtime](#zipziruntime).
+
 
 ## zipzi.describe
 
@@ -983,6 +1065,8 @@ bounded preview. Fields and child paths are also available individually.
 This describes the installed API, while runtime.capabilities() describes
 the connected host. No resource is constructed or RPC sent by this query.
 
+Types: [ApiDescription](#zipziapidescription).
+
 
 ## zipzi.local
 
@@ -991,6 +1075,8 @@ the connected host. No resource is constructed or RPC sent by this query.
 `() -> Runtime`
 
 Explicitly create an owned in-process Runtime with the paired optional native wheel. Importing zipzi alone does not start it. Use as a context manager; close releases its sessions without saving or connecting to another host.
+
+Types: [Runtime](#zipziruntime).
 
 
 ## zipzi.recover_call

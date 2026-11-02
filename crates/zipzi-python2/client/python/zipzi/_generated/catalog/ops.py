@@ -6,7 +6,6 @@ DATA: dict[str, Entry] = {'zipzi.ops': {'children': ('zipzi.ops.Operation', 'zip
                'signature': ''},
  'zipzi.ops.Operation': {'children': (),
                          'documentation': '',
-                         'example': 'docs/recipes.py',
                          'fields': [],
                          'kind': 'alias',
                          'signature': '_meshes.Create | _meshes.Rename | _meshes.SetPositions | _parameters.Create | '
@@ -27,7 +26,6 @@ DATA: dict[str, Entry] = {'zipzi.ops': {'children': ('zipzi.ops.Operation', 'zip
                                        'zipzi.scene.Operation')},
  'zipzi.ops.PlannableOperation': {'children': (),
                                   'documentation': '',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'alias',
                                   'signature': '_meshes.Rename | _resources.RenameImage | _scene.Operation | '

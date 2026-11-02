@@ -28,7 +28,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                          'signature': ''},
  'zipzi.modeling.mesh.ManualMeshOperation': {'children': (),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'ManualMeshOperationInsertVertex | '
@@ -50,7 +49,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationConstrainEdge': {'children': ('zipzi.modeling.mesh.ManualMeshOperationConstrainEdge.__repr__',
                                                                        'zipzi.modeling.mesh.ManualMeshOperationConstrainEdge.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('a',
                                                                       'First endpoint identity of the fixed edge.'),
                                                                      ('b',
@@ -64,7 +62,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                        'documentation': "Remove an outer edge's incident face and "
                                                                         'recover the remaining outline.\n'
                                                                         'Internal fixed edges become automatic edges.',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('a',
                                                                    'First endpoint identity of the edge to remove.'),
                                                                   ('b',
@@ -76,7 +73,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices': {'children': ('zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.__repr__',
                                                                         'zipzi.modeling.mesh.ManualMeshOperationDeleteVertices.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('ids',
                                                                        'Persistent vertex identities to remove '
                                                                        'atomically.')],
@@ -88,7 +84,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                                'zipzi.modeling.mesh.ManualMeshOperationInsertConnectedVertex.summary'),
                                                                   'documentation': 'Insert and connect in a single '
                                                                                    'atomic operation/history step.',
-                                                                  'example': 'docs/recipes.py',
                                                                   'fields': [('from_',
                                                                               'Existing vertex identity to connect to '
                                                                               'the inserted vertex.'),
@@ -108,7 +103,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                          'documentation': 'The caller supplies a fresh ID; its '
                                                                           'allocator must not reuse canceled candidate '
                                                                           'IDs.',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('id',
                                                                      'Fresh vertex identity that has not been used by '
                                                                      'a cancelled candidate.'),
@@ -122,7 +116,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                                       'zipzi.modeling.mesh.ManualMeshOperationMoveVertices.summary'),
                                                          'documentation': 'Absolute UV targets; motion_from is the '
                                                                           'last accepted preview when supplied.',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('targets',
                                                                      'Absolute UV targets keyed by persistent mesh '
                                                                      'vertex identities.'),
@@ -139,7 +132,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationReconnect': {'children': ('zipzi.modeling.mesh.ManualMeshOperationReconnect.__repr__',
                                                                    'zipzi.modeling.mesh.ManualMeshOperationReconnect.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [],
                                                       'kind': 'type',
                                                       'signature': '()'},
@@ -148,7 +140,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint': {'children': ('zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint.__repr__',
                                                                            'zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('a',
                                                                           'First endpoint identity of the constraint '
                                                                           'to release.'),
@@ -162,7 +153,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualMeshTransferReport': {'children': ('zipzi.modeling.mesh.ManualMeshTransferReport.__repr__',
                                                                'zipzi.modeling.mesh.ManualMeshTransferReport.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('added', 'Number of newly allocated vertices.'),
                                                              ('moved',
                                                               'Retained identities whose UV sampling location '
@@ -199,7 +189,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualVertexTarget': {'children': ('zipzi.modeling.mesh.ManualVertexTarget.__repr__',
                                                          'zipzi.modeling.mesh.ManualVertexTarget.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('id',
                                                         'Stable vertex identity in the edited mesh, not its array '
                                                         'index.'),
@@ -212,7 +201,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.ManualVertexTarget.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.Mesh': {'children': ('zipzi.modeling.mesh.Mesh.__repr__', 'zipzi.modeling.mesh.Mesh.summary'),
                               'documentation': '',
-                              'example': 'docs/recipes.py',
                               'fields': [('id',
                                           'Stable document object ID used by references; it is distinct from the '
                                           'exported runtime_id.'),
@@ -286,7 +274,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                          'and its origin.\n'
                                                          'The edge must exist in the triangulation; boundary edges '
                                                          'belong to MeshMeshing.boundary.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('endpoints',
                                                     'Two distinct vertex IDs in increasing order; the segment is an '
                                                     'actual triangle edge.'),
@@ -300,7 +287,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.MeshConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.MeshConstraintKind': {'children': (),
                                             'documentation': 'The origin of a retained internal mesh constraint edge.',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('USER', "'user' — Fixed by the user."),
                                                        ('EDGE_SUPPORT',
                                                         "'edge_support' — Supplied by the edge-layout generator.")],
@@ -310,7 +296,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                   'zipzi.modeling.mesh.MeshMeshing.summary'),
                                      'documentation': 'A canonical counterclockwise outer boundary and the internal '
                                                       'edges retained by remeshing.',
-                                     'example': 'docs/recipes.py',
                                      'fields': [('boundary',
                                                  'Closed UV boundary without a repeated endpoint, starting at its '
                                                  'smallest vertex ID.'),
@@ -326,7 +311,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.NewMeshVertex': {'children': ('zipzi.modeling.mesh.NewMeshVertex.__repr__',
                                                     'zipzi.modeling.mesh.NewMeshVertex.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('vertex_id',
                                                    'Stable u32 vertex ID within the mesh, not an offset into its '
                                                    'position array.'),
@@ -346,7 +330,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.TopologyReplacement': {'children': ('zipzi.modeling.mesh.TopologyReplacement.__repr__',
                                                           'zipzi.modeling.mesh.TopologyReplacement.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('mesh',
                                                          'Complete replacement mesh geometry and metadata. Setting '
                                                          'meshing to None explicitly\n'
@@ -378,7 +361,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.VertexContentPatch': {'children': ('zipzi.modeling.mesh.VertexContentPatch.__repr__',
                                                          'zipzi.modeling.mesh.VertexContentPatch.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('vertex_id',
                                                         'Stable u32 vertex ID within the mesh, not an offset into its '
                                                         'position array.'),
@@ -396,14 +378,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.VertexContentPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.mesh.VertexDeletePolicy': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('REJECT_REFERENCES', "'reject_references'"),
                                                        ('REMOVE_DEPENDENT_CONTENT', "'remove_dependent_content'")],
                                             'kind': 'enum',
                                             'signature': ''},
  'zipzi.modeling.mesh.VertexSeed': {'children': (),
                                     'documentation': '',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'alias',
                                     'signature': 'VertexSeedBase | VertexSeedInterpolate',
@@ -412,7 +392,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.VertexSeedBase': {'children': ('zipzi.modeling.mesh.VertexSeedBase.__repr__',
                                                      'zipzi.modeling.mesh.VertexSeedBase.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'type',
                                         'signature': '()'},
@@ -421,7 +400,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.VertexSeedInterpolate': {'children': ('zipzi.modeling.mesh.VertexSeedInterpolate.__repr__',
                                                             'zipzi.modeling.mesh.VertexSeedInterpolate.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('weights',
                                                            'Source vertex IDs and interpolation weights used to seed '
                                                            'dependent shape content.')],
@@ -433,7 +411,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
  'zipzi.modeling.mesh.VertexWeight': {'children': ('zipzi.modeling.mesh.VertexWeight.__repr__',
                                                    'zipzi.modeling.mesh.VertexWeight.summary'),
                                       'documentation': '',
-                                      'example': 'docs/recipes.py',
                                       'fields': [('vertex_id',
                                                   'Stable u32 vertex ID within the mesh, not an offset into its '
                                                   'position array.'),

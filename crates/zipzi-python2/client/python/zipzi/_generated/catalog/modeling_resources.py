@@ -15,7 +15,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ImageAsset': {'children': ('zipzi.modeling.resources.ImageAsset.__repr__',
                                                       'zipzi.modeling.resources.ImageAsset.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('unresolved_source',
                                                      'Original imported path or external slot when no decoded content '
                                                      'exists.'),
@@ -37,7 +36,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ImageContent': {'children': ('zipzi.modeling.resources.ImageContent.__repr__',
                                                         'zipzi.modeling.resources.ImageContent.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('source',
                                                        'Stored resource location, normally a package-relative path or '
                                                        'generated memory-resource\n'
@@ -57,7 +55,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ImageContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEdit': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'ResourceEditCreate | ResourceEditPatchName | '
@@ -72,7 +69,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditCreate': {'children': ('zipzi.modeling.resources.ResourceEditCreate.__repr__',
                                                               'zipzi.modeling.resources.ResourceEditCreate.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'New stable UUID for this object; it must not conflict '
                                                              'with an existing identity.'),
@@ -91,7 +87,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
                                                               'zipzi.modeling.resources.ResourceEditDelete.summary'),
                                                  'documentation': 'None rejects references; Some explicitly redirects '
                                                                   'or detaches every user.',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable document object ID used by references; it is '
                                                              'distinct from the exported\n'
@@ -108,7 +103,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditDuplicate': {'children': ('zipzi.modeling.resources.ResourceEditDuplicate.__repr__',
                                                                  'zipzi.modeling.resources.ResourceEditDuplicate.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('source',
                                                                 'Stable ID of the existing source object to duplicate, '
                                                                 'not a filesystem path.'),
@@ -130,7 +124,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditPatchName': {'children': ('zipzi.modeling.resources.ResourceEditPatchName.__repr__',
                                                                  'zipzi.modeling.resources.ResourceEditPatchName.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable document object ID used by references; it is '
                                                                 'distinct from the exported\n'
@@ -149,7 +142,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditReorder': {'children': ('zipzi.modeling.resources.ResourceEditReorder.__repr__',
                                                                'zipzi.modeling.resources.ResourceEditReorder.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable object IDs selected for this operation; '
                                                               'visible names and row numbers\n'
@@ -165,7 +157,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditSetContent': {'children': ('zipzi.modeling.resources.ResourceEditSetContent.__repr__',
                                                                   'zipzi.modeling.resources.ResourceEditSetContent.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable document object ID used by references; it is '
                                                                  'distinct from the exported\n'

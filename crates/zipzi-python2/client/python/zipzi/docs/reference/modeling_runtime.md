@@ -20,6 +20,8 @@ Canonical runtime modeling values.
 
 `(*, version: _Version, view_id: str, selected_ids: tuple[str, ...], workspace: str, editing_context: str, active_tool: str, pending_interaction: bool)`
 
+Types: [Version].
+
 **Fields**
 
 - `version`: Exact SDK version captured for this value; not a best-effort latest-version marker.

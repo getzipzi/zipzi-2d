@@ -30,7 +30,8 @@ pub struct ParameterCreateSpec {
     pub default_value: f32,
     /// Optional new parameter UUID; None allocates a fresh UUID when the create operation executes.
     pub id: Option<String>,
-    /// Optional external runtime identifier; None uses the native default empty string.
+    /// Optional external runtime identifier; None or an empty string uses the parameter's
+    /// stable ID when creation executes.
     pub runtime_id: Option<String>,
     /// Optional parameter kind; None uses Normal.
     pub kind: Option<ParameterKind>,
@@ -44,6 +45,8 @@ pub struct ParameterCreateSpec {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
+/// Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.
+/// Omitted or None fields preserve their current values; empty text and false are explicit replacements.
 pub struct ParameterPatch {
     /// Human-readable display name; use the stable ID for identity because names can change.
     /// None preserves the current value; it does not reset the field to its default.
@@ -75,12 +78,15 @@ pub struct ParameterPatch {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
+/// Parameter creation or partial replacement in an Edit candidate; publication is separate.
 pub enum ParameterOperation {
+    /// Create a parameter from its specification, allocating an ID when none is supplied.
     Create {
         /// Creation specification; native admission supplies identities/defaults and rejects
         /// invalid input.
         spec: ParameterCreateSpec,
     },
+    /// Replace only the supplied fields of the parameter selected by stable document ID.
     Patch {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.

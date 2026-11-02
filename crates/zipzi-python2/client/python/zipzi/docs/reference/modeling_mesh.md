@@ -20,6 +20,8 @@ Canonical mesh modeling values.
 
 `ManualMeshOperationInsertVertex | ManualMeshOperationInsertConnectedVertex | ManualMeshOperationDeleteEdge | ManualMeshOperationMoveVertices | ManualMeshOperationDeleteVertices | ManualMeshOperationConstrainEdge | ManualMeshOperationReleaseConstraint | ManualMeshOperationReconnect`
 
+Types: [ManualMeshOperationConstrainEdge](#zipzimodelingmeshmanualmeshoperationconstrainedge), [ManualMeshOperationDeleteEdge](#zipzimodelingmeshmanualmeshoperationdeleteedge), [ManualMeshOperationDeleteVertices](#zipzimodelingmeshmanualmeshoperationdeletevertices), [ManualMeshOperationInsertConnectedVertex](#zipzimodelingmeshmanualmeshoperationinsertconnectedvertex), [ManualMeshOperationInsertVertex](#zipzimodelingmeshmanualmeshoperationinsertvertex), [ManualMeshOperationMoveVertices](#zipzimodelingmeshmanualmeshoperationmovevertices), [ManualMeshOperationReconnect](#zipzimodelingmeshmanualmeshoperationreconnect), [ManualMeshOperationReleaseConstraint](#zipzimodelingmeshmanualmeshoperationreleaseconstraint).
+
 
 ## zipzi.modeling.mesh.ManualMeshOperationConstrainEdge
 
@@ -64,6 +66,8 @@ Internal fixed edges become automatic edges.
 
 Insert and connect in a single atomic operation/history step.
 
+Types: [Vec2].
+
 **Fields**
 
 - `from_`: Existing vertex identity to connect to the inserted vertex.
@@ -78,6 +82,8 @@ Insert and connect in a single atomic operation/history step.
 
 The caller supplies a fresh ID; its allocator must not reuse canceled candidate IDs.
 
+Types: [Vec2].
+
 **Fields**
 
 - `id`: Fresh vertex identity that has not been used by a cancelled candidate.
@@ -90,6 +96,8 @@ The caller supplies a fresh ID; its allocator must not reuse canceled candidate 
 `(*, targets: tuple[ManualVertexTarget, ...], motion_from: tuple[ManualVertexTarget, ...] | None = None)`
 
 Absolute UV targets; motion_from is the last accepted preview when supplied.
+
+Types: [ManualVertexTarget](#zipzimodelingmeshmanualvertextarget).
 
 **Fields**
 
@@ -120,6 +128,8 @@ Absolute UV targets; motion_from is the last accepted preview when supplied.
 
 `(*, added: int, moved: int, removed: int, shape_count: int, reconnected: bool, glue_endpoints: bool, non_affine_parent: bool, affine_extension: bool, appearance_limits: tuple[str, ...], cost: ConversionCost)`
 
+Types: [ConversionCost].
+
 **Fields**
 
 - `added`: Number of newly allocated vertices.
@@ -139,6 +149,8 @@ Absolute UV targets; motion_from is the last accepted preview when supplied.
 
 `(*, id: int, uv: Vec2)`
 
+Types: [Vec2].
+
 **Fields**
 
 - `id`: Stable vertex identity in the edited mesh, not its array index.
@@ -149,6 +161,8 @@ Absolute UV targets; motion_from is the last accepted preview when supplied.
 **Type**
 
 `(*, id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], raw_blend_mode: int | None = None)`
+
+Types: [Vec2], [MeshMeshing](#zipzimodelingmeshmeshmeshing), [Appearance], [BlendMode], [SceneReference].
 
 **Fields**
 
@@ -185,6 +199,8 @@ this channel unspecified for native evaluation.
 An internal mesh edge identified by two stable vertex IDs and its origin.
 The edge must exist in the triangulation; boundary edges belong to MeshMeshing.boundary.
 
+Types: [MeshConstraintKind](#zipzimodelingmeshmeshconstraintkind).
+
 **Fields**
 
 - `endpoints`: Two distinct vertex IDs in increasing order; the segment is an actual triangle edge.
@@ -209,6 +225,8 @@ The origin of a retained internal mesh constraint edge.
 
 A canonical counterclockwise outer boundary and the internal edges retained by remeshing.
 
+Types: [MeshConstraint](#zipzimodelingmeshmeshconstraint).
+
 **Fields**
 
 - `boundary`: Closed UV boundary without a repeated endpoint, starting at its smallest vertex ID.
@@ -219,6 +237,8 @@ A canonical counterclockwise outer boundary and the internal edges retained by r
 **Type**
 
 `(*, vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)`
+
+Types: [Vec2], [VertexSeed](#zipzimodelingmeshvertexseed).
 
 **Fields**
 
@@ -232,6 +252,8 @@ A canonical counterclockwise outer boundary and the internal edges retained by r
 **Type**
 
 `(*, mesh: Mesh, binding: MeshBinding | None = None, blend_bindings: tuple[BlendShapeBinding, ...], glues: tuple[Glue, ...], vertex_mapping: _Mapping[int, int | None])`
+
+Types: [BlendShapeBinding], [MeshBinding], [Mesh](#zipzimodelingmeshmesh), [Glue].
 
 **Fields**
 
@@ -248,6 +270,8 @@ removes it.
 **Type**
 
 `(*, vertex_id: int, position: Vec2 | None = None, uv: Vec2 | None = None)`
+
+Types: [Vec2].
 
 **Fields**
 
@@ -271,6 +295,8 @@ None preserves the current value in the selected shape.
 
 `VertexSeedBase | VertexSeedInterpolate`
 
+Types: [VertexSeedBase](#zipzimodelingmeshvertexseedbase), [VertexSeedInterpolate](#zipzimodelingmeshvertexseedinterpolate).
+
 
 ## zipzi.modeling.mesh.VertexSeedBase
 
@@ -284,6 +310,8 @@ None preserves the current value in the selected shape.
 **Type**
 
 `(*, weights: tuple[VertexWeight, ...])`
+
+Types: [VertexWeight](#zipzimodelingmeshvertexweight).
 
 **Fields**
 

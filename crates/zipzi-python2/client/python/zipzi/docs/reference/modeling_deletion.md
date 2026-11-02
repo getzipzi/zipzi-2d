@@ -31,6 +31,8 @@ Canonical deletion modeling values.
 
 `DeletionFieldOwned | DeletionFieldMeshMask | DeletionFieldMeshInvertedMask | DeletionFieldOffscreenMask | DeletionFieldGlueMeshA | DeletionFieldGlueMeshB | DeletionFieldHitAreaMesh | DeletionFieldDrawingItem | DeletionFieldOrganizationParent | DeletionFieldDeformationParent | DeletionFieldConvertedData | DeletionFieldPosePart | DeletionFieldPoseLinkPart | DeletionFieldMotionPart | DeletionFieldExpressionSourcePart | DeletionFieldCdiPart | DeletionFieldRequestedScope | DeletionFieldParameterAxis | DeletionFieldBlendTableParameter | DeletionFieldBlendConstraintParameter | DeletionFieldBlendTable | DeletionFieldBlendConstraint | DeletionFieldMotionParameter | DeletionFieldExpressionParameter | DeletionFieldExpressionSourceParameter | DeletionFieldPhysicsParameter | DeletionFieldPhysicsNode | DeletionFieldTexture | DeletionFieldAttachmentSound | DeletionFieldAttachmentUserData | DeletionFieldMotionClip | DeletionFieldMotionRegistrationContainer | DeletionFieldParameterFolder | DeletionFieldModelParameter | DeletionFieldCdiParameter | DeletionFieldCdiCombinedParameter`
 
+Types: [DeletionFieldAttachmentSound](#zipzimodelingdeletiondeletionfieldattachmentsound), [DeletionFieldAttachmentUserData](#zipzimodelingdeletiondeletionfieldattachmentuserdata), [DeletionFieldBlendConstraint](#zipzimodelingdeletiondeletionfieldblendconstraint), [DeletionFieldBlendConstraintParameter](#zipzimodelingdeletiondeletionfieldblendconstraintparameter), [DeletionFieldBlendTable](#zipzimodelingdeletiondeletionfieldblendtable), [DeletionFieldBlendTableParameter](#zipzimodelingdeletiondeletionfieldblendtableparameter), [DeletionFieldCdiCombinedParameter](#zipzimodelingdeletiondeletionfieldcdicombinedparameter), [DeletionFieldCdiParameter](#zipzimodelingdeletiondeletionfieldcdiparameter), [DeletionFieldCdiPart](#zipzimodelingdeletiondeletionfieldcdipart), [DeletionFieldConvertedData](#zipzimodelingdeletiondeletionfieldconverteddata), [DeletionFieldDeformationParent](#zipzimodelingdeletiondeletionfielddeformationparent), [DeletionFieldDrawingItem](#zipzimodelingdeletiondeletionfielddrawingitem), [DeletionFieldExpressionParameter](#zipzimodelingdeletiondeletionfieldexpressionparameter), [DeletionFieldExpressionSourceParameter](#zipzimodelingdeletiondeletionfieldexpressionsourceparameter), [DeletionFieldExpressionSourcePart](#zipzimodelingdeletiondeletionfieldexpressionsourcepart), [DeletionFieldGlueMeshA](#zipzimodelingdeletiondeletionfieldgluemesha), [DeletionFieldGlueMeshB](#zipzimodelingdeletiondeletionfieldgluemeshb), [DeletionFieldHitAreaMesh](#zipzimodelingdeletiondeletionfieldhitareamesh), [DeletionFieldMeshInvertedMask](#zipzimodelingdeletiondeletionfieldmeshinvertedmask), [DeletionFieldMeshMask](#zipzimodelingdeletiondeletionfieldmeshmask), [DeletionFieldModelParameter](#zipzimodelingdeletiondeletionfieldmodelparameter), [DeletionFieldMotionClip](#zipzimodelingdeletiondeletionfieldmotionclip), [DeletionFieldMotionParameter](#zipzimodelingdeletiondeletionfieldmotionparameter), [DeletionFieldMotionPart](#zipzimodelingdeletiondeletionfieldmotionpart), [DeletionFieldMotionRegistrationContainer](#zipzimodelingdeletiondeletionfieldmotionregistrationcontainer), [DeletionFieldOffscreenMask](#zipzimodelingdeletiondeletionfieldoffscreenmask), [DeletionFieldOrganizationParent](#zipzimodelingdeletiondeletionfieldorganizationparent), [DeletionFieldOwned](#zipzimodelingdeletiondeletionfieldowned), [DeletionFieldParameterAxis](#zipzimodelingdeletiondeletionfieldparameteraxis), [DeletionFieldParameterFolder](#zipzimodelingdeletiondeletionfieldparameterfolder), [DeletionFieldPhysicsNode](#zipzimodelingdeletiondeletionfieldphysicsnode), [DeletionFieldPhysicsParameter](#zipzimodelingdeletiondeletionfieldphysicsparameter), [DeletionFieldPoseLinkPart](#zipzimodelingdeletiondeletionfieldposelinkpart), [DeletionFieldPosePart](#zipzimodelingdeletiondeletionfieldposepart), [DeletionFieldRequestedScope](#zipzimodelingdeletiondeletionfieldrequestedscope), [DeletionFieldTexture](#zipzimodelingdeletiondeletionfieldtexture).
+
 
 ## zipzi.modeling.deletion.DeletionFieldAttachmentSound
 
@@ -308,6 +310,8 @@ Canonical deletion modeling values.
 
 `(*, request: DeletionRequest, accepted_export_failures: tuple[OpaqueExportIssue, ...] = ())`
 
+Types: [DeletionRequest](#zipzimodelingdeletiondeletionrequest), [OpaqueExportIssue].
+
 **Fields**
 
 - `request`: Exact typed roots, scope options and conversion resolutions to prepare.
@@ -372,6 +376,8 @@ Canonical deletion modeling values.
 
 `(*, object: DeletionObject, source_id: str)`
 
+Types: [DeletionObject](#zipzimodelingdeletiondeletionobject).
+
 **Fields**
 
 - `object`: Actual removed or rewritten object protected by the lock.
@@ -382,6 +388,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, kind: DeletionKind, id: str, owner_id: str | None = None)`
+
+Types: [DeletionKind](#zipzimodelingdeletiondeletionkind).
 
 **Fields**
 
@@ -406,6 +414,8 @@ Canonical deletion modeling values.
 
 `(*, section: DeletionSection, offset: int, total: int, rows: tuple[DeletionRow, ...], next_offset: int | None = None)`
 
+Types: [DeletionRow](#zipzimodelingdeletiondeletionrow), [DeletionSection](#zipzimodelingdeletiondeletionsection).
+
 **Fields**
 
 - `section`: Report section in the frozen plan.
@@ -419,6 +429,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, strategy: ReparentStrategy, tolerance: float, relative_tolerance: float, measured_error: float, error_bound: float, domain_parameters: int, edit_time_seconds: float | None = None)`
+
+Types: [ReparentStrategy].
 
 **Fields**
 
@@ -436,6 +448,8 @@ Canonical deletion modeling values.
 
 `(*, owner: DeletionObject, field: DeletionField, target: DeletionObject)`
 
+Types: [DeletionField](#zipzimodelingdeletiondeletionfield), [DeletionObject](#zipzimodelingdeletiondeletionobject).
+
 **Fields**
 
 - `owner`: Native object or role containing this field in the frozen source.
@@ -448,6 +462,8 @@ Canonical deletion modeling values.
 
 `(*, object: DeletionObject, reason: DeletionReason)`
 
+Types: [DeletionObject](#zipzimodelingdeletiondeletionobject), [DeletionReason].
+
 **Fields**
 
 - `object`: Retired identity, including its native domain and embedded namespace.
@@ -458,6 +474,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, roots: tuple[DeletionTarget, ...], reparent: _Mapping[str, ReparentStrategy] = <factory>, conversion_context: ReparentContext | None = None, offscreen_placements: _Mapping[str, DeletionOffscreenPlacement] = <factory>, tolerance: DeletionTolerance = <factory>, parameter_slices: _Mapping[str, float] = <factory>, texture_replacements: _Mapping[str, str | None] = <factory>, physics_node_replacements: _Mapping[str, str] = <factory>, blend_base_replacements: _Mapping[str, str] = <factory>)`
+
+Types: [DeletionOffscreenPlacement](#zipzimodelingdeletiondeletionoffscreenplacement), [DeletionTarget](#zipzimodelingdeletiondeletiontarget), [DeletionTolerance](#zipzimodelingdeletiondeletiontolerance), [ReparentContext], [ReparentStrategy].
 
 **Fields**
 
@@ -488,12 +506,16 @@ Canonical deletion modeling values.
 
 `DeletionRowRemoval | DeletionRowRelation | DeletionRowEffect | DeletionRowDecision | DeletionRowLock | DeletionRowStructural | DeletionRowDeformation | DeletionRowOrganization | DeletionRowGuaranteeLimit | DeletionRowDomain | DeletionRowExport`
 
+Types: [DeletionRowDecision](#zipzimodelingdeletiondeletionrowdecision), [DeletionRowDeformation](#zipzimodelingdeletiondeletionrowdeformation), [DeletionRowDomain](#zipzimodelingdeletiondeletionrowdomain), [DeletionRowEffect](#zipzimodelingdeletiondeletionroweffect), [DeletionRowExport](#zipzimodelingdeletiondeletionrowexport), [DeletionRowGuaranteeLimit](#zipzimodelingdeletiondeletionrowguaranteelimit), [DeletionRowLock](#zipzimodelingdeletiondeletionrowlock), [DeletionRowOrganization](#zipzimodelingdeletiondeletionroworganization), [DeletionRowRelation](#zipzimodelingdeletiondeletionrowrelation), [DeletionRowRemoval](#zipzimodelingdeletiondeletionrowremoval), [DeletionRowStructural](#zipzimodelingdeletiondeletionrowstructural).
+
 
 ## zipzi.modeling.deletion.DeletionRowDecision
 
 **Type**
 
 `(*, decision: DeletionDecision)`
+
+Types: [DeletionDecision].
 
 **Fields**
 
@@ -504,6 +526,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, object: DeletionObject, parent_id: str, strategy: ReparentStrategy, guarantee: DeletionPositionGuarantee | None = None)`
+
+Types: [DeletionObject](#zipzimodelingdeletiondeletionobject), [DeletionPositionGuarantee](#zipzimodelingdeletiondeletionpositionguarantee), [ReparentStrategy].
 
 **Fields**
 
@@ -517,6 +541,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, object: DeletionObject, parameter_id: str, minimum: float, maximum: float, reference_value: float)`
+
+Types: [DeletionObject](#zipzimodelingdeletiondeletionobject).
 
 **Fields**
 
@@ -532,6 +558,8 @@ Canonical deletion modeling values.
 
 `(*, effect: DeletionEffect)`
 
+Types: [DeletionEffect].
+
 **Fields**
 
 - `effect`: Typed appearance, animation, composition or export consequence.
@@ -541,6 +569,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, failure: OpaqueExportIssue, existing: bool)`
+
+Types: [OpaqueExportIssue].
 
 **Fields**
 
@@ -553,6 +583,8 @@ Canonical deletion modeling values.
 
 `(*, object: DeletionObject, ancestor: DeletionObject)`
 
+Types: [DeletionObject](#zipzimodelingdeletiondeletionobject).
+
 **Fields**
 
 - `object`: Object whose standalone position proof is limited by another migration.
@@ -564,6 +596,8 @@ Canonical deletion modeling values.
 
 `(*, blocker: DeletionLock)`
 
+Types: [DeletionLock](#zipzimodelingdeletiondeletionlock).
+
 **Fields**
 
 - `blocker`: Affected identity and the inherited lock source.
@@ -573,6 +607,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, object: DeletionObject, parent_id: str, mapping_slots: int | None = None)`
+
+Types: [DeletionObject](#zipzimodelingdeletiondeletionobject).
 
 **Fields**
 
@@ -586,6 +622,8 @@ Canonical deletion modeling values.
 
 `(*, relation: DeletionRelation)`
 
+Types: [DeletionRelation](#zipzimodelingdeletiondeletionrelation).
+
 **Fields**
 
 - `relation`: Native source field and target explaining a retained rewrite or dependency.
@@ -596,6 +634,8 @@ Canonical deletion modeling values.
 
 `(*, removal: DeletionRemoval)`
 
+Types: [DeletionRemoval](#zipzimodelingdeletiondeletionremoval).
+
 **Fields**
 
 - `removal`: Deleted identity and its ownership/scope/dependency reason.
@@ -605,6 +645,8 @@ Canonical deletion modeling values.
 **Type**
 
 `(*, blocker: DeletionStructuralBlocker)`
+
+Types: [DeletionStructuralBlocker](#zipzimodelingdeletiondeletionstructuralblocker).
 
 **Fields**
 
@@ -636,6 +678,8 @@ Canonical deletion modeling values.
 
 `(*, section: DeletionSection, count: int)`
 
+Types: [DeletionSection](#zipzimodelingdeletiondeletionsection).
+
 **Fields**
 
 - `section`: Frozen report section addressed by report_page.
@@ -659,6 +703,8 @@ Canonical deletion modeling values.
 
 `(*, state: DeletionReviewState, requested: int, sections: tuple[DeletionSectionCount, ...], export_analysis_complete: bool)`
 
+Types: [DeletionReviewState](#zipzimodelingdeletiondeletionreviewstate), [DeletionSectionCount](#zipzimodelingdeletiondeletionsectioncount).
+
 **Fields**
 
 - `state`: Whether the plan is executable, requires confirmation/choices, or is blocked.
@@ -673,6 +719,8 @@ Canonical deletion modeling values.
 `DeletionTargetMesh | DeletionTargetGlue | DeletionTargetOffscreen | DeletionTargetPart | DeletionTargetDeformer | DeletionTargetDissolvePart | DeletionTargetRemoveDeformer | DeletionTargetParameter | DeletionTargetParameterFolder | DeletionTargetParameterFolderContents | DeletionTargetTexture | DeletionTargetAttachment | DeletionTargetRecord`
 
 Typed deletion scopes and native business identities.
+
+Types: [DeletionTargetAttachment](#zipzimodelingdeletiondeletiontargetattachment), [DeletionTargetDeformer](#zipzimodelingdeletiondeletiontargetdeformer), [DeletionTargetDissolvePart](#zipzimodelingdeletiondeletiontargetdissolvepart), [DeletionTargetGlue](#zipzimodelingdeletiondeletiontargetglue), [DeletionTargetMesh](#zipzimodelingdeletiondeletiontargetmesh), [DeletionTargetOffscreen](#zipzimodelingdeletiondeletiontargetoffscreen), [DeletionTargetParameter](#zipzimodelingdeletiondeletiontargetparameter), [DeletionTargetParameterFolder](#zipzimodelingdeletiondeletiontargetparameterfolder), [DeletionTargetParameterFolderContents](#zipzimodelingdeletiondeletiontargetparameterfoldercontents), [DeletionTargetPart](#zipzimodelingdeletiondeletiontargetpart), [DeletionTargetRecord](#zipzimodelingdeletiondeletiontargetrecord), [DeletionTargetRemoveDeformer](#zipzimodelingdeletiondeletiontargetremovedeformer), [DeletionTargetTexture](#zipzimodelingdeletiondeletiontargettexture).
 
 
 ## zipzi.modeling.deletion.DeletionTargetAttachment
@@ -780,6 +828,8 @@ Typed deletion scopes and native business identities.
 **Type**
 
 `(*, value: DeletionObject)`
+
+Types: [DeletionObject](#zipzimodelingdeletiondeletionobject).
 
 **Fields**
 

@@ -20,6 +20,8 @@ Canonical resources modeling values.
 
 `(*, unresolved_source: str | None = None, id: str, name: str, content: ImageContent | None = None)`
 
+Types: [ImageContent](#zipzimodelingresourcesimagecontent).
+
 **Fields**
 
 - `unresolved_source`: Original imported path or external slot when no decoded content exists.
@@ -47,6 +49,8 @@ locator; reading metadata does not open it.
 
 `ResourceEditCreate | ResourceEditPatchName | ResourceEditSetContent | ResourceEditReorder | ResourceEditDuplicate | ResourceEditDelete`
 
+Types: [ResourceEditCreate](#zipzimodelingresourcesresourceeditcreate), [ResourceEditDelete](#zipzimodelingresourcesresourceeditdelete), [ResourceEditDuplicate](#zipzimodelingresourcesresourceeditduplicate), [ResourceEditPatchName](#zipzimodelingresourcesresourceeditpatchname), [ResourceEditReorder](#zipzimodelingresourcesresourceeditreorder), [ResourceEditSetContent](#zipzimodelingresourcesresourceeditsetcontent).
+
 
 ## zipzi.modeling.resources.ResourceEditCreate
 
@@ -68,6 +72,8 @@ the selected destination.
 `(*, id: str, replacement: SceneReference | None = None)`
 
 None rejects references; Some explicitly redirects or detaches every user.
+
+Types: [SceneReference].
 
 **Fields**
 
@@ -122,6 +128,8 @@ the selected destination.
 **Type**
 
 `(*, id: str, expected: ImageContent | None = None, content: ImageContent | None = None)`
+
+Types: [ImageContent](#zipzimodelingresourcesimagecontent).
 
 **Fields**
 

@@ -54,7 +54,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionClip': {'children': ('zipzi.modeling.motion.MotionClip.__repr__',
                                                    'zipzi.modeling.motion.MotionClip.summary'),
                                       'documentation': '',
-                                      'example': 'docs/recipes.py',
                                       'fields': [('id',
                                                   'Stable identity in the owning authoring domain; exported metadata '
                                                   'IDs retain their source text.'),
@@ -112,7 +111,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionContainer': {'children': (),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'MotionContainerRoot | MotionContainerGroup',
@@ -121,7 +119,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionContainerGroup': {'children': ('zipzi.modeling.motion.MotionContainerGroup.__repr__',
                                                              'zipzi.modeling.motion.MotionContainerGroup.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Destination motion-group identity; Root selects ungrouped '
                                                             'registrations.')],
@@ -132,7 +129,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionContainerRoot': {'children': ('zipzi.modeling.motion.MotionContainerRoot.__repr__',
                                                             'zipzi.modeling.motion.MotionContainerRoot.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'type',
                                                'signature': '()'},
@@ -140,7 +136,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionContainerRoot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEdit': {'children': (),
                                       'documentation': '',
-                                      'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'alias',
                                       'signature': 'MotionEditCreate | MotionEditCreateGroup | MotionEditRenameGroup | '
@@ -180,7 +175,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditCreate': {'children': ('zipzi.modeling.motion.MotionEditCreate.__repr__',
                                                          'zipzi.modeling.motion.MotionEditCreate.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('id',
                                                         'Stable identity in the owning authoring domain; exported '
                                                         'metadata IDs retain their source text.'),
@@ -201,7 +195,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditCreateGroup': {'children': ('zipzi.modeling.motion.MotionEditCreateGroup.__repr__',
                                                               'zipzi.modeling.motion.MotionEditCreateGroup.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable identity in the owning authoring domain; exported '
                                                              'metadata IDs retain their source text.'),
@@ -215,7 +208,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditCreateTrack': {'children': ('zipzi.modeling.motion.MotionEditCreateTrack.__repr__',
                                                               'zipzi.modeling.motion.MotionEditCreateTrack.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('clip',
                                                              'Stable ID of the motion clip owning the affected track '
                                                              'or event.'),
@@ -235,7 +227,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteClip': {'children': ('zipzi.modeling.motion.MotionEditDeleteClip.__repr__',
                                                              'zipzi.modeling.motion.MotionEditDeleteClip.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable identity in the owning authoring domain; exported '
                                                             'metadata IDs retain their source text.')],
@@ -246,7 +237,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteEvents': {'children': ('zipzi.modeling.motion.MotionEditDeleteEvents.__repr__',
                                                                'zipzi.modeling.motion.MotionEditDeleteEvents.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
                                                               'and row numbers are not identities.')],
@@ -257,7 +247,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteGroup': {'children': ('zipzi.modeling.motion.MotionEditDeleteGroup.__repr__',
                                                               'zipzi.modeling.motion.MotionEditDeleteGroup.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable identity in the owning authoring domain; exported '
                                                              'metadata IDs retain their source text.')],
@@ -268,7 +257,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteRegistrations': {'children': ('zipzi.modeling.motion.MotionEditDeleteRegistrations.__repr__',
                                                                       'zipzi.modeling.motion.MotionEditDeleteRegistrations.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('ids',
                                                                      'Ordered stable IDs selected by this operation; '
                                                                      'names and row numbers are not identities.')],
@@ -279,7 +267,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDeleteTracks': {'children': ('zipzi.modeling.motion.MotionEditDeleteTracks.__repr__',
                                                                'zipzi.modeling.motion.MotionEditDeleteTracks.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
                                                               'and row numbers are not identities.')],
@@ -290,7 +277,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDissolveGroup': {'children': ('zipzi.modeling.motion.MotionEditDissolveGroup.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditDissolveGroup.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('id',
                                                                'Stable identity in the owning authoring domain; '
                                                                'exported metadata IDs retain their source text.')],
@@ -301,7 +287,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDuplicateClip': {'children': ('zipzi.modeling.motion.MotionEditDuplicateClip.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditDuplicateClip.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('source',
                                                                'Typed parameter reference or stable source object ID, '
                                                                'as declared by the enclosing operation.'),
@@ -326,7 +311,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDuplicateGroup': {'children': ('zipzi.modeling.motion.MotionEditDuplicateGroup.__repr__',
                                                                  'zipzi.modeling.motion.MotionEditDuplicateGroup.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('source',
                                                                 'Typed parameter reference or stable source object ID, '
                                                                 'as declared by the enclosing operation.'),
@@ -343,7 +327,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditDuplicateRegistrations': {'children': ('zipzi.modeling.motion.MotionEditDuplicateRegistrations.__repr__',
                                                                          'zipzi.modeling.motion.MotionEditDuplicateRegistrations.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('ids',
                                                                         'Ordered stable IDs selected by this '
                                                                         'operation; names and row numbers are not '
@@ -363,7 +346,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditMoveEvents': {'children': ('zipzi.modeling.motion.MotionEditMoveEvents.__repr__',
                                                              'zipzi.modeling.motion.MotionEditMoveEvents.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('ids',
                                                             'Ordered stable IDs selected by this operation; names and '
                                                             'row numbers are not identities.'),
@@ -384,7 +366,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditMoveRegistrations': {'children': ('zipzi.modeling.motion.MotionEditMoveRegistrations.__repr__',
                                                                     'zipzi.modeling.motion.MotionEditMoveRegistrations.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('ids',
                                                                    'Ordered stable IDs selected by this operation; '
                                                                    'names and row numbers are not identities.'),
@@ -403,7 +384,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditMoveTracks': {'children': ('zipzi.modeling.motion.MotionEditMoveTracks.__repr__',
                                                              'zipzi.modeling.motion.MotionEditMoveTracks.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('ids',
                                                             'Ordered stable IDs selected by this operation; names and '
                                                             'row numbers are not identities.'),
@@ -424,7 +404,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditPatchRegistration': {'children': ('zipzi.modeling.motion.MotionEditPatchRegistration.__repr__',
                                                                     'zipzi.modeling.motion.MotionEditPatchRegistration.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),
@@ -443,7 +422,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditRegister': {'children': ('zipzi.modeling.motion.MotionEditRegister.__repr__',
                                                            'zipzi.modeling.motion.MotionEditRegister.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('entry',
                                                           'Complete replacement motion registration; its owner is '
                                                           'selected separately.'),
@@ -463,7 +441,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditRenameGroup': {'children': ('zipzi.modeling.motion.MotionEditRenameGroup.__repr__',
                                                               'zipzi.modeling.motion.MotionEditRenameGroup.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('id',
                                                              'Stable identity in the owning authoring domain; exported '
                                                              'metadata IDs retain their source text.'),
@@ -477,7 +454,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditReorderGroups': {'children': ('zipzi.modeling.motion.MotionEditReorderGroups.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditReorderGroups.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('ids',
                                                                'Ordered stable IDs selected by this operation; names '
                                                                'and row numbers are not identities.')],
@@ -488,7 +464,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditReorderTracks': {'children': ('zipzi.modeling.motion.MotionEditReorderTracks.__repr__',
                                                                 'zipzi.modeling.motion.MotionEditReorderTracks.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('clip',
                                                                'Stable ID of the motion clip owning the affected track '
                                                                'or event.'),
@@ -502,7 +477,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditSetEvent': {'children': ('zipzi.modeling.motion.MotionEditSetEvent.__repr__',
                                                            'zipzi.modeling.motion.MotionEditSetEvent.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('clip',
                                                           'Stable ID of the motion clip owning the affected track or '
                                                           'event.'),
@@ -517,7 +491,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditSetTrackTarget': {'children': ('zipzi.modeling.motion.MotionEditSetTrackTarget.__repr__',
                                                                  'zipzi.modeling.motion.MotionEditSetTrackTarget.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('id',
                                                                 'Stable identity in the owning authoring domain; '
                                                                 'exported metadata IDs retain their source text.'),
@@ -532,7 +505,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEditTransferKeys': {'children': ('zipzi.modeling.motion.MotionEditTransferKeys.__repr__',
                                                                'zipzi.modeling.motion.MotionEditTransferKeys.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
                                                               'and row numbers are not identities.'),
@@ -552,7 +524,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionEvent': {'children': ('zipzi.modeling.motion.MotionEvent.__repr__',
                                                     'zipzi.modeling.motion.MotionEvent.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('id',
                                                    'Stable identity in the owning authoring domain; exported metadata '
                                                    'IDs retain their source text.'),
@@ -572,7 +543,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                          'zipzi.modeling.motion.MotionEventFired.summary'),
                                             'documentation': 'A motion event crossed during the last update, returned '
                                                              'without side effects.',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('motion_id', 'Source clip UUID.'),
                                                        ('event_id', 'Source event UUID.'),
                                                        ('value', 'User-authored event text.')],
@@ -583,7 +553,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionGroup': {'children': ('zipzi.modeling.motion.MotionGroup.__repr__',
                                                     'zipzi.modeling.motion.MotionGroup.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('id',
                                                    'Stable identity in the owning authoring domain; exported metadata '
                                                    'IDs retain their source text.'),
@@ -602,7 +571,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                   'zipzi.modeling.motion.MotionKey.summary'),
                                      'documentation': 'Persistent identity belongs to keys, never to Bezier control '
                                                       'points.',
-                                     'example': 'docs/recipes.py',
                                      'fields': [('id',
                                                  'Stable identity in the owning authoring domain; exported metadata '
                                                  'IDs retain their source text.'),
@@ -617,7 +585,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionPlaybackPosition': {'children': ('zipzi.modeling.motion.MotionPlaybackPosition.__repr__',
                                                                'zipzi.modeling.motion.MotionPlaybackPosition.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('motion_id',
                                                               'Source motion clip UUID for this SDK playback '
                                                               'position.'),
@@ -640,7 +607,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionPoint': {'children': ('zipzi.modeling.motion.MotionPoint.__repr__',
                                                     'zipzi.modeling.motion.MotionPoint.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('time', 'Absolute time in seconds within the owning motion clip.'),
                                                   ('value',
                                                    'Channel value or replacement payload in the domain declared by '
@@ -653,7 +619,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                            'zipzi.modeling.motion.MotionRegistration.summary'),
                                               'documentation': 'model3 registration is separate from a clip: one file '
                                                                'may appear in multiple groups.',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('id',
                                                           'Stable identity in the owning authoring domain; exported '
                                                           'metadata IDs retain their source text.'),
@@ -680,7 +645,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegment': {'children': (),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'MotionSegmentLinear | MotionSegmentBezier | '
@@ -692,7 +656,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionSegmentBezier': {'children': ('zipzi.modeling.motion.MotionSegmentBezier.__repr__',
                                                             'zipzi.modeling.motion.MotionSegmentBezier.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('control1',
                                                            'First Bezier control point in seconds/channel-value '
                                                            'coordinates; it has no key identity.'),
@@ -712,7 +675,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionSegmentInverseStepped': {'children': ('zipzi.modeling.motion.MotionSegmentInverseStepped.__repr__',
                                                                     'zipzi.modeling.motion.MotionSegmentInverseStepped.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('end',
                                                                    'Segment endpoint key or source-range end time, as '
                                                                    'declared by the enclosing type.')],
@@ -724,7 +686,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionSegmentLinear': {'children': ('zipzi.modeling.motion.MotionSegmentLinear.__repr__',
                                                             'zipzi.modeling.motion.MotionSegmentLinear.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('end',
                                                            'Segment endpoint key or source-range end time, as declared '
                                                            'by the enclosing type.')],
@@ -736,7 +697,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionSegmentStepped': {'children': ('zipzi.modeling.motion.MotionSegmentStepped.__repr__',
                                                              'zipzi.modeling.motion.MotionSegmentStepped.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('end',
                                                             'Segment endpoint key or source-range end time, as '
                                                             'declared by the enclosing type.')],
@@ -749,7 +709,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                        'zipzi.modeling.motion.MotionSnapshot.summary'),
                                           'documentation': 'Combined values after Motion, Expression, Physics and Pose '
                                                            'evaluation.',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('physics',
                                                       'Optional inspector observations. Collected explicitly by a host '
                                                       'after\n'
@@ -799,7 +758,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrack': {'children': ('zipzi.modeling.motion.MotionTrack.__repr__',
                                                     'zipzi.modeling.motion.MotionTrack.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('id',
                                                    'Stable identity in the owning authoring domain; exported metadata '
                                                    'IDs retain their source text.'),
@@ -833,7 +791,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrack.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionTrackTarget': {'children': (),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'MotionTrackTargetUnspecified | MotionTrackTargetModel | '
@@ -847,7 +804,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetModel': {'children': ('zipzi.modeling.motion.MotionTrackTargetModel.__repr__',
                                                                'zipzi.modeling.motion.MotionTrackTargetModel.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('runtime_id',
                                                               'Imported/exported runtime label, distinct from the '
                                                               'document object UUID.')],
@@ -858,7 +814,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetParameter': {'children': ('zipzi.modeling.motion.MotionTrackTargetParameter.__repr__',
                                                                    'zipzi.modeling.motion.MotionTrackTargetParameter.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('parameter_id',
                                                                   'Stable document parameter UUID; evaluation uses its '
                                                                   'declared range and default.')],
@@ -869,7 +824,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetPartOpacity': {'children': ('zipzi.modeling.motion.MotionTrackTargetPartOpacity.__repr__',
                                                                      'zipzi.modeling.motion.MotionTrackTargetPartOpacity.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('part_id',
                                                                     'Stable document Part UUID for this opacity or '
                                                                     'visibility reference.')],
@@ -880,7 +834,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetUnresolved': {'children': ('zipzi.modeling.motion.MotionTrackTargetUnresolved.__repr__',
                                                                     'zipzi.modeling.motion.MotionTrackTargetUnresolved.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('category',
                                                                    'Imported Physics target category retained by this '
                                                                    'wire metadata record.'),
@@ -894,7 +847,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
  'zipzi.modeling.motion.MotionTrackTargetUnspecified': {'children': ('zipzi.modeling.motion.MotionTrackTargetUnspecified.__repr__',
                                                                      'zipzi.modeling.motion.MotionTrackTargetUnspecified.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',
                                                         'signature': '()'},

@@ -20,7 +20,7 @@ Bounded cursor streams; polling never drains another client's events.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
 
-Owned events Closed value; reading fields, repr and summary performs no IO.
+Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Fields**
 
@@ -36,7 +36,7 @@ Owned events Closed value; reading fields, repr and summary performs no IO.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
 
-Owned events Created value; reading fields, repr and summary performs no IO.
+Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Fields**
 
@@ -52,7 +52,7 @@ Owned events Created value; reading fields, repr and summary performs no IO.
 
 `(runtime: str, session: SessionId | None, sequence: int) -> None`
 
-Owned events Cursor value; reading fields, repr and summary performs no IO.
+Types: [SessionId].
 
 **Fields**
 
@@ -66,14 +66,14 @@ Owned events Cursor value; reading fields, repr and summary performs no IO.
 
 `Published | Saved | StateChanged | Created | Closed`
 
+Types: [Closed](#zipzieventsclosed), [Created](#zipzieventscreated), [Published](#zipzieventspublished), [Saved](#zipzieventssaved), [StateChanged](#zipzieventsstatechanged).
+
 
 ## zipzi.events.Origin
 
 **Type**
 
 `(runtime: str, serial: int) -> None`
-
-Owned events Origin value; reading fields, repr and summary performs no IO.
 
 **Fields**
 
@@ -86,7 +86,7 @@ Owned events Origin value; reading fields, repr and summary performs no IO.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, receipt: Receipt) -> None`
 
-Owned events Published value; reading fields, repr and summary performs no IO.
+Types: [Receipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Fields**
 
@@ -111,6 +111,8 @@ Owned events Published value; reading fields, repr and summary performs no IO.
 
 Return this subscription's cached exact cursor without IO. Recover initial subscription before using it; cursors belong to one Runtime and registry/session stream.
 
+Types: [Cursor](#zipzieventscursor).
+
 
 ## zipzi.events.RegistrySubscription.initial
 
@@ -132,6 +134,8 @@ Alias of [zipzi.Buffer.pending_request](runtime.md#zipzibufferpending_request).
 `(*, limit: int=128) -> tuple[Event, ...]`
 
 Read up to limit events after this independent cursor, with limit in 1..256. Advance only after a complete valid page; gaps require explicit resync. Recover the original call after a lost response.
+
+Types: [Event](#zipzieventsevent).
 
 
 ## zipzi.events.RegistrySubscription.resync
@@ -155,7 +159,7 @@ Example: initial = subscription.resync().
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, receipt: SaveReceipt) -> None`
 
-Owned events Saved value; reading fields, repr and summary performs no IO.
+Types: [SaveReceipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Fields**
 
@@ -170,6 +174,8 @@ Owned events Saved value; reading fields, repr and summary performs no IO.
 **Type**
 
 `(backend: 'Backend', token: object, id: SessionId)`
+
+Types: [SessionId].
 
 
 ## zipzi.events.SessionSubscription.cursor
@@ -198,7 +204,7 @@ Alias of [zipzi.events.RegistrySubscription.resync](events.md#zipzieventsregistr
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
 
-Owned events StateChanged value; reading fields, repr and summary performs no IO.
+Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Fields**
 

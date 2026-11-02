@@ -64,7 +64,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ConversionCost': {'children': ('zipzi.modeling.commands.ConversionCost.__repr__',
                                                          'zipzi.modeling.commands.ConversionCost.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('sample_combinations',
                                                         'Number of shape-sample combinations the conversion must '
                                                         'process.'),
@@ -85,7 +84,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ConversionDomain': {'children': ('zipzi.modeling.commands.ConversionDomain.__repr__',
                                                            'zipzi.modeling.commands.ConversionDomain.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('parameter_id',
                                                           'Stable document parameter ID, not its exported runtime '
                                                           'identifier.'),
@@ -101,7 +99,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ConversionDomain.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommand': {'children': (),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'ModelingCommandCreateAsset | ModelingCommandReplaceAsset | '
@@ -202,15 +199,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandAttachment': {'children': ('zipzi.modeling.commands.ModelingCommandAttachment.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandAttachment.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('intent',
                                                                    'Typed domain edit executed against the candidate; '
                                                                    'constructing this intent does not\n'
-                                                                   'mutate or publish.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'mutate or publish.')],
                                                        'kind': 'type',
                                                        'signature': '(*, intent: AttachmentEdit)',
                                                        'type_refs': ('zipzi.modeling.scene.AttachmentEdit',)},
@@ -219,15 +211,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandBinding': {'children': ('zipzi.modeling.commands.ModelingCommandBinding.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandBinding.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('intent',
                                                                 'Typed domain edit executed against the candidate; '
                                                                 'constructing this intent does not\n'
-                                                                'mutate or publish.'),
-                                                               ('kind',
-                                                                'Fixed operation discriminator supplied by this value '
-                                                                'type; not a constructor argument or a mutable object '
-                                                                'field.')],
+                                                                'mutate or publish.')],
                                                     'kind': 'type',
                                                     'signature': '(*, intent: BindingAuthoringEdit)',
                                                     'type_refs': ('zipzi.modeling.bindings.BindingAuthoringEdit',)},
@@ -236,15 +223,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandContent': {'children': ('zipzi.modeling.commands.ModelingCommandContent.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandContent.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('intent',
                                                                 'Typed domain edit executed against the candidate; '
                                                                 'constructing this intent does not\n'
-                                                                'mutate or publish.'),
-                                                               ('kind',
-                                                                'Fixed operation discriminator supplied by this value '
-                                                                'type; not a constructor argument or a mutable object '
-                                                                'field.')],
+                                                                'mutate or publish.')],
                                                     'kind': 'type',
                                                     'signature': '(*, intent: SceneContentEdit)',
                                                     'type_refs': ('zipzi.modeling.scene.SceneContentEdit',)},
@@ -253,15 +235,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateAsset': {'children': ('zipzi.modeling.commands.ModelingCommandCreateAsset.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandCreateAsset.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('asset',
                                                                     'Complete asset record to create with native '
                                                                     'identity validation; this DTO alone does\n'
-                                                                    'not publish.'),
-                                                                   ('kind',
-                                                                    'Fixed operation discriminator supplied by this '
-                                                                    'value type; not a constructor argument or a '
-                                                                    'mutable object field.')],
+                                                                    'not publish.')],
                                                         'kind': 'type',
                                                         'signature': '(*, asset: ImageAsset)',
                                                         'type_refs': ('zipzi.modeling.resources.ImageAsset',)},
@@ -270,15 +247,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBinding.__repr__',
                                                                        'zipzi.modeling.commands.ModelingCommandCreateBinding.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('binding',
                                                                       'Complete binding record to create with native '
                                                                       'identity validation; this DTO alone\n'
-                                                                      'does not publish.'),
-                                                                     ('kind',
-                                                                      'Fixed operation discriminator supplied by this '
-                                                                      'value type; not a constructor argument or a '
-                                                                      'mutable object field.')],
+                                                                      'does not publish.')],
                                                           'kind': 'type',
                                                           'signature': '(*, binding: MeshBinding)',
                                                           'type_refs': ('zipzi.modeling.bindings.MeshBinding',)},
@@ -287,15 +259,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendBinding.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('binding',
                                                                            'Complete blend binding record to create '
                                                                            'with native identity validation; this DTO\n'
-                                                                           'alone does not publish.'),
-                                                                          ('kind',
-                                                                           'Fixed operation discriminator supplied by '
-                                                                           'this value type; not a constructor '
-                                                                           'argument or a mutable object field.')],
+                                                                           'alone does not publish.')],
                                                                'kind': 'type',
                                                                'signature': '(*, binding: BlendShapeBinding)',
                                                                'type_refs': ('zipzi.modeling.bindings.BlendShapeBinding',)},
@@ -304,16 +271,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.__repr__',
                                                                                'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.summary'),
                                                                   'documentation': '',
-                                                                  'example': 'docs/recipes.py',
                                                                   'fields': [('constraint',
                                                                               'Complete blend constraint record to '
                                                                               'create with native identity validation; '
                                                                               'this DTO\n'
-                                                                              'alone does not publish.'),
-                                                                             ('kind',
-                                                                              'Fixed operation discriminator supplied '
-                                                                              'by this value type; not a constructor '
-                                                                              'argument or a mutable object field.')],
+                                                                              'alone does not publish.')],
                                                                   'kind': 'type',
                                                                   'signature': '(*, constraint: BlendShapeConstraint)',
                                                                   'type_refs': ('zipzi.modeling.bindings.BlendShapeConstraint',)},
@@ -322,16 +284,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('table',
                                                                             'Complete blend key table record to create '
                                                                             'with native identity validation; this '
                                                                             'DTO\n'
-                                                                            'alone does not publish.'),
-                                                                           ('kind',
-                                                                            'Fixed operation discriminator supplied by '
-                                                                            'this value type; not a constructor '
-                                                                            'argument or a mutable object field.')],
+                                                                            'alone does not publish.')],
                                                                 'kind': 'type',
                                                                 'signature': '(*, table: BlendShapeKeyTable)',
                                                                 'type_refs': ('zipzi.modeling.bindings.BlendShapeKeyTable',)},
@@ -340,14 +297,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateExpression': {'children': ('zipzi.modeling.commands.ModelingCommandCreateExpression.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandCreateExpression.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('expression',
                                                                          'Complete expression asset with ordered owned '
-                                                                         'entries.'),
-                                                                        ('kind',
-                                                                         'Fixed operation discriminator supplied by '
-                                                                         'this value type; not a constructor argument '
-                                                                         'or a mutable object field.')],
+                                                                         'entries.')],
                                                              'kind': 'type',
                                                              'signature': '(*, expression: ExpressionAsset)',
                                                              'type_refs': ('zipzi.modeling.expression.ExpressionAsset',)},
@@ -356,15 +308,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateGlue': {'children': ('zipzi.modeling.commands.ModelingCommandCreateGlue.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreateGlue.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('glue',
                                                                    'Complete glue record to create with native '
                                                                    'identity validation; this DTO alone does\n'
-                                                                   'not publish.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'not publish.')],
                                                        'kind': 'type',
                                                        'signature': '(*, glue: Glue)',
                                                        'type_refs': ('zipzi.modeling.scene.Glue',)},
@@ -373,15 +320,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateMesh': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreateMesh.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('mesh',
                                                                    'Complete mesh record to create with native '
                                                                    'identity validation; this DTO alone does\n'
-                                                                   'not publish.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'not publish.')],
                                                        'kind': 'type',
                                                        'signature': '(*, mesh: Mesh)',
                                                        'type_refs': ('zipzi.modeling.mesh.Mesh',)},
@@ -390,14 +332,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateMotion': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMotion.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandCreateMotion.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('clip',
                                                                      'Complete owned clip with stable track/key/event '
-                                                                     'identities.'),
-                                                                    ('kind',
-                                                                     'Fixed operation discriminator supplied by this '
-                                                                     'value type; not a constructor argument or a '
-                                                                     'mutable object field.')],
+                                                                     'identities.')],
                                                          'kind': 'type',
                                                          'signature': '(*, clip: MotionClip)',
                                                          'type_refs': ('zipzi.modeling.motion.MotionClip',)},
@@ -406,15 +343,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandCreateOffscreen.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateOffscreen.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('offscreen',
                                                                         'Complete offscreen record to create with '
                                                                         'native identity validation; this DTO alone\n'
-                                                                        'does not publish.'),
-                                                                       ('kind',
-                                                                        'Fixed operation discriminator supplied by '
-                                                                        'this value type; not a constructor argument '
-                                                                        'or a mutable object field.')],
+                                                                        'does not publish.')],
                                                             'kind': 'type',
                                                             'signature': '(*, offscreen: Offscreen)',
                                                             'type_refs': ('zipzi.modeling.scene.Offscreen',)},
@@ -423,15 +355,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateParameter': {'children': ('zipzi.modeling.commands.ModelingCommandCreateParameter.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateParameter.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('parameter',
                                                                         'Complete parameter record to create with '
                                                                         'native identity validation; this DTO alone\n'
-                                                                        'does not publish.'),
-                                                                       ('kind',
-                                                                        'Fixed operation discriminator supplied by '
-                                                                        'this value type; not a constructor argument '
-                                                                        'or a mutable object field.')],
+                                                                        'does not publish.')],
                                                             'kind': 'type',
                                                             'signature': '(*, parameter: Parameter)',
                                                             'type_refs': ('zipzi.modeling.parameters.Parameter',)},
@@ -440,15 +367,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreatePart': {'children': ('zipzi.modeling.commands.ModelingCommandCreatePart.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreatePart.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('part',
                                                                    'Complete part record to create with native '
                                                                    'identity validation; this DTO alone does\n'
-                                                                   'not publish.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'not publish.')],
                                                        'kind': 'type',
                                                        'signature': '(*, part: Part)',
                                                        'type_refs': ('zipzi.modeling.scene.Part',)},
@@ -457,15 +379,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateSceneBinding.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('binding',
                                                                            'Complete scene binding record to create '
                                                                            'with native identity validation; this DTO\n'
-                                                                           'alone does not publish.'),
-                                                                          ('kind',
-                                                                           'Fixed operation discriminator supplied by '
-                                                                           'this value type; not a constructor '
-                                                                           'argument or a mutable object field.')],
+                                                                           'alone does not publish.')],
                                                                'kind': 'type',
                                                                'signature': '(*, binding: SceneBinding)',
                                                                'type_refs': ('zipzi.modeling.bindings.SceneBinding',)},
@@ -474,15 +391,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateTransform': {'children': ('zipzi.modeling.commands.ModelingCommandCreateTransform.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateTransform.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('transform',
                                                                         'Complete transform record to create with '
                                                                         'native identity validation; this DTO alone\n'
-                                                                        'does not publish.'),
-                                                                       ('kind',
-                                                                        'Fixed operation discriminator supplied by '
-                                                                        'this value type; not a constructor argument '
-                                                                        'or a mutable object field.')],
+                                                                        'does not publish.')],
                                                             'kind': 'type',
                                                             'signature': '(*, transform: Transform)',
                                                             'type_refs': ('zipzi.modeling.scene.Transform',)},
@@ -491,14 +403,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandDeletion': {'children': ('zipzi.modeling.commands.ModelingCommandDeletion.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandDeletion.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('intent',
                                                                  'Dependency-cleaning deletion request; plan first to '
-                                                                 'inspect choices and bounded report pages.'),
-                                                                ('kind',
-                                                                 'Fixed operation discriminator supplied by this value '
-                                                                 'type; not a constructor argument or a mutable object '
-                                                                 'field.')],
+                                                                 'inspect choices and bounded report pages.')],
                                                      'kind': 'type',
                                                      'signature': '(*, intent: DeletionIntent)',
                                                      'type_refs': ('zipzi.modeling.deletion.DeletionIntent',)},
@@ -507,15 +414,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandDocument': {'children': ('zipzi.modeling.commands.ModelingCommandDocument.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandDocument.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('intent',
                                                                  'Typed domain edit executed against the candidate; '
                                                                  'constructing this intent does not\n'
-                                                                 'mutate or publish.'),
-                                                                ('kind',
-                                                                 'Fixed operation discriminator supplied by this value '
-                                                                 'type; not a constructor argument or a mutable object '
-                                                                 'field.')],
+                                                                 'mutate or publish.')],
                                                      'kind': 'type',
                                                      'signature': '(*, intent: DocumentAuthoringEdit)',
                                                      'type_refs': ('zipzi.modeling.project.DocumentAuthoringEdit',)},
@@ -524,15 +426,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandEraseObject': {'children': ('zipzi.modeling.commands.ModelingCommandEraseObject.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandEraseObject.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable document object ID used by references; it '
                                                                     'is distinct from the exported\n'
-                                                                    'runtime_id.'),
-                                                                   ('kind',
-                                                                    'Fixed operation discriminator supplied by this '
-                                                                    'value type; not a constructor argument or a '
-                                                                    'mutable object field.')],
+                                                                    'runtime_id.')],
                                                         'kind': 'type',
                                                         'signature': '(*, id: str)'},
  'zipzi.modeling.commands.ModelingCommandEraseObject.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -540,14 +437,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandExpression': {'children': ('zipzi.modeling.commands.ModelingCommandExpression.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandExpression.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('intent',
                                                                    'Expression asset/entry intent, validated by the '
-                                                                   'shared SDK planner.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'shared SDK planner.')],
                                                        'kind': 'type',
                                                        'signature': '(*, intent: ExpressionEdit)',
                                                        'type_refs': ('zipzi.modeling.expression.ExpressionEdit',)},
@@ -556,7 +448,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandManualMesh': {'children': ('zipzi.modeling.commands.ModelingCommandManualMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandManualMesh.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('mesh_id',
                                                                    'Stable mesh UUID whose editable UV triangulation '
                                                                    'is changed.'),
@@ -565,11 +456,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                    'submit it alone in a batch.'),
                                                                   ('operation',
                                                                    'Atomic UV topology intent; the SDK preserves '
-                                                                   'dependent geometry and identities.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'dependent geometry and identities.')],
                                                        'kind': 'type',
                                                        'signature': '(*, mesh_id: str, expected: _Source, operation: '
                                                                     'ManualMeshOperation)',
@@ -580,14 +467,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandMotion': {'children': ('zipzi.modeling.commands.ModelingCommandMotion.__repr__',
                                                                 'zipzi.modeling.commands.ModelingCommandMotion.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('intent',
                                                                'Motion library/track/key/event intent; use a Plan or '
-                                                               'apply to an Edit.'),
-                                                              ('kind',
-                                                               'Fixed operation discriminator supplied by this value '
-                                                               'type; not a constructor argument or a mutable object '
-                                                               'field.')],
+                                                               'apply to an Edit.')],
                                                    'kind': 'type',
                                                    'signature': '(*, intent: MotionEdit)',
                                                    'type_refs': ('zipzi.modeling.motion.MotionEdit',)},
@@ -596,15 +478,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandOrganization': {'children': ('zipzi.modeling.commands.ModelingCommandOrganization.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandOrganization.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('intent',
                                                                      'Typed domain edit executed against the '
                                                                      'candidate; constructing this intent does not\n'
-                                                                     'mutate or publish.'),
-                                                                    ('kind',
-                                                                     'Fixed operation discriminator supplied by this '
-                                                                     'value type; not a constructor argument or a '
-                                                                     'mutable object field.')],
+                                                                     'mutate or publish.')],
                                                          'kind': 'type',
                                                          'signature': '(*, intent: OrganizationEdit)',
                                                          'type_refs': ('zipzi.modeling.scene.OrganizationEdit',)},
@@ -613,14 +490,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandPhysics.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandPhysics.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('intent',
                                                                 'Physics rig/row/node intent with native ownership and '
-                                                                'reference checks.'),
-                                                               ('kind',
-                                                                'Fixed operation discriminator supplied by this value '
-                                                                'type; not a constructor argument or a mutable object '
-                                                                'field.')],
+                                                                'reference checks.')],
                                                     'kind': 'type',
                                                     'signature': '(*, intent: PhysicsEdit)',
                                                     'type_refs': ('zipzi.modeling.physics.PhysicsEdit',)},
@@ -629,14 +501,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandPose': {'children': ('zipzi.modeling.commands.ModelingCommandPose.__repr__',
                                                               'zipzi.modeling.commands.ModelingCommandPose.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('intent',
                                                              'Pose singleton/group/entry/link intent, independent of '
-                                                             'playback state.'),
-                                                            ('kind',
-                                                             'Fixed operation discriminator supplied by this value '
-                                                             'type; not a constructor argument or a mutable object '
-                                                             'field.')],
+                                                             'playback state.')],
                                                  'kind': 'type',
                                                  'signature': '(*, intent: PoseEdit)',
                                                  'type_refs': ('zipzi.modeling.pose.PoseEdit',)},
@@ -645,15 +512,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReferences': {'children': ('zipzi.modeling.commands.ModelingCommandReferences.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandReferences.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('intent',
                                                                    'Typed domain edit executed against the candidate; '
                                                                    'constructing this intent does not\n'
-                                                                   'mutate or publish.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'mutate or publish.')],
                                                        'kind': 'type',
                                                        'signature': '(*, intent: ReferenceEdit)',
                                                        'type_refs': ('zipzi.modeling.addressing.ReferenceEdit',)},
@@ -662,7 +524,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid': {'children': ('zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('id',
                                                                             'Stable document object ID used by '
                                                                             'references; it is distinct from the '
@@ -677,11 +538,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                             'Positive rectangle-grid subdivision count '
                                                                             'vertically; resulting geometry must\n'
                                                                             'satisfy native vertex/working-set '
-                                                                            'limits.'),
-                                                                           ('kind',
-                                                                            'Fixed operation discriminator supplied by '
-                                                                            'this value type; not a constructor '
-                                                                            'argument or a mutable object field.')],
+                                                                            'limits.')],
                                                                 'kind': 'type',
                                                                 'signature': '(*, id: str, columns: int, rows: int)'},
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -689,18 +546,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandRenameMesh': {'children': ('zipzi.modeling.commands.ModelingCommandRenameMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandRenameMesh.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable document object ID used by references; it '
                                                                    'is distinct from the exported\n'
                                                                    'runtime_id.'),
                                                                   ('name',
                                                                    'Human-readable display name; use the stable ID for '
-                                                                   'identity because names can change.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'identity because names can change.')],
                                                        'kind': 'type',
                                                        'signature': '(*, id: str, name: str)'},
  'zipzi.modeling.commands.ModelingCommandRenameMesh.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -708,15 +560,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceAsset': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceAsset.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandReplaceAsset.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('asset',
                                                                      'Complete asset record to replace the existing '
                                                                      'object while preserving its stable\n'
-                                                                     'identity; this DTO alone does not publish.'),
-                                                                    ('kind',
-                                                                     'Fixed operation discriminator supplied by this '
-                                                                     'value type; not a constructor argument or a '
-                                                                     'mutable object field.')],
+                                                                     'identity; this DTO alone does not publish.')],
                                                          'kind': 'type',
                                                          'signature': '(*, asset: ImageAsset)',
                                                          'type_refs': ('zipzi.modeling.resources.ImageAsset',)},
@@ -725,15 +572,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBinding.__repr__',
                                                                         'zipzi.modeling.commands.ModelingCommandReplaceBinding.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('binding',
                                                                        'Complete binding record to replace the '
                                                                        'existing object while preserving its stable\n'
-                                                                       'identity; this DTO alone does not publish.'),
-                                                                      ('kind',
-                                                                       'Fixed operation discriminator supplied by this '
-                                                                       'value type; not a constructor argument or a '
-                                                                       'mutable object field.')],
+                                                                       'identity; this DTO alone does not publish.')],
                                                            'kind': 'type',
                                                            'signature': '(*, binding: MeshBinding)',
                                                            'type_refs': ('zipzi.modeling.bindings.MeshBinding',)},
@@ -742,16 +584,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('binding',
                                                                             'Complete blend binding record to replace '
                                                                             'the existing object while preserving its\n'
                                                                             'stable identity; this DTO alone does not '
-                                                                            'publish.'),
-                                                                           ('kind',
-                                                                            'Fixed operation discriminator supplied by '
-                                                                            'this value type; not a constructor '
-                                                                            'argument or a mutable object field.')],
+                                                                            'publish.')],
                                                                 'kind': 'type',
                                                                 'signature': '(*, binding: BlendShapeBinding)',
                                                                 'type_refs': ('zipzi.modeling.bindings.BlendShapeBinding',)},
@@ -760,17 +597,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.__repr__',
                                                                                 'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.summary'),
                                                                    'documentation': '',
-                                                                   'example': 'docs/recipes.py',
                                                                    'fields': [('constraint',
                                                                                'Complete blend constraint record to '
                                                                                'replace the existing object while '
                                                                                'preserving its\n'
                                                                                'stable identity; this DTO alone does '
-                                                                               'not publish.'),
-                                                                              ('kind',
-                                                                               'Fixed operation discriminator supplied '
-                                                                               'by this value type; not a constructor '
-                                                                               'argument or a mutable object field.')],
+                                                                               'not publish.')],
                                                                    'kind': 'type',
                                                                    'signature': '(*, constraint: BlendShapeConstraint)',
                                                                    'type_refs': ('zipzi.modeling.bindings.BlendShapeConstraint',)},
@@ -779,17 +611,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.__repr__',
                                                                               'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.summary'),
                                                                  'documentation': '',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [('table',
                                                                              'Complete blend key table record to '
                                                                              'replace the existing object while '
                                                                              'preserving its\n'
                                                                              'stable identity; this DTO alone does not '
-                                                                             'publish.'),
-                                                                            ('kind',
-                                                                             'Fixed operation discriminator supplied '
-                                                                             'by this value type; not a constructor '
-                                                                             'argument or a mutable object field.')],
+                                                                             'publish.')],
                                                                  'kind': 'type',
                                                                  'signature': '(*, table: BlendShapeKeyTable)',
                                                                  'type_refs': ('zipzi.modeling.bindings.BlendShapeKeyTable',)},
@@ -798,17 +625,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.__repr__',
                                                                                 'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.summary'),
                                                                    'documentation': '',
-                                                                   'example': 'docs/recipes.py',
                                                                    'fields': [('groups',
                                                                                'Complete drawing-order group list; '
                                                                                'native validation checks root/owner '
                                                                                'membership\n'
                                                                                'and ranges. This is a required list, '
-                                                                               'not an optional grouping override.'),
-                                                                              ('kind',
-                                                                               'Fixed operation discriminator supplied '
-                                                                               'by this value type; not a constructor '
-                                                                               'argument or a mutable object field.')],
+                                                                               'not an optional grouping override.')],
                                                                    'kind': 'type',
                                                                    'signature': '(*, groups: tuple[DrawOrderGroup, '
                                                                                 '...])',
@@ -818,14 +640,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceEditorState.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandReplaceEditorState.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('state',
                                                                            'Complete Editor visibility/lock metadata '
-                                                                           'to replace.'),
-                                                                          ('kind',
-                                                                           'Fixed operation discriminator supplied by '
-                                                                           'this value type; not a constructor '
-                                                                           'argument or a mutable object field.')],
+                                                                           'to replace.')],
                                                                'kind': 'type',
                                                                'signature': '(*, state: EditorState)',
                                                                'type_refs': ('zipzi.modeling.project.EditorState',)},
@@ -834,14 +651,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceExpression': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceExpression.__repr__',
                                                                            'zipzi.modeling.commands.ModelingCommandReplaceExpression.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('expression',
                                                                           'Complete replacement expression preserving '
-                                                                          'its object ID.'),
-                                                                         ('kind',
-                                                                          'Fixed operation discriminator supplied by '
-                                                                          'this value type; not a constructor argument '
-                                                                          'or a mutable object field.')],
+                                                                          'its object ID.')],
                                                               'kind': 'type',
                                                               'signature': '(*, expression: ExpressionAsset)',
                                                               'type_refs': ('zipzi.modeling.expression.ExpressionAsset',)},
@@ -850,15 +662,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceGlue': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceGlue.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplaceGlue.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('glue',
                                                                     'Complete glue record to replace the existing '
                                                                     'object while preserving its stable\n'
-                                                                    'identity; this DTO alone does not publish.'),
-                                                                   ('kind',
-                                                                    'Fixed operation discriminator supplied by this '
-                                                                    'value type; not a constructor argument or a '
-                                                                    'mutable object field.')],
+                                                                    'identity; this DTO alone does not publish.')],
                                                         'kind': 'type',
                                                         'signature': '(*, glue: Glue)',
                                                         'type_refs': ('zipzi.modeling.scene.Glue',)},
@@ -867,14 +674,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.__repr__',
                                                                                'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.summary'),
                                                                   'documentation': '',
-                                                                  'example': 'docs/recipes.py',
                                                                   'fields': [('order',
                                                                               'Replacement organization/deformation '
-                                                                              'palette order; not runtime draw order.'),
-                                                                             ('kind',
-                                                                              'Fixed operation discriminator supplied '
-                                                                              'by this value type; not a constructor '
-                                                                              'argument or a mutable object field.')],
+                                                                              'palette order; not runtime draw '
+                                                                              'order.')],
                                                                   'kind': 'type',
                                                                   'signature': '(*, order: HierarchyOrder)',
                                                                   'type_refs': ('zipzi.modeling.scene.HierarchyOrder',)},
@@ -883,15 +686,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceMesh': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMesh.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplaceMesh.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('mesh',
                                                                     'Complete mesh record to replace the existing '
                                                                     'object while preserving its stable\n'
-                                                                    'identity; this DTO alone does not publish.'),
-                                                                   ('kind',
-                                                                    'Fixed operation discriminator supplied by this '
-                                                                    'value type; not a constructor argument or a '
-                                                                    'mutable object field.')],
+                                                                    'identity; this DTO alone does not publish.')],
                                                         'kind': 'type',
                                                         'signature': '(*, mesh: Mesh)',
                                                         'type_refs': ('zipzi.modeling.mesh.Mesh',)},
@@ -900,14 +698,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceModelSetup.__repr__',
                                                                            'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('setup',
                                                                           'Model source-canvas and export-frame '
-                                                                          'configuration.'),
-                                                                         ('kind',
-                                                                          'Fixed operation discriminator supplied by '
-                                                                          'this value type; not a constructor argument '
-                                                                          'or a mutable object field.')],
+                                                                          'configuration.')],
                                                               'kind': 'type',
                                                               'signature': '(*, setup: ModelSetup)',
                                                               'type_refs': ('zipzi.modeling.scene.ModelSetup',)},
@@ -916,14 +709,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceMotion': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMotion.__repr__',
                                                                        'zipzi.modeling.commands.ModelingCommandReplaceMotion.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('clip',
                                                                       'Complete replacement clip preserving its stable '
-                                                                      'object ID.'),
-                                                                     ('kind',
-                                                                      'Fixed operation discriminator supplied by this '
-                                                                      'value type; not a constructor argument or a '
-                                                                      'mutable object field.')],
+                                                                      'object ID.')],
                                                           'kind': 'type',
                                                           'signature': '(*, clip: MotionClip)',
                                                           'type_refs': ('zipzi.modeling.motion.MotionClip',)},
@@ -932,15 +720,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceOffscreen.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('offscreen',
                                                                          'Complete offscreen record to replace the '
                                                                          'existing object while preserving its stable\n'
-                                                                         'identity; this DTO alone does not publish.'),
-                                                                        ('kind',
-                                                                         'Fixed operation discriminator supplied by '
-                                                                         'this value type; not a constructor argument '
-                                                                         'or a mutable object field.')],
+                                                                         'identity; this DTO alone does not publish.')],
                                                              'kind': 'type',
                                                              'signature': '(*, offscreen: Offscreen)',
                                                              'type_refs': ('zipzi.modeling.scene.Offscreen',)},
@@ -949,15 +732,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceParameter': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceParameter.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceParameter.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('parameter',
                                                                          'Complete parameter record to replace the '
                                                                          'existing object while preserving its stable\n'
-                                                                         'identity; this DTO alone does not publish.'),
-                                                                        ('kind',
-                                                                         'Fixed operation discriminator supplied by '
-                                                                         'this value type; not a constructor argument '
-                                                                         'or a mutable object field.')],
+                                                                         'identity; this DTO alone does not publish.')],
                                                              'kind': 'type',
                                                              'signature': '(*, parameter: Parameter)',
                                                              'type_refs': ('zipzi.modeling.parameters.Parameter',)},
@@ -966,15 +744,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplacePart': {'children': ('zipzi.modeling.commands.ModelingCommandReplacePart.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplacePart.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('part',
                                                                     'Complete part record to replace the existing '
                                                                     'object while preserving its stable\n'
-                                                                    'identity; this DTO alone does not publish.'),
-                                                                   ('kind',
-                                                                    'Fixed operation discriminator supplied by this '
-                                                                    'value type; not a constructor argument or a '
-                                                                    'mutable object field.')],
+                                                                    'identity; this DTO alone does not publish.')],
                                                         'kind': 'type',
                                                         'signature': '(*, part: Part)',
                                                         'type_refs': ('zipzi.modeling.scene.Part',)},
@@ -983,16 +756,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('binding',
                                                                             'Complete scene binding record to replace '
                                                                             'the existing object while preserving its\n'
                                                                             'stable identity; this DTO alone does not '
-                                                                            'publish.'),
-                                                                           ('kind',
-                                                                            'Fixed operation discriminator supplied by '
-                                                                            'this value type; not a constructor '
-                                                                            'argument or a mutable object field.')],
+                                                                            'publish.')],
                                                                 'kind': 'type',
                                                                 'signature': '(*, binding: SceneBinding)',
                                                                 'type_refs': ('zipzi.modeling.bindings.SceneBinding',)},
@@ -1001,7 +769,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceTopology': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceTopology.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandReplaceTopology.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('source',
                                                                         'Exact geometry snapshot the topology '
                                                                         'replacement was planned against; stale '
@@ -1010,11 +777,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                        ('replacement',
                                                                         'Coordinated replacement geometry, bindings, '
                                                                         'Glues and vertex mapping from the\n'
-                                                                        'remeshing plan.'),
-                                                                       ('kind',
-                                                                        'Fixed operation discriminator supplied by '
-                                                                        'this value type; not a constructor argument '
-                                                                        'or a mutable object field.')],
+                                                                        'remeshing plan.')],
                                                             'kind': 'type',
                                                             'signature': '(*, source: GeometrySnapshot, replacement: '
                                                                          'TopologyReplacement)',
@@ -1025,15 +788,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceTransform': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceTransform.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceTransform.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('transform',
                                                                          'Complete transform record to replace the '
                                                                          'existing object while preserving its stable\n'
-                                                                         'identity; this DTO alone does not publish.'),
-                                                                        ('kind',
-                                                                         'Fixed operation discriminator supplied by '
-                                                                         'this value type; not a constructor argument '
-                                                                         'or a mutable object field.')],
+                                                                         'identity; this DTO alone does not publish.')],
                                                              'kind': 'type',
                                                              'signature': '(*, transform: Transform)',
                                                              'type_refs': ('zipzi.modeling.scene.Transform',)},
@@ -1042,15 +800,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandResource': {'children': ('zipzi.modeling.commands.ModelingCommandResource.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandResource.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('intent',
                                                                  'Typed domain edit executed against the candidate; '
                                                                  'constructing this intent does not\n'
-                                                                 'mutate or publish.'),
-                                                                ('kind',
-                                                                 'Fixed operation discriminator supplied by this value '
-                                                                 'type; not a constructor argument or a mutable object '
-                                                                 'field.')],
+                                                                 'mutate or publish.')],
                                                      'kind': 'type',
                                                      'signature': '(*, intent: ResourceEdit)',
                                                      'type_refs': ('zipzi.modeling.resources.ResourceEdit',)},
@@ -1059,15 +812,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandScene': {'children': ('zipzi.modeling.commands.ModelingCommandScene.__repr__',
                                                                'zipzi.modeling.commands.ModelingCommandScene.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('intent',
                                                               'Typed domain edit executed against the candidate; '
                                                               'constructing this intent does not\n'
-                                                              'mutate or publish.'),
-                                                             ('kind',
-                                                              'Fixed operation discriminator supplied by this value '
-                                                              'type; not a constructor argument or a mutable object '
-                                                              'field.')],
+                                                              'mutate or publish.')],
                                                   'kind': 'type',
                                                   'signature': '(*, intent: SceneEdit)',
                                                   'type_refs': ('zipzi.modeling.scene.SceneEdit',)},
@@ -1076,18 +824,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetMeshKeyform.__repr__',
                                                                         'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('id',
                                                                        'Stable document object ID used by references; '
                                                                        'it is distinct from the exported\n'
                                                                        'runtime_id.'),
                                                                       ('keyform',
                                                                        'Complete shape sample to insert or replace; '
-                                                                       'unrelated samples are retained.'),
-                                                                      ('kind',
-                                                                       'Fixed operation discriminator supplied by this '
-                                                                       'value type; not a constructor argument or a '
-                                                                       'mutable object field.')],
+                                                                       'unrelated samples are retained.')],
                                                            'kind': 'type',
                                                            'signature': '(*, id: str, keyform: MeshKeyform)',
                                                            'type_refs': ('zipzi.modeling.bindings.MeshKeyform',)},
@@ -1096,13 +839,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandSetPhysics.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandSetPhysics.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('physics',
-                                                                   'Complete Physics singleton and ordered rig data.'),
-                                                                  ('kind',
-                                                                   'Fixed operation discriminator supplied by this '
-                                                                   'value type; not a constructor argument or a '
-                                                                   'mutable object field.')],
+                                                                   'Complete Physics singleton and ordered rig data.')],
                                                        'kind': 'type',
                                                        'signature': '(*, physics: PhysicsAsset)',
                                                        'type_refs': ('zipzi.modeling.physics.PhysicsAsset',)},
@@ -1111,14 +849,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetPose': {'children': ('zipzi.modeling.commands.ModelingCommandSetPose.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandSetPose.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('pose',
                                                                 'Complete Pose singleton and owned part/link '
-                                                                'references.'),
-                                                               ('kind',
-                                                                'Fixed operation discriminator supplied by this value '
-                                                                'type; not a constructor argument or a mutable object '
-                                                                'field.')],
+                                                                'references.')],
                                                     'kind': 'type',
                                                     'signature': '(*, pose: PoseAsset)',
                                                     'type_refs': ('zipzi.modeling.pose.PoseAsset',)},
@@ -1127,18 +860,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetSceneKeyform.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Stable document object ID used by references; '
                                                                         'it is distinct from the exported\n'
                                                                         'runtime_id.'),
                                                                        ('keyform',
                                                                         'Complete shape sample to insert or replace; '
-                                                                        'unrelated samples are retained.'),
-                                                                       ('kind',
-                                                                        'Fixed operation discriminator supplied by '
-                                                                        'this value type; not a constructor argument '
-                                                                        'or a mutable object field.')],
+                                                                        'unrelated samples are retained.')],
                                                             'kind': 'type',
                                                             'signature': '(*, id: str, keyform: SceneKeyform)',
                                                             'type_refs': ('zipzi.modeling.bindings.SceneKeyform',)},
@@ -1147,7 +875,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandUpdatePositions': {'children': ('zipzi.modeling.commands.ModelingCommandUpdatePositions.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandUpdatePositions.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Stable document object ID used by references; '
                                                                         'it is distinct from the exported\n'
@@ -1158,11 +885,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                                         'positions in the supplied order.'),
                                                                        ('positions',
                                                                         'Absolute XY shape positions in mesh vertex '
-                                                                        'order; these are positions, not vertex IDs.'),
-                                                                       ('kind',
-                                                                        'Fixed operation discriminator supplied by '
-                                                                        'this value type; not a constructor argument '
-                                                                        'or a mutable object field.')],
+                                                                        'order; these are positions, not vertex IDs.')],
                                                             'kind': 'type',
                                                             'signature': '(*, id: str, vertex_ids: tuple[int, ...], '
                                                                          'positions: tuple[Vec2, ...])',

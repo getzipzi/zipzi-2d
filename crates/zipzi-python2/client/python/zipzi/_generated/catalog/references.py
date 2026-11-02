@@ -13,7 +13,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                               'zipzi.references.Capability.summary'),
                                  'documentation': 'Current native capability state; inspect it before invoking the '
                                                   'operation.',
-                                 'example': 'docs/recipes.py',
                                  'fields': [('state',
                                              'Available, temporarily unavailable, or unsupported for this '
                                              'object/domain.'),
@@ -29,7 +28,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                 'zipzi.references.FieldAddress.pending_request',
                                                 'zipzi.references.FieldAddress.plan'),
                                    'documentation': 'An SDK address with incarnation and monotonic epoch validation.',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'type',
                                    'signature': '()'},
@@ -38,7 +36,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                               'FieldAddress without IO. Use with to close on exit; '
                                                               'pending work must recover on its original owner. '
                                                               'Entering does not refresh or rebind stale SDK identity.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '() -> FieldAddress',
@@ -50,7 +47,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'documentation': 'Plan a typed address patch under captured SDK epochs and '
                                                          'context. Stale fields or recreated objects fail explicitly. '
                                                          'Returns the same owned Plan form used by Edit.apply.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '(patch: modeling.addressing.AddressPatch) -> Plan',
@@ -63,7 +59,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                 'zipzi.references.LabelAddress.pending_request',
                                                 'zipzi.references.LabelAddress.plan'),
                                    'documentation': '',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'type',
                                    'signature': '(factory-owned; use the documented public entry)'},
@@ -72,7 +67,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                               'LabelAddress without IO. Use with to close on exit; '
                                                               'pending work must recover on its original owner. '
                                                               'Entering does not refresh or rebind stale SDK identity.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '() -> LabelAddress',
@@ -84,7 +78,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                              'label/context/identity change invalidates the address; '
                                                              'capture a new address instead of silently refreshing its '
                                                              'precondition.',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'property',
                                             'signature': ': str'},
@@ -92,7 +85,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                       'documentation': 'Return the cached target UUID without IO. Field epoch and '
                                                        'incarnation remain part of this address; the ID alone cannot '
                                                        'replace them.',
-                                      'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'property',
                                       'signature': ': str'},
@@ -102,14 +94,12 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                          'incarnation/context/field epochs. Returns an owned Plan and '
                                                          'cached report; apply through Edit and close the Plan after '
                                                          'use.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '(name: str) -> Plan',
                                         'type_refs': ('zipzi.Plan',)},
  'zipzi.references.ObjectKind': {'children': (),
                                  'documentation': '',
-                                 'example': 'docs/recipes.py',
                                  'fields': [],
                                  'kind': 'alias',
                                  'signature': "Literal['asset', 'mesh', 'parameter', 'mesh_binding', 'binding_axis', "
@@ -135,17 +125,14 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'zipzi.references.ObjectRef.resolve',
                                              'zipzi.references.ObjectRef.scene_capabilities'),
                                 'documentation': '',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'type',
-                                'signature': '(factory-owned; use the documented public entry)',
-                                'type_refs': ('zipzi.references.ObjectKind',)},
+                                'signature': '(factory-owned; use the documented public entry)'},
  'zipzi.references.ObjectRef.__enter__': {'children': (),
                                           'documentation': 'Check the owning client/lease locally and return this '
                                                            'ObjectRef without IO. Use with to close on exit; pending '
                                                            'work must recover on its original owner. Entering does not '
                                                            'refresh or rebind stale SDK identity.',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'callable',
                                           'signature': '() -> ObjectRef',
@@ -155,7 +142,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                              'documentation': 'Query a declared capability domain for this live '
                                                               'reference. Returns an owned source-bearing capability '
                                                               'result, without reserving future execution.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '(domain: modeling.addressing.CapabilityDomain) -> '
@@ -167,13 +153,11 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
  'zipzi.references.ObjectRef.id': {'children': (),
                                    'documentation': 'Read the cached persistent UUID without IO. It is distinct from '
                                                     'the reference incarnation and Runtime lease.',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'property',
                                    'signature': ': str'},
  'zipzi.references.ObjectRef.kind': {'children': (),
                                      'documentation': 'Read the cached SDK object-kind tag without IO.',
-                                     'example': 'docs/recipes.py',
                                      'fields': [],
                                      'kind': 'property',
                                      'signature': ': ObjectKind',
@@ -182,7 +166,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                       'documentation': 'Capture a label address bound to this reference incarnation '
                                                        'and field epoch. Close the address independently; do not '
                                                        'replace its plan with an ID-only rename.',
-                                      'example': 'docs/recipes.py',
                                       'fields': [],
                                       'kind': 'callable',
                                       'signature': '() -> LabelAddress',
@@ -192,7 +175,6 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                         'documentation': 'Validate the SDK reference against current '
                                                          'incarnation/context and return exact formal Source. Deletion '
                                                          'or recreation does not silently rebind the reference.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'callable',
                                         'signature': '() -> Source',
@@ -201,16 +183,13 @@ DATA: dict[str, Entry] = {'zipzi.references': {'children': ('zipzi.references.Ca
                                                    'documentation': 'Query SDK scene capability states for this live '
                                                                     'reference. Unavailable and unsupported states '
                                                                     'retain their stable reason code.',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'callable',
                                                    'signature': '() -> SceneCapabilities',
                                                    'type_refs': ('zipzi.references.SceneCapabilities',)},
  'zipzi.references.SceneCapabilities': {'children': ('zipzi.references.SceneCapabilities.__repr__',
                                                      'zipzi.references.SceneCapabilities.summary'),
-                                        'documentation': 'Owned references SceneCapabilities value; reading fields, '
-                                                         'repr and summary performs no IO.',
-                                        'example': 'docs/recipes.py',
+                                        'documentation': '',
                                         'fields': [('inspect',
                                                     'Current capability to read the current typed record; inspect its '
                                                     'state/reason before\n'

@@ -9,7 +9,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.common': {'children': ('zipzi.modeling
                                                         'origin to an\n'
                                                         'imported f32 runtime position must remain reversible before '
                                                         'evaluation.',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('x',
                                                    'Horizontal coordinate; its space and units are determined by the '
                                                    'containing geometry or\n'
@@ -21,7 +20,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.common': {'children': ('zipzi.modeling
                                        'signature': '(x: float, y: float)'},
  'zipzi.modeling.common.Vec2': {'children': (),
                                 'documentation': '',
-                                'example': 'docs/recipes.py',
                                 'fields': [('x',
                                             'Horizontal coordinate; its space and units are determined by the '
                                             'containing geometry or\n'

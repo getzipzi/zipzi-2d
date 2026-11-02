@@ -25,6 +25,8 @@ One mesh whose evaluated geometry contains the query point.
 A hit is a geometric candidate, not proof that the mesh painted a visible
 pixel. `part_path` and `part_names` run from root to leaf.
 
+Types: [TriangleHit](#zipzimodelingspatialtrianglehit).
+
 **Fields**
 
 - `mesh_id`: Stable authoring mesh ID.
@@ -45,6 +47,8 @@ This is not a visibility ranking across offscreen composition groups.
 `(*, hits: tuple[GeometryHit, ...], total: int, truncated: bool)`
 
 Mesh candidates for a model-space point, ordered by descending draw order.
+
+Types: [GeometryHit](#zipzimodelingspatialgeometryhit).
 
 **Fields**
 
@@ -82,6 +86,8 @@ A mesh or Part selected by its stable authoring ID.
 
 A Part selects every descendant mesh, including meshes in nested Parts.
 
+Types: [ObjectTargetMesh](#zipzimodelingspatialobjecttargetmesh), [ObjectTargetPart](#zipzimodelingspatialobjecttargetpart).
+
 
 ## zipzi.modeling.spatial.ObjectTargetMesh
 
@@ -113,6 +119,8 @@ Select all descendant meshes of a Part.
 
 `(*, parameters: _Mapping[str, float], results: tuple[SpatialResult, ...])`
 
+Types: [SpatialResult](#zipzimodelingspatialspatialresult).
+
 **Fields**
 
 - `parameters`: Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
@@ -126,12 +134,16 @@ Select all descendant meshes of a Part.
 
 CPU geometric queries; masks, textures and occlusion are not pixel-tested.
 
+Types: [SpatialQueryBounds](#zipzimodelingspatialspatialquerybounds), [SpatialQueryHits](#zipzimodelingspatialspatialqueryhits).
+
 
 ## zipzi.modeling.spatial.SpatialQueryBounds
 
 **Type**
 
 `(*, targets: tuple[ObjectTarget, ...], include_hidden: bool = False)`
+
+Types: [ObjectTarget](#zipzimodelingspatialobjecttarget).
 
 **Fields**
 
@@ -157,12 +169,16 @@ CPU geometric queries; masks, textures and occlusion are not pixel-tested.
 
 `SpatialResultBounds | SpatialResultHits`
 
+Types: [SpatialResultBounds](#zipzimodelingspatialspatialresultbounds), [SpatialResultHits](#zipzimodelingspatialspatialresulthits).
+
 
 ## zipzi.modeling.spatial.SpatialResultBounds
 
 **Type**
 
 `(*, value: ObjectBounds)`
+
+Types: [ObjectBounds](#zipzimodelingspatialobjectbounds).
 
 **Fields**
 
@@ -174,6 +190,8 @@ CPU geometric queries; masks, textures and occlusion are not pixel-tested.
 
 `(*, value: GeometryQuery)`
 
+Types: [GeometryQuery](#zipzimodelingspatialgeometryquery).
+
 **Fields**
 
 - `value`: Geometric candidates in SDK order, including total and truncation metadata.
@@ -183,6 +201,8 @@ CPU geometric queries; masks, textures and occlusion are not pixel-tested.
 **Type**
 
 `(*, version: _Version, requested: tuple[_Mapping[str, float], ...], queries: tuple[SpatialQuery, ...], frames: tuple[SpatialFrame, ...])`
+
+Types: [Version], [SpatialFrame](#zipzimodelingspatialspatialframe), [SpatialQuery](#zipzimodelingspatialspatialquery).
 
 **Fields**
 

@@ -504,10 +504,11 @@ def render(contract):
     binary_source = render_python(binary_path, binary[binary_path])
     output.update(split_binary.split(binary_source, graph, HEADER))
     accept(_dto_codegen.render_dtos(graph.root['dtos'], HEADER, graph.resolve))
-    accept(_api_codegen.render_api(graph.root, HEADER, RUST_HEADER, graph.resolve, codec_domains))
+    documentation = {}
+    accept(_api_codegen.render_api(graph.root, HEADER, RUST_HEADER, graph.resolve, codec_domains, documentation=documentation))
     output['src/generated/mod.rs'] += 'pub mod scene;\npub mod modeling;\npub mod discovery;\n'
     prepared = prepare(output)
-    documents = _api_codegen.document_model(graph.root, prepared, PACKAGE)
+    documents = _api_codegen.document_model(graph.root, prepared, PACKAGE, documentation)
     contract_hash=schema.digest(logical)
     output.update(_catalog_codegen.render_catalog(graph.root, documents, HEADER, contract_hash))
     # rustfmt only sees generated scratch files, never handwritten sources.

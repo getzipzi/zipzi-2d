@@ -33,7 +33,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseAsset': {'children': ('zipzi.modeling.pose.PoseAsset.__repr__',
                                                 'zipzi.modeling.pose.PoseAsset.summary'),
                                    'documentation': '',
-                                   'example': 'docs/recipes.py',
                                    'fields': [('id',
                                                'Stable identity in the owning authoring domain; exported metadata IDs '
                                                'retain their source text.'),
@@ -64,7 +63,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseCollection': {'children': (),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'alias',
                                         'signature': 'PoseCollectionGroups | PoseCollectionEntries | '
@@ -75,7 +73,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseCollectionEntries': {'children': ('zipzi.modeling.pose.PoseCollectionEntries.__repr__',
                                                             'zipzi.modeling.pose.PoseCollectionEntries.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('group_id',
                                                            'Stable ID of the group owning the affected rows or node '
                                                            'chain.')],
@@ -86,7 +83,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseCollectionGroups': {'children': ('zipzi.modeling.pose.PoseCollectionGroups.__repr__',
                                                            'zipzi.modeling.pose.PoseCollectionGroups.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [],
                                               'kind': 'type',
                                               'signature': '()'},
@@ -95,7 +91,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseCollectionLinks': {'children': ('zipzi.modeling.pose.PoseCollectionLinks.__repr__',
                                                           'zipzi.modeling.pose.PoseCollectionLinks.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('entry_id',
                                                          'Stable ID of the owning entry; links remain owned by that '
                                                          'entry.')],
@@ -105,7 +100,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseCollectionLinks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseEdit': {'children': (),
                                   'documentation': '',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'alias',
                                   'signature': 'PoseEditCreate | PoseEditCreateGroup | PoseEditCreateEntry | '
@@ -123,7 +117,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEditCreate': {'children': ('zipzi.modeling.pose.PoseEditCreate.__repr__',
                                                      'zipzi.modeling.pose.PoseEditCreate.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('id',
                                                     'Stable identity in the owning authoring domain; exported metadata '
                                                     'IDs retain their source text.')],
@@ -134,7 +127,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEditCreateEntry': {'children': ('zipzi.modeling.pose.PoseEditCreateEntry.__repr__',
                                                           'zipzi.modeling.pose.PoseEditCreateEntry.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('group_id',
                                                          'Stable ID of the group owning the affected rows or node '
                                                          'chain.'),
@@ -152,7 +144,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                           'zipzi.modeling.pose.PoseEditCreateGroup.summary'),
                                              'documentation': 'Also creates the singleton when absent, in the same '
                                                               'transaction.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('pose_id',
                                                          'Stable Pose singleton ID; the operation may create it when '
                                                          'absent.'),
@@ -173,7 +164,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEditCreateLink': {'children': ('zipzi.modeling.pose.PoseEditCreateLink.__repr__',
                                                          'zipzi.modeling.pose.PoseEditCreateLink.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('entry_id',
                                                         'Stable ID of the owning entry; links remain owned by that '
                                                         'entry.'),
@@ -190,7 +180,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEditDelete': {'children': ('zipzi.modeling.pose.PoseEditDelete.__repr__',
                                                      'zipzi.modeling.pose.PoseEditDelete.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('ids',
                                                     'Ordered stable IDs selected by this operation; names and row '
                                                     'numbers are not identities.')],
@@ -202,7 +191,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                             'zipzi.modeling.pose.PoseEditDissolveGroup.summary'),
                                                'documentation': 'A Pose group has no root member container; a '
                                                                 'receiving group is required.',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id',
                                                            'Stable identity in the owning authoring domain; exported '
                                                            'metadata IDs retain their source text.'),
@@ -220,7 +208,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEditDuplicate': {'children': ('zipzi.modeling.pose.PoseEditDuplicate.__repr__',
                                                         'zipzi.modeling.pose.PoseEditDuplicate.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('ids',
                                                        'Ordered stable IDs selected by this operation; names and row '
                                                        'numbers are not identities.'),
@@ -239,7 +226,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEditMove': {'children': ('zipzi.modeling.pose.PoseEditMove.__repr__',
                                                    'zipzi.modeling.pose.PoseEditMove.summary'),
                                       'documentation': '',
-                                      'example': 'docs/recipes.py',
                                       'fields': [('ids',
                                                   'Ordered stable IDs selected by this operation; names and row '
                                                   'numbers are not identities.'),
@@ -257,7 +243,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEditPatch': {'children': ('zipzi.modeling.pose.PoseEditPatch.__repr__',
                                                     'zipzi.modeling.pose.PoseEditPatch.summary'),
                                        'documentation': '',
-                                       'example': 'docs/recipes.py',
                                        'fields': [('id',
                                                    'Stable identity in the owning authoring domain; exported metadata '
                                                    'IDs retain their source text.'),
@@ -275,7 +260,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEntry': {'children': ('zipzi.modeling.pose.PoseEntry.__repr__',
                                                 'zipzi.modeling.pose.PoseEntry.summary'),
                                    'documentation': '',
-                                   'example': 'docs/recipes.py',
                                    'fields': [('id',
                                                'Stable identity in the owning authoring domain; exported metadata IDs '
                                                'retain their source text.'),
@@ -296,7 +280,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseFields': {'children': (),
                                     'documentation': '',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'alias',
                                     'signature': 'PoseFieldsAsset | PoseFieldsGroup | PoseFieldsEntry | PoseFieldsLink',
@@ -307,7 +290,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseFieldsAsset': {'children': ('zipzi.modeling.pose.PoseFieldsAsset.__repr__',
                                                       'zipzi.modeling.pose.PoseFieldsAsset.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('fade_in',
                                                      'Optional fade-in duration in seconds; None retains the '
                                                      'format/runtime default.')],
@@ -318,7 +300,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseFieldsEntry': {'children': ('zipzi.modeling.pose.PoseFieldsEntry.__repr__',
                                                       'zipzi.modeling.pose.PoseFieldsEntry.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('part',
                                                      'Typed resolved/unresolved Part reference retained by the Pose '
                                                      'entry or link.')],
@@ -330,7 +311,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseFieldsGroup': {'children': ('zipzi.modeling.pose.PoseFieldsGroup.__repr__',
                                                       'zipzi.modeling.pose.PoseFieldsGroup.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('name',
                                                      'Human-readable display or registration name; distinct from '
                                                      'persistent object identity.')],
@@ -341,7 +321,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseFieldsLink': {'children': ('zipzi.modeling.pose.PoseFieldsLink.__repr__',
                                                      'zipzi.modeling.pose.PoseFieldsLink.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('target',
                                                     'Typed target reference; unresolved imported runtime labels remain '
                                                     'explicit.')],
@@ -353,7 +332,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseGroup': {'children': ('zipzi.modeling.pose.PoseGroup.__repr__',
                                                 'zipzi.modeling.pose.PoseGroup.summary'),
                                    'documentation': '',
-                                   'example': 'docs/recipes.py',
                                    'fields': [('id',
                                                'Stable identity in the owning authoring domain; exported metadata IDs '
                                                'retain their source text.'),
@@ -371,7 +349,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseLink': {'children': ('zipzi.modeling.pose.PoseLink.__repr__',
                                                'zipzi.modeling.pose.PoseLink.summary'),
                                   'documentation': '',
-                                  'example': 'docs/recipes.py',
                                   'fields': [('id',
                                               'Stable identity in the owning authoring domain; exported metadata IDs '
                                               'retain their source text.'),
@@ -385,7 +362,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PoseLink.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PosePartRef': {'children': (),
                                      'documentation': '',
-                                     'example': 'docs/recipes.py',
                                      'fields': [],
                                      'kind': 'alias',
                                      'signature': 'PosePartRefUnspecified | PosePartRefResolved | '
@@ -396,7 +372,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PosePartRefResolved': {'children': ('zipzi.modeling.pose.PosePartRefResolved.__repr__',
                                                           'zipzi.modeling.pose.PosePartRefResolved.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('part_id',
                                                          'Stable document Part UUID for this opacity or visibility '
                                                          'reference.')],
@@ -407,7 +382,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PosePartRefUnresolved': {'children': ('zipzi.modeling.pose.PosePartRefUnresolved.__repr__',
                                                             'zipzi.modeling.pose.PosePartRefUnresolved.summary'),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('runtime_id',
                                                            'Imported/exported runtime label, distinct from the '
                                                            'document object UUID.')],
@@ -418,7 +392,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
  'zipzi.modeling.pose.PosePartRefUnspecified': {'children': ('zipzi.modeling.pose.PosePartRefUnspecified.__repr__',
                                                              'zipzi.modeling.pose.PosePartRefUnspecified.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [],
                                                 'kind': 'type',
                                                 'signature': '()'},

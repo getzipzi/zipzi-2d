@@ -28,16 +28,13 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                     'host state. Session queries read committed content, including while an Edit is '
                                     'open. Use session.edit(label) to author candidate changes; commit publishes into '
                                     'shared history and saving is separate.',
-                   'example': 'docs/recipes.py',
                    'fields': [],
                    'kind': 'type',
-                   'signature': '(factory-owned; use the documented public entry)',
-                   'type_refs': ('zipzi.Runtime',)},
+                   'signature': '(factory-owned; use the documented public entry)'},
  'zipzi.Session.address': {'children': (),
                            'documentation': 'Capture a field address with incarnation, context and field epochs. The '
                                             'returned handle owns a lease and must be closed; recreated IDs cannot '
                                             'revive an old address.',
-                           'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
                            'signature': '(selector: modeling.addressing.AddressSelector) -> references.FieldAddress',
@@ -47,19 +44,54 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                          'zipzi.Session.bindings.list'),
                             'documentation': 'Read bindings through a Session or Edit. Session reads committed '
                                              'document content; Edit reads include its pending writes.',
-                            'example': 'docs/recipes.py',
                             'fields': [],
                             'kind': 'property',
                             'signature': 'session.bindings',
                             'type_refs': ('zipzi.Edit', 'zipzi.Session')},
- 'zipzi.Session.bindings.get': {'alias': 'zipzi.Edit.bindings.get'},
- 'zipzi.Session.bindings.get_many': {'alias': 'zipzi.Edit.bindings.get_many'},
- 'zipzi.Session.bindings.list': {'alias': 'zipzi.Edit.bindings.list'},
+ 'zipzi.Session.bindings.get': {'children': (),
+                                'documentation': 'Reads committed Session content.\n'
+                                                 '\n'
+                                                 'Read one value synchronously by stable document ID, not name. '
+                                                 'Returns Snapshot[value] with the captured Source; no lease needs '
+                                                 'closing. Query failures preserve the Edit. Recover OutcomeUnknown '
+                                                 'through the original Call.',
+                                'fields': [],
+                                'kind': 'callable',
+                                'rule_refs': ('collection-read',),
+                                'signature': '(id: str, *, expected: Source | None=None) -> '
+                                             'Snapshot[bindings.MeshBinding]',
+                                'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.bindings.MeshBinding')},
+ 'zipzi.Session.bindings.get_many': {'children': (),
+                                     'documentation': 'Reads committed Session content.\n'
+                                                      '\n'
+                                                      'Read selected stable IDs synchronously from one Source. Copies '
+                                                      'ids and preserves requested order and duplicates. Returns '
+                                                      'Batch[value], with a valid Source even for empty ids; no lease '
+                                                      'needs closing. Query failures preserve the Edit; recover '
+                                                      'OutcomeUnknown through the original Call.',
+                                     'fields': [],
+                                     'kind': 'callable',
+                                     'rule_refs': ('collection-read',),
+                                     'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
+                                                  'Batch[bindings.MeshBinding]',
+                                     'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.bindings.MeshBinding')},
+ 'zipzi.Session.bindings.list': {'children': (),
+                                 'documentation': 'Reads committed Session content.\n'
+                                                  '\n'
+                                                  'Read a bounded metadata Page synchronously in SDK storage order, '
+                                                  'without geometry/keyform/pixel payloads. The Page captures its '
+                                                  'Source and needs no close. Query failures preserve the Edit; '
+                                                  'recover OutcomeUnknown through the original Call.',
+                                 'fields': [],
+                                 'kind': 'callable',
+                                 'rule_refs': ('collection-page',),
+                                 'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | '
+                                              'None=None) -> Page[bindings.Summary]',
+                                 'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Session.capabilities': {'children': (),
                                 'documentation': 'Query selected collection capabilities at the captured formal '
                                                  'Source. Results explain available/unavailable/unsupported states and '
                                                  'do not reserve future admission.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '(query: modeling.queries.CollectionQuery) -> '
@@ -80,7 +112,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                           'response\n'
                                           'must recover the original close and returns the same final metadata.\n'
                                           'Example: session.close(discard_modified=True) when discarding is intended.',
-                         'example': 'docs/recipes.py',
                          'fields': [],
                          'kind': 'callable',
                          'signature': '(*, discard_modified: bool=False) -> SessionInfo',
@@ -88,7 +119,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
  'zipzi.Session.detach': {'children': (),
                           'documentation': "Release this client's binding and its references. Active work refuses "
                                            'detach; the host session remains resident. Aliases become invalid.',
-                          'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'callable',
                           'signature': '() -> None'},
@@ -96,7 +126,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                         'documentation': 'Begin an explicit candidate with a history label. Reads see candidate '
                                          'changes; normal context exit commits and waits. Confirmed write failures '
                                          'require a new Edit and unknown outcomes require original-call recovery.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': "(label: str) -> 'Edit'",
@@ -105,7 +134,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                   'documentation': 'Read an owned optional Editor context and exact formal Source. '
                                                    'Local or non-Editor hosts can return None; no Editor object is '
                                                    'exposed.',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '() -> Snapshot[modeling.runtime.EditorContext | None]',
@@ -113,7 +141,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
  'zipzi.Session.id': {'children': (),
                       'documentation': 'Return cached Runtime-scoped identity without IO. Persistent object IDs belong '
                                        'to this session and do not substitute for a SessionId.',
-                      'example': 'docs/recipes.py',
                       'fields': [],
                       'kind': 'property',
                       'signature': ': SessionId',
@@ -121,7 +148,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
  'zipzi.Session.info': {'children': (),
                         'documentation': 'Read current version, modified state, history lengths, path and host state. '
                                          'Returns an owned value; a lost response recovers the original query.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': '() -> SessionInfo',
@@ -131,14 +157,49 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                        'zipzi.Session.meshes.list'),
                           'documentation': 'Read meshes through a Session or Edit. Session reads committed document '
                                            'content; Edit reads include its pending writes.',
-                          'example': 'docs/recipes.py',
                           'fields': [],
                           'kind': 'property',
                           'signature': 'session.meshes',
                           'type_refs': ('zipzi.Edit', 'zipzi.Session')},
- 'zipzi.Session.meshes.get': {'alias': 'zipzi.Edit.meshes.get'},
- 'zipzi.Session.meshes.get_many': {'alias': 'zipzi.Edit.meshes.get_many'},
- 'zipzi.Session.meshes.list': {'alias': 'zipzi.Edit.meshes.list'},
+ 'zipzi.Session.meshes.get': {'children': (),
+                              'documentation': 'Reads committed Session content.\n'
+                                               '\n'
+                                               'Read one value synchronously by stable document ID, not name. Returns '
+                                               'Snapshot[value] with the captured Source; no lease needs closing. '
+                                               'Query failures preserve the Edit. Recover OutcomeUnknown through the '
+                                               'original Call.',
+                              'fields': [],
+                              'kind': 'callable',
+                              'rule_refs': ('collection-read',),
+                              'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[meshes.Mesh]',
+                              'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.meshes.Mesh')},
+ 'zipzi.Session.meshes.get_many': {'children': (),
+                                   'documentation': 'Reads committed Session content.\n'
+                                                    '\n'
+                                                    'Read selected stable IDs synchronously from one Source. Copies '
+                                                    'ids and preserves requested order and duplicates. Returns '
+                                                    'Batch[value], with a valid Source even for empty ids; no lease '
+                                                    'needs closing. Query failures preserve the Edit; recover '
+                                                    'OutcomeUnknown through the original Call.',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'rule_refs': ('collection-read',),
+                                   'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
+                                                'Batch[meshes.Mesh]',
+                                   'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.meshes.Mesh')},
+ 'zipzi.Session.meshes.list': {'children': (),
+                               'documentation': 'Reads committed Session content.\n'
+                                                '\n'
+                                                'Read a bounded metadata Page synchronously in SDK storage order, '
+                                                'without geometry/keyform/pixel payloads. The Page captures its Source '
+                                                'and needs no close. Query failures preserve the Edit; recover '
+                                                'OutcomeUnknown through the original Call.',
+                               'fields': [],
+                               'kind': 'callable',
+                               'rule_refs': ('collection-page',),
+                               'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | '
+                                            'None=None) -> Page[meshes.Summary]',
+                               'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Session.modeling': {'children': ('zipzi.Session.modeling.estimate_observation',
                                          'zipzi.Session.modeling.observe',
                                          'zipzi.Session.modeling.records',
@@ -146,7 +207,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                          'zipzi.Session.modeling.sample_async',
                                          'zipzi.Session.modeling.spatial'),
                             'documentation': '',
-                            'example': 'docs/recipes.py',
                             'fields': [],
                             'kind': 'property',
                             'signature': 'session.modeling',
@@ -162,19 +222,54 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                            'zipzi.Session.parameters.list'),
                               'documentation': 'Read parameters through a Session or Edit. Session reads committed '
                                                'document content; Edit reads include its pending writes.',
-                              'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'property',
                               'signature': 'session.parameters',
                               'type_refs': ('zipzi.Edit', 'zipzi.Session')},
- 'zipzi.Session.parameters.get': {'alias': 'zipzi.Edit.parameters.get'},
- 'zipzi.Session.parameters.get_many': {'alias': 'zipzi.Edit.parameters.get_many'},
- 'zipzi.Session.parameters.list': {'alias': 'zipzi.Edit.parameters.list'},
+ 'zipzi.Session.parameters.get': {'children': (),
+                                  'documentation': 'Reads committed Session content.\n'
+                                                   '\n'
+                                                   'Read one value synchronously by stable document ID, not name. '
+                                                   'Returns Snapshot[value] with the captured Source; no lease needs '
+                                                   'closing. Query failures preserve the Edit. Recover OutcomeUnknown '
+                                                   'through the original Call.',
+                                  'fields': [],
+                                  'kind': 'callable',
+                                  'rule_refs': ('collection-read',),
+                                  'signature': '(id: str, *, expected: Source | None=None) -> '
+                                               'Snapshot[parameters.Parameter]',
+                                  'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.parameters.Parameter')},
+ 'zipzi.Session.parameters.get_many': {'children': (),
+                                       'documentation': 'Reads committed Session content.\n'
+                                                        '\n'
+                                                        'Read selected stable IDs synchronously from one Source. '
+                                                        'Copies ids and preserves requested order and duplicates. '
+                                                        'Returns Batch[value], with a valid Source even for empty ids; '
+                                                        'no lease needs closing. Query failures preserve the Edit; '
+                                                        'recover OutcomeUnknown through the original Call.',
+                                       'fields': [],
+                                       'kind': 'callable',
+                                       'rule_refs': ('collection-read',),
+                                       'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
+                                                    'Batch[parameters.Parameter]',
+                                       'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.parameters.Parameter')},
+ 'zipzi.Session.parameters.list': {'children': (),
+                                   'documentation': 'Reads committed Session content.\n'
+                                                    '\n'
+                                                    'Read a bounded metadata Page synchronously in SDK storage order, '
+                                                    'without geometry/keyform/pixel payloads. The Page captures its '
+                                                    'Source and needs no close. Query failures preserve the Edit; '
+                                                    'recover OutcomeUnknown through the original Call.',
+                                   'fields': [],
+                                   'kind': 'callable',
+                                   'rule_refs': ('collection-page',),
+                                   'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | '
+                                                'None=None) -> Page[parameters.Summary]',
+                                   'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Session.plan': {'children': (),
                         'documentation': 'Plan a registered typed domain operation against the exact formal Source. '
                                          'Read cost/losses, apply through an Edit, then close the Plan. Planning '
                                          'failures do not abort another candidate.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': '(operation: ops.PlannableOperation) -> plans.Plan',
@@ -183,7 +278,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                               'documentation': 'Submit a registered expensive modeling plan at the captured Source. '
                                                'Returns Job[Plan]; wait before applying and close the resulting Plan. '
                                                'Input type determines this explicit Job API.',
-                              'example': 'docs/recipes.py',
                               'fields': [],
                               'kind': 'callable',
                               'signature': '(operation: ModelingPlanOperation) -> Job[plans.Plan]',
@@ -192,7 +286,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                            'documentation': 'Capture an independent frozen formal animation Preview. Close it '
                                             'explicitly; later edits never refresh it, and playback never changes '
                                             'document history.',
-                           'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'callable',
                            'signature': '(*, expected: Source | None=None) -> Preview',
@@ -205,7 +298,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                         'zipzi.Session.project.save'),
                            'documentation': 'Host-side format and persistence operations. Every path is absolute on '
                                             'the selected execution host; IO returns explicit Jobs.',
-                           'example': 'docs/recipes.py',
                            'fields': [],
                            'kind': 'property',
                            'signature': 'session.project',
@@ -214,7 +306,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                     'documentation': 'Submit SDK project diagnostics without publishing edited model '
                                                      'content. Returns Job[ProjectReport] with owned diagnostics; wait '
                                                      'releases the result slot.',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'callable',
                                     'signature': '() -> Job[modeling.project.ProjectReport]',
@@ -223,7 +314,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                   'documentation': 'Submit a selected export to a host-absolute path. allow_loss, '
                                                    'animation baking and frame-rate choices are explicit. Read report '
                                                    'losses/published and wait for the durable IO outcome.',
-                                  'example': 'docs/recipes.py',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '(path: Path, format: modeling.project.ExportFormat, *, name: '
@@ -237,7 +327,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                 'documentation': 'Replace this session from an absolute host project path through an '
                                                  'explicit Job. Successful replacement advances generation and '
                                                  'invalidates old source-bound addresses/plans.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '(path: Path) -> Job[modeling.project.ProjectReport]',
@@ -246,7 +335,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                    'documentation': 'Submit explicit format import to replace this session. Textures '
                                                     'are host-absolute slots. Wait for the real report; generation '
                                                     'changes only after confirmed publication.',
-                                   'example': 'docs/recipes.py',
                                    'fields': [],
                                    'kind': 'callable',
                                    'signature': '(path: Path, format: modeling.project.ImportFormat, *, textures: '
@@ -260,7 +348,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                'documentation': 'Submit one typed ProjectRequest and return Job[ProjectReport]. Input '
                                                 'selects explicit format/IO policy; losses and notices belong to the '
                                                 'report. Wait and verify before claiming publication.',
-                               'example': 'docs/recipes.py',
                                'fields': [],
                                'kind': 'callable',
                                'signature': '(request: modeling.project.ProjectRequest) -> '
@@ -277,7 +364,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                  'save to probe its outcome. The Job owns a bounded result slot '
                                                  'released by wait/close. Example: saved = '
                                                  'session.project.save(absolute_folder).wait(); assert saved.durable.',
-                                'example': 'docs/recipes.py',
                                 'fields': [],
                                 'kind': 'callable',
                                 'signature': '(path: Path) -> Job[SaveReceipt]',
@@ -286,7 +372,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                         'documentation': 'Submit one formal history redo and return Job[Receipt]. Wait for the actual '
                                          'receipt. Cancelling or a no-op Edit preserves redo according to SDK history '
                                          'rules.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': '() -> Job[Receipt]',
@@ -295,7 +380,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                              'documentation': 'Capture an SDK object reference for the declared kind and canonical '
                                               'UUID. Runtime validates session ownership and incarnation. Close the '
                                               'returned reference after use.',
-                             'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'callable',
                              'signature': '(kind: references.ObjectKind, id: str) -> references.ObjectRef',
@@ -306,28 +390,98 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                           'zipzi.Session.resources.snapshot'),
                              'documentation': 'Read resources through a Session or Edit. Session reads committed '
                                               'document content; Edit reads include its pending writes.',
-                             'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'property',
                              'signature': 'session.resources',
                              'type_refs': ('zipzi.Edit', 'zipzi.Session')},
- 'zipzi.Session.resources.get': {'alias': 'zipzi.Edit.resources.get'},
- 'zipzi.Session.resources.get_many': {'alias': 'zipzi.Edit.resources.get_many'},
- 'zipzi.Session.resources.list': {'alias': 'zipzi.Edit.resources.list'},
+ 'zipzi.Session.resources.get': {'children': (),
+                                 'documentation': 'Reads committed Session content.\n'
+                                                  '\n'
+                                                  'Read one value synchronously by stable document ID, not name. '
+                                                  'Returns Snapshot[value] with the captured Source; no lease needs '
+                                                  'closing. Query failures preserve the Edit. Recover OutcomeUnknown '
+                                                  'through the original Call.',
+                                 'fields': [],
+                                 'kind': 'callable',
+                                 'rule_refs': ('collection-read',),
+                                 'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[resources.Image]',
+                                 'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.resources.Image')},
+ 'zipzi.Session.resources.get_many': {'children': (),
+                                      'documentation': 'Reads committed Session content.\n'
+                                                       '\n'
+                                                       'Read selected stable IDs synchronously from one Source. Copies '
+                                                       'ids and preserves requested order and duplicates. Returns '
+                                                       'Batch[value], with a valid Source even for empty ids; no lease '
+                                                       'needs closing. Query failures preserve the Edit; recover '
+                                                       'OutcomeUnknown through the original Call.',
+                                      'fields': [],
+                                      'kind': 'callable',
+                                      'rule_refs': ('collection-read',),
+                                      'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
+                                                   'Batch[resources.Image]',
+                                      'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.resources.Image')},
+ 'zipzi.Session.resources.list': {'children': (),
+                                  'documentation': 'Reads committed Session content.\n'
+                                                   '\n'
+                                                   'Read a bounded metadata Page synchronously in SDK storage order, '
+                                                   'without geometry/keyform/pixel payloads. The Page captures its '
+                                                   'Source and needs no close. Query failures preserve the Edit; '
+                                                   'recover OutcomeUnknown through the original Call.',
+                                  'fields': [],
+                                  'kind': 'callable',
+                                  'rule_refs': ('collection-page',),
+                                  'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | '
+                                               'None=None) -> Page[resources.Summary]',
+                                  'type_refs': ('zipzi.ObjectSummary', 'zipzi.Page', 'zipzi.PageCursor')},
  'zipzi.Session.resources.snapshot': {'alias': 'zipzi.Edit.resources.snapshot'},
  'zipzi.Session.scene': {'children': ('zipzi.Session.scene.get',
                                       'zipzi.Session.scene.get_many',
                                       'zipzi.Session.scene.list'),
                          'documentation': 'Read scene through a Session or Edit. Session reads committed document '
                                           'content; Edit reads include its pending writes.',
-                         'example': 'docs/recipes.py',
                          'fields': [],
                          'kind': 'property',
                          'signature': 'session.scene',
                          'type_refs': ('zipzi.Edit', 'zipzi.Session')},
- 'zipzi.Session.scene.get': {'alias': 'zipzi.Edit.scene.get'},
- 'zipzi.Session.scene.get_many': {'alias': 'zipzi.Edit.scene.get_many'},
- 'zipzi.Session.scene.list': {'alias': 'zipzi.Edit.scene.list'},
+ 'zipzi.Session.scene.get': {'children': (),
+                             'documentation': 'Reads committed Session content.\n'
+                                              '\n'
+                                              'Read one value synchronously by stable document ID, not name. Returns '
+                                              'Snapshot[value] with the captured Source; no lease needs closing. Query '
+                                              'failures preserve the Edit. Recover OutcomeUnknown through the original '
+                                              'Call.',
+                             'fields': [],
+                             'kind': 'callable',
+                             'rule_refs': ('collection-read',),
+                             'signature': '(id: str, *, expected: Source | None=None) -> Snapshot[scene.Summary]',
+                             'type_refs': ('zipzi.Snapshot', 'zipzi.Source', 'zipzi.scene.Summary')},
+ 'zipzi.Session.scene.get_many': {'children': (),
+                                  'documentation': 'Reads committed Session content.\n'
+                                                   '\n'
+                                                   'Read selected stable IDs synchronously from one Source. Copies ids '
+                                                   'and preserves requested order and duplicates. Returns '
+                                                   'Batch[value], with a valid Source even for empty ids; no lease '
+                                                   'needs closing. Query failures preserve the Edit; recover '
+                                                   'OutcomeUnknown through the original Call.',
+                                  'fields': [],
+                                  'kind': 'callable',
+                                  'rule_refs': ('collection-read',),
+                                  'signature': '(ids: Sequence[str], *, expected: Source | None=None) -> '
+                                               'Batch[scene.Summary]',
+                                  'type_refs': ('zipzi.Batch', 'zipzi.Source', 'zipzi.scene.Summary')},
+ 'zipzi.Session.scene.list': {'children': (),
+                              'documentation': 'Reads committed Session content.\n'
+                                               '\n'
+                                               'Read a bounded metadata Page synchronously in SDK storage order, '
+                                               'without geometry/keyform/pixel payloads. The Page captures its Source '
+                                               'and needs no close. Query failures preserve the Edit; recover '
+                                               'OutcomeUnknown through the original Call.',
+                              'fields': [],
+                              'kind': 'callable',
+                              'rule_refs': ('collection-page',),
+                              'signature': '(*, name: str | None=None, limit: int=128, cursor: PageCursor | None=None) '
+                                           '-> Page[scene.Summary]',
+                              'type_refs': ('zipzi.Page', 'zipzi.PageCursor', 'zipzi.scene.Summary')},
  'zipzi.Session.show_window': {'children': (),
                                'documentation': 'Synchronously display this resident document in the connected desktop '
                                                 'host.\n'
@@ -339,7 +493,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                                 'than model/history, and owns no new client lease. Recover an unknown\n'
                                                 'response through the original call before requesting another window.\n'
                                                 'Example: session.show_window().',
-                               'example': 'docs/recipes.py',
                                'fields': [],
                                'kind': 'callable',
                                'signature': '() -> None'},
@@ -347,7 +500,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                              'documentation': 'Capture SessionInfo and an independent exact event cursor. Poll '
                                               'explicit bounded pages and resync on gaps; subscribed metadata does not '
                                               'hold a model mirror.',
-                             'example': 'docs/recipes.py',
                              'fields': [],
                              'kind': 'callable',
                              'signature': '() -> events.SessionSubscription',
@@ -356,7 +508,6 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                         'documentation': 'Submit one formal history undo and return Job[Receipt]. Wait for confirmed '
                                          'content/version/history; conflicting or busy sessions reject without '
                                          'silently changing the target.',
-                        'example': 'docs/recipes.py',
                         'fields': [],
                         'kind': 'callable',
                         'signature': '() -> Job[Receipt]',

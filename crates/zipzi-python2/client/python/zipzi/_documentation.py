@@ -5,7 +5,7 @@ from ._presentation import CompactValue
 
 @dataclass(frozen=True,repr=False)
 class ApiDescription(CompactValue):
-    'One installed offline API entry; it describes the client package rather than probing host support.\n\nFields:\npath: Canonical public API path under zipzi.\nkind: Directory entry category such as module, type, callable or value.\nsignature: Rendered public signature; empty for entries without a callable/type signature.\ndocumentation: Semantic docstring for this installed entry.\nfields: Ordered pairs of public field name and semantic description; empty when no value fields are declared.\nchildren: Canonical child entry paths for further bounded describe queries.\ntype_refs: Referenced public type paths resolved from source annotations.\nexample: Package-relative workflow/example reference; empty when no example is assigned.'
+    'One installed offline API entry; it describes the client package rather than probing host support.\n\nFields:\npath: Canonical public API path under zipzi.\nkind: Directory entry category such as module, type, callable or value.\nsignature: Rendered public signature; empty for entries without a callable/type signature.\ndocumentation: Entry-specific semantics; rules contains the directly referenced shared explanations.\nfields: Ordered pairs of public field name and semantic description; empty when no value fields are declared.\nchildren: Canonical child entry paths for further bounded describe queries.\ntype_refs: Referenced public type paths resolved from source annotations.\nexample: Package-relative workflow/example reference; empty when no example is assigned.\nrule_refs: Direct shared rule identities; rules are leaves and never query children or referenced types.\nrules: Resolved title/text pairs for the directly referenced rules, expanded once by format().\nfield_roles: Field name, projection display role and fixed value for explicitly declared projections.'
     __module__='zipzi'
     path:str
     kind:str
@@ -15,12 +15,16 @@ class ApiDescription(CompactValue):
     children:tuple[str,...]=()
     example:str=''
     type_refs:tuple[str,...]=()
+    rule_refs:tuple[str,...]=()
+    rules:tuple[tuple[str,str],...]=()
+    field_roles:tuple[tuple[str,str,str],...]=()
 
     def format(self) -> str:
         """Return complete help text without truncation or IO.
 
         Use print(description.format()) for full help. repr, str and summary
-        remain bounded previews; formatting does not recursively query children.
+        remain bounded previews. Direct shared rules expand once; children and
+        type references remain paths and are never recursively queried.
         """
         lines=[self.path+' ('+self.kind+')']
         if self.signature:lines.extend(('',self.signature))
@@ -28,6 +32,8 @@ class ApiDescription(CompactValue):
         if self.fields:
             lines.extend(('', 'Fields:'))
             lines.extend(name+': '+text for name,text in self.fields)
+        for title,text in self.rules:
+            lines.extend(('',title+':',text))
         if self.children:
             lines.extend(('', 'Children:', *self.children))
         if self.type_refs:lines.extend(('', 'Types:', *self.type_refs))
@@ -54,4 +60,4 @@ def describe(path:str)->ApiDescription:
 def _describe(key:str)->ApiDescription:
     from ._generated.catalog import lookup
     raw=lookup(key)
-    return ApiDescription(key,raw['kind'],raw.get('signature',''),raw.get('documentation',''),tuple(raw.get('fields',())),tuple(raw.get('children',())),raw.get('example',''),tuple(raw.get('type_refs',())))
+    return ApiDescription(key,raw['kind'],raw.get('signature',''),raw.get('documentation',''),tuple(raw.get('fields',())),tuple(raw.get('children',())),raw.get('example',''),tuple(raw.get('type_refs',())),raw.get('rule_refs',()),raw.get('rules',()),raw.get('field_roles',()))

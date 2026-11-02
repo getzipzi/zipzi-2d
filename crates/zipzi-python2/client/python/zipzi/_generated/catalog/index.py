@@ -19,6 +19,8 @@ class Entry(TypedDict, total=False):
     example: str
     alias: str
     common: str
+    rule_refs: tuple[str, ...]
+    field_roles: tuple[tuple[str, str, str], ...]
 
 class Resolved(TypedDict, total=False):
     kind: Required[str]
@@ -29,19 +31,25 @@ class Resolved(TypedDict, total=False):
     type_refs: tuple[str, ...]
     example: str
     common: str
+    rule_refs: tuple[str, ...]
+    rules: tuple[tuple[str, str], ...]
+    field_roles: tuple[tuple[str, str, str], ...]
 
-def _group(path: str) -> str:
+def page_group(path: str, domains: tuple[str, ...], modeling_domains: tuple[str, ...]) -> str:
     parts = path.split('.')
-    segment = parts[1] if len(parts)>1 else ''
-    if segment == 'modeling' and len(parts)>2 and parts[2] in MODELING_DOMAINS:
-        if len(parts)>3:
+    segment = parts[1] if len(parts) > 1 else ''
+    if segment == 'modeling' and len(parts) > 2 and parts[2] in modeling_domains:
+        if len(parts) > 3:
             for suffix, prefixes in SPLITS.get(parts[2], {}).items():
                 if parts[3].startswith(prefixes):
                     return 'modeling_' + parts[2] + '_' + suffix
         return 'modeling_' + parts[2]
     if segment in {'Session', 'Edit'}:
         return 'runtime_' + segment.lower()
-    return segment if segment in DOMAINS else 'runtime'
+    return segment if segment in domains else 'runtime'
+
+def _group(path: str) -> str:
+    return page_group(path, DOMAINS, MODELING_DOMAINS)
 
 def _data(name: str) -> dict[str, Entry]:
     return cast(dict[str, Entry], import_module('.' + name, __package__).DATA)
@@ -60,6 +68,12 @@ def lookup(path: str) -> Resolved:
                 from .common import COMMON
                 result['documentation'] = COMMON[result['common']]
                 del result['common']
+            refs = result.get('rule_refs', ())
+            if refs:
+                from .rules import RULES
+                if len(refs) != len(set(refs)) or any(key not in RULES for key in refs):
+                    raise ValueError('Invalid documentation rule reference')
+                result['rules'] = tuple((RULES[key][0], RULES[key][1]) for key in refs)
             result['children'] = tuple(requested + c[len(path):] if c.startswith(path + '.') else c for c in result.get('children', ()))
             return result
         path = row['alias']

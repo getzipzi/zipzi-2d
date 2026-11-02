@@ -13,12 +13,16 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `BindingAuthoringEditGrid | BindingAuthoringEditBlend | BindingAuthoringEditMeshGrid | BindingAuthoringEditParameterRange | BindingAuthoringEditReparent`
 
+Types: [BindingAuthoringEditBlend](#zipzimodelingbindingsbindingauthoringeditblend), [BindingAuthoringEditGrid](#zipzimodelingbindingsbindingauthoringeditgrid), [BindingAuthoringEditMeshGrid](#zipzimodelingbindingsbindingauthoringeditmeshgrid), [BindingAuthoringEditParameterRange](#zipzimodelingbindingsbindingauthoringeditparameterrange), [BindingAuthoringEditReparent](#zipzimodelingbindingsbindingauthoringeditreparent).
+
 
 ## zipzi.modeling.bindings.BindingAuthoringEditBlend
 
 **Type**
 
 `(*, value: BlendAuthoringEdit)`
+
+Types: [BlendAuthoringEdit](#zipzimodelingbindingsblendauthoringedit).
 
 **Fields**
 
@@ -31,6 +35,8 @@ rather than mutating this value.
 
 `(*, value: BindingGridEdit)`
 
+Types: [BindingGridEdit](#zipzimodelingbindingsbindinggridedit).
+
 **Fields**
 
 - `value`: Typed intent for ordinary binding-grid edits; apply/plan it against a Session/Edit
@@ -41,6 +47,8 @@ source rather than mutating this value.
 **Type**
 
 `(*, value: MeshGridEdit)`
+
+Types: [MeshGridEdit](#zipzimodelingbindingsmeshgridedit).
 
 **Fields**
 
@@ -53,6 +61,8 @@ source rather than mutating this value.
 
 `(*, value: ParameterRangeEdit)`
 
+Types: [ParameterRangeEdit].
+
 **Fields**
 
 - `value`: Typed intent for parameter range conversion; apply/plan it against a Session/Edit
@@ -63,6 +73,8 @@ source rather than mutating this value.
 **Type**
 
 `(*, value: ReparentEdit)`
+
+Types: [ReparentEdit].
 
 **Fields**
 
@@ -75,12 +87,16 @@ source rather than mutating this value.
 
 `BindingGridEditDelete | BindingGridEditCreate | BindingGridEditEdit`
 
+Types: [BindingGridEditCreate](#zipzimodelingbindingsbindinggrideditcreate), [BindingGridEditDelete](#zipzimodelingbindingsbindinggrideditdelete), [BindingGridEditEdit](#zipzimodelingbindingsbindinggrideditedit).
+
 
 ## zipzi.modeling.bindings.BindingGridEditCreate
 
 **Type**
 
 `(*, id: str, target: BindingGridTarget)`
+
+Types: [BindingGridTarget].
 
 **Fields**
 
@@ -106,6 +122,8 @@ Explicitly discard owned shapes and return to the unchanged base target.
 
 `(*, owner: str, operation: GridOperation)`
 
+Types: [GridOperation].
+
 **Fields**
 
 - `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
@@ -117,12 +135,16 @@ Explicitly discard owned shapes and return to the unchanged base target.
 
 `BlendAuthoringEditCreateTable | BlendAuthoringEditCreateConstraint | BlendAuthoringEditCreateBinding | BlendAuthoringEditTable | BlendAuthoringEditConstraint | BlendAuthoringEditSetBindingTable`
 
+Types: [BlendAuthoringEditConstraint](#zipzimodelingbindingsblendauthoringeditconstraint), [BlendAuthoringEditCreateBinding](#zipzimodelingbindingsblendauthoringeditcreatebinding), [BlendAuthoringEditCreateConstraint](#zipzimodelingbindingsblendauthoringeditcreateconstraint), [BlendAuthoringEditCreateTable](#zipzimodelingbindingsblendauthoringeditcreatetable), [BlendAuthoringEditSetBindingTable](#zipzimodelingbindingsblendauthoringeditsetbindingtable), [BlendAuthoringEditTable](#zipzimodelingbindingsblendauthoringedittable).
+
 
 ## zipzi.modeling.bindings.BlendAuthoringEditConstraint
 
 **Type**
 
 `(*, id: str, parameter_id: str, samples: tuple[ConstraintSample, ...])`
+
+Types: [ConstraintSample].
 
 **Fields**
 
@@ -137,6 +159,8 @@ runtime_id.
 
 `(*, id: str, target_id: str, target_kind: BlendShapeTargetKind, key_table_id: str)`
 
+Types: [BlendShapeTargetKind].
+
 **Fields**
 
 - `id`: New stable UUID for this object; it must not conflict with an existing identity.
@@ -150,6 +174,8 @@ runtime_id.
 
 `(*, constraint: BlendShapeConstraint)`
 
+Types: [BlendShapeConstraint].
+
 **Fields**
 
 - `constraint`: Complete BlendShape constraint with its driving parameter and weighted samples.
@@ -159,6 +185,8 @@ runtime_id.
 **Type**
 
 `(*, table: BlendShapeKeyTable)`
+
+Types: [BlendShapeKeyTable].
 
 **Fields**
 
@@ -183,6 +211,8 @@ runtime_id.
 
 `(*, id: str, operation: BlendTableOperation)`
 
+Types: [BlendTableOperation].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -195,12 +225,16 @@ runtime_id.
 
 `MeshGridEditCreate | MeshGridEditAddAxis | MeshGridEditReorderAxes | MeshGridEditInsertSample | MeshGridEditMoveSample | MeshGridEditDeleteSample | MeshGridEditRemoveAxis`
 
+Types: [MeshGridEditAddAxis](#zipzimodelingbindingsmeshgrideditaddaxis), [MeshGridEditCreate](#zipzimodelingbindingsmeshgrideditcreate), [MeshGridEditDeleteSample](#zipzimodelingbindingsmeshgrideditdeletesample), [MeshGridEditInsertSample](#zipzimodelingbindingsmeshgrideditinsertsample), [MeshGridEditMoveSample](#zipzimodelingbindingsmeshgrideditmovesample), [MeshGridEditRemoveAxis](#zipzimodelingbindingsmeshgrideditremoveaxis), [MeshGridEditReorderAxes](#zipzimodelingbindingsmeshgrideditreorderaxes).
+
 
 ## zipzi.modeling.bindings.MeshGridEditAddAxis
 
 **Type**
 
 `(*, binding_id: str, axis: BindingAxis)`
+
+Types: [BindingAxis].
 
 **Fields**
 
@@ -261,6 +295,8 @@ from the parameter ID.
 **Type**
 
 `(*, binding_id: str, parameter_id: str, reduction: AxisReduction)`
+
+Types: [AxisReduction].
 
 **Fields**
 

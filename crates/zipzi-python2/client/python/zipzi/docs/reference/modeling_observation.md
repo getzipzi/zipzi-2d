@@ -20,6 +20,8 @@ Canonical observation modeling values.
 
 `(*, texture_report: ObservationTextureReport, view: ObservationView, requested: tuple[_Mapping[str, float], ...], frames: tuple[ObservationImage, ...])`
 
+Types: [ObservationImage](#zipzimodelingobservationobservationimage), [ObservationTextureReport](#zipzimodelingobservationobservationtexturereport), [ObservationView](#zipzimodelingobservationobservationview).
+
 **Fields**
 
 - `texture_report`: Verified once-per-batch source and rendering texture content.
@@ -35,6 +37,8 @@ Canonical observation modeling values.
 
 A source content identity includes its representation. A PNG byte digest
 and a domain-separated straight RGBA8 pixel digest are not interchangeable.
+
+Types: [ObservationContentIdentityPngSha256](#zipzimodelingobservationobservationcontentidentitypngsha256), [ObservationContentIdentityRgba8Sha256](#zipzimodelingobservationobservationcontentidentityrgba8sha256).
 
 
 ## zipzi.modeling.observation.ObservationContentIdentityPngSha256
@@ -65,6 +69,8 @@ and a domain-separated straight RGBA8 pixel digest are not interchangeable.
 
 Synchronous metadata estimate; it does not pin a plan, reserve a task, decode
 resources, evaluate poses, replay animation or initialize a GPU.
+
+Types: [Source], [ObservationEstimateIssue](#zipzimodelingobservationobservationestimateissue), [ObservationTexturePlanning](#zipzimodelingobservationobservationtextureplanning).
 
 **Fields**
 
@@ -104,6 +110,8 @@ resources, evaluate poses, replay animation or initialize a GPU.
 
 `(*, width: int, height: int, rgba: _Bytes, png: _Bytes, document_id: str, evaluation_revision: int, capture_id: str, scene_digest: str, render_digest: str, input_sha256: str, adapter_name: str, adapter_backend: str, parameters: _Mapping[str, float], visible_roi: tuple[float, float, float, float], scale: float, offset: tuple[float, float], drawable_bounds: tuple[ObservedBounds, ...], quality: tuple[MeshQuality, ...])`
 
+Types: [ObservedBounds](#zipzimodelingobservationobservedbounds), [MeshQuality].
+
 **Fields**
 
 - `width`: Output image width in pixels.
@@ -137,6 +145,8 @@ Feasible deterministic CPU plan. Clients cannot submit this as a trusted
 execution plan. Mipmap bytes exclude the base level and are logical bytes,
 not GPU allocation measurements.
 
+Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepolicy), [ObservationTextureTarget](#zipzimodelingobservationobservationtexturetarget).
+
 **Fields**
 
 - `policy`: Requested policy; equivalent actual pixels may have different policies.
@@ -159,12 +169,16 @@ not GPU allocation measurements.
 A valid policy can be statically infeasible. Retain source dimensions for
 diagnosis instead of treating a budget shortfall as malformed input.
 
+Types: [ObservationTexturePlanningInsufficientBudget](#zipzimodelingobservationobservationtextureplanninginsufficientbudget), [ObservationTexturePlanningReady](#zipzimodelingobservationobservationtextureplanningready).
+
 
 ## zipzi.modeling.observation.ObservationTexturePlanningInsufficientBudget
 
 **Type**
 
 `(*, policy: ObservationTexturePolicy, effective_max_rgba_bytes: int, source_rgba_bytes: int, minimum_required_rgba_bytes: int, textures: tuple[ObservationTextureSource, ...])`
+
+Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepolicy), [ObservationTextureSource](#zipzimodelingobservationobservationtexturesource).
 
 **Fields**
 
@@ -180,6 +194,8 @@ diagnosis instead of treating a budget shortfall as malformed input.
 
 `(*, plan: ObservationTexturePlan)`
 
+Types: [ObservationTexturePlan](#zipzimodelingobservationobservationtextureplan).
+
 **Fields**
 
 - `plan`: Feasible CPU dimensions; device limits remain unverified.
@@ -192,6 +208,8 @@ diagnosis instead of treating a budget shortfall as malformed input.
 
 Explicit base-level texture policy. Budgets count logical straight RGBA8
 bytes per referenced asset ID, independently of physical buffer sharing.
+
+Types: [ObservationTexturePolicyFitBudget](#zipzimodelingobservationobservationtexturepolicyfitbudget), [ObservationTexturePolicyOriginal](#zipzimodelingobservationobservationtexturepolicyoriginal).
 
 
 ## zipzi.modeling.observation.ObservationTexturePolicyFitBudget
@@ -219,6 +237,8 @@ Preserve the source dimensions and every source byte.
 
 `(*, policy: ObservationTexturePolicy, effective_max_rgba_bytes: int, longest_edge_limit: int | None = None, source_rgba_bytes: int, render_rgba_bytes: int, estimated_mipmap_bytes: int, resized_count: int, filter: str, algorithm_version: int, planning_version: int, mipmap_version: int, textures: tuple[ObservationTextureReportEntry, ...])`
 
+Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepolicy), [ObservationTextureReportEntry](#zipzimodelingobservationobservationtexturereportentry).
+
 **Fields**
 
 - `policy`: Requested texture policy; not part of rendering-content digests.
@@ -239,6 +259,8 @@ Preserve the source dimensions and every source byte.
 **Type**
 
 `(*, asset_id: str, source_size: ObservationTextureSize, render_size: ObservationTextureSize, source_content_identity: ObservationContentIdentity, render_rgba_hash: str)`
+
+Types: [ObservationContentIdentity](#zipzimodelingobservationobservationcontentidentity), [ObservationTextureSize](#zipzimodelingobservationobservationtexturesize).
 
 **Fields**
 
@@ -270,6 +292,8 @@ Pixel dimensions; zero axes are invalid resource metadata.
 Metadata-only source description. A declared identity has not been verified
 by estimation; Source freezes the document, not external file bytes.
 
+Types: [ObservationContentIdentity](#zipzimodelingobservationobservationcontentidentity), [ObservationTextureSize](#zipzimodelingobservationobservationtexturesize).
+
 **Fields**
 
 - `asset_id`: Stable image asset ID, counted once across all batch frames.
@@ -282,6 +306,8 @@ by estimation; Source freezes the document, not external file bytes.
 
 `(*, source: ObservationTextureSource, render_size: ObservationTextureSize)`
 
+Types: [ObservationTextureSize](#zipzimodelingobservationobservationtexturesize), [ObservationTextureSource](#zipzimodelingobservationobservationtexturesource).
+
 **Fields**
 
 - `source`: Declared source metadata; the executor must validate it again.
@@ -292,6 +318,8 @@ by estimation; Source freezes the document, not external file bytes.
 **Type**
 
 `(*, texture_policy: ObservationTexturePolicy = <factory>, width: int, height: int, roi: tuple[float, float, float, float], padding_model: float = 0.0, topology: TopologyOverlay | None = None, quality: bool = False)`
+
+Types: [ObservationTexturePolicy](#zipzimodelingobservationobservationtexturepolicy), [TopologyOverlay](#zipzimodelingobservationtopologyoverlay).
 
 **Fields**
 
@@ -343,6 +371,8 @@ Uses default parameters of the same source as reference; checks requested frames
 `(*, targets: tuple[ObjectTarget, ...] | None = None, wireframe: bool = True, vertices: bool = False, vertex_ids: bool = False, constraints: bool = False, strain: bool = False, include_hidden: bool = False, topology_only: bool = False, heat_opacity: float = 0.25, anomalies_only: bool = False, thresholds: TopologyThresholds = <factory>, label_scale: int = 2, label_spacing: int = 3, max_labels: int = 256)`
 
 Explicit diagnostic drawing options; overlays ignore masks and occlusion.
+
+Types: [TopologyThresholds](#zipzimodelingobservationtopologythresholds), [ObjectTarget].
 
 **Fields**
 

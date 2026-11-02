@@ -20,12 +20,16 @@ Static operation unions; construct operations in their owning domain.
 
 `_meshes.Create | _meshes.Rename | _meshes.SetPositions | _parameters.Create | _parameters.Patch | _bindings.Create | _bindings.SetKeyform | _resources.CreateImage | _resources.ReplaceImage | _resources.RenameImage | _scene.Operation | _modeling.ModelingCommand`
 
+Types: [bindings.Create], [SetKeyform], [meshes.Create], [Rename], [SetPositions], [ModelingCommand], [parameters.Create], [Patch], [CreateImage], [RenameImage], [ReplaceImage], [Operation].
+
 
 ## zipzi.ops.PlannableOperation
 
 **Alias**
 
 `_meshes.Rename | _resources.RenameImage | _scene.Operation | _ModelingPlanOperation`
+
+Types: [Rename], [RenameImage], [Operation].
 
 
 [bindings.Create]: bindings.md#zipzibindingscreate

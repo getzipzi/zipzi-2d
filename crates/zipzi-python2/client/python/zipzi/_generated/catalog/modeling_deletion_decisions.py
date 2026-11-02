@@ -2,7 +2,6 @@
 from .index import Entry
 DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('PRESERVE_EDIT_STATE', "'PreserveEditState'"),
                                                        ('KEEP_LOCAL_DATA', "'KeepLocalData'"),
                                                        ('CHOOSE_PART', "'ChoosePart'"),
@@ -18,7 +17,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecision': {'children': ('zipzi.modeling.deletion.DeletionDecision.__repr__',
                                                            'zipzi.modeling.deletion.DeletionDecision.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('object',
                                                           'Affected surviving object that needs an explicit '
                                                           'resolution.'),
@@ -39,7 +37,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecision.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionDecisionReason': {'children': (),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [],
                                                     'kind': 'alias',
                                                     'signature': 'DeletionDecisionReasonConversionUnproven | '
@@ -61,7 +58,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonBlendBaseReplacementRequired': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonBlendBaseReplacementRequired.__repr__',
                                                                                              'zipzi.modeling.deletion.DeletionDecisionReasonBlendBaseReplacementRequired.summary'),
                                                                                 'documentation': '',
-                                                                                'example': 'docs/recipes.py',
                                                                                 'fields': [],
                                                                                 'kind': 'type',
                                                                                 'signature': '()'},
@@ -70,7 +66,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven.__repr__',
                                                                                    'zipzi.modeling.deletion.DeletionDecisionReasonConversionUnproven.summary'),
                                                                       'documentation': '',
-                                                                      'example': 'docs/recipes.py',
                                                                       'fields': [('code',
                                                                                   'Native conversion diagnostic code; '
                                                                                   'available resolutions come from '
@@ -82,7 +77,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer.__repr__',
                                                                                  'zipzi.modeling.deletion.DeletionDecisionReasonInvalidContainer.summary'),
                                                                     'documentation': '',
-                                                                    'example': 'docs/recipes.py',
                                                                     'fields': [('code',
                                                                                 'Native container invariant requiring '
                                                                                 'an explicit larger deletion or '
@@ -94,7 +88,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonOffscreenMappingRequired': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonOffscreenMappingRequired.__repr__',
                                                                                          'zipzi.modeling.deletion.DeletionDecisionReasonOffscreenMappingRequired.summary'),
                                                                             'documentation': '',
-                                                                            'example': 'docs/recipes.py',
                                                                             'fields': [],
                                                                             'kind': 'type',
                                                                             'signature': '()'},
@@ -103,7 +96,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonOffscreenOwnerUnavailable': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonOffscreenOwnerUnavailable.__repr__',
                                                                                           'zipzi.modeling.deletion.DeletionDecisionReasonOffscreenOwnerUnavailable.summary'),
                                                                              'documentation': '',
-                                                                             'example': 'docs/recipes.py',
                                                                              'fields': [],
                                                                              'kind': 'type',
                                                                              'signature': '()'},
@@ -112,7 +104,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonPartStateUnpreserved': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonPartStateUnpreserved.__repr__',
                                                                                      'zipzi.modeling.deletion.DeletionDecisionReasonPartStateUnpreserved.summary'),
                                                                         'documentation': '',
-                                                                        'example': 'docs/recipes.py',
                                                                         'fields': [],
                                                                         'kind': 'type',
                                                                         'signature': '()'},
@@ -121,7 +112,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonPhysicsNodeReplacementRequired': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonPhysicsNodeReplacementRequired.__repr__',
                                                                                                'zipzi.modeling.deletion.DeletionDecisionReasonPhysicsNodeReplacementRequired.summary'),
                                                                                   'documentation': '',
-                                                                                  'example': 'docs/recipes.py',
                                                                                   'fields': [],
                                                                                   'kind': 'type',
                                                                                   'signature': '()'},
@@ -130,7 +120,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonTextureReplacementRequired': {'children': ('zipzi.modeling.deletion.DeletionDecisionReasonTextureReplacementRequired.__repr__',
                                                                                            'zipzi.modeling.deletion.DeletionDecisionReasonTextureReplacementRequired.summary'),
                                                                               'documentation': '',
-                                                                              'example': 'docs/recipes.py',
                                                                               'fields': [],
                                                                               'kind': 'type',
                                                                               'signature': '()'},
@@ -138,7 +127,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionDecisionReasonTextureReplacementRequired.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionEffect': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'DeletionEffectMotionRegistrationMoved | '
@@ -177,7 +165,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved.__repr__',
                                                                                    'zipzi.modeling.deletion.DeletionEffectBindingContributionRemoved.summary'),
                                                                       'documentation': '',
-                                                                      'example': 'docs/recipes.py',
                                                                       'fields': [('object',
                                                                                   'Retained target whose authored '
                                                                                   'contribution disappears.'),
@@ -194,7 +181,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectCompositionChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectCompositionChanged.__repr__',
                                                                            'zipzi.modeling.deletion.DeletionEffectCompositionChanged.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('value',
                                                                           'Affected Offscreen or Part whose '
                                                                           'compositing can change.')],
@@ -207,7 +193,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
                                                                        'zipzi.modeling.deletion.DeletionEffectContentChanged.summary'),
                                                           'documentation': 'A retained native record loses selected '
                                                                            'samples, pairs or keys.',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('value',
                                                                       'Retained owner whose selected stable content '
                                                                       'identities disappear.')],
@@ -219,7 +204,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectDeformationChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectDeformationChanged.__repr__',
                                                                            'zipzi.modeling.deletion.DeletionEffectDeformationChanged.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('value',
                                                                           'Surviving object whose deformation is not '
                                                                           'fully preserved.')],
@@ -231,7 +215,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectDrawingGroupFlattened': {'children': ('zipzi.modeling.deletion.DeletionEffectDrawingGroupFlattened.__repr__',
                                                                               'zipzi.modeling.deletion.DeletionEffectDrawingGroupFlattened.summary'),
                                                                  'documentation': '',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [('group',
                                                                              'Removed drawing role being flattened.'),
                                                                             ('destination',
@@ -261,7 +244,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectGlueRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectGlueRemoved.__repr__',
                                                                     'zipzi.modeling.deletion.DeletionEffectGlueRemoved.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('value',
                                                                    'Deleted connection whose seam or postprocessing '
                                                                    'contribution disappears.')],
@@ -273,7 +255,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectHitAreaRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectHitAreaRemoved.__repr__',
                                                                        'zipzi.modeling.deletion.DeletionEffectHitAreaRemoved.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('value',
                                                                       'Deleted model3 Hit Area registration.')],
                                                           'kind': 'type',
@@ -284,7 +265,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectMaskChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectMaskChanged.__repr__',
                                                                     'zipzi.modeling.deletion.DeletionEffectMaskChanged.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('value',
                                                                    'Retained Mask consumer whose clipping effect '
                                                                    'changes.')],
@@ -296,7 +276,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved': {'children': ('zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved.__repr__',
                                                                                 'zipzi.modeling.deletion.DeletionEffectMotionRegistrationMoved.summary'),
                                                                    'documentation': '',
-                                                                   'example': 'docs/recipes.py',
                                                                    'fields': [('registration',
                                                                                'Preserved last registration of a '
                                                                                'retained Clip, moved to the ungrouped '
@@ -314,7 +293,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectOrganizationChanged': {'children': ('zipzi.modeling.deletion.DeletionEffectOrganizationChanged.__repr__',
                                                                             'zipzi.modeling.deletion.DeletionEffectOrganizationChanged.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('value',
                                                                            'Surviving member whose organization owner '
                                                                            'changes.')],
@@ -326,7 +304,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved.__repr__',
                                                                                   'zipzi.modeling.deletion.DeletionEffectParameterAnimationRemoved.summary'),
                                                                      'documentation': '',
-                                                                     'example': 'docs/recipes.py',
                                                                      'fields': [('value',
                                                                                  'Removed Motion/Expression parameter '
                                                                                  'record; other tracks, events and '
@@ -339,7 +316,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved.__repr__',
                                                                                   'zipzi.modeling.deletion.DeletionEffectParameterDimensionRemoved.summary'),
                                                                      'documentation': '',
-                                                                     'example': 'docs/recipes.py',
                                                                      'fields': [('object',
                                                                                  'Surviving ordinary binding or Glue '
                                                                                  'grid reduced by the native grid '
@@ -370,7 +346,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved.__repr__',
                                                                              'zipzi.modeling.deletion.DeletionEffectPartAnimationRemoved.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('value',
                                                                             'Removed Part animation/Pose record; its '
                                                                             'container remains.')],
@@ -382,7 +357,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectPartStateRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectPartStateRemoved.__repr__',
                                                                          'zipzi.modeling.deletion.DeletionEffectPartStateRemoved.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('part',
                                                                         'Dissolved Part whose inherited state is '
                                                                         'removed.'),
@@ -401,7 +375,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectPhysicsChannelRemoved': {'children': ('zipzi.modeling.deletion.DeletionEffectPhysicsChannelRemoved.__repr__',
                                                                               'zipzi.modeling.deletion.DeletionEffectPhysicsChannelRemoved.summary'),
                                                                  'documentation': '',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [('object',
                                                                              'Removed input or output channel, with a '
                                                                              'stable native identity.'),
@@ -417,7 +390,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectResourceReplaced': {'children': ('zipzi.modeling.deletion.DeletionEffectResourceReplaced.__repr__',
                                                                          'zipzi.modeling.deletion.DeletionEffectResourceReplaced.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('object',
                                                                         'Retained consumer whose texture or optional '
                                                                         'attachment reference changes.'),
@@ -437,7 +409,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectUnpreservedChannels': {'children': ('zipzi.modeling.deletion.DeletionEffectUnpreservedChannels.__repr__',
                                                                             'zipzi.modeling.deletion.DeletionEffectUnpreservedChannels.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('object',
                                                                            'Surviving object affected by channels '
                                                                            'outside the position proof.'),
@@ -453,7 +424,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.deletion.DeletionChoice': {'children':
  'zipzi.modeling.deletion.DeletionEffectUnpreservedChannels.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.deletion.DeletionReason': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('REQUESTED', "'Requested'"),
                                                        ('OWNED', "'Owned'"),
                                                        ('DEPENDENCY', "'Dependency'"),

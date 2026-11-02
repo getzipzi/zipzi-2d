@@ -66,7 +66,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsAsset': {'children': ('zipzi.modeling.physics.PhysicsAsset.__repr__',
                                                       'zipzi.modeling.physics.PhysicsAsset.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable identity in the owning authoring domain; exported '
                                                      'metadata IDs retain their source text.'),
@@ -90,7 +89,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                               'zipzi.modeling.physics.PhysicsAssetProperty.summary'),
                                                  'documentation': 'None or zero follows the evaluation delta; positive '
                                                                   'values select a fixed step.',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Optional Physics fixed-step frequency; None follows the '
                                                              'evaluation delta.')],
@@ -103,13 +101,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsAssetPropertyFps.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsAxis': {'children': (),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('X', "'X'"), ('Y', "'Y'"), ('ANGLE', "'Angle'")],
                                         'kind': 'enum',
                                         'signature': ''},
  'zipzi.modeling.physics.PhysicsCollection': {'children': (),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [],
                                               'kind': 'alias',
                                               'signature': 'PhysicsCollectionGroups | PhysicsCollectionInputs | '
@@ -121,7 +117,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionGroups': {'children': ('zipzi.modeling.physics.PhysicsCollectionGroups.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsCollectionGroups.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [],
                                                     'kind': 'type',
                                                     'signature': '()'},
@@ -130,7 +125,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionInputs': {'children': ('zipzi.modeling.physics.PhysicsCollectionInputs.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsCollectionInputs.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('group_id',
                                                                 'Stable Physics rig ID owning the selected rows.')],
                                                     'kind': 'type',
@@ -140,7 +134,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionNodes': {'children': ('zipzi.modeling.physics.PhysicsCollectionNodes.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsCollectionNodes.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('group_id',
                                                                'Stable Physics rig ID owning the selected rows.')],
                                                    'kind': 'type',
@@ -150,7 +143,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsCollectionOutputs': {'children': ('zipzi.modeling.physics.PhysicsCollectionOutputs.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsCollectionOutputs.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('group_id',
                                                                  'Stable Physics rig ID owning the selected rows.')],
                                                      'kind': 'type',
@@ -160,7 +152,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsDefinition': {'children': ('zipzi.modeling.physics.PhysicsDefinition.__repr__',
                                                            'zipzi.modeling.physics.PhysicsDefinition.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('version', 'Native Physics format version number.'),
                                                          ('meta',
                                                           'Physics format metadata and counts maintained by native '
@@ -180,7 +171,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsDictionaryEntry': {'children': ('zipzi.modeling.physics.PhysicsDictionaryEntry.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsDictionaryEntry.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('Id',
                                                                'Stable identity in the owning authoring domain; '
                                                                'exported metadata IDs retain their source text.'),
@@ -197,7 +187,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsDictionaryEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEdit': {'children': (),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [],
                                         'kind': 'alias',
                                         'signature': 'PhysicsEditCreateGroup | PhysicsEditCreateInput | '
@@ -221,7 +210,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateGroup': {'children': ('zipzi.modeling.physics.PhysicsEditCreateGroup.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditCreateGroup.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('asset_id',
                                                                'Stable Physics singleton ID owning these changes.'),
                                                               ('id',
@@ -241,7 +229,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateInput': {'children': ('zipzi.modeling.physics.PhysicsEditCreateInput.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditCreateInput.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('group_id',
                                                                'Stable ID of the group owning the affected rows or '
                                                                'node chain.'),
@@ -259,7 +246,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditCreateOutput': {'children': ('zipzi.modeling.physics.PhysicsEditCreateOutput.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsEditCreateOutput.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('group_id',
                                                                 'Stable ID of the group owning the affected rows or '
                                                                 'node chain.'),
@@ -280,7 +266,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDelete': {'children': ('zipzi.modeling.physics.PhysicsEditDelete.__repr__',
                                                            'zipzi.modeling.physics.PhysicsEditDelete.summary'),
                                               'documentation': '',
-                                              'example': 'docs/recipes.py',
                                               'fields': [('ids',
                                                           'Ordered stable IDs selected by this operation; names and '
                                                           'row numbers are not identities.'),
@@ -295,7 +280,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDuplicate': {'children': ('zipzi.modeling.physics.PhysicsEditDuplicate.__repr__',
                                                               'zipzi.modeling.physics.PhysicsEditDuplicate.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('ids',
                                                              'Ordered stable IDs selected by this operation; names and '
                                                              'row numbers are not identities.'),
@@ -313,7 +297,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditDuplicateNode': {'children': ('zipzi.modeling.physics.PhysicsEditDuplicateNode.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsEditDuplicateNode.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable identity in the owning authoring domain; '
                                                                  'exported metadata IDs retain their source text.'),
@@ -327,7 +310,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditInsertNode': {'children': ('zipzi.modeling.physics.PhysicsEditInsertNode.__repr__',
                                                                'zipzi.modeling.physics.PhysicsEditInsertNode.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('group_id',
                                                               'Stable ID of the group owning the affected rows or node '
                                                               'chain.'),
@@ -346,7 +328,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveInputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveInputs.__repr__',
                                                                'zipzi.modeling.physics.PhysicsEditMoveInputs.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('ids',
                                                               'Ordered stable IDs selected by this operation; names '
                                                               'and row numbers are not identities.'),
@@ -364,7 +345,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveNode': {'children': ('zipzi.modeling.physics.PhysicsEditMoveNode.__repr__',
                                                              'zipzi.modeling.physics.PhysicsEditMoveNode.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('id',
                                                             'Stable identity in the owning authoring domain; exported '
                                                             'metadata IDs retain their source text.'),
@@ -378,7 +358,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditMoveOutputs': {'children': ('zipzi.modeling.physics.PhysicsEditMoveOutputs.__repr__',
                                                                 'zipzi.modeling.physics.PhysicsEditMoveOutputs.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('ids',
                                                                'Ordered stable IDs selected by this operation; names '
                                                                'and row numbers are not identities.'),
@@ -400,7 +379,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditPatch': {'children': ('zipzi.modeling.physics.PhysicsEditPatch.__repr__',
                                                           'zipzi.modeling.physics.PhysicsEditPatch.summary'),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [('patch',
                                                          'Typed atomic Physics changes validated against the current '
                                                          'candidate.')],
@@ -412,7 +390,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsEditReorderGroups': {'children': ('zipzi.modeling.physics.PhysicsEditReorderGroups.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsEditReorderGroups.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('ids',
                                                                  'Ordered stable IDs selected by this operation; names '
                                                                  'and row numbers are not identities.'),
@@ -427,7 +404,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsForces': {'children': ('zipzi.modeling.physics.PhysicsForces.__repr__',
                                                        'zipzi.modeling.physics.PhysicsForces.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('Gravity',
                                                       'Effective gravity vector in the native Physics coordinate '
                                                       'convention.'),
@@ -446,7 +422,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsInput': {'children': ('zipzi.modeling.physics.PhysicsInput.__repr__',
                                                       'zipzi.modeling.physics.PhysicsInput.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('id',
                                                      'Stable identity in the owning authoring domain; exported '
                                                      'metadata IDs retain their source text.'),
@@ -478,7 +453,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsMeta': {'children': ('zipzi.modeling.physics.PhysicsMeta.__repr__',
                                                      'zipzi.modeling.physics.PhysicsMeta.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('PhysicsSettingCount',
                                                     'Exported count of Physics settings, maintained by native '
                                                     'validation.'),
@@ -513,7 +487,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsNode': {'children': ('zipzi.modeling.physics.PhysicsNode.__repr__',
                                                      'zipzi.modeling.physics.PhysicsNode.summary'),
                                         'documentation': '',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('id',
                                                     'Stable identity in the owning authoring domain; exported metadata '
                                                     'IDs retain their source text.'),
@@ -537,7 +510,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsNormalization': {'children': ('zipzi.modeling.physics.PhysicsNormalization.__repr__',
                                                               'zipzi.modeling.physics.PhysicsNormalization.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('Position',
                                                              'Authored two-dimensional Physics node position or '
                                                              'normalization domain, as declared by the field.'),
@@ -556,7 +528,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsOutput': {'children': ('zipzi.modeling.physics.PhysicsOutput.__repr__',
                                                        'zipzi.modeling.physics.PhysicsOutput.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('id',
                                                       'Stable identity in the owning authoring domain; exported '
                                                       'metadata IDs retain their source text.'),
@@ -593,7 +564,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsOutputSnapshot': {'children': ('zipzi.modeling.physics.PhysicsOutputSnapshot.__repr__',
                                                                'zipzi.modeling.physics.PhysicsOutputSnapshot.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('raw',
                                                               'Raw output value before weight and parameter clamping.'),
                                                              ('before',
@@ -613,7 +583,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                       'zipzi.modeling.physics.PhysicsPatch.summary'),
                                          'documentation': 'Atomic asset edits plus optional rig edits; asset-only '
                                                           'patches support empty assets.',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('asset_id', 'Stable Physics singleton ID owning these changes.'),
                                                     ('asset_changes',
                                                      'Ordered changes to Physics asset metadata; rig-local changes are '
@@ -628,7 +597,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsProperty': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'PhysicsPropertyName | PhysicsPropertyInputWeight | '
@@ -663,7 +631,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyAngleNormalization': {'children': ('zipzi.modeling.physics.PhysicsPropertyAngleNormalization.__repr__',
                                                                            'zipzi.modeling.physics.PhysicsPropertyAngleNormalization.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('value',
                                                                           'Replacement minimum/default/maximum range '
                                                                           'for angle normalization.')],
@@ -675,7 +642,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputAxis.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsPropertyInputAxis.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable identity in the owning authoring domain; '
                                                                  'exported metadata IDs retain their source text.'),
@@ -690,7 +656,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputParameter.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyInputParameter.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
                                                                       'exported metadata IDs retain their source '
@@ -706,7 +671,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputReflect.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyInputReflect.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
@@ -720,7 +684,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyInputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyInputWeight.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyInputWeight.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),
@@ -734,7 +697,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyName': {'children': ('zipzi.modeling.physics.PhysicsPropertyName.__repr__',
                                                              'zipzi.modeling.physics.PhysicsPropertyName.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('value', 'Replacement display name of the Physics group.')],
                                                 'kind': 'type',
                                                 'signature': '(*, value: str)'},
@@ -743,7 +705,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputAxis': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputAxis.__repr__',
                                                                    'zipzi.modeling.physics.PhysicsPropertyOutputAxis.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('id',
                                                                   'Stable identity in the owning authoring domain; '
                                                                   'exported metadata IDs retain their source text.'),
@@ -758,7 +719,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputNode': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputNode.__repr__',
                                                                    'zipzi.modeling.physics.PhysicsPropertyOutputNode.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('id',
                                                                   'Stable identity in the owning authoring domain; '
                                                                   'exported metadata IDs retain their source text.'),
@@ -772,7 +732,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputParameter': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputParameter.__repr__',
                                                                         'zipzi.modeling.physics.PhysicsPropertyOutputParameter.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('id',
                                                                        'Stable identity in the owning authoring '
                                                                        'domain; exported metadata IDs retain their '
@@ -788,7 +747,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputReflect': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputReflect.__repr__',
                                                                       'zipzi.modeling.physics.PhysicsPropertyOutputReflect.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('id',
                                                                      'Stable identity in the owning authoring domain; '
                                                                      'exported metadata IDs retain their source text.'),
@@ -802,7 +760,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputScale': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputScale.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyOutputScale.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),
@@ -816,7 +773,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyOutputWeight': {'children': ('zipzi.modeling.physics.PhysicsPropertyOutputWeight.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyOutputWeight.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
@@ -830,7 +786,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyPositionNormalization': {'children': ('zipzi.modeling.physics.PhysicsPropertyPositionNormalization.__repr__',
                                                                               'zipzi.modeling.physics.PhysicsPropertyPositionNormalization.summary'),
                                                                  'documentation': '',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [('value',
                                                                              'Replacement minimum/default/maximum '
                                                                              'range for position normalization.')],
@@ -842,7 +797,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.__repr__',
                                                                            'zipzi.modeling.physics.PhysicsPropertyVertexAcceleration.summary'),
                                                               'documentation': '',
-                                                              'example': 'docs/recipes.py',
                                                               'fields': [('id',
                                                                           'Stable identity in the owning authoring '
                                                                           'domain; exported metadata IDs retain their '
@@ -857,7 +811,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexDelay': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexDelay.__repr__',
                                                                     'zipzi.modeling.physics.PhysicsPropertyVertexDelay.summary'),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('id',
                                                                    'Stable identity in the owning authoring domain; '
                                                                    'exported metadata IDs retain their source text.'),
@@ -871,7 +824,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexMobility': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexMobility.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyVertexMobility.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
                                                                       'exported metadata IDs retain their source '
@@ -886,7 +838,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexPosition': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexPosition.__repr__',
                                                                        'zipzi.modeling.physics.PhysicsPropertyVertexPosition.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('id',
                                                                       'Stable identity in the owning authoring domain; '
                                                                       'exported metadata IDs retain their source '
@@ -902,7 +853,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsPropertyVertexRadius': {'children': ('zipzi.modeling.physics.PhysicsPropertyVertexRadius.__repr__',
                                                                      'zipzi.modeling.physics.PhysicsPropertyVertexRadius.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('id',
                                                                     'Stable identity in the owning authoring domain; '
                                                                     'exported metadata IDs retain their source text.'),
@@ -916,7 +866,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsRange': {'children': ('zipzi.modeling.physics.PhysicsRange.__repr__',
                                                       'zipzi.modeling.physics.PhysicsRange.summary'),
                                          'documentation': '',
-                                         'example': 'docs/recipes.py',
                                          'fields': [('Minimum',
                                                      'Lower normalization bound in the declared position or angle '
                                                      'domain.'),
@@ -932,7 +881,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsRigPatch': {'children': ('zipzi.modeling.physics.PhysicsRigPatch.__repr__',
                                                          'zipzi.modeling.physics.PhysicsRigPatch.summary'),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [('group_id',
                                                         'Stable ID of the group owning the affected rows or node '
                                                         'chain.'),
@@ -950,7 +898,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                 'latest solved physics\n'
                                                                 'step, not model-space attachment points or '
                                                                 'interpolated render geometry.',
-                                               'example': 'docs/recipes.py',
                                                'fields': [('id', 'Native physics group UUID.'),
                                                           ('input_ids', 'Input channel UUIDs aligned with inputs.'),
                                                           ('output_ids', 'Output channel UUIDs aligned with outputs.'),
@@ -981,7 +928,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsSetting': {'children': ('zipzi.modeling.physics.PhysicsSetting.__repr__',
                                                         'zipzi.modeling.physics.PhysicsSetting.summary'),
                                            'documentation': '',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('id',
                                                        'Stable identity in the owning authoring domain; exported '
                                                        'metadata IDs retain their source text.'),
@@ -1015,7 +961,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsSetting.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsTarget': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'PhysicsTargetUnspecified | PhysicsTargetResolved | '
@@ -1026,7 +971,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetResolved': {'children': ('zipzi.modeling.physics.PhysicsTargetResolved.__repr__',
                                                                'zipzi.modeling.physics.PhysicsTargetResolved.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('parameter_id',
                                                               'Stable document parameter UUID; evaluation uses its '
                                                               'declared range and default.')],
@@ -1037,7 +981,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetUnresolved': {'children': ('zipzi.modeling.physics.PhysicsTargetUnresolved.__repr__',
                                                                  'zipzi.modeling.physics.PhysicsTargetUnresolved.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('runtime_id',
                                                                 'Imported/exported runtime label, distinct from the '
                                                                 'document object UUID.')],
@@ -1048,7 +991,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsTargetUnspecified': {'children': ('zipzi.modeling.physics.PhysicsTargetUnspecified.__repr__',
                                                                   'zipzi.modeling.physics.PhysicsTargetUnspecified.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [],
                                                      'kind': 'type',
                                                      'signature': '()'},
@@ -1057,7 +999,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
  'zipzi.modeling.physics.PhysicsVector': {'children': ('zipzi.modeling.physics.PhysicsVector.__repr__',
                                                        'zipzi.modeling.physics.PhysicsVector.summary'),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('X',
                                                       'Horizontal component in the native Physics coordinate '
                                                       'convention.'),

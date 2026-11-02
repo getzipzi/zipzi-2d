@@ -15,7 +15,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
  'zipzi.mesh_generation.FillParameters': {'children': (),
                                           'documentation': 'Controls for one interior fill strategy, validated by the '
                                                            'Editor host.',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('edge_ratio', 'Boundary-to-interior spacing ratio, from 1 to 4.'),
                                                      ('gradation',
                                                       'Rate of spacing growth away from the boundary, from 0.25 to 4.'),
@@ -27,7 +26,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                        'float = 0.45, angle: float = 0.0, max_rows: int = 12)'},
  'zipzi.mesh_generation.FillSettings': {'children': (),
                                         'documentation': 'Retained controls for each available interior fill strategy.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('poisson',
                                                     'Controls shared by graded Poisson and simple triangle fill.'),
                                                    ('quadtree', 'Controls for adaptive quadtree fill.'),
@@ -49,7 +47,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                             'masks and occlusion.\n'
                                                             'pixel_step > 1 denotes approximate coverage. No animation '
                                                             'is evaluated.',
-                                           'example': 'docs/recipes.py',
                                            'fields': [('vertex_count', 'Number of supplied mesh vertices.'),
                                                       ('triangle_count', 'Number of supplied triangles.'),
                                                       ('min_angle_degrees',
@@ -96,7 +93,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                       'replacements. It never\n'
                                                       'silently drops dependencies. Inspect the Edit candidate before '
                                                       'committing.',
-                                     'example': 'docs/recipes.py',
                                      'fields': [('source',
                                                  'Exact document Source captured before generation; later edits '
                                                  'invalidate the draft.'),
@@ -125,7 +121,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                             'vertex_mapping explicitly\n'
                                                             'maps every old ID to a new ID or None; new IDs do not '
                                                             'imply correspondence.',
-                                           'example': 'docs/recipes.py',
                                            'fields': [],
                                            'kind': 'callable',
                                            'signature': '(edit: Edit, *, vertex_mapping: dict[int, int | None], '
@@ -140,7 +135,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
  'zipzi.mesh_generation.MeshSettings': {'children': (),
                                         'documentation': 'Editor mesh generation controls; lengths use mesh units '
                                                          'unless stated.',
-                                        'example': 'docs/recipes.py',
                                         'fields': [('edge_mode', 'Number of contour bands: single, double or triple.'),
                                                    ('edge_spacing',
                                                     'Spacing between contour vertices, from 6 to 1000000 mesh units.'),
@@ -198,7 +192,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                      'means the\n'
                                                      'contour/triangulation pipeline failed, rather than invalid '
                                                      'settings.',
-                                    'example': 'docs/recipes.py',
                                     'fields': [],
                                     'kind': 'callable',
                                     'signature': "(runtime: Runtime, width: int, height: int, alpha: bytes=b'', *, "
@@ -217,7 +210,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                               'non-affine mappings rather\n'
                                                               'than guessing. The draft retains original metadata and '
                                                               'authoring space.',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'callable',
                                              'signature': '(session: Session, mesh_id: str, *, settings: MeshSettings '
@@ -235,7 +227,6 @@ DATA: dict[str, Entry] = {'zipzi.mesh_generation': {'children': ('zipzi.mesh_gen
                                                              'triangles and 8 million triangle\n'
                                                              'scanlines are accepted. Malformed/nonfinite geometry '
                                                              'raises ValueError.',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'callable',
                                             'signature': '(geometry: Geometry, width: int, height: int, alpha: bytes, '

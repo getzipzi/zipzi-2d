@@ -13,6 +13,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `AddressPatchScene | AddressPatchDrawingRange | AddressPatchBinding | AddressPatchOrganization | AddressPatchContent | AddressPatchReference | AddressPatchSelection | AddressPatchResourceName | AddressPatchAttachmentPath | AddressPatchDocument | AddressPatchMotionRegistration | AddressPatchExpressionEntry | AddressPatchPhysics | AddressPatchPose`
 
+Types: [AddressPatchAttachmentPath](#zipzimodelingaddressingaddresspatchattachmentpath), [AddressPatchBinding](#zipzimodelingaddressingaddresspatchbinding), [AddressPatchContent](#zipzimodelingaddressingaddresspatchcontent), [AddressPatchDocument](#zipzimodelingaddressingaddresspatchdocument), [AddressPatchDrawingRange](#zipzimodelingaddressingaddresspatchdrawingrange), [AddressPatchExpressionEntry](#zipzimodelingaddressingaddresspatchexpressionentry), [AddressPatchMotionRegistration](#zipzimodelingaddressingaddresspatchmotionregistration), [AddressPatchOrganization](#zipzimodelingaddressingaddresspatchorganization), [AddressPatchPhysics](#zipzimodelingaddressingaddresspatchphysics), [AddressPatchPose](#zipzimodelingaddressingaddresspatchpose), [AddressPatchReference](#zipzimodelingaddressingaddresspatchreference), [AddressPatchResourceName](#zipzimodelingaddressingaddresspatchresourcename), [AddressPatchScene](#zipzimodelingaddressingaddresspatchscene), [AddressPatchSelection](#zipzimodelingaddressingaddresspatchselection).
+
 
 ## zipzi.modeling.addressing.AddressPatchAttachmentPath
 
@@ -31,6 +33,8 @@ and .. components are invalid.
 
 `(*, patch: BindingFieldPatch)`
 
+Types: [BindingFieldPatch].
+
 **Fields**
 
 - `patch`: Typed patch for the addressed object; apply through the Edit to mutate candidate state.
@@ -41,6 +45,8 @@ and .. components are invalid.
 
 `(*, value: SceneContentValue)`
 
+Types: [SceneContentValue].
+
 **Fields**
 
 - `value`: Scalar value in the referenced parameter domain.
@@ -50,6 +56,8 @@ and .. components are invalid.
 **Type**
 
 `(*, value: DocumentValue)`
+
+Types: [DocumentValue].
 
 **Fields**
 
@@ -71,6 +79,8 @@ and .. components are invalid.
 
 `(*, fields: ExpressionEntryFields)`
 
+Types: [ExpressionEntryFields].
+
 **Fields**
 
 - `fields`: Replacement expression target/value/blend fields, under captured owner epochs.
@@ -81,6 +91,8 @@ and .. components are invalid.
 
 `(*, entry: MotionRegistration)`
 
+Types: [MotionRegistration].
+
 **Fields**
 
 - `entry`: Complete replacement registration with its existing stable identity.
@@ -90,6 +102,8 @@ and .. components are invalid.
 **Type**
 
 `(*, intent: OrganizationEdit)`
+
+Types: [OrganizationEdit].
 
 **Fields**
 
@@ -102,6 +116,8 @@ mutate or publish.
 
 `(*, changes: tuple[PhysicsProperty, ...])`
 
+Types: [PhysicsProperty].
+
 **Fields**
 
 - `changes`: Atomic property changes targeting only the captured Physics entity.
@@ -112,6 +128,8 @@ mutate or publish.
 
 `(*, fields: PoseFields)`
 
+Types: [PoseFields].
+
 **Fields**
 
 - `fields`: Replacement fields for the captured Pose singleton/group/entry/link.
@@ -121,6 +139,8 @@ mutate or publish.
 **Type**
 
 `(*, fields: ReferenceFields)`
+
+Types: [ReferenceFields].
 
 **Fields**
 
@@ -142,6 +162,8 @@ kind.
 **Type**
 
 `(*, value: SceneFieldValue, clear_glue_pairs: bool)`
+
+Types: [SceneFieldValue].
 
 **Fields**
 

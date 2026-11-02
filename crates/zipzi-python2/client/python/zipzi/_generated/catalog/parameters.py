@@ -11,17 +11,16 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                       'kind': 'module',
                       'signature': ''},
  'zipzi.parameters.Create': {'children': ('zipzi.parameters.Create.__repr__', 'zipzi.parameters.Create.summary'),
-                             'documentation': 'Owned parameters Create value; reading fields, repr and summary '
-                                              'performs no IO.',
-                             'example': 'docs/recipes.py',
+                             'documentation': 'Create a parameter from its specification, allocating an ID when none '
+                                              'is supplied.',
+                             'field_roles': (('kind', 'fixed-discriminator', "'create_parameter'"),),
                              'fields': [('spec',
                                          'Creation specification; native admission supplies identities/defaults and '
                                          'rejects\n'
                                          'invalid input.'),
-                                        ('kind',
-                                         'Fixed operation discriminator supplied by this value type; not a constructor '
-                                         'argument or a mutable object field.')],
+                                        ('kind', "Fixed value 'create_parameter' (read-only).")],
                              'kind': 'type',
+                             'rule_refs': ('fixed-discriminator',),
                              'signature': '(spec: ParameterSpec) -> None',
                              'type_refs': ('zipzi.parameters.ParameterSpec',)},
  'zipzi.parameters.Create.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -29,9 +28,7 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
  'zipzi.parameters.Kind': {'alias': 'zipzi.modeling.parameters.ParameterKind'},
  'zipzi.parameters.Parameter': {'children': ('zipzi.parameters.Parameter.__repr__',
                                              'zipzi.parameters.Parameter.summary'),
-                                'documentation': 'Owned parameters Parameter value; reading fields, repr and summary '
-                                                 'performs no IO.',
-                                'example': 'docs/recipes.py',
+                                'documentation': '',
                                 'fields': [('id',
                                             'Stable document object ID used by references; it is distinct from the '
                                             'exported runtime_id.'),
@@ -65,9 +62,10 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
  'zipzi.parameters.Parameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.ParameterPatch': {'children': ('zipzi.parameters.ParameterPatch.__repr__',
                                                   'zipzi.parameters.ParameterPatch.summary'),
-                                     'documentation': 'Owned parameters ParameterPatch value; reading fields, repr and '
-                                                      'summary performs no IO.',
-                                     'example': 'docs/recipes.py',
+                                     'documentation': "Partial replacement of a parameter's authored fields, applied "
+                                                      'by ParameterOperation::Patch.\n'
+                                                      'Omitted or None fields preserve their current values; empty '
+                                                      'text and false are explicit replacements.',
                                      'fields': [('name',
                                                  'Human-readable display name; use the stable ID for identity because '
                                                  'names can change.\n'
@@ -114,9 +112,7 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
  'zipzi.parameters.ParameterPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.ParameterSpec': {'children': ('zipzi.parameters.ParameterSpec.__repr__',
                                                  'zipzi.parameters.ParameterSpec.summary'),
-                                    'documentation': 'Owned parameters ParameterSpec value; reading fields, repr and '
-                                                     'summary performs no IO.',
-                                    'example': 'docs/recipes.py',
+                                    'documentation': '',
                                     'fields': [('name',
                                                 'Human-readable display name; use the stable ID for identity because '
                                                 'names can change.'),
@@ -134,8 +130,9 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                                 'Optional new parameter UUID; None allocates a fresh UUID when the '
                                                 'create operation executes.'),
                                                ('runtime_id',
-                                                'Optional external runtime identifier; None uses the native default '
-                                                'empty string.'),
+                                                'Optional external runtime identifier; None or an empty string uses '
+                                                "the parameter's\n"
+                                                'stable ID when creation executes.'),
                                                ('kind', 'Optional parameter kind; None uses Normal.'),
                                                ('decimal_places',
                                                 'Optional decimal precision for runtime parameter handling; None uses '
@@ -152,9 +149,9 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
  'zipzi.parameters.ParameterSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.parameters.ParameterSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.parameters.Patch': {'children': ('zipzi.parameters.Patch.__repr__', 'zipzi.parameters.Patch.summary'),
-                            'documentation': 'Owned parameters Patch value; reading fields, repr and summary performs '
-                                             'no IO.',
-                            'example': 'docs/recipes.py',
+                            'documentation': 'Replace only the supplied fields of the parameter selected by stable '
+                                             'document ID.',
+                            'field_roles': (('kind', 'fixed-discriminator', "'patch_parameter'"),),
                             'fields': [('id',
                                         'Stable document object ID used by references; it is distinct from the '
                                         'exported\n'
@@ -162,10 +159,9 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                        ('patch',
                                         'Typed patch for the addressed object; apply through the Edit to mutate '
                                         'candidate state.'),
-                                       ('kind',
-                                        'Fixed operation discriminator supplied by this value type; not a constructor '
-                                        'argument or a mutable object field.')],
+                                       ('kind', "Fixed value 'patch_parameter' (read-only).")],
                             'kind': 'type',
+                            'rule_refs': ('fixed-discriminator',),
                             'signature': '(id: str, patch: ParameterPatch) -> None',
                             'type_refs': ('zipzi.parameters.ParameterPatch',)},
  'zipzi.parameters.Patch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

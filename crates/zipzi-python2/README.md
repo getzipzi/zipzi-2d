@@ -260,3 +260,32 @@ external types once using standard Markdown reference links and the shortest
 unambiguous page-local label. Types defined on the same page use their existing
 API headings. `zipzi.describe(path).type_refs` exposes the full public paths
 without recursively loading their help.
+
+Collection and candidate-write rules live beside `_facade_support.Collection`
+and `_lifecycle.Edit`. Generator descriptors bind their stable rule identities
+before rendering. Markdown links to each rule in `reference/common.md`;
+docstrings contain complete help, and `ApiDescription.format()` expands only
+the entry's directly referenced leaf rules. Fixed discriminator roles come from
+variant projections, so business fields such as `ParameterPatch.kind` retain
+their own semantics. Entries have no default recipes example; module navigation
+still links to the guide and recipes.
+
+`docs/documentation-quality.json` separately lists missing enum/union branch
+semantics, unresolved SDK annotation references, placeholders and a callable
+parameter/return review checklist. `review_required` means the text still needs
+semantic review; `not_applicable` is distinct from a missing item. Nonempty type
+summaries alone do not establish branch or callable completeness.
+
+Run the staged reference gates with:
+
+```sh
+uv run --locked python tools/test_tools.py -p test_python2_codegen.py -k PythonReference
+```
+
+The tests inventory every routed page by rollout batch, check accepted pages
+and exact cross-page pilot paths, and compare stable source/projection debt
+against `tools/python/python-reference-debt.json`. Remove resolved debt from
+that baseline when fixing documentation; the test rejects both new gaps and
+stale baseline entries, so one fix cannot hide a regression elsewhere. It stores
+identities and diagnostic categories, never business descriptions. Unreviewed
+domains remain visible in both reports until their own batch is accepted.

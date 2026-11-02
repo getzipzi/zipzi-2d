@@ -2,7 +2,6 @@
 from .index import Entry
 DATA: dict[str, Entry] = {'zipzi.modeling.addressing.ObjectKind': {'children': (),
                                           'documentation': '',
-                                          'example': 'docs/recipes.py',
                                           'fields': [('ASSET', "'asset'"),
                                                      ('MESH', "'mesh'"),
                                                      ('PARAMETER', "'parameter'"),

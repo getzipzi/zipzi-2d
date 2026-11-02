@@ -93,7 +93,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.AttachmentCapabilities': {'children': ('zipzi.modeling.addressing.AttachmentCapabilities.__repr__',
                                                                    'zipzi.modeling.addressing.AttachmentCapabilities.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('inspect',
                                                                   'Current capability to read the current typed '
                                                                   'record; inspect its state/reason before\n'
@@ -125,7 +124,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.BindingCapabilities': {'children': ('zipzi.modeling.addressing.BindingCapabilities.__repr__',
                                                                 'zipzi.modeling.addressing.BindingCapabilities.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('inspect',
                                                                'Current capability to read the current typed record; '
                                                                'inspect its state/reason before\n'
@@ -164,7 +162,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.BindingCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.Capabilities': {'children': (),
                                             'documentation': '',
-                                            'example': 'docs/recipes.py',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'CapabilitiesScene | CapabilitiesOrganization | '
@@ -190,7 +187,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesAttachment': {'children': ('zipzi.modeling.addressing.CapabilitiesAttachment.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesAttachment.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current package attachments and their references '
                                                                   'capability states and reasons; do\n'
@@ -203,7 +199,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesBinding': {'children': ('zipzi.modeling.addressing.CapabilitiesBinding.__repr__',
                                                                 'zipzi.modeling.addressing.CapabilitiesBinding.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Current parameter bindings and grid conversions '
                                                                'capability states and reasons; do\n'
@@ -216,7 +211,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesCollection': {'children': ('zipzi.modeling.addressing.CapabilitiesCollection.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesCollection.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current collection capability states and reasons; '
                                                                   'do not infer support from method\n'
@@ -229,7 +223,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesContent': {'children': ('zipzi.modeling.addressing.CapabilitiesContent.__repr__',
                                                                 'zipzi.modeling.addressing.CapabilitiesContent.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Current geometry and topology content capability '
                                                                'states and reasons; do not infer\n'
@@ -242,7 +235,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesDocument': {'children': ('zipzi.modeling.addressing.CapabilitiesDocument.__repr__',
                                                                  'zipzi.modeling.addressing.CapabilitiesDocument.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Current document configuration and metadata repair '
                                                                 'capability states and reasons; do\n'
@@ -255,7 +247,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesExpression': {'children': ('zipzi.modeling.addressing.CapabilitiesExpression.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesExpression.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current native expression eligibility; host Preview '
                                                                   'support is advertised separately.')],
@@ -267,7 +258,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesMotion': {'children': ('zipzi.modeling.addressing.CapabilitiesMotion.__repr__',
                                                                'zipzi.modeling.addressing.CapabilitiesMotion.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('value',
                                                               'Current native motion eligibility; host Preview support '
                                                               'is advertised separately.')],
@@ -279,7 +269,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesOrganization': {'children': ('zipzi.modeling.addressing.CapabilitiesOrganization.__repr__',
                                                                      'zipzi.modeling.addressing.CapabilitiesOrganization.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('value',
                                                                     'Current organization and parameter groups '
                                                                     'capability states and reasons; do not\n'
@@ -292,7 +281,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesPhysics': {'children': ('zipzi.modeling.addressing.CapabilitiesPhysics.__repr__',
                                                                 'zipzi.modeling.addressing.CapabilitiesPhysics.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('value',
                                                                'Current native physics eligibility; host Preview '
                                                                'support is advertised separately.')],
@@ -304,7 +292,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesPose': {'children': ('zipzi.modeling.addressing.CapabilitiesPose.__repr__',
                                                              'zipzi.modeling.addressing.CapabilitiesPose.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('value',
                                                             'Current native pose eligibility; host Preview support is '
                                                             'advertised separately.')],
@@ -316,7 +303,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesReferences': {'children': ('zipzi.modeling.addressing.CapabilitiesReferences.__repr__',
                                                                    'zipzi.modeling.addressing.CapabilitiesReferences.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('value',
                                                                   'Current metadata references and selections '
                                                                   'capability states and reasons; do not\n'
@@ -329,7 +315,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesResource': {'children': ('zipzi.modeling.addressing.CapabilitiesResource.__repr__',
                                                                  'zipzi.modeling.addressing.CapabilitiesResource.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('value',
                                                                 'Current image asset metadata and references '
                                                                 'capability states and reasons; do not\n'
@@ -342,7 +327,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesScene': {'children': ('zipzi.modeling.addressing.CapabilitiesScene.__repr__',
                                                               'zipzi.modeling.addressing.CapabilitiesScene.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('value',
                                                              'Current scene lifecycle, hierarchy and drawing '
                                                              'capability states and reasons; do not\n'
@@ -354,7 +338,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilitiesScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.CapabilityDomain': {'children': (),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('SCENE', "'scene'"),
                                                            ('ORGANIZATION', "'organization'"),
                                                            ('BINDING', "'binding'"),
@@ -370,7 +353,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
                                                 'signature': ''},
  'zipzi.modeling.addressing.CapabilityState': {'children': (),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'alias',
                                                'signature': 'CapabilityStateAvailable | CapabilityStateUnsupported | '
@@ -381,7 +363,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilityStateAvailable': {'children': ('zipzi.modeling.addressing.CapabilityStateAvailable.__repr__',
                                                                      'zipzi.modeling.addressing.CapabilityStateAvailable.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [],
                                                         'kind': 'type',
                                                         'signature': '()'},
@@ -390,7 +371,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilityStateUnavailable': {'children': ('zipzi.modeling.addressing.CapabilityStateUnavailable.__repr__',
                                                                        'zipzi.modeling.addressing.CapabilityStateUnavailable.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('code',
                                                                       'Stable reason code explaining why this '
                                                                       'operation is currently unavailable.')],
@@ -401,7 +381,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CapabilityStateUnsupported': {'children': ('zipzi.modeling.addressing.CapabilityStateUnsupported.__repr__',
                                                                        'zipzi.modeling.addressing.CapabilityStateUnsupported.summary'),
                                                           'documentation': '',
-                                                          'example': 'docs/recipes.py',
                                                           'fields': [('code',
                                                                       'Stable reason code explaining why this '
                                                                       'operation is unsupported for this '
@@ -413,7 +392,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.CollectionCapabilities': {'children': ('zipzi.modeling.addressing.CollectionCapabilities.__repr__',
                                                                    'zipzi.modeling.addressing.CollectionCapabilities.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('create',
                                                                   'Current capability to create objects in this '
                                                                   'collection; inspect its state/reason before\n'
@@ -435,7 +413,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ExpressionCapabilities': {'children': ('zipzi.modeling.addressing.ExpressionCapabilities.__repr__',
                                                                    'zipzi.modeling.addressing.ExpressionCapabilities.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('inspect',
                                                                   'Read this object while its identity/context remains '
                                                                   'valid.'),
@@ -469,7 +446,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.MotionCapabilities': {'children': ('zipzi.modeling.addressing.MotionCapabilities.__repr__',
                                                                'zipzi.modeling.addressing.MotionCapabilities.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('inspect',
                                                               'Read this object while its identity/context remains '
                                                               'valid.'),
@@ -511,7 +487,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.OrganizationCapabilities': {'children': ('zipzi.modeling.addressing.OrganizationCapabilities.__repr__',
                                                                      'zipzi.modeling.addressing.OrganizationCapabilities.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('inspect',
                                                                     'Current capability to read the current typed '
                                                                     'record; inspect its state/reason before\n'
@@ -557,7 +532,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.PhysicsCapabilities': {'children': ('zipzi.modeling.addressing.PhysicsCapabilities.__repr__',
                                                                 'zipzi.modeling.addressing.PhysicsCapabilities.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('inspect',
                                                                'Read this object while its identity/context remains '
                                                                'valid.'),
@@ -596,7 +570,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.PoseCapabilities': {'children': ('zipzi.modeling.addressing.PoseCapabilities.__repr__',
                                                              'zipzi.modeling.addressing.PoseCapabilities.summary'),
                                                 'documentation': '',
-                                                'example': 'docs/recipes.py',
                                                 'fields': [('inspect',
                                                             'Read this object while its identity/context remains '
                                                             'valid.'),
@@ -637,7 +610,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCapabilities': {'children': ('zipzi.modeling.addressing.ReferenceCapabilities.__repr__',
                                                                   'zipzi.modeling.addressing.ReferenceCapabilities.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('inspect',
                                                                  'Current capability to read the current typed record; '
                                                                  'inspect its state/reason before\n'
@@ -677,7 +649,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCapabilities.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceCollection': {'children': (),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [],
                                                    'kind': 'alias',
                                                    'signature': 'ReferenceCollectionModelParameterGroups | '
@@ -693,7 +664,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers': {'children': ('zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers.__repr__',
                                                                                   'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedMembers.summary'),
                                                                      'documentation': '',
-                                                                     'example': 'docs/recipes.py',
                                                                      'fields': [('set_id',
                                                                                  'Stable CDI combined-parameter set ID '
                                                                                  'owning the selected members.')],
@@ -704,7 +674,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets': {'children': ('zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets.__repr__',
                                                                                'zipzi.modeling.addressing.ReferenceCollectionCdiCombinedSets.summary'),
                                                                   'documentation': '',
-                                                                  'example': 'docs/recipes.py',
                                                                   'fields': [],
                                                                   'kind': 'type',
                                                                   'signature': '()'},
@@ -713,7 +682,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionModelHitAreas': {'children': ('zipzi.modeling.addressing.ReferenceCollectionModelHitAreas.__repr__',
                                                                              'zipzi.modeling.addressing.ReferenceCollectionModelHitAreas.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [],
                                                                 'kind': 'type',
                                                                 'signature': '()'},
@@ -722,7 +690,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups': {'children': ('zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups.__repr__',
                                                                                     'zipzi.modeling.addressing.ReferenceCollectionModelParameterGroups.summary'),
                                                                        'documentation': '',
-                                                                       'example': 'docs/recipes.py',
                                                                        'fields': [],
                                                                        'kind': 'type',
                                                                        'signature': '()'},
@@ -731,7 +698,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers': {'children': ('zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.__repr__',
                                                                                      'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.summary'),
                                                                         'documentation': '',
-                                                                        'example': 'docs/recipes.py',
                                                                         'fields': [('group_id',
                                                                                     'Existing model3 parameter-group '
                                                                                     'object ID; this collection has no '
@@ -742,7 +708,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceCollectionModelParameterMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceEdit': {'children': (),
                                              'documentation': '',
-                                             'example': 'docs/recipes.py',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'ReferenceEditCreateModelParameterGroup | '
@@ -765,7 +730,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet.__repr__',
                                                                               'zipzi.modeling.addressing.ReferenceEditCreateCdiCombinedSet.summary'),
                                                                  'documentation': '',
-                                                                 'example': 'docs/recipes.py',
                                                                  'fields': [('id',
                                                                              'New stable UUID for this object; it must '
                                                                              'not conflict with an existing identity.'),
@@ -782,7 +746,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditCreateMember': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateMember.__repr__',
                                                                       'zipzi.modeling.addressing.ReferenceEditCreateMember.summary'),
                                                          'documentation': '',
-                                                         'example': 'docs/recipes.py',
                                                          'fields': [('id',
                                                                      'New stable UUID for this object; it must not '
                                                                      'conflict with an existing identity.'),
@@ -802,7 +765,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateModelHitArea.__repr__',
                                                                             'zipzi.modeling.addressing.ReferenceEditCreateModelHitArea.summary'),
                                                                'documentation': '',
-                                                               'example': 'docs/recipes.py',
                                                                'fields': [('id',
                                                                            'New stable UUID for this object; it must '
                                                                            'not conflict with an existing identity.'),
@@ -823,7 +785,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup': {'children': ('zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.__repr__',
                                                                                    'zipzi.modeling.addressing.ReferenceEditCreateModelParameterGroup.summary'),
                                                                       'documentation': '',
-                                                                      'example': 'docs/recipes.py',
                                                                       'fields': [('id',
                                                                                   'New stable UUID for this object; it '
                                                                                   'must not conflict with an existing '
@@ -845,7 +806,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditDelete': {'children': ('zipzi.modeling.addressing.ReferenceEditDelete.__repr__',
                                                                 'zipzi.modeling.addressing.ReferenceEditDelete.summary'),
                                                    'documentation': '',
-                                                   'example': 'docs/recipes.py',
                                                    'fields': [('ids',
                                                                'Ordered stable object IDs selected for this operation; '
                                                                'visible names and row numbers\n'
@@ -857,7 +817,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditDissolve': {'children': ('zipzi.modeling.addressing.ReferenceEditDissolve.__repr__',
                                                                   'zipzi.modeling.addressing.ReferenceEditDissolve.summary'),
                                                      'documentation': '',
-                                                     'example': 'docs/recipes.py',
                                                      'fields': [('id',
                                                                  'Stable document object ID used by references; it is '
                                                                  'distinct from the exported\n'
@@ -878,7 +837,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditDuplicate': {'children': ('zipzi.modeling.addressing.ReferenceEditDuplicate.__repr__',
                                                                    'zipzi.modeling.addressing.ReferenceEditDuplicate.summary'),
                                                       'documentation': '',
-                                                      'example': 'docs/recipes.py',
                                                       'fields': [('ids',
                                                                   'Ordered stable object IDs selected for this '
                                                                   'operation; visible names and row numbers\n'
@@ -900,7 +858,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditMove': {'children': ('zipzi.modeling.addressing.ReferenceEditMove.__repr__',
                                                               'zipzi.modeling.addressing.ReferenceEditMove.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('ids',
                                                              'Ordered stable object IDs selected for this operation; '
                                                              'visible names and row numbers\n'
@@ -922,7 +879,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditPatch': {'children': ('zipzi.modeling.addressing.ReferenceEditPatch.__repr__',
                                                                'zipzi.modeling.addressing.ReferenceEditPatch.summary'),
                                                   'documentation': '',
-                                                  'example': 'docs/recipes.py',
                                                   'fields': [('id',
                                                               'Stable document object ID used by references; it is '
                                                               'distinct from the exported\n'
@@ -944,7 +900,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEditReplaceSelection': {'children': ('zipzi.modeling.addressing.ReferenceEditReplaceSelection.__repr__',
                                                                           'zipzi.modeling.addressing.ReferenceEditReplaceSelection.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('owner',
                                                                          'Stable owner ID for the addressed drawing '
                                                                          'group, collection or reference selection.'),
@@ -968,7 +923,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef': {'children': ('zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.__repr__',
                                                                           'zipzi.modeling.addressing.ReferenceEntryCdiParameterRef.summary'),
                                                              'documentation': '',
-                                                             'example': 'docs/recipes.py',
                                                              'fields': [('id',
                                                                          'Stable UUID of this reference entry; not the '
                                                                          'identity of its target.'),
@@ -985,7 +939,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef': {'children': ('zipzi.modeling.addressing.ReferenceEntryModelTargetRef.__repr__',
                                                                          'zipzi.modeling.addressing.ReferenceEntryModelTargetRef.summary'),
                                                             'documentation': '',
-                                                            'example': 'docs/recipes.py',
                                                             'fields': [('id',
                                                                         'Stable UUID of this reference entry; not the '
                                                                         'identity of its target.'),
@@ -1001,7 +954,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceEntryModelTargetRef.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceFields': {'children': (),
                                                'documentation': '',
-                                               'example': 'docs/recipes.py',
                                                'fields': [],
                                                'kind': 'alias',
                                                'signature': 'ReferenceFieldsModelParameterGroup | '
@@ -1015,7 +967,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember': {'children': ('zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.__repr__',
                                                                              'zipzi.modeling.addressing.ReferenceFieldsCdiCombinedMember.summary'),
                                                                 'documentation': '',
-                                                                'example': 'docs/recipes.py',
                                                                 'fields': [('target',
                                                                             'Resolved document target or preserved '
                                                                             'unresolved runtime identifier; entry '
@@ -1029,7 +980,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceFieldsModelHitArea': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelHitArea.__repr__',
                                                                         'zipzi.modeling.addressing.ReferenceFieldsModelHitArea.summary'),
                                                            'documentation': '',
-                                                           'example': 'docs/recipes.py',
                                                            'fields': [('name',
                                                                        'Human-readable display name; use the stable ID '
                                                                        'for identity because names can change.'),
@@ -1044,7 +994,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.__repr__',
                                                                                'zipzi.modeling.addressing.ReferenceFieldsModelParameterGroup.summary'),
                                                                   'documentation': '',
-                                                                  'example': 'docs/recipes.py',
                                                                   'fields': [('name',
                                                                               'Human-readable display name; use the '
                                                                               'stable ID for identity because names '
@@ -1056,7 +1005,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember': {'children': ('zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.__repr__',
                                                                                 'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.summary'),
                                                                    'documentation': '',
-                                                                   'example': 'docs/recipes.py',
                                                                    'fields': [('target',
                                                                                'Resolved document target or preserved '
                                                                                'unresolved runtime identifier; entry '
@@ -1069,7 +1017,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ReferenceFieldsModelParameterMember.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.addressing.ReferenceSelectionField': {'children': (),
                                                        'documentation': '',
-                                                       'example': 'docs/recipes.py',
                                                        'fields': [('MESH_MASKS', "'mesh_masks'"),
                                                                   ('OFFSCREEN_MASKS', "'offscreen_masks'"),
                                                                   ('BLEND_CONSTRAINTS', "'blend_constraints'")],
@@ -1078,7 +1025,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.ResourceCapabilities': {'children': ('zipzi.modeling.addressing.ResourceCapabilities.__repr__',
                                                                  'zipzi.modeling.addressing.ResourceCapabilities.summary'),
                                                     'documentation': '',
-                                                    'example': 'docs/recipes.py',
                                                     'fields': [('inspect',
                                                                 'Current capability to read the current typed record; '
                                                                 'inspect its state/reason before\n'
@@ -1114,7 +1060,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.SceneCapabilities': {'children': ('zipzi.modeling.addressing.SceneCapabilities.__repr__',
                                                               'zipzi.modeling.addressing.SceneCapabilities.summary'),
                                                  'documentation': '',
-                                                 'example': 'docs/recipes.py',
                                                  'fields': [('inspect',
                                                              'Current capability to read the current typed record; '
                                                              'inspect its state/reason before\n'
@@ -1159,7 +1104,6 @@ DATA: dict[str, Entry] = {'zipzi.modeling.addressing': {'children': ('zipzi.mode
  'zipzi.modeling.addressing.SceneContentCapabilities': {'children': ('zipzi.modeling.addressing.SceneContentCapabilities.__repr__',
                                                                      'zipzi.modeling.addressing.SceneContentCapabilities.summary'),
                                                         'documentation': '',
-                                                        'example': 'docs/recipes.py',
                                                         'fields': [('inspect',
                                                                     'Current capability to read the current typed '
                                                                     'record; inspect its state/reason before\n'

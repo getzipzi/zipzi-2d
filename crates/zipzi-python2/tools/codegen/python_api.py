@@ -4,7 +4,7 @@ import importlib.util
 import tomllib
 from copy import deepcopy
 from dataclasses import replace
-from codegen.model import DocEntry, Projection, validate_projections
+from codegen.model import DocEntry, DocRule, Projection, collection_rules, validate_rules, validate_projections
 import keyword
 import re
 from pathlib import Path
@@ -14,6 +14,13 @@ _fingerprint_spec=importlib.util.spec_from_file_location('zipzi_source_fingerpri
 _fingerprint=importlib.util.module_from_spec(_fingerprint_spec)
 _fingerprint_spec.loader.exec_module(_fingerprint)
 PUBLIC_SPECIALS=frozenset({'__enter__','__exit__','__repr__'})
+
+# Bound only to variant projections with an emitted init=False Literal field.
+DISCRIMINATOR_RULE = DocRule('fixed-discriminator', 'Fixed operation discriminators',
+    'A variant constructor supplies its fixed operation discriminator automatically. '
+    'The attribute is read-only and is not a constructor argument or an editable business field. '
+    'Choose a variant by its documented business effect; the discriminator identifies its wire operation.',
+    'generator:codegen.python_api.compiled_fields')
 
 def compact(source):
     lines=source.splitlines();result=[];decorated=False;changed=False
@@ -91,12 +98,33 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
             # The bound Plan wrapper adds its captured Runtime source to the SDK report.
             snapshot=shapes['zipzi_contract::runtime::PlanSnapshot']
             fields=[next(f for f in snapshot['fields'] if f['name']=='source')]+fields
-        if 'kind' in selected and not any(f['name']=='kind' for f in fields):
-            fields=fields+[dict(name='kind',doc='Fixed operation discriminator supplied by this value type; not a constructor argument or a mutable object field.')]
+        for name, role, value in field_roles(file,node):
+            fields=fields+[dict(name=name,doc='Fixed value '+value+' (read-only).')]
         missing=[f['name'] for f in fields if not f.get('doc','').strip()]
         if missing:
             raise ValueError('Missing semantic field documentation: '+shape['name']+'.'+', '.join(missing))
         return [(f['name'],f['doc']) for f in fields]
+    def field_roles(file,node):
+        shape=class_shapes.get((file,node.name),{})
+        if not shape.get('variant'):return ()
+        roles=[]
+        declared={f['name'] for f in shape.get('fields',())}
+        for field in node.body:
+            if not isinstance(field,ast.AnnAssign) or not isinstance(field.target,ast.Name) or field.target.id in declared:continue
+            if (isinstance(field.annotation,ast.Subscript) and ast.unparse(field.annotation.value)=='Literal'
+                    and isinstance(field.value,ast.Call) and ast.unparse(field.value.func)=='field'
+                    and any(arg.arg=='init' and isinstance(arg.value,ast.Constant) and arg.value.value is False for arg in field.value.keywords)):
+                value=next(arg.value for arg in field.value.keywords if arg.arg=='default')
+                if ast.literal_eval(value)!=ast.literal_eval(field.annotation.slice):
+                    raise ValueError('Projection discriminator mismatch: '+shape['name'])
+                roles.append((field.target.id,'fixed-discriminator',ast.unparse(value)))
+            elif (isinstance(field.annotation,ast.Subscript) and ast.unparse(field.annotation.value)=='ClassVar'
+                  and isinstance(field.annotation.slice,ast.Subscript) and ast.unparse(field.annotation.slice.value)=='Literal'
+                  and isinstance(field.value,ast.Constant)):
+                if ast.literal_eval(field.value)!=ast.literal_eval(field.annotation.slice.slice):
+                    raise ValueError('Projection discriminator mismatch: '+shape['name'])
+                roles.append((field.target.id,'fixed-discriminator',ast.unparse(field.value)))
+        return tuple(roles)
     def python_fields(node,selected=None):
         declared=[n.target.id for n in node.body if isinstance(n,ast.AnnAssign)
                   and isinstance(n.target,ast.Name) and not n.target.id.startswith('_')
@@ -171,13 +199,17 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
         if '/_generated/' not in path:return content
         tree=parse(path,content);lines=content.splitlines(True);edits=[]
         for node in tree.body:
-            if not isinstance(node,ast.ClassDef) or ast.get_docstring(node) or not any(isinstance(n,ast.Name) and n.id in {'CompactValue','NamedTuple','Enum'} for n in node.bases):continue
+            if not isinstance(node,ast.ClassDef) or not any(isinstance(n,ast.Name) and n.id in {'CompactValue','NamedTuple','Enum'} for n in node.bases):continue
+            roles=field_roles(Path(path).stem,node)
+            if ast.get_docstring(node) and not roles:continue
             fs=compiled_fields(Path(path).stem,node)
             shape=class_shapes.get((Path(path).stem,node.name),{})
             text=shape.get('doc','').strip()
             if fs:text+='\n\nFields:\n'+'\n'.join(name+': '+doc for name,doc in fs)
-            edits.append((node.body[0].lineno-1,'    '+repr(text)+'\n'))
-        for index,value in reversed(edits):lines.insert(index,value)
+            if roles:text+='\n\n'+DISCRIMINATOR_RULE.documentation
+            first=node.body[0]
+            edits.append((first.lineno-1,first.end_lineno if ast.get_docstring(node) else first.lineno-1,'    '+repr(text)+'\n'))
+        for start,end,value in reversed(edits):lines[start:end]=[value]
         return ''.join(lines)
     def prepare(output):
         # Handwritten source docs may be read, but generated outputs always come
@@ -199,12 +231,15 @@ def build_api(contract,package,dto_names,modeling_name,resolve=lambda shape: sha
                 if name is not None and ('modeling',name) in class_shapes:
                     class_shapes[(domain,name)]=class_shapes[('modeling',name)]
         validate_projections(tuple(projected))
-        return sources,parse,class_shapes,compiled_fields,python_fields,tuple(projected),resolve
+        return sources,parse,class_shapes,compiled_fields,python_fields,tuple(projected),resolve,field_roles
     return render_python,prepare
 
 
-def document_model(contract,prepared,package):
-    sources,parse,class_shapes,compiled_fields,python_fields,projected,resolve_shape=prepared
+def document_model(contract,prepared,package,bindings=None):
+    sources,parse,class_shapes,compiled_fields,python_fields,projected,resolve_shape,field_roles=prepared
+    bindings={} if bindings is None else bindings
+    rules=collection_rules(package)
+    rules[DISCRIMINATOR_RULE.key]=DISCRIMINATOR_RULE
     prefix='client/python/zipzi/'
     def module_name(path):
         suffix=path[len(prefix):]
@@ -216,6 +251,16 @@ def document_model(contract,prepared,package):
     trees={module_name(p):parse(p,s) for p,s in sources.items() if p.startswith(prefix)}
     symbols={}
     definition_docs={}
+    identities={}
+    def identify(module,nodes,parents=()):
+        for node in nodes:
+            name=(node.name if isinstance(node,(ast.ClassDef,ast.FunctionDef)) else
+                  node.target.id if isinstance(node,ast.AnnAssign) and isinstance(node.target,ast.Name) else
+                  node.targets[0].id if isinstance(node,ast.Assign) and isinstance(node.targets[0],ast.Name) else None)
+            if name is not None:
+                identities[id(node)]='python:'+'.'.join(('zipzi', *((module,) if module else ()), *parents, name))
+                if isinstance(node,ast.ClassDef):identify(module,node.body,(*parents,name))
+    for module,tree in trees.items():identify(module,tree.body)
     def signature(node):
         if isinstance(node,ast.FunctionDef):
             if any(isinstance(d,ast.Name) and d.id=='property' for d in node.decorator_list):
@@ -307,7 +352,7 @@ def document_model(contract,prepared,package):
         methods.update({n.name:n for n in node.body if isinstance(n,ast.FunctionDef)
                         and (not n.name.startswith('_') or n.name in PUBLIC_SPECIALS)})
         return methods
-    catalog={'zipzi':dict(kind='module',signature='',documentation='Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release.',example='docs/recipes.py',children=[])}
+    catalog={'zipzi':dict(kind='module',signature='',documentation='Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release.',children=[])}
     def add(path,node,field_docs=None):
         kind='type' if isinstance(node,ast.ClassDef) else 'callable' if isinstance(node,ast.FunctionDef) else 'value'
         text=ast.get_docstring(node) if isinstance(node,(ast.ClassDef,ast.FunctionDef)) else definition_docs.get(id(node),'')
@@ -324,12 +369,22 @@ def document_model(contract,prepared,package):
                           and ast.unparse(n.annotation.value) in {'ClassVar','_ClassVar'})}
                 extra=selected-set(dict(fields))
                 if extra:fields+=python_fields(node,extra)
-        catalog[path]=dict(kind=kind,signature=signature(node) if kind in {'type','callable'} else '',documentation=text or '',fields=fields,children=[],example='docs/recipes.py',_identity=id(node))
+        identity=identities[id(node)]
+        binding=bindings.get(identity)
+        roles=field_roles(node_modules.get(id(node),'').rsplit('.',1)[-1],node) if isinstance(node,ast.ClassDef) else ()
+        # Compiled summaries and descriptors are acquired before rendering; no
+        # consumer trims expanded shared prose out of a docstring.
+        if roles:
+            shape=class_shapes[(node_modules[id(node)].rsplit('.',1)[-1],node.name)]
+            text=shape.get('doc','')
+        catalog[path]=dict(kind=kind,signature=signature(node) if kind in {'type','callable'} else '',documentation=binding.summary if binding else text or '',fields=fields,children=[],_identity=identity,
+                           _node=id(node),example=binding.example if binding else None,rule_refs=binding.rule_refs if binding else ('fixed-discriminator',) if roles else (),field_roles=roles)
         if (isinstance(node,ast.AnnAssign) and 'TypeAlias' in ast.unparse(node.annotation)) or (isinstance(node,ast.Assign) and isinstance(node.value,(ast.Subscript,ast.BinOp))):
             name=node.target.id if isinstance(node,ast.AnnAssign) else node.targets[0].id
             shape=class_shapes.get((node_modules.get(id(node),'').rsplit('.',1)[-1],name),{})
             catalog[path].update(kind='alias',signature=ast.unparse(node.value),documentation=text or shape.get('doc') or '')
         if isinstance(node,ast.ClassDef) and any(isinstance(b,ast.Name) and b.id=='Enum' for b in node.bases):
+            kind='enum'
             shape=class_shapes.get((node_modules.get(id(node),'').rsplit('.',1)[-1],node.name),{})
             variant_docs={variant.get('wire_name',variant.get('name')):variant.get('doc','').strip() for variant in shape.get('variants',())}
             members=[]
@@ -338,11 +393,22 @@ def document_model(contract,prepared,package):
                 meaning=variant_docs.get(ast.literal_eval(member.value),'')
                 members.append((member.targets[0].id,ast.unparse(member.value)+(' — '+meaning if meaning else '')))
             catalog[path].update(kind='enum',signature='',fields=members,documentation=text or '')
+            catalog[path]['_diagnostics']=[('enum-member',name,'review_required' if variant_docs.get(ast.literal_eval(member.value),'') else 'missing')
+                for member in node.body if isinstance(member,ast.Assign) and isinstance(member.targets[0],ast.Name)
+                and not (name:=member.targets[0].id).startswith('_')]
         if isinstance(node,(ast.ClassDef,ast.Assign,ast.AnnAssign)):
             module=node_modules.get(id(node),'')
             name=node.name if isinstance(node,ast.ClassDef) else node.target.id if isinstance(node,ast.AnnAssign) else node.targets[0].id
             shape=class_shapes.get((module.rsplit('.',1)[-1],name),{})
-            catalog[path]['_documentation_source']=('rust:'+shape['name'] if shape else 'python:zipzi.'+module+'.'+name)
+            catalog[path]['_documentation_source']=('rust:'+shape['name'] if shape else identity)
+            if shape.get('variants') and kind!='enum':
+                catalog[path]['_diagnostics']=[('union-branch',v['rust_name'],'review_required' if v.get('doc','').strip() else 'missing') for v in shape['variants']]
+            elif shape.get('variant'):
+                catalog[path]['_diagnostics']=[('union-branch',shape['variant'],'review_required' if shape.get('doc','').strip() else 'missing')]
+        if isinstance(node,ast.FunctionDef):
+            parameters=[arg.arg for arg in (*node.args.posonlyargs,*node.args.args,*node.args.kwonlyargs) if arg.arg not in {'self','cls'}]
+            catalog[path]['_diagnostics']=[('callable-parameters',','.join(parameters),'review_required' if parameters else 'not_applicable'),
+                ('callable-return',ast.unparse(node.returns) if node.returns else '', 'review_required' if node.returns else 'missing')]
         if kind=='property':catalog[path]['signature']=signature(node)
         if isinstance(node,ast.ClassDef):
             for child in public_methods(node).values():
@@ -392,6 +458,11 @@ def document_model(contract,prepared,package):
                     for child in edit.body:
                         if isinstance(child,ast.FunctionDef) and not child.name.startswith('_'):add(path+'.'+child.name,child);catalog[path]['children'].append(path+'.'+child.name)
             if 'zipzi.'+owner in catalog:catalog['zipzi.'+owner]['children'].append(path)
+            for child_path in catalog[path]['children']:
+                row=catalog[child_path]
+                if any(ref in {'collection-read','collection-page'} for ref in row.get('rule_refs',())):
+                    context=('Reads committed Session content.' if owner=='Session' else 'Reads this Edit candidate, including pending writes.')
+                    row['documentation']=context+'\n\n'+row['documentation']
     for owner,module,cls in [('Runtime.sessions','_lifecycle','Sessions'),('Session.project','_lifecycle','Project'),('Runtime.resources','resources','Resources')]:
         node=resolve(module,cls)
         if node:
@@ -409,6 +480,8 @@ def document_model(contract,prepared,package):
         example=row.get('example')
         if example and not (package/prefix/example).is_file():
             raise ValueError('Missing API example: '+example)
+    unused=set(bindings)-{row.get('_identity') for row in catalog.values()}
+    if unused:raise ValueError('Unbound documentation projection: '+', '.join(sorted(unused)))
     source_sha=_fingerprint.fingerprint(sources)
     package_version=tomllib.loads((package/'client/pyproject.toml').read_text(encoding='utf-8'))['project']['version']
     compact_class=resolve('_presentation','CompactValue')
@@ -421,33 +494,42 @@ def document_model(contract,prepared,package):
     canonical_paths={projection.canonical_path for projection in projected}
     for path,row in sorted(catalog.items(),key=lambda item:(item[0] not in canonical_paths,item[0].count('.'),item[0])):
         if row['kind'] in {'type','enum','alias'}:
-            public_types.setdefault(row.get('_identity'),path)
+            public_types.setdefault(row.get('_node'),path)
     definitions={id(node):(module,node) for module,tree in trees.items() for node in ast.walk(tree)
                  if isinstance(node,(ast.ClassDef,ast.FunctionDef,ast.Assign,ast.AnnAssign))}
     imported_modules={}
+    external_names={}
     for module,tree in trees.items():
         aliases={}
+        external=set()
         for node in type_scope(tree.body):
             if isinstance(node,ast.Import):
                 for alias in node.names:
                     target=alias.name.removeprefix('zipzi.')
                     aliases[alias.asname or alias.name.split('.')[0]]=target if alias.asname else alias.name.split('.')[0]
+                    if not alias.name.startswith('zipzi'):external.add(alias.asname or alias.name.split('.')[0])
             elif isinstance(node,ast.ImportFrom):
                 if node.level:
                     parent=module.split('.') if module in packages else module.split('.')[:-1]
                     target='.'.join(parent[:len(parent)-node.level+1]+(node.module or '').split('.')).strip('.')
                 elif node.module=='zipzi' or (node.module or '').startswith('zipzi.'):
                     target=(node.module or '').removeprefix('zipzi').lstrip('.')
-                else:continue
+                else:
+                    external.update(alias.asname or alias.name for alias in node.names)
+                    continue
                 for alias in node.names:
                     candidate=(target+'.'+alias.name).strip('.')
                     if candidate in trees:aliases[alias.asname or alias.name]=candidate
         imported_modules[module]=aliases
+        external_names[module]=external
+    reference_diagnostics=set()
     def annotation_refs(module,annotation):
         if annotation is None:return set()
         if isinstance(annotation,ast.Constant) and isinstance(annotation.value,str):
             try:return annotation_refs(module,ast.parse(annotation.value,mode='eval').body)
-            except SyntaxError:return set()
+            except SyntaxError:
+                reference_diagnostics.add(('type-reference',annotation.value,'unresolved-sdk'))
+                return set()
         if isinstance(annotation,(ast.Name,ast.Attribute)):
             parts=ast.unparse(annotation).split('.')
             node=None
@@ -457,17 +539,32 @@ def document_model(contract,prepared,package):
                 if target is not None:node=resolve('.'.join([target,*parts[1:-1]]),parts[-1])
                 elif parts[0]=='zipzi':node=resolve('.'.join(parts[1:-1]),parts[-1])
             path=public_types.get(id(node))
-            return {path} if path else set()
+            name=ast.unparse(annotation)
+            variable=resolve(module,parts[0])
+            if path:
+                reference_diagnostics.add(('type-reference',name,'public-sdk'))
+                return {path}
+            if parts[0] in {'str','int','float','bool','bytes','bytearray','memoryview','object','tuple','list','dict','set','frozenset','type','range','Exception','BaseException'}:
+                classification='builtin'
+            elif parts[0] in {'typing','Any','Self','Generic','Sequence','Mapping','Callable','Iterator','Iterable','Literal','ClassVar','TypeAlias','Protocol','Never','Optional','Union','TypeVar'}:
+                classification='typing'
+            elif isinstance(variable,(ast.Assign,ast.AnnAssign)) and isinstance(variable.value,ast.Call) and ast.unparse(variable.value.func) in {'TypeVar','typing.TypeVar','ParamSpec','typing.ParamSpec'}:
+                classification='type-variable'
+            elif parts[0] in external_names.get(module,set()):classification='external'
+            else:classification='unresolved-sdk'
+            reference_diagnostics.add(('type-reference',name,classification))
+            return set()
         if isinstance(annotation,ast.Subscript) and ast.unparse(annotation.value).split('.')[-1]=='Literal':return set()
         return set().union(*(annotation_refs(module,child) for child in ast.iter_child_nodes(annotation)))
     for path,row in catalog.items():
-        definition=definitions.get(row.get('_identity'))
+        reference_diagnostics.clear()
+        definition=definitions.get(row.get('_node'))
         if definition is None:continue
         module,node=definition
         annotations=[]
         if isinstance(node,ast.ClassDef):
             init=next((child for child in node.body if isinstance(child,ast.FunctionDef) and child.name=='__init__'),None)
-            if init:node=init
+            if init and not row['signature'].startswith('(factory-owned'):node=init
             else:annotations=[child.annotation for child in node.body if isinstance(child,ast.AnnAssign)]
         if isinstance(node,ast.FunctionDef):
             annotations=[arg.annotation for arg in [*node.args.posonlyargs,*node.args.args,*node.args.kwonlyargs]]+[node.returns]
@@ -476,6 +573,16 @@ def document_model(contract,prepared,package):
             annotations=[node.value]
         refs=set().union(*(annotation_refs(module,annotation) for annotation in annotations))
         row['type_refs']=tuple(sorted(refs-{path}))
+        row.setdefault('_diagnostics',[]).extend(sorted(reference_diagnostics))
+    # Projection identity distinguishes convenience/canonical constructors even
+    # when their Rust source is the same. Reexports share the defining identity.
+    projection_ids={catalog[p.canonical_path]['_identity']:'rust:'+p.rust_type_id+'|projection:'+p.projection_id
+                    for p in projected if p.canonical_path in catalog}
+    for path,row in catalog.items():
+        if row.get('_identity') in projection_ids:row['_identity']=projection_ids[row['_identity']]
+        validate_rules(rules,tuple(row.get('rule_refs',())))
+        for ref in row.get('type_refs',()):
+            if ref not in catalog:raise ValueError('Dangling public type reference: '+path+' -> '+ref)
     entries=[DocEntry.from_row(path,row,common) for path,row in sorted(catalog.items())]
     by_identity={}
     by_path={entry.path:entry for entry in entries}
@@ -492,4 +599,4 @@ def document_model(contract,prepared,package):
             path for path in by_identity[entry.identity] if path != projection.canonical_path and path not in canonical_paths)
         resolved.append(replace(projection,aliases=aliases))
     validate_projections(tuple(resolved))
-    return entries,domains,common,package_version,source_sha,prefix,tuple(resolved)
+    return entries,domains,common,package_version,source_sha,prefix,rules,tuple(resolved)

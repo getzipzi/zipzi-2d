@@ -16,6 +16,8 @@ Canonical physics modeling values.
 
 `(*, id: str, data: PhysicsDefinition, opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
+Types: [PhysicsDefinition](#zipzimodelingphysicsphysicsdefinition).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -54,6 +56,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 **Alias**
 
 `PhysicsCollectionGroups | PhysicsCollectionInputs | PhysicsCollectionOutputs | PhysicsCollectionNodes`
+
+Types: [PhysicsCollectionGroups](#zipzimodelingphysicsphysicscollectiongroups), [PhysicsCollectionInputs](#zipzimodelingphysicsphysicscollectioninputs), [PhysicsCollectionNodes](#zipzimodelingphysicsphysicscollectionnodes), [PhysicsCollectionOutputs](#zipzimodelingphysicsphysicscollectionoutputs).
 
 
 ## zipzi.modeling.physics.PhysicsCollectionGroups
@@ -99,6 +103,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 `(*, version: int, meta: PhysicsMeta, settings: tuple[PhysicsSetting, ...], extensions: _Mapping[str, ExtensionValue])`
 
+Types: [PhysicsMeta](#zipzimodelingphysicsphysicsmeta), [PhysicsSetting](#zipzimodelingphysicsphysicssetting).
+
 **Fields**
 
 - `version`: Native Physics format version number.
@@ -123,6 +129,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 **Alias**
 
 `PhysicsEditCreateGroup | PhysicsEditCreateInput | PhysicsEditCreateOutput | PhysicsEditInsertNode | PhysicsEditMoveNode | PhysicsEditDuplicateNode | PhysicsEditPatch | PhysicsEditMoveInputs | PhysicsEditMoveOutputs | PhysicsEditReorderGroups | PhysicsEditDuplicate | PhysicsEditDelete`
+
+Types: [PhysicsEditCreateGroup](#zipzimodelingphysicsphysicseditcreategroup), [PhysicsEditCreateInput](#zipzimodelingphysicsphysicseditcreateinput), [PhysicsEditCreateOutput](#zipzimodelingphysicsphysicseditcreateoutput), [PhysicsEditDelete](#zipzimodelingphysicsphysicseditdelete), [PhysicsEditDuplicate](#zipzimodelingphysicsphysicseditduplicate), [PhysicsEditDuplicateNode](#zipzimodelingphysicsphysicseditduplicatenode), [PhysicsEditInsertNode](#zipzimodelingphysicsphysicseditinsertnode), [PhysicsEditMoveInputs](#zipzimodelingphysicsphysicseditmoveinputs), [PhysicsEditMoveNode](#zipzimodelingphysicsphysicseditmovenode), [PhysicsEditMoveOutputs](#zipzimodelingphysicsphysicseditmoveoutputs), [PhysicsEditPatch](#zipzimodelingphysicsphysicseditpatch), [PhysicsEditReorderGroups](#zipzimodelingphysicsphysicseditreordergroups).
 
 
 ## zipzi.modeling.physics.PhysicsEditCreateGroup
@@ -203,6 +211,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 `(*, group_id: str, node: PhysicsNode, before: str | None = None)`
 
+Types: [PhysicsNode](#zipzimodelingphysicsphysicsnode).
+
 **Fields**
 
 - `group_id`: Stable ID of the group owning the affected rows or node chain.
@@ -251,6 +261,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 `(*, patch: PhysicsPatch)`
 
+Types: [PhysicsPatch](#zipzimodelingphysicsphysicspatch).
+
 **Fields**
 
 - `patch`: Typed atomic Physics changes validated against the current candidate.
@@ -272,6 +284,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 `(*, Gravity: PhysicsVector, Wind: PhysicsVector, extensions: _Mapping[str, ExtensionValue])`
 
+Types: [PhysicsVector](#zipzimodelingphysicsphysicsvector).
+
 **Fields**
 
 - `Gravity`: Effective gravity vector in the native Physics coordinate convention.
@@ -283,6 +297,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 **Type**
 
 `(*, id: str, source: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
+
+Types: [PhysicsAxis](#zipzimodelingphysicsphysicsaxis), [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 **Fields**
 
@@ -299,6 +315,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 **Type**
 
 `(*, PhysicsSettingCount: int, TotalInputCount: int, TotalOutputCount: int, VertexCount: int, EffectiveForces: PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, ...], Fps: float | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Types: [PhysicsDictionaryEntry](#zipzimodelingphysicsphysicsdictionaryentry), [PhysicsForces](#zipzimodelingphysicsphysicsforces).
 
 **Fields**
 
@@ -317,6 +335,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 `(*, id: str, position: PhysicsVector, mobility: float, delay: float, acceleration: float, radius: float, extensions: _Mapping[str, ExtensionValue])`
 
+Types: [PhysicsVector](#zipzimodelingphysicsphysicsvector).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -333,6 +353,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 `(*, Position: PhysicsRange, Angle: PhysicsRange, extensions: _Mapping[str, ExtensionValue])`
 
+Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
+
 **Fields**
 
 - `Position`: Authored two-dimensional Physics node position or normalization domain, as declared by the field.
@@ -344,6 +366,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 **Type**
 
 `(*, id: str, destination: PhysicsTarget, reference_extensions: _Mapping[str, ExtensionValue], node_id: str, scale: float, weight: float, kind: PhysicsAxis, reflect: bool, extensions: _Mapping[str, ExtensionValue])`
+
+Types: [PhysicsAxis](#zipzimodelingphysicsphysicsaxis), [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 **Fields**
 
@@ -378,6 +402,8 @@ Alias of [zipzi.modeling.physics.PhysicsAssetProperty](modeling_physics.md#zipzi
 
 Atomic asset edits plus optional rig edits; asset-only patches support empty assets.
 
+Types: [PhysicsAssetProperty](#zipzimodelingphysicsphysicsassetproperty), [PhysicsRigPatch](#zipzimodelingphysicsphysicsrigpatch).
+
 **Fields**
 
 - `asset_id`: Stable Physics singleton ID owning these changes.
@@ -390,12 +416,16 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 
 `PhysicsPropertyName | PhysicsPropertyInputWeight | PhysicsPropertyInputAxis | PhysicsPropertyInputReflect | PhysicsPropertyInputParameter | PhysicsPropertyOutputWeight | PhysicsPropertyOutputScale | PhysicsPropertyOutputAxis | PhysicsPropertyOutputReflect | PhysicsPropertyOutputParameter | PhysicsPropertyOutputNode | PhysicsPropertyVertexPosition | PhysicsPropertyVertexRadius | PhysicsPropertyVertexMobility | PhysicsPropertyVertexDelay | PhysicsPropertyVertexAcceleration | PhysicsPropertyPositionNormalization | PhysicsPropertyAngleNormalization`
 
+Types: [PhysicsPropertyAngleNormalization](#zipzimodelingphysicsphysicspropertyanglenormalization), [PhysicsPropertyInputAxis](#zipzimodelingphysicsphysicspropertyinputaxis), [PhysicsPropertyInputParameter](#zipzimodelingphysicsphysicspropertyinputparameter), [PhysicsPropertyInputReflect](#zipzimodelingphysicsphysicspropertyinputreflect), [PhysicsPropertyInputWeight](#zipzimodelingphysicsphysicspropertyinputweight), [PhysicsPropertyName](#zipzimodelingphysicsphysicspropertyname), [PhysicsPropertyOutputAxis](#zipzimodelingphysicsphysicspropertyoutputaxis), [PhysicsPropertyOutputNode](#zipzimodelingphysicsphysicspropertyoutputnode), [PhysicsPropertyOutputParameter](#zipzimodelingphysicsphysicspropertyoutputparameter), [PhysicsPropertyOutputReflect](#zipzimodelingphysicsphysicspropertyoutputreflect), [PhysicsPropertyOutputScale](#zipzimodelingphysicsphysicspropertyoutputscale), [PhysicsPropertyOutputWeight](#zipzimodelingphysicsphysicspropertyoutputweight), [PhysicsPropertyPositionNormalization](#zipzimodelingphysicsphysicspropertypositionnormalization), [PhysicsPropertyVertexAcceleration](#zipzimodelingphysicsphysicspropertyvertexacceleration), [PhysicsPropertyVertexDelay](#zipzimodelingphysicsphysicspropertyvertexdelay), [PhysicsPropertyVertexMobility](#zipzimodelingphysicsphysicspropertyvertexmobility), [PhysicsPropertyVertexPosition](#zipzimodelingphysicsphysicspropertyvertexposition), [PhysicsPropertyVertexRadius](#zipzimodelingphysicsphysicspropertyvertexradius).
+
 
 ## zipzi.modeling.physics.PhysicsPropertyAngleNormalization
 
 **Type**
 
 `(*, value: PhysicsRange)`
+
+Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
 
 **Fields**
 
@@ -407,6 +437,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 
 `(*, id: str, value: PhysicsAxis)`
 
+Types: [PhysicsAxis](#zipzimodelingphysicsphysicsaxis).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -417,6 +449,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 **Type**
 
 `(*, id: str, target: PhysicsTarget)`
+
+Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 **Fields**
 
@@ -461,6 +495,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 
 `(*, id: str, value: PhysicsAxis)`
 
+Types: [PhysicsAxis](#zipzimodelingphysicsphysicsaxis).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -482,6 +518,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 **Type**
 
 `(*, id: str, target: PhysicsTarget)`
+
+Types: [PhysicsTarget](#zipzimodelingphysicsphysicstarget).
 
 **Fields**
 
@@ -527,6 +565,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 
 `(*, value: PhysicsRange)`
 
+Types: [PhysicsRange](#zipzimodelingphysicsphysicsrange).
+
 **Fields**
 
 - `value`: Replacement minimum/default/maximum range for position normalization.
@@ -570,6 +610,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 
 `(*, id: str, value: PhysicsVector)`
 
+Types: [PhysicsVector](#zipzimodelingphysicsphysicsvector).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -604,6 +646,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 
 `(*, group_id: str, changes: tuple[PhysicsProperty, ...])`
 
+Types: [PhysicsProperty](#zipzimodelingphysicsphysicsproperty).
+
 **Fields**
 
 - `group_id`: Stable ID of the group owning the affected rows or node chain.
@@ -617,6 +661,8 @@ Atomic asset edits plus optional rig edits; asset-only patches support empty ass
 
 Read-only observation of one rig. Positions are the latest solved physics
 step, not model-space attachment points or interpolated render geometry.
+
+Types: [PhysicsOutputSnapshot](#zipzimodelingphysicsphysicsoutputsnapshot).
 
 **Fields**
 
@@ -637,6 +683,8 @@ gravity direction with rotating input axes.
 
 `(*, id: str, external_id: str, inputs: tuple[PhysicsInput, ...], outputs: tuple[PhysicsOutput, ...], vertices: tuple[PhysicsNode, ...], normalization: PhysicsNormalization, extensions: _Mapping[str, ExtensionValue])`
 
+Types: [PhysicsInput](#zipzimodelingphysicsphysicsinput), [PhysicsNode](#zipzimodelingphysicsphysicsnode), [PhysicsNormalization](#zipzimodelingphysicsphysicsnormalization), [PhysicsOutput](#zipzimodelingphysicsphysicsoutput).
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -652,6 +700,8 @@ gravity direction with rotating input axes.
 **Alias**
 
 `PhysicsTargetUnspecified | PhysicsTargetResolved | PhysicsTargetUnresolved`
+
+Types: [PhysicsTargetResolved](#zipzimodelingphysicsphysicstargetresolved), [PhysicsTargetUnresolved](#zipzimodelingphysicsphysicstargetunresolved), [PhysicsTargetUnspecified](#zipzimodelingphysicsphysicstargetunspecified).
 
 
 ## zipzi.modeling.physics.PhysicsTargetResolved

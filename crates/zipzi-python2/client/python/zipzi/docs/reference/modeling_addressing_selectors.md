@@ -13,6 +13,8 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 `AddressSelectorScene | AddressSelectorDrawingGroup | AddressSelectorBinding | AddressSelectorOrganization | AddressSelectorContent | AddressSelectorReference | AddressSelectorSelection | AddressSelectorResourceName | AddressSelectorAttachmentPath | AddressSelectorDocument | AddressSelectorMotionRegistration | AddressSelectorExpressionEntry | AddressSelectorPhysics | AddressSelectorPose`
 
+Types: [AddressSelectorAttachmentPath](#zipzimodelingaddressingaddressselectorattachmentpath), [AddressSelectorBinding](#zipzimodelingaddressingaddressselectorbinding), [AddressSelectorContent](#zipzimodelingaddressingaddressselectorcontent), [AddressSelectorDocument](#zipzimodelingaddressingaddressselectordocument), [AddressSelectorDrawingGroup](#zipzimodelingaddressingaddressselectordrawinggroup), [AddressSelectorExpressionEntry](#zipzimodelingaddressingaddressselectorexpressionentry), [AddressSelectorMotionRegistration](#zipzimodelingaddressingaddressselectormotionregistration), [AddressSelectorOrganization](#zipzimodelingaddressingaddressselectororganization), [AddressSelectorPhysics](#zipzimodelingaddressingaddressselectorphysics), [AddressSelectorPose](#zipzimodelingaddressingaddressselectorpose), [AddressSelectorReference](#zipzimodelingaddressingaddressselectorreference), [AddressSelectorResourceName](#zipzimodelingaddressingaddressselectorresourcename), [AddressSelectorScene](#zipzimodelingaddressingaddressselectorscene), [AddressSelectorSelection](#zipzimodelingaddressingaddressselectorselection).
+
 
 ## zipzi.modeling.addressing.AddressSelectorAttachmentPath
 
@@ -42,6 +44,8 @@ runtime_id.
 
 `(*, id: str, target: SceneContentTarget)`
 
+Types: [SceneContentTarget].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -54,6 +58,8 @@ undeformed base shape.
 **Type**
 
 `(*, field: DocumentField)`
+
+Types: [DocumentField].
 
 **Fields**
 
@@ -148,6 +154,8 @@ runtime_id.
 
 `(*, id: str, field: SceneField)`
 
+Types: [SceneField].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -159,6 +167,8 @@ runtime_id.
 **Type**
 
 `(*, owner: str, field: ReferenceSelectionField)`
+
+Types: [ReferenceSelectionField].
 
 **Fields**
 

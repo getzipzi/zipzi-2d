@@ -16,6 +16,8 @@ Canonical parameters modeling values.
 
 `(*, id: str, runtime_id: str, name: str, minimum: float, maximum: float, default_value: float, decimal_places: int = 6, kind: ParameterKind = ParameterKind.NORMAL, repeat: bool = False)`
 
+Types: [ParameterKind](#zipzimodelingparametersparameterkind).
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
@@ -42,6 +44,8 @@ Canonical parameters modeling values.
 **Type**
 
 `(*, parameter_id: str, minimum: float, maximum: float, default_value: float, policy: ParameterRangePolicy)`
+
+Types: [ParameterRangePolicy](#zipzimodelingparametersparameterrangepolicy).
 
 **Fields**
 
