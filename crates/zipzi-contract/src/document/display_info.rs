@@ -13,15 +13,19 @@ pub struct ReferenceEntry<T> {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Provenance of CDI display metadata.
 pub enum DisplayInfoOrigin {
     #[default]
+    /// Metadata was generated from document content.
     Generated,
+    /// Metadata was retained from an imported CDI source.
     Imported,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// CDI display metadata with explicit omission and preserved opaque extensions.
 pub struct DisplayInfo {
     /// Import/generation provenance of these display metadata records.
     pub origin: DisplayInfoOrigin,
@@ -46,6 +50,7 @@ pub struct DisplayInfo {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// CDI parameter group metadata and its optional parent.
 pub struct CdiParameterGroup {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -64,7 +69,9 @@ pub struct CdiParameterGroup {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// CDI parameter metadata that may be resolved to a document parameter or retain an external ID.
 pub enum CdiParameterEntry {
+    /// Refer to an existing document parameter.
     Resolved {
         /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
@@ -75,6 +82,7 @@ pub enum CdiParameterEntry {
         /// known fields.
         extensions: BTreeMap<String, Value>,
     },
+    /// Preserve an external parameter identity and label.
     Unresolved {
         /// External format/runtime identifier retained for import/export; not the document
         /// object ID.
@@ -109,7 +117,9 @@ impl CdiParameterEntry {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// CDI Part metadata that may retain an unresolved external ID.
 pub enum CdiPartEntry {
+    /// Refer to an existing document Part.
     Resolved {
         /// Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.
         part_id: String,
@@ -117,6 +127,7 @@ pub enum CdiPartEntry {
         /// known fields.
         extensions: BTreeMap<String, Value>,
     },
+    /// Preserve an external Part identity and label.
     Unresolved {
         /// External format/runtime identifier retained for import/export; not the document
         /// object ID.
@@ -140,12 +151,16 @@ impl CdiPartEntry {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Optional resolved or unresolved parameter target in CDI metadata.
 pub enum CdiParameterRef {
+    /// No parameter target is specified.
     Unspecified,
+    /// Reference a stable document parameter ID.
     Resolved {
         /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
     },
+    /// Preserve an external parameter runtime ID.
     Unresolved {
         /// External format/runtime identifier retained for import/export; not the document
         /// object ID.
@@ -156,6 +171,7 @@ pub enum CdiParameterRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Ordered CDI combined-parameter reference members with a stable set identity.
 pub struct CdiCombinedSet {
     /// Stable UUID of this CDI combined set; not the identity of its target.
     pub id: String,
@@ -167,6 +183,7 @@ pub struct CdiCombinedSet {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Imported document-to-runtime identity maps used to guard opaque CDI metadata.
 pub struct CdiNamespaceIds {
     /// Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.
     pub parameters: BTreeMap<String, String>,

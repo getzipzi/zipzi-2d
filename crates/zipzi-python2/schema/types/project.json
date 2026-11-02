@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::document::CdiCombinedSet": {
+      "doc": "Ordered CDI combined-parameter reference members with a stable set identity.",
       "fields": [
         {
           "doc": "Stable UUID of this CDI combined set; not the identity of its target.",
@@ -32,6 +33,7 @@
       "tuple": false
     },
     "zipzi_contract::document::CdiNamespaceIds": {
+      "doc": "Imported document-to-runtime identity maps used to guard opaque CDI metadata.",
       "fields": [
         {
           "doc": "Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.",
@@ -77,11 +79,13 @@
     },
     "zipzi_contract::document::CdiParameterEntry": {
       "content": null,
+      "doc": "CDI parameter metadata that may be resolved to a document parameter or retain an external ID.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::CdiParameterEntry",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Refer to an existing document parameter.",
           "fields": [
             {
               "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -123,6 +127,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve an external parameter identity and label.",
           "fields": [
             {
               "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
@@ -175,6 +180,7 @@
       ]
     },
     "zipzi_contract::document::CdiParameterGroup": {
+      "doc": "CDI parameter group metadata and its optional parent.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -236,17 +242,20 @@
     },
     "zipzi_contract::document::CdiParameterRef": {
       "content": null,
+      "doc": "Optional resolved or unresolved parameter target in CDI metadata.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::CdiParameterRef",
       "tag": "kind",
       "variants": [
         {
+          "doc": "No parameter target is specified.",
           "fields": [],
           "form": "unit",
           "name": "unspecified",
           "rust_name": "Unspecified"
         },
         {
+          "doc": "Reference a stable document parameter ID.",
           "fields": [
             {
               "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -263,6 +272,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve an external parameter runtime ID.",
           "fields": [
             {
               "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
@@ -282,11 +292,13 @@
     },
     "zipzi_contract::document::CdiPartEntry": {
       "content": null,
+      "doc": "CDI Part metadata that may retain an unresolved external ID.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::CdiPartEntry",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Refer to an existing document Part.",
           "fields": [
             {
               "doc": "Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.",
@@ -315,6 +327,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve an external Part identity and label.",
           "fields": [
             {
               "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
@@ -354,6 +367,7 @@
       ]
     },
     "zipzi_contract::document::DisplayInfo": {
+      "doc": "CDI display metadata with explicit omission and preserved opaque extensions.",
       "fields": [
         {
           "doc": "Import/generation provenance of these display metadata records.",
@@ -467,17 +481,20 @@
     },
     "zipzi_contract::document::DisplayInfoOrigin": {
       "content": null,
+      "doc": "Provenance of CDI display metadata.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DisplayInfoOrigin",
       "tag": null,
       "variants": [
         {
+          "doc": "Metadata was generated from document content.",
           "fields": [],
           "form": "unit",
           "name": "generated",
           "rust_name": "Generated"
         },
         {
+          "doc": "Metadata was retained from an imported CDI source.",
           "fields": [],
           "form": "unit",
           "name": "imported",
@@ -487,11 +504,13 @@
     },
     "zipzi_contract::document::DocumentAuthoringEdit": {
       "content": null,
+      "doc": "Patch or repair document metadata under explicit preconditions.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DocumentAuthoringEdit",
       "tag": "operation",
       "variants": [
         {
+          "doc": "Replace a typed document value under an exact precondition.",
           "fields": [
             {
               "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
@@ -504,7 +523,7 @@
               "skip": false
             },
             {
-              "doc": "Scalar value in the referenced parameter domain.",
+              "doc": "Replacement typed document value; its variant must match expected.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -519,6 +538,7 @@
           "rust_name": "Patch"
         },
         {
+          "doc": "Resolve an imported attachment path to an attachment or clear it.",
           "fields": [
             {
               "doc": "Unresolved imported attachment path to repair; this command does not read client-\nside files.",
@@ -548,6 +568,7 @@
           "rust_name": "RepairMissingAttachment"
         },
         {
+          "doc": "Resolve or clear an imported CDI parameter reference.",
           "fields": [
             {
               "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
@@ -577,6 +598,7 @@
           "rust_name": "RepairCdiParameter"
         },
         {
+          "doc": "Resolve or clear an imported CDI Part reference.",
           "fields": [
             {
               "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
@@ -609,41 +631,48 @@
     },
     "zipzi_contract::document::DocumentField": {
       "content": null,
+      "doc": "Select a document metadata field or repair domain.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DocumentField",
       "tag": null,
       "variants": [
         {
+          "doc": "Model3 layout metadata.",
           "fields": [],
           "form": "unit",
           "name": "layout",
           "rust_name": "Layout"
         },
         {
+          "doc": "Export frame settings.",
           "fields": [],
           "form": "unit",
           "name": "export_settings",
           "rust_name": "ExportSettings"
         },
         {
+          "doc": "Source canvas metadata.",
           "fields": [],
           "form": "unit",
           "name": "source_canvas",
           "rust_name": "SourceCanvas"
         },
         {
+          "doc": "Preserved opaque document metadata.",
           "fields": [],
           "form": "unit",
           "name": "opaque_metadata",
           "rust_name": "OpaqueMetadata"
         },
         {
+          "doc": "Unresolved imported attachment paths.",
           "fields": [],
           "form": "unit",
           "name": "missing_attachments",
           "rust_name": "MissingAttachments"
         },
         {
+          "doc": "CDI display information.",
           "fields": [],
           "form": "unit",
           "name": "display_info",
@@ -653,11 +682,13 @@
     },
     "zipzi_contract::document::DocumentValue": {
       "content": "value",
+      "doc": "Typed replacement value for a writable document metadata field.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::DocumentValue",
       "tag": "field",
       "variants": [
         {
+          "doc": "Replace or remove model3 layout metadata.",
           "fields": [
             {
               "default": null,
@@ -681,6 +712,7 @@
           "rust_name": "Layout"
         },
         {
+          "doc": "Replace export-frame settings.",
           "fields": [
             {
               "doc": "Replacement export-frame scale and padding settings.",
@@ -698,6 +730,7 @@
           "rust_name": "ExportSettings"
         },
         {
+          "doc": "Replace or remove source canvas metadata.",
           "fields": [
             {
               "default": null,
@@ -721,6 +754,7 @@
       ]
     },
     "zipzi_contract::document::EditorState": {
+      "doc": "Explicit per-object Editor visibility and lock metadata.",
       "fields": [
         {
           "default": {},
@@ -743,6 +777,7 @@
       "tuple": false
     },
     "zipzi_contract::document::Model3Settings": {
+      "doc": "Optional model3 export metadata, reference registrations and preserved extensions.",
       "fields": [
         {
           "default": null,
@@ -856,6 +891,7 @@
       "tuple": false
     },
     "zipzi_contract::document::ModelHitArea": {
+      "doc": "Model3 hit-area metadata and its mesh target.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -905,6 +941,7 @@
       "tuple": false
     },
     "zipzi_contract::document::ModelParameterGroup": {
+      "doc": "Model3 parameter group and its ordered reference entries.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -958,17 +995,20 @@
     },
     "zipzi_contract::document::ModelTargetRef": {
       "content": null,
+      "doc": "Optional resolved or unresolved document target in model3 metadata.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::ModelTargetRef",
       "tag": "kind",
       "variants": [
         {
+          "doc": "No target is specified.",
           "fields": [],
           "form": "unit",
           "name": "unspecified",
           "rust_name": "Unspecified"
         },
         {
+          "doc": "Reference a stable document object ID.",
           "fields": [
             {
               "doc": "Stable document ID of the object described or selected by this value.",
@@ -985,6 +1025,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve an external runtime ID without inventing a document identity.",
           "fields": [
             {
               "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
@@ -1003,6 +1044,7 @@
       ]
     },
     "zipzi_contract::document::ObjectEditorState": {
+      "doc": "Editor visibility and lock flags for one document object.",
       "fields": [
         {
           "default": false,
@@ -1031,6 +1073,7 @@
       "tuple": false
     },
     "zipzi_contract::document::PackageAttachment": {
+      "doc": "Stable package attachment path and optional owned bytes.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -1139,59 +1182,69 @@
     },
     "zipzi_contract::project::ExportFormat": {
       "content": null,
+      "doc": "Explicit host-side export representation.",
       "kind": "serde_enum",
       "name": "zipzi_contract::project::ExportFormat",
       "tag": null,
       "variants": [
         {
+          "doc": "Export a project package.",
           "fields": [],
           "form": "unit",
           "name": "package",
           "rust_name": "Package"
         },
         {
+          "doc": "Export a CMO3 model.",
           "fields": [],
           "form": "unit",
           "name": "cmo3",
           "rust_name": "Cmo3"
         },
         {
+          "doc": "Export a CAN3 animation.",
           "fields": [],
           "form": "unit",
           "name": "can3",
           "rust_name": "Can3"
         },
         {
+          "doc": "Export a Cubism project representation.",
           "fields": [],
           "form": "unit",
           "name": "cubism",
           "rust_name": "Cubism"
         },
         {
+          "doc": "Export one selected Motion3 asset.",
           "fields": [],
           "form": "unit",
           "name": "motion3",
           "rust_name": "Motion3"
         },
         {
+          "doc": "Export one selected Expression3 asset.",
           "fields": [],
           "form": "unit",
           "name": "expression3",
           "rust_name": "Expression3"
         },
         {
+          "doc": "Export the Physics3 sidecar when present.",
           "fields": [],
           "form": "unit",
           "name": "physics3",
           "rust_name": "Physics3"
         },
         {
+          "doc": "Export the Pose3 sidecar when present.",
           "fields": [],
           "form": "unit",
           "name": "pose3",
           "rust_name": "Pose3"
         },
         {
+          "doc": "Export CDI3 display metadata.",
           "fields": [],
           "form": "unit",
           "name": "cdi3",
@@ -1201,29 +1254,34 @@
     },
     "zipzi_contract::project::ImportFormat": {
       "content": null,
+      "doc": "Explicit source format used by host-side project import.",
       "kind": "serde_enum",
       "name": "zipzi_contract::project::ImportFormat",
       "tag": null,
       "variants": [
         {
+          "doc": "Import a model3 descriptor and referenced resources.",
           "fields": [],
           "form": "unit",
           "name": "model3",
           "rust_name": "Model3"
         },
         {
+          "doc": "Import a layered PSD source.",
           "fields": [],
           "form": "unit",
           "name": "psd",
           "rust_name": "Psd"
         },
         {
+          "doc": "Import a Cubism project source.",
           "fields": [],
           "form": "unit",
           "name": "cubism",
           "rust_name": "Cubism"
         },
         {
+          "doc": "Import a bare MOC3 with explicitly selected texture slots.",
           "fields": [],
           "form": "unit",
           "name": "moc3",
@@ -1233,17 +1291,20 @@
     },
     "zipzi_contract::project::OpaqueExportIssue": {
       "content": null,
+      "doc": "Opaque data or namespace guard that prevents a safe export.",
       "kind": "serde_enum",
       "name": "zipzi_contract::project::OpaqueExportIssue",
       "tag": null,
       "variants": [
         {
+          "doc": "Model3 opaque metadata no longer matches its imported namespace.",
           "fields": [],
           "form": "unit",
           "name": "Model3NamespaceChanged",
           "rust_name": "Model3NamespaceChanged"
         },
         {
+          "doc": "CDI opaque metadata failed its source guard.",
           "fields": [
             {
               "doc": "Exact native opaque-field guard violated by this retained resource.",
@@ -1261,6 +1322,7 @@
           "rust_name": "Cdi"
         },
         {
+          "doc": "A retained motion asset failed its opaque-data guard.",
           "fields": [
             {
               "doc": "Persistent retained resource UUID in the frozen source.",
@@ -1287,6 +1349,7 @@
           "rust_name": "Motion"
         },
         {
+          "doc": "A retained expression asset failed its opaque-data guard.",
           "fields": [
             {
               "doc": "Persistent retained resource UUID in the frozen source.",
@@ -1313,6 +1376,7 @@
           "rust_name": "Expression"
         },
         {
+          "doc": "Pose opaque data failed its source guard.",
           "fields": [
             {
               "doc": "Persistent retained resource UUID in the frozen source.",
@@ -1339,6 +1403,7 @@
           "rust_name": "Pose"
         },
         {
+          "doc": "Physics opaque data failed its source guard.",
           "fields": [
             {
               "doc": "Persistent retained resource UUID in the frozen source.",
@@ -1368,23 +1433,27 @@
     },
     "zipzi_contract::project::OpaqueExportProblem": {
       "content": null,
+      "doc": "Reason retained opaque data cannot be exported safely under current source identities or content.",
       "kind": "serde_enum",
       "name": "zipzi_contract::project::OpaqueExportProblem",
       "tag": null,
       "variants": [
         {
+          "doc": "Referenced runtime identity namespace no longer matches the imported data.",
           "fields": [],
           "form": "unit",
           "name": "NamespaceChanged",
           "rust_name": "NamespaceChanged"
         },
         {
+          "doc": "Retained source content changed since opaque data was captured.",
           "fields": [],
           "form": "unit",
           "name": "ContentChanged",
           "rust_name": "ContentChanged"
         },
         {
+          "doc": "Required source provenance is unavailable.",
           "fields": [],
           "form": "unit",
           "name": "ProvenanceMissing",
@@ -1393,6 +1462,7 @@
       ]
     },
     "zipzi_contract::project::ProjectDiagnostic": {
+      "doc": "Machine-readable project warning or informational diagnostic.",
       "fields": [
         {
           "doc": "Diagnostic severity label; inspect code for stable programmatic handling.",
@@ -1437,6 +1507,7 @@
       "tuple": false
     },
     "zipzi_contract::project::ProjectReport": {
+      "doc": "Owned outcome of a project operation, including diagnostics, publication and durability.",
       "fields": [
         {
           "doc": "Exact SDK version before the operation.",
@@ -1486,7 +1557,7 @@
           "skip": false
         },
         {
-          "doc": "Whether the operation published its result; inspect durable separately for persistence\nguarantees.",
+          "doc": "Whether the operation published its result: a replacement for import/open/new, or an\noutput for export. Diagnose does not publish.",
           "name": "published",
           "rust_name": "published",
           "shape": {
@@ -1495,7 +1566,7 @@
           "skip": false
         },
         {
-          "doc": "Whether the reported persistence step achieved its durability guarantee; job completion\nalone does not imply true.",
+          "doc": "Operation-reported durability. Diagnose and New may report true without writing a file;\ninspect the SaveReceipt separately when asserting project persistence.",
           "name": "durable",
           "rust_name": "durable",
           "shape": {
@@ -1523,17 +1594,20 @@
     },
     "zipzi_contract::project::ProjectRequest": {
       "content": null,
+      "doc": "Host-side project diagnosis, replacement, import or export request.",
       "kind": "serde_enum",
       "name": "zipzi_contract::project::ProjectRequest",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Inspect resource diagnostics without publishing model changes.",
           "fields": [],
           "form": "unit",
           "name": "diagnose",
           "rust_name": "Diagnose"
         },
         {
+          "doc": "Import an explicitly selected format into the selected Session.",
           "fields": [
             {
               "doc": "Host-side filesystem path for this IO request; resolve it explicitly on the host.",
@@ -1555,7 +1629,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit external texture-slot to host-file mappings used by imports requiring\nseparate images.",
+              "doc": "External texture-slot to host-file mappings for bare MOC3 import; other import\nformats do not consume this list.",
               "name": "textures",
               "rust_name": "textures",
               "shape": {
@@ -1573,6 +1647,7 @@
           "rust_name": "Import"
         },
         {
+          "doc": "Replace the selected Session from a host project path.",
           "fields": [
             {
               "doc": "Host-side filesystem path for this IO request; resolve it explicitly on the host.",
@@ -1589,6 +1664,7 @@
           "rust_name": "Open"
         },
         {
+          "doc": "Replace the selected Session with a new document and model setup.",
           "fields": [
             {
               "doc": "Stable document UUID; not a Runtime Session handle.",
@@ -1615,6 +1691,7 @@
           "rust_name": "New"
         },
         {
+          "doc": "Export a selected format to a host path under an explicit loss policy.",
           "fields": [
             {
               "doc": "Host-side filesystem path for this IO request; resolve it explicitly on the host.",
@@ -1646,7 +1723,7 @@
             },
             {
               "default": null,
-              "doc": "Stable document ID of the object described or selected by this value.",
+              "doc": "Stable Motion or Expression ID for the corresponding sidecar export; None supplies\nno object selection. Other formats do not use this selection.",
               "name": "object_id",
               "rust_name": "object_id",
               "shape": {
@@ -1658,7 +1735,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit permission to export despite format-conversion losses; false rejects\nunsupported loss.",
+              "doc": "For CMO3, CAN3 and Cubism conversion, permit reported losses; false rejects\nunsupported loss. Other export formats do not consume this policy.",
               "name": "allow_loss",
               "rust_name": "allow_loss",
               "shape": {
@@ -1667,7 +1744,7 @@
               "skip": false
             },
             {
-              "doc": "Whether export may bake animation into the destination representation.",
+              "doc": "Whether CAN3/Cubism export may bake animation into the destination representation.",
               "name": "bake_animation",
               "rust_name": "bake_animation",
               "shape": {
@@ -1676,7 +1753,7 @@
               "skip": false
             },
             {
-              "doc": "Whether export may choose a frame rate automatically instead of requiring an\nexplicit one.",
+              "doc": "Whether CAN3/Cubism export may choose a frame rate automatically instead of requiring\nan explicit one.",
               "name": "auto_frame_rate",
               "rust_name": "auto_frame_rate",
               "shape": {
@@ -1692,6 +1769,7 @@
       ]
     },
     "zipzi_contract::project::TextureSlot": {
+      "doc": "Explicit external texture slot and host-side image path for bare MOC3 import.",
       "fields": [
         {
           "doc": "Zero-based external texture slot number used by the import format.",

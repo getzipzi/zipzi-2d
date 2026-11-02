@@ -3,7 +3,7 @@
 
 ## Type references
 
-[PhysicsRigSnapshot], [AttachmentRef]
+[ExtensionValue], [PhysicsRigSnapshot], [AttachmentRef]
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
@@ -20,7 +20,7 @@ Canonical motion modeling values.
 
 `(*, id: str, name: str, duration: float, fps: float, looping: bool, restricted_beziers: bool, fade_in: float | None = None, fade_out: float | None = None, track_order: tuple[str, ...], tracks: tuple[MotionTrack, ...], events: tuple[MotionEvent, ...], extensions: _Mapping[str, ExtensionValue], meta_extensions: _Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, opaque_source_content_hash: str | None = None)`
 
-Types: [MotionEvent](#zipzimodelingmotionmotionevent), [MotionTrack](#zipzimodelingmotionmotiontrack).
+Types: [ExtensionValue], [MotionEvent](#zipzimodelingmotionmotionevent), [MotionTrack](#zipzimodelingmotionmotiontrack).
 
 **Fields**
 
@@ -361,6 +361,8 @@ Types: [MotionTrackTarget](#zipzimodelingmotionmotiontracktarget).
 
 `(*, id: str, time: float, value: str, extensions: _Mapping[str, ExtensionValue])`
 
+Types: [ExtensionValue].
+
 **Fields**
 
 - `id`: Stable identity in the owning authoring domain; exported metadata IDs retain their source text.
@@ -443,7 +445,7 @@ Persistent identity belongs to keys, never to Bezier control points.
 
 model3 registration is separate from a clip: one file may appear in multiple groups.
 
-Types: [AttachmentRef].
+Types: [ExtensionValue], [AttachmentRef].
 
 **Fields**
 
@@ -546,7 +548,7 @@ Internal observations are retained in replay checkpoints for consistent seeks.
 
 `(*, id: str, target: MotionTrackTarget, initial: MotionKey, segments: tuple[MotionSegment, ...], fade_in: float | None = None, fade_out: float | None = None, extensions: _Mapping[str, ExtensionValue])`
 
-Types: [MotionKey](#zipzimodelingmotionmotionkey), [MotionSegment](#zipzimodelingmotionmotionsegment), [MotionTrackTarget](#zipzimodelingmotionmotiontracktarget).
+Types: [ExtensionValue], [MotionKey](#zipzimodelingmotionmotionkey), [MotionSegment](#zipzimodelingmotionmotionsegment), [MotionTrackTarget](#zipzimodelingmotionmotiontracktarget).
 
 **Fields**
 
@@ -615,5 +617,6 @@ Types: [MotionTrackTargetModel](#zipzimodelingmotionmotiontracktargetmodel), [Mo
 `()`
 
 
+[ExtensionValue]: modeling.md#zipzimodelingextensionvalue
 [PhysicsRigSnapshot]: modeling_physics.md#zipzimodelingphysicsphysicsrigsnapshot
 [AttachmentRef]: modeling_scene.md#zipzimodelingsceneattachmentref

@@ -411,7 +411,7 @@ Types: [Job], [ProjectReport].
 
 `(path: Path, format: modeling.project.ExportFormat, *, name: str='model', object_id: str | None=None, allow_loss: bool=False, bake_animation: bool=False, auto_frame_rate: bool=False) -> Job[modeling.project.ProjectReport]`
 
-Submit a selected export to a host-absolute path. allow_loss, animation baking and frame-rate choices are explicit. Read report losses/published and wait for the durable IO outcome.
+Submit export to a host-absolute path without marking the Session saved. CMO3/CAN3/Cubism use allow_loss; CAN3/Cubism use the animation baking and frame-rate choices. Wait for the Job and inspect report diagnostics, warnings, published and durable; rejected exports can expose a ProjectReport on SdkFailure.project_report.
 
 Types: [Job], [ExportFormat], [ProjectReport].
 

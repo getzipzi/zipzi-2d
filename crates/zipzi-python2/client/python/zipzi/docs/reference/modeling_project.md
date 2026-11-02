@@ -3,7 +3,7 @@
 
 ## Type references
 
-[Version], [ReferenceEntryCdiParameterRef], [ReferenceEntryModelTargetRef], [AttachmentRef], [Canvas], [ModelSetup]
+[Version], [ExtensionValue], [ReferenceEntryCdiParameterRef], [ReferenceEntryModelTargetRef], [AttachmentRef], [Canvas], [ModelSetup]
 
 See [common behavior](common.md) for owned-value conventions and inherited methods.
 
@@ -20,6 +20,8 @@ Canonical project modeling values.
 
 `(*, id: str, members: tuple[ReferenceEntryCdiParameterRef, ...])`
 
+Ordered CDI combined-parameter reference members with a stable set identity.
+
 Types: [ReferenceEntryCdiParameterRef].
 
 **Fields**
@@ -34,6 +36,8 @@ object identity.
 
 `(*, parameters: _Mapping[str, str], parts: _Mapping[str, str], groups: _Mapping[str, str])`
 
+Imported document-to-runtime identity maps used to guard opaque CDI metadata.
+
 **Fields**
 
 - `parameters`: Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.
@@ -46,6 +50,8 @@ object identity.
 
 `CdiParameterEntryResolved | CdiParameterEntryUnresolved`
 
+CDI parameter metadata that may be resolved to a document parameter or retain an external ID.
+
 Types: [CdiParameterEntryResolved](#zipzimodelingprojectcdiparameterentryresolved), [CdiParameterEntryUnresolved](#zipzimodelingprojectcdiparameterentryunresolved).
 
 
@@ -54,6 +60,10 @@ Types: [CdiParameterEntryResolved](#zipzimodelingprojectcdiparameterentryresolve
 **Type**
 
 `(*, parameter_id: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Refer to an existing document parameter.
+
+Types: [ExtensionValue].
 
 **Fields**
 
@@ -68,6 +78,10 @@ known fields.
 **Type**
 
 `(*, runtime_id: str, name: str, group_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
+
+Preserve an external parameter identity and label.
+
+Types: [ExtensionValue].
 
 **Fields**
 
@@ -85,6 +99,10 @@ known fields.
 
 `(*, id: str, runtime_id: str, name: str, parent_id: str | None = None, extensions: _Mapping[str, ExtensionValue])`
 
+CDI parameter group metadata and its optional parent.
+
+Types: [ExtensionValue].
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported runtime_id.
@@ -101,6 +119,8 @@ fields.
 
 `CdiParameterRefUnspecified | CdiParameterRefResolved | CdiParameterRefUnresolved`
 
+Optional resolved or unresolved parameter target in CDI metadata.
+
 Types: [CdiParameterRefResolved](#zipzimodelingprojectcdiparameterrefresolved), [CdiParameterRefUnresolved](#zipzimodelingprojectcdiparameterrefunresolved), [CdiParameterRefUnspecified](#zipzimodelingprojectcdiparameterrefunspecified).
 
 
@@ -109,6 +129,8 @@ Types: [CdiParameterRefResolved](#zipzimodelingprojectcdiparameterrefresolved), 
 **Type**
 
 `(*, parameter_id: str)`
+
+Reference a stable document parameter ID.
 
 **Fields**
 
@@ -119,6 +141,8 @@ Types: [CdiParameterRefResolved](#zipzimodelingprojectcdiparameterrefresolved), 
 **Type**
 
 `(*, runtime_id: str)`
+
+Preserve an external parameter runtime ID.
 
 **Fields**
 
@@ -131,12 +155,16 @@ object ID.
 
 `()`
 
+No parameter target is specified.
+
 
 ## zipzi.modeling.project.CdiPartEntry
 
 **Alias**
 
 `CdiPartEntryResolved | CdiPartEntryUnresolved`
+
+CDI Part metadata that may retain an unresolved external ID.
 
 Types: [CdiPartEntryResolved](#zipzimodelingprojectcdipartentryresolved), [CdiPartEntryUnresolved](#zipzimodelingprojectcdipartentryunresolved).
 
@@ -146,6 +174,10 @@ Types: [CdiPartEntryResolved](#zipzimodelingprojectcdipartentryresolved), [CdiPa
 **Type**
 
 `(*, part_id: str, extensions: _Mapping[str, ExtensionValue])`
+
+Refer to an existing document Part.
+
+Types: [ExtensionValue].
 
 **Fields**
 
@@ -158,6 +190,10 @@ known fields.
 **Type**
 
 `(*, runtime_id: str, name: str, extensions: _Mapping[str, ExtensionValue])`
+
+Preserve an external Part identity and label.
+
+Types: [ExtensionValue].
 
 **Fields**
 
@@ -173,7 +209,9 @@ known fields.
 
 `(*, origin: DisplayInfoOrigin, parameters: tuple[CdiParameterEntry, ...] | None = None, parameter_groups: tuple[CdiParameterGroup, ...] | None = None, parts: tuple[CdiPartEntry, ...] | None = None, combined_parameters: tuple[CdiCombinedSet, ...] | None = None, extensions: _Mapping[str, ExtensionValue], opaque_source_ids: CdiNamespaceIds | None = None)`
 
-Types: [CdiCombinedSet](#zipzimodelingprojectcdicombinedset), [CdiNamespaceIds](#zipzimodelingprojectcdinamespaceids), [CdiParameterEntry](#zipzimodelingprojectcdiparameterentry), [CdiParameterGroup](#zipzimodelingprojectcdiparametergroup), [CdiPartEntry](#zipzimodelingprojectcdipartentry), [DisplayInfoOrigin](#zipzimodelingprojectdisplayinfoorigin).
+CDI display metadata with explicit omission and preserved opaque extensions.
+
+Types: [ExtensionValue], [CdiCombinedSet](#zipzimodelingprojectcdicombinedset), [CdiNamespaceIds](#zipzimodelingprojectcdinamespaceids), [CdiParameterEntry](#zipzimodelingprojectcdiparameterentry), [CdiParameterGroup](#zipzimodelingprojectcdiparametergroup), [CdiPartEntry](#zipzimodelingprojectcdipartentry), [DisplayInfoOrigin](#zipzimodelingprojectdisplayinfoorigin).
 
 **Fields**
 
@@ -193,16 +231,20 @@ fields.
 
 **Enum**
 
+Provenance of CDI display metadata.
+
 **Members**
 
-- `GENERATED`: 'generated'
-- `IMPORTED`: 'imported'
+- `GENERATED`: 'generated' — Metadata was generated from document content.
+- `IMPORTED`: 'imported' — Metadata was retained from an imported CDI source.
 
 ## zipzi.modeling.project.DocumentAuthoringEdit
 
 **Alias**
 
 `DocumentAuthoringEditPatch | DocumentAuthoringEditRepairMissingAttachment | DocumentAuthoringEditRepairCdiParameter | DocumentAuthoringEditRepairCdiPart`
+
+Patch or repair document metadata under explicit preconditions.
 
 Types: [DocumentAuthoringEditPatch](#zipzimodelingprojectdocumentauthoringeditpatch), [DocumentAuthoringEditRepairCdiParameter](#zipzimodelingprojectdocumentauthoringeditrepaircdiparameter), [DocumentAuthoringEditRepairCdiPart](#zipzimodelingprojectdocumentauthoringeditrepaircdipart), [DocumentAuthoringEditRepairMissingAttachment](#zipzimodelingprojectdocumentauthoringeditrepairmissingattachment).
 
@@ -213,19 +255,23 @@ Types: [DocumentAuthoringEditPatch](#zipzimodelingprojectdocumentauthoringeditpa
 
 `(*, expected: DocumentValue, value: DocumentValue)`
 
+Replace a typed document value under an exact precondition.
+
 Types: [DocumentValue](#zipzimodelingprojectdocumentvalue).
 
 **Fields**
 
 - `expected`: Exact current field value used as an optimistic precondition; stale values reject
 the edit.
-- `value`: Scalar value in the referenced parameter domain.
+- `value`: Replacement typed document value; its variant must match expected.
 
 ## zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter
 
 **Type**
 
 `(*, runtime_id: str, parameter_id: str | None = None)`
+
+Resolve or clear an imported CDI parameter reference.
 
 **Fields**
 
@@ -238,6 +284,8 @@ object ID.
 **Type**
 
 `(*, runtime_id: str, part_id: str | None = None)`
+
+Resolve or clear an imported CDI Part reference.
 
 **Fields**
 
@@ -252,6 +300,8 @@ the root/unassigned container.
 
 `(*, path: str, attachment_id: str | None = None)`
 
+Resolve an imported attachment path to an attachment or clear it.
+
 **Fields**
 
 - `path`: Unresolved imported attachment path to repair; this command does not read client-
@@ -262,20 +312,24 @@ side files.
 
 **Enum**
 
+Select a document metadata field or repair domain.
+
 **Members**
 
-- `LAYOUT`: 'layout'
-- `EXPORT_SETTINGS`: 'export_settings'
-- `SOURCE_CANVAS`: 'source_canvas'
-- `OPAQUE_METADATA`: 'opaque_metadata'
-- `MISSING_ATTACHMENTS`: 'missing_attachments'
-- `DISPLAY_INFO`: 'display_info'
+- `LAYOUT`: 'layout' — Model3 layout metadata.
+- `EXPORT_SETTINGS`: 'export_settings' — Export frame settings.
+- `SOURCE_CANVAS`: 'source_canvas' — Source canvas metadata.
+- `OPAQUE_METADATA`: 'opaque_metadata' — Preserved opaque document metadata.
+- `MISSING_ATTACHMENTS`: 'missing_attachments' — Unresolved imported attachment paths.
+- `DISPLAY_INFO`: 'display_info' — CDI display information.
 
 ## zipzi.modeling.project.DocumentValue
 
 **Alias**
 
 `DocumentValueLayout | DocumentValueExportSettings | DocumentValueSourceCanvas`
+
+Typed replacement value for a writable document metadata field.
 
 Types: [DocumentValueExportSettings](#zipzimodelingprojectdocumentvalueexportsettings), [DocumentValueLayout](#zipzimodelingprojectdocumentvaluelayout), [DocumentValueSourceCanvas](#zipzimodelingprojectdocumentvaluesourcecanvas).
 
@@ -285,6 +339,8 @@ Types: [DocumentValueExportSettings](#zipzimodelingprojectdocumentvalueexportset
 **Type**
 
 `(*, value: ExportSettings)`
+
+Replace export-frame settings.
 
 Types: [ExportSettings](#zipzimodelingprojectexportsettings).
 
@@ -298,6 +354,8 @@ Types: [ExportSettings](#zipzimodelingprojectexportsettings).
 
 `(*, value: _Mapping[str, float] | None = None)`
 
+Replace or remove model3 layout metadata.
+
 **Fields**
 
 - `value`: Replacement model3 layout map; None explicitly removes the layout.
@@ -307,6 +365,8 @@ Types: [ExportSettings](#zipzimodelingprojectexportsettings).
 **Type**
 
 `(*, value: Canvas | None = None)`
+
+Replace or remove source canvas metadata.
 
 Types: [Canvas].
 
@@ -320,6 +380,8 @@ Types: [Canvas].
 
 `(*, objects: _Mapping[str, ObjectEditorState] = <factory>)`
 
+Explicit per-object Editor visibility and lock metadata.
+
 Types: [ObjectEditorState](#zipzimodelingprojectobjecteditorstate).
 
 **Fields**
@@ -330,17 +392,19 @@ Types: [ObjectEditorState](#zipzimodelingprojectobjecteditorstate).
 
 **Enum**
 
+Explicit host-side export representation.
+
 **Members**
 
-- `PACKAGE`: 'package'
-- `CMO3`: 'cmo3'
-- `CAN3`: 'can3'
-- `CUBISM`: 'cubism'
-- `MOTION3`: 'motion3'
-- `EXPRESSION3`: 'expression3'
-- `PHYSICS3`: 'physics3'
-- `POSE3`: 'pose3'
-- `CDI3`: 'cdi3'
+- `PACKAGE`: 'package' — Export a project package.
+- `CMO3`: 'cmo3' — Export a CMO3 model.
+- `CAN3`: 'can3' — Export a CAN3 animation.
+- `CUBISM`: 'cubism' — Export a Cubism project representation.
+- `MOTION3`: 'motion3' — Export one selected Motion3 asset.
+- `EXPRESSION3`: 'expression3' — Export one selected Expression3 asset.
+- `PHYSICS3`: 'physics3' — Export the Physics3 sidecar when present.
+- `POSE3`: 'pose3' — Export the Pose3 sidecar when present.
+- `CDI3`: 'cdi3' — Export CDI3 display metadata.
 
 ## zipzi.modeling.project.ExportSettings
 
@@ -365,12 +429,14 @@ Specified bounds bypass automatic padding; pixel edges round outwards.
 
 **Enum**
 
+Explicit source format used by host-side project import.
+
 **Members**
 
-- `MODEL3`: 'model3'
-- `PSD`: 'psd'
-- `CUBISM`: 'cubism'
-- `MOC3`: 'moc3'
+- `MODEL3`: 'model3' — Import a model3 descriptor and referenced resources.
+- `PSD`: 'psd' — Import a layered PSD source.
+- `CUBISM`: 'cubism' — Import a Cubism project source.
+- `MOC3`: 'moc3' — Import a bare MOC3 with explicitly selected texture slots.
 
 ## zipzi.modeling.project.Model3Settings
 
@@ -378,7 +444,9 @@ Specified bounds bypass automatic padding; pixel edges round outwards.
 
 `(*, groups: tuple[ModelParameterGroup, ...] | None = None, layout: _Mapping[str, float] | None = None, hit_areas: tuple[ModelHitArea, ...] | None = None, user_data: AttachmentRef | None = None, extensions: _Mapping[str, ExtensionValue], source_runtime_ids: _Mapping[str, str] | None = None, source_content: str | None = None)`
 
-Types: [ModelHitArea](#zipzimodelingprojectmodelhitarea), [ModelParameterGroup](#zipzimodelingprojectmodelparametergroup), [AttachmentRef].
+Optional model3 export metadata, reference registrations and preserved extensions.
+
+Types: [ExtensionValue], [ModelHitArea](#zipzimodelingprojectmodelhitarea), [ModelParameterGroup](#zipzimodelingprojectmodelparametergroup), [AttachmentRef].
 
 **Fields**
 
@@ -399,7 +467,9 @@ fields.
 
 `(*, id: str, name: str, mesh: ModelTargetRef, extensions: _Mapping[str, ExtensionValue] = <factory>)`
 
-Types: [ModelTargetRef](#zipzimodelingprojectmodeltargetref).
+Model3 hit-area metadata and its mesh target.
+
+Types: [ExtensionValue], [ModelTargetRef](#zipzimodelingprojectmodeltargetref).
 
 **Fields**
 
@@ -415,7 +485,9 @@ fields.
 
 `(*, id: str, name: str, parameters: tuple[ReferenceEntryModelTargetRef, ...], extensions: _Mapping[str, ExtensionValue] = <factory>)`
 
-Types: [ReferenceEntryModelTargetRef].
+Model3 parameter group and its ordered reference entries.
+
+Types: [ExtensionValue], [ReferenceEntryModelTargetRef].
 
 **Fields**
 
@@ -432,6 +504,8 @@ fields.
 
 `ModelTargetRefUnspecified | ModelTargetRefResolved | ModelTargetRefUnresolved`
 
+Optional resolved or unresolved document target in model3 metadata.
+
 Types: [ModelTargetRefResolved](#zipzimodelingprojectmodeltargetrefresolved), [ModelTargetRefUnresolved](#zipzimodelingprojectmodeltargetrefunresolved), [ModelTargetRefUnspecified](#zipzimodelingprojectmodeltargetrefunspecified).
 
 
@@ -440,6 +514,8 @@ Types: [ModelTargetRefResolved](#zipzimodelingprojectmodeltargetrefresolved), [M
 **Type**
 
 `(*, object_id: str)`
+
+Reference a stable document object ID.
 
 **Fields**
 
@@ -450,6 +526,8 @@ Types: [ModelTargetRefResolved](#zipzimodelingprojectmodeltargetrefresolved), [M
 **Type**
 
 `(*, runtime_id: str)`
+
+Preserve an external runtime ID without inventing a document identity.
 
 **Fields**
 
@@ -462,12 +540,16 @@ object ID.
 
 `()`
 
+No target is specified.
+
 
 ## zipzi.modeling.project.ObjectEditorState
 
 **Type**
 
 `(*, hidden_in_editor: bool = False, locked: bool = False)`
+
+Editor visibility and lock flags for one document object.
 
 **Fields**
 
@@ -480,6 +562,8 @@ object ID.
 
 `OpaqueExportIssueModel3NamespaceChanged | OpaqueExportIssueCdi | OpaqueExportIssueMotion | OpaqueExportIssueExpression | OpaqueExportIssuePose | OpaqueExportIssuePhysics`
 
+Opaque data or namespace guard that prevents a safe export.
+
 Types: [OpaqueExportIssueCdi](#zipzimodelingprojectopaqueexportissuecdi), [OpaqueExportIssueExpression](#zipzimodelingprojectopaqueexportissueexpression), [OpaqueExportIssueModel3NamespaceChanged](#zipzimodelingprojectopaqueexportissuemodel3namespacechanged), [OpaqueExportIssueMotion](#zipzimodelingprojectopaqueexportissuemotion), [OpaqueExportIssuePhysics](#zipzimodelingprojectopaqueexportissuephysics), [OpaqueExportIssuePose](#zipzimodelingprojectopaqueexportissuepose).
 
 
@@ -488,6 +572,8 @@ Types: [OpaqueExportIssueCdi](#zipzimodelingprojectopaqueexportissuecdi), [Opaqu
 **Type**
 
 `(*, problem: OpaqueExportProblem)`
+
+CDI opaque metadata failed its source guard.
 
 Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
@@ -500,6 +586,8 @@ Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 **Type**
 
 `(*, id: str, problem: OpaqueExportProblem)`
+
+A retained expression asset failed its opaque-data guard.
 
 Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
@@ -514,12 +602,16 @@ Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 `()`
 
+Model3 opaque metadata no longer matches its imported namespace.
+
 
 ## zipzi.modeling.project.OpaqueExportIssueMotion
 
 **Type**
 
 `(*, id: str, problem: OpaqueExportProblem)`
+
+A retained motion asset failed its opaque-data guard.
 
 Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
@@ -534,6 +626,8 @@ Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 `(*, id: str, problem: OpaqueExportProblem)`
 
+Physics opaque data failed its source guard.
+
 Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 **Fields**
@@ -547,6 +641,8 @@ Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 `(*, id: str, problem: OpaqueExportProblem)`
 
+Pose opaque data failed its source guard.
+
 Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 **Fields**
@@ -558,17 +654,21 @@ Types: [OpaqueExportProblem](#zipzimodelingprojectopaqueexportproblem).
 
 **Enum**
 
+Reason retained opaque data cannot be exported safely under current source identities or content.
+
 **Members**
 
-- `NAMESPACE_CHANGED`: 'NamespaceChanged'
-- `CONTENT_CHANGED`: 'ContentChanged'
-- `PROVENANCE_MISSING`: 'ProvenanceMissing'
+- `NAMESPACE_CHANGED`: 'NamespaceChanged' — Referenced runtime identity namespace no longer matches the imported data.
+- `CONTENT_CHANGED`: 'ContentChanged' — Retained source content changed since opaque data was captured.
+- `PROVENANCE_MISSING`: 'ProvenanceMissing' — Required source provenance is unavailable.
 
 ## zipzi.modeling.project.PackageAttachment
 
 **Type**
 
 `(*, id: str, path: str, bytes: _Bytes | None = None)`
+
+Stable package attachment path and optional owned bytes.
 
 **Fields**
 
@@ -583,6 +683,8 @@ and .. are invalid.
 
 `(*, severity: str, code: str, object_id: str, message: str)`
 
+Machine-readable project warning or informational diagnostic.
+
 **Fields**
 
 - `severity`: Diagnostic severity label; inspect code for stable programmatic handling.
@@ -596,6 +698,8 @@ and .. are invalid.
 
 `(*, before: _Version, after: _Version, warnings: tuple[str, ...], diagnostics: tuple[ProjectDiagnostic, ...], published: bool, durable: bool, paths: tuple[str, ...])`
 
+Owned outcome of a project operation, including diagnostics, publication and durability.
+
 Types: [Version], [ProjectDiagnostic](#zipzimodelingprojectprojectdiagnostic).
 
 **Fields**
@@ -605,10 +709,10 @@ Types: [Version], [ProjectDiagnostic](#zipzimodelingprojectprojectdiagnostic).
 operation.
 - `warnings`: Nonfatal operation warnings retained even when an output was produced.
 - `diagnostics`: Structured diagnostics from this query or operation; an empty list means none were reported.
-- `published`: Whether the operation published its result; inspect durable separately for persistence
-guarantees.
-- `durable`: Whether the reported persistence step achieved its durability guarantee; job completion
-alone does not imply true.
+- `published`: Whether the operation published its result: a replacement for import/open/new, or an
+output for export. Diagnose does not publish.
+- `durable`: Operation-reported durability. Diagnose and New may report true without writing a file;
+inspect the SaveReceipt separately when asserting project persistence.
 - `paths`: Host-side output paths actually reported by the operation; no client-side path
 translation is implied.
 
@@ -617,6 +721,8 @@ translation is implied.
 **Alias**
 
 `ProjectRequestDiagnose | ProjectRequestImport | ProjectRequestOpen | ProjectRequestNew | ProjectRequestExport`
+
+Host-side project diagnosis, replacement, import or export request.
 
 Types: [ProjectRequestDiagnose](#zipzimodelingprojectprojectrequestdiagnose), [ProjectRequestExport](#zipzimodelingprojectprojectrequestexport), [ProjectRequestImport](#zipzimodelingprojectprojectrequestimport), [ProjectRequestNew](#zipzimodelingprojectprojectrequestnew), [ProjectRequestOpen](#zipzimodelingprojectprojectrequestopen).
 
@@ -627,12 +733,16 @@ Types: [ProjectRequestDiagnose](#zipzimodelingprojectprojectrequestdiagnose), [P
 
 `()`
 
+Inspect resource diagnostics without publishing model changes.
+
 
 ## zipzi.modeling.project.ProjectRequestExport
 
 **Type**
 
 `(*, path: str, format: ExportFormat, name: str, object_id: str | None = None, allow_loss: bool, bake_animation: bool, auto_frame_rate: bool)`
+
+Export a selected format to a host path under an explicit loss policy.
 
 Types: [ExportFormat](#zipzimodelingprojectexportformat).
 
@@ -641,12 +751,13 @@ Types: [ExportFormat](#zipzimodelingprojectexportformat).
 - `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
 - `format`: Explicit import/export format; does not change based on the installed backend.
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
-- `object_id`: Stable document ID of the object described or selected by this value.
-- `allow_loss`: Explicit permission to export despite format-conversion losses; false rejects
-unsupported loss.
-- `bake_animation`: Whether export may bake animation into the destination representation.
-- `auto_frame_rate`: Whether export may choose a frame rate automatically instead of requiring an
-explicit one.
+- `object_id`: Stable Motion or Expression ID for the corresponding sidecar export; None supplies
+no object selection. Other formats do not use this selection.
+- `allow_loss`: For CMO3, CAN3 and Cubism conversion, permit reported losses; false rejects
+unsupported loss. Other export formats do not consume this policy.
+- `bake_animation`: Whether CAN3/Cubism export may bake animation into the destination representation.
+- `auto_frame_rate`: Whether CAN3/Cubism export may choose a frame rate automatically instead of requiring
+an explicit one.
 
 ## zipzi.modeling.project.ProjectRequestImport
 
@@ -654,20 +765,24 @@ explicit one.
 
 `(*, path: str, format: ImportFormat, textures: tuple[TextureSlot, ...])`
 
+Import an explicitly selected format into the selected Session.
+
 Types: [ImportFormat](#zipzimodelingprojectimportformat), [TextureSlot](#zipzimodelingprojecttextureslot).
 
 **Fields**
 
 - `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
 - `format`: Explicit import/export format; does not change based on the installed backend.
-- `textures`: Explicit external texture-slot to host-file mappings used by imports requiring
-separate images.
+- `textures`: External texture-slot to host-file mappings for bare MOC3 import; other import
+formats do not consume this list.
 
 ## zipzi.modeling.project.ProjectRequestNew
 
 **Type**
 
 `(*, document_id: str, setup: ModelSetup)`
+
+Replace the selected Session with a new document and model setup.
 
 Types: [ModelSetup].
 
@@ -682,6 +797,8 @@ Types: [ModelSetup].
 
 `(*, path: str)`
 
+Replace the selected Session from a host project path.
+
 **Fields**
 
 - `path`: Host-side filesystem path for this IO request; resolve it explicitly on the host.
@@ -692,12 +809,15 @@ Types: [ModelSetup].
 
 `(*, slot: int, path: str)`
 
+Explicit external texture slot and host-side image path for bare MOC3 import.
+
 **Fields**
 
 - `slot`: Zero-based external texture slot number used by the import format.
 - `path`: Host-side image file path supplying this external texture slot.
 
 [Version]: runtime.md#zipziversion
+[ExtensionValue]: modeling.md#zipzimodelingextensionvalue
 [ReferenceEntryCdiParameterRef]: modeling_addressing.md#zipzimodelingaddressingreferenceentrycdiparameterref
 [ReferenceEntryModelTargetRef]: modeling_addressing.md#zipzimodelingaddressingreferenceentrymodeltargetref
 [AttachmentRef]: modeling_scene.md#zipzimodelingsceneattachmentref

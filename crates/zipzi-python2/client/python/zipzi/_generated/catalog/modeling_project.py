@@ -60,7 +60,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.project.CdiCombinedSet': {'children': ('zipzi.modeling.project.CdiCombinedSet.__repr__',
                                                         'zipzi.modeling.project.CdiCombinedSet.summary'),
-                                           'documentation': '',
+                                           'documentation': 'Ordered CDI combined-parameter reference members with a '
+                                                            'stable set identity.',
                                            'fields': [('id',
                                                        'Stable UUID of this CDI combined set; not the identity of its '
                                                        'target.'),
@@ -76,7 +77,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiCombinedSet.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiNamespaceIds': {'children': ('zipzi.modeling.project.CdiNamespaceIds.__repr__',
                                                          'zipzi.modeling.project.CdiNamespaceIds.summary'),
-                                            'documentation': '',
+                                            'documentation': 'Imported document-to-runtime identity maps used to guard '
+                                                             'opaque CDI metadata.',
                                             'fields': [('parameters',
                                                         'Imported parameter document-ID to runtime-ID map, retained to '
                                                         'validate opaque metadata.'),
@@ -92,7 +94,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiNamespaceIds.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiNamespaceIds.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterEntry': {'children': (),
-                                              'documentation': '',
+                                              'documentation': 'CDI parameter metadata that may be resolved to a '
+                                                               'document parameter or retain an external ID.',
                                               'fields': [],
                                               'kind': 'alias',
                                               'signature': 'CdiParameterEntryResolved | CdiParameterEntryUnresolved',
@@ -100,7 +103,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                             'zipzi.modeling.project.CdiParameterEntryUnresolved')},
  'zipzi.modeling.project.CdiParameterEntryResolved': {'children': ('zipzi.modeling.project.CdiParameterEntryResolved.__repr__',
                                                                    'zipzi.modeling.project.CdiParameterEntryResolved.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Refer to an existing document parameter.',
                                                       'fields': [('parameter_id',
                                                                   'Stable document parameter ID, not its exported '
                                                                   'runtime identifier.'),
@@ -114,12 +117,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                   'known fields.')],
                                                       'kind': 'type',
                                                       'signature': '(*, parameter_id: str, group_id: str | None = '
-                                                                   'None, extensions: _Mapping[str, ExtensionValue])'},
+                                                                   'None, extensions: _Mapping[str, ExtensionValue])',
+                                                      'type_refs': ('zipzi.modeling.ExtensionValue',)},
  'zipzi.modeling.project.CdiParameterEntryResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterEntryResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterEntryUnresolved': {'children': ('zipzi.modeling.project.CdiParameterEntryUnresolved.__repr__',
                                                                      'zipzi.modeling.project.CdiParameterEntryUnresolved.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Preserve an external parameter identity and '
+                                                                         'label.',
                                                         'fields': [('runtime_id',
                                                                     'External format/runtime identifier retained for '
                                                                     'import/export; not the document\n'
@@ -138,12 +143,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                         'kind': 'type',
                                                         'signature': '(*, runtime_id: str, name: str, group_id: str | '
                                                                      'None = None, extensions: _Mapping[str, '
-                                                                     'ExtensionValue])'},
+                                                                     'ExtensionValue])',
+                                                        'type_refs': ('zipzi.modeling.ExtensionValue',)},
  'zipzi.modeling.project.CdiParameterEntryUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterEntryUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterGroup': {'children': ('zipzi.modeling.project.CdiParameterGroup.__repr__',
                                                            'zipzi.modeling.project.CdiParameterGroup.summary'),
-                                              'documentation': '',
+                                              'documentation': 'CDI parameter group metadata and its optional parent.',
                                               'fields': [('id',
                                                           'Stable document object ID used by references; it is '
                                                           'distinct from the exported runtime_id.'),
@@ -163,11 +169,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                           'fields.')],
                                               'kind': 'type',
                                               'signature': '(*, id: str, runtime_id: str, name: str, parent_id: str | '
-                                                           'None = None, extensions: _Mapping[str, ExtensionValue])'},
+                                                           'None = None, extensions: _Mapping[str, ExtensionValue])',
+                                              'type_refs': ('zipzi.modeling.ExtensionValue',)},
  'zipzi.modeling.project.CdiParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRef': {'children': (),
-                                            'documentation': '',
+                                            'documentation': 'Optional resolved or unresolved parameter target in CDI '
+                                                             'metadata.',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'CdiParameterRefUnspecified | CdiParameterRefResolved | '
@@ -177,7 +185,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                           'zipzi.modeling.project.CdiParameterRefUnspecified')},
  'zipzi.modeling.project.CdiParameterRefResolved': {'children': ('zipzi.modeling.project.CdiParameterRefResolved.__repr__',
                                                                  'zipzi.modeling.project.CdiParameterRefResolved.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Reference a stable document parameter ID.',
                                                     'fields': [('parameter_id',
                                                                 'Stable document parameter ID, not its exported '
                                                                 'runtime identifier.')],
@@ -187,7 +195,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRefUnresolved': {'children': ('zipzi.modeling.project.CdiParameterRefUnresolved.__repr__',
                                                                    'zipzi.modeling.project.CdiParameterRefUnresolved.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Preserve an external parameter runtime ID.',
                                                       'fields': [('runtime_id',
                                                                   'External format/runtime identifier retained for '
                                                                   'import/export; not the document\n'
@@ -198,14 +206,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.CdiParameterRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiParameterRefUnspecified': {'children': ('zipzi.modeling.project.CdiParameterRefUnspecified.__repr__',
                                                                     'zipzi.modeling.project.CdiParameterRefUnspecified.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'No parameter target is specified.',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
  'zipzi.modeling.project.CdiParameterRefUnspecified.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiParameterRefUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiPartEntry': {'children': (),
-                                         'documentation': '',
+                                         'documentation': 'CDI Part metadata that may retain an unresolved external '
+                                                          'ID.',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'CdiPartEntryResolved | CdiPartEntryUnresolved',
@@ -213,7 +222,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                        'zipzi.modeling.project.CdiPartEntryUnresolved')},
  'zipzi.modeling.project.CdiPartEntryResolved': {'children': ('zipzi.modeling.project.CdiPartEntryResolved.__repr__',
                                                               'zipzi.modeling.project.CdiPartEntryResolved.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Refer to an existing document Part.',
                                                  'fields': [('part_id',
                                                              'Resolved stable document Part ID; use an Unresolved '
                                                              'entry to preserve an external runtime identifier.'),
@@ -223,12 +232,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'known fields.')],
                                                  'kind': 'type',
                                                  'signature': '(*, part_id: str, extensions: _Mapping[str, '
-                                                              'ExtensionValue])'},
+                                                              'ExtensionValue])',
+                                                 'type_refs': ('zipzi.modeling.ExtensionValue',)},
  'zipzi.modeling.project.CdiPartEntryResolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiPartEntryResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.CdiPartEntryUnresolved': {'children': ('zipzi.modeling.project.CdiPartEntryUnresolved.__repr__',
                                                                 'zipzi.modeling.project.CdiPartEntryUnresolved.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Preserve an external Part identity and label.',
                                                    'fields': [('runtime_id',
                                                                'External format/runtime identifier retained for '
                                                                'import/export; not the document\n'
@@ -242,12 +252,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                'known fields.')],
                                                    'kind': 'type',
                                                    'signature': '(*, runtime_id: str, name: str, extensions: '
-                                                                '_Mapping[str, ExtensionValue])'},
+                                                                '_Mapping[str, ExtensionValue])',
+                                                   'type_refs': ('zipzi.modeling.ExtensionValue',)},
  'zipzi.modeling.project.CdiPartEntryUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.CdiPartEntryUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DisplayInfo': {'children': ('zipzi.modeling.project.DisplayInfo.__repr__',
                                                      'zipzi.modeling.project.DisplayInfo.summary'),
-                                        'documentation': '',
+                                        'documentation': 'CDI display metadata with explicit omission and preserved '
+                                                         'opaque extensions.',
                                         'fields': [('origin',
                                                     'Import/generation provenance of these display metadata records.'),
                                                    ('parameters',
@@ -280,7 +292,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                      'tuple[CdiCombinedSet, ...] | None = None, extensions: '
                                                      '_Mapping[str, ExtensionValue], opaque_source_ids: '
                                                      'CdiNamespaceIds | None = None)',
-                                        'type_refs': ('zipzi.modeling.project.CdiCombinedSet',
+                                        'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                      'zipzi.modeling.project.CdiCombinedSet',
                                                       'zipzi.modeling.project.CdiNamespaceIds',
                                                       'zipzi.modeling.project.CdiParameterEntry',
                                                       'zipzi.modeling.project.CdiParameterGroup',
@@ -289,12 +302,18 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DisplayInfo.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DisplayInfo.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DisplayInfoOrigin': {'children': (),
-                                              'documentation': '',
-                                              'fields': [('GENERATED', "'generated'"), ('IMPORTED', "'imported'")],
+                                              'documentation': 'Provenance of CDI display metadata.',
+                                              'fields': [('GENERATED',
+                                                          "'generated' — Metadata was generated from document "
+                                                          'content.'),
+                                                         ('IMPORTED',
+                                                          "'imported' — Metadata was retained from an imported CDI "
+                                                          'source.')],
                                               'kind': 'enum',
                                               'signature': ''},
  'zipzi.modeling.project.DocumentAuthoringEdit': {'children': (),
-                                                  'documentation': '',
+                                                  'documentation': 'Patch or repair document metadata under explicit '
+                                                                   'preconditions.',
                                                   'fields': [],
                                                   'kind': 'alias',
                                                   'signature': 'DocumentAuthoringEditPatch | '
@@ -307,13 +326,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                                 'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment')},
  'zipzi.modeling.project.DocumentAuthoringEditPatch': {'children': ('zipzi.modeling.project.DocumentAuthoringEditPatch.__repr__',
                                                                     'zipzi.modeling.project.DocumentAuthoringEditPatch.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Replace a typed document value under an exact '
+                                                                        'precondition.',
                                                        'fields': [('expected',
                                                                    'Exact current field value used as an optimistic '
                                                                    'precondition; stale values reject\n'
                                                                    'the edit.'),
                                                                   ('value',
-                                                                   'Scalar value in the referenced parameter domain.')],
+                                                                   'Replacement typed document value; its variant must '
+                                                                   'match expected.')],
                                                        'kind': 'type',
                                                        'signature': '(*, expected: DocumentValue, value: '
                                                                     'DocumentValue)',
@@ -322,7 +343,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.__repr__',
                                                                                  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.summary'),
-                                                                    'documentation': '',
+                                                                    'documentation': 'Resolve or clear an imported CDI '
+                                                                                     'parameter reference.',
                                                                     'fields': [('runtime_id',
                                                                                 'External format/runtime identifier '
                                                                                 'retained for import/export; not the '
@@ -338,7 +360,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.__repr__',
                                                                             'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.summary'),
-                                                               'documentation': '',
+                                                               'documentation': 'Resolve or clear an imported CDI Part '
+                                                                                'reference.',
                                                                'fields': [('runtime_id',
                                                                            'External format/runtime identifier '
                                                                            'retained for import/export; not the '
@@ -355,7 +378,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment': {'children': ('zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.__repr__',
                                                                                       'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.summary'),
-                                                                         'documentation': '',
+                                                                         'documentation': 'Resolve an imported '
+                                                                                          'attachment path to an '
+                                                                                          'attachment or clear it.',
                                                                          'fields': [('path',
                                                                                      'Unresolved imported attachment '
                                                                                      'path to repair; this command '
@@ -371,17 +396,20 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentField': {'children': (),
-                                          'documentation': '',
-                                          'fields': [('LAYOUT', "'layout'"),
-                                                     ('EXPORT_SETTINGS', "'export_settings'"),
-                                                     ('SOURCE_CANVAS', "'source_canvas'"),
-                                                     ('OPAQUE_METADATA', "'opaque_metadata'"),
-                                                     ('MISSING_ATTACHMENTS', "'missing_attachments'"),
-                                                     ('DISPLAY_INFO', "'display_info'")],
+                                          'documentation': 'Select a document metadata field or repair domain.',
+                                          'fields': [('LAYOUT', "'layout' — Model3 layout metadata."),
+                                                     ('EXPORT_SETTINGS', "'export_settings' — Export frame settings."),
+                                                     ('SOURCE_CANVAS', "'source_canvas' — Source canvas metadata."),
+                                                     ('OPAQUE_METADATA',
+                                                      "'opaque_metadata' — Preserved opaque document metadata."),
+                                                     ('MISSING_ATTACHMENTS',
+                                                      "'missing_attachments' — Unresolved imported attachment paths."),
+                                                     ('DISPLAY_INFO', "'display_info' — CDI display information.")],
                                           'kind': 'enum',
                                           'signature': ''},
  'zipzi.modeling.project.DocumentValue': {'children': (),
-                                          'documentation': '',
+                                          'documentation': 'Typed replacement value for a writable document metadata '
+                                                           'field.',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'DocumentValueLayout | DocumentValueExportSettings | '
@@ -391,7 +419,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                         'zipzi.modeling.project.DocumentValueSourceCanvas')},
  'zipzi.modeling.project.DocumentValueExportSettings': {'children': ('zipzi.modeling.project.DocumentValueExportSettings.__repr__',
                                                                      'zipzi.modeling.project.DocumentValueExportSettings.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace export-frame settings.',
                                                         'fields': [('value',
                                                                     'Replacement export-frame scale and padding '
                                                                     'settings.')],
@@ -402,7 +430,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueExportSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentValueLayout': {'children': ('zipzi.modeling.project.DocumentValueLayout.__repr__',
                                                              'zipzi.modeling.project.DocumentValueLayout.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Replace or remove model3 layout metadata.',
                                                 'fields': [('value',
                                                             'Replacement model3 layout map; None explicitly removes '
                                                             'the layout.')],
@@ -412,7 +440,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueLayout.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.DocumentValueSourceCanvas': {'children': ('zipzi.modeling.project.DocumentValueSourceCanvas.__repr__',
                                                                    'zipzi.modeling.project.DocumentValueSourceCanvas.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Replace or remove source canvas metadata.',
                                                       'fields': [('value',
                                                                   'Replacement source-canvas metadata; None explicitly '
                                                                   'removes the canvas provenance.')],
@@ -423,7 +451,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueSourceCanvas.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.EditorState': {'children': ('zipzi.modeling.project.EditorState.__repr__',
                                                      'zipzi.modeling.project.EditorState.summary'),
-                                        'documentation': '',
+                                        'documentation': 'Explicit per-object Editor visibility and lock metadata.',
                                         'fields': [('objects',
                                                     'Explicit flags only, keyed by globally unique object ID. Defaults '
                                                     'are omitted.')],
@@ -433,16 +461,18 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.EditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.EditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ExportFormat': {'children': (),
-                                         'documentation': '',
-                                         'fields': [('PACKAGE', "'package'"),
-                                                    ('CMO3', "'cmo3'"),
-                                                    ('CAN3', "'can3'"),
-                                                    ('CUBISM', "'cubism'"),
-                                                    ('MOTION3', "'motion3'"),
-                                                    ('EXPRESSION3', "'expression3'"),
-                                                    ('PHYSICS3', "'physics3'"),
-                                                    ('POSE3', "'pose3'"),
-                                                    ('CDI3', "'cdi3'")],
+                                         'documentation': 'Explicit host-side export representation.',
+                                         'fields': [('PACKAGE', "'package' — Export a project package."),
+                                                    ('CMO3', "'cmo3' — Export a CMO3 model."),
+                                                    ('CAN3', "'can3' — Export a CAN3 animation."),
+                                                    ('CUBISM', "'cubism' — Export a Cubism project representation."),
+                                                    ('MOTION3', "'motion3' — Export one selected Motion3 asset."),
+                                                    ('EXPRESSION3',
+                                                     "'expression3' — Export one selected Expression3 asset."),
+                                                    ('PHYSICS3',
+                                                     "'physics3' — Export the Physics3 sidecar when present."),
+                                                    ('POSE3', "'pose3' — Export the Pose3 sidecar when present."),
+                                                    ('CDI3', "'cdi3' — Export CDI3 display metadata.")],
                                          'kind': 'enum',
                                          'signature': ''},
  'zipzi.modeling.project.ExportSettings': {'children': ('zipzi.modeling.project.ExportSettings.__repr__',
@@ -475,16 +505,20 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ExportSettings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ExportSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ImportFormat': {'children': (),
-                                         'documentation': '',
-                                         'fields': [('MODEL3', "'model3'"),
-                                                    ('PSD', "'psd'"),
-                                                    ('CUBISM', "'cubism'"),
-                                                    ('MOC3', "'moc3'")],
+                                         'documentation': 'Explicit source format used by host-side project import.',
+                                         'fields': [('MODEL3',
+                                                     "'model3' — Import a model3 descriptor and referenced resources."),
+                                                    ('PSD', "'psd' — Import a layered PSD source."),
+                                                    ('CUBISM', "'cubism' — Import a Cubism project source."),
+                                                    ('MOC3',
+                                                     "'moc3' — Import a bare MOC3 with explicitly selected texture "
+                                                     'slots.')],
                                          'kind': 'enum',
                                          'signature': ''},
  'zipzi.modeling.project.Model3Settings': {'children': ('zipzi.modeling.project.Model3Settings.__repr__',
                                                         'zipzi.modeling.project.Model3Settings.summary'),
-                                           'documentation': '',
+                                           'documentation': 'Optional model3 export metadata, reference registrations '
+                                                            'and preserved extensions.',
                                            'fields': [('groups',
                                                        'Optional ordered model3 parameter groups; None preserves '
                                                        'omission rather than an empty list.'),
@@ -516,14 +550,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                         'AttachmentRef | None = None, extensions: _Mapping[str, '
                                                         'ExtensionValue], source_runtime_ids: _Mapping[str, str] | '
                                                         'None = None, source_content: str | None = None)',
-                                           'type_refs': ('zipzi.modeling.project.ModelHitArea',
+                                           'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                         'zipzi.modeling.project.ModelHitArea',
                                                          'zipzi.modeling.project.ModelParameterGroup',
                                                          'zipzi.modeling.scene.AttachmentRef')},
  'zipzi.modeling.project.Model3Settings.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.Model3Settings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelHitArea': {'children': ('zipzi.modeling.project.ModelHitArea.__repr__',
                                                       'zipzi.modeling.project.ModelHitArea.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Model3 hit-area metadata and its mesh target.',
                                          'fields': [('id',
                                                      'Stable document object ID used by references; it is distinct '
                                                      'from the exported runtime_id.'),
@@ -540,12 +575,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                          'kind': 'type',
                                          'signature': '(*, id: str, name: str, mesh: ModelTargetRef, extensions: '
                                                       '_Mapping[str, ExtensionValue] = <factory>)',
-                                         'type_refs': ('zipzi.modeling.project.ModelTargetRef',)},
+                                         'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                       'zipzi.modeling.project.ModelTargetRef')},
  'zipzi.modeling.project.ModelHitArea.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelHitArea.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelParameterGroup': {'children': ('zipzi.modeling.project.ModelParameterGroup.__repr__',
                                                              'zipzi.modeling.project.ModelParameterGroup.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Model3 parameter group and its ordered reference '
+                                                                 'entries.',
                                                 'fields': [('id',
                                                             'Stable document object ID used by references; it is '
                                                             'distinct from the exported runtime_id.'),
@@ -564,11 +601,13 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                 'signature': '(*, id: str, name: str, parameters: '
                                                              'tuple[ReferenceEntryModelTargetRef, ...], extensions: '
                                                              '_Mapping[str, ExtensionValue] = <factory>)',
-                                                'type_refs': ('zipzi.modeling.addressing.ReferenceEntryModelTargetRef',)},
+                                                'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                              'zipzi.modeling.addressing.ReferenceEntryModelTargetRef')},
  'zipzi.modeling.project.ModelParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ModelParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRef': {'children': (),
-                                           'documentation': '',
+                                           'documentation': 'Optional resolved or unresolved document target in model3 '
+                                                            'metadata.',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'ModelTargetRefUnspecified | ModelTargetRefResolved | '
@@ -578,7 +617,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                          'zipzi.modeling.project.ModelTargetRefUnspecified')},
  'zipzi.modeling.project.ModelTargetRefResolved': {'children': ('zipzi.modeling.project.ModelTargetRefResolved.__repr__',
                                                                 'zipzi.modeling.project.ModelTargetRefResolved.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Reference a stable document object ID.',
                                                    'fields': [('object_id',
                                                                'Stable document ID of the object described or selected '
                                                                'by this value.')],
@@ -588,7 +627,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRefUnresolved': {'children': ('zipzi.modeling.project.ModelTargetRefUnresolved.__repr__',
                                                                   'zipzi.modeling.project.ModelTargetRefUnresolved.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Preserve an external runtime ID without '
+                                                                      'inventing a document identity.',
                                                      'fields': [('runtime_id',
                                                                  'External format/runtime identifier retained for '
                                                                  'import/export; not the document\n'
@@ -599,7 +639,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ModelTargetRefUnspecified': {'children': ('zipzi.modeling.project.ModelTargetRefUnspecified.__repr__',
                                                                    'zipzi.modeling.project.ModelTargetRefUnspecified.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'No target is specified.',
                                                       'fields': [],
                                                       'kind': 'type',
                                                       'signature': '()'},
@@ -607,7 +647,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ModelTargetRefUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ObjectEditorState': {'children': ('zipzi.modeling.project.ObjectEditorState.__repr__',
                                                            'zipzi.modeling.project.ObjectEditorState.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Editor visibility and lock flags for one document '
+                                                               'object.',
                                               'fields': [('hidden_in_editor',
                                                           'Editor-only hiding flag; does not replace the model '
                                                           'enabled/visibility state.'),
@@ -619,7 +660,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ObjectEditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ObjectEditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssue': {'children': (),
-                                              'documentation': '',
+                                              'documentation': 'Opaque data or namespace guard that prevents a safe '
+                                                               'export.',
                                               'fields': [],
                                               'kind': 'alias',
                                               'signature': 'OpaqueExportIssueModel3NamespaceChanged | '
@@ -634,7 +676,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                             'zipzi.modeling.project.OpaqueExportIssuePose')},
  'zipzi.modeling.project.OpaqueExportIssueCdi': {'children': ('zipzi.modeling.project.OpaqueExportIssueCdi.__repr__',
                                                               'zipzi.modeling.project.OpaqueExportIssueCdi.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'CDI opaque metadata failed its source guard.',
                                                  'fields': [('problem',
                                                              'Exact native opaque-field guard violated by this '
                                                              'retained resource.')],
@@ -645,7 +687,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueCdi.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueExpression': {'children': ('zipzi.modeling.project.OpaqueExportIssueExpression.__repr__',
                                                                      'zipzi.modeling.project.OpaqueExportIssueExpression.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'A retained expression asset failed its '
+                                                                         'opaque-data guard.',
                                                         'fields': [('id',
                                                                     'Persistent retained resource UUID in the frozen '
                                                                     'source.'),
@@ -659,7 +702,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged': {'children': ('zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.__repr__',
                                                                                  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.summary'),
-                                                                    'documentation': '',
+                                                                    'documentation': 'Model3 opaque metadata no longer '
+                                                                                     'matches its imported namespace.',
                                                                     'fields': [],
                                                                     'kind': 'type',
                                                                     'signature': '()'},
@@ -667,7 +711,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssueMotion': {'children': ('zipzi.modeling.project.OpaqueExportIssueMotion.__repr__',
                                                                  'zipzi.modeling.project.OpaqueExportIssueMotion.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'A retained motion asset failed its opaque-data '
+                                                                     'guard.',
                                                     'fields': [('id',
                                                                 'Persistent retained resource UUID in the frozen '
                                                                 'source.'),
@@ -681,7 +726,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssueMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssuePhysics': {'children': ('zipzi.modeling.project.OpaqueExportIssuePhysics.__repr__',
                                                                   'zipzi.modeling.project.OpaqueExportIssuePhysics.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Physics opaque data failed its source guard.',
                                                      'fields': [('id',
                                                                  'Persistent retained resource UUID in the frozen '
                                                                  'source.'),
@@ -695,7 +740,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssuePhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportIssuePose': {'children': ('zipzi.modeling.project.OpaqueExportIssuePose.__repr__',
                                                                'zipzi.modeling.project.OpaqueExportIssuePose.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Pose opaque data failed its source guard.',
                                                   'fields': [('id',
                                                               'Persistent retained resource UUID in the frozen '
                                                               'source.'),
@@ -708,15 +753,23 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.OpaqueExportIssuePose.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.OpaqueExportIssuePose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.OpaqueExportProblem': {'children': (),
-                                                'documentation': '',
-                                                'fields': [('NAMESPACE_CHANGED', "'NamespaceChanged'"),
-                                                           ('CONTENT_CHANGED', "'ContentChanged'"),
-                                                           ('PROVENANCE_MISSING', "'ProvenanceMissing'")],
+                                                'documentation': 'Reason retained opaque data cannot be exported '
+                                                                 'safely under current source identities or content.',
+                                                'fields': [('NAMESPACE_CHANGED',
+                                                            "'NamespaceChanged' — Referenced runtime identity "
+                                                            'namespace no longer matches the imported data.'),
+                                                           ('CONTENT_CHANGED',
+                                                            "'ContentChanged' — Retained source content changed since "
+                                                            'opaque data was captured.'),
+                                                           ('PROVENANCE_MISSING',
+                                                            "'ProvenanceMissing' — Required source provenance is "
+                                                            'unavailable.')],
                                                 'kind': 'enum',
                                                 'signature': ''},
  'zipzi.modeling.project.PackageAttachment': {'children': ('zipzi.modeling.project.PackageAttachment.__repr__',
                                                            'zipzi.modeling.project.PackageAttachment.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Stable package attachment path and optional owned '
+                                                               'bytes.',
                                               'fields': [('id',
                                                           'Stable document object ID used by references; it is '
                                                           'distinct from the exported runtime_id.'),
@@ -733,7 +786,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.PackageAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectDiagnostic': {'children': ('zipzi.modeling.project.ProjectDiagnostic.__repr__',
                                                            'zipzi.modeling.project.ProjectDiagnostic.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Machine-readable project warning or informational '
+                                                               'diagnostic.',
                                               'fields': [('severity',
                                                           'Diagnostic severity label; inspect code for stable '
                                                           'programmatic handling.'),
@@ -753,7 +807,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectDiagnostic.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectReport': {'children': ('zipzi.modeling.project.ProjectReport.__repr__',
                                                        'zipzi.modeling.project.ProjectReport.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Owned outcome of a project operation, including '
+                                                           'diagnostics, publication and durability.',
                                           'fields': [('before', 'Exact SDK version before the operation.'),
                                                      ('after',
                                                       'Exact SDK version after the operation; may equal before for a '
@@ -766,13 +821,14 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                       'Structured diagnostics from this query or operation; an empty '
                                                       'list means none were reported.'),
                                                      ('published',
-                                                      'Whether the operation published its result; inspect durable '
-                                                      'separately for persistence\n'
-                                                      'guarantees.'),
+                                                      'Whether the operation published its result: a replacement for '
+                                                      'import/open/new, or an\n'
+                                                      'output for export. Diagnose does not publish.'),
                                                      ('durable',
-                                                      'Whether the reported persistence step achieved its durability '
-                                                      'guarantee; job completion\n'
-                                                      'alone does not imply true.'),
+                                                      'Operation-reported durability. Diagnose and New may report true '
+                                                      'without writing a file;\n'
+                                                      'inspect the SaveReceipt separately when asserting project '
+                                                      'persistence.'),
                                                      ('paths',
                                                       'Host-side output paths actually reported by the operation; no '
                                                       'client-side path\n'
@@ -785,7 +841,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectReport.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.ProjectReport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequest': {'children': (),
-                                           'documentation': '',
+                                           'documentation': 'Host-side project diagnosis, replacement, import or '
+                                                            'export request.',
                                            'fields': [],
                                            'kind': 'alias',
                                            'signature': 'ProjectRequestDiagnose | ProjectRequestImport | '
@@ -797,7 +854,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                          'zipzi.modeling.project.ProjectRequestOpen')},
  'zipzi.modeling.project.ProjectRequestDiagnose': {'children': ('zipzi.modeling.project.ProjectRequestDiagnose.__repr__',
                                                                 'zipzi.modeling.project.ProjectRequestDiagnose.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Inspect resource diagnostics without publishing '
+                                                                    'model changes.',
                                                    'fields': [],
                                                    'kind': 'type',
                                                    'signature': '()'},
@@ -805,7 +863,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestDiagnose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestExport': {'children': ('zipzi.modeling.project.ProjectRequestExport.__repr__',
                                                               'zipzi.modeling.project.ProjectRequestExport.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Export a selected format to a host path under an '
+                                                                  'explicit loss policy.',
                                                  'fields': [('path',
                                                              'Host-side filesystem path for this IO request; resolve '
                                                              'it explicitly on the host.'),
@@ -816,19 +875,22 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'Human-readable display name; use the stable ID for '
                                                              'identity because names can change.'),
                                                             ('object_id',
-                                                             'Stable document ID of the object described or selected '
-                                                             'by this value.'),
+                                                             'Stable Motion or Expression ID for the corresponding '
+                                                             'sidecar export; None supplies\n'
+                                                             'no object selection. Other formats do not use this '
+                                                             'selection.'),
                                                             ('allow_loss',
-                                                             'Explicit permission to export despite format-conversion '
+                                                             'For CMO3, CAN3 and Cubism conversion, permit reported '
                                                              'losses; false rejects\n'
-                                                             'unsupported loss.'),
+                                                             'unsupported loss. Other export formats do not consume '
+                                                             'this policy.'),
                                                             ('bake_animation',
-                                                             'Whether export may bake animation into the destination '
-                                                             'representation.'),
+                                                             'Whether CAN3/Cubism export may bake animation into the '
+                                                             'destination representation.'),
                                                             ('auto_frame_rate',
-                                                             'Whether export may choose a frame rate automatically '
-                                                             'instead of requiring an\n'
-                                                             'explicit one.')],
+                                                             'Whether CAN3/Cubism export may choose a frame rate '
+                                                             'automatically instead of requiring\n'
+                                                             'an explicit one.')],
                                                  'kind': 'type',
                                                  'signature': '(*, path: str, format: ExportFormat, name: str, '
                                                               'object_id: str | None = None, allow_loss: bool, '
@@ -838,7 +900,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestExport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestImport': {'children': ('zipzi.modeling.project.ProjectRequestImport.__repr__',
                                                               'zipzi.modeling.project.ProjectRequestImport.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Import an explicitly selected format into the '
+                                                                  'selected Session.',
                                                  'fields': [('path',
                                                              'Host-side filesystem path for this IO request; resolve '
                                                              'it explicitly on the host.'),
@@ -846,9 +909,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
                                                              'Explicit import/export format; does not change based on '
                                                              'the installed backend.'),
                                                             ('textures',
-                                                             'Explicit external texture-slot to host-file mappings '
-                                                             'used by imports requiring\n'
-                                                             'separate images.')],
+                                                             'External texture-slot to host-file mappings for bare '
+                                                             'MOC3 import; other import\n'
+                                                             'formats do not consume this list.')],
                                                  'kind': 'type',
                                                  'signature': '(*, path: str, format: ImportFormat, textures: '
                                                               'tuple[TextureSlot, ...])',
@@ -858,7 +921,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestImport.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestNew': {'children': ('zipzi.modeling.project.ProjectRequestNew.__repr__',
                                                            'zipzi.modeling.project.ProjectRequestNew.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Replace the selected Session with a new document and '
+                                                               'model setup.',
                                               'fields': [('document_id',
                                                           'Stable document UUID; not a Runtime Session handle.'),
                                                          ('setup',
@@ -870,7 +934,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestNew.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.ProjectRequestOpen': {'children': ('zipzi.modeling.project.ProjectRequestOpen.__repr__',
                                                             'zipzi.modeling.project.ProjectRequestOpen.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Replace the selected Session from a host project '
+                                                                'path.',
                                                'fields': [('path',
                                                            'Host-side filesystem path for this IO request; resolve it '
                                                            'explicitly on the host.')],
@@ -880,7 +945,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.ProjectRequestOpen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.TextureSlot': {'children': ('zipzi.modeling.project.TextureSlot.__repr__',
                                                      'zipzi.modeling.project.TextureSlot.summary'),
-                                        'documentation': '',
+                                        'documentation': 'Explicit external texture slot and host-side image path for '
+                                                         'bare MOC3 import.',
                                         'fields': [('slot',
                                                     'Zero-based external texture slot number used by the import '
                                                     'format.'),

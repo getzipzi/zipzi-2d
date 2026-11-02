@@ -58,7 +58,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                                 'None, groups: tuple[PoseGroup, ...], extensions: _Mapping[str, '
                                                 'ExtensionValue], opaque_source_ids: _Mapping[str, str] | None = None, '
                                                 'opaque_source_content_hash: str | None = None)',
-                                   'type_refs': ('zipzi.modeling.pose.PoseGroup',)},
+                                   'type_refs': ('zipzi.modeling.ExtensionValue', 'zipzi.modeling.pose.PoseGroup')},
  'zipzi.modeling.pose.PoseAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseCollection': {'children': (),
@@ -275,7 +275,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.pose': {'children': ('zipzi.modeling.p
                                    'kind': 'type',
                                    'signature': '(*, id: str, part: PosePartRef, links: tuple[PoseLink, ...] | None = '
                                                 'None, extensions: _Mapping[str, ExtensionValue])',
-                                   'type_refs': ('zipzi.modeling.pose.PoseLink', 'zipzi.modeling.pose.PosePartRef')},
+                                   'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                 'zipzi.modeling.pose.PoseLink',
+                                                 'zipzi.modeling.pose.PosePartRef')},
  'zipzi.modeling.pose.PoseEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.pose.PoseEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.pose.PoseFields': {'children': (),

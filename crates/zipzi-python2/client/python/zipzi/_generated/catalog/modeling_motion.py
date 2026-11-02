@@ -105,7 +105,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'extensions: _Mapping[str, ExtensionValue], meta_extensions: '
                                                    '_Mapping[str, ExtensionValue], opaque_source_ids: _Mapping[str, '
                                                    'str] | None = None, opaque_source_content_hash: str | None = None)',
-                                      'type_refs': ('zipzi.modeling.motion.MotionEvent',
+                                      'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                    'zipzi.modeling.motion.MotionEvent',
                                                     'zipzi.modeling.motion.MotionTrack')},
  'zipzi.modeling.motion.MotionClip.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionClip.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -536,7 +537,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                    'declared fields cannot be shadowed.')],
                                        'kind': 'type',
                                        'signature': '(*, id: str, time: float, value: str, extensions: _Mapping[str, '
-                                                    'ExtensionValue])'},
+                                                    'ExtensionValue])',
+                                       'type_refs': ('zipzi.modeling.ExtensionValue',)},
  'zipzi.modeling.motion.MotionEvent.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionEvent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionEventFired': {'children': ('zipzi.modeling.motion.MotionEventFired.__repr__',
@@ -640,7 +642,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                               'signature': '(*, id: str, clip_id: str, fade_in: float | None = None, '
                                                            'fade_out: float | None = None, sound: AttachmentRef | None '
                                                            '= None, extensions: _Mapping[str, ExtensionValue])',
-                                              'type_refs': ('zipzi.modeling.scene.AttachmentRef',)},
+                                              'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                            'zipzi.modeling.scene.AttachmentRef')},
  'zipzi.modeling.motion.MotionRegistration.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.motion.MotionRegistration.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.motion.MotionSegment': {'children': (),
@@ -784,7 +787,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.motion': {'children': ('zipzi.modeling
                                                     'segments: tuple[MotionSegment, ...], fade_in: float | None = '
                                                     'None, fade_out: float | None = None, extensions: _Mapping[str, '
                                                     'ExtensionValue])',
-                                       'type_refs': ('zipzi.modeling.motion.MotionKey',
+                                       'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                     'zipzi.modeling.motion.MotionKey',
                                                      'zipzi.modeling.motion.MotionSegment',
                                                      'zipzi.modeling.motion.MotionTrackTarget')},
  'zipzi.modeling.motion.MotionTrack.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

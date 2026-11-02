@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "51169750935f12401924181388badb190f145a88722b065aba80c0414f22f247",
+  "contract_sha256": "42aada97154e8d30c7e5359096cb6005fe7b29a9df0491d848063bce76ea307e",
   "format_version": 2,
   "root": {
     "binary": {
@@ -793,7 +793,7 @@
     },
     {
       "path": "types/project.json",
-      "sha256": "565ee9070563537d064de01d215dc0b7adb6c43e61a3a2fb196720a13d43c631"
+      "sha256": "0f5da4d578fab83fd90bb5bd8b8195b09ffddeca5ab60e5f012a1d89f4c10bca"
     },
     {
       "path": "types/queries.json",

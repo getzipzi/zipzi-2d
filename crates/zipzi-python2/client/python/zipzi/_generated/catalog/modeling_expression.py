@@ -59,7 +59,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                             '_Mapping[str, ExtensionValue], opaque_source_ids: '
                                                             '_Mapping[str, str] | None = None, '
                                                             'opaque_source_content_hash: str | None = None)',
-                                               'type_refs': ('zipzi.modeling.expression.ExpressionEntry',)},
+                                               'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                             'zipzi.modeling.expression.ExpressionEntry')},
  'zipzi.modeling.expression.ExpressionAsset.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.expression.ExpressionBlend': {'children': (),
@@ -245,7 +246,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.expression': {'children': ('zipzi.mode
                                                'signature': '(*, id: str, target: ExpressionTarget, value: float, '
                                                             'blend: ExpressionBlend | None = None, extensions: '
                                                             '_Mapping[str, ExtensionValue])',
-                                               'type_refs': ('zipzi.modeling.expression.ExpressionBlend',
+                                               'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                             'zipzi.modeling.expression.ExpressionBlend',
                                                              'zipzi.modeling.expression.ExpressionTarget')},
  'zipzi.modeling.expression.ExpressionEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.expression.ExpressionEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},

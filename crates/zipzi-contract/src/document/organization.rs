@@ -118,12 +118,19 @@ pub enum OrganizationEdit {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape)]
+/// Select a document metadata field or repair domain.
 pub enum DocumentField {
+    /// Model3 layout metadata.
     Layout,
+    /// Export frame settings.
     ExportSettings,
+    /// Source canvas metadata.
     SourceCanvas,
+    /// Preserved opaque document metadata.
     OpaqueMetadata,
+    /// Unresolved imported attachment paths.
     MissingAttachments,
+    /// CDI display information.
     DisplayInfo,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -134,12 +141,16 @@ pub enum DocumentField {
     deny_unknown_fields
 )]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Typed replacement value for a writable document metadata field.
 pub enum DocumentValue {
+    /// Replace or remove model3 layout metadata.
     Layout(
         /// Replacement model3 layout map; None explicitly removes the layout.
         Option<BTreeMap<String, f64>>,
     ),
+    /// Replace export-frame settings.
     ExportSettings(#[doc = "Replacement export-frame scale and padding settings."] ExportSettings),
+    /// Replace or remove source canvas metadata.
     SourceCanvas(
         /// Replacement source-canvas metadata; None explicitly removes the canvas provenance.
         Option<Canvas>,
@@ -157,14 +168,17 @@ impl DocumentValue {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Patch or repair document metadata under explicit preconditions.
 pub enum DocumentAuthoringEdit {
+    /// Replace a typed document value under an exact precondition.
     Patch {
         /// Exact current field value used as an optimistic precondition; stale values reject
         /// the edit.
         expected: DocumentValue,
-        /// Scalar value in the referenced parameter domain.
+        /// Replacement typed document value; its variant must match expected.
         value: DocumentValue,
     },
+    /// Resolve an imported attachment path to an attachment or clear it.
     RepairMissingAttachment {
         /// Unresolved imported attachment path to repair; this command does not read client-
         /// side files.
@@ -172,6 +186,7 @@ pub enum DocumentAuthoringEdit {
         /// Stable package-attachment ID, distinct from its relative package path.
         attachment_id: Option<String>,
     },
+    /// Resolve or clear an imported CDI parameter reference.
     RepairCdiParameter {
         /// External format/runtime identifier retained for import/export; not the document
         /// object ID.
@@ -179,6 +194,7 @@ pub enum DocumentAuthoringEdit {
         /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: Option<String>,
     },
+    /// Resolve or clear an imported CDI Part reference.
     RepairCdiPart {
         /// External format/runtime identifier retained for import/export; not the document
         /// object ID.

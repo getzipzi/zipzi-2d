@@ -180,6 +180,7 @@ def split(source, graph, header):
     core=['ModelingCommand','ModelingQuery','OwnedModelingRecords']
     for name in core:
         if name in symbols:root.append('from .'+symbols[name]+' import '+name+' as '+name)
-    root.append('__all__ = '+repr(domains+core))
+    root.append('from .._extensions import ExtensionValue as ExtensionValue')
+    root.append('__all__ = '+repr(domains+core+['ExtensionValue']))
     output['client/python/zipzi/modeling/__init__.py']='\n'.join(root)+'\n'
     return output, symbols, function_domains

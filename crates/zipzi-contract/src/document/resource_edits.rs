@@ -71,12 +71,16 @@ pub enum ResourceEdit {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Optional resolved or unresolved document target in model3 metadata.
 pub enum ModelTargetRef {
+    /// No target is specified.
     Unspecified,
+    /// Reference a stable document object ID.
     Resolved {
         /// Stable document ID of the object described or selected by this value.
         object_id: String,
     },
+    /// Preserve an external runtime ID without inventing a document identity.
     Unresolved {
         /// External format/runtime identifier retained for import/export; not the document
         /// object ID.
@@ -95,6 +99,7 @@ impl ModelTargetRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Model3 parameter group and its ordered reference entries.
 pub struct ModelParameterGroup {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -112,6 +117,7 @@ pub struct ModelParameterGroup {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Model3 hit-area metadata and its mesh target.
 pub struct ModelHitArea {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -128,6 +134,7 @@ pub struct ModelHitArea {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
+/// Optional model3 export metadata, reference registrations and preserved extensions.
 pub struct Model3Settings {
     /// Optional ordered model3 parameter groups; None preserves omission rather than an empty list.
     pub groups: Option<Vec<ModelParameterGroup>>,

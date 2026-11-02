@@ -658,3 +658,36 @@ epoch，UUID 复用或 Undo 不能复活旧引用；Plan 针对精确 Source，r
 及清理历史、参数删除冻结默认值。四项均通过 Local/Connected 和静态类型检查。
 离线 `format()` 检查引用失效、删除分页和三种非 Ready 状态，并确认不加载 native/GPU。
 未运行全量 SDK、GPU 或真实 Editor 服务门禁。
+
+## 16. P5 项目 IO 与格式结构检查（2026-11-02）
+
+状态：P5 **结构门禁及指定行为证据通过，格式语义仍待全面复核**。仍须对所有 sidecar
+格式和拒绝场景逐项检查，并在 P6/P7 复核动画、客户端 inspection 文件 IO 和可选服务；
+本记录不以非空摘要取代完整领域验收。
+
+本批主范围为 `modeling_project`，跨页检查 `Runtime.sessions.open/import_`、
+`Session.project.run/diagnose/replace/open/export/save` 和 `SdkFailure.project_report`。
+Rust project、document metadata/CDI、model3 和 Editor state 声明维护类型、格式、分支和字段
+说明；Python 生命周期方法维护 host 路径、Job 和报告解释。更正了原先不存在的
+`ProjectReport.losses` 提示：应检查 diagnostics/warnings/published/durable，部分拒绝导出
+在异常上提供 project_report。`durable=True` 在 Diagnose/New 也可出现而没有写盘；项目
+持久化仍须检查独立 SaveReceipt。说明 CMO3/CAN3/Cubism 的 allow_loss 和 CAN3/Cubism 的
+动画选项，以及裸 MOC3 的显式纹理槽；export 不将 Session 标记为已保存。
+
+JSON opaque 扩展的递归 `ExtensionValue` 原本被导出字段引用但没有可导航的公开定义；
+新增 `zipzi.modeling.ExtensionValue` 公开别名并在 Python 源旁说明不可变 JSON 值及数值边界，
+不改变已有字段的类型含义。modeling_project 的 9 个未解析引用因此可链接到同一公开路径，
+并以离线查询和生成测试检查解析，不静默豁免递归类型。
+
+本批类型摘要缺口 54 → 0、union 分支诊断 56 → 0、enum 成员诊断 24 → 0、未解析类型
+诊断 9 → 0；全局缺口 256 → 202，稳定债务键移除 214 项且无新增。新增公开别名使文档类型
+身份 991 → 992，其摘要完整；modeling_project 已纳入独立结构门禁。比较该页与 modeling、
+runtime、runtime_session、runtime_edit、common，标题 260 → 261，正文 139,235 → 144,393
+字符；新增一个公开类型与必要的格式、字段和导航说明，公共规则未新增重复。
+
+执行无缓存生成检查、reference tooling、graph 和 output 测试、`cargo test --locked -p
+zipzi-contract`；计划列出的 PSD 导入/保存/替换/导出、缺失资源诊断和大附件迁移往返
+均通过 Local/Connected 与静态类型检查。新增数值/状态断言确认 Diagnose 的 durable 标志
+不表示保存，导出后 Session 仍 modified；新增无轴绑定的 CMO3 测试确认默认拒绝时返回
+`EXPORT_LOSS` 和诊断报告，`allow_loss=True` 可发布且不改变历史。离线 format 检查
+扩展类型及导出报告提示，未加载 native/GPU。

@@ -29,14 +29,14 @@ def read_ObjectEditorState(value: object) -> ObjectEditorState:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OpaqueExportIssueModel3NamespaceChanged(CompactValue):
-    ''
+    'Model3 opaque metadata no longer matches its imported namespace.'
     _variant: _ClassVar[str] = 'Model3NamespaceChanged'
 
 OpaqueExportIssueModel3NamespaceChanged.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OpaqueExportIssueCdi(CompactValue):
-    '\n\nFields:\nproblem: Exact native opaque-field guard violated by this retained resource.'
+    'CDI opaque metadata failed its source guard.\n\nFields:\nproblem: Exact native opaque-field guard violated by this retained resource.'
     _variant: _ClassVar[str] = 'Cdi'
     problem: OpaqueExportProblem
 
@@ -44,7 +44,7 @@ OpaqueExportIssueCdi.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OpaqueExportIssueMotion(CompactValue):
-    '\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
+    'A retained motion asset failed its opaque-data guard.\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
     _variant: _ClassVar[str] = 'Motion'
     id: str
     problem: OpaqueExportProblem
@@ -53,7 +53,7 @@ OpaqueExportIssueMotion.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OpaqueExportIssueExpression(CompactValue):
-    '\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
+    'A retained expression asset failed its opaque-data guard.\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
     _variant: _ClassVar[str] = 'Expression'
     id: str
     problem: OpaqueExportProblem
@@ -62,7 +62,7 @@ OpaqueExportIssueExpression.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OpaqueExportIssuePose(CompactValue):
-    '\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
+    'Pose opaque data failed its source guard.\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
     _variant: _ClassVar[str] = 'Pose'
     id: str
     problem: OpaqueExportProblem
@@ -71,7 +71,7 @@ OpaqueExportIssuePose.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OpaqueExportIssuePhysics(CompactValue):
-    '\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
+    'Physics opaque data failed its source guard.\n\nFields:\nid: Persistent retained resource UUID in the frozen source.\nproblem: Exact native opaque-field guard violated by this retained resource.'
     _variant: _ClassVar[str] = 'Physics'
     id: str
     problem: OpaqueExportProblem
@@ -81,7 +81,7 @@ OpaqueExportIssuePhysics.__module__ = "zipzi.modeling.project"
 OpaqueExportIssue: TypeAlias = OpaqueExportIssueModel3NamespaceChanged | OpaqueExportIssueCdi | OpaqueExportIssueMotion | OpaqueExportIssueExpression | OpaqueExportIssuePose | OpaqueExportIssuePhysics
 
 class OpaqueExportProblem(str, Enum):
-    ''
+    'Reason retained opaque data cannot be exported safely under current source identities or content.'
     __module__ = "zipzi.modeling.project"
     NAMESPACE_CHANGED = 'NamespaceChanged'
     CONTENT_CHANGED = 'ContentChanged'
@@ -89,7 +89,7 @@ class OpaqueExportProblem(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiParameterGroup(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.'
+    'CDI parameter group metadata and its optional parent.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.'
     id: str
     runtime_id: str
     name: str
@@ -103,14 +103,14 @@ CdiParameterGroup.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelTargetRefUnspecified(CompactValue):
-    ''
+    'No target is specified.'
     _variant: _ClassVar[str] = 'unspecified'
 
 ModelTargetRefUnspecified.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelTargetRefResolved(CompactValue):
-    '\n\nFields:\nobject_id: Stable document ID of the object described or selected by this value.'
+    'Reference a stable document object ID.\n\nFields:\nobject_id: Stable document ID of the object described or selected by this value.'
     _variant: _ClassVar[str] = 'resolved'
     object_id: str
 
@@ -118,7 +118,7 @@ ModelTargetRefResolved.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelTargetRefUnresolved(CompactValue):
-    '\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
+    'Preserve an external runtime ID without inventing a document identity.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
 
@@ -128,14 +128,14 @@ ModelTargetRef: TypeAlias = ModelTargetRefUnspecified | ModelTargetRefResolved |
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiParameterRefUnspecified(CompactValue):
-    ''
+    'No parameter target is specified.'
     _variant: _ClassVar[str] = 'unspecified'
 
 CdiParameterRefUnspecified.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiParameterRefResolved(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
+    'Reference a stable document parameter ID.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
     _variant: _ClassVar[str] = 'resolved'
     parameter_id: str
 
@@ -143,7 +143,7 @@ CdiParameterRefResolved.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiParameterRefUnresolved(CompactValue):
-    '\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
+    'Preserve an external parameter runtime ID.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
 
@@ -153,7 +153,7 @@ CdiParameterRef: TypeAlias = CdiParameterRefUnspecified | CdiParameterRefResolve
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DocumentAuthoringEditPatch(CompactValue):
-    '\n\nFields:\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nvalue: Scalar value in the referenced parameter domain.'
+    'Replace a typed document value under an exact precondition.\n\nFields:\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nvalue: Replacement typed document value; its variant must match expected.'
     _variant: _ClassVar[str] = 'patch'
     expected: DocumentValue
     value: DocumentValue
@@ -162,7 +162,7 @@ DocumentAuthoringEditPatch.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DocumentAuthoringEditRepairMissingAttachment(CompactValue):
-    '\n\nFields:\npath: Unresolved imported attachment path to repair; this command does not read client-\nside files.\nattachment_id: Stable package-attachment ID, distinct from its relative package path.'
+    'Resolve an imported attachment path to an attachment or clear it.\n\nFields:\npath: Unresolved imported attachment path to repair; this command does not read client-\nside files.\nattachment_id: Stable package-attachment ID, distinct from its relative package path.'
     _variant: _ClassVar[str] = 'repair_missing_attachment'
     path: str
     attachment_id: (str | None) = None
@@ -171,7 +171,7 @@ DocumentAuthoringEditRepairMissingAttachment.__module__ = "zipzi.modeling.projec
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DocumentAuthoringEditRepairCdiParameter(CompactValue):
-    '\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
+    'Resolve or clear an imported CDI parameter reference.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.'
     _variant: _ClassVar[str] = 'repair_cdi_parameter'
     runtime_id: str
     parameter_id: (str | None) = None
@@ -180,7 +180,7 @@ DocumentAuthoringEditRepairCdiParameter.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DocumentAuthoringEditRepairCdiPart(CompactValue):
-    '\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
+    'Resolve or clear an imported CDI Part reference.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
     _variant: _ClassVar[str] = 'repair_cdi_part'
     runtime_id: str
     part_id: (str | None) = None
@@ -191,7 +191,7 @@ DocumentAuthoringEdit: TypeAlias = DocumentAuthoringEditPatch | DocumentAuthorin
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DocumentValueLayout(CompactValue):
-    '\n\nFields:\nvalue: Replacement model3 layout map; None explicitly removes the layout.'
+    'Replace or remove model3 layout metadata.\n\nFields:\nvalue: Replacement model3 layout map; None explicitly removes the layout.'
     _variant: _ClassVar[str] = 'layout'
     value: (_Mapping[str, float] | None) = None
 
@@ -202,7 +202,7 @@ DocumentValueLayout.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DocumentValueExportSettings(CompactValue):
-    '\n\nFields:\nvalue: Replacement export-frame scale and padding settings.'
+    'Replace export-frame settings.\n\nFields:\nvalue: Replacement export-frame scale and padding settings.'
     _variant: _ClassVar[str] = 'export_settings'
     value: ExportSettings
 
@@ -210,7 +210,7 @@ DocumentValueExportSettings.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DocumentValueSourceCanvas(CompactValue):
-    '\n\nFields:\nvalue: Replacement source-canvas metadata; None explicitly removes the canvas provenance.'
+    'Replace or remove source canvas metadata.\n\nFields:\nvalue: Replacement source-canvas metadata; None explicitly removes the canvas provenance.'
     _variant: _ClassVar[str] = 'source_canvas'
     value: (Canvas | None) = None
 
@@ -234,7 +234,7 @@ ExportSettings.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class PackageAttachment(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\npath: Normalized package-relative path using forward slashes; absolute paths, empty components\nand .. are invalid.\nbytes: Optional owned file contents; None preserves an unavailable attachment, not an empty file.'
+    'Stable package attachment path and optional owned bytes.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\npath: Normalized package-relative path using forward slashes; absolute paths, empty components\nand .. are invalid.\nbytes: Optional owned file contents; None preserves an unavailable attachment, not an empty file.'
     id: str
     path: str
     bytes: (_Bytes | None) = None
@@ -243,7 +243,7 @@ PackageAttachment.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class EditorState(CompactValue):
-    '\n\nFields:\nobjects: Explicit flags only, keyed by globally unique object ID. Defaults are omitted.'
+    'Explicit per-object Editor visibility and lock metadata.\n\nFields:\nobjects: Explicit flags only, keyed by globally unique object ID. Defaults are omitted.'
     objects: _Mapping[str, ObjectEditorState] = field(default_factory=lambda: {key0: read_ObjectEditorState(v0) for key0, v0 in record({}).items()})
 
     def __post_init__(self) -> None:
@@ -253,7 +253,7 @@ EditorState.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ObjectEditorState(CompactValue):
-    '\n\nFields:\nhidden_in_editor: Editor-only hiding flag; does not replace the model enabled/visibility state.\nlocked: Authoring lock state; native edit admission and capabilities enforce the lock.'
+    'Editor visibility and lock flags for one document object.\n\nFields:\nhidden_in_editor: Editor-only hiding flag; does not replace the model enabled/visibility state.\nlocked: Authoring lock state; native edit admission and capabilities enforce the lock.'
     hidden_in_editor: bool = field(default_factory=lambda: _boolean(False))
     locked: bool = field(default_factory=lambda: _boolean(False))
 
@@ -261,7 +261,7 @@ ObjectEditorState.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DisplayInfo(CompactValue):
-    '\n\nFields:\norigin: Import/generation provenance of these display metadata records.\nparameters: `None` and `Some([])` retain CDI collection omission and emptiness.\nparameter_groups: Optional ordered CDI parameter groups metadata; None preserves omission and an empty\nlist explicitly preserves emptiness.\nparts: Optional ordered CDI parts metadata; None preserves omission and an empty list\nexplicitly preserves emptiness.\ncombined_parameters: Optional ordered CDI combined parameters metadata; None preserves omission and an empty\nlist explicitly preserves emptiness.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.\nopaque_source_ids: Complete namespace identity at import when opaque extensions exist.'
+    'CDI display metadata with explicit omission and preserved opaque extensions.\n\nFields:\norigin: Import/generation provenance of these display metadata records.\nparameters: `None` and `Some([])` retain CDI collection omission and emptiness.\nparameter_groups: Optional ordered CDI parameter groups metadata; None preserves omission and an empty\nlist explicitly preserves emptiness.\nparts: Optional ordered CDI parts metadata; None preserves omission and an empty list\nexplicitly preserves emptiness.\ncombined_parameters: Optional ordered CDI combined parameters metadata; None preserves omission and an empty\nlist explicitly preserves emptiness.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.\nopaque_source_ids: Complete namespace identity at import when opaque extensions exist.'
     origin: DisplayInfoOrigin
     parameters: (tuple[CdiParameterEntry, ...] | None) = None
     parameter_groups: (tuple[CdiParameterGroup, ...] | None) = None
@@ -280,14 +280,14 @@ class DisplayInfo(CompactValue):
 DisplayInfo.__module__ = "zipzi.modeling.project"
 
 class DisplayInfoOrigin(str, Enum):
-    ''
+    'Provenance of CDI display metadata.'
     __module__ = "zipzi.modeling.project"
     GENERATED = 'generated'
     IMPORTED = 'imported'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiParameterEntryResolved(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
+    'Refer to an existing document parameter.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
     _variant: _ClassVar[str] = 'resolved'
     parameter_id: str
     group_id: (str | None) = None
@@ -300,7 +300,7 @@ CdiParameterEntryResolved.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiParameterEntryUnresolved(CompactValue):
-    '\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
+    'Preserve an external parameter identity and label.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
     name: str
@@ -316,7 +316,7 @@ CdiParameterEntry: TypeAlias = CdiParameterEntryResolved | CdiParameterEntryUnre
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiPartEntryResolved(CompactValue):
-    '\n\nFields:\npart_id: Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
+    'Refer to an existing document Part.\n\nFields:\npart_id: Resolved stable document Part ID; use an Unresolved entry to preserve an external runtime identifier.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
     _variant: _ClassVar[str] = 'resolved'
     part_id: str
     extensions: _Mapping[str, ExtensionValue]
@@ -328,7 +328,7 @@ CdiPartEntryResolved.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiPartEntryUnresolved(CompactValue):
-    '\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
+    'Preserve an external Part identity and label.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing\nknown fields.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
     name: str
@@ -343,7 +343,7 @@ CdiPartEntry: TypeAlias = CdiPartEntryResolved | CdiPartEntryUnresolved
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiCombinedSet(CompactValue):
-    '\n\nFields:\nid: Stable UUID of this CDI combined set; not the identity of its target.\nmembers: Ordered stable reference-entry records; entry identity is distinct from the referenced\nobject identity.'
+    'Ordered CDI combined-parameter reference members with a stable set identity.\n\nFields:\nid: Stable UUID of this CDI combined set; not the identity of its target.\nmembers: Ordered stable reference-entry records; entry identity is distinct from the referenced\nobject identity.'
     id: str
     members: tuple[ReferenceEntryCdiParameterRef, ...]
 
@@ -354,7 +354,7 @@ CdiCombinedSet.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CdiNamespaceIds(CompactValue):
-    '\n\nFields:\nparameters: Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.\nparts: Imported Part document-ID to runtime-ID map, retained to validate opaque metadata.\ngroups: Imported group document-ID to runtime-ID map, retained to validate opaque metadata.'
+    'Imported document-to-runtime identity maps used to guard opaque CDI metadata.\n\nFields:\nparameters: Imported parameter document-ID to runtime-ID map, retained to validate opaque metadata.\nparts: Imported Part document-ID to runtime-ID map, retained to validate opaque metadata.\ngroups: Imported group document-ID to runtime-ID map, retained to validate opaque metadata.'
     parameters: _Mapping[str, str]
     parts: _Mapping[str, str]
     groups: _Mapping[str, str]
@@ -368,7 +368,7 @@ CdiNamespaceIds.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Model3Settings(CompactValue):
-    '\n\nFields:\ngroups: Optional ordered model3 parameter groups; None preserves omission rather than an empty list.\nlayout: Optional model3 numeric layout map; None preserves omission and an empty map is\nexplicitly empty.\nhit_areas: Optional ordered named hit-area records with stable mesh references; None preserves\nomission.\nuser_data: Optional model3 user-data attachment reference; None means the field was omitted.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.\nsource_runtime_ids: Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.\nsource_content: Preserved opaque imported model3 source metadata; None means none was retained.'
+    'Optional model3 export metadata, reference registrations and preserved extensions.\n\nFields:\ngroups: Optional ordered model3 parameter groups; None preserves omission rather than an empty list.\nlayout: Optional model3 numeric layout map; None preserves omission and an empty map is\nexplicitly empty.\nhit_areas: Optional ordered named hit-area records with stable mesh references; None preserves\nomission.\nuser_data: Optional model3 user-data attachment reference; None means the field was omitted.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.\nsource_runtime_ids: Provenance is needed only for opaque metadata and unmanaged IDs inside UserData.\nsource_content: Preserved opaque imported model3 source metadata; None means none was retained.'
     groups: (tuple[ModelParameterGroup, ...] | None) = None
     layout: (_Mapping[str, float] | None) = None
     hit_areas: (tuple[ModelHitArea, ...] | None) = None
@@ -388,7 +388,7 @@ Model3Settings.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelParameterGroup(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nparameters: Ordered stable reference-entry records selecting model parameters; entry IDs are\ndistinct from parameter IDs.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.'
+    'Model3 parameter group and its ordered reference entries.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nparameters: Ordered stable reference-entry records selecting model parameters; entry IDs are\ndistinct from parameter IDs.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.'
     id: str
     name: str
     parameters: tuple[ReferenceEntryModelTargetRef, ...]
@@ -402,7 +402,7 @@ ModelParameterGroup.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ModelHitArea(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nmesh: Resolved mesh target or preserved unresolved mesh runtime identifier.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.'
+    'Model3 hit-area metadata and its mesh target.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nmesh: Resolved mesh target or preserved unresolved mesh runtime identifier.\nextensions: Preserved opaque import/export extension fields; retain unknown keys when editing known\nfields.'
     id: str
     name: str
     mesh: ModelTargetRef
@@ -414,7 +414,7 @@ class ModelHitArea(CompactValue):
 ModelHitArea.__module__ = "zipzi.modeling.project"
 
 class DocumentField(str, Enum):
-    ''
+    'Select a document metadata field or repair domain.'
     __module__ = "zipzi.modeling.project"
     LAYOUT = 'layout'
     EXPORT_SETTINGS = 'export_settings'
@@ -425,14 +425,14 @@ class DocumentField(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectRequestDiagnose(CompactValue):
-    ''
+    'Inspect resource diagnostics without publishing model changes.'
     _variant: _ClassVar[str] = 'diagnose'
 
 ProjectRequestDiagnose.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectRequestImport(CompactValue):
-    '\n\nFields:\npath: Host-side filesystem path for this IO request; resolve it explicitly on the host.\nformat: Explicit import/export format; does not change based on the installed backend.\ntextures: Explicit external texture-slot to host-file mappings used by imports requiring\nseparate images.'
+    'Import an explicitly selected format into the selected Session.\n\nFields:\npath: Host-side filesystem path for this IO request; resolve it explicitly on the host.\nformat: Explicit import/export format; does not change based on the installed backend.\ntextures: External texture-slot to host-file mappings for bare MOC3 import; other import\nformats do not consume this list.'
     _variant: _ClassVar[str] = 'import'
     path: str
     format: ImportFormat
@@ -445,7 +445,7 @@ ProjectRequestImport.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectRequestOpen(CompactValue):
-    '\n\nFields:\npath: Host-side filesystem path for this IO request; resolve it explicitly on the host.'
+    'Replace the selected Session from a host project path.\n\nFields:\npath: Host-side filesystem path for this IO request; resolve it explicitly on the host.'
     _variant: _ClassVar[str] = 'open'
     path: str
 
@@ -453,7 +453,7 @@ ProjectRequestOpen.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectRequestNew(CompactValue):
-    '\n\nFields:\ndocument_id: Stable document UUID; not a Runtime Session handle.\nsetup: Model source-canvas and export-frame configuration.'
+    'Replace the selected Session with a new document and model setup.\n\nFields:\ndocument_id: Stable document UUID; not a Runtime Session handle.\nsetup: Model source-canvas and export-frame configuration.'
     _variant: _ClassVar[str] = 'new'
     document_id: str
     setup: ModelSetup
@@ -462,7 +462,7 @@ ProjectRequestNew.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectRequestExport(CompactValue):
-    '\n\nFields:\npath: Host-side filesystem path for this IO request; resolve it explicitly on the host.\nformat: Explicit import/export format; does not change based on the installed backend.\nname: Human-readable display name; use the stable ID for identity because names can change.\nobject_id: Stable document ID of the object described or selected by this value.\nallow_loss: Explicit permission to export despite format-conversion losses; false rejects\nunsupported loss.\nbake_animation: Whether export may bake animation into the destination representation.\nauto_frame_rate: Whether export may choose a frame rate automatically instead of requiring an\nexplicit one.'
+    'Export a selected format to a host path under an explicit loss policy.\n\nFields:\npath: Host-side filesystem path for this IO request; resolve it explicitly on the host.\nformat: Explicit import/export format; does not change based on the installed backend.\nname: Human-readable display name; use the stable ID for identity because names can change.\nobject_id: Stable Motion or Expression ID for the corresponding sidecar export; None supplies\nno object selection. Other formats do not use this selection.\nallow_loss: For CMO3, CAN3 and Cubism conversion, permit reported losses; false rejects\nunsupported loss. Other export formats do not consume this policy.\nbake_animation: Whether CAN3/Cubism export may bake animation into the destination representation.\nauto_frame_rate: Whether CAN3/Cubism export may choose a frame rate automatically instead of requiring\nan explicit one.'
     _variant: _ClassVar[str] = 'export'
     path: str
     format: ExportFormat
@@ -477,7 +477,7 @@ ProjectRequestExport.__module__ = "zipzi.modeling.project"
 ProjectRequest: TypeAlias = ProjectRequestDiagnose | ProjectRequestImport | ProjectRequestOpen | ProjectRequestNew | ProjectRequestExport
 
 class ImportFormat(str, Enum):
-    ''
+    'Explicit source format used by host-side project import.'
     __module__ = "zipzi.modeling.project"
     MODEL3 = 'model3'
     PSD = 'psd'
@@ -486,14 +486,14 @@ class ImportFormat(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TextureSlot(CompactValue):
-    '\n\nFields:\nslot: Zero-based external texture slot number used by the import format.\npath: Host-side image file path supplying this external texture slot.'
+    'Explicit external texture slot and host-side image path for bare MOC3 import.\n\nFields:\nslot: Zero-based external texture slot number used by the import format.\npath: Host-side image file path supplying this external texture slot.'
     slot: int
     path: str
 
 TextureSlot.__module__ = "zipzi.modeling.project"
 
 class ExportFormat(str, Enum):
-    ''
+    'Explicit host-side export representation.'
     __module__ = "zipzi.modeling.project"
     PACKAGE = 'package'
     CMO3 = 'cmo3'
@@ -507,7 +507,7 @@ class ExportFormat(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectReport(CompactValue):
-    '\n\nFields:\nbefore: Exact SDK version before the operation.\nafter: Exact SDK version after the operation; may equal before for a no-op or nonpublishing\noperation.\nwarnings: Nonfatal operation warnings retained even when an output was produced.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.\npublished: Whether the operation published its result; inspect durable separately for persistence\nguarantees.\ndurable: Whether the reported persistence step achieved its durability guarantee; job completion\nalone does not imply true.\npaths: Host-side output paths actually reported by the operation; no client-side path\ntranslation is implied.'
+    'Owned outcome of a project operation, including diagnostics, publication and durability.\n\nFields:\nbefore: Exact SDK version before the operation.\nafter: Exact SDK version after the operation; may equal before for a no-op or nonpublishing\noperation.\nwarnings: Nonfatal operation warnings retained even when an output was produced.\ndiagnostics: Structured diagnostics from this query or operation; an empty list means none were reported.\npublished: Whether the operation published its result: a replacement for import/open/new, or an\noutput for export. Diagnose does not publish.\ndurable: Operation-reported durability. Diagnose and New may report true without writing a file;\ninspect the SaveReceipt separately when asserting project persistence.\npaths: Host-side output paths actually reported by the operation; no client-side path\ntranslation is implied.'
     before: _Version
     after: _Version
     warnings: tuple[str, ...]
@@ -525,7 +525,7 @@ ProjectReport.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ProjectDiagnostic(CompactValue):
-    '\n\nFields:\nseverity: Diagnostic severity label; inspect code for stable programmatic handling.\ncode: Machine-readable reason or diagnostic code; use it instead of matching human-readable text.\nobject_id: Stable document object ID related to this diagnostic; empty if no object was attributed.\nmessage: Human-readable diagnostic detail; code is the stable programmatic discriminator.'
+    'Machine-readable project warning or informational diagnostic.\n\nFields:\nseverity: Diagnostic severity label; inspect code for stable programmatic handling.\ncode: Machine-readable reason or diagnostic code; use it instead of matching human-readable text.\nobject_id: Stable document object ID related to this diagnostic; empty if no object was attributed.\nmessage: Human-readable diagnostic detail; code is the stable programmatic discriminator.'
     severity: str
     code: str
     object_id: str

@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Editor visibility and lock flags for one document object.
 pub struct ObjectEditorState {
     #[serde(default, skip_serializing_if = "is_false")]
     /// Editor-only hiding flag; does not replace the model enabled/visibility state.
@@ -16,6 +17,7 @@ fn is_false(value: &bool) -> bool {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Explicit per-object Editor visibility and lock metadata.
 pub struct EditorState {
     /// Explicit flags only, keyed by globally unique object ID. Defaults are omitted.
     #[serde(default)]
@@ -233,6 +235,7 @@ pub struct DrawOrderGroup {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Stable package attachment path and optional owned bytes.
 pub struct PackageAttachment {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

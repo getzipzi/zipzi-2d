@@ -904,7 +904,7 @@ class PythonReference(unittest.TestCase):
                                   'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits '
                                   'resources modeling_resources modeling_mesh scene modeling_scene modeling_scene_edits '
                                   'references modeling_addressing modeling_addressing_kinds modeling_addressing_patches '
-                                  'modeling_addressing_selectors modeling_deletion modeling_deletion_decisions').split())
+                                  'modeling_addressing_selectors modeling_deletion modeling_deletion_decisions modeling_project').split())
     BATCH_PAGES = {
         'S': 'meshes',
         'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
@@ -1109,6 +1109,20 @@ class PythonReference(unittest.TestCase):
         self.assertIn('retaining local data', self.catalog['zipzi.scene.ReparentLocal']['documentation'])
         self.assertIn('candidate operations', self.catalog['zipzi.scene.Operation']['documentation'])
 
+    def test_reference_project_export_and_extension_navigation(self):
+        extension = self.catalog['zipzi.modeling.ExtensionValue']
+        self.assertIn('JSON-compatible', extension['documentation'])
+        settings = self.catalog['zipzi.modeling.project.Model3Settings']
+        self.assertIn('zipzi.modeling.ExtensionValue', settings['type_refs'])
+        report = dict(self.catalog['zipzi.modeling.project.ProjectReport']['fields'])
+        self.assertTrue({'diagnostics', 'warnings', 'published', 'durable'} <= report.keys())
+        self.assertNotIn('losses', report)
+        export = self.catalog['zipzi.Session.project.export']['documentation']
+        self.assertIn('project_report', export)
+        self.assertNotIn('report losses', export)
+        request = dict(self.catalog['zipzi.modeling.project.ProjectRequestImport']['fields'])
+        self.assertIn('MOC3', request['textures'])
+
     def test_reference_deletion_review_and_address_semantics(self):
         state = dict(self.catalog['zipzi.modeling.deletion.DeletionReviewState']['fields'])
         self.assertIn('confirmation', state['NEEDS_CONFIRMATION'])
@@ -1208,6 +1222,7 @@ class PythonReference(unittest.TestCase):
         code='''import sys
 sys.path.insert(0, {package!r})
 import zipzi
+assert zipzi.modeling.ExtensionValue is zipzi.modeling.project.ExtensionValue
 assert not any(name.startswith('zipzi._generated.catalog.') for name in sys.modules)
 entry=zipzi.describe('Edit.meshes.create')
 assert entry.rule_refs == ('edit-write',)
@@ -1224,6 +1239,8 @@ for path, facts in (
     ('references.ObjectRef', ('incarnation', 'recreation', 'close')),
     ('Plan.deletion_page', ('zero-based row', 'not an object ID', 'next_offset')),
     ('modeling.deletion.DeletionReviewState', ('explicit confirmation', 'Outstanding decisions', 'blockers')),
+    ('modeling.ExtensionValue', ('JSON-compatible', 'read-only', 'finite')),
+    ('Session.project.export', ('diagnostics', 'durable', 'project_report')),
 ):
     text = zipzi.describe(path).format()
     for fact in facts:

@@ -322,9 +322,12 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                     'signature': '() -> Job[modeling.project.ProjectReport]',
                                     'type_refs': ('zipzi.Job', 'zipzi.modeling.project.ProjectReport')},
  'zipzi.Session.project.export': {'children': (),
-                                  'documentation': 'Submit a selected export to a host-absolute path. allow_loss, '
-                                                   'animation baking and frame-rate choices are explicit. Read report '
-                                                   'losses/published and wait for the durable IO outcome.',
+                                  'documentation': 'Submit export to a host-absolute path without marking the Session '
+                                                   'saved. CMO3/CAN3/Cubism use allow_loss; CAN3/Cubism use the '
+                                                   'animation baking and frame-rate choices. Wait for the Job and '
+                                                   'inspect report diagnostics, warnings, published and durable; '
+                                                   'rejected exports can expose a ProjectReport on '
+                                                   'SdkFailure.project_report.',
                                   'fields': [],
                                   'kind': 'callable',
                                   'signature': '(path: Path, format: modeling.project.ExportFormat, *, name: '

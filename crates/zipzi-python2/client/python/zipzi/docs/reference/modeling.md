@@ -14,6 +14,15 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 Core modeling commands, queries and domain modules.
 
 
+## zipzi.modeling.ExtensionValue
+
+**Alias**
+
+`None | bool | int | float | str | tuple['ExtensionValue', ...] | Mapping[str, 'ExtensionValue']`
+
+Immutable JSON-compatible extension value; arrays are tuples and objects are read-only string-keyed mappings. Integers use the supported signed/unsigned 64-bit JSON range and floating-point values must be finite.
+
+
 ## zipzi.modeling.ModelingCommand
 
 Alias of [zipzi.modeling.commands.ModelingCommand](modeling_commands.md#zipzimodelingcommandsmodelingcommand).

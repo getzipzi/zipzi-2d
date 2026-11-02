@@ -23,4 +23,5 @@ from . import spatial as spatial
 from .commands import ModelingCommand as ModelingCommand
 from .queries import ModelingQuery as ModelingQuery
 from .queries import OwnedModelingRecords as OwnedModelingRecords
-__all__ = ['addressing', 'bindings', 'commands', 'common', 'deletion', 'expression', 'mesh', 'motion', 'observation', 'parameters', 'physics', 'pose', 'preview', 'project', 'queries', 'resources', 'runtime', 'sampling', 'scene', 'spatial', 'ModelingCommand', 'ModelingQuery', 'OwnedModelingRecords']
+from .._extensions import ExtensionValue as ExtensionValue
+__all__ = ['addressing', 'bindings', 'commands', 'common', 'deletion', 'expression', 'mesh', 'motion', 'observation', 'parameters', 'physics', 'pose', 'preview', 'project', 'queries', 'resources', 'runtime', 'sampling', 'scene', 'spatial', 'ModelingCommand', 'ModelingQuery', 'OwnedModelingRecords', 'ExtensionValue']

@@ -164,7 +164,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                               'signature': '(*, version: int, meta: PhysicsMeta, settings: '
                                                            'tuple[PhysicsSetting, ...], extensions: _Mapping[str, '
                                                            'ExtensionValue])',
-                                              'type_refs': ('zipzi.modeling.physics.PhysicsMeta',
+                                              'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                            'zipzi.modeling.physics.PhysicsMeta',
                                                             'zipzi.modeling.physics.PhysicsSetting')},
  'zipzi.modeling.physics.PhysicsDefinition.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsDefinition.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -182,7 +183,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                                'roundtrips; declared fields cannot be shadowed.')],
                                                    'kind': 'type',
                                                    'signature': '(*, Id: str, Name: str, extensions: _Mapping[str, '
-                                                                'ExtensionValue])'},
+                                                                'ExtensionValue])',
+                                                   'type_refs': ('zipzi.modeling.ExtensionValue',)},
  'zipzi.modeling.physics.PhysicsDictionaryEntry.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsDictionaryEntry.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsEdit': {'children': (),
@@ -416,7 +418,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                           'kind': 'type',
                                           'signature': '(*, Gravity: PhysicsVector, Wind: PhysicsVector, extensions: '
                                                        '_Mapping[str, ExtensionValue])',
-                                          'type_refs': ('zipzi.modeling.physics.PhysicsVector',)},
+                                          'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                        'zipzi.modeling.physics.PhysicsVector')},
  'zipzi.modeling.physics.PhysicsForces.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsForces.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsInput': {'children': ('zipzi.modeling.physics.PhysicsInput.__repr__',
@@ -446,7 +449,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                       '_Mapping[str, ExtensionValue], weight: float, kind: '
                                                       'PhysicsAxis, reflect: bool, extensions: _Mapping[str, '
                                                       'ExtensionValue])',
-                                         'type_refs': ('zipzi.modeling.physics.PhysicsAxis',
+                                         'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                       'zipzi.modeling.physics.PhysicsAxis',
                                                        'zipzi.modeling.physics.PhysicsTarget')},
  'zipzi.modeling.physics.PhysicsInput.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsInput.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -480,7 +484,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                      'PhysicsForces, PhysicsDictionary: tuple[PhysicsDictionaryEntry, '
                                                      '...], Fps: float | None = None, extensions: _Mapping[str, '
                                                      'ExtensionValue])',
-                                        'type_refs': ('zipzi.modeling.physics.PhysicsDictionaryEntry',
+                                        'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                      'zipzi.modeling.physics.PhysicsDictionaryEntry',
                                                       'zipzi.modeling.physics.PhysicsForces')},
  'zipzi.modeling.physics.PhysicsMeta.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsMeta.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -504,7 +509,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                         'signature': '(*, id: str, position: PhysicsVector, mobility: float, delay: '
                                                      'float, acceleration: float, radius: float, extensions: '
                                                      '_Mapping[str, ExtensionValue])',
-                                        'type_refs': ('zipzi.modeling.physics.PhysicsVector',)},
+                                        'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                      'zipzi.modeling.physics.PhysicsVector')},
  'zipzi.modeling.physics.PhysicsNode.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsNormalization': {'children': ('zipzi.modeling.physics.PhysicsNormalization.__repr__',
@@ -522,7 +528,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                  'kind': 'type',
                                                  'signature': '(*, Position: PhysicsRange, Angle: PhysicsRange, '
                                                               'extensions: _Mapping[str, ExtensionValue])',
-                                                 'type_refs': ('zipzi.modeling.physics.PhysicsRange',)},
+                                                 'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                               'zipzi.modeling.physics.PhysicsRange')},
  'zipzi.modeling.physics.PhysicsNormalization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsNormalization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.physics.PhysicsOutput': {'children': ('zipzi.modeling.physics.PhysicsOutput.__repr__',
@@ -557,7 +564,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                        '_Mapping[str, ExtensionValue], node_id: str, scale: float, '
                                                        'weight: float, kind: PhysicsAxis, reflect: bool, extensions: '
                                                        '_Mapping[str, ExtensionValue])',
-                                          'type_refs': ('zipzi.modeling.physics.PhysicsAxis',
+                                          'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                        'zipzi.modeling.physics.PhysicsAxis',
                                                         'zipzi.modeling.physics.PhysicsTarget')},
  'zipzi.modeling.physics.PhysicsOutput.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.physics.PhysicsOutput.summary': {'alias': 'zipzi.ApiDescription.summary'},
@@ -953,7 +961,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.physics': {'children': ('zipzi.modelin
                                                         '...], outputs: tuple[PhysicsOutput, ...], vertices: '
                                                         'tuple[PhysicsNode, ...], normalization: PhysicsNormalization, '
                                                         'extensions: _Mapping[str, ExtensionValue])',
-                                           'type_refs': ('zipzi.modeling.physics.PhysicsInput',
+                                           'type_refs': ('zipzi.modeling.ExtensionValue',
+                                                         'zipzi.modeling.physics.PhysicsInput',
                                                          'zipzi.modeling.physics.PhysicsNode',
                                                          'zipzi.modeling.physics.PhysicsNormalization',
                                                          'zipzi.modeling.physics.PhysicsOutput')},

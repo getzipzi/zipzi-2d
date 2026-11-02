@@ -1074,12 +1074,18 @@ class PythonSdk(unittest.TestCase):
                     mesh=edit.meshes.create(meshes.MeshSpec("Constructed",GEOMETRY,texture_asset_id=asset,id=uid(2)))
                 self.assertEqual(session.info().history,(1,0))
                 before=session.info()
+                self.assertTrue(before.modified)
+                diagnosis = session.project.diagnose().wait()
+                self.assertFalse(diagnosis.published)
+                self.assertTrue(diagnosis.durable)  # Diagnostic success is not a save.
+                self.assertTrue(session.info().modified)
                 for format,name in ((m.project.ExportFormat.CMO3,"model.cmo3"),(m.project.ExportFormat.CAN3,"model.can3"),(m.project.ExportFormat.CUBISM,"cubism"),(m.project.ExportFormat.CDI3,"model.cdi3.json")):
                     report=session.project.export(folder/name,format,allow_loss=True).wait()
                     self.assertTrue(report.published)
                     self.assertEqual(report.before,before.version)
                     self.assertTrue((folder/name).exists())
                     self.assertEqual(session.info().history,before.history)
+                    self.assertTrue(session.info().modified)
                 saved=session.project.save(folder/"project").wait()
                 with session.reference("mesh",mesh) as reference:
                     report=session.project.open(saved.manifest).wait()
@@ -1095,6 +1101,36 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.meshes.get(mesh).value.name,"Constructed")
                 session.project.export(folder/"package",m.project.ExportFormat.PACKAGE).wait()
                 self.assertTrue((folder/"package").is_dir())
+
+    def test_project_export_loss_rejection_keeps_report_and_candidate(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as folder:
+                runtime = self.runtime(mode)
+                session = runtime.sessions.import_(
+                    ROOT/"crates/zipzi-psd/tests/fixtures/layered.psd", m.project.ImportFormat.PSD
+                ).wait()
+                asset = session.modeling.records(m.ModelingQuery()).value.ids["assets"][0]
+                with session.edit("Undriven binding") as edit:
+                    mesh = edit.meshes.create(meshes.MeshSpec("Face", GEOMETRY, texture_asset_id=asset, id=uid(2)))
+                    edit.apply(m.commands.ModelingCommandBinding(intent=m.bindings.BindingAuthoringEditMeshGrid(
+                        value=m.bindings.MeshGridEditCreate(id=uid(3), mesh_id=mesh))))
+                before = session.info()
+                rejected = Path(folder)/"rejected.cmo3"
+                with self.assertRaises(zipzi.SdkFailure) as failure:
+                    session.project.export(rejected, m.project.ExportFormat.CMO3).wait()
+                self.assertEqual(failure.exception.code, "EXPORT_LOSS")
+                report = failure.exception.project_report
+                assert report is not None
+                self.assertFalse(report.published)
+                self.assertTrue(any(d.code == "ZERO_AXIS_BINDING" for d in report.diagnostics))
+                self.assertFalse(rejected.exists())
+                self.assertEqual(session.info().version, before.version)
+                allowed = session.project.export(Path(folder)/"accepted.cmo3", m.project.ExportFormat.CMO3,
+                                                 allow_loss=True).wait()
+                self.assertTrue(allowed.published)
+                self.assertTrue(any(d.code == "ZERO_AXIS_BINDING" for d in allowed.diagnostics))
+                self.assertEqual(session.info().history, before.history)
+                self.assertEqual(session.info().modified, before.modified)
 
     def test_large_binary_authoring_records_sampling_and_attachment(self):
         # SDK rectangle-grid helper's exact 65536-vertex boundary, with a

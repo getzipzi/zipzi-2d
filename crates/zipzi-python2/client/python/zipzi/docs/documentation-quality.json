@@ -48,11 +48,11 @@
     "spatial"
   ],
   "reference_classifications": {
-    "builtin": 1482,
+    "builtin": 1411,
     "external": 616,
-    "public-sdk": 1496,
+    "public-sdk": 1523,
     "type-variable": 11,
-    "typing": 64
+    "typing": 39
   },
   "diagnostics": [
     {
@@ -622,903 +622,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::document::CdiCombinedSet|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiCombinedSet"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiCombinedSet",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiNamespaceIds|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiNamespaceIds"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiNamespaceIds",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntry"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntry"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntry"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntryResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry::Resolved",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntryResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry::Resolved",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntryResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry::Resolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntryUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry::Unresolved",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntryUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry::Unresolved",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterEntryUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterEntry::Unresolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterGroup|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterGroup"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterGroup",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterGroup|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterGroup"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterGroup",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef",
-      "category": "union-branch",
-      "subject": "Unspecified",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRefResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef::Resolved",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRefResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef::Resolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRefUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef::Unresolved",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRefUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef::Unresolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Unspecified",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRefUnspecified"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef::Unspecified",
-      "category": "union-branch",
-      "subject": "Unspecified",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Unspecified",
-      "paths": [
-        "zipzi.modeling.project.CdiParameterRefUnspecified"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiParameterRef::Unspecified",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntry"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntry"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntry"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntryResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry::Resolved",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntryResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry::Resolved",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntryResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry::Resolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntryUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry::Unresolved",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntryUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry::Unresolved",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.CdiPartEntryUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::CdiPartEntry::Unresolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DisplayInfoOrigin|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DisplayInfoOrigin"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DisplayInfoOrigin",
-      "category": "enum-member",
-      "subject": "GENERATED",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DisplayInfoOrigin|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DisplayInfoOrigin"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DisplayInfoOrigin",
-      "category": "enum-member",
-      "subject": "IMPORTED",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DisplayInfoOrigin|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DisplayInfoOrigin"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DisplayInfoOrigin",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DisplayInfo|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DisplayInfo"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DisplayInfo",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DisplayInfo|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DisplayInfo"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DisplayInfo",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
-      "category": "union-branch",
-      "subject": "Patch",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
-      "category": "union-branch",
-      "subject": "RepairCdiParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
-      "category": "union-branch",
-      "subject": "RepairCdiPart",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
-      "category": "union-branch",
-      "subject": "RepairMissingAttachment",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEdit"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:Patch",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditPatch"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::Patch",
-      "category": "union-branch",
-      "subject": "Patch",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:Patch",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditPatch"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::Patch",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairCdiParameter",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiParameter",
-      "category": "union-branch",
-      "subject": "RepairCdiParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairCdiParameter",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiParameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairCdiPart",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiPart",
-      "category": "union-branch",
-      "subject": "RepairCdiPart",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairCdiPart",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiPart",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairMissingAttachment",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairMissingAttachment",
-      "category": "union-branch",
-      "subject": "RepairMissingAttachment",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairMissingAttachment",
-      "paths": [
-        "zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairMissingAttachment",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentField"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentField",
-      "category": "enum-member",
-      "subject": "DISPLAY_INFO",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentField"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentField",
-      "category": "enum-member",
-      "subject": "EXPORT_SETTINGS",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentField"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentField",
-      "category": "enum-member",
-      "subject": "LAYOUT",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentField"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentField",
-      "category": "enum-member",
-      "subject": "MISSING_ATTACHMENTS",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentField"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentField",
-      "category": "enum-member",
-      "subject": "OPAQUE_METADATA",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentField"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentField",
-      "category": "enum-member",
-      "subject": "SOURCE_CANVAS",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentField"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentField",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentValue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue",
-      "category": "union-branch",
-      "subject": "ExportSettings",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentValue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue",
-      "category": "union-branch",
-      "subject": "Layout",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentValue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue",
-      "category": "union-branch",
-      "subject": "SourceCanvas",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.DocumentValue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:ExportSettings",
-      "paths": [
-        "zipzi.modeling.project.DocumentValueExportSettings"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue::ExportSettings",
-      "category": "union-branch",
-      "subject": "ExportSettings",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:ExportSettings",
-      "paths": [
-        "zipzi.modeling.project.DocumentValueExportSettings"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue::ExportSettings",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:Layout",
-      "paths": [
-        "zipzi.modeling.project.DocumentValueLayout"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue::Layout",
-      "category": "union-branch",
-      "subject": "Layout",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:Layout",
-      "paths": [
-        "zipzi.modeling.project.DocumentValueLayout"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue::Layout",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:SourceCanvas",
-      "paths": [
-        "zipzi.modeling.project.DocumentValueSourceCanvas"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue::SourceCanvas",
-      "category": "union-branch",
-      "subject": "SourceCanvas",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:SourceCanvas",
-      "paths": [
-        "zipzi.modeling.project.DocumentValueSourceCanvas"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::DocumentValue::SourceCanvas",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::EditorState|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.EditorState"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::EditorState",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ExpressionAsset|projection:canonical",
-      "paths": [
-        "zipzi.modeling.expression.ExpressionAsset"
-      ],
-      "pages": [
-        "modeling_expression"
-      ],
-      "source": "rust:zipzi_contract::document::ExpressionAsset",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
       "identity": "rust:zipzi_contract::document::ExpressionAsset|projection:canonical",
       "paths": [
         "zipzi.modeling.expression.ExpressionAsset"
@@ -1956,19 +1059,6 @@
         "modeling_expression"
       ],
       "source": "rust:zipzi_contract::document::ExpressionEntry",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ExpressionEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.expression.ExpressionEntry"
-      ],
-      "pages": [
-        "modeling_expression"
-      ],
-      "source": "rust:zipzi_contract::document::ExpressionEntry",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -2102,227 +1192,6 @@
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::Model3Settings|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.Model3Settings"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::Model3Settings",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::Model3Settings|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.Model3Settings"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::Model3Settings",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelHitArea|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelHitArea"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelHitArea",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelHitArea|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelHitArea"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelHitArea",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelParameterGroup|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelParameterGroup"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelParameterGroup",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelParameterGroup|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelParameterGroup"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelParameterGroup",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef",
-      "category": "union-branch",
-      "subject": "Unspecified",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRef"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRefResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef::Resolved",
-      "category": "union-branch",
-      "subject": "Resolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Resolved",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRefResolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef::Resolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRefUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef::Unresolved",
-      "category": "union-branch",
-      "subject": "Unresolved",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Unresolved",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRefUnresolved"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef::Unresolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Unspecified",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRefUnspecified"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef::Unspecified",
-      "category": "union-branch",
-      "subject": "Unspecified",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Unspecified",
-      "paths": [
-        "zipzi.modeling.project.ModelTargetRefUnspecified"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ModelTargetRef::Unspecified",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MotionClip|projection:canonical",
-      "paths": [
-        "zipzi.modeling.motion.MotionClip"
-      ],
-      "pages": [
-        "modeling_motion"
-      ],
-      "source": "rust:zipzi_contract::document::MotionClip",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::document::MotionClip|projection:canonical",
@@ -3337,19 +2206,6 @@
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MotionEvent|projection:canonical",
-      "paths": [
-        "zipzi.modeling.motion.MotionEvent"
-      ],
-      "pages": [
-        "modeling_motion"
-      ],
-      "source": "rust:zipzi_contract::document::MotionEvent",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::document::MotionEvent|projection:canonical",
@@ -3391,19 +2247,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::document::MotionRegistration|projection:canonical",
-      "paths": [
-        "zipzi.modeling.motion.MotionRegistration"
-      ],
-      "pages": [
-        "modeling_motion"
-      ],
-      "source": "rust:zipzi_contract::document::MotionRegistration",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
       "identity": "rust:zipzi_contract::document::MotionSegment|projection:canonical",
       "paths": [
         "zipzi.modeling.motion.MotionSegment"
@@ -3789,61 +2632,9 @@
         "modeling_motion"
       ],
       "source": "rust:zipzi_contract::document::MotionTrack",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::MotionTrack|projection:canonical",
-      "paths": [
-        "zipzi.modeling.motion.MotionTrack"
-      ],
-      "pages": [
-        "modeling_motion"
-      ],
-      "source": "rust:zipzi_contract::document::MotionTrack",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ObjectEditorState|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ObjectEditorState"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::ObjectEditorState",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PackageAttachment|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.PackageAttachment"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::document::PackageAttachment",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PoseAsset|projection:canonical",
-      "paths": [
-        "zipzi.modeling.pose.PoseAsset"
-      ],
-      "pages": [
-        "modeling_pose"
-      ],
-      "source": "rust:zipzi_contract::document::PoseAsset",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::document::PoseAsset|projection:canonical",
@@ -4273,19 +3064,6 @@
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::PoseEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.pose.PoseEntry"
-      ],
-      "pages": [
-        "modeling_pose"
-      ],
-      "source": "rust:zipzi_contract::document::PoseEntry",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::document::PoseEntry|projection:canonical",
@@ -4946,35 +3724,9 @@
         "modeling_physics"
       ],
       "source": "rust:zipzi_contract::physics::PhysicsDictionaryEntry",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics::PhysicsDictionaryEntry|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsDictionaryEntry"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics::PhysicsDictionaryEntry",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics::PhysicsForces|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsForces"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics::PhysicsForces",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::physics::PhysicsForces|projection:canonical",
@@ -4998,35 +3750,9 @@
         "modeling_physics"
       ],
       "source": "rust:zipzi_contract::physics::PhysicsMeta",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics::PhysicsMeta|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsMeta"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics::PhysicsMeta",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics::PhysicsNormalization|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsNormalization"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics::PhysicsNormalization",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::physics::PhysicsNormalization|projection:canonical",
@@ -5089,19 +3815,6 @@
         "modeling_physics"
       ],
       "source": "rust:zipzi_contract::physics_document::PhysicsDefinition",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics_document::PhysicsDefinition|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsDefinition"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics_document::PhysicsDefinition",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -5596,19 +4309,6 @@
         "modeling_physics"
       ],
       "source": "rust:zipzi_contract::physics_document::PhysicsInput",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics_document::PhysicsInput|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsInput"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics_document::PhysicsInput",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -5622,35 +4322,9 @@
         "modeling_physics"
       ],
       "source": "rust:zipzi_contract::physics_document::PhysicsNode",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics_document::PhysicsNode|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsNode"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics_document::PhysicsNode",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics_document::PhysicsOutput|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsOutput"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics_document::PhysicsOutput",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
     },
     {
       "identity": "rust:zipzi_contract::physics_document::PhysicsOutput|projection:canonical",
@@ -6402,19 +5076,6 @@
         "modeling_physics"
       ],
       "source": "rust:zipzi_contract::physics_document::PhysicsSetting",
-      "category": "type-reference",
-      "subject": "ExtensionValue",
-      "status": "unresolved-sdk"
-    },
-    {
-      "identity": "rust:zipzi_contract::physics_document::PhysicsSetting|projection:canonical",
-      "paths": [
-        "zipzi.modeling.physics.PhysicsSetting"
-      ],
-      "pages": [
-        "modeling_physics"
-      ],
-      "source": "rust:zipzi_contract::physics_document::PhysicsSetting",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -6545,747 +5206,6 @@
         "modeling_physics"
       ],
       "source": "rust:zipzi_contract::physics_document::PhysicsTarget::Unspecified",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "CAN3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "CDI3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "CMO3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "CUBISM",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "EXPRESSION3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "MOTION3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "PACKAGE",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "PHYSICS3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "enum-member",
-      "subject": "POSE3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ExportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ExportFormat",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ImportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ImportFormat",
-      "category": "enum-member",
-      "subject": "CUBISM",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ImportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ImportFormat",
-      "category": "enum-member",
-      "subject": "MOC3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ImportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ImportFormat",
-      "category": "enum-member",
-      "subject": "MODEL3",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ImportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ImportFormat",
-      "category": "enum-member",
-      "subject": "PSD",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ImportFormat"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ImportFormat",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
-      "category": "union-branch",
-      "subject": "Cdi",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
-      "category": "union-branch",
-      "subject": "Expression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
-      "category": "union-branch",
-      "subject": "Model3NamespaceChanged",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
-      "category": "union-branch",
-      "subject": "Motion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
-      "category": "union-branch",
-      "subject": "Physics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
-      "category": "union-branch",
-      "subject": "Pose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssue"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Cdi",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueCdi"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Cdi",
-      "category": "union-branch",
-      "subject": "Cdi",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Cdi",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueCdi"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Cdi",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Expression",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueExpression"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Expression",
-      "category": "union-branch",
-      "subject": "Expression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Expression",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueExpression"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Expression",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Model3NamespaceChanged",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Model3NamespaceChanged",
-      "category": "union-branch",
-      "subject": "Model3NamespaceChanged",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Model3NamespaceChanged",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Model3NamespaceChanged",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Motion",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueMotion"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Motion",
-      "category": "union-branch",
-      "subject": "Motion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Motion",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssueMotion"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Motion",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Physics",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssuePhysics"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Physics",
-      "category": "union-branch",
-      "subject": "Physics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Physics",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssuePhysics"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Physics",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Pose",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssuePose"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Pose",
-      "category": "union-branch",
-      "subject": "Pose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Pose",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportIssuePose"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Pose",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportProblem|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportProblem"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportProblem",
-      "category": "enum-member",
-      "subject": "CONTENT_CHANGED",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportProblem|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportProblem"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportProblem",
-      "category": "enum-member",
-      "subject": "NAMESPACE_CHANGED",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportProblem|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportProblem"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportProblem",
-      "category": "enum-member",
-      "subject": "PROVENANCE_MISSING",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::OpaqueExportProblem|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.OpaqueExportProblem"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::OpaqueExportProblem",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectDiagnostic|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectDiagnostic"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectDiagnostic",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectReport|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectReport"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectReport",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequest"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest",
-      "category": "union-branch",
-      "subject": "Diagnose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequest"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest",
-      "category": "union-branch",
-      "subject": "Export",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequest"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest",
-      "category": "union-branch",
-      "subject": "Import",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequest"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest",
-      "category": "union-branch",
-      "subject": "New",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequest"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest",
-      "category": "union-branch",
-      "subject": "Open",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequest"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Diagnose",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestDiagnose"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Diagnose",
-      "category": "union-branch",
-      "subject": "Diagnose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Diagnose",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestDiagnose"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Diagnose",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Export",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestExport"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Export",
-      "category": "union-branch",
-      "subject": "Export",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Export",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestExport"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Export",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Import",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestImport"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Import",
-      "category": "union-branch",
-      "subject": "Import",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Import",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestImport"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Import",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:New",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestNew"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::New",
-      "category": "union-branch",
-      "subject": "New",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:New",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestNew"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::New",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Open",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestOpen"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Open",
-      "category": "union-branch",
-      "subject": "Open",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Open",
-      "paths": [
-        "zipzi.modeling.project.ProjectRequestOpen"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::ProjectRequest::Open",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::project::TextureSlot|projection:canonical",
-      "paths": [
-        "zipzi.modeling.project.TextureSlot"
-      ],
-      "pages": [
-        "modeling_project"
-      ],
-      "source": "rust:zipzi_contract::project::TextureSlot",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -18653,6 +16573,188 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterEntry"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterEntry",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterEntry"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterEntry",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Resolved",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterEntryResolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterEntry::Resolved",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterEntry|projection:variant:Unresolved",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterEntryUnresolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterEntry::Unresolved",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRef"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRef"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRef"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef",
+      "category": "union-branch",
+      "subject": "Unspecified",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Resolved",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRefResolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef::Resolved",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Unresolved",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRefUnresolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef::Unresolved",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiParameterRef|projection:variant:Unspecified",
+      "paths": [
+        "zipzi.modeling.project.CdiParameterRefUnspecified"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiParameterRef::Unspecified",
+      "category": "union-branch",
+      "subject": "Unspecified",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.CdiPartEntry"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiPartEntry",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.CdiPartEntry"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiPartEntry",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Resolved",
+      "paths": [
+        "zipzi.modeling.project.CdiPartEntryResolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiPartEntry::Resolved",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::CdiPartEntry|projection:variant:Unresolved",
+      "paths": [
+        "zipzi.modeling.project.CdiPartEntryUnresolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::CdiPartEntry::Unresolved",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::document::DeletionChannel|projection:canonical",
       "paths": [
         "zipzi.modeling.deletion.DeletionChannel"
@@ -21409,6 +19511,292 @@
       "status": "review_required"
     },
     {
+      "identity": "rust:zipzi_contract::document::DisplayInfoOrigin|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DisplayInfoOrigin"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DisplayInfoOrigin",
+      "category": "enum-member",
+      "subject": "GENERATED",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DisplayInfoOrigin|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DisplayInfoOrigin"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DisplayInfoOrigin",
+      "category": "enum-member",
+      "subject": "IMPORTED",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
+      "category": "union-branch",
+      "subject": "Patch",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
+      "category": "union-branch",
+      "subject": "RepairCdiParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
+      "category": "union-branch",
+      "subject": "RepairCdiPart",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEdit"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit",
+      "category": "union-branch",
+      "subject": "RepairMissingAttachment",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:Patch",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditPatch"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::Patch",
+      "category": "union-branch",
+      "subject": "Patch",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairCdiParameter",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiParameter"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiParameter",
+      "category": "union-branch",
+      "subject": "RepairCdiParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairCdiPart",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditRepairCdiPart"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairCdiPart",
+      "category": "union-branch",
+      "subject": "RepairCdiPart",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentAuthoringEdit|projection:variant:RepairMissingAttachment",
+      "paths": [
+        "zipzi.modeling.project.DocumentAuthoringEditRepairMissingAttachment"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentAuthoringEdit::RepairMissingAttachment",
+      "category": "union-branch",
+      "subject": "RepairMissingAttachment",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentField"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentField",
+      "category": "enum-member",
+      "subject": "DISPLAY_INFO",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentField"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentField",
+      "category": "enum-member",
+      "subject": "EXPORT_SETTINGS",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentField"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentField",
+      "category": "enum-member",
+      "subject": "LAYOUT",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentField"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentField",
+      "category": "enum-member",
+      "subject": "MISSING_ATTACHMENTS",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentField"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentField",
+      "category": "enum-member",
+      "subject": "OPAQUE_METADATA",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentField|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentField"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentField",
+      "category": "enum-member",
+      "subject": "SOURCE_CANVAS",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentValue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentValue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue",
+      "category": "union-branch",
+      "subject": "ExportSettings",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentValue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentValue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue",
+      "category": "union-branch",
+      "subject": "Layout",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentValue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.DocumentValue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue",
+      "category": "union-branch",
+      "subject": "SourceCanvas",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:ExportSettings",
+      "paths": [
+        "zipzi.modeling.project.DocumentValueExportSettings"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue::ExportSettings",
+      "category": "union-branch",
+      "subject": "ExportSettings",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:Layout",
+      "paths": [
+        "zipzi.modeling.project.DocumentValueLayout"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue::Layout",
+      "category": "union-branch",
+      "subject": "Layout",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::DocumentValue|projection:variant:SourceCanvas",
+      "paths": [
+        "zipzi.modeling.project.DocumentValueSourceCanvas"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::DocumentValue::SourceCanvas",
+      "category": "union-branch",
+      "subject": "SourceCanvas",
+      "status": "review_required"
+    },
+    {
       "identity": "rust:zipzi_contract::document::GridOperation|projection:canonical",
       "paths": [
         "zipzi.modeling.bindings.GridOperation"
@@ -21796,6 +20184,84 @@
       "source": "rust:zipzi_contract::document::MeshGridEdit::ReorderAxes",
       "category": "union-branch",
       "subject": "ReorderAxes",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRef"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRef"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRef"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef",
+      "category": "union-branch",
+      "subject": "Unspecified",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Resolved",
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRefResolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef::Resolved",
+      "category": "union-branch",
+      "subject": "Resolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Unresolved",
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRefUnresolved"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef::Unresolved",
+      "category": "union-branch",
+      "subject": "Unresolved",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::document::ModelTargetRef|projection:variant:Unspecified",
+      "paths": [
+        "zipzi.modeling.project.ModelTargetRefUnspecified"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::document::ModelTargetRef::Unspecified",
+      "category": "union-branch",
+      "subject": "Unspecified",
       "status": "review_required"
     },
     {
@@ -26101,6 +24567,500 @@
       "source": "rust:zipzi_contract::physics_document::PhysicsAssetProperty::Fps",
       "category": "union-branch",
       "subject": "Fps",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "CAN3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "CDI3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "CMO3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "CUBISM",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "EXPRESSION3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "MOTION3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "PACKAGE",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "PHYSICS3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ExportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ExportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ExportFormat",
+      "category": "enum-member",
+      "subject": "POSE3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ImportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ImportFormat",
+      "category": "enum-member",
+      "subject": "CUBISM",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ImportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ImportFormat",
+      "category": "enum-member",
+      "subject": "MOC3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ImportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ImportFormat",
+      "category": "enum-member",
+      "subject": "MODEL3",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ImportFormat|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ImportFormat"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ImportFormat",
+      "category": "enum-member",
+      "subject": "PSD",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
+      "category": "union-branch",
+      "subject": "Cdi",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
+      "category": "union-branch",
+      "subject": "Expression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
+      "category": "union-branch",
+      "subject": "Model3NamespaceChanged",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
+      "category": "union-branch",
+      "subject": "Motion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
+      "category": "union-branch",
+      "subject": "Physics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssue"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue",
+      "category": "union-branch",
+      "subject": "Pose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Cdi",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueCdi"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Cdi",
+      "category": "union-branch",
+      "subject": "Cdi",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Expression",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueExpression"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Expression",
+      "category": "union-branch",
+      "subject": "Expression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Model3NamespaceChanged",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueModel3NamespaceChanged"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Model3NamespaceChanged",
+      "category": "union-branch",
+      "subject": "Model3NamespaceChanged",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Motion",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssueMotion"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Motion",
+      "category": "union-branch",
+      "subject": "Motion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Physics",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssuePhysics"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Physics",
+      "category": "union-branch",
+      "subject": "Physics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportIssue|projection:variant:Pose",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportIssuePose"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportIssue::Pose",
+      "category": "union-branch",
+      "subject": "Pose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportProblem|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportProblem"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportProblem",
+      "category": "enum-member",
+      "subject": "CONTENT_CHANGED",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportProblem|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportProblem"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportProblem",
+      "category": "enum-member",
+      "subject": "NAMESPACE_CHANGED",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::OpaqueExportProblem|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.OpaqueExportProblem"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::OpaqueExportProblem",
+      "category": "enum-member",
+      "subject": "PROVENANCE_MISSING",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequest"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest",
+      "category": "union-branch",
+      "subject": "Diagnose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequest"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest",
+      "category": "union-branch",
+      "subject": "Export",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequest"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest",
+      "category": "union-branch",
+      "subject": "Import",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequest"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest",
+      "category": "union-branch",
+      "subject": "New",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:canonical",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequest"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest",
+      "category": "union-branch",
+      "subject": "Open",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Diagnose",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestDiagnose"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Diagnose",
+      "category": "union-branch",
+      "subject": "Diagnose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Export",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestExport"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Export",
+      "category": "union-branch",
+      "subject": "Export",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Import",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestImport"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Import",
+      "category": "union-branch",
+      "subject": "Import",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:New",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestNew"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::New",
+      "category": "union-branch",
+      "subject": "New",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::project::ProjectRequest|projection:variant:Open",
+      "paths": [
+        "zipzi.modeling.project.ProjectRequestOpen"
+      ],
+      "pages": [
+        "modeling_project"
+      ],
+      "source": "rust:zipzi_contract::project::ProjectRequest::Open",
+      "category": "union-branch",
+      "subject": "Open",
       "status": "review_required"
     },
     {
