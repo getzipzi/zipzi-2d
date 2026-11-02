@@ -246,7 +246,7 @@ DeltaKeyformsWarp.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsRotation(CompactValue):
-    'Select rotation-transform delta samples.\n\nFields:\nvalue: Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select rotation-transform delta samples.\n\nFields:\nvalue: Rotation and appearance delta keyforms, each keyed by stable sample_id.'
     _variant: _ClassVar[str] = 'rotation'
     value: tuple[DeltaRotationKeyform, ...]
 
@@ -257,7 +257,7 @@ DeltaKeyformsRotation.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsPart(CompactValue):
-    'Select Part drawing-order delta samples.\n\nFields:\nvalue: Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select Part drawing-order delta samples.\n\nFields:\nvalue: Part drawing-order delta keyforms, each keyed by stable sample_id.'
     _variant: _ClassVar[str] = 'part'
     value: tuple[DeltaPartKeyform, ...]
 
@@ -268,7 +268,7 @@ DeltaKeyformsPart.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsGlue(CompactValue):
-    'Select Glue intensity delta samples.\n\nFields:\nvalue: Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select Glue intensity delta samples.\n\nFields:\nvalue: Glue intensity delta keyforms, each keyed by stable sample_id.'
     _variant: _ClassVar[str] = 'glue'
     value: tuple[DeltaGlueKeyform, ...]
 
@@ -279,7 +279,7 @@ DeltaKeyformsGlue.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeltaKeyformsOffscreen(CompactValue):
-    'Select Offscreen appearance samples.\n\nFields:\nvalue: Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.'
+    'Select Offscreen appearance samples.\n\nFields:\nvalue: Offscreen appearance keyforms keyed by stable sample_id; opacity and screen are\nadditive deltas, while multiply retains a neutral-one factor.'
     _variant: _ClassVar[str] = 'offscreen'
     value: tuple[DeltaOffscreenKeyform, ...]
 
@@ -450,7 +450,7 @@ BindingAuthoringEdit: TypeAlias = BindingAuthoringEditGrid | BindingAuthoringEdi
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridEditDelete(CompactValue):
-    'Explicitly discard owned shapes and return to the unchanged base target.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
+    'Explicitly discard owned shapes and return to the unchanged base target.\n\nFields:\nowner: Stable mesh/scene binding ID, or Glue ID for its owned grid.'
     _variant: _ClassVar[str] = 'Delete'
     owner: str
 
@@ -458,7 +458,7 @@ BindingGridEditDelete.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridEditCreate(CompactValue):
-    'Create an ordinary grid on the selected target.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.'
+    'Create an ordinary grid on the selected target.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\ntarget: Mesh, scene transform/Part or Glue that the new ordinary grid drives.'
     _variant: _ClassVar[str] = 'Create'
     id: str
     target: BindingGridTarget
@@ -467,7 +467,7 @@ BindingGridEditCreate.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingGridEditEdit(CompactValue):
-    'Apply an axis or sample operation to an existing grid.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\noperation: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.'
+    'Apply an axis or sample operation to an existing grid.\n\nFields:\nowner: Stable mesh/scene binding ID, or Glue ID for its owned grid.\noperation: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.'
     _variant: _ClassVar[str] = 'Edit'
     owner: str
     operation: GridOperation
@@ -522,7 +522,7 @@ GridOperationRemapParameter.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GridOperationSetParameter(CompactValue):
-    'Assign or clear the driving parameter of an existing axis.\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
+    'Assign or clear the driving parameter of an existing axis.\n\nFields:\naxis_id: Stable axis ID owned by this binding, not a parameter or sample ID.\nparameter_id: Stable document parameter ID; an empty string clears the axis parameter.\nreduction: Required reduction when clearing an active axis; otherwise no reduction is applied.'
     _variant: _ClassVar[str] = 'SetParameter'
     axis_id: str
     parameter_id: str
@@ -775,7 +775,7 @@ MeshGridEditDeleteSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class MeshGridEditRemoveAxis(CompactValue):
-    'Remove a parameter axis using the specified reduction.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
+    'Remove a parameter axis using the specified reduction.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Required for an active axis; None is allowed when the axis is already pending.'
     _variant: _ClassVar[str] = 'RemoveAxis'
     binding_id: str
     parameter_id: str
@@ -850,7 +850,7 @@ BindingFieldPatchConstraintSample.__module__ = "zipzi.modeling.bindings"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class BindingFieldPatchAxisParameter(CompactValue):
-    'Change the parameter assigned to an axis.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\nreduction: Explicit parameter-domain reduction used when removing or replacing an axis.'
+    'Change the parameter assigned to an axis.\n\nFields:\nparameter_id: Stable document parameter ID; an empty string clears the axis parameter.\nreduction: Required reduction when clearing an active axis; otherwise no reduction is applied.'
     _variant: _ClassVar[str] = 'AxisParameter'
     parameter_id: str
     reduction: (AxisReduction | None) = None

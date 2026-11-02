@@ -89,8 +89,8 @@ Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 
 **Fields**
 
-- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
-- `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
+- `parameter_id`: Stable document parameter ID; an empty string clears the axis parameter.
+- `reduction`: Required reduction when clearing an active axis; otherwise no reduction is applied.
 
 ## zipzi.modeling.bindings.BindingFieldPatchConstraintSample
 
@@ -391,8 +391,7 @@ Types: [DeltaGlueKeyform](#zipzimodelingbindingsdeltagluekeyform).
 
 **Fields**
 
-- `value`: Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;
-channels describe deltas from the base shape.
+- `value`: Glue intensity delta keyforms, each keyed by stable sample_id.
 
 ## zipzi.modeling.bindings.DeltaKeyformsMesh
 
@@ -421,8 +420,8 @@ Types: [DeltaOffscreenKeyform](#zipzimodelingbindingsdeltaoffscreenkeyform).
 
 **Fields**
 
-- `value`: Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;
-channels describe deltas from the base shape.
+- `value`: Offscreen appearance keyforms keyed by stable sample_id; opacity and screen are
+additive deltas, while multiply retains a neutral-one factor.
 
 ## zipzi.modeling.bindings.DeltaKeyformsPart
 
@@ -436,8 +435,7 @@ Types: [DeltaPartKeyform](#zipzimodelingbindingsdeltapartkeyform).
 
 **Fields**
 
-- `value`: Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;
-channels describe deltas from the base shape.
+- `value`: Part drawing-order delta keyforms, each keyed by stable sample_id.
 
 ## zipzi.modeling.bindings.DeltaKeyformsRotation
 
@@ -451,8 +449,7 @@ Types: [DeltaRotationKeyform](#zipzimodelingbindingsdeltarotationkeyform).
 
 **Fields**
 
-- `value`: Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;
-channels describe deltas from the base shape.
+- `value`: Rotation and appearance delta keyforms, each keyed by stable sample_id.
 
 ## zipzi.modeling.bindings.DeltaKeyformsWarp
 
@@ -717,8 +714,8 @@ Types: [AxisReduction](#zipzimodelingbindingsaxisreduction).
 **Fields**
 
 - `axis_id`: Stable axis ID owned by this binding, not a parameter or sample ID.
-- `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
-- `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
+- `parameter_id`: Stable document parameter ID; an empty string clears the axis parameter.
+- `reduction`: Required reduction when clearing an active axis; otherwise no reduction is applied.
 
 ## zipzi.modeling.bindings.MeshBinding
 

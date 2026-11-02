@@ -55,9 +55,9 @@ pub enum BindingFieldPatch {
     },
     /// Change the parameter assigned to an axis.
     AxisParameter {
-        /// Stable document parameter ID, not its exported runtime identifier.
+        /// Stable document parameter ID; an empty string clears the axis parameter.
         parameter_id: String,
-        /// Explicit parameter-domain reduction used when removing or replacing an axis.
+        /// Required reduction when clearing an active axis; otherwise no reduction is applied.
         reduction: Option<AxisReduction>,
     },
 }

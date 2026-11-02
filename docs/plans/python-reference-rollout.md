@@ -808,3 +808,22 @@ mesh_generation 或其他批次；P8 仍未完成。
 
 至此 P7 六个分片及上述跨页入口的结构、语义和实际 CPU/GPU/Editor 行为证据已齐；
 P1–P6 的完整跨领域语义复核及 P8 最终门禁仍未完成。
+
+## 22. P2 参数与绑定页面语义验收
+
+逐条复核 `parameters`、`bindings` 及三个 canonical modeling 分片，覆盖参数创建与部分
+patch、普通网格轴/样本/笛卡尔顺序、零轴、绝对位置与 BlendShape 通道、网格和表编辑，
+并复核 Session/Edit 参数与绑定读写的正式/候选源和提交边界。按基线与当前页面及离线帮助
+回答相同问题：None 是否保留值、空 runtime ID 是否可用、轴清除是否需 reduction、sample ID
+和坐标是否相同、网格 target/owner 是什么、各 BlendShape 通道是位置还是其他值。
+
+修正普通网格 target 与 owner 的跨领域套话，补充清除轴参数使用空字符串及 active/pending 的
+reduction 规则；将旋转、Part、Glue、Offscreen 的样本类型写成各自通道。核对实现后纠正
+`ParameterPatch.runtime_id`：空字符串作为替换值提交，但 native 以 `INVALID_ID` 拒绝，
+不是清空；新增 Local/Connected 测试确认拒绝后正式数据不变。此前 P2 数值绑定 sweep、
+参数 patch/保留测试与 mesh grid 行为证据见第 13 节，本次新增类型/字段测试与严格生成检查、
+上述 Local/Connected 行为及静态类型检查均通过。
+
+同范围五页从 44,533 增至 58,029 字符，均为 118 个入口且规则正文展开均为零；增量是字段、
+分支和投影语义。五页加入语义验收集合；P3 场景 runtime ID 的同类错误已确认，留待 P3 修复，
+不把该跨域缺口视为 P2 的场景语义验收。

@@ -93,9 +93,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                'New stable UUID for this object; it must not conflict '
                                                                'with an existing identity.'),
                                                               ('target',
-                                                               'Explicit base/ordinary/BlendShape content selector; '
-                                                               'default Base edits the\n'
-                                                               'undeformed base shape.')],
+                                                               'Mesh, scene transform/Part or Glue that the new '
+                                                               'ordinary grid drives.')],
                                                    'kind': 'type',
                                                    'signature': '(*, id: str, target: BindingGridTarget)',
                                                    'type_refs': ('zipzi.modeling.bindings.BindingGridTarget',)},
@@ -106,8 +105,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                    'documentation': 'Explicitly discard owned shapes and return to the '
                                                                     'unchanged base target.',
                                                    'fields': [('owner',
-                                                               'Stable owner ID for the addressed drawing group, '
-                                                               'collection or reference selection.')],
+                                                               'Stable mesh/scene binding ID, or Glue ID for its owned '
+                                                               'grid.')],
                                                    'kind': 'type',
                                                    'signature': '(*, owner: str)'},
  'zipzi.modeling.bindings.BindingGridEditDelete.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -117,8 +116,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                  'documentation': 'Apply an axis or sample operation to an existing '
                                                                   'grid.',
                                                  'fields': [('owner',
-                                                             'Stable owner ID for the addressed drawing group, '
-                                                             'collection or reference selection.'),
+                                                             'Stable mesh/scene binding ID, or Glue ID for its owned '
+                                                             'grid.'),
                                                             ('operation',
                                                              'Typed axis/sample grid edit to perform on this owner; '
                                                              'not a Runtime operation ID.')],
@@ -354,8 +353,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings.BindingAuthoringEdit': {'chil
                                                                 'Stable document parameter ID, not its exported '
                                                                 'runtime identifier.'),
                                                                ('reduction',
-                                                                'Explicit parameter-domain reduction used when '
-                                                                'removing or replacing an axis.')],
+                                                                'Required for an active axis; None is allowed when the '
+                                                                'axis is already pending.')],
                                                     'kind': 'type',
                                                     'signature': '(*, binding_id: str, parameter_id: str, reduction: '
                                                                  'AxisReduction)',

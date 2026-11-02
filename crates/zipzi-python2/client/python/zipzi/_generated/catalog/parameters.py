@@ -65,8 +65,8 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                                   'zipzi.parameters.ParameterPatch.summary'),
                                      'documentation': "Partial replacement of a parameter's authored fields, applied "
                                                       'by ParameterOperation::Patch.\n'
-                                                      'Omitted or None fields preserve their current values; empty '
-                                                      'text and false are explicit replacements.',
+                                                      'Omitted or None fields preserve their current values; supplied '
+                                                      'values are validated as replacements.',
                                      'fields': [('name',
                                                  'Human-readable display name; use the stable ID for identity because '
                                                  'names can change.\n'
@@ -87,9 +87,9 @@ DATA: dict[str, Entry] = {'zipzi.parameters': {'children': ('zipzi.parameters.Cr
                                                  'reset the field to\n'
                                                  'its default.'),
                                                 ('runtime_id',
-                                                 'Replacement external runtime identifier; an empty string explicitly '
-                                                 'clears it. None\n'
-                                                 'preserves the current value; it does not reset the field to its '
+                                                 'Replacement external runtime identifier; an empty string is rejected '
+                                                 'by native validation.\n'
+                                                 'None preserves the current value; it does not reset the field to its '
                                                  'default.'),
                                                 ('kind',
                                                  'Replacement parameter kind. None preserves the current value; it '

@@ -65,7 +65,7 @@ Types: [ParameterKind].
 `(name: str | None=None, minimum: float | None=None, maximum: float | None=None, default_value: float | None=None, runtime_id: str | None=None, kind: Kind | None=None, decimal_places: int | None=None, repeat: bool | None=None) -> None`
 
 Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.
-Omitted or None fields preserve their current values; empty text and false are explicit replacements.
+Omitted or None fields preserve their current values; supplied values are validated as replacements.
 
 Types: [ParameterKind].
 
@@ -80,8 +80,8 @@ current value; it does not reset the field to its default.
 - `default_value`: Default parameter value in its declared domain; native validation checks it against
 minimum and maximum. None preserves the current value; it does not reset the field to
 its default.
-- `runtime_id`: Replacement external runtime identifier; an empty string explicitly clears it. None
-preserves the current value; it does not reset the field to its default.
+- `runtime_id`: Replacement external runtime identifier; an empty string is rejected by native validation.
+None preserves the current value; it does not reset the field to its default.
 - `kind`: Replacement parameter kind. None preserves the current value; it does not reset the
 field to its default.
 - `decimal_places`: Replacement decimal precision for runtime parameter handling. None preserves the current

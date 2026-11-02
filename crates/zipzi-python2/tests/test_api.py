@@ -2027,6 +2027,11 @@ class PythonSdk(unittest.TestCase):
                 with self.assertRaises(FrozenInstanceError):
                     formal.value.name = "mutable"
                 self.assertEqual(session.meshes.get(uid(803)).value.name, "Mixed")
+                with self.assertRaises(zipzi.SdkFailure) as invalid:
+                    with session.edit("Reject empty runtime ID") as edit:
+                        edit.parameters.patch(uid(802), parameters.ParameterPatch(runtime_id=""))
+                self.assertEqual(invalid.exception.code, "INVALID_ID")
+                self.assertEqual(session.parameters.get(uid(802)).value.runtime_id, "ParamAngle")
 
     def test_parameter_query_admission_and_missing_records_do_not_poison_candidate(self):
         for mode in ("local", "connected"):

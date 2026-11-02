@@ -898,7 +898,8 @@ class Python2Codegen(unittest.TestCase):
 class PythonReference(unittest.TestCase):
     # Pages only enter this set after full page acceptance. Cross-page pilots
     # are exact paths; accepting modeling does not accept modeling.* domains.
-    ACCEPTED_PAGES = frozenset({'meshes', 'inspection', 'spatial', 'modeling_spatial', 'observation', 'modeling_observation', 'mesh_generation'})
+    ACCEPTED_PAGES = frozenset({'meshes', 'inspection', 'spatial', 'modeling_spatial', 'observation', 'modeling_observation', 'mesh_generation',
+                                'parameters', 'bindings', 'modeling_parameters', 'modeling_bindings', 'modeling_bindings_edits'})
     # These pages have no structural gaps; cross-domain semantic acceptance remains open.
     STRUCTURAL_PAGES = frozenset(('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events '
                                   'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits '
@@ -1013,6 +1014,7 @@ class PythonReference(unittest.TestCase):
         self.assertIn('None',patch['documentation'])
         self.assertIn('preserve',patch['documentation'])
         self.assertIn('None preserves',dict(patch['fields'])['kind'])
+        self.assertIn('empty string is rejected', dict(patch['fields'])['runtime_id'])
         self.assertNotIn('kind',{name for name,_,_ in patch.get('field_roles',())})
         create=self.catalog['zipzi.meshes.Create']
         self.assertEqual(create['field_roles'],(('kind','fixed-discriminator',"'create'"),))
@@ -1078,6 +1080,16 @@ class PythonReference(unittest.TestCase):
         self.assertIn('sample IDs', dict(canonical['fields'])['samples'])
         self.assertIn('Absolute', dict(canonical['fields'])['positions'])
         self.assertIn('displacement', dict(delta['fields'])['positions'])
+        create = dict(self.catalog['zipzi.modeling.bindings.BindingGridEditCreate']['fields'])
+        self.assertIn('new ordinary grid drives', create['target'])
+        edit = dict(self.catalog['zipzi.modeling.bindings.BindingGridEditEdit']['fields'])
+        self.assertIn('Glue ID', edit['owner'])
+        axis = dict(self.catalog['zipzi.modeling.bindings.GridOperationSetParameter']['fields'])
+        self.assertIn('empty string clears', axis['parameter_id'])
+        self.assertIn('Required reduction', axis['reduction'])
+        for kind in ('Rotation', 'Part', 'Glue', 'Offscreen'):
+            branch = self.catalog['zipzi.modeling.bindings.DeltaKeyforms' + kind]
+            self.assertNotIn('displacement keyforms', dict(branch['fields'])['value'])
         spec = dict(self.catalog['zipzi.bindings.MeshBindingSpec']['fields'])
         result = dict(self.catalog['zipzi.modeling.bindings.MeshBinding']['fields'])
         self.assertIn('Cartesian', spec['keyforms'])

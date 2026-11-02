@@ -126,7 +126,7 @@ pub enum MeshGridEdit {
         binding_id: String,
         /// Stable document parameter ID, not its exported runtime identifier.
         parameter_id: String,
-        /// Explicit parameter-domain reduction used when removing or replacing an axis.
+        /// Required for an active axis; None is allowed when the axis is already pending.
         reduction: AxisReduction,
     },
 }
@@ -207,9 +207,9 @@ pub enum GridOperation {
     SetParameter {
         /// Stable axis ID owned by this binding, not a parameter or sample ID.
         axis_id: String,
-        /// Stable document parameter ID, not its exported runtime identifier.
+        /// Stable document parameter ID; an empty string clears the axis parameter.
         parameter_id: String,
-        /// Explicit parameter-domain reduction used when removing or replacing an axis.
+        /// Required reduction when clearing an active axis; otherwise no reduction is applied.
         reduction: Option<AxisReduction>,
     },
     /// Reorder the grid using stable axis IDs.

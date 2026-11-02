@@ -241,26 +241,23 @@ pub enum DeltaKeyforms {
     ),
     /// Select rotation-transform delta samples.
     Rotation(
-        /// Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;
-        /// channels describe deltas from the base shape.
+        /// Rotation and appearance delta keyforms, each keyed by stable sample_id.
         Vec<DeltaRotationKeyform>,
     ),
     /// Select Part drawing-order delta samples.
     Part(
-        /// Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;
-        /// channels describe deltas from the base shape.
+        /// Part drawing-order delta keyforms, each keyed by stable sample_id.
         Vec<DeltaPartKeyform>,
     ),
     /// Select Glue intensity delta samples.
     Glue(
-        /// Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;
-        /// channels describe deltas from the base shape.
+        /// Glue intensity delta keyforms, each keyed by stable sample_id.
         Vec<DeltaGlueKeyform>,
     ),
     /// Select Offscreen appearance samples.
     Offscreen(
-        /// Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;
-        /// channels describe deltas from the base shape.
+        /// Offscreen appearance keyforms keyed by stable sample_id; opacity and screen are
+        /// additive deltas, while multiply retains a neutral-one factor.
         Vec<DeltaOffscreenKeyform>,
     ),
 }

@@ -47,7 +47,7 @@ pub struct ParameterCreateSpec {
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
 /// Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.
-/// Omitted or None fields preserve their current values; empty text and false are explicit replacements.
+/// Omitted or None fields preserve their current values; supplied values are validated as replacements.
 pub struct ParameterPatch {
     /// Human-readable display name; use the stable ID for identity because names can change.
     /// None preserves the current value; it does not reset the field to its default.
@@ -62,8 +62,8 @@ pub struct ParameterPatch {
     /// minimum and maximum. None preserves the current value; it does not reset the field to
     /// its default.
     pub default_value: Option<f32>,
-    /// Replacement external runtime identifier; an empty string explicitly clears it. None
-    /// preserves the current value; it does not reset the field to its default.
+    /// Replacement external runtime identifier; an empty string is rejected by native validation.
+    /// None preserves the current value; it does not reset the field to its default.
     pub runtime_id: Option<String>,
     /// Replacement parameter kind. None preserves the current value; it does not reset the
     /// field to its default.

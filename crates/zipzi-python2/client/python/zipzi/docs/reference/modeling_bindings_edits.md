@@ -117,8 +117,7 @@ Types: [BindingGridTarget].
 **Fields**
 
 - `id`: New stable UUID for this object; it must not conflict with an existing identity.
-- `target`: Explicit base/ordinary/BlendShape content selector; default Base edits the
-undeformed base shape.
+- `target`: Mesh, scene transform/Part or Glue that the new ordinary grid drives.
 
 ## zipzi.modeling.bindings.BindingGridEditDelete
 
@@ -130,7 +129,7 @@ Explicitly discard owned shapes and return to the unchanged base target.
 
 **Fields**
 
-- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+- `owner`: Stable mesh/scene binding ID, or Glue ID for its owned grid.
 
 ## zipzi.modeling.bindings.BindingGridEditEdit
 
@@ -144,7 +143,7 @@ Types: [GridOperation].
 
 **Fields**
 
-- `owner`: Stable owner ID for the addressed drawing group, collection or reference selection.
+- `owner`: Stable mesh/scene binding ID, or Glue ID for its owned grid.
 - `operation`: Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.
 
 ## zipzi.modeling.bindings.BlendAuthoringEdit
@@ -348,7 +347,7 @@ Types: [AxisReduction].
 
 - `binding_id`: Stable binding ID owning the addressed axes or keyforms.
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
-- `reduction`: Explicit parameter-domain reduction used when removing or replacing an axis.
+- `reduction`: Required for an active axis; None is allowed when the axis is already pending.
 
 ## zipzi.modeling.bindings.MeshGridEditReorderAxes
 

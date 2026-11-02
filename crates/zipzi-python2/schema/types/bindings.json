@@ -154,7 +154,7 @@
           "doc": "Change the parameter assigned to an axis.",
           "fields": [
             {
-              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "doc": "Stable document parameter ID; an empty string clears the axis parameter.",
               "name": "parameter_id",
               "rust_name": "parameter_id",
               "shape": {
@@ -164,7 +164,7 @@
             },
             {
               "default": null,
-              "doc": "Explicit parameter-domain reduction used when removing or replacing an axis.",
+              "doc": "Required reduction when clearing an active axis; otherwise no reduction is applied.",
               "name": "reduction",
               "rust_name": "reduction",
               "shape": {
@@ -495,7 +495,7 @@
           "doc": "Explicitly discard owned shapes and return to the unchanged base target.",
           "fields": [
             {
-              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "doc": "Stable mesh/scene binding ID, or Glue ID for its owned grid.",
               "name": "owner",
               "rust_name": "owner",
               "shape": {
@@ -521,7 +521,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "doc": "Mesh, scene transform/Part or Glue that the new ordinary grid drives.",
               "name": "target",
               "rust_name": "target",
               "shape": {
@@ -539,7 +539,7 @@
           "doc": "Apply an axis or sample operation to an existing grid.",
           "fields": [
             {
-              "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
+              "doc": "Stable mesh/scene binding ID, or Glue ID for its owned grid.",
               "name": "owner",
               "rust_name": "owner",
               "shape": {
@@ -1033,7 +1033,7 @@
               "skip": false
             },
             {
-              "doc": "Stable document parameter ID, not its exported runtime identifier.",
+              "doc": "Stable document parameter ID; an empty string clears the axis parameter.",
               "name": "parameter_id",
               "rust_name": "parameter_id",
               "shape": {
@@ -1043,7 +1043,7 @@
             },
             {
               "default": null,
-              "doc": "Explicit parameter-domain reduction used when removing or replacing an axis.",
+              "doc": "Required reduction when clearing an active axis; otherwise no reduction is applied.",
               "name": "reduction",
               "rust_name": "reduction",
               "shape": {
@@ -1425,7 +1425,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit parameter-domain reduction used when removing or replacing an axis.",
+              "doc": "Required for an active axis; None is allowed when the axis is already pending.",
               "name": "reduction",
               "rust_name": "reduction",
               "shape": {
@@ -1924,7 +1924,7 @@
           "doc": "Select rotation-transform delta samples.",
           "fields": [
             {
-              "doc": "Ordered Rotation BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "doc": "Rotation and appearance delta keyforms, each keyed by stable sample_id.",
               "name": "value",
               "rust_name": "0",
               "shape": {
@@ -1945,7 +1945,7 @@
           "doc": "Select Part drawing-order delta samples.",
           "fields": [
             {
-              "doc": "Ordered Part BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "doc": "Part drawing-order delta keyforms, each keyed by stable sample_id.",
               "name": "value",
               "rust_name": "0",
               "shape": {
@@ -1966,7 +1966,7 @@
           "doc": "Select Glue intensity delta samples.",
           "fields": [
             {
-              "doc": "Ordered Glue BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "doc": "Glue intensity delta keyforms, each keyed by stable sample_id.",
               "name": "value",
               "rust_name": "0",
               "shape": {
@@ -1987,7 +1987,7 @@
           "doc": "Select Offscreen appearance samples.",
           "fields": [
             {
-              "doc": "Ordered Offscreen BlendShape displacement keyforms, each keyed by stable sample_id;\nchannels describe deltas from the base shape.",
+              "doc": "Offscreen appearance keyforms keyed by stable sample_id; opacity and screen are\nadditive deltas, while multiply retains a neutral-one factor.",
               "name": "value",
               "rust_name": "0",
               "shape": {

@@ -234,7 +234,7 @@
       ]
     },
     "zipzi_contract::authoring::ParameterPatch": {
-      "doc": "Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.\nOmitted or None fields preserve their current values; empty text and false are explicit replacements.",
+      "doc": "Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.\nOmitted or None fields preserve their current values; supplied values are validated as replacements.",
       "fields": [
         {
           "default": null,
@@ -290,7 +290,7 @@
         },
         {
           "default": null,
-          "doc": "Replacement external runtime identifier; an empty string explicitly clears it. None\npreserves the current value; it does not reset the field to its default.",
+          "doc": "Replacement external runtime identifier; an empty string is rejected by native validation.\nNone preserves the current value; it does not reset the field to its default.",
           "name": "runtime_id",
           "rust_name": "runtime_id",
           "shape": {

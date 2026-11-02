@@ -32,20 +32,19 @@ pub enum BindingGridTarget {
 pub enum BindingGridEdit {
     /// Explicitly discard owned shapes and return to the unchanged base target.
     Delete {
-        /// Stable owner ID for the addressed drawing group, collection or reference selection.
+        /// Stable mesh/scene binding ID, or Glue ID for its owned grid.
         owner: String,
     },
     /// Create an ordinary grid on the selected target.
     Create {
         /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
-        /// Explicit base/ordinary/BlendShape content selector; default Base edits the
-        /// undeformed base shape.
+        /// Mesh, scene transform/Part or Glue that the new ordinary grid drives.
         target: BindingGridTarget,
     },
     /// Apply an axis or sample operation to an existing grid.
     Edit {
-        /// Stable owner ID for the addressed drawing group, collection or reference selection.
+        /// Stable mesh/scene binding ID, or Glue ID for its owned grid.
         owner: String,
         /// Typed axis/sample grid edit to perform on this owner; not a Runtime operation ID.
         operation: GridOperation,

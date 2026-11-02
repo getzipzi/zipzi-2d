@@ -161,11 +161,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                             'documentation': 'Change the parameter assigned to an '
                                                                              'axis.',
                                                             'fields': [('parameter_id',
-                                                                        'Stable document parameter ID, not its '
-                                                                        'exported runtime identifier.'),
+                                                                        'Stable document parameter ID; an empty string '
+                                                                        'clears the axis parameter.'),
                                                                        ('reduction',
-                                                                        'Explicit parameter-domain reduction used when '
-                                                                        'removing or replacing an axis.')],
+                                                                        'Required reduction when clearing an active '
+                                                                        'axis; otherwise no reduction is applied.')],
                                                             'kind': 'type',
                                                             'signature': '(*, parameter_id: str, reduction: '
                                                                          'AxisReduction | None = None)',
@@ -473,9 +473,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                             'zipzi.modeling.bindings.DeltaKeyformsGlue.summary'),
                                                'documentation': 'Select Glue intensity delta samples.',
                                                'fields': [('value',
-                                                           'Ordered Glue BlendShape displacement keyforms, each keyed '
-                                                           'by stable sample_id;\n'
-                                                           'channels describe deltas from the base shape.')],
+                                                           'Glue intensity delta keyforms, each keyed by stable '
+                                                           'sample_id.')],
                                                'kind': 'type',
                                                'signature': '(*, value: tuple[DeltaGlueKeyform, ...])',
                                                'type_refs': ('zipzi.modeling.bindings.DeltaGlueKeyform',)},
@@ -497,9 +496,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                  'zipzi.modeling.bindings.DeltaKeyformsOffscreen.summary'),
                                                     'documentation': 'Select Offscreen appearance samples.',
                                                     'fields': [('value',
-                                                                'Ordered Offscreen BlendShape displacement keyforms, '
-                                                                'each keyed by stable sample_id;\n'
-                                                                'channels describe deltas from the base shape.')],
+                                                                'Offscreen appearance keyforms keyed by stable '
+                                                                'sample_id; opacity and screen are\n'
+                                                                'additive deltas, while multiply retains a neutral-one '
+                                                                'factor.')],
                                                     'kind': 'type',
                                                     'signature': '(*, value: tuple[DeltaOffscreenKeyform, ...])',
                                                     'type_refs': ('zipzi.modeling.bindings.DeltaOffscreenKeyform',)},
@@ -509,9 +509,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                             'zipzi.modeling.bindings.DeltaKeyformsPart.summary'),
                                                'documentation': 'Select Part drawing-order delta samples.',
                                                'fields': [('value',
-                                                           'Ordered Part BlendShape displacement keyforms, each keyed '
-                                                           'by stable sample_id;\n'
-                                                           'channels describe deltas from the base shape.')],
+                                                           'Part drawing-order delta keyforms, each keyed by stable '
+                                                           'sample_id.')],
                                                'kind': 'type',
                                                'signature': '(*, value: tuple[DeltaPartKeyform, ...])',
                                                'type_refs': ('zipzi.modeling.bindings.DeltaPartKeyform',)},
@@ -521,9 +520,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                 'zipzi.modeling.bindings.DeltaKeyformsRotation.summary'),
                                                    'documentation': 'Select rotation-transform delta samples.',
                                                    'fields': [('value',
-                                                               'Ordered Rotation BlendShape displacement keyforms, '
-                                                               'each keyed by stable sample_id;\n'
-                                                               'channels describe deltas from the base shape.')],
+                                                               'Rotation and appearance delta keyforms, each keyed by '
+                                                               'stable sample_id.')],
                                                    'kind': 'type',
                                                    'signature': '(*, value: tuple[DeltaRotationKeyform, ...])',
                                                    'type_refs': ('zipzi.modeling.bindings.DeltaRotationKeyform',)},
@@ -832,11 +830,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.bindings': {'children': ('zipzi.modeli
                                                                    'Stable axis ID owned by this binding, not a '
                                                                    'parameter or sample ID.'),
                                                                   ('parameter_id',
-                                                                   'Stable document parameter ID, not its exported '
-                                                                   'runtime identifier.'),
+                                                                   'Stable document parameter ID; an empty string '
+                                                                   'clears the axis parameter.'),
                                                                   ('reduction',
-                                                                   'Explicit parameter-domain reduction used when '
-                                                                   'removing or replacing an axis.')],
+                                                                   'Required reduction when clearing an active axis; '
+                                                                   'otherwise no reduction is applied.')],
                                                        'kind': 'type',
                                                        'signature': '(*, axis_id: str, parameter_id: str, reduction: '
                                                                     'AxisReduction | None = None)',

@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "e97a2631e88b417b623b5c822ab9368dedb630f7d6ba38b109b39182e4900003",
+  "contract_sha256": "e345e182e208a92831dcfa2da5f31d5b1515ca9e68980f70d10bde800beb5dfa",
   "format_version": 2,
   "root": {
     "binary": {
@@ -741,7 +741,7 @@
     },
     {
       "path": "types/bindings.json",
-      "sha256": "aabfcc29d26eab3915482576f6d1b1a0ee13716c6cf0f57ecd71c7ea1b48ce34"
+      "sha256": "e6bb5acb953b1ab2ac8a617023f2360ffbba5c78d7128309588916e3705ce132"
     },
     {
       "path": "types/commands.json",
@@ -777,7 +777,7 @@
     },
     {
       "path": "types/parameters.json",
-      "sha256": "50050ae72e2237b06292526ee6fd4d2cc3f995afa7939476bbedc063a0dad2d1"
+      "sha256": "cad335ad5d8b4221e29262743442b7b1145897bb973a85ca401a1b53afe7557b"
     },
     {
       "path": "types/physics.json",
