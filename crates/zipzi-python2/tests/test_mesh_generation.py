@@ -25,6 +25,7 @@ class MeshGenerationWorkflow(unittest.TestCase):
             entry=zipzi.describe('mesh_generation.'+name)
             self.assertTrue(entry.documentation)
         typing.get_type_hints(generate_for_mesh)
+        typing.get_type_hints(zipzi.mesh_generation.MeshDraft)
         if os.name == 'nt':
             return  # This diagnostic belongs to Unix endpoint discovery.
         with tempfile.TemporaryDirectory() as folder:

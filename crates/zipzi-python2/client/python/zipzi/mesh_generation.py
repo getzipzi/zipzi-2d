@@ -128,4 +128,8 @@ def generate(runtime: Runtime, width: int, height: int, alpha: bytes = b'', *,
 
 # Public workflow helpers share the same optional Editor service; inspection is CPU-only.
 from ._mesh_workflow import MeshDraft as MeshDraft, GeometryQuality as GeometryQuality, generate_for_mesh as generate_for_mesh, inspect_geometry as inspect_geometry
+# MeshDraft presents this module as its public home, so its annotations must
+# resolve here as well as in the implementation module.
+from ._values import Source as Source
+from . import modeling as m
 __all__ = ['MeshSettings', 'FillSettings', 'FillParameters', 'generate', 'MeshDraft', 'GeometryQuality', 'generate_for_mesh', 'inspect_geometry']

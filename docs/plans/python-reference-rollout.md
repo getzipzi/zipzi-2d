@@ -1,6 +1,6 @@
 # Python generated reference 质量与去重实施计划
 
-日期：2026-11-02。状态：P0 已实施并通过试点验收，见第 10 节；P1–P8 待实施，其余领域尚未逐项完成语义审阅。
+日期：2026-11-02。状态：P0 已实施并通过试点验收；P1–P7 结构和各批已列出的行为证据已完成，跨领域语义复核及 P8 最终验收仍在进行。详见第 10–18 节。
 
 目标是让读者从一个公开入口判断如何调用、会产生什么结果和有哪些约束，同时减少重复维护和重复阅读。
 类型摘要缺口清零是完整性门禁，不是文档质量的替代指标；不把当前样板的长段落直接推广到全部 API。
@@ -745,3 +745,19 @@ GPU observation 两项指定测试（Local/Connected，含纹理预算、像素�
 实际验证五种算法、阶段、Edit 提交、参数验证及 Local 拒绝。`cargo test --locked -p zipzi-contract`
 和 codegen graph/output 测试通过。结构门禁和所列行为证据通过；全套 SDK、安装客户端、
 跨领域人工语义验收及真实 Editor 安装客户端 gate 继续在 P8 处理。
+
+## 19. P8 安装包与全局检查进展
+
+全局严格检查报告 992/992 类型摘要、结构诊断为零，所有分片有结构范围归属；
+`cargo test --locked -p zipzi-contract`、codegen graph/output 测试、完整
+`./tools/test-sdk.sh python2` 通过。`python2-connected --editor-host` 首次执行发现安装包
+的 `MeshDraft` 公开模块无法解析类型注解，以及两个 reference-intros 源片段在安装包中的相对链接
+失效；修复公开模块类型注解解析并让链接在源片段和生成页面均有效后，重跑安装 wheel 离线审计
+（D01/D02/D04/D07/D08 均零）、21 项连接测试和真实 Editor 冷启动/保存/重开测试均通过。
+`test_mesh_generation.py` 的类型注解回归及全部 8 项测试通过。
+
+从计划基线 e4ad1c35 到本批前的 45 个 reference 页面（含 common），正文从 550,613 增至
+676,477 字符，入口从 1,295 增至 1,296；固定 discriminator 重复句从 93 降为零，占位
+示例从 7 降为零。增加的文字主要是原先缺失的业务、字段和分支语义，公共规则集中维护；
+总字符数上升不是阅读质量的验收证明。完整 codegen tooling gate 及 P1–P7 跨领域人工语义
+复核仍须结束后才能宣称 P8 完成；机器报告的 `review_required` 不是自动通过标记。
