@@ -13,6 +13,10 @@ MAX_BUFFER_BYTES = 256 << 20
 CHUNK = 1 << 20
 
 class Buffer(Owned):
+    """Client-owned immutable host bytes, reusable across requests until closed.
+
+    Create through Runtime; close the Buffer after use to release its host lease.
+    """
     def __init__(self, backend: Backend, data: bytes):
         super().__init__(backend, "buffer")
         self._data = data

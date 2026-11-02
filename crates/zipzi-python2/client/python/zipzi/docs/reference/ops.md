@@ -20,6 +20,8 @@ Static operation unions; construct operations in their owning domain.
 
 `_meshes.Create | _meshes.Rename | _meshes.SetPositions | _parameters.Create | _parameters.Patch | _bindings.Create | _bindings.SetKeyform | _resources.CreateImage | _resources.ReplaceImage | _resources.RenameImage | _scene.Operation | _modeling.ModelingCommand`
 
+Candidate write input: select a domain operation or a canonical modeling command; execution and publication are separate.
+
 Types: [bindings.Create], [SetKeyform], [meshes.Create], [Rename], [SetPositions], [ModelingCommand], [parameters.Create], [Patch], [CreateImage], [RenameImage], [ReplaceImage], [Operation].
 
 
@@ -28,6 +30,8 @@ Types: [bindings.Create], [SetKeyform], [meshes.Create], [Rename], [SetPositions
 **Alias**
 
 `_meshes.Rename | _resources.RenameImage | _scene.Operation | _ModelingPlanOperation`
+
+Operations accepted for planning; inspect the source-bound plan before applying it.
 
 Types: [Rename], [RenameImage], [Operation].
 

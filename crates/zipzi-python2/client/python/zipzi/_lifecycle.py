@@ -267,6 +267,7 @@ class Project:
         return Job[SaveReceipt]._start(s._backend, lambda owner: s._backend.save(s._token, path, owner), "saved", SaveReceipt._read)
 
 class EditState(str, Enum):
+    """Lifecycle of an Edit candidate and its separate commit outcome."""
     editing = "editing"
     committing = "committing"
     committed = "committed"

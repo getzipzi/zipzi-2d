@@ -56,19 +56,24 @@ pub enum RuntimeError {
 
 #[derive(Debug, Clone, zipzi_api_derive::ApiFields)]
 pub enum EventKind {
+    /// A candidate was published to the Session document.
     Published(
         /// Confirmed edit publication receipt, including before/after versions and changes.
         Arc<EditReceipt>,
     ),
+    /// A Session save completed with a persistence receipt.
     Saved(
         /// Save receipt with persistence paths, warnings and durability status.
         SaveReceipt,
     ),
+    /// A Session lifecycle state changed.
     StateChanged(
         /// Session metadata captured at this lifecycle state transition.
         SessionInfo,
     ),
+    /// A Session was created in the Runtime registry.
     Created(#[doc = "Session metadata captured when the Session was created."] SessionInfo),
+    /// A Session was closed in the Runtime registry.
     Closed(#[doc = "Final Session metadata captured when the document closed."] SessionInfo),
 }
 #[derive(Debug, Clone, zipzi_api_derive::ApiFields)]

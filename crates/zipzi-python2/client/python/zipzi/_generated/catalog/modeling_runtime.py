@@ -6,7 +6,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.runtime': {'children': ('zipzi.modelin
                             'signature': ''},
  'zipzi.modeling.runtime.EditorContext': {'children': ('zipzi.modeling.runtime.EditorContext.__repr__',
                                                        'zipzi.modeling.runtime.EditorContext.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Editor view and selection captured at a particular '
+                                                           'document version.',
                                           'fields': [('version',
                                                       'Exact SDK version captured for this value; not a best-effort '
                                                       'latest-version marker.'),

@@ -31,6 +31,8 @@ pose.
 
 `(x: float, y: float)`
 
+Two coordinates whose units and space are defined by their containing value.
+
 **Fields**
 
 - `x`: Horizontal coordinate; its space and units are determined by the containing geometry or

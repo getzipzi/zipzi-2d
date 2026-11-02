@@ -20,6 +20,8 @@ Canonical runtime modeling values.
 
 `(*, version: _Version, view_id: str, selected_ids: tuple[str, ...], workspace: str, editing_context: str, active_tool: str, pending_interaction: bool)`
 
+Editor view and selection captured at a particular document version.
+
 Types: [Version].
 
 **Fields**

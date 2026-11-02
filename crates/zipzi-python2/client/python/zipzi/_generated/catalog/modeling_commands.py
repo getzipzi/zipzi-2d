@@ -63,7 +63,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                              'signature': ''},
  'zipzi.modeling.commands.ConversionCost': {'children': ('zipzi.modeling.commands.ConversionCost.__repr__',
                                                          'zipzi.modeling.commands.ConversionCost.summary'),
-                                            'documentation': '',
+                                            'documentation': 'Estimated work and storage for a planned conversion; '
+                                                             'estimates are not an admission guarantee.',
                                             'fields': [('sample_combinations',
                                                         'Number of shape-sample combinations the conversion must '
                                                         'process.'),
@@ -83,7 +84,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ConversionCost.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ConversionDomain': {'children': ('zipzi.modeling.commands.ConversionDomain.__repr__',
                                                            'zipzi.modeling.commands.ConversionDomain.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Parameter range captured for a binding conversion or '
+                                                               'reparenting plan.',
                                               'fields': [('parameter_id',
                                                           'Stable document parameter ID, not its exported runtime '
                                                           'identifier.'),
@@ -98,7 +100,10 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ConversionDomain.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.commands.ConversionDomain.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommand': {'children': (),
-                                             'documentation': '',
+                                             'documentation': 'A typed candidate mutation; select the variant for the '
+                                                              'operation and submit it through an Edit.\n'
+                                                              'Constructing a command neither changes the candidate '
+                                                              'nor publishes it.',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'ModelingCommandCreateAsset | ModelingCommandReplaceAsset | '
@@ -198,7 +203,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
                                                            'zipzi.modeling.commands.ModelingCommandUpdatePositions')},
  'zipzi.modeling.commands.ModelingCommandAttachment': {'children': ('zipzi.modeling.commands.ModelingCommandAttachment.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandAttachment.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Apply a package attachment edit.',
                                                        'fields': [('intent',
                                                                    'Typed domain edit executed against the candidate; '
                                                                    'constructing this intent does not\n'
@@ -210,7 +215,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandAttachment.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandBinding': {'children': ('zipzi.modeling.commands.ModelingCommandBinding.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandBinding.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Apply a binding authoring edit to the candidate.',
                                                     'fields': [('intent',
                                                                 'Typed domain edit executed against the candidate; '
                                                                 'constructing this intent does not\n'
@@ -222,7 +227,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandContent': {'children': ('zipzi.modeling.commands.ModelingCommandContent.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandContent.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Apply an edit to scene content.',
                                                     'fields': [('intent',
                                                                 'Typed domain edit executed against the candidate; '
                                                                 'constructing this intent does not\n'
@@ -234,7 +239,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandContent.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateAsset': {'children': ('zipzi.modeling.commands.ModelingCommandCreateAsset.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandCreateAsset.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Create an image asset from its complete '
+                                                                         'record.',
                                                         'fields': [('asset',
                                                                     'Complete asset record to create with native '
                                                                     'identity validation; this DTO alone does\n'
@@ -246,7 +252,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBinding.__repr__',
                                                                        'zipzi.modeling.commands.ModelingCommandCreateBinding.summary'),
-                                                          'documentation': '',
+                                                          'documentation': 'Create a mesh binding from its complete '
+                                                                           'record.',
                                                           'fields': [('binding',
                                                                       'Complete binding record to create with native '
                                                                       'identity validation; this DTO alone\n'
@@ -258,7 +265,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendBinding.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.summary'),
-                                                               'documentation': '',
+                                                               'documentation': 'Create a blend binding from its '
+                                                                                'complete record.',
                                                                'fields': [('binding',
                                                                            'Complete blend binding record to create '
                                                                            'with native identity validation; this DTO\n'
@@ -270,7 +278,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBlendBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.__repr__',
                                                                                'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.summary'),
-                                                                  'documentation': '',
+                                                                  'documentation': 'Create a blend constraint from its '
+                                                                                   'complete record.',
                                                                   'fields': [('constraint',
                                                                               'Complete blend constraint record to '
                                                                               'create with native identity validation; '
@@ -283,7 +292,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.summary'),
-                                                                'documentation': '',
+                                                                'documentation': 'Create a blend key table from its '
+                                                                                 'complete record.',
                                                                 'fields': [('table',
                                                                             'Complete blend key table record to create '
                                                                             'with native identity validation; this '
@@ -296,7 +306,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateExpression': {'children': ('zipzi.modeling.commands.ModelingCommandCreateExpression.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandCreateExpression.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Create an expression asset from its '
+                                                                              'complete record.',
                                                              'fields': [('expression',
                                                                          'Complete expression asset with ordered owned '
                                                                          'entries.')],
@@ -307,7 +318,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateGlue': {'children': ('zipzi.modeling.commands.ModelingCommandCreateGlue.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreateGlue.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Create a Glue from its complete record.',
                                                        'fields': [('glue',
                                                                    'Complete glue record to create with native '
                                                                    'identity validation; this DTO alone does\n'
@@ -319,7 +330,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateMesh': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreateMesh.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Create a mesh from its complete record.',
                                                        'fields': [('mesh',
                                                                    'Complete mesh record to create with native '
                                                                    'identity validation; this DTO alone does\n'
@@ -331,7 +342,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateMotion': {'children': ('zipzi.modeling.commands.ModelingCommandCreateMotion.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandCreateMotion.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Create a motion clip from its complete '
+                                                                          'record.',
                                                          'fields': [('clip',
                                                                      'Complete owned clip with stable track/key/event '
                                                                      'identities.')],
@@ -342,7 +354,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandCreateOffscreen.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateOffscreen.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Create an Offscreen from its complete '
+                                                                             'record.',
                                                             'fields': [('offscreen',
                                                                         'Complete offscreen record to create with '
                                                                         'native identity validation; this DTO alone\n'
@@ -354,7 +367,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateParameter': {'children': ('zipzi.modeling.commands.ModelingCommandCreateParameter.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateParameter.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Create a parameter from its complete '
+                                                                             'record.',
                                                             'fields': [('parameter',
                                                                         'Complete parameter record to create with '
                                                                         'native identity validation; this DTO alone\n'
@@ -366,7 +380,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreatePart': {'children': ('zipzi.modeling.commands.ModelingCommandCreatePart.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandCreatePart.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Create a Part from its complete record.',
                                                        'fields': [('part',
                                                                    'Complete part record to create with native '
                                                                    'identity validation; this DTO alone does\n'
@@ -378,7 +392,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreatePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandCreateSceneBinding.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.summary'),
-                                                               'documentation': '',
+                                                               'documentation': 'Create a scene binding from its '
+                                                                                'complete record.',
                                                                'fields': [('binding',
                                                                            'Complete scene binding record to create '
                                                                            'with native identity validation; this DTO\n'
@@ -390,7 +405,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateSceneBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandCreateTransform': {'children': ('zipzi.modeling.commands.ModelingCommandCreateTransform.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandCreateTransform.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Create a deformation transform from its '
+                                                                             'complete record.',
                                                             'fields': [('transform',
                                                                         'Complete transform record to create with '
                                                                         'native identity validation; this DTO alone\n'
@@ -402,7 +418,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandCreateTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandDeletion': {'children': ('zipzi.modeling.commands.ModelingCommandDeletion.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandDeletion.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Request dependency-aware deletion; plan first '
+                                                                      'to inspect the required decisions.',
                                                      'fields': [('intent',
                                                                  'Dependency-cleaning deletion request; plan first to '
                                                                  'inspect choices and bounded report pages.')],
@@ -413,7 +430,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandDeletion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandDocument': {'children': ('zipzi.modeling.commands.ModelingCommandDocument.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandDocument.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Apply a document-level authoring edit.',
                                                      'fields': [('intent',
                                                                  'Typed domain edit executed against the candidate; '
                                                                  'constructing this intent does not\n'
@@ -425,7 +442,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandEraseObject': {'children': ('zipzi.modeling.commands.ModelingCommandEraseObject.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandEraseObject.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Erase the object identified by its stable '
+                                                                         'document ID.',
                                                         'fields': [('id',
                                                                     'Stable document object ID used by references; it '
                                                                     'is distinct from the exported\n'
@@ -436,7 +454,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandEraseObject.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandExpression': {'children': ('zipzi.modeling.commands.ModelingCommandExpression.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandExpression.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Edit expression assets or entries.',
                                                        'fields': [('intent',
                                                                    'Expression asset/entry intent, validated by the '
                                                                    'shared SDK planner.')],
@@ -447,7 +465,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandManualMesh': {'children': ('zipzi.modeling.commands.ModelingCommandManualMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandManualMesh.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Apply one source-checked manual UV topology '
+                                                                        'operation.',
                                                        'fields': [('mesh_id',
                                                                    'Stable mesh UUID whose editable UV triangulation '
                                                                    'is changed.'),
@@ -466,7 +485,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandManualMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandMotion': {'children': ('zipzi.modeling.commands.ModelingCommandMotion.__repr__',
                                                                 'zipzi.modeling.commands.ModelingCommandMotion.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Edit motion library, track, key or event data.',
                                                    'fields': [('intent',
                                                                'Motion library/track/key/event intent; use a Plan or '
                                                                'apply to an Edit.')],
@@ -477,7 +496,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandOrganization': {'children': ('zipzi.modeling.commands.ModelingCommandOrganization.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandOrganization.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Apply an organization and hierarchy edit to '
+                                                                          'the candidate.',
                                                          'fields': [('intent',
                                                                      'Typed domain edit executed against the '
                                                                      'candidate; constructing this intent does not\n'
@@ -489,7 +509,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandPhysics.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandPhysics.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Edit Physics rig, rows or nodes.',
                                                     'fields': [('intent',
                                                                 'Physics rig/row/node intent with native ownership and '
                                                                 'reference checks.')],
@@ -500,7 +520,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandPose': {'children': ('zipzi.modeling.commands.ModelingCommandPose.__repr__',
                                                               'zipzi.modeling.commands.ModelingCommandPose.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Edit Pose singleton, groups, entries or links.',
                                                  'fields': [('intent',
                                                              'Pose singleton/group/entry/link intent, independent of '
                                                              'playback state.')],
@@ -511,7 +531,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReferences': {'children': ('zipzi.modeling.commands.ModelingCommandReferences.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandReferences.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Apply a document reference edit.',
                                                        'fields': [('intent',
                                                                    'Typed domain edit executed against the candidate; '
                                                                    'constructing this intent does not\n'
@@ -523,7 +543,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid': {'children': ('zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.summary'),
-                                                                'documentation': '',
+                                                                'documentation': 'Regenerate a mesh using the '
+                                                                                 'requested rectangular grid.',
                                                                 'fields': [('id',
                                                                             'Stable document object ID used by '
                                                                             'references; it is distinct from the '
@@ -545,7 +566,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandRenameMesh': {'children': ('zipzi.modeling.commands.ModelingCommandRenameMesh.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandRenameMesh.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Change the display name of an existing mesh.',
                                                        'fields': [('id',
                                                                    'Stable document object ID used by references; it '
                                                                    'is distinct from the exported\n'
@@ -559,7 +580,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandRenameMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceAsset': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceAsset.__repr__',
                                                                       'zipzi.modeling.commands.ModelingCommandReplaceAsset.summary'),
-                                                         'documentation': '',
+                                                         'documentation': 'Replace an existing image asset with a '
+                                                                          'complete record preserving its identity.',
                                                          'fields': [('asset',
                                                                      'Complete asset record to replace the existing '
                                                                      'object while preserving its stable\n'
@@ -571,7 +593,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceAsset.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBinding.__repr__',
                                                                         'zipzi.modeling.commands.ModelingCommandReplaceBinding.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'Replace an existing mesh binding with a '
+                                                                            'complete record preserving its identity.',
                                                            'fields': [('binding',
                                                                        'Complete binding record to replace the '
                                                                        'existing object while preserving its stable\n'
@@ -583,7 +606,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.summary'),
-                                                                'documentation': '',
+                                                                'documentation': 'Replace an existing blend binding '
+                                                                                 'with a complete record preserving '
+                                                                                 'its identity.',
                                                                 'fields': [('binding',
                                                                             'Complete blend binding record to replace '
                                                                             'the existing object while preserving its\n'
@@ -596,7 +621,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBlendBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.__repr__',
                                                                                 'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.summary'),
-                                                                   'documentation': '',
+                                                                   'documentation': 'Replace an existing blend '
+                                                                                    'constraint with a complete record '
+                                                                                    'preserving its identity.',
                                                                    'fields': [('constraint',
                                                                                'Complete blend constraint record to '
                                                                                'replace the existing object while '
@@ -610,7 +637,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.__repr__',
                                                                               'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.summary'),
-                                                                 'documentation': '',
+                                                                 'documentation': 'Replace an existing blend key table '
+                                                                                  'with a complete record preserving '
+                                                                                  'its identity.',
                                                                  'fields': [('table',
                                                                              'Complete blend key table record to '
                                                                              'replace the existing object while '
@@ -624,7 +653,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.__repr__',
                                                                                 'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.summary'),
-                                                                   'documentation': '',
+                                                                   'documentation': 'Replace the complete draw-order '
+                                                                                    'group list.',
                                                                    'fields': [('groups',
                                                                                'Complete drawing-order group list; '
                                                                                'native validation checks root/owner '
@@ -639,7 +669,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceEditorState.__repr__',
                                                                             'zipzi.modeling.commands.ModelingCommandReplaceEditorState.summary'),
-                                                               'documentation': '',
+                                                               'documentation': 'Replace Editor visibility and lock '
+                                                                                'metadata.',
                                                                'fields': [('state',
                                                                            'Complete Editor visibility/lock metadata '
                                                                            'to replace.')],
@@ -650,7 +681,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceEditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceExpression': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceExpression.__repr__',
                                                                            'zipzi.modeling.commands.ModelingCommandReplaceExpression.summary'),
-                                                              'documentation': '',
+                                                              'documentation': 'Replace an existing expression asset '
+                                                                               'with a complete record preserving its '
+                                                                               'identity.',
                                                               'fields': [('expression',
                                                                           'Complete replacement expression preserving '
                                                                           'its object ID.')],
@@ -661,7 +694,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceExpression.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceGlue': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceGlue.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplaceGlue.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace an existing Glue with a complete '
+                                                                         'record preserving its identity.',
                                                         'fields': [('glue',
                                                                     'Complete glue record to replace the existing '
                                                                     'object while preserving its stable\n'
@@ -673,7 +707,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.__repr__',
                                                                                'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.summary'),
-                                                                  'documentation': '',
+                                                                  'documentation': 'Replace organization and '
+                                                                                   'deformation palette ordering.',
                                                                   'fields': [('order',
                                                                               'Replacement organization/deformation '
                                                                               'palette order; not runtime draw '
@@ -685,7 +720,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceMesh': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMesh.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplaceMesh.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace an existing mesh with a complete '
+                                                                         'record preserving its identity.',
                                                         'fields': [('mesh',
                                                                     'Complete mesh record to replace the existing '
                                                                     'object while preserving its stable\n'
@@ -697,7 +733,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceModelSetup.__repr__',
                                                                            'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.summary'),
-                                                              'documentation': '',
+                                                              'documentation': 'Replace model canvas and export-frame '
+                                                                               'configuration.',
                                                               'fields': [('setup',
                                                                           'Model source-canvas and export-frame '
                                                                           'configuration.')],
@@ -708,7 +745,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceModelSetup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceMotion': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceMotion.__repr__',
                                                                        'zipzi.modeling.commands.ModelingCommandReplaceMotion.summary'),
-                                                          'documentation': '',
+                                                          'documentation': 'Replace an existing motion clip with a '
+                                                                           'complete record preserving its identity.',
                                                           'fields': [('clip',
                                                                       'Complete replacement clip preserving its stable '
                                                                       'object ID.')],
@@ -719,7 +757,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceOffscreen.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Replace an existing Offscreen with a '
+                                                                              'complete record preserving its '
+                                                                              'identity.',
                                                              'fields': [('offscreen',
                                                                          'Complete offscreen record to replace the '
                                                                          'existing object while preserving its stable\n'
@@ -731,7 +771,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceParameter': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceParameter.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceParameter.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Replace an existing parameter with a '
+                                                                              'complete record preserving its '
+                                                                              'identity.',
                                                              'fields': [('parameter',
                                                                          'Complete parameter record to replace the '
                                                                          'existing object while preserving its stable\n'
@@ -743,7 +785,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceParameter.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplacePart': {'children': ('zipzi.modeling.commands.ModelingCommandReplacePart.__repr__',
                                                                      'zipzi.modeling.commands.ModelingCommandReplacePart.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Replace an existing Part with a complete '
+                                                                         'record preserving its identity.',
                                                         'fields': [('part',
                                                                     'Complete part record to replace the existing '
                                                                     'object while preserving its stable\n'
@@ -755,7 +798,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplacePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.__repr__',
                                                                              'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.summary'),
-                                                                'documentation': '',
+                                                                'documentation': 'Replace an existing scene binding '
+                                                                                 'with a complete record preserving '
+                                                                                 'its identity.',
                                                                 'fields': [('binding',
                                                                             'Complete scene binding record to replace '
                                                                             'the existing object while preserving its\n'
@@ -768,7 +813,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceSceneBinding.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceTopology': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceTopology.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandReplaceTopology.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Apply a coordinated topology replacement '
+                                                                             'against its captured geometry source.',
                                                             'fields': [('source',
                                                                         'Exact geometry snapshot the topology '
                                                                         'replacement was planned against; stale '
@@ -787,7 +833,9 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceTopology.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandReplaceTransform': {'children': ('zipzi.modeling.commands.ModelingCommandReplaceTransform.__repr__',
                                                                           'zipzi.modeling.commands.ModelingCommandReplaceTransform.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Replace an existing deformation '
+                                                                              'transform with a complete record '
+                                                                              'preserving its identity.',
                                                              'fields': [('transform',
                                                                          'Complete transform record to replace the '
                                                                          'existing object while preserving its stable\n'
@@ -799,7 +847,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandReplaceTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandResource': {'children': ('zipzi.modeling.commands.ModelingCommandResource.__repr__',
                                                                   'zipzi.modeling.commands.ModelingCommandResource.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Apply an edit to document resources.',
                                                      'fields': [('intent',
                                                                  'Typed domain edit executed against the candidate; '
                                                                  'constructing this intent does not\n'
@@ -811,7 +859,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandResource.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandScene': {'children': ('zipzi.modeling.commands.ModelingCommandScene.__repr__',
                                                                'zipzi.modeling.commands.ModelingCommandScene.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Apply a scene-domain edit to the candidate.',
                                                   'fields': [('intent',
                                                               'Typed domain edit executed against the candidate; '
                                                               'constructing this intent does not\n'
@@ -823,7 +871,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetMeshKeyform.__repr__',
                                                                         'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'Insert or replace one mesh shape sample.',
                                                            'fields': [('id',
                                                                        'Stable document object ID used by references; '
                                                                        'it is distinct from the exported\n'
@@ -838,7 +886,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetMeshKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetPhysics': {'children': ('zipzi.modeling.commands.ModelingCommandSetPhysics.__repr__',
                                                                     'zipzi.modeling.commands.ModelingCommandSetPhysics.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Replace the Physics singleton with the '
+                                                                        'supplied rig data.',
                                                        'fields': [('physics',
                                                                    'Complete Physics singleton and ordered rig data.')],
                                                        'kind': 'type',
@@ -848,7 +897,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetPose': {'children': ('zipzi.modeling.commands.ModelingCommandSetPose.__repr__',
                                                                  'zipzi.modeling.commands.ModelingCommandSetPose.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Replace the Pose singleton with the supplied '
+                                                                     'data.',
                                                     'fields': [('pose',
                                                                 'Complete Pose singleton and owned part/link '
                                                                 'references.')],
@@ -859,7 +909,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform': {'children': ('zipzi.modeling.commands.ModelingCommandSetSceneKeyform.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Insert or replace one scene shape '
+                                                                             'sample.',
                                                             'fields': [('id',
                                                                         'Stable document object ID used by references; '
                                                                         'it is distinct from the exported\n'
@@ -874,7 +925,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.commands': {'children': ('zipzi.modeli
  'zipzi.modeling.commands.ModelingCommandSetSceneKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.commands.ModelingCommandUpdatePositions': {'children': ('zipzi.modeling.commands.ModelingCommandUpdatePositions.__repr__',
                                                                          'zipzi.modeling.commands.ModelingCommandUpdatePositions.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Replace positions for the selected mesh '
+                                                                             'vertex IDs in paired order.',
                                                             'fields': [('id',
                                                                         'Stable document object ID used by references; '
                                                                         'it is distinct from the exported\n'

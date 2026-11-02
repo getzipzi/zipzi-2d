@@ -20,6 +20,8 @@ Bounded cursor streams; polling never drains another client's events.
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
 
+A Session was closed in the Runtime registry.
+
 Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Fields**
@@ -35,6 +37,8 @@ Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin)
 **Type**
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
+
+A Session was created in the Runtime registry.
 
 Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
@@ -52,6 +56,8 @@ Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin)
 
 `(runtime: str, session: SessionId | None, sequence: int) -> None`
 
+Position in one Runtime registry or Session event stream, used to resume bounded reads.
+
 Types: [SessionId].
 
 **Fields**
@@ -66,6 +72,8 @@ Types: [SessionId].
 
 `Published | Saved | StateChanged | Created | Closed`
 
+One event from a Runtime registry or Session stream; its variant identifies the captured payload.
+
 Types: [Closed](#zipzieventsclosed), [Created](#zipzieventscreated), [Published](#zipzieventspublished), [Saved](#zipzieventssaved), [StateChanged](#zipzieventsstatechanged).
 
 
@@ -74,6 +82,8 @@ Types: [Closed](#zipzieventsclosed), [Created](#zipzieventscreated), [Published]
 **Type**
 
 `(runtime: str, serial: int) -> None`
+
+Handle identity scoped to one Runtime instance and handle kind.
 
 **Fields**
 
@@ -85,6 +95,8 @@ Types: [Closed](#zipzieventsclosed), [Created](#zipzieventscreated), [Published]
 **Type**
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, receipt: Receipt) -> None`
+
+A candidate was published to the Session document.
 
 Types: [Receipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
@@ -101,6 +113,8 @@ Types: [Receipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 **Type**
 
 `(backend: 'Backend')`
+
+Independent cursor and initial Session list for the Runtime registry stream.
 
 
 ## zipzi.events.RegistrySubscription.cursor
@@ -159,6 +173,8 @@ Example: initial = subscription.resync().
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, receipt: SaveReceipt) -> None`
 
+A Session save completed with a persistence receipt.
+
 Types: [SaveReceipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 
 **Fields**
@@ -174,6 +190,8 @@ Types: [SaveReceipt], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin)
 **Type**
 
 `(backend: 'Backend', token: object, id: SessionId)`
+
+Independent cursor and initial metadata for one Session event stream.
 
 Types: [SessionId].
 
@@ -203,6 +221,8 @@ Alias of [zipzi.events.RegistrySubscription.resync](events.md#zipzieventsregistr
 **Type**
 
 `(cursor: Cursor, client: Origin | None, job: Origin | None, operation: Origin, info: SessionInfo) -> None`
+
+A Session lifecycle state changed.
 
 Types: [SessionInfo], [Cursor](#zipzieventscursor), [Origin](#zipzieventsorigin).
 

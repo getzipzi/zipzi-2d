@@ -20,6 +20,8 @@ Canonical queries modeling values.
 
 `CollectionQueryScene | CollectionQueryOrganization | CollectionQueryReferences | CollectionQueryResources | CollectionQueryAttachments | CollectionQueryDocument | CollectionQueryMotion | CollectionQueryMotionGroups | CollectionQueryClips | CollectionQueryExpressions | CollectionQueryExpressionEntries | CollectionQueryPhysics | CollectionQueryPose`
 
+Select a collection for a source-bound read; choosing a selector does not write or publish.
+
 Types: [CollectionQueryAttachments](#zipzimodelingqueriescollectionqueryattachments), [CollectionQueryClips](#zipzimodelingqueriescollectionqueryclips), [CollectionQueryDocument](#zipzimodelingqueriescollectionquerydocument), [CollectionQueryExpressionEntries](#zipzimodelingqueriescollectionqueryexpressionentries), [CollectionQueryExpressions](#zipzimodelingqueriescollectionqueryexpressions), [CollectionQueryMotion](#zipzimodelingqueriescollectionquerymotion), [CollectionQueryMotionGroups](#zipzimodelingqueriescollectionquerymotiongroups), [CollectionQueryOrganization](#zipzimodelingqueriescollectionqueryorganization), [CollectionQueryPhysics](#zipzimodelingqueriescollectionqueryphysics), [CollectionQueryPose](#zipzimodelingqueriescollectionquerypose), [CollectionQueryReferences](#zipzimodelingqueriescollectionqueryreferences), [CollectionQueryResources](#zipzimodelingqueriescollectionqueryresources), [CollectionQueryScene](#zipzimodelingqueriescollectionqueryscene).
 
 
@@ -29,6 +31,8 @@ Types: [CollectionQueryAttachments](#zipzimodelingqueriescollectionqueryattachme
 
 `()`
 
+Read the package attachment collection.
+
 
 ## zipzi.modeling.queries.CollectionQueryClips
 
@@ -36,12 +40,16 @@ Types: [CollectionQueryAttachments](#zipzimodelingqueriescollectionqueryattachme
 
 `()`
 
+Read motion clips.
+
 
 ## zipzi.modeling.queries.CollectionQueryDocument
 
 **Type**
 
 `(*, field: DocumentField)`
+
+Read the collection selected by a document field.
 
 Types: [DocumentField].
 
@@ -55,6 +63,8 @@ Types: [DocumentField].
 
 `(*, expression_id: str)`
 
+Read entries owned by one expression asset.
+
 **Fields**
 
 - `expression_id`: Stable expression asset ID owning the entry collection.
@@ -65,12 +75,16 @@ Types: [DocumentField].
 
 `()`
 
+Read expression assets.
+
 
 ## zipzi.modeling.queries.CollectionQueryMotion
 
 **Type**
 
 `(*, collection: MotionContainer)`
+
+Read registrations in a motion container.
 
 Types: [MotionContainer].
 
@@ -84,12 +98,16 @@ Types: [MotionContainer].
 
 `()`
 
+Read motion registration groups.
+
 
 ## zipzi.modeling.queries.CollectionQueryOrganization
 
 **Type**
 
 `(*, collection: OrganizationCollection)`
+
+Read a selected organization collection.
 
 Types: [OrganizationCollection].
 
@@ -103,6 +121,8 @@ Types: [OrganizationCollection].
 
 `(*, collection: PhysicsCollection)`
 
+Read a selected Physics collection.
+
 Types: [PhysicsCollection].
 
 **Fields**
@@ -114,6 +134,8 @@ Types: [PhysicsCollection].
 **Type**
 
 `(*, collection: PoseCollection)`
+
+Read a selected Pose collection.
 
 Types: [PoseCollection].
 
@@ -127,6 +149,8 @@ Types: [PoseCollection].
 
 `(*, collection: ReferenceCollection)`
 
+Read a selected reference collection.
+
 Types: [ReferenceCollection].
 
 **Fields**
@@ -139,12 +163,16 @@ Types: [ReferenceCollection].
 
 `()`
 
+Read the resource collection.
+
 
 ## zipzi.modeling.queries.CollectionQueryScene
 
 **Type**
 
 `(*, collection: SceneCollection)`
+
+Read a selected scene collection.
 
 Types: [SceneCollection].
 

@@ -7,6 +7,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Parameter range captured for a binding conversion or reparenting plan.
 pub struct ConversionDomain {
     /// Stable document parameter ID, not its exported runtime identifier.
     pub parameter_id: String,

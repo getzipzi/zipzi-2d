@@ -19,7 +19,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.common': {'children': ('zipzi.modeling
                                        'kind': 'type',
                                        'signature': '(x: float, y: float)'},
  'zipzi.modeling.common.Vec2': {'children': (),
-                                'documentation': '',
+                                'documentation': 'Two coordinates whose units and space are defined by their '
+                                                 'containing value.',
                                 'fields': [('x',
                                             'Horizontal coordinate; its space and units are determined by the '
                                             'containing geometry or\n'

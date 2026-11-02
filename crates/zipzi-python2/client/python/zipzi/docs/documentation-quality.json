@@ -56,123 +56,6 @@
   },
   "diagnostics": [
     {
-      "identity": "python:zipzi._errors.RecoveryAction",
-      "paths": [
-        "zipzi.RecoveryAction"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._errors.RecoveryAction",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.Closed",
-      "paths": [
-        "zipzi.events.Closed"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.Closed",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.Created",
-      "paths": [
-        "zipzi.events.Created"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.Created",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.Cursor",
-      "paths": [
-        "zipzi.events.Cursor"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.Cursor",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.Event",
-      "paths": [
-        "zipzi.events.Event"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.Event",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.Origin",
-      "paths": [
-        "zipzi.events.Origin"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.Origin",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.Published",
-      "paths": [
-        "zipzi.events.Published"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.Published",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.Saved",
-      "paths": [
-        "zipzi.events.Saved"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.Saved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._generated.event_values.StateChanged",
-      "paths": [
-        "zipzi.events.StateChanged"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi._generated.event_values.StateChanged",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "python:zipzi._generated.reference_values.ObjectKind",
       "paths": [
         "zipzi.references.ObjectKind"
@@ -246,19 +129,6 @@
         "scene"
       ],
       "source": "python:zipzi._generated.scene.Operation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi._jobs.JobState",
-      "paths": [
-        "zipzi.JobState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._jobs.JobState",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -368,19 +238,6 @@
       "status": "missing"
     },
     {
-      "identity": "python:zipzi._lifecycle.EditState",
-      "paths": [
-        "zipzi.EditState"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi._lifecycle.EditState",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "python:zipzi._lifecycle.Session.plan_async",
       "paths": [
         "zipzi.Session.plan_async"
@@ -394,19 +251,6 @@
       "status": "unresolved-sdk"
     },
     {
-      "identity": "python:zipzi.buffers.Buffer",
-      "paths": [
-        "zipzi.Buffer"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "python:zipzi.buffers.Buffer",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "python:zipzi.events.RegistrySubscription",
       "paths": [
         "zipzi.events.RegistrySubscription"
@@ -420,19 +264,6 @@
       "status": "unresolved-sdk"
     },
     {
-      "identity": "python:zipzi.events.RegistrySubscription",
-      "paths": [
-        "zipzi.events.RegistrySubscription"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi.events.RegistrySubscription",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "python:zipzi.events.SessionSubscription",
       "paths": [
         "zipzi.events.SessionSubscription"
@@ -444,32 +275,6 @@
       "category": "type-reference",
       "subject": "Backend",
       "status": "unresolved-sdk"
-    },
-    {
-      "identity": "python:zipzi.events.SessionSubscription",
-      "paths": [
-        "zipzi.events.SessionSubscription"
-      ],
-      "pages": [
-        "events"
-      ],
-      "source": "python:zipzi.events.SessionSubscription",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "python:zipzi.ops.Operation",
-      "paths": [
-        "zipzi.ops.Operation"
-      ],
-      "pages": [
-        "ops"
-      ],
-      "source": "python:zipzi.ops.Operation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
     },
     {
       "identity": "python:zipzi.ops.PlannableOperation",
@@ -483,19 +288,6 @@
       "category": "type-reference",
       "subject": "_ModelingPlanOperation",
       "status": "unresolved-sdk"
-    },
-    {
-      "identity": "python:zipzi.ops.PlannableOperation",
-      "paths": [
-        "zipzi.ops.PlannableOperation"
-      ],
-      "pages": [
-        "ops"
-      ],
-      "source": "python:zipzi.ops.PlannableOperation",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
     },
     {
       "identity": "python:zipzi.references.LabelAddress",
@@ -2416,19 +2208,6 @@
         "sampling"
       ],
       "source": "rust:zipzi_contract::authoring::MeshQuality",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::authoring::ModelingPlanReport|projection:plan_values.PlanReport",
-      "paths": [
-        "zipzi.PlanReport"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "rust:zipzi_contract::authoring::ModelingPlanReport",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -5778,45 +5557,6 @@
         "modeling_project"
       ],
       "source": "rust:zipzi_contract::document::CdiPartEntry::Unresolved",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ConversionCost|projection:canonical",
-      "paths": [
-        "zipzi.modeling.commands.ConversionCost"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::document::ConversionCost",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ConversionCost|projection:plan_values.PlanCost",
-      "paths": [
-        "zipzi.PlanCost"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "rust:zipzi_contract::document::ConversionCost",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::document::ConversionDomain|projection:canonical",
-      "paths": [
-        "zipzi.modeling.commands.ConversionDomain"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::document::ConversionDomain",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -21254,19 +20994,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::model::Vec2|projection:canonical",
-      "paths": [
-        "zipzi.modeling.common.Vec2"
-      ],
-      "pages": [
-        "modeling_common"
-      ],
-      "source": "rust:zipzi_contract::model::Vec2",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::model::WarpKeyform|projection:canonical",
       "paths": [
         "zipzi.modeling.bindings.WarpKeyform"
@@ -25492,539 +25219,6 @@
       "status": "missing"
     },
     {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Attachments",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Clips",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Document",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "ExpressionEntries",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Expressions",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Motion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "MotionGroups",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Organization",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Physics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Pose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "References",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Resources",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "union-branch",
-      "subject": "Scene",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQuery"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Attachments",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryAttachments"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Attachments",
-      "category": "union-branch",
-      "subject": "Attachments",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Attachments",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryAttachments"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Attachments",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Clips",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryClips"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Clips",
-      "category": "union-branch",
-      "subject": "Clips",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Clips",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryClips"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Clips",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Document",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryDocument"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Document",
-      "category": "union-branch",
-      "subject": "Document",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Document",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryDocument"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Document",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:ExpressionEntries",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryExpressionEntries"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::ExpressionEntries",
-      "category": "union-branch",
-      "subject": "ExpressionEntries",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:ExpressionEntries",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryExpressionEntries"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::ExpressionEntries",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Expressions",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryExpressions"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Expressions",
-      "category": "union-branch",
-      "subject": "Expressions",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Expressions",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryExpressions"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Expressions",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Motion",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryMotion"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Motion",
-      "category": "union-branch",
-      "subject": "Motion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Motion",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryMotion"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Motion",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:MotionGroups",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryMotionGroups"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::MotionGroups",
-      "category": "union-branch",
-      "subject": "MotionGroups",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:MotionGroups",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryMotionGroups"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::MotionGroups",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Organization",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryOrganization"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Organization",
-      "category": "union-branch",
-      "subject": "Organization",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Organization",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryOrganization"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Organization",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Physics",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryPhysics"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Physics",
-      "category": "union-branch",
-      "subject": "Physics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Physics",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryPhysics"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Physics",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Pose",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryPose"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Pose",
-      "category": "union-branch",
-      "subject": "Pose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Pose",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryPose"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Pose",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:References",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryReferences"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::References",
-      "category": "union-branch",
-      "subject": "References",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:References",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryReferences"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::References",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Resources",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryResources"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Resources",
-      "category": "union-branch",
-      "subject": "Resources",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Resources",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryResources"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Resources",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Scene",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryScene"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Scene",
-      "category": "union-branch",
-      "subject": "Scene",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Scene",
-      "paths": [
-        "zipzi.modeling.queries.CollectionQueryScene"
-      ],
-      "pages": [
-        "modeling_queries"
-      ],
-      "source": "rust:zipzi_contract::runtime::CollectionQuery::Scene",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::EditorContext|projection:canonical",
-      "paths": [
-        "zipzi.modeling.runtime.EditorContext"
-      ],
-      "pages": [
-        "modeling_runtime"
-      ],
-      "source": "rust:zipzi_contract::runtime::EditorContext",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
       "identity": "rust:zipzi_contract::runtime::ImagePixels|projection:resource_values.ImagePixels",
       "paths": [
         "zipzi.resources.ImagePixels"
@@ -26046,2276 +25240,6 @@
         "resources"
       ],
       "source": "rust:zipzi_contract::runtime::ImageSnapshot",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Attachment",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Binding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Content",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateAsset",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateBlendBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateBlendConstraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateBlendKeyTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateExpression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateGlue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateMotion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateOffscreen",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreatePart",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateSceneBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "CreateTransform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Deletion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Document",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "EraseObject",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Expression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ManualMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Motion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Organization",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Physics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Pose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "References",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "RemeshRectangleGrid",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "RenameMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceAsset",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceBlendBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceBlendConstraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceBlendKeyTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceDrawOrderGroups",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceEditorState",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceExpression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceGlue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceHierarchyOrder",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceModelSetup",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceMotion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceOffscreen",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplacePart",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceSceneBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceTopology",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "ReplaceTransform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Resource",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "Scene",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "SetMeshKeyform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "SetPhysics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "SetPose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "SetSceneKeyform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "union-branch",
-      "subject": "UpdatePositions",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
-      "paths": [
-        "zipzi.modeling.ModelingCommand",
-        "zipzi.modeling.commands.ModelingCommand"
-      ],
-      "pages": [
-        "modeling",
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Attachment",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandAttachment"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Attachment",
-      "category": "union-branch",
-      "subject": "Attachment",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Attachment",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandAttachment"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Attachment",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Binding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Binding",
-      "category": "union-branch",
-      "subject": "Binding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Binding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Binding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Content",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandContent"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Content",
-      "category": "union-branch",
-      "subject": "Content",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Content",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandContent"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Content",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateAsset",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateAsset"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateAsset",
-      "category": "union-branch",
-      "subject": "CreateAsset",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateAsset",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateAsset"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateAsset",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBinding",
-      "category": "union-branch",
-      "subject": "CreateBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBlendBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendBinding",
-      "category": "union-branch",
-      "subject": "CreateBlendBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBlendBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendConstraint",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBlendConstraint"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendConstraint",
-      "category": "union-branch",
-      "subject": "CreateBlendConstraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendConstraint",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBlendConstraint"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendConstraint",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendKeyTable",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendKeyTable",
-      "category": "union-branch",
-      "subject": "CreateBlendKeyTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendKeyTable",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendKeyTable",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateExpression",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateExpression"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateExpression",
-      "category": "union-branch",
-      "subject": "CreateExpression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateExpression",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateExpression"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateExpression",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateGlue",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateGlue"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateGlue",
-      "category": "union-branch",
-      "subject": "CreateGlue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateGlue",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateGlue"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateGlue",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMesh",
-      "category": "union-branch",
-      "subject": "CreateMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMesh",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateMotion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateMotion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMotion",
-      "category": "union-branch",
-      "subject": "CreateMotion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateMotion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateMotion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMotion",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateOffscreen",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateOffscreen"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateOffscreen",
-      "category": "union-branch",
-      "subject": "CreateOffscreen",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateOffscreen",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateOffscreen"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateOffscreen",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateParameter",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateParameter"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateParameter",
-      "category": "union-branch",
-      "subject": "CreateParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateParameter",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateParameter"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateParameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreatePart",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreatePart"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreatePart",
-      "category": "union-branch",
-      "subject": "CreatePart",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreatePart",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreatePart"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreatePart",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateSceneBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateSceneBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateSceneBinding",
-      "category": "union-branch",
-      "subject": "CreateSceneBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateSceneBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateSceneBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateSceneBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateTransform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateTransform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateTransform",
-      "category": "union-branch",
-      "subject": "CreateTransform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateTransform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandCreateTransform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateTransform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Deletion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandDeletion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Deletion",
-      "category": "union-branch",
-      "subject": "Deletion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Deletion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandDeletion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Deletion",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Document",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandDocument"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Document",
-      "category": "union-branch",
-      "subject": "Document",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Document",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandDocument"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Document",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:EraseObject",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandEraseObject"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::EraseObject",
-      "category": "union-branch",
-      "subject": "EraseObject",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:EraseObject",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandEraseObject"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::EraseObject",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Expression",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandExpression"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Expression",
-      "category": "union-branch",
-      "subject": "Expression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Expression",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandExpression"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Expression",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ManualMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandManualMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ManualMesh",
-      "category": "union-branch",
-      "subject": "ManualMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ManualMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandManualMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ManualMesh",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Motion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandMotion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Motion",
-      "category": "union-branch",
-      "subject": "Motion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Motion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandMotion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Motion",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Organization",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandOrganization"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Organization",
-      "category": "union-branch",
-      "subject": "Organization",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Organization",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandOrganization"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Organization",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Physics",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandPhysics"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Physics",
-      "category": "union-branch",
-      "subject": "Physics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Physics",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandPhysics"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Physics",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Pose",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandPose"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Pose",
-      "category": "union-branch",
-      "subject": "Pose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Pose",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandPose"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Pose",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:References",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReferences"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::References",
-      "category": "union-branch",
-      "subject": "References",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:References",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReferences"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::References",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:RemeshRectangleGrid",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::RemeshRectangleGrid",
-      "category": "union-branch",
-      "subject": "RemeshRectangleGrid",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:RemeshRectangleGrid",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::RemeshRectangleGrid",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:RenameMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandRenameMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::RenameMesh",
-      "category": "union-branch",
-      "subject": "RenameMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:RenameMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandRenameMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::RenameMesh",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceAsset",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceAsset"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceAsset",
-      "category": "union-branch",
-      "subject": "ReplaceAsset",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceAsset",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceAsset"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceAsset",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBinding",
-      "category": "union-branch",
-      "subject": "ReplaceBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBlendBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendBinding",
-      "category": "union-branch",
-      "subject": "ReplaceBlendBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBlendBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendConstraint",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendConstraint",
-      "category": "union-branch",
-      "subject": "ReplaceBlendConstraint",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendConstraint",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendConstraint",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendKeyTable",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendKeyTable",
-      "category": "union-branch",
-      "subject": "ReplaceBlendKeyTable",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendKeyTable",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendKeyTable",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceDrawOrderGroups",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceDrawOrderGroups",
-      "category": "union-branch",
-      "subject": "ReplaceDrawOrderGroups",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceDrawOrderGroups",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceDrawOrderGroups",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceEditorState",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceEditorState"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceEditorState",
-      "category": "union-branch",
-      "subject": "ReplaceEditorState",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceEditorState",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceEditorState"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceEditorState",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceExpression",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceExpression"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceExpression",
-      "category": "union-branch",
-      "subject": "ReplaceExpression",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceExpression",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceExpression"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceExpression",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceGlue",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceGlue"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceGlue",
-      "category": "union-branch",
-      "subject": "ReplaceGlue",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceGlue",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceGlue"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceGlue",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceHierarchyOrder",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceHierarchyOrder",
-      "category": "union-branch",
-      "subject": "ReplaceHierarchyOrder",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceHierarchyOrder",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceHierarchyOrder",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMesh",
-      "category": "union-branch",
-      "subject": "ReplaceMesh",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceMesh",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceMesh"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMesh",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceModelSetup",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceModelSetup"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceModelSetup",
-      "category": "union-branch",
-      "subject": "ReplaceModelSetup",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceModelSetup",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceModelSetup"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceModelSetup",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceMotion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceMotion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMotion",
-      "category": "union-branch",
-      "subject": "ReplaceMotion",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceMotion",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceMotion"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMotion",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceOffscreen",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceOffscreen"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceOffscreen",
-      "category": "union-branch",
-      "subject": "ReplaceOffscreen",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceOffscreen",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceOffscreen"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceOffscreen",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceParameter",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceParameter"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceParameter",
-      "category": "union-branch",
-      "subject": "ReplaceParameter",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceParameter",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceParameter"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceParameter",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplacePart",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplacePart"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplacePart",
-      "category": "union-branch",
-      "subject": "ReplacePart",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplacePart",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplacePart"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplacePart",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceSceneBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceSceneBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceSceneBinding",
-      "category": "union-branch",
-      "subject": "ReplaceSceneBinding",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceSceneBinding",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceSceneBinding"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceSceneBinding",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceTopology",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceTopology"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTopology",
-      "category": "union-branch",
-      "subject": "ReplaceTopology",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceTopology",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceTopology"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTopology",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceTransform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceTransform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTransform",
-      "category": "union-branch",
-      "subject": "ReplaceTransform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceTransform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandReplaceTransform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTransform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Resource",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandResource"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Resource",
-      "category": "union-branch",
-      "subject": "Resource",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Resource",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandResource"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Resource",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Scene",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandScene"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Scene",
-      "category": "union-branch",
-      "subject": "Scene",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Scene",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandScene"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::Scene",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetMeshKeyform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetMeshKeyform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetMeshKeyform",
-      "category": "union-branch",
-      "subject": "SetMeshKeyform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetMeshKeyform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetMeshKeyform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetMeshKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetPhysics",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetPhysics"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPhysics",
-      "category": "union-branch",
-      "subject": "SetPhysics",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetPhysics",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetPhysics"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPhysics",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetPose",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetPose"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPose",
-      "category": "union-branch",
-      "subject": "SetPose",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetPose",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetPose"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPose",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetSceneKeyform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetSceneKeyform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetSceneKeyform",
-      "category": "union-branch",
-      "subject": "SetSceneKeyform",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetSceneKeyform",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandSetSceneKeyform"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetSceneKeyform",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:UpdatePositions",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandUpdatePositions"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::UpdatePositions",
-      "category": "union-branch",
-      "subject": "UpdatePositions",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:UpdatePositions",
-      "paths": [
-        "zipzi.modeling.commands.ModelingCommandUpdatePositions"
-      ],
-      "pages": [
-        "modeling_commands"
-      ],
-      "source": "rust:zipzi_contract::runtime::ModelingCommand::UpdatePositions",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -29107,19 +26031,6 @@
         "resources"
       ],
       "source": "rust:zipzi_contract::runtime::ResourceUsage",
-      "category": "empty-summary",
-      "subject": "",
-      "status": "missing"
-    },
-    {
-      "identity": "rust:zipzi_contract::runtime::RuntimeCapabilities|projection:discovery.RuntimeCapabilities",
-      "paths": [
-        "zipzi.RuntimeCapabilities"
-      ],
-      "pages": [
-        "runtime"
-      ],
-      "source": "rust:zipzi_contract::runtime::RuntimeCapabilities",
       "category": "empty-summary",
       "subject": "",
       "status": "missing"
@@ -37553,6 +34464,1884 @@
       "source": "rust:zipzi_contract::physics_document::PhysicsAssetProperty::Fps",
       "category": "union-branch",
       "subject": "Fps",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Attachments",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Clips",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Document",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "ExpressionEntries",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Expressions",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Motion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "MotionGroups",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Organization",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Physics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Pose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "References",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Resources",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:canonical",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQuery"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery",
+      "category": "union-branch",
+      "subject": "Scene",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Attachments",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryAttachments"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Attachments",
+      "category": "union-branch",
+      "subject": "Attachments",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Clips",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryClips"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Clips",
+      "category": "union-branch",
+      "subject": "Clips",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Document",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryDocument"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Document",
+      "category": "union-branch",
+      "subject": "Document",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:ExpressionEntries",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryExpressionEntries"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::ExpressionEntries",
+      "category": "union-branch",
+      "subject": "ExpressionEntries",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Expressions",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryExpressions"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Expressions",
+      "category": "union-branch",
+      "subject": "Expressions",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Motion",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryMotion"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Motion",
+      "category": "union-branch",
+      "subject": "Motion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:MotionGroups",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryMotionGroups"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::MotionGroups",
+      "category": "union-branch",
+      "subject": "MotionGroups",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Organization",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryOrganization"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Organization",
+      "category": "union-branch",
+      "subject": "Organization",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Physics",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryPhysics"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Physics",
+      "category": "union-branch",
+      "subject": "Physics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Pose",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryPose"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Pose",
+      "category": "union-branch",
+      "subject": "Pose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:References",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryReferences"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::References",
+      "category": "union-branch",
+      "subject": "References",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Resources",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryResources"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Resources",
+      "category": "union-branch",
+      "subject": "Resources",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::CollectionQuery|projection:variant:Scene",
+      "paths": [
+        "zipzi.modeling.queries.CollectionQueryScene"
+      ],
+      "pages": [
+        "modeling_queries"
+      ],
+      "source": "rust:zipzi_contract::runtime::CollectionQuery::Scene",
+      "category": "union-branch",
+      "subject": "Scene",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Attachment",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Binding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Content",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateAsset",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateBlendBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateBlendConstraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateBlendKeyTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateExpression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateGlue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateMotion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateOffscreen",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreatePart",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateSceneBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "CreateTransform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Deletion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Document",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "EraseObject",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Expression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ManualMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Motion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Organization",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Physics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Pose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "References",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "RemeshRectangleGrid",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "RenameMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceAsset",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceBlendBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceBlendConstraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceBlendKeyTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceDrawOrderGroups",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceEditorState",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceExpression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceGlue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceHierarchyOrder",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceModelSetup",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceMotion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceOffscreen",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplacePart",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceSceneBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceTopology",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "ReplaceTransform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Resource",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "Scene",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "SetMeshKeyform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "SetPhysics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "SetPose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "SetSceneKeyform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:canonical",
+      "paths": [
+        "zipzi.modeling.ModelingCommand",
+        "zipzi.modeling.commands.ModelingCommand"
+      ],
+      "pages": [
+        "modeling",
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand",
+      "category": "union-branch",
+      "subject": "UpdatePositions",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Attachment",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandAttachment"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Attachment",
+      "category": "union-branch",
+      "subject": "Attachment",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Binding",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandBinding"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Binding",
+      "category": "union-branch",
+      "subject": "Binding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Content",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandContent"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Content",
+      "category": "union-branch",
+      "subject": "Content",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateAsset",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateAsset"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateAsset",
+      "category": "union-branch",
+      "subject": "CreateAsset",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBinding",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBinding"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBinding",
+      "category": "union-branch",
+      "subject": "CreateBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendBinding",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBlendBinding"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendBinding",
+      "category": "union-branch",
+      "subject": "CreateBlendBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendConstraint",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBlendConstraint"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendConstraint",
+      "category": "union-branch",
+      "subject": "CreateBlendConstraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateBlendKeyTable",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateBlendKeyTable"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateBlendKeyTable",
+      "category": "union-branch",
+      "subject": "CreateBlendKeyTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateExpression",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateExpression"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateExpression",
+      "category": "union-branch",
+      "subject": "CreateExpression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateGlue",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateGlue"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateGlue",
+      "category": "union-branch",
+      "subject": "CreateGlue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateMesh",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateMesh"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMesh",
+      "category": "union-branch",
+      "subject": "CreateMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateMotion",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateMotion"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateMotion",
+      "category": "union-branch",
+      "subject": "CreateMotion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateOffscreen",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateOffscreen"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateOffscreen",
+      "category": "union-branch",
+      "subject": "CreateOffscreen",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateParameter",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateParameter"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateParameter",
+      "category": "union-branch",
+      "subject": "CreateParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreatePart",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreatePart"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreatePart",
+      "category": "union-branch",
+      "subject": "CreatePart",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateSceneBinding",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateSceneBinding"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateSceneBinding",
+      "category": "union-branch",
+      "subject": "CreateSceneBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:CreateTransform",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandCreateTransform"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::CreateTransform",
+      "category": "union-branch",
+      "subject": "CreateTransform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Deletion",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandDeletion"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Deletion",
+      "category": "union-branch",
+      "subject": "Deletion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Document",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandDocument"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Document",
+      "category": "union-branch",
+      "subject": "Document",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:EraseObject",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandEraseObject"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::EraseObject",
+      "category": "union-branch",
+      "subject": "EraseObject",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Expression",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandExpression"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Expression",
+      "category": "union-branch",
+      "subject": "Expression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ManualMesh",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandManualMesh"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ManualMesh",
+      "category": "union-branch",
+      "subject": "ManualMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Motion",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandMotion"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Motion",
+      "category": "union-branch",
+      "subject": "Motion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Organization",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandOrganization"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Organization",
+      "category": "union-branch",
+      "subject": "Organization",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Physics",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandPhysics"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Physics",
+      "category": "union-branch",
+      "subject": "Physics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Pose",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandPose"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Pose",
+      "category": "union-branch",
+      "subject": "Pose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:References",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReferences"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::References",
+      "category": "union-branch",
+      "subject": "References",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:RemeshRectangleGrid",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandRemeshRectangleGrid"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::RemeshRectangleGrid",
+      "category": "union-branch",
+      "subject": "RemeshRectangleGrid",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:RenameMesh",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandRenameMesh"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::RenameMesh",
+      "category": "union-branch",
+      "subject": "RenameMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceAsset",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceAsset"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceAsset",
+      "category": "union-branch",
+      "subject": "ReplaceAsset",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBinding",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBinding"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBinding",
+      "category": "union-branch",
+      "subject": "ReplaceBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendBinding",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBlendBinding"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendBinding",
+      "category": "union-branch",
+      "subject": "ReplaceBlendBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendConstraint",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBlendConstraint"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendConstraint",
+      "category": "union-branch",
+      "subject": "ReplaceBlendConstraint",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceBlendKeyTable",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceBlendKeyTable"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceBlendKeyTable",
+      "category": "union-branch",
+      "subject": "ReplaceBlendKeyTable",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceDrawOrderGroups",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceDrawOrderGroups"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceDrawOrderGroups",
+      "category": "union-branch",
+      "subject": "ReplaceDrawOrderGroups",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceEditorState",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceEditorState"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceEditorState",
+      "category": "union-branch",
+      "subject": "ReplaceEditorState",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceExpression",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceExpression"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceExpression",
+      "category": "union-branch",
+      "subject": "ReplaceExpression",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceGlue",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceGlue"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceGlue",
+      "category": "union-branch",
+      "subject": "ReplaceGlue",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceHierarchyOrder",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceHierarchyOrder"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceHierarchyOrder",
+      "category": "union-branch",
+      "subject": "ReplaceHierarchyOrder",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceMesh",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceMesh"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMesh",
+      "category": "union-branch",
+      "subject": "ReplaceMesh",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceModelSetup",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceModelSetup"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceModelSetup",
+      "category": "union-branch",
+      "subject": "ReplaceModelSetup",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceMotion",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceMotion"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceMotion",
+      "category": "union-branch",
+      "subject": "ReplaceMotion",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceOffscreen",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceOffscreen"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceOffscreen",
+      "category": "union-branch",
+      "subject": "ReplaceOffscreen",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceParameter",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceParameter"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceParameter",
+      "category": "union-branch",
+      "subject": "ReplaceParameter",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplacePart",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplacePart"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplacePart",
+      "category": "union-branch",
+      "subject": "ReplacePart",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceSceneBinding",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceSceneBinding"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceSceneBinding",
+      "category": "union-branch",
+      "subject": "ReplaceSceneBinding",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceTopology",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceTopology"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTopology",
+      "category": "union-branch",
+      "subject": "ReplaceTopology",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:ReplaceTransform",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandReplaceTransform"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::ReplaceTransform",
+      "category": "union-branch",
+      "subject": "ReplaceTransform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Resource",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandResource"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Resource",
+      "category": "union-branch",
+      "subject": "Resource",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:Scene",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandScene"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::Scene",
+      "category": "union-branch",
+      "subject": "Scene",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetMeshKeyform",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetMeshKeyform"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetMeshKeyform",
+      "category": "union-branch",
+      "subject": "SetMeshKeyform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetPhysics",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetPhysics"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPhysics",
+      "category": "union-branch",
+      "subject": "SetPhysics",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetPose",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetPose"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetPose",
+      "category": "union-branch",
+      "subject": "SetPose",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:SetSceneKeyform",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandSetSceneKeyform"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::SetSceneKeyform",
+      "category": "union-branch",
+      "subject": "SetSceneKeyform",
+      "status": "review_required"
+    },
+    {
+      "identity": "rust:zipzi_contract::runtime::ModelingCommand|projection:variant:UpdatePositions",
+      "paths": [
+        "zipzi.modeling.commands.ModelingCommandUpdatePositions"
+      ],
+      "pages": [
+        "modeling_commands"
+      ],
+      "source": "rust:zipzi_contract::runtime::ModelingCommand::UpdatePositions",
+      "category": "union-branch",
+      "subject": "UpdatePositions",
       "status": "review_required"
     },
     {

@@ -20,6 +20,8 @@ Canonical commands modeling values.
 
 `(*, sample_combinations: int, payload_bytes: int, temporary_bytes: int, history_bytes: int)`
 
+Estimated work and storage for a planned conversion; estimates are not an admission guarantee.
+
 **Fields**
 
 - `sample_combinations`: Number of shape-sample combinations the conversion must process.
@@ -33,6 +35,8 @@ Canonical commands modeling values.
 
 `(*, parameter_id: str, minimum: float, maximum: float)`
 
+Parameter range captured for a binding conversion or reparenting plan.
+
 **Fields**
 
 - `parameter_id`: Stable document parameter ID, not its exported runtime identifier.
@@ -45,6 +49,9 @@ Canonical commands modeling values.
 
 `ModelingCommandCreateAsset | ModelingCommandReplaceAsset | ModelingCommandCreateMesh | ModelingCommandReplaceMesh | ModelingCommandCreateParameter | ModelingCommandReplaceParameter | ModelingCommandCreatePart | ModelingCommandReplacePart | ModelingCommandCreateTransform | ModelingCommandReplaceTransform | ModelingCommandCreateBinding | ModelingCommandReplaceBinding | ModelingCommandCreateSceneBinding | ModelingCommandReplaceSceneBinding | ModelingCommandCreateBlendKeyTable | ModelingCommandReplaceBlendKeyTable | ModelingCommandCreateBlendConstraint | ModelingCommandReplaceBlendConstraint | ModelingCommandCreateBlendBinding | ModelingCommandReplaceBlendBinding | ModelingCommandCreateGlue | ModelingCommandReplaceGlue | ModelingCommandCreateOffscreen | ModelingCommandReplaceOffscreen | ModelingCommandDeletion | ModelingCommandScene | ModelingCommandOrganization | ModelingCommandBinding | ModelingCommandContent | ModelingCommandReferences | ModelingCommandResource | ModelingCommandDocument | ModelingCommandAttachment | ModelingCommandMotion | ModelingCommandExpression | ModelingCommandPhysics | ModelingCommandPose | ModelingCommandCreateMotion | ModelingCommandReplaceMotion | ModelingCommandCreateExpression | ModelingCommandReplaceExpression | ModelingCommandSetPhysics | ModelingCommandSetPose | ModelingCommandReplaceModelSetup | ModelingCommandReplaceHierarchyOrder | ModelingCommandReplaceEditorState | ModelingCommandReplaceDrawOrderGroups | ModelingCommandEraseObject | ModelingCommandRenameMesh | ModelingCommandUpdatePositions | ModelingCommandSetMeshKeyform | ModelingCommandSetSceneKeyform | ModelingCommandRemeshRectangleGrid | ModelingCommandReplaceTopology | ModelingCommandManualMesh`
 
+A typed candidate mutation; select the variant for the operation and submit it through an Edit.
+Constructing a command neither changes the candidate nor publishes it.
+
 Types: [ModelingCommandAttachment](#zipzimodelingcommandsmodelingcommandattachment), [ModelingCommandBinding](#zipzimodelingcommandsmodelingcommandbinding), [ModelingCommandContent](#zipzimodelingcommandsmodelingcommandcontent), [ModelingCommandCreateAsset](#zipzimodelingcommandsmodelingcommandcreateasset), [ModelingCommandCreateBinding](#zipzimodelingcommandsmodelingcommandcreatebinding), [ModelingCommandCreateBlendBinding](#zipzimodelingcommandsmodelingcommandcreateblendbinding), [ModelingCommandCreateBlendConstraint](#zipzimodelingcommandsmodelingcommandcreateblendconstraint), [ModelingCommandCreateBlendKeyTable](#zipzimodelingcommandsmodelingcommandcreateblendkeytable), [ModelingCommandCreateExpression](#zipzimodelingcommandsmodelingcommandcreateexpression), [ModelingCommandCreateGlue](#zipzimodelingcommandsmodelingcommandcreateglue), [ModelingCommandCreateMesh](#zipzimodelingcommandsmodelingcommandcreatemesh), [ModelingCommandCreateMotion](#zipzimodelingcommandsmodelingcommandcreatemotion), [ModelingCommandCreateOffscreen](#zipzimodelingcommandsmodelingcommandcreateoffscreen), [ModelingCommandCreateParameter](#zipzimodelingcommandsmodelingcommandcreateparameter), [ModelingCommandCreatePart](#zipzimodelingcommandsmodelingcommandcreatepart), [ModelingCommandCreateSceneBinding](#zipzimodelingcommandsmodelingcommandcreatescenebinding), [ModelingCommandCreateTransform](#zipzimodelingcommandsmodelingcommandcreatetransform), [ModelingCommandDeletion](#zipzimodelingcommandsmodelingcommanddeletion), [ModelingCommandDocument](#zipzimodelingcommandsmodelingcommanddocument), [ModelingCommandEraseObject](#zipzimodelingcommandsmodelingcommanderaseobject), [ModelingCommandExpression](#zipzimodelingcommandsmodelingcommandexpression), [ModelingCommandManualMesh](#zipzimodelingcommandsmodelingcommandmanualmesh), [ModelingCommandMotion](#zipzimodelingcommandsmodelingcommandmotion), [ModelingCommandOrganization](#zipzimodelingcommandsmodelingcommandorganization), [ModelingCommandPhysics](#zipzimodelingcommandsmodelingcommandphysics), [ModelingCommandPose](#zipzimodelingcommandsmodelingcommandpose), [ModelingCommandReferences](#zipzimodelingcommandsmodelingcommandreferences), [ModelingCommandRemeshRectangleGrid](#zipzimodelingcommandsmodelingcommandremeshrectanglegrid), [ModelingCommandRenameMesh](#zipzimodelingcommandsmodelingcommandrenamemesh), [ModelingCommandReplaceAsset](#zipzimodelingcommandsmodelingcommandreplaceasset), [ModelingCommandReplaceBinding](#zipzimodelingcommandsmodelingcommandreplacebinding), [ModelingCommandReplaceBlendBinding](#zipzimodelingcommandsmodelingcommandreplaceblendbinding), [ModelingCommandReplaceBlendConstraint](#zipzimodelingcommandsmodelingcommandreplaceblendconstraint), [ModelingCommandReplaceBlendKeyTable](#zipzimodelingcommandsmodelingcommandreplaceblendkeytable), [ModelingCommandReplaceDrawOrderGroups](#zipzimodelingcommandsmodelingcommandreplacedrawordergroups), [ModelingCommandReplaceEditorState](#zipzimodelingcommandsmodelingcommandreplaceeditorstate), [ModelingCommandReplaceExpression](#zipzimodelingcommandsmodelingcommandreplaceexpression), [ModelingCommandReplaceGlue](#zipzimodelingcommandsmodelingcommandreplaceglue), [ModelingCommandReplaceHierarchyOrder](#zipzimodelingcommandsmodelingcommandreplacehierarchyorder), [ModelingCommandReplaceMesh](#zipzimodelingcommandsmodelingcommandreplacemesh), [ModelingCommandReplaceModelSetup](#zipzimodelingcommandsmodelingcommandreplacemodelsetup), [ModelingCommandReplaceMotion](#zipzimodelingcommandsmodelingcommandreplacemotion), [ModelingCommandReplaceOffscreen](#zipzimodelingcommandsmodelingcommandreplaceoffscreen), [ModelingCommandReplaceParameter](#zipzimodelingcommandsmodelingcommandreplaceparameter), [ModelingCommandReplacePart](#zipzimodelingcommandsmodelingcommandreplacepart), [ModelingCommandReplaceSceneBinding](#zipzimodelingcommandsmodelingcommandreplacescenebinding), [ModelingCommandReplaceTopology](#zipzimodelingcommandsmodelingcommandreplacetopology), [ModelingCommandReplaceTransform](#zipzimodelingcommandsmodelingcommandreplacetransform), [ModelingCommandResource](#zipzimodelingcommandsmodelingcommandresource), [ModelingCommandScene](#zipzimodelingcommandsmodelingcommandscene), [ModelingCommandSetMeshKeyform](#zipzimodelingcommandsmodelingcommandsetmeshkeyform), [ModelingCommandSetPhysics](#zipzimodelingcommandsmodelingcommandsetphysics), [ModelingCommandSetPose](#zipzimodelingcommandsmodelingcommandsetpose), [ModelingCommandSetSceneKeyform](#zipzimodelingcommandsmodelingcommandsetscenekeyform), [ModelingCommandUpdatePositions](#zipzimodelingcommandsmodelingcommandupdatepositions).
 
 
@@ -53,6 +60,8 @@ Types: [ModelingCommandAttachment](#zipzimodelingcommandsmodelingcommandattachme
 **Type**
 
 `(*, intent: AttachmentEdit)`
+
+Apply a package attachment edit.
 
 Types: [AttachmentEdit].
 
@@ -67,6 +76,8 @@ mutate or publish.
 
 `(*, intent: BindingAuthoringEdit)`
 
+Apply a binding authoring edit to the candidate.
+
 Types: [BindingAuthoringEdit].
 
 **Fields**
@@ -79,6 +90,8 @@ mutate or publish.
 **Type**
 
 `(*, intent: SceneContentEdit)`
+
+Apply an edit to scene content.
 
 Types: [SceneContentEdit].
 
@@ -93,6 +106,8 @@ mutate or publish.
 
 `(*, asset: ImageAsset)`
 
+Create an image asset from its complete record.
+
 Types: [ImageAsset].
 
 **Fields**
@@ -105,6 +120,8 @@ not publish.
 **Type**
 
 `(*, binding: MeshBinding)`
+
+Create a mesh binding from its complete record.
 
 Types: [MeshBinding].
 
@@ -119,6 +136,8 @@ does not publish.
 
 `(*, binding: BlendShapeBinding)`
 
+Create a blend binding from its complete record.
+
 Types: [BlendShapeBinding].
 
 **Fields**
@@ -131,6 +150,8 @@ alone does not publish.
 **Type**
 
 `(*, constraint: BlendShapeConstraint)`
+
+Create a blend constraint from its complete record.
 
 Types: [BlendShapeConstraint].
 
@@ -145,6 +166,8 @@ alone does not publish.
 
 `(*, table: BlendShapeKeyTable)`
 
+Create a blend key table from its complete record.
+
 Types: [BlendShapeKeyTable].
 
 **Fields**
@@ -158,6 +181,8 @@ alone does not publish.
 
 `(*, expression: ExpressionAsset)`
 
+Create an expression asset from its complete record.
+
 Types: [ExpressionAsset].
 
 **Fields**
@@ -169,6 +194,8 @@ Types: [ExpressionAsset].
 **Type**
 
 `(*, glue: Glue)`
+
+Create a Glue from its complete record.
 
 Types: [Glue].
 
@@ -183,6 +210,8 @@ not publish.
 
 `(*, mesh: Mesh)`
 
+Create a mesh from its complete record.
+
 Types: [Mesh].
 
 **Fields**
@@ -196,6 +225,8 @@ not publish.
 
 `(*, clip: MotionClip)`
 
+Create a motion clip from its complete record.
+
 Types: [MotionClip].
 
 **Fields**
@@ -207,6 +238,8 @@ Types: [MotionClip].
 **Type**
 
 `(*, offscreen: Offscreen)`
+
+Create an Offscreen from its complete record.
 
 Types: [Offscreen].
 
@@ -221,6 +254,8 @@ does not publish.
 
 `(*, parameter: Parameter)`
 
+Create a parameter from its complete record.
+
 Types: [Parameter].
 
 **Fields**
@@ -233,6 +268,8 @@ does not publish.
 **Type**
 
 `(*, part: Part)`
+
+Create a Part from its complete record.
 
 Types: [Part].
 
@@ -247,6 +284,8 @@ not publish.
 
 `(*, binding: SceneBinding)`
 
+Create a scene binding from its complete record.
+
 Types: [SceneBinding].
 
 **Fields**
@@ -259,6 +298,8 @@ alone does not publish.
 **Type**
 
 `(*, transform: Transform)`
+
+Create a deformation transform from its complete record.
 
 Types: [Transform].
 
@@ -273,6 +314,8 @@ does not publish.
 
 `(*, intent: DeletionIntent)`
 
+Request dependency-aware deletion; plan first to inspect the required decisions.
+
 Types: [DeletionIntent].
 
 **Fields**
@@ -284,6 +327,8 @@ Types: [DeletionIntent].
 **Type**
 
 `(*, intent: DocumentAuthoringEdit)`
+
+Apply a document-level authoring edit.
 
 Types: [DocumentAuthoringEdit].
 
@@ -298,6 +343,8 @@ mutate or publish.
 
 `(*, id: str)`
 
+Erase the object identified by its stable document ID.
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -308,6 +355,8 @@ runtime_id.
 **Type**
 
 `(*, intent: ExpressionEdit)`
+
+Edit expression assets or entries.
 
 Types: [ExpressionEdit].
 
@@ -320,6 +369,8 @@ Types: [ExpressionEdit].
 **Type**
 
 `(*, mesh_id: str, expected: _Source, operation: ManualMeshOperation)`
+
+Apply one source-checked manual UV topology operation.
 
 Types: [Source], [ManualMeshOperation].
 
@@ -335,6 +386,8 @@ Types: [Source], [ManualMeshOperation].
 
 `(*, intent: MotionEdit)`
 
+Edit motion library, track, key or event data.
+
 Types: [MotionEdit].
 
 **Fields**
@@ -346,6 +399,8 @@ Types: [MotionEdit].
 **Type**
 
 `(*, intent: OrganizationEdit)`
+
+Apply an organization and hierarchy edit to the candidate.
 
 Types: [OrganizationEdit].
 
@@ -360,6 +415,8 @@ mutate or publish.
 
 `(*, intent: PhysicsEdit)`
 
+Edit Physics rig, rows or nodes.
+
 Types: [PhysicsEdit].
 
 **Fields**
@@ -371,6 +428,8 @@ Types: [PhysicsEdit].
 **Type**
 
 `(*, intent: PoseEdit)`
+
+Edit Pose singleton, groups, entries or links.
 
 Types: [PoseEdit].
 
@@ -384,6 +443,8 @@ Types: [PoseEdit].
 
 `(*, intent: ReferenceEdit)`
 
+Apply a document reference edit.
+
 Types: [ReferenceEdit].
 
 **Fields**
@@ -396,6 +457,8 @@ mutate or publish.
 **Type**
 
 `(*, id: str, columns: int, rows: int)`
+
+Regenerate a mesh using the requested rectangular grid.
 
 **Fields**
 
@@ -412,6 +475,8 @@ satisfy native vertex/working-set limits.
 
 `(*, id: str, name: str)`
 
+Change the display name of an existing mesh.
+
 **Fields**
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
@@ -423,6 +488,8 @@ runtime_id.
 **Type**
 
 `(*, asset: ImageAsset)`
+
+Replace an existing image asset with a complete record preserving its identity.
 
 Types: [ImageAsset].
 
@@ -437,6 +504,8 @@ identity; this DTO alone does not publish.
 
 `(*, binding: MeshBinding)`
 
+Replace an existing mesh binding with a complete record preserving its identity.
+
 Types: [MeshBinding].
 
 **Fields**
@@ -449,6 +518,8 @@ identity; this DTO alone does not publish.
 **Type**
 
 `(*, binding: BlendShapeBinding)`
+
+Replace an existing blend binding with a complete record preserving its identity.
 
 Types: [BlendShapeBinding].
 
@@ -463,6 +534,8 @@ stable identity; this DTO alone does not publish.
 
 `(*, constraint: BlendShapeConstraint)`
 
+Replace an existing blend constraint with a complete record preserving its identity.
+
 Types: [BlendShapeConstraint].
 
 **Fields**
@@ -475,6 +548,8 @@ stable identity; this DTO alone does not publish.
 **Type**
 
 `(*, table: BlendShapeKeyTable)`
+
+Replace an existing blend key table with a complete record preserving its identity.
 
 Types: [BlendShapeKeyTable].
 
@@ -489,6 +564,8 @@ stable identity; this DTO alone does not publish.
 
 `(*, groups: tuple[DrawOrderGroup, ...])`
 
+Replace the complete draw-order group list.
+
 Types: [DrawOrderGroup].
 
 **Fields**
@@ -502,6 +579,8 @@ and ranges. This is a required list, not an optional grouping override.
 
 `(*, state: EditorState)`
 
+Replace Editor visibility and lock metadata.
+
 Types: [EditorState].
 
 **Fields**
@@ -514,6 +593,8 @@ Types: [EditorState].
 
 `(*, expression: ExpressionAsset)`
 
+Replace an existing expression asset with a complete record preserving its identity.
+
 Types: [ExpressionAsset].
 
 **Fields**
@@ -525,6 +606,8 @@ Types: [ExpressionAsset].
 **Type**
 
 `(*, glue: Glue)`
+
+Replace an existing Glue with a complete record preserving its identity.
 
 Types: [Glue].
 
@@ -539,6 +622,8 @@ identity; this DTO alone does not publish.
 
 `(*, order: HierarchyOrder)`
 
+Replace organization and deformation palette ordering.
+
 Types: [HierarchyOrder].
 
 **Fields**
@@ -550,6 +635,8 @@ Types: [HierarchyOrder].
 **Type**
 
 `(*, mesh: Mesh)`
+
+Replace an existing mesh with a complete record preserving its identity.
 
 Types: [Mesh].
 
@@ -564,6 +651,8 @@ identity; this DTO alone does not publish.
 
 `(*, setup: ModelSetup)`
 
+Replace model canvas and export-frame configuration.
+
 Types: [ModelSetup].
 
 **Fields**
@@ -576,6 +665,8 @@ Types: [ModelSetup].
 
 `(*, clip: MotionClip)`
 
+Replace an existing motion clip with a complete record preserving its identity.
+
 Types: [MotionClip].
 
 **Fields**
@@ -587,6 +678,8 @@ Types: [MotionClip].
 **Type**
 
 `(*, offscreen: Offscreen)`
+
+Replace an existing Offscreen with a complete record preserving its identity.
 
 Types: [Offscreen].
 
@@ -601,6 +694,8 @@ identity; this DTO alone does not publish.
 
 `(*, parameter: Parameter)`
 
+Replace an existing parameter with a complete record preserving its identity.
+
 Types: [Parameter].
 
 **Fields**
@@ -613,6 +708,8 @@ identity; this DTO alone does not publish.
 **Type**
 
 `(*, part: Part)`
+
+Replace an existing Part with a complete record preserving its identity.
 
 Types: [Part].
 
@@ -627,6 +724,8 @@ identity; this DTO alone does not publish.
 
 `(*, binding: SceneBinding)`
 
+Replace an existing scene binding with a complete record preserving its identity.
+
 Types: [SceneBinding].
 
 **Fields**
@@ -639,6 +738,8 @@ stable identity; this DTO alone does not publish.
 **Type**
 
 `(*, source: GeometrySnapshot, replacement: TopologyReplacement)`
+
+Apply a coordinated topology replacement against its captured geometry source.
 
 Types: [TopologyReplacement], [GeometrySnapshot].
 
@@ -655,6 +756,8 @@ remeshing plan.
 
 `(*, transform: Transform)`
 
+Replace an existing deformation transform with a complete record preserving its identity.
+
 Types: [Transform].
 
 **Fields**
@@ -667,6 +770,8 @@ identity; this DTO alone does not publish.
 **Type**
 
 `(*, intent: ResourceEdit)`
+
+Apply an edit to document resources.
 
 Types: [ResourceEdit].
 
@@ -681,6 +786,8 @@ mutate or publish.
 
 `(*, intent: SceneEdit)`
 
+Apply a scene-domain edit to the candidate.
+
 Types: [SceneEdit].
 
 **Fields**
@@ -693,6 +800,8 @@ mutate or publish.
 **Type**
 
 `(*, id: str, keyform: MeshKeyform)`
+
+Insert or replace one mesh shape sample.
 
 Types: [MeshKeyform].
 
@@ -708,6 +817,8 @@ runtime_id.
 
 `(*, physics: PhysicsAsset)`
 
+Replace the Physics singleton with the supplied rig data.
+
 Types: [PhysicsAsset].
 
 **Fields**
@@ -720,6 +831,8 @@ Types: [PhysicsAsset].
 
 `(*, pose: PoseAsset)`
 
+Replace the Pose singleton with the supplied data.
+
 Types: [PoseAsset].
 
 **Fields**
@@ -731,6 +844,8 @@ Types: [PoseAsset].
 **Type**
 
 `(*, id: str, keyform: SceneKeyform)`
+
+Insert or replace one scene shape sample.
 
 Types: [SceneKeyform].
 
@@ -745,6 +860,8 @@ runtime_id.
 **Type**
 
 `(*, id: str, vertex_ids: tuple[int, ...], positions: tuple[Vec2, ...])`
+
+Replace positions for the selected mesh vertex IDs in paired order.
 
 Types: [Vec2].
 

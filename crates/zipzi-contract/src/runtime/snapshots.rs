@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiFields)]
+/// Position in one Runtime registry or Session event stream, used to resume bounded reads.
 pub struct EventCursor {
     /// Runtime instance identity; handles and cursors from another instance cannot be substituted.
     pub runtime: RuntimeInstanceId,

@@ -29,6 +29,7 @@
       "tuple": false
     },
     "zipzi_contract::model::Vec2": {
+      "doc": "Two coordinates whose units and space are defined by their containing value.",
       "fields": [
         {
           "default": null,

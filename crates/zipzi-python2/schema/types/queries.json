@@ -682,11 +682,13 @@
     },
     "zipzi_contract::runtime::CollectionQuery": {
       "content": null,
+      "doc": "Select a collection for a source-bound read; choosing a selector does not write or publish.",
       "kind": "serde_enum",
       "name": "zipzi_contract::runtime::CollectionQuery",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Read a selected scene collection.",
           "fields": [
             {
               "doc": "Explicit native collection selector; it does not imply loading every object payload.",
@@ -704,6 +706,7 @@
           "rust_name": "Scene"
         },
         {
+          "doc": "Read a selected organization collection.",
           "fields": [
             {
               "doc": "Explicit native collection selector; it does not imply loading every object payload.",
@@ -721,6 +724,7 @@
           "rust_name": "Organization"
         },
         {
+          "doc": "Read a selected reference collection.",
           "fields": [
             {
               "doc": "Explicit native collection selector; it does not imply loading every object payload.",
@@ -738,18 +742,21 @@
           "rust_name": "References"
         },
         {
+          "doc": "Read the resource collection.",
           "fields": [],
           "form": "unit",
           "name": "resources",
           "rust_name": "Resources"
         },
         {
+          "doc": "Read the package attachment collection.",
           "fields": [],
           "form": "unit",
           "name": "attachments",
           "rust_name": "Attachments"
         },
         {
+          "doc": "Read the collection selected by a document field.",
           "fields": [
             {
               "doc": "Explicit field discriminator; must match the addressed object/domain.",
@@ -767,6 +774,7 @@
           "rust_name": "Document"
         },
         {
+          "doc": "Read registrations in a motion container.",
           "fields": [
             {
               "doc": "Root or stable motion-group container for library registrations.",
@@ -784,24 +792,28 @@
           "rust_name": "Motion"
         },
         {
+          "doc": "Read motion registration groups.",
           "fields": [],
           "form": "unit",
           "name": "motion_groups",
           "rust_name": "MotionGroups"
         },
         {
+          "doc": "Read motion clips.",
           "fields": [],
           "form": "unit",
           "name": "clips",
           "rust_name": "Clips"
         },
         {
+          "doc": "Read expression assets.",
           "fields": [],
           "form": "unit",
           "name": "expressions",
           "rust_name": "Expressions"
         },
         {
+          "doc": "Read entries owned by one expression asset.",
           "fields": [
             {
               "doc": "Stable expression asset ID owning the entry collection.",
@@ -818,6 +830,7 @@
           "rust_name": "ExpressionEntries"
         },
         {
+          "doc": "Read a selected Physics collection.",
           "fields": [
             {
               "doc": "Native Physics group/input/output/node collection selector.",
@@ -835,6 +848,7 @@
           "rust_name": "Physics"
         },
         {
+          "doc": "Read a selected Pose collection.",
           "fields": [
             {
               "doc": "Native Pose group/entry/link collection selector.",

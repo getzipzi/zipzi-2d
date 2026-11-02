@@ -20,7 +20,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                             'kind': 'module',
                             'signature': ''},
  'zipzi.modeling.queries.CollectionQuery': {'children': (),
-                                            'documentation': '',
+                                            'documentation': 'Select a collection for a source-bound read; choosing a '
+                                                             'selector does not write or publish.',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'CollectionQueryScene | CollectionQueryOrganization | '
@@ -45,7 +46,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
                                                           'zipzi.modeling.queries.CollectionQueryScene')},
  'zipzi.modeling.queries.CollectionQueryAttachments': {'children': ('zipzi.modeling.queries.CollectionQueryAttachments.__repr__',
                                                                     'zipzi.modeling.queries.CollectionQueryAttachments.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Read the package attachment collection.',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -53,7 +54,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryAttachments.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryClips': {'children': ('zipzi.modeling.queries.CollectionQueryClips.__repr__',
                                                               'zipzi.modeling.queries.CollectionQueryClips.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Read motion clips.',
                                                  'fields': [],
                                                  'kind': 'type',
                                                  'signature': '()'},
@@ -61,7 +62,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryClips.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryDocument': {'children': ('zipzi.modeling.queries.CollectionQueryDocument.__repr__',
                                                                  'zipzi.modeling.queries.CollectionQueryDocument.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Read the collection selected by a document '
+                                                                     'field.',
                                                     'fields': [('field',
                                                                 'Explicit field discriminator; must match the '
                                                                 'addressed object/domain.')],
@@ -72,7 +74,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryDocument.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryExpressionEntries': {'children': ('zipzi.modeling.queries.CollectionQueryExpressionEntries.__repr__',
                                                                           'zipzi.modeling.queries.CollectionQueryExpressionEntries.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Read entries owned by one expression '
+                                                                              'asset.',
                                                              'fields': [('expression_id',
                                                                          'Stable expression asset ID owning the entry '
                                                                          'collection.')],
@@ -82,7 +85,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryExpressionEntries.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryExpressions': {'children': ('zipzi.modeling.queries.CollectionQueryExpressions.__repr__',
                                                                     'zipzi.modeling.queries.CollectionQueryExpressions.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Read expression assets.',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -90,7 +93,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryExpressions.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryMotion': {'children': ('zipzi.modeling.queries.CollectionQueryMotion.__repr__',
                                                                'zipzi.modeling.queries.CollectionQueryMotion.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Read registrations in a motion container.',
                                                   'fields': [('collection',
                                                               'Root or stable motion-group container for library '
                                                               'registrations.')],
@@ -101,7 +104,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryMotion.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryMotionGroups': {'children': ('zipzi.modeling.queries.CollectionQueryMotionGroups.__repr__',
                                                                      'zipzi.modeling.queries.CollectionQueryMotionGroups.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Read motion registration groups.',
                                                         'fields': [],
                                                         'kind': 'type',
                                                         'signature': '()'},
@@ -109,7 +112,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryMotionGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryOrganization': {'children': ('zipzi.modeling.queries.CollectionQueryOrganization.__repr__',
                                                                      'zipzi.modeling.queries.CollectionQueryOrganization.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Read a selected organization collection.',
                                                         'fields': [('collection',
                                                                     'Explicit native collection selector; it does not '
                                                                     'imply loading every object payload.')],
@@ -120,7 +123,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryPhysics': {'children': ('zipzi.modeling.queries.CollectionQueryPhysics.__repr__',
                                                                 'zipzi.modeling.queries.CollectionQueryPhysics.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Read a selected Physics collection.',
                                                    'fields': [('collection',
                                                                'Native Physics group/input/output/node collection '
                                                                'selector.')],
@@ -131,7 +134,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryPhysics.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryPose': {'children': ('zipzi.modeling.queries.CollectionQueryPose.__repr__',
                                                              'zipzi.modeling.queries.CollectionQueryPose.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Read a selected Pose collection.',
                                                 'fields': [('collection',
                                                             'Native Pose group/entry/link collection selector.')],
                                                 'kind': 'type',
@@ -141,7 +144,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryReferences': {'children': ('zipzi.modeling.queries.CollectionQueryReferences.__repr__',
                                                                    'zipzi.modeling.queries.CollectionQueryReferences.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Read a selected reference collection.',
                                                       'fields': [('collection',
                                                                   'Explicit native collection selector; it does not '
                                                                   'imply loading every object payload.')],
@@ -152,7 +155,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryResources': {'children': ('zipzi.modeling.queries.CollectionQueryResources.__repr__',
                                                                   'zipzi.modeling.queries.CollectionQueryResources.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Read the resource collection.',
                                                      'fields': [],
                                                      'kind': 'type',
                                                      'signature': '()'},
@@ -160,7 +163,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.queries': {'children': ('zipzi.modelin
  'zipzi.modeling.queries.CollectionQueryResources.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.queries.CollectionQueryScene': {'children': ('zipzi.modeling.queries.CollectionQueryScene.__repr__',
                                                               'zipzi.modeling.queries.CollectionQueryScene.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Read a selected scene collection.',
                                                  'fields': [('collection',
                                                              'Explicit native collection selector; it does not imply '
                                                              'loading every object payload.')],

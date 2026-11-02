@@ -511,3 +511,28 @@ create 返回 ID、rename/set_positions/patch 返回 WriteResult，显式 commit
 未运行全局 `--check-docs` 成功门禁、完整 SDK、隔离 checkout 构建接受测试或真实 Editor/GPU 门禁；
 本批复用既有 exporter，针对修改运行生成、contract、CPU 行为与离线检查。
 全局摘要、分支、callable 和剩余未解析类型继续由 P1–P8 处理；Editor/GPU 的领域验收仍留在 P7/P8。
+
+## 11. P1 中间记录：公共类型和命令/查询摘要（2026-11-02）
+
+状态：**未完成 P1**。本次只完成摘要及部分分支来源补充；结构与语义均尚未整体验收，
+不能把摘要为零当作领域完成。P2–P8 尚未开始。
+
+范围为 P1 的 10 个分片，重点检查 `ModelingCommand`、`CollectionQuery` 各分支、
+事件投影及其订阅、Buffer、Resources、EditState、JobState、RecoveryAction、
+PlanCost/PlanReport、运行时能力和 EditorContext。Rust contract 的对应声明维护类型与分支说明；
+Python 入口维护生命周期和投影说明，事件 DTO 生成器直接使用 contract 分支注释。
+本次未更改运行时行为。资源和计划交互仍须在 P3/P4 复核。
+
+生成报告中 P1 范围缺失摘要 95 → 0，全局缺失 879 → 784；P1 union 分支缺失诊断
+136 → 0，稳定债务键只移除已解决项，无新增项。仍有 EditState 的 7 个成员缺失诊断和
+6 个类型引用诊断；callable、事件保留窗口及无跨 Session 全序、恢复和生命周期的完整语义
+仍须逐项审阅。原有 meshes 门禁继续执行。不能将自动非空检查视作人工语义验收。
+
+相同 10 页公开标题均为 306 个，正文字符数 158,742 → 164,812；增加来自补充各分支和
+类型的用途，公共规则结构未改变。这里没有声称总体去重或完成 P1 阅读验收。
+离线帮助的全面人工审阅、发现与恢复的额外行为用例仍待执行。
+
+已运行生成及无缓存一致性检查、reference tooling 门禁、`cargo test --locked -p zipzi-contract`，
+以及 `./tools/test-sdk.sh python2 PythonSdk.test_event_subscriptions_are_paged_immutable_independent_and_source_exact`；
+后者通过 Local/Connected 行为与静态类型检查。新来源链路用例覆盖事件投影、查询和命令分支。
+后续应先解决剩余诊断并完成 P1 全部阅读问题和行为证据，再登记已验收范围。

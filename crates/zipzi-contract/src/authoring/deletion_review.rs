@@ -68,6 +68,7 @@ pub struct DeletionSummary {
 crate::api_record! {
 #[derive(Debug, Clone, Serialize)]
 #[derive(zipzi_api_derive::BinaryOutput)]
+/// Frozen summary of a planned modeling operation, including predicted effects and losses.
 pub struct ModelingPlanReport {
     /// Exact SDK version captured for this value; not a best-effort latest-version marker.
     pub version: Version,

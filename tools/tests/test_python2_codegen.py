@@ -1012,6 +1012,18 @@ class PythonReference(unittest.TestCase):
         self.assertIn('fixed-discriminator',create['rule_refs'])
         self.assertIn('persistent',dict(self.catalog['zipzi.modeling.spatial.ObjectTargetMesh']['fields'])['value'].lower())
 
+    def test_reference_runtime_query_and_event_sources(self):
+        # Contract variant descriptions reach both the projected docstring and
+        # its catalog/reference consumers; the event remains a distinct type.
+        event = self.catalog['zipzi.events.Published']
+        self.assertIn('candidate was published', event['documentation'])
+        self.assertIn('candidate was published', self.output['client/python/zipzi/_generated/event_values.py'])
+        self.assertIn('candidate was published', self.output['client/python/zipzi/docs/reference/events.md'])
+        query = self.catalog['zipzi.modeling.queries.CollectionQueryExpressionEntries']
+        self.assertIn('expression asset', query['documentation'])
+        command = self.catalog['zipzi.modeling.commands.ModelingCommandManualMesh']
+        self.assertIn('source-checked', command['documentation'])
+
     def test_reference_missing_branches_and_unknown_sdk_types_are_diagnosed(self):
         contract=gen.schema.read(PACKAGE/'schema/authoring.json')
         contract['definitions']['zipzi_contract::model::MeshConstraintKind']['variants'][0]['doc']=''

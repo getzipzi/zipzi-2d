@@ -93,10 +93,12 @@ class _Subscription(RecoveryOwner, Generic[T]):
         return self._request("poll", lambda: self._backend.events(cursor, limit, self), decode)
 
 class SessionSubscription(_Subscription[SessionInfo]):
+    """Independent cursor and initial metadata for one Session event stream."""
     def __init__(self, backend: "Backend", token: object, id: SessionId):
         super().__init__(backend, token, id, lambda raw: SessionInfo._read(record(raw)["info"]))
 
 class RegistrySubscription(_Subscription[tuple[SessionInfo, ...]]):
+    """Independent cursor and initial Session list for the Runtime registry stream."""
     def __init__(self, backend: "Backend"):
         super().__init__(backend, None, None, lambda raw: tuple(SessionInfo._read(item) for item in sequence(record(raw)["sessions"])))
 

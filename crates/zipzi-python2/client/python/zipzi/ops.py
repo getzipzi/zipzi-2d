@@ -8,6 +8,8 @@ Operation: _TypeAlias = (_meshes.Create | _meshes.Rename | _meshes.SetPositions 
     _parameters.Create | _parameters.Patch | _bindings.Create | _bindings.SetKeyform |
     _resources.CreateImage | _resources.ReplaceImage | _resources.RenameImage |
     _scene.Operation | _modeling.ModelingCommand)
+"""Candidate write input: select a domain operation or a canonical modeling command; execution and publication are separate."""
 PlannableOperation: _TypeAlias = _meshes.Rename | _resources.RenameImage | _scene.Operation | _ModelingPlanOperation
+"""Operations accepted for planning; inspect the source-bound plan before applying it."""
 
 __all__ = ['Operation', 'PlannableOperation']

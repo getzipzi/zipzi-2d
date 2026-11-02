@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "ae024dd9c14f68b4d0ddd012c5fd422266862e8d3b8a9224865a5529152e9bdf",
+  "contract_sha256": "d4ad04418cbe498752ad62cf238600e45d107aa01ce707e9a93e84431ed0bb38",
   "format_version": 2,
   "root": {
     "binary": {
@@ -745,11 +745,11 @@
     },
     {
       "path": "types/commands.json",
-      "sha256": "1874b6d01a6883e72f6e52faf5461eed62605a11125874058751ecfef22f58c4"
+      "sha256": "250a10becdf0a3e317afed34e92eaff69732e98d50da0ecb3277ea6699467a91"
     },
     {
       "path": "types/common.json",
-      "sha256": "5978595d2cb9e8f904dbc0bfdc6226b3275bac59448600a5cce75c9ee62e0579"
+      "sha256": "ea6aeee3df68d42721729441991d08b8e4b7337c8287629cfb4e742fbb6a0629"
     },
     {
       "path": "types/deletion.json",
@@ -797,7 +797,7 @@
     },
     {
       "path": "types/queries.json",
-      "sha256": "bbcec911e52492ff97a189de5aa757d2730f13d23f540a2059a7cd51b9dad996"
+      "sha256": "49c764ab110e31ffaef7c4d6ad1279cf61004c925d456032c1737a9957ee2091"
     },
     {
       "path": "types/resources.json",
@@ -805,7 +805,7 @@
     },
     {
       "path": "types/runtime.json",
-      "sha256": "101b526d5e27dcd01793baa5ee6472cbb69e863eddc84226bb07ac098c092228"
+      "sha256": "7dcde8ea66d238d22efccf1a35e58cedd6476e60be830fee3ccca25b8fd783dc"
     },
     {
       "path": "types/sampling.json",

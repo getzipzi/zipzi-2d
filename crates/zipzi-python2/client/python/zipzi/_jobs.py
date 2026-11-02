@@ -16,6 +16,7 @@ else:
 T=TypeVar('T')
 
 JobState = Literal["queued", "running", "cancelling", "succeeded", "failed", "cancelled"]
+"""Observed Job lifecycle: queued and running are pending, cancelling requests cancellation; succeeded, failed and cancelled are terminal."""
 
 class Job(RecoveryOwner, Generic[T]):
     """Owned accepted work returned by submit/commit/IO calls; use those factories.

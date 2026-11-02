@@ -109,6 +109,7 @@ pub struct ObjectSummary {
 }
 
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::ApiShape)]
+/// Host capabilities observed at discovery; availability can change before a later operation.
 pub struct RuntimeCapabilities {
     /// Finite domain names supported by this host; absence means the domain is unavailable.
     pub domains: Vec<String>,

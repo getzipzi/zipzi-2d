@@ -10,7 +10,7 @@ Point = tuple[float, float]
 
 @dataclass(frozen=True, init=False, repr=False)
 class Cursor(CompactValue):
-    '\n\nFields:\nruntime: Runtime instance identity; handles and cursors from another instance cannot be substituted.\nsession: None is the registry stream; it has no cross-session ordering guarantee.\nsequence: Monotonic sequence within the selected registry or Session stream; no cross-stream\nordering is implied.'
+    'Position in one Runtime registry or Session event stream, used to resume bounded reads.\n\nFields:\nruntime: Runtime instance identity; handles and cursors from another instance cannot be substituted.\nsession: None is the registry stream; it has no cross-session ordering guarantee.\nsequence: Monotonic sequence within the selected registry or Session stream; no cross-stream\nordering is implied.'
     __module__ = "zipzi.events"
     runtime: str
     session: SessionId | None
@@ -44,7 +44,7 @@ def encode_Cursor(value: Cursor) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Origin(CompactValue):
-    '\n\nFields:\nruntime: Runtime instance that allocated this handle; handles are invalid across instances.\nserial: Runtime-allocated serial, meaningful only together with the instance and handle kind.'
+    'Handle identity scoped to one Runtime instance and handle kind.\n\nFields:\nruntime: Runtime instance that allocated this handle; handles are invalid across instances.\nserial: Runtime-allocated serial, meaningful only together with the instance and handle kind.'
     __module__ = "zipzi.events"
     runtime: str
     serial: int
@@ -72,7 +72,7 @@ def encode_Origin(value: Origin) -> dict[str, object]:
 
 @dataclass(frozen=True, init=False, repr=False)
 class Published(CompactValue):
-    '\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\nreceipt: Confirmed edit publication receipt, including before/after versions and changes.'
+    'A candidate was published to the Session document.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\nreceipt: Confirmed edit publication receipt, including before/after versions and changes.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['published']] = 'published'
     cursor: Cursor
@@ -95,7 +95,7 @@ class Published(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Saved(CompactValue):
-    '\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\nreceipt: Save receipt with persistence paths, warnings and durability status.'
+    'A Session save completed with a persistence receipt.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\nreceipt: Save receipt with persistence paths, warnings and durability status.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['saved']] = 'saved'
     cursor: Cursor
@@ -118,7 +118,7 @@ class Saved(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class StateChanged(CompactValue):
-    '\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Session metadata captured at this lifecycle state transition.'
+    'A Session lifecycle state changed.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Session metadata captured at this lifecycle state transition.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['state_changed']] = 'state_changed'
     cursor: Cursor
@@ -141,7 +141,7 @@ class StateChanged(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Created(CompactValue):
-    '\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Session metadata captured when the Session was created.'
+    'A Session was created in the Runtime registry.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Session metadata captured when the Session was created.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['created']] = 'created'
     cursor: Cursor
@@ -164,7 +164,7 @@ class Created(CompactValue):
 
 @dataclass(frozen=True, init=False, repr=False)
 class Closed(CompactValue):
-    '\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Final Session metadata captured when the document closed.'
+    'A Session was closed in the Runtime registry.\n\nFields:\ncursor: Exact event-stream position captured for this event; cursors are scoped to Runtime and\nstream.\nclient: Originating client identity; None means no client was attributed to the event.\njob: Related Job identity; None means this event has no associated Job.\noperation: Runtime operation identity used to correlate a published event with its original operation.\ninfo: Final Session metadata captured when the document closed.'
     __module__ = "zipzi.events"
     kind: ClassVar[Literal['closed']] = 'closed'
     cursor: Cursor
@@ -186,6 +186,7 @@ class Closed(CompactValue):
         return cls(cursor=_external(_get(value, 'cursor'), Cursor, Cursor._read), client=None if _get(value, 'client') is None else _external(_get(value, 'client'), Origin, Origin._read), job=None if _get(value, 'job') is None else _external(_get(value, 'job'), Origin, Origin._read), operation=_external(_get(value, 'operation'), Origin, Origin._read), info=_external(_get(value, 'info'), SessionInfo, SessionInfo._read))
 
 Event: TypeAlias = Published | Saved | StateChanged | Created | Closed
+'One event from a Runtime registry or Session stream; its variant identifies the captured payload.'
 
 def read_event(value: object) -> Event:
     kind = _text(_get(value, "kind"))

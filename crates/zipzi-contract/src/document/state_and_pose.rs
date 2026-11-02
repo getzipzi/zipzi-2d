@@ -39,6 +39,7 @@ impl EditorState {
 crate::api_record! {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[derive(zipzi_api_derive::BinaryOutput)]
+/// Estimated work and storage for a planned conversion; estimates are not an admission guarantee.
 pub struct ConversionCost {
     /// Number of shape-sample combinations the conversion must process.
     pub sample_combinations: usize,

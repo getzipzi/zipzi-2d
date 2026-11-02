@@ -150,7 +150,7 @@ OwnedModelingRecords.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryScene(CompactValue):
-    '\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
+    'Read a selected scene collection.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'scene'
     collection: SceneCollection
 
@@ -158,7 +158,7 @@ CollectionQueryScene.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryOrganization(CompactValue):
-    '\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
+    'Read a selected organization collection.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'organization'
     collection: OrganizationCollection
 
@@ -166,7 +166,7 @@ CollectionQueryOrganization.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryReferences(CompactValue):
-    '\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
+    'Read a selected reference collection.\n\nFields:\ncollection: Explicit native collection selector; it does not imply loading every object payload.'
     _variant: _ClassVar[str] = 'references'
     collection: ReferenceCollection
 
@@ -174,21 +174,21 @@ CollectionQueryReferences.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryResources(CompactValue):
-    ''
+    'Read the resource collection.'
     _variant: _ClassVar[str] = 'resources'
 
 CollectionQueryResources.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryAttachments(CompactValue):
-    ''
+    'Read the package attachment collection.'
     _variant: _ClassVar[str] = 'attachments'
 
 CollectionQueryAttachments.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryDocument(CompactValue):
-    '\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
+    'Read the collection selected by a document field.\n\nFields:\nfield: Explicit field discriminator; must match the addressed object/domain.'
     _variant: _ClassVar[str] = 'document'
     field: DocumentField
 
@@ -196,7 +196,7 @@ CollectionQueryDocument.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryMotion(CompactValue):
-    '\n\nFields:\ncollection: Root or stable motion-group container for library registrations.'
+    'Read registrations in a motion container.\n\nFields:\ncollection: Root or stable motion-group container for library registrations.'
     _variant: _ClassVar[str] = 'motion'
     collection: MotionContainer
 
@@ -204,28 +204,28 @@ CollectionQueryMotion.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryMotionGroups(CompactValue):
-    ''
+    'Read motion registration groups.'
     _variant: _ClassVar[str] = 'motion_groups'
 
 CollectionQueryMotionGroups.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryClips(CompactValue):
-    ''
+    'Read motion clips.'
     _variant: _ClassVar[str] = 'clips'
 
 CollectionQueryClips.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryExpressions(CompactValue):
-    ''
+    'Read expression assets.'
     _variant: _ClassVar[str] = 'expressions'
 
 CollectionQueryExpressions.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryExpressionEntries(CompactValue):
-    '\n\nFields:\nexpression_id: Stable expression asset ID owning the entry collection.'
+    'Read entries owned by one expression asset.\n\nFields:\nexpression_id: Stable expression asset ID owning the entry collection.'
     _variant: _ClassVar[str] = 'expression_entries'
     expression_id: str
 
@@ -233,7 +233,7 @@ CollectionQueryExpressionEntries.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryPhysics(CompactValue):
-    '\n\nFields:\ncollection: Native Physics group/input/output/node collection selector.'
+    'Read a selected Physics collection.\n\nFields:\ncollection: Native Physics group/input/output/node collection selector.'
     _variant: _ClassVar[str] = 'physics'
     collection: PhysicsCollection
 
@@ -241,7 +241,7 @@ CollectionQueryPhysics.__module__ = "zipzi.modeling.queries"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class CollectionQueryPose(CompactValue):
-    '\n\nFields:\ncollection: Native Pose group/entry/link collection selector.'
+    'Read a selected Pose collection.\n\nFields:\ncollection: Native Pose group/entry/link collection selector.'
     _variant: _ClassVar[str] = 'pose'
     collection: PoseCollection
 

@@ -11,7 +11,7 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Module**
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 74fc19a3f04c7d2f34bcdefc4e14b0dd267cb2012db4f07763ce18f186b61e2c.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 6eb2a6859acd0800919151f2eabdd9a4a637116a7c3d59033355284dd220fd36.
 
 
 ## zipzi.ApiDescription
@@ -69,6 +69,10 @@ Types: [Source](#zipzisource).
 **Type**
 
 `(factory-owned; use the documented public entry)`
+
+Client-owned immutable host bytes, reusable across requests until closed.
+
+Create through Runtime; close the Buffer after use to release its host lease.
 
 
 ## zipzi.Buffer.__enter__
@@ -185,6 +189,8 @@ Handshake limits reported by the connected host; values are facts, not client-si
 
 **Enum**
 
+Lifecycle of an Edit candidate and its separate commit outcome.
+
 **Members**
 
 - `editing`: 'editing'
@@ -287,6 +293,8 @@ A pending cancel/status request must be recovered before waiting.
 **Alias**
 
 `Literal['queued', 'running', 'cancelling', 'succeeded', 'failed', 'cancelled']`
+
+Observed Job lifecycle: queued and running are pending, cancelling requests cancellation; succeeded, failed and cancelled are terminal.
 
 
 ## zipzi.JobTimeout
@@ -464,6 +472,8 @@ Types: [PlanReport](#zipziplanreport).
 
 `(sample_combinations: int, payload_bytes: int, temporary_bytes: int, history_bytes: int)`
 
+Estimated work and storage for a planned conversion; estimates are not an admission guarantee.
+
 **Fields**
 
 - `sample_combinations`: Number of shape-sample combinations the conversion must process.
@@ -476,6 +486,8 @@ Types: [PlanReport](#zipziplanreport).
 **Type**
 
 `(source: Source, version: Version, affected_ids: tuple[str, ...], copied_ids: tuple[tuple[str, str], ...], cost: PlanCost | None, losses: tuple[str, ...], no_op: bool | None, deletion: modeling.DeletionSummary | None)`
+
+Frozen summary of a planned modeling operation, including predicted effects and losses.
 
 Types: [PlanCost](#zipziplancost), [Source](#zipzisource), [Version](#zipziversion), [DeletionSummary].
 
@@ -582,6 +594,8 @@ Types: [Version](#zipziversion).
 
 `Literal['retry', 'reduce_request', 'release_resources', 'recover_original', 'restart_edit', 'refresh_source', 'resync', 'wait_job', 'stop']`
 
+Suggested next step for a failure, derived from its code, Edit state and limit; recover_original and wait_job retain the original work rather than replaying it.
+
 
 ## zipzi.Runtime
 
@@ -679,6 +693,8 @@ Types: [RuntimeLimits](#zipziruntimelimits).
 **Property**
 
 `runtime.resources`
+
+Runtime resource preparation entry point; prepared images have independent leases.
 
 
 ## zipzi.Runtime.resources.load_png
@@ -818,6 +834,8 @@ Types: [RegistrySubscription].
 **Type**
 
 `(domains: tuple[str, ...], pagination: bool, source_checked_reads: bool, session_close: bool, binary_arrays: bool, editor_windows: bool, gpu: bool | None, gpu_backend: str, gpu_error: str | None)`
+
+Host capabilities observed at discovery; availability can change before a later operation.
 
 **Fields**
 

@@ -299,6 +299,8 @@ Types: [WriteResult], [Point].
 
 `edit.modeling`
 
+Typed modeling operations bound to this Session or Edit source.
+
 Types: [Edit](#zipziedit), [Session].
 
 

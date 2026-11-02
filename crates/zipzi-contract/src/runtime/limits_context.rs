@@ -122,6 +122,7 @@ impl Default for RuntimeLimits {
 }
 
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
+/// Editor view and selection captured at a particular document version.
 pub struct EditorContext {
     /// Exact SDK version captured for this value; not a best-effort latest-version marker.
     pub version: crate::authoring::Version,

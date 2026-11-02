@@ -90,6 +90,7 @@ class ImageLease(PreparedImage):
         super().__enter__();return self
 
 class Resources:
+    """Runtime resource preparation entry point; prepared images have independent leases."""
     def __init__(self, backend: Backend):
         self._backend = backend
 

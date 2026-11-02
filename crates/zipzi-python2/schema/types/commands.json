@@ -235,6 +235,7 @@
       ]
     },
     "zipzi_contract::authoring::ModelingPlanReport": {
+      "doc": "Frozen summary of a planned modeling operation, including predicted effects and losses.",
       "fields": [
         {
           "default": null,
@@ -325,6 +326,7 @@
       "name": "zipzi_contract::authoring::ModelingPlanReport"
     },
     "zipzi_contract::document::ConversionCost": {
+      "doc": "Estimated work and storage for a planned conversion; estimates are not an admission guarantee.",
       "fields": [
         {
           "default": null,
@@ -363,6 +365,7 @@
       "name": "zipzi_contract::document::ConversionCost"
     },
     "zipzi_contract::document::ConversionDomain": {
+      "doc": "Parameter range captured for a binding conversion or reparenting plan.",
       "fields": [
         {
           "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -399,11 +402,13 @@
     },
     "zipzi_contract::runtime::ModelingCommand": {
       "content": null,
+      "doc": "A typed candidate mutation; select the variant for the operation and submit it through an Edit.\nConstructing a command neither changes the candidate nor publishes it.",
       "kind": "serde_enum",
       "name": "zipzi_contract::runtime::ModelingCommand",
       "tag": "op",
       "variants": [
         {
+          "doc": "Create an image asset from its complete record.",
           "fields": [
             {
               "doc": "Complete asset record to create with native identity validation; this DTO alone does\nnot publish.",
@@ -421,6 +426,7 @@
           "rust_name": "CreateAsset"
         },
         {
+          "doc": "Replace an existing image asset with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete asset record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -438,6 +444,7 @@
           "rust_name": "ReplaceAsset"
         },
         {
+          "doc": "Create a mesh from its complete record.",
           "fields": [
             {
               "doc": "Complete mesh record to create with native identity validation; this DTO alone does\nnot publish.",
@@ -455,6 +462,7 @@
           "rust_name": "CreateMesh"
         },
         {
+          "doc": "Replace an existing mesh with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete mesh record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -472,6 +480,7 @@
           "rust_name": "ReplaceMesh"
         },
         {
+          "doc": "Create a parameter from its complete record.",
           "fields": [
             {
               "doc": "Complete parameter record to create with native identity validation; this DTO alone\ndoes not publish.",
@@ -489,6 +498,7 @@
           "rust_name": "CreateParameter"
         },
         {
+          "doc": "Replace an existing parameter with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete parameter record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -506,6 +516,7 @@
           "rust_name": "ReplaceParameter"
         },
         {
+          "doc": "Create a Part from its complete record.",
           "fields": [
             {
               "doc": "Complete part record to create with native identity validation; this DTO alone does\nnot publish.",
@@ -523,6 +534,7 @@
           "rust_name": "CreatePart"
         },
         {
+          "doc": "Replace an existing Part with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete part record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -540,6 +552,7 @@
           "rust_name": "ReplacePart"
         },
         {
+          "doc": "Create a deformation transform from its complete record.",
           "fields": [
             {
               "doc": "Complete transform record to create with native identity validation; this DTO alone\ndoes not publish.",
@@ -557,6 +570,7 @@
           "rust_name": "CreateTransform"
         },
         {
+          "doc": "Replace an existing deformation transform with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete transform record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -574,6 +588,7 @@
           "rust_name": "ReplaceTransform"
         },
         {
+          "doc": "Create a mesh binding from its complete record.",
           "fields": [
             {
               "doc": "Complete binding record to create with native identity validation; this DTO alone\ndoes not publish.",
@@ -591,6 +606,7 @@
           "rust_name": "CreateBinding"
         },
         {
+          "doc": "Replace an existing mesh binding with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete binding record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -608,6 +624,7 @@
           "rust_name": "ReplaceBinding"
         },
         {
+          "doc": "Create a scene binding from its complete record.",
           "fields": [
             {
               "doc": "Complete scene binding record to create with native identity validation; this DTO\nalone does not publish.",
@@ -625,6 +642,7 @@
           "rust_name": "CreateSceneBinding"
         },
         {
+          "doc": "Replace an existing scene binding with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete scene binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
@@ -642,6 +660,7 @@
           "rust_name": "ReplaceSceneBinding"
         },
         {
+          "doc": "Create a blend key table from its complete record.",
           "fields": [
             {
               "doc": "Complete blend key table record to create with native identity validation; this DTO\nalone does not publish.",
@@ -659,6 +678,7 @@
           "rust_name": "CreateBlendKeyTable"
         },
         {
+          "doc": "Replace an existing blend key table with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete blend key table record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
@@ -676,6 +696,7 @@
           "rust_name": "ReplaceBlendKeyTable"
         },
         {
+          "doc": "Create a blend constraint from its complete record.",
           "fields": [
             {
               "doc": "Complete blend constraint record to create with native identity validation; this DTO\nalone does not publish.",
@@ -693,6 +714,7 @@
           "rust_name": "CreateBlendConstraint"
         },
         {
+          "doc": "Replace an existing blend constraint with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete blend constraint record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
@@ -710,6 +732,7 @@
           "rust_name": "ReplaceBlendConstraint"
         },
         {
+          "doc": "Create a blend binding from its complete record.",
           "fields": [
             {
               "doc": "Complete blend binding record to create with native identity validation; this DTO\nalone does not publish.",
@@ -727,6 +750,7 @@
           "rust_name": "CreateBlendBinding"
         },
         {
+          "doc": "Replace an existing blend binding with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete blend binding record to replace the existing object while preserving its\nstable identity; this DTO alone does not publish.",
@@ -744,6 +768,7 @@
           "rust_name": "ReplaceBlendBinding"
         },
         {
+          "doc": "Create a Glue from its complete record.",
           "fields": [
             {
               "doc": "Complete glue record to create with native identity validation; this DTO alone does\nnot publish.",
@@ -761,6 +786,7 @@
           "rust_name": "CreateGlue"
         },
         {
+          "doc": "Replace an existing Glue with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete glue record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -778,6 +804,7 @@
           "rust_name": "ReplaceGlue"
         },
         {
+          "doc": "Create an Offscreen from its complete record.",
           "fields": [
             {
               "doc": "Complete offscreen record to create with native identity validation; this DTO alone\ndoes not publish.",
@@ -795,6 +822,7 @@
           "rust_name": "CreateOffscreen"
         },
         {
+          "doc": "Replace an existing Offscreen with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete offscreen record to replace the existing object while preserving its stable\nidentity; this DTO alone does not publish.",
@@ -812,6 +840,7 @@
           "rust_name": "ReplaceOffscreen"
         },
         {
+          "doc": "Request dependency-aware deletion; plan first to inspect the required decisions.",
           "fields": [
             {
               "doc": "Dependency-cleaning deletion request; plan first to inspect choices and bounded report pages.",
@@ -829,6 +858,7 @@
           "rust_name": "Deletion"
         },
         {
+          "doc": "Apply a scene-domain edit to the candidate.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -846,6 +876,7 @@
           "rust_name": "Scene"
         },
         {
+          "doc": "Apply an organization and hierarchy edit to the candidate.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -863,6 +894,7 @@
           "rust_name": "Organization"
         },
         {
+          "doc": "Apply a binding authoring edit to the candidate.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -880,6 +912,7 @@
           "rust_name": "Binding"
         },
         {
+          "doc": "Apply an edit to scene content.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -897,6 +930,7 @@
           "rust_name": "Content"
         },
         {
+          "doc": "Apply a document reference edit.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -914,6 +948,7 @@
           "rust_name": "References"
         },
         {
+          "doc": "Apply an edit to document resources.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -931,6 +966,7 @@
           "rust_name": "Resource"
         },
         {
+          "doc": "Apply a document-level authoring edit.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -948,6 +984,7 @@
           "rust_name": "Document"
         },
         {
+          "doc": "Apply a package attachment edit.",
           "fields": [
             {
               "doc": "Typed domain edit executed against the candidate; constructing this intent does not\nmutate or publish.",
@@ -965,6 +1002,7 @@
           "rust_name": "Attachment"
         },
         {
+          "doc": "Edit motion library, track, key or event data.",
           "fields": [
             {
               "doc": "Motion library/track/key/event intent; use a Plan or apply to an Edit.",
@@ -982,6 +1020,7 @@
           "rust_name": "Motion"
         },
         {
+          "doc": "Edit expression assets or entries.",
           "fields": [
             {
               "doc": "Expression asset/entry intent, validated by the shared SDK planner.",
@@ -999,6 +1038,7 @@
           "rust_name": "Expression"
         },
         {
+          "doc": "Edit Physics rig, rows or nodes.",
           "fields": [
             {
               "doc": "Physics rig/row/node intent with native ownership and reference checks.",
@@ -1016,6 +1056,7 @@
           "rust_name": "Physics"
         },
         {
+          "doc": "Edit Pose singleton, groups, entries or links.",
           "fields": [
             {
               "doc": "Pose singleton/group/entry/link intent, independent of playback state.",
@@ -1033,6 +1074,7 @@
           "rust_name": "Pose"
         },
         {
+          "doc": "Create a motion clip from its complete record.",
           "fields": [
             {
               "doc": "Complete owned clip with stable track/key/event identities.",
@@ -1050,6 +1092,7 @@
           "rust_name": "CreateMotion"
         },
         {
+          "doc": "Replace an existing motion clip with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete replacement clip preserving its stable object ID.",
@@ -1067,6 +1110,7 @@
           "rust_name": "ReplaceMotion"
         },
         {
+          "doc": "Create an expression asset from its complete record.",
           "fields": [
             {
               "doc": "Complete expression asset with ordered owned entries.",
@@ -1084,6 +1128,7 @@
           "rust_name": "CreateExpression"
         },
         {
+          "doc": "Replace an existing expression asset with a complete record preserving its identity.",
           "fields": [
             {
               "doc": "Complete replacement expression preserving its object ID.",
@@ -1101,6 +1146,7 @@
           "rust_name": "ReplaceExpression"
         },
         {
+          "doc": "Replace the Physics singleton with the supplied rig data.",
           "fields": [
             {
               "doc": "Complete Physics singleton and ordered rig data.",
@@ -1118,6 +1164,7 @@
           "rust_name": "SetPhysics"
         },
         {
+          "doc": "Replace the Pose singleton with the supplied data.",
           "fields": [
             {
               "doc": "Complete Pose singleton and owned part/link references.",
@@ -1135,6 +1182,7 @@
           "rust_name": "SetPose"
         },
         {
+          "doc": "Replace model canvas and export-frame configuration.",
           "fields": [
             {
               "doc": "Model source-canvas and export-frame configuration.",
@@ -1152,6 +1200,7 @@
           "rust_name": "ReplaceModelSetup"
         },
         {
+          "doc": "Replace organization and deformation palette ordering.",
           "fields": [
             {
               "doc": "Replacement organization/deformation palette order; not runtime draw order.",
@@ -1169,6 +1218,7 @@
           "rust_name": "ReplaceHierarchyOrder"
         },
         {
+          "doc": "Replace Editor visibility and lock metadata.",
           "fields": [
             {
               "doc": "Complete Editor visibility/lock metadata to replace.",
@@ -1186,6 +1236,7 @@
           "rust_name": "ReplaceEditorState"
         },
         {
+          "doc": "Replace the complete draw-order group list.",
           "fields": [
             {
               "doc": "Complete drawing-order group list; native validation checks root/owner membership\nand ranges. This is a required list, not an optional grouping override.",
@@ -1206,6 +1257,7 @@
           "rust_name": "ReplaceDrawOrderGroups"
         },
         {
+          "doc": "Erase the object identified by its stable document ID.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1222,6 +1274,7 @@
           "rust_name": "EraseObject"
         },
         {
+          "doc": "Change the display name of an existing mesh.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1247,6 +1300,7 @@
           "rust_name": "RenameMesh"
         },
         {
+          "doc": "Replace positions for the selected mesh vertex IDs in paired order.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1288,6 +1342,7 @@
           "rust_name": "UpdatePositions"
         },
         {
+          "doc": "Insert or replace one mesh shape sample.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1314,6 +1369,7 @@
           "rust_name": "SetMeshKeyform"
         },
         {
+          "doc": "Insert or replace one scene shape sample.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1340,6 +1396,7 @@
           "rust_name": "SetSceneKeyform"
         },
         {
+          "doc": "Regenerate a mesh using the requested rectangular grid.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1374,6 +1431,7 @@
           "rust_name": "RemeshRectangleGrid"
         },
         {
+          "doc": "Apply a coordinated topology replacement against its captured geometry source.",
           "fields": [
             {
               "doc": "Exact geometry snapshot the topology replacement was planned against; stale source\nversions are rejected.",
@@ -1401,6 +1459,7 @@
           "rust_name": "ReplaceTopology"
         },
         {
+          "doc": "Apply one source-checked manual UV topology operation.",
           "fields": [
             {
               "doc": "Stable mesh UUID whose editable UV triangulation is changed.",

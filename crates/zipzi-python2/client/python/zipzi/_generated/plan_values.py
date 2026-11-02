@@ -13,7 +13,7 @@ def _boolean(value: object) -> bool:
 
 @dataclass(frozen=True, repr=False)
 class PlanCost(CompactValue):
-    "\n\nFields:\nsample_combinations: Number of shape-sample combinations the conversion must process.\npayload_bytes: Estimated owned result payload in bytes; not total process RSS.\ntemporary_bytes: Estimated temporary working storage in bytes; not total process RSS.\nhistory_bytes: Includes the SDK's complete previous checkpoint and new candidate."
+    "Estimated work and storage for a planned conversion; estimates are not an admission guarantee.\n\nFields:\nsample_combinations: Number of shape-sample combinations the conversion must process.\npayload_bytes: Estimated owned result payload in bytes; not total process RSS.\ntemporary_bytes: Estimated temporary working storage in bytes; not total process RSS.\nhistory_bytes: Includes the SDK's complete previous checkpoint and new candidate."
     __module__ = "zipzi"
     sample_combinations: int
     payload_bytes: int
@@ -27,7 +27,7 @@ class PlanCost(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class PlanReport(CompactValue):
-    '\n\nFields:\nsource: Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\naffected_ids: Stable IDs conservatively affected by the planned operation.\ncopied_ids: Mapping from original object IDs to the new IDs allocated for copied objects.\ncost: Native plan cost estimates; inspect losses separately before applying the plan.\nlosses: Explicit semantic losses predicted by conversion; empty means no losses were reported.\nno_op: Whether applying the plan would leave the document unchanged.\ndeletion: Bounded deletion readiness/count summary; detailed rows use frozen report pages.'
+    'Frozen summary of a planned modeling operation, including predicted effects and losses.\n\nFields:\nsource: Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.\nversion: Exact SDK version captured for this value; not a best-effort latest-version marker.\naffected_ids: Stable IDs conservatively affected by the planned operation.\ncopied_ids: Mapping from original object IDs to the new IDs allocated for copied objects.\ncost: Native plan cost estimates; inspect losses separately before applying the plan.\nlosses: Explicit semantic losses predicted by conversion; empty means no losses were reported.\nno_op: Whether applying the plan would leave the document unchanged.\ndeletion: Bounded deletion readiness/count summary; detailed rows use frozen report pages.'
     __module__ = "zipzi"
     source: Source
     version: Version

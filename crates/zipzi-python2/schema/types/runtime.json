@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::runtime::ClientId": {
+      "doc": "Handle identity scoped to one Runtime instance and handle kind.",
       "fields": [
         {
           "doc": "Runtime instance that allocated this handle; handles are invalid across instances.",
@@ -32,6 +33,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::EditorContext": {
+      "doc": "Editor view and selection captured at a particular document version.",
       "fields": [
         {
           "doc": "Exact SDK version captured for this value; not a best-effort latest-version marker.",
@@ -108,6 +110,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::EventCursor": {
+      "doc": "Position in one Runtime registry or Session event stream, used to resume bounded reads.",
       "fields": [
         {
           "doc": "Runtime instance identity; handles and cursors from another instance cannot be substituted.",
@@ -155,6 +158,7 @@
       "tag": null,
       "variants": [
         {
+          "doc": "A candidate was published to the Session document.",
           "fields": [
             {
               "doc": "Confirmed edit publication receipt, including before/after versions and changes.",
@@ -173,6 +177,7 @@
           "rust_name": "Published"
         },
         {
+          "doc": "A Session save completed with a persistence receipt.",
           "fields": [
             {
               "doc": "Save receipt with persistence paths, warnings and durability status.",
@@ -191,6 +196,7 @@
           "rust_name": "Saved"
         },
         {
+          "doc": "A Session lifecycle state changed.",
           "fields": [
             {
               "doc": "Session metadata captured at this lifecycle state transition.",
@@ -209,6 +215,7 @@
           "rust_name": "StateChanged"
         },
         {
+          "doc": "A Session was created in the Runtime registry.",
           "fields": [
             {
               "doc": "Session metadata captured when the Session was created.",
@@ -227,6 +234,7 @@
           "rust_name": "Created"
         },
         {
+          "doc": "A Session was closed in the Runtime registry.",
           "fields": [
             {
               "doc": "Final Session metadata captured when the document closed.",
@@ -379,6 +387,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::RuntimeCapabilities": {
+      "doc": "Host capabilities observed at discovery; availability can change before a later operation.",
       "fields": [
         {
           "doc": "Finite domain names supported by this host; absence means the domain is unavailable.",

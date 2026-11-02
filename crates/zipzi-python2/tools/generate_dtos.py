@@ -258,8 +258,8 @@ def render_dtos(contract, header, resolve=lambda shape: shape):
                 if public is None:raise ValueError('Unselected event payload')
                 fs=deepcopy(common)+[dict(variant['fields'][0],name=public)]
                 kind=re.sub(r'(?<!^)(?=[A-Z])','_',n).lower()
-                record_class(n,fs,kind)
-            lines+=['Event: TypeAlias = '+' | '.join(classes),'','def read_event(value: object) -> Event:','    kind = _text(_get(value, "kind"))','    content = {name: _get(value, name) for name in '+repr(tuple(f['name'] for f in common))+'}']
+                record_class(n,fs,kind,doc=variant.get('doc',''))
+            lines+=['Event: TypeAlias = '+' | '.join(classes),repr('One event from a Runtime registry or Session stream; its variant identifies the captured payload.'),'','def read_event(value: object) -> Event:','    kind = _text(_get(value, "kind"))','    content = {name: _get(value, name) for name in '+repr(tuple(f['name'] for f in common))+'}']
             for variant in resolve(contract['events']['kind'])['variants']:
                 n=variant['rust_name'];payload=typ(variant['fields'][0]['shape']);field='receipt' if payload in {'Receipt','SaveReceipt'} else 'info';kind=re.sub(r'(?<!^)(?=[A-Z])','_',n).lower()
                 lines+=['    if kind == '+repr(kind)+': return '+n+'.read(dict(content, '+field+'=_get(value, "value")))']

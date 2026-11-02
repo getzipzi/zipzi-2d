@@ -27,6 +27,7 @@ impl Status {
 crate::api_record! {
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 #[derive(zipzi_api_derive::BinaryWire)]
+/// Two coordinates whose units and space are defined by their containing value.
 pub struct Vec2 {
     /// Horizontal coordinate; its space and units are determined by the containing geometry or
     /// pose.

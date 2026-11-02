@@ -8,6 +8,7 @@ from ._generated.values.project import ProjectReport
 
 RecoveryAction = Literal["retry", "reduce_request", "release_resources", "recover_original",
                          "restart_edit", "refresh_source", "resync", "wait_job", "stop"]
+"""Suggested next step for a failure, derived from its code, Edit state and limit; recover_original and wait_job retain the original work rather than replaying it."""
 
 def _recovery_action(code: str, edit_state: str | None, limit_name: str | None) -> RecoveryAction:
     if edit_state in {"aborted", "failed"}:

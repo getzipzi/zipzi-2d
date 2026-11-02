@@ -233,6 +233,8 @@ Types: [ObjectSummary], [Page], [PageCursor].
 
 `session.modeling`
 
+Typed modeling operations bound to this Session or Edit source.
+
 Types: [Edit], [Session](#zipzisession).
 
 

@@ -137,42 +137,56 @@ pub enum AddressPatch {
         fields: crate::document::PoseFields,
     },
 }
+/// Select a collection for a source-bound read; choosing a selector does not write or publish.
 #[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum CollectionQuery {
+    /// Read a selected scene collection.
     Scene {
         /// Explicit native collection selector; it does not imply loading every object payload.
         collection: SceneCollection,
     },
+    /// Read a selected organization collection.
     Organization {
         /// Explicit native collection selector; it does not imply loading every object payload.
         collection: OrganizationCollection,
     },
+    /// Read a selected reference collection.
     References {
         /// Explicit native collection selector; it does not imply loading every object payload.
         collection: ReferenceCollection,
     },
+    /// Read the resource collection.
     Resources,
+    /// Read the package attachment collection.
     Attachments,
+    /// Read the collection selected by a document field.
     Document {
         /// Explicit field discriminator; must match the addressed object/domain.
         field: DocumentField,
     },
+    /// Read registrations in a motion container.
     Motion {
         /// Root or stable motion-group container for library registrations.
         collection: crate::document::MotionContainer,
     },
+    /// Read motion registration groups.
     MotionGroups,
+    /// Read motion clips.
     Clips,
+    /// Read expression assets.
     Expressions,
+    /// Read entries owned by one expression asset.
     ExpressionEntries {
         /// Stable expression asset ID owning the entry collection.
         expression_id: String,
     },
+    /// Read a selected Physics collection.
     Physics {
         /// Native Physics group/input/output/node collection selector.
         collection: PhysicsCollection,
     },
+    /// Read a selected Pose collection.
     Pose {
         /// Native Pose group/entry/link collection selector.
         collection: crate::document::PoseCollection,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 class Vec2(NamedTuple):
-    '\n\nFields:\nx: Horizontal coordinate; its space and units are determined by the containing geometry or\npose.\ny: Vertical coordinate; its space and units are determined by the containing geometry or pose.'
+    'Two coordinates whose units and space are defined by their containing value.\n\nFields:\nx: Horizontal coordinate; its space and units are determined by the containing geometry or\npose.\ny: Vertical coordinate; its space and units are determined by the containing geometry or pose.'
     __module__ = "zipzi.modeling.common"
     x: float
     y: float

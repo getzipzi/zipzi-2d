@@ -206,7 +206,7 @@ DATA: dict[str, Entry] = {'zipzi.Session': {'children': ('zipzi.Session.address'
                                          'zipzi.Session.modeling.sample',
                                          'zipzi.Session.modeling.sample_async',
                                          'zipzi.Session.modeling.spatial'),
-                            'documentation': '',
+                            'documentation': 'Typed modeling operations bound to this Session or Edit source.',
                             'fields': [],
                             'kind': 'property',
                             'signature': 'session.modeling',
