@@ -2,17 +2,21 @@ crate::api_union! {
     tag = "op";
     #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Scene and organization candidate operations; choose a typed variant for the intended edit.
     pub enum SceneOperation {
+        /// Create an organizational Part.
         CreatePart {
             /// Creation specification; native admission supplies identities/defaults and
             /// rejects invalid input.
             spec: PartCreateSpec,
         },
+        /// Create a parameter organization group.
         CreateParameterGroup {
             /// Creation specification; native admission supplies identities/defaults and
             /// rejects invalid input.
             spec: ParameterGroupCreateSpec,
         },
+        /// Create a Warp transform with separate organization and deformation placement.
         CreateWarp {
             /// Human-readable display name; use the stable ID for identity because names can
             /// change.
@@ -26,6 +30,7 @@ crate::api_union! {
             /// Optional new object UUID; None allocates a fresh identity in the SDK.
             id: Option<String>,
         },
+        /// Create a Rotation transform with separate organization and deformation placement.
         CreateRotation {
             /// Human-readable display name; use the stable ID for identity because names can
             /// change.
@@ -36,6 +41,7 @@ crate::api_union! {
             /// Optional new object UUID; None allocates a fresh identity in the SDK.
             id: Option<String>,
         },
+        /// Create a Glue connection between two mesh endpoints.
         CreateGlue {
             /// Human-readable display name; use the stable ID for identity because names can
             /// change.
@@ -52,6 +58,7 @@ crate::api_union! {
             /// Optional new object UUID; None allocates a fresh identity in the SDK.
             id: Option<String>,
         },
+        /// Create an Offscreen group owned by a Part.
         CreateOffscreen {
             /// Human-readable display name; use the stable ID for identity because names can
             /// change.
@@ -61,6 +68,7 @@ crate::api_union! {
             /// Optional new object UUID; None allocates a fresh identity in the SDK.
             id: Option<String>,
         },
+        /// Move scene objects in the organizational Part hierarchy.
         MoveToPart {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -72,6 +80,7 @@ crate::api_union! {
             /// to the selected destination.
             before: Option<String>,
         },
+        /// Move scene objects in the deformation hierarchy.
         MoveDeformation {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -83,6 +92,7 @@ crate::api_union! {
             /// to the selected destination.
             before: Option<String>,
         },
+        /// Move parameters between organization groups.
         MoveParameters {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -94,6 +104,7 @@ crate::api_union! {
             /// to the selected destination.
             before: Option<String>,
         },
+        /// Move parameter groups in their organization hierarchy.
         MoveParameterGroups {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -105,6 +116,7 @@ crate::api_union! {
             /// to the selected destination.
             before: Option<String>,
         },
+        /// Duplicate selected scene objects, optionally including their deformation subtrees.
         DuplicateScene {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -118,6 +130,7 @@ crate::api_union! {
             /// to the selected destination.
             before: Option<String>,
         },
+        /// Delete selected scene objects, optionally including deformation subtrees.
         DeleteScene {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -125,6 +138,7 @@ crate::api_union! {
             /// Include the deformation subtree when true; false affects only the selected objects.
             subtree: bool,
         },
+        /// Delete organization containers or dissolve them while preserving their contents.
         DeleteOrganization {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -133,6 +147,7 @@ crate::api_union! {
             /// deleting its contents.
             dissolve: bool,
         },
+        /// Replace a scene object label with an expected-value precondition.
         SetSceneLabel {
             /// Stable document object ID used by references; it is distinct from the exported
             /// runtime_id.
@@ -144,6 +159,7 @@ crate::api_union! {
             /// change.
             name: String,
         },
+        /// Replace scene evaluation visibility with an expected-value precondition.
         SetSceneEnabled {
             /// Stable document object ID used by references; it is distinct from the exported
             /// runtime_id.
@@ -154,6 +170,7 @@ crate::api_union! {
             /// Whether this object participates in evaluation; editor hiding is a separate state.
             enabled: bool,
         },
+        /// Reparent deformation objects while retaining local data; appearance may change.
         ReparentLocal {
             /// Ordered stable object IDs selected for this operation; visible names and row
             /// numbers are not identities.
@@ -165,6 +182,7 @@ crate::api_union! {
             /// to the selected destination.
             before: Option<String>,
         },
+        /// Replace a mesh triangle list using stable vertex IDs.
         ReplaceTriangles {
             /// Stable ID of the target mesh in this document.
             mesh_id: String,
@@ -172,6 +190,7 @@ crate::api_union! {
             /// position-array offsets.
             triangles: Vec<[u32; 3]>,
         },
+        /// Reorder mesh vertex storage while retaining vertex identities and associated content.
         ReorderMeshVertices {
             /// Stable ID of the target mesh in this document.
             mesh_id: String,
@@ -179,6 +198,7 @@ crate::api_union! {
             /// per-vertex payload.
             order: Vec<u32>,
         },
+        /// Insert a stable mesh vertex and seed dependent shapes.
         InsertMeshVertex {
             /// Stable ID of the target mesh in this document.
             mesh_id: String,
@@ -194,6 +214,7 @@ crate::api_union! {
             /// This is not a position-array index.
             before: Option<u32>,
         },
+        /// Delete vertices with an explicit dependent-content policy.
         DeleteMeshVertices {
             /// Stable ID of the target mesh in this document.
             mesh_id: String,
@@ -203,6 +224,7 @@ crate::api_union! {
             /// referenced-vertex deletion.
             remove_dependents: bool,
         },
+        /// Create a BlendShape key table and select its neutral sample.
         CreateBlendTable {
             /// Stable document parameter ID, not its exported runtime identifier.
             parameter_id: String,
@@ -214,6 +236,7 @@ crate::api_union! {
             /// Optional new object UUID; None allocates a fresh identity in the SDK.
             id: Option<String>,
         },
+        /// Create a BlendShape binding from a mesh to a key table.
         CreateMeshBlend {
             /// Stable ID of the target mesh in this document.
             mesh_id: String,
@@ -222,6 +245,7 @@ crate::api_union! {
             /// Optional new object UUID; None allocates a fresh identity in the SDK.
             id: Option<String>,
         },
+        /// Patch mesh BlendShape displacements for a selected binding sample.
         SetMeshBlendVertices {
             /// Stable ID of the target mesh in this document.
             mesh_id: String,
@@ -233,6 +257,7 @@ crate::api_union! {
             /// Ordered content patches applied together by the native edit.
             updates: Vec<VertexPatchSpec>,
         },
+        /// Insert a stable vertex pair into a Glue connection.
         InsertGluePair {
             /// Stable Glue object ID owning the affected vertex pairs.
             glue_id: String,
@@ -243,6 +268,7 @@ crate::api_union! {
             /// to the selected destination.
             before: Option<String>,
         },
+        /// Delete selected stable Glue pair identities.
         DeleteGluePairs {
             /// Stable Glue object ID owning the affected vertex pairs.
             glue_id: String,
@@ -250,28 +276,30 @@ crate::api_union! {
             /// numbers are not identities.
             ids: Vec<String>,
         },
+        /// Replace one Offscreen keyform at a numeric slot.
         PatchOffscreenKeyform {
             /// Stable Offscreen object ID; not a texture asset ID.
             offscreen_id: String,
             /// Zero-based slot in the addressed triangle or Offscreen keyform array; never an
             /// object ID.
             slot: u32,
-            /// Scalar value in the referenced parameter domain.
+            /// Complete Offscreen opacity and color form.
             value: OffscreenFormSpec,
         },
+        /// Insert an Offscreen keyform at a numeric slot or append.
         InsertOffscreenKeyform {
             /// Stable Offscreen object ID; not a texture asset ID.
             offscreen_id: String,
-            /// Scalar value in the referenced parameter domain.
+            /// Complete Offscreen opacity and color form.
             value: OffscreenFormSpec,
-            /// Optional stable vertex ID before which to insert new vertices; None appends.
-            /// This is not a position-array index.
+            /// Optional zero-based Offscreen keyform slot before which to insert; None appends.
             before: Option<u32>,
         },
+        /// Map the static Part slot to an Offscreen keyform or neutral value.
         SetOffscreenStaticKeyform {
             /// Stable Offscreen object ID; not a texture asset ID.
             offscreen_id: String,
-            /// Complete shape sample to insert or replace; unrelated samples are retained.
+            /// Offscreen keyform-array index; -1 selects the neutral/unmapped state.
             keyform: i32,
         },
     }
@@ -281,10 +309,11 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Source vertex and weight used to seed a newly inserted mesh vertex.
     pub struct VertexWeightSpec {
         /// Stable u32 vertex ID within the mesh, not an offset into its position array.
         pub vertex_id: u32,
-        /// Dimensionless interpolation weight applied to the referenced source vertex.
+        /// Finite nonnegative weight; the nonempty set of weights must sum to 1 within native tolerance.
         pub weight: f32,
     }
 }

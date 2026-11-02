@@ -419,6 +419,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::ScalarSample": {
+      "doc": "Stable sample identity and coordinate for a BlendShape key table.",
       "fields": [
         {
           "default": null,

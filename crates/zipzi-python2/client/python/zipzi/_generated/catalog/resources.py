@@ -14,7 +14,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
                      'signature': ''},
  'zipzi.resources.CreateImage': {'children': ('zipzi.resources.CreateImage.__repr__',
                                               'zipzi.resources.CreateImage.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Create a document image using a separately owned prepared-image '
+                                                  'lease.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'create_image'"),),
                                  'fields': [('id',
                                              'Optional new object UUID; None allocates a fresh UUID in the SDK when '
@@ -34,7 +35,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.CreateImage.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.CreateImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Image': {'children': ('zipzi.resources.Image.__repr__', 'zipzi.resources.Image.summary'),
-                           'documentation': '',
+                           'documentation': 'Image identity and pixels captured at one exact formal or candidate '
+                                            'source.',
                            'fields': [('id',
                                        'Stable document object ID used by references; it is distinct from the exported '
                                        'runtime_id.'),
@@ -84,7 +86,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.ImageLease.width': {'alias': 'zipzi.PreparedImage.width'},
  'zipzi.resources.ImagePixels': {'children': ('zipzi.resources.ImagePixels.__repr__',
                                               'zipzi.resources.ImagePixels.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Owned decoded pixels captured from an image, independent of '
+                                                  'subsequent host reads.',
                                  'fields': [('width',
                                              'Image width in pixels; prepared image content requires a positive '
                                              'dimension.'),
@@ -109,7 +112,7 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.PreparedImage.width': {'alias': 'zipzi.PreparedImage.width'},
  'zipzi.resources.RenameImage': {'children': ('zipzi.resources.RenameImage.__repr__',
                                               'zipzi.resources.RenameImage.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Rename an image asset, optionally requiring its previous name.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'rename_image'"),),
                                  'fields': [('id',
                                              'Stable document object ID used by references; it is distinct from the '
@@ -128,7 +131,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.RenameImage.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.ReplaceImage': {'children': ('zipzi.resources.ReplaceImage.__repr__',
                                                'zipzi.resources.ReplaceImage.summary'),
-                                  'documentation': '',
+                                  'documentation': 'Replace an image asset using a separately owned prepared-image '
+                                                   'lease.',
                                   'field_roles': (('kind', 'fixed-discriminator', "'replace_image'"),),
                                   'fields': [('id',
                                               'Stable document object ID used by references; it is distinct from the '
@@ -149,7 +153,8 @@ DATA: dict[str, Entry] = {'zipzi.resources': {'children': ('zipzi.resources.Crea
  'zipzi.resources.Summary.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.resources.Summary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.resources.Usage': {'children': ('zipzi.resources.Usage.__repr__', 'zipzi.resources.Usage.summary'),
-                           'documentation': '',
+                           'documentation': 'Runtime-wide snapshot of retained resource counts and byte-accounting '
+                                            'totals.',
                            'fields': [('previews',
                                        'Runtime-wide retained independent Preview leases; active Jobs can retain '
                                        'workspace after release.'),

@@ -1,15 +1,19 @@
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Select the base, an ordinary binding sample or a BlendShape sample for a content edit.
 pub enum ShapeTarget {
     #[default]
+    /// Edit the undeformed base shape.
     Base,
+    /// Edit the ordinary shape selected by binding and sample identities.
     Ordinary {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
         /// Stable sample IDs selecting one ordinary-binding combination, in active axis order.
         samples: Vec<String>,
     },
+    /// Edit the BlendShape displacement selected by binding and sample identities.
     Blend {
         /// Stable binding ID owning the addressed axes or keyforms.
         binding_id: String,
@@ -27,13 +31,15 @@ pub enum ShapeTarget {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Optional updates to one stable mesh vertex in a selected shape.
 pub struct VertexContentPatch {
     /// Stable u32 vertex ID within the mesh, not an offset into its position array.
     pub vertex_id: VertexId,
     /// Replacement XY value: absolute for Base/Ordinary, displacement for BlendShape.
     /// None preserves the current value in the selected shape.
     pub position: Option<Vec2>,
-    /// Optional texture UV pair; None preserves the current UV.
+    /// Optional texture UV pair; None preserves the current UV. UV updates are permitted only
+    /// for the Base shape, because UV coordinates are shared by all shapes.
     pub uv: Option<Vec2>,
 }
 #[derive(
@@ -45,17 +51,22 @@ pub struct VertexContentPatch {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Source vertex and interpolation weight used to initialize dependent shapes.
 pub struct VertexWeight {
     /// Stable u32 vertex ID within the mesh, not an offset into its position array.
     pub vertex_id: VertexId,
-    /// Dimensionless interpolation weight applied to the referenced source vertex.
+    /// Finite nonnegative interpolation weight. The nonempty source weights must sum to 1
+    /// within native tolerance.
     pub weight: f32,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Policy for seeding a new vertex in dependent ordinary and BlendShape content.
 pub enum VertexSeed {
+    /// Use the new base position for ordinary shapes and zero displacement for BlendShapes.
     Base,
+    /// Interpolate dependent content from existing vertices and supplied weights.
     Interpolate {
         /// Source vertex IDs and interpolation weights used to seed dependent shape content.
         weights: Vec<VertexWeight>,
@@ -70,6 +81,7 @@ pub enum VertexSeed {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// New stable mesh vertex, its base position and UV, and the policy for dependent shapes.
 pub struct NewMeshVertex {
     /// Stable u32 vertex ID within the mesh, not an offset into its position array.
     pub vertex_id: VertexId,
@@ -83,9 +95,12 @@ pub struct NewMeshVertex {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Select how deletion handles triangles and other content that reference a vertex.
 pub enum VertexDeletePolicy {
     #[default]
+    /// Reject deletion while dependent content refers to a selected vertex.
     RejectReferences,
+    /// Remove dependent content as part of the same edit.
     RemoveDependentContent,
 }
 #[derive(
@@ -97,6 +112,7 @@ pub enum VertexDeletePolicy {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Replacement lattice point at a row and column in a selected Warp shape.
 pub struct WarpPointPatch {
     /// Zero-based lattice point row, in the inclusive range 0..rows.
     pub row: u32,
@@ -108,9 +124,13 @@ pub struct WarpPointPatch {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Choose how Part mappings are handled when Offscreen keyform slots are deleted.
 pub enum OffscreenDeletePolicy {
+    /// Reject removal of referenced keyform slots.
     RejectReferences,
+    /// Replace references to removed slots with the neutral mapping.
     Neutral,
+    /// Replace references according to the explicit old-to-new slot mapping.
     Remap {
         #[serde(deserialize_with = "crate::serde_maps::usize_map")]
         /// Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that
@@ -140,6 +160,7 @@ pub enum PartKeyformSlot {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Assign an Offscreen keyform index to one static or sampled Part slot.
 pub struct OffscreenMappingPatch {
     /// Static Part slot or stable Part-binding sample combination to remap.
     pub slot: PartKeyformSlot,
@@ -149,7 +170,9 @@ pub struct OffscreenMappingPatch {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Typed edits to mesh, deformer, Glue and Offscreen shape content.
 pub enum SceneContentEdit {
+    /// Capture, restore or configure the stored original deformer shape.
     DeformerOriginal {
         /// Stable Warp or Rotation transform ID.
         transform_id: String,
@@ -162,6 +185,7 @@ pub enum SceneContentEdit {
         /// Frozen parameter inputs used to evaluate current parent spaces in canvas coordinates.
         context: crate::evaluation::PreviewValues,
     },
+    /// Patch selected stable mesh vertices in one shape.
     MeshVertices {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
@@ -172,6 +196,7 @@ pub enum SceneContentEdit {
         /// Ordered content patches applied together by the native edit.
         updates: Vec<VertexContentPatch>,
     },
+    /// Insert mesh vertices and seed dependent shape content.
     InsertMeshVertices {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
@@ -182,6 +207,7 @@ pub enum SceneContentEdit {
         /// not a position-array index.
         before: Option<VertexId>,
     },
+    /// Delete selected vertices with an explicit dependency policy.
     DeleteMeshVertices {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
@@ -191,6 +217,7 @@ pub enum SceneContentEdit {
         /// requested.
         policy: VertexDeletePolicy,
     },
+    /// Reorder mesh vertex storage and associated shape content.
     ReorderMeshVertices {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
@@ -198,6 +225,7 @@ pub enum SceneContentEdit {
         /// vertex payload.
         order: Vec<VertexId>,
     },
+    /// Insert a triangle of stable vertex IDs.
     InsertTriangle {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
@@ -207,6 +235,7 @@ pub enum SceneContentEdit {
         /// belong to the selected destination.
         before: Option<usize>,
     },
+    /// Replace the triangle at a numeric slot.
     PatchTriangle {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
@@ -215,12 +244,14 @@ pub enum SceneContentEdit {
         /// Triangle corners as three stable vertex IDs; not position-array indices.
         vertices: [VertexId; 3],
     },
+    /// Delete triangles selected by numeric slots.
     DeleteTriangles {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
         /// Zero-based content-array positions selected by this operation.
         slots: Vec<usize>,
     },
+    /// Replace the complete mesh triangle list.
     ReplaceTriangles {
         /// Stable ID of the target mesh in this document.
         mesh_id: String,
@@ -228,6 +259,7 @@ pub enum SceneContentEdit {
         /// position-array offsets.
         triangles: Vec<[VertexId; 3]>,
     },
+    /// Patch lattice points in one Warp shape.
     WarpPoints {
         /// Stable deformation-transform ID in this document.
         transform_id: String,
@@ -242,6 +274,7 @@ pub enum SceneContentEdit {
         /// False preserves the controller and retains lattice detail for subsequent delta edits.
         clear_bezier: bool,
     },
+    /// Replace or remove a Warp controller and update its baked lattice.
     WarpBezier {
         /// Stable deformation-transform ID in this document.
         transform_id: String,
@@ -252,6 +285,7 @@ pub enum SceneContentEdit {
         /// Complete authoring Bezier controller; its baked lattice is updated by the native edit.
         controller: Option<WarpBezier>,
     },
+    /// Edit selected controls on a stored Warp controller.
     WarpBezierControls {
         /// Stable Warp transform ID.
         transform_id: String,
@@ -261,12 +295,14 @@ pub enum SceneContentEdit {
         /// Explicit controller destinations; the stored editing mode supplies neighborhood influence.
         updates: Vec<crate::warp_bezier::WarpBezierControlPatch>,
     },
+    /// Update Warp editing settings and optionally refit controllers.
     WarpAuthoring {
         /// Stable Warp transform ID.
         transform_id: String,
         /// Object editing settings. An explicit grid refits all stored controllers without changing baked points.
         settings: crate::warp_bezier::WarpAuthoringSettings,
     },
+    /// Reset or reform one stored Warp shape.
     WarpShape {
         /// Stable Warp transform ID.
         transform_id: String,
@@ -276,6 +312,7 @@ pub enum SceneContentEdit {
         /// Reset preserves baked points; Reform samples the controller and replaces baked detail.
         action: crate::warp_bezier::WarpShapeAction,
     },
+    /// Replace a static Warp while compensating child shapes.
     WarpKeepChildren {
         /// Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.
         transform_id: String,
@@ -283,6 +320,7 @@ pub enum SceneContentEdit {
         /// The shared plan compensates all child shape channels atomically.
         warp: crate::model::WarpTransform,
     },
+    /// Replace a static Rotation while compensating child shapes.
     RotationKeepChildren {
         /// Stable ID of a static Rotation. Driven maps and ancestors are unsupported.
         transform_id: String,
@@ -290,6 +328,7 @@ pub enum SceneContentEdit {
         /// stored child shape channel atomically while retaining the hierarchy.
         rotation: crate::model::RotationTransform,
     },
+    /// Change the Warp lattice conversion density.
     ResizeWarp {
         /// Stable deformation-transform ID in this document.
         transform_id: String,
@@ -300,6 +339,7 @@ pub enum SceneContentEdit {
         /// Whether to use the quad warp interpolation mode for the lattice.
         quad: bool,
     },
+    /// Insert a Glue pair with a stable identity.
     InsertGluePair {
         /// Stable Glue object ID owning the affected vertex pairs.
         glue_id: String,
@@ -310,6 +350,7 @@ pub enum SceneContentEdit {
         /// the selected destination.
         before: Option<String>,
     },
+    /// Replace an existing Glue pair.
     PatchGluePair {
         /// Stable Glue object ID owning the affected vertex pairs.
         glue_id: String,
@@ -317,6 +358,7 @@ pub enum SceneContentEdit {
         /// meshes.
         pair: GlueVertexPair,
     },
+    /// Reorder selected Glue pairs.
     MoveGluePairs {
         /// Stable Glue object ID owning the affected vertex pairs.
         glue_id: String,
@@ -327,11 +369,11 @@ pub enum SceneContentEdit {
         /// the selected destination.
         before: Option<String>,
     },
+    /// Move Glue pairs to another Glue with explicit replacement records.
     TransferGluePairs {
         /// Stable Glue object ID owning the affected vertex pairs.
         glue_id: String,
-        /// Explicit destination collection; organization, deformation and drawing memberships
-        /// are independent.
+        /// Stable destination Glue object ID.
         destination: String,
         /// Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.
         pairs: Vec<GlueVertexPair>,
@@ -339,6 +381,7 @@ pub enum SceneContentEdit {
         /// the selected destination.
         before: Option<String>,
     },
+    /// Duplicate selected Glue pairs.
     DuplicateGluePairs {
         /// Stable Glue object ID owning the affected vertex pairs.
         glue_id: String,
@@ -349,6 +392,7 @@ pub enum SceneContentEdit {
         /// the selected destination.
         before: Option<String>,
     },
+    /// Delete selected Glue pairs.
     DeleteGluePairs {
         /// Stable Glue object ID owning the affected vertex pairs.
         glue_id: String,
@@ -356,24 +400,27 @@ pub enum SceneContentEdit {
         /// are not identities.
         ids: Vec<String>,
     },
+    /// Insert an Offscreen appearance form at a slot or append.
     InsertOffscreenKeyform {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
-        /// Scalar value in the referenced parameter domain.
+        /// Complete Offscreen opacity and color form.
         value: OffscreenKeyform,
         /// Optional zero-based array slot before which to insert; None appends. The anchor must
         /// belong to the selected destination.
         before: Option<usize>,
     },
+    /// Replace the Offscreen form at a slot.
     PatchOffscreenKeyform {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
         /// Zero-based slot in the addressed triangle or Offscreen keyform array; never an
         /// object ID.
         slot: usize,
-        /// Scalar value in the referenced parameter domain.
+        /// Complete Offscreen opacity and color form.
         value: OffscreenKeyform,
     },
+    /// Duplicate selected Offscreen keyform slots.
     DuplicateOffscreenKeyforms {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
@@ -384,6 +431,7 @@ pub enum SceneContentEdit {
         /// belong to the selected destination.
         before: Option<usize>,
     },
+    /// Reorder Offscreen forms and remap their references.
     ReorderOffscreenKeyforms {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
@@ -391,6 +439,7 @@ pub enum SceneContentEdit {
         /// references consistently.
         order: Vec<usize>,
     },
+    /// Delete Offscreen forms using an explicit mapping policy.
     DeleteOffscreenKeyforms {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
@@ -401,6 +450,7 @@ pub enum SceneContentEdit {
         /// requested.
         policy: OffscreenDeletePolicy,
     },
+    /// Set static or sampled Part-to-Offscreen mappings.
     SetOffscreenMapping {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,

@@ -56,7 +56,7 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
            'documentation': 'Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or '
                             'connect(), explicitly select sessions, read before editing, verify confirmed results, '
                             'then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 '
-                            'e981999ec0974a19b496ed6456d44dfae200b69c7ca62d4a01ebe32601a53281.',
+                            '50c298fb336699cacb3e3e93ed57af6c0447d6ba4be230859a276f4431aa5dbf.',
            'kind': 'module',
            'signature': ''},
  'zipzi.ApiDescription': {'children': ('zipzi.ApiDescription.__repr__',
@@ -678,10 +678,21 @@ DATA: dict[str, Entry] = {'zipzi': {'children': ('zipzi.ApiDescription',
                                             'signature': '(data: bytes | bytearray | memoryview) -> Buffer',
                                             'type_refs': ('zipzi.Buffer',)},
  'zipzi.Runtime.resources.prepare_image': {'children': (),
-                                           'documentation': 'Own RGBA8 bytes or an immutable Buffer and prepare a '
-                                                            'width-by-height image lease. Preparation does not edit a '
-                                                            'document. Close the lease after candidate acceptance; '
-                                                            'SDK/history owners retain their references.',
+                                           'documentation': 'Prepare a client-owned image lease from RGBA8 bytes or a '
+                                                            'same-client Buffer.\n'
+                                                            '\n'
+                                                            'Width and height must be positive; bytes are tightly '
+                                                            'packed, row-major\n'
+                                                            'with the top row first and straight alpha, exactly width '
+                                                            '* height * 4\n'
+                                                            'bytes. The Python byte input is limited to 256 MiB; host '
+                                                            'budgets also\n'
+                                                            'apply. Preparation does not edit a document. Close the '
+                                                            'PreparedImage\n'
+                                                            'after candidate acceptance; candidate, committed document '
+                                                            'and history\n'
+                                                            'retain their own references. Recover an unknown call '
+                                                            'through its owner.',
                                            'fields': [],
                                            'kind': 'callable',
                                            'signature': '(width: int, height: int, rgba: bytes | bytearray | '

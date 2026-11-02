@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ImageAsset(CompactValue):
-    '\n\nFields:\nunresolved_source: Original imported path or external slot when no decoded content exists.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image content.'
+    'Document image identity with optional content metadata or an unresolved imported source.\n\nFields:\nunresolved_source: Original imported path or external slot when no decoded content exists.\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image content.'
     unresolved_source: (str | None) = None
     id: str
     name: str
@@ -20,7 +20,7 @@ ImageAsset.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ImageContent(CompactValue):
-    '\n\nFields:\nsource: Stored resource location, normally a package-relative path or generated memory-resource\nlocator; reading metadata does not open it.\nwidth: Image width in pixels; prepared image content requires a positive dimension.\nheight: Image height in pixels; prepared image content requires a positive dimension.\nsha256: Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.'
+    'Stored image locator, dimensions and optional recorded digest; metadata access does not decode pixels.\n\nFields:\nsource: Stored resource location, normally a package-relative path or generated memory-resource\nlocator; reading metadata does not open it.\nwidth: Image width in pixels; prepared image content requires a positive dimension.\nheight: Image height in pixels; prepared image content requires a positive dimension.\nsha256: Hexadecimal SHA-256 of the stored image content; an empty string means no recorded digest.'
     source: str
     width: int
     height: int
@@ -30,7 +30,7 @@ ImageContent.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditCreate(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create an image asset without loaded content.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create'
     id: str
     name: str
@@ -40,7 +40,7 @@ ResourceEditCreate.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditPatchName(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nname: Human-readable display name; use the stable ID for identity because names can change.'
+    'Rename an image only if its existing name matches the precondition.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nname: Human-readable display name; use the stable ID for identity because names can change.'
     _variant: _ClassVar[str] = 'patch_name'
     id: str
     expected: str
@@ -50,7 +50,7 @@ ResourceEditPatchName.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditSetContent(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current image-content metadata precondition; None requires the asset to have\nno loaded content.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image\ncontent.'
+    'Replace or clear content metadata under an exact prior-value precondition.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current image-content metadata precondition; None requires the asset to have\nno loaded content.\ncontent: Image content metadata; None explicitly represents an asset with no loaded image\ncontent.'
     _variant: _ClassVar[str] = 'set_content'
     id: str
     expected: (ImageContent | None) = None
@@ -60,7 +60,7 @@ ResourceEditSetContent.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditReorder(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Reorder selected image assets relative to an optional sibling anchor.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'reorder'
     ids: tuple[str, ...]
     before: (str | None) = None
@@ -72,7 +72,7 @@ ResourceEditReorder.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditDuplicate(CompactValue):
-    '\n\nFields:\nsource: Stable ID of the existing source object to duplicate, not a filesystem path.\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Duplicate an existing image asset under a fresh identity.\n\nFields:\nsource: Stable ID of the existing source object to duplicate, not a filesystem path.\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'duplicate'
     source: str
     id: str

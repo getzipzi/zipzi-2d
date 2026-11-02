@@ -7,7 +7,7 @@ from .. import _plans as plans
 
 @dataclass(frozen=True, repr=False)
 class CreateImage(CompactValue):
-    "\n\nFields:\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nname: Human-readable display name; use the stable ID for identity because names can change.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed value 'create_image' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Create a document image using a separately owned prepared-image lease.\n\nFields:\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nname: Human-readable display name; use the stable ID for identity because names can change.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed value 'create_image' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.resources"
     name: str
     image: resources.PreparedImage
@@ -16,7 +16,7 @@ class CreateImage(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ReplaceImage(CompactValue):
-    "\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed value 'replace_image' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Replace an image asset using a separately owned prepared-image lease.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nimage: Client-owned prepared-image handle; creating an operation value does not transfer\nownership.\nkind: Fixed value 'replace_image' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.resources"
     id: str
     image: resources.PreparedImage
@@ -24,7 +24,7 @@ class ReplaceImage(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class RenameImage(CompactValue):
-    "\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nexpected_name: Required current display name; None disables this name precondition.\nkind: Fixed value 'rename_image' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Rename an image asset, optionally requiring its previous name.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\nexpected_name: Required current display name; None disables this name precondition.\nkind: Fixed value 'rename_image' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.resources"
     id: str
     name: str

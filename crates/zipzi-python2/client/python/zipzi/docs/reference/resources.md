@@ -20,6 +20,8 @@ Prepared images own independent leases; pixel snapshots are immutable values.
 
 `(name: str, image: resources.PreparedImage, id: str | None = None)`
 
+Create a document image using a separately owned prepared-image lease.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 Types: [PreparedImage].
@@ -37,6 +39,8 @@ ownership.
 **Type**
 
 `(id: str, name: str, pixels: ImagePixels)`
+
+Image identity and pixels captured at one exact formal or candidate source.
 
 Types: [ImagePixels](#zipziresourcesimagepixels).
 
@@ -103,6 +107,8 @@ Alias of [zipzi.PreparedImage.width](runtime.md#zipzipreparedimagewidth).
 
 `(width: int, height: int, rgba: bytes)`
 
+Owned decoded pixels captured from an image, independent of subsequent host reads.
+
 **Fields**
 
 - `width`: Image width in pixels; prepared image content requires a positive dimension.
@@ -148,6 +154,8 @@ Alias of [zipzi.PreparedImage.width](runtime.md#zipzipreparedimagewidth).
 
 `(id: str, name: str, *, expected_name: str | None = None)`
 
+Rename an image asset, optionally requiring its previous name.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -163,6 +171,8 @@ runtime_id.
 **Type**
 
 `(id: str, image: resources.PreparedImage)`
+
+Replace an image asset using a separately owned prepared-image lease.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -185,6 +195,8 @@ Alias of [zipzi.ObjectSummary](runtime.md#zipziobjectsummary).
 **Type**
 
 `(previews: int, allocations: int, resource_entries: int, prepared_images: int, plans: int, rgba_bytes: int, png_bytes: int, blob_bytes: int, preparing_bytes: int, transfer_bytes: int)`
+
+Runtime-wide snapshot of retained resource counts and byte-accounting totals.
 
 **Fields**
 

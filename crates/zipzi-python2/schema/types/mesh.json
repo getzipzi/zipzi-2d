@@ -3,6 +3,7 @@
   "definitions": {
     "zipzi_contract::authoring::ManualMeshOperation": {
       "content": null,
+      "doc": "Manual Mesh UV triangulation intent. Applying it through an Edit requires an exact\ncandidate source and transfers dependent shapes through the SDK.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::ManualMeshOperation",
       "tag": "op",
@@ -135,6 +136,7 @@
           "rust_name": "MoveVertices"
         },
         {
+          "doc": "Remove the selected vertices and rebuild affected connectivity.",
           "fields": [
             {
               "doc": "Persistent vertex identities to remove atomically.",
@@ -154,6 +156,7 @@
           "rust_name": "DeleteVertices"
         },
         {
+          "doc": "Add a user-fixed edge or chain between existing vertices.",
           "fields": [
             {
               "doc": "First endpoint identity of the fixed edge.",
@@ -179,6 +182,7 @@
           "rust_name": "ConstrainEdge"
         },
         {
+          "doc": "Release a structural edge constraint, leaving its endpoints intact.",
           "fields": [
             {
               "doc": "First endpoint identity of the constraint to release.",
@@ -204,6 +208,7 @@
           "rust_name": "ReleaseConstraint"
         },
         {
+          "doc": "Rebuild automatic triangulation while retaining the structural constraints.",
           "fields": [],
           "form": "unit",
           "name": "reconnect",
@@ -212,6 +217,7 @@
       ]
     },
     "zipzi_contract::authoring::ManualMeshTransferReport": {
+      "doc": "Summary of a Manual Mesh topology transfer, its dependencies, estimated cost and appearance limits.",
       "fields": [
         {
           "doc": "Number of newly allocated vertices.",
@@ -314,6 +320,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::ManualVertexTarget": {
+      "doc": "Absolute UV destination for an existing Manual Mesh vertex, selected by stable ID.",
       "fields": [
         {
           "doc": "Stable vertex identity in the edited mesh, not its array index.",
@@ -557,6 +564,7 @@
       ]
     },
     "zipzi_contract::authoring::TopologyReplacement": {
+      "doc": "Coordinated mesh topology and dependent binding/Glue replacements for a remesh.",
       "fields": [
         {
           "doc": "Complete replacement mesh geometry and metadata. Setting meshing to None explicitly\ndiscards previous modeling topology; ordinary mesh replacements must preserve it.",
@@ -633,6 +641,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::VertexPatchSpec": {
+      "doc": "Optional displacement update for one stable mesh vertex in a BlendShape sample.",
       "fields": [
         {
           "default": null,
@@ -681,6 +690,7 @@
       "name": "zipzi_contract::authoring::VertexPatchSpec"
     },
     "zipzi_contract::authoring::VertexWeightSpec": {
+      "doc": "Source vertex and weight used to seed a newly inserted mesh vertex.",
       "fields": [
         {
           "default": null,
@@ -692,7 +702,7 @@
         },
         {
           "default": null,
-          "doc": "Dimensionless interpolation weight applied to the referenced source vertex.",
+          "doc": "Finite nonnegative weight; the nonempty set of weights must sum to 1 within native tolerance.",
           "name": "weight",
           "shape": {
             "kind": "f32"
@@ -703,6 +713,7 @@
       "name": "zipzi_contract::authoring::VertexWeightSpec"
     },
     "zipzi_contract::document::NewMeshVertex": {
+      "doc": "New stable mesh vertex, its base position and UV, and the policy for dependent shapes.",
       "fields": [
         {
           "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
@@ -750,6 +761,7 @@
       "tuple": false
     },
     "zipzi_contract::document::VertexContentPatch": {
+      "doc": "Optional updates to one stable mesh vertex in a selected shape.",
       "fields": [
         {
           "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
@@ -776,7 +788,7 @@
         },
         {
           "default": null,
-          "doc": "Optional texture UV pair; None preserves the current UV.",
+          "doc": "Optional texture UV pair; None preserves the current UV. UV updates are permitted only\nfor the Base shape, because UV coordinates are shared by all shapes.",
           "name": "uv",
           "rust_name": "uv",
           "shape": {
@@ -796,17 +808,20 @@
     },
     "zipzi_contract::document::VertexDeletePolicy": {
       "content": null,
+      "doc": "Select how deletion handles triangles and other content that reference a vertex.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::VertexDeletePolicy",
       "tag": null,
       "variants": [
         {
+          "doc": "Reject deletion while dependent content refers to a selected vertex.",
           "fields": [],
           "form": "unit",
           "name": "reject_references",
           "rust_name": "RejectReferences"
         },
         {
+          "doc": "Remove dependent content as part of the same edit.",
           "fields": [],
           "form": "unit",
           "name": "remove_dependent_content",
@@ -816,17 +831,20 @@
     },
     "zipzi_contract::document::VertexSeed": {
       "content": null,
+      "doc": "Policy for seeding a new vertex in dependent ordinary and BlendShape content.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::VertexSeed",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Use the new base position for ordinary shapes and zero displacement for BlendShapes.",
           "fields": [],
           "form": "unit",
           "name": "base",
           "rust_name": "Base"
         },
         {
+          "doc": "Interpolate dependent content from existing vertices and supplied weights.",
           "fields": [
             {
               "doc": "Source vertex IDs and interpolation weights used to seed dependent shape content.",
@@ -849,6 +867,7 @@
       ]
     },
     "zipzi_contract::document::VertexWeight": {
+      "doc": "Source vertex and interpolation weight used to initialize dependent shapes.",
       "fields": [
         {
           "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
@@ -860,7 +879,7 @@
           "skip": false
         },
         {
-          "doc": "Dimensionless interpolation weight applied to the referenced source vertex.",
+          "doc": "Finite nonnegative interpolation weight. The nonempty source weights must sum to 1\nwithin native tolerance.",
           "name": "weight",
           "rust_name": "weight",
           "shape": {
@@ -875,6 +894,7 @@
       "tuple": false
     },
     "zipzi_contract::model::Mesh": {
+      "doc": "Authored drawable mesh with stable vertex identities, geometry and resource references.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",

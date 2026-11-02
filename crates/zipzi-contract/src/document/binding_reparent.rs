@@ -62,9 +62,13 @@ pub enum BindingGridEdit {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Choose how deformation reparenting treats local shape data and preservation.
 pub enum ReparentStrategy {
+    /// Retain local data; world-space appearance may change.
     KeepLocalData,
+    /// Attempt preservation at the frozen parameter values.
     PreserveEditState,
+    /// Attempt preservation across the explicitly supplied parameter domains.
     PreserveParameterDomain,
 }
 #[derive(
@@ -76,6 +80,7 @@ pub enum ReparentStrategy {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Request deformation reparenting with explicit strategy, placement and tolerances.
 pub struct ReparentEdit {
     /// Stable IDs of objects to reparent; source order is retained in the planned selection.
     pub sources: Vec<String>,
@@ -105,6 +110,7 @@ pub struct ReparentEdit {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Optional insertion position in the destination deformation collection.
 pub struct ReparentPlacement {
     /// None appends; Some names an unselected member of the destination.
     pub before: Option<String>,
@@ -122,6 +128,7 @@ fn default_relative_tolerance() -> f64 {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Frozen parameter values, optional domains and reference time for preservation planning.
 pub struct ReparentContext {
     /// Parameter-ID-to-value map used for the reparenting reference pose; values use each
     /// parameter domain.

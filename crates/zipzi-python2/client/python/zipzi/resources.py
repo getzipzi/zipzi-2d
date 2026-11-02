@@ -105,7 +105,15 @@ class Resources:
         return Job[PreparedImage]._start(self._backend,lambda owner:self._backend.prepare_image_job(None,buffer._token,owner),"image",lambda raw:PreparedImage._from_info(self._backend,raw))
 
     def prepare_image(self, width: int, height: int, rgba: bytes | bytearray | memoryview | Buffer) -> PreparedImage:
-        'Own RGBA8 bytes or an immutable Buffer and prepare a width-by-height image lease. Preparation does not edit a document. Close the lease after candidate acceptance; SDK/history owners retain their references.'
+        """Prepare a client-owned image lease from RGBA8 bytes or a same-client Buffer.
+
+        Width and height must be positive; bytes are tightly packed, row-major
+        with the top row first and straight alpha, exactly width * height * 4
+        bytes. The Python byte input is limited to 256 MiB; host budgets also
+        apply. Preparation does not edit a document. Close the PreparedImage
+        after candidate acceptance; candidate, committed document and history
+        retain their own references. Recover an unknown call through its owner.
+        """
         if any(type(v) is not int or not 0 <= v <= 0xffffffff for v in (width, height)):
             raise ValueError("Dimensions must be u32 integers")
         if isinstance(rgba, Buffer):

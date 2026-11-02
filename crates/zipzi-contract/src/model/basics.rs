@@ -206,6 +206,7 @@ impl Canvas {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Document image identity with optional content metadata or an unresolved imported source.
 pub struct ImageAsset {
     /// Original imported path or external slot when no decoded content exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -220,6 +221,7 @@ pub struct ImageAsset {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Stored image locator, dimensions and optional recorded digest; metadata access does not decode pixels.
 pub struct ImageContent {
     /// Stored resource location, normally a package-relative path or generated memory-resource
     /// locator; reading metadata does not open it.

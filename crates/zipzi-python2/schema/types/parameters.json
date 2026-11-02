@@ -113,6 +113,7 @@
       "tuple": false
     },
     "zipzi_contract::authoring::ParameterGroupCreateSpec": {
+      "doc": "Input for creating a parameter group in the organizational hierarchy.",
       "fields": [
         {
           "default": null,

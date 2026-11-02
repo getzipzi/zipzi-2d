@@ -899,9 +899,10 @@ class PythonReference(unittest.TestCase):
     # Pages only enter this set after full page acceptance. Cross-page pilots
     # are exact paths; accepting modeling does not accept modeling.* domains.
     ACCEPTED_PAGES = frozenset({'meshes'})
-    # P1/P2 have no structural gaps; cross-domain semantic acceptance remains open.
+    # These pages have no structural gaps; cross-domain semantic acceptance remains open.
     STRUCTURAL_PAGES = frozenset(('runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events '
-                                  'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits').split())
+                                  'parameters bindings modeling_parameters modeling_bindings modeling_bindings_edits '
+                                  'resources modeling_resources modeling_mesh scene modeling_scene modeling_scene_edits').split())
     BATCH_PAGES = {
         'S': 'meshes',
         'P1': 'runtime runtime_session runtime_edit modeling modeling_common modeling_runtime ops modeling_commands modeling_queries events',
@@ -1085,6 +1086,36 @@ class PythonReference(unittest.TestCase):
         self.assertIn('sample coordinates', self.catalog['zipzi.bindings.Axis']['documentation'])
         self.assertIn('ordinary', self.catalog['zipzi.parameters.Kind']['documentation'])
 
+    def test_reference_image_ownership_and_manual_mesh_sources(self):
+        prepare = self.catalog['zipzi.Runtime.resources.prepare_image']['documentation']
+        for fact in ('top row first', 'straight alpha', 'width * height * 4', 'Close the PreparedImage'):
+            self.assertIn(fact, prepare)
+        pixels = dict(self.catalog['zipzi.resources.ImagePixels']['fields'])
+        self.assertIn('top row first', pixels['rgba'])
+        target = self.catalog['zipzi.modeling.mesh.ManualMeshOperation']
+        self.assertIn('candidate source', target['documentation'])
+        base = self.catalog['zipzi.modeling.mesh.VertexSeedBase']
+        self.assertIn('zero displacement', base['documentation'])
+        vertex = dict(self.catalog['zipzi.modeling.mesh.VertexContentPatch']['fields'])
+        self.assertIn('only', vertex['uv'])
+        self.assertIn('BlendShape', vertex['position'])
+        insertion = dict(self.catalog['zipzi.scene.InsertOffscreenKeyform']['fields'])
+        self.assertIn('keyform slot', insertion['before'])
+        self.assertIn('Offscreen opacity', insertion['value'])
+        mapping = dict(self.catalog['zipzi.scene.SetOffscreenStaticKeyform']['fields'])
+        self.assertIn('-1', mapping['keyform'])
+        self.assertIn('retaining local data', self.catalog['zipzi.scene.ReparentLocal']['documentation'])
+        self.assertIn('candidate operations', self.catalog['zipzi.scene.Operation']['documentation'])
+
+    def test_reference_scene_union_summary_follows_contract(self):
+        contract = gen.schema.read(PACKAGE/'schema/authoring.json')
+        marker = 'Changed scene union source description.'
+        contract['definitions']['zipzi_contract::authoring::SceneOperation']['doc'] = marker
+        changed = gen.render(contract)
+        self.assertIn(marker, changed['client/python/zipzi/_generated/scene.py'])
+        self.assertIn(marker, catalog_from_output(changed)['zipzi.scene.Operation']['documentation'])
+        self.assertIn(marker, changed['client/python/zipzi/docs/reference/scene.md'])
+
     def test_reference_private_union_does_not_hide_unknown_members(self):
         original = gen._api_codegen.render_api
         def unknown(*args, **kwargs):
@@ -1156,6 +1187,14 @@ for fact in ('candidate', 'abort the candidate', 'OutcomeUnknown', 'Job[Receipt]
 assert text.count(entry.rules[0][1]) == 1
 assert not entry.example
 assert set(name.removeprefix('zipzi._generated.catalog.') for name in sys.modules if name.startswith('zipzi._generated.catalog.')) == {{'index','runtime_edit','rules'}}
+for path, facts in (
+    ('bindings.Keyform', ('axis order', 'vertex_ids order', 'displacement vectors')),
+    ('Runtime.resources.prepare_image', ('top row first', 'straight alpha', 'Close the PreparedImage')),
+    ('scene.ReparentLocal', ('local data', 'appearance may change')),
+):
+    text = zipzi.describe(path).format()
+    for fact in facts:
+        assert fact in text.replace('\\n', ' '), (path, fact)
 assert not any(name.startswith(('zipzi_native','wgpu')) for name in sys.modules)
 '''.format(package=str(PACKAGE/'client/python'))
         result=subprocess.run([__import__('sys').executable,'-I','-c',code],capture_output=True,text=True)

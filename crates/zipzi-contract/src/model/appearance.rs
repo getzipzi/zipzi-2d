@@ -1,10 +1,14 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Compositing mode used when drawing a drawable.
 pub enum BlendMode {
     #[default]
+    /// Use normal compositing.
     Normal,
+    /// Use additive compositing.
     Additive,
+    /// Use multiplicative compositing.
     Multiplicative,
 }
 
@@ -81,6 +85,7 @@ impl From<Vec2> for PreciseVec2 {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Rotation origin, angle, scale and reflections in its parent space.
 pub struct RotationPose {
     /// Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).
     pub origin: PreciseVec2,

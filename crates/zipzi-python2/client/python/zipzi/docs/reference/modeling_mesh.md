@@ -20,6 +20,9 @@ Canonical mesh modeling values.
 
 `ManualMeshOperationInsertVertex | ManualMeshOperationInsertConnectedVertex | ManualMeshOperationDeleteEdge | ManualMeshOperationMoveVertices | ManualMeshOperationDeleteVertices | ManualMeshOperationConstrainEdge | ManualMeshOperationReleaseConstraint | ManualMeshOperationReconnect`
 
+Manual Mesh UV triangulation intent. Applying it through an Edit requires an exact
+candidate source and transfers dependent shapes through the SDK.
+
 Types: [ManualMeshOperationConstrainEdge](#zipzimodelingmeshmanualmeshoperationconstrainedge), [ManualMeshOperationDeleteEdge](#zipzimodelingmeshmanualmeshoperationdeleteedge), [ManualMeshOperationDeleteVertices](#zipzimodelingmeshmanualmeshoperationdeletevertices), [ManualMeshOperationInsertConnectedVertex](#zipzimodelingmeshmanualmeshoperationinsertconnectedvertex), [ManualMeshOperationInsertVertex](#zipzimodelingmeshmanualmeshoperationinsertvertex), [ManualMeshOperationMoveVertices](#zipzimodelingmeshmanualmeshoperationmovevertices), [ManualMeshOperationReconnect](#zipzimodelingmeshmanualmeshoperationreconnect), [ManualMeshOperationReleaseConstraint](#zipzimodelingmeshmanualmeshoperationreleaseconstraint).
 
 
@@ -28,6 +31,8 @@ Types: [ManualMeshOperationConstrainEdge](#zipzimodelingmeshmanualmeshoperationc
 **Type**
 
 `(*, a: int, b: int)`
+
+Add a user-fixed edge or chain between existing vertices.
 
 **Fields**
 
@@ -53,6 +58,8 @@ Internal fixed edges become automatic edges.
 **Type**
 
 `(*, ids: tuple[int, ...])`
+
+Remove the selected vertices and rebuild affected connectivity.
 
 **Fields**
 
@@ -110,12 +117,16 @@ Types: [ManualVertexTarget](#zipzimodelingmeshmanualvertextarget).
 
 `()`
 
+Rebuild automatic triangulation while retaining the structural constraints.
+
 
 ## zipzi.modeling.mesh.ManualMeshOperationReleaseConstraint
 
 **Type**
 
 `(*, a: int, b: int)`
+
+Release a structural edge constraint, leaving its endpoints intact.
 
 **Fields**
 
@@ -127,6 +138,8 @@ Types: [ManualVertexTarget](#zipzimodelingmeshmanualvertextarget).
 **Type**
 
 `(*, added: int, moved: int, removed: int, shape_count: int, reconnected: bool, glue_endpoints: bool, non_affine_parent: bool, affine_extension: bool, appearance_limits: tuple[str, ...], cost: ConversionCost)`
+
+Summary of a Manual Mesh topology transfer, its dependencies, estimated cost and appearance limits.
 
 Types: [ConversionCost].
 
@@ -149,6 +162,8 @@ Types: [ConversionCost].
 
 `(*, id: int, uv: Vec2)`
 
+Absolute UV destination for an existing Manual Mesh vertex, selected by stable ID.
+
 Types: [Vec2].
 
 **Fields**
@@ -161,6 +176,8 @@ Types: [Vec2].
 **Type**
 
 `(*, id: str, name: str, texture_asset_id: SceneReference, vertex_ids: tuple[int, ...], base_positions: tuple[Vec2, ...], uvs: tuple[Vec2, ...], triangles: tuple[tuple[int, int, int], ...], meshing: MeshMeshing | None = None, runtime_id: str, part_id: str, deformer_id: str, appearance: Appearance, draw_order: float | None = None, blend_mode: BlendMode, enabled: bool, double_sided: bool, inverted_mask: bool, masks: tuple[str, ...], raw_blend_mode: int | None = None)`
+
+Authored drawable mesh with stable vertex identities, geometry and resource references.
 
 Types: [Vec2], [MeshMeshing](#zipzimodelingmeshmeshmeshing), [Appearance], [BlendMode], [SceneReference].
 
@@ -238,6 +255,8 @@ Types: [MeshConstraint](#zipzimodelingmeshmeshconstraint).
 
 `(*, vertex_id: int, position: Vec2, uv: Vec2, seed: VertexSeed)`
 
+New stable mesh vertex, its base position and UV, and the policy for dependent shapes.
+
 Types: [Vec2], [VertexSeed](#zipzimodelingmeshvertexseed).
 
 **Fields**
@@ -252,6 +271,8 @@ Types: [Vec2], [VertexSeed](#zipzimodelingmeshvertexseed).
 **Type**
 
 `(*, mesh: Mesh, binding: MeshBinding | None = None, blend_bindings: tuple[BlendShapeBinding, ...], glues: tuple[Glue, ...], vertex_mapping: _Mapping[int, int | None])`
+
+Coordinated mesh topology and dependent binding/Glue replacements for a remesh.
 
 Types: [BlendShapeBinding], [MeshBinding], [Mesh](#zipzimodelingmeshmesh), [Glue].
 
@@ -271,6 +292,8 @@ removes it.
 
 `(*, vertex_id: int, position: Vec2 | None = None, uv: Vec2 | None = None)`
 
+Optional updates to one stable mesh vertex in a selected shape.
+
 Types: [Vec2].
 
 **Fields**
@@ -278,22 +301,27 @@ Types: [Vec2].
 - `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
 - `position`: Replacement XY value: absolute for Base/Ordinary, displacement for BlendShape.
 None preserves the current value in the selected shape.
-- `uv`: Optional texture UV pair; None preserves the current UV.
+- `uv`: Optional texture UV pair; None preserves the current UV. UV updates are permitted only
+for the Base shape, because UV coordinates are shared by all shapes.
 
 ## zipzi.modeling.mesh.VertexDeletePolicy
 
 **Enum**
 
+Select how deletion handles triangles and other content that reference a vertex.
+
 **Members**
 
-- `REJECT_REFERENCES`: 'reject_references'
-- `REMOVE_DEPENDENT_CONTENT`: 'remove_dependent_content'
+- `REJECT_REFERENCES`: 'reject_references' — Reject deletion while dependent content refers to a selected vertex.
+- `REMOVE_DEPENDENT_CONTENT`: 'remove_dependent_content' — Remove dependent content as part of the same edit.
 
 ## zipzi.modeling.mesh.VertexSeed
 
 **Alias**
 
 `VertexSeedBase | VertexSeedInterpolate`
+
+Policy for seeding a new vertex in dependent ordinary and BlendShape content.
 
 Types: [VertexSeedBase](#zipzimodelingmeshvertexseedbase), [VertexSeedInterpolate](#zipzimodelingmeshvertexseedinterpolate).
 
@@ -304,12 +332,16 @@ Types: [VertexSeedBase](#zipzimodelingmeshvertexseedbase), [VertexSeedInterpolat
 
 `()`
 
+Use the new base position for ordinary shapes and zero displacement for BlendShapes.
+
 
 ## zipzi.modeling.mesh.VertexSeedInterpolate
 
 **Type**
 
 `(*, weights: tuple[VertexWeight, ...])`
+
+Interpolate dependent content from existing vertices and supplied weights.
 
 Types: [VertexWeight](#zipzimodelingmeshvertexweight).
 
@@ -323,10 +355,13 @@ Types: [VertexWeight](#zipzimodelingmeshvertexweight).
 
 `(*, vertex_id: int, weight: float)`
 
+Source vertex and interpolation weight used to initialize dependent shapes.
+
 **Fields**
 
 - `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
-- `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
+- `weight`: Finite nonnegative interpolation weight. The nonempty source weights must sum to 1
+within native tolerance.
 
 [BlendShapeBinding]: modeling_bindings.md#zipzimodelingbindingsblendshapebinding
 [MeshBinding]: modeling_bindings.md#zipzimodelingbindingsmeshbinding

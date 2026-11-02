@@ -30,11 +30,13 @@
     },
     "zipzi_contract::document::ResourceEdit": {
       "content": null,
+      "doc": "Document image-resource metadata and ordering edits; pixel preparation is separate.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::ResourceEdit",
       "tag": "operation",
       "variants": [
         {
+          "doc": "Create an image asset without loaded content.",
           "fields": [
             {
               "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
@@ -73,6 +75,7 @@
           "rust_name": "Create"
         },
         {
+          "doc": "Rename an image only if its existing name matches the precondition.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -107,6 +110,7 @@
           "rust_name": "PatchName"
         },
         {
+          "doc": "Replace or clear content metadata under an exact prior-value precondition.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -151,6 +155,7 @@
           "rust_name": "SetContent"
         },
         {
+          "doc": "Reorder selected image assets relative to an optional sibling anchor.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -183,6 +188,7 @@
           "rust_name": "Reorder"
         },
         {
+          "doc": "Duplicate an existing image asset under a fresh identity.",
           "fields": [
             {
               "doc": "Stable ID of the existing source object to duplicate, not a filesystem path.",
@@ -263,6 +269,7 @@
       ]
     },
     "zipzi_contract::model::ImageAsset": {
+      "doc": "Document image identity with optional content metadata or an unresolved imported source.",
       "fields": [
         {
           "default": null,
@@ -316,6 +323,7 @@
       "tuple": false
     },
     "zipzi_contract::model::ImageContent": {
+      "doc": "Stored image locator, dimensions and optional recorded digest; metadata access does not decode pixels.",
       "fields": [
         {
           "doc": "Stored resource location, normally a package-relative path or generated memory-resource\nlocator; reading metadata does not open it.",
@@ -360,6 +368,7 @@
       "tuple": false
     },
     "zipzi_contract::runtime::ImagePixels": {
+      "doc": "Owned decoded pixels captured from an image, independent of subsequent host reads.",
       "fields": [
         {
           "default": null,
@@ -429,6 +438,7 @@
       "name": "zipzi_contract::runtime::ImageQuery"
     },
     "zipzi_contract::runtime::ImageSnapshot": {
+      "doc": "Image identity and pixels captured at one exact formal or candidate source.",
       "fields": [
         {
           "default": null,
@@ -518,11 +528,13 @@
       "name": "zipzi_contract::runtime::PreparedPixelsQuery"
     },
     "zipzi_contract::runtime::ResourceOperation": {
+      "doc": "Image-resource writes and source-bound plan application within an Edit candidate.",
       "kind": "union",
       "name": "zipzi_contract::runtime::ResourceOperation",
       "tag": "domain",
       "variants": [
         {
+          "doc": "Create a document image using a separately owned prepared-image lease.",
           "fields": [
             {
               "default": null,
@@ -548,6 +560,7 @@
           "wire_name": "create_image"
         },
         {
+          "doc": "Replace an image asset using a separately owned prepared-image lease.",
           "fields": [
             {
               "default": null,
@@ -572,6 +585,7 @@
           "wire_name": "replace_image"
         },
         {
+          "doc": "Rename an image asset, optionally requiring its previous name.",
           "fields": [
             {
               "default": null,
@@ -625,6 +639,7 @@
       ]
     },
     "zipzi_contract::runtime::ResourceUsage": {
+      "doc": "Runtime-wide snapshot of retained resource counts and byte-accounting totals.",
       "fields": [
         {
           "default": null,

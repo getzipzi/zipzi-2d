@@ -195,7 +195,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                       'zipzi.modeling.scene.AttachmentRefUnresolved')},
  'zipzi.modeling.scene.AttachmentRefResolved': {'children': ('zipzi.modeling.scene.AttachmentRefResolved.__repr__',
                                                              'zipzi.modeling.scene.AttachmentRefResolved.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Reference a loaded package attachment by stable ID.',
                                                 'fields': [('attachment_id',
                                                             'Stable package-attachment ID, distinct from its relative '
                                                             'package path.')],
@@ -205,7 +205,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRefResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.AttachmentRefUnresolved': {'children': ('zipzi.modeling.scene.AttachmentRefUnresolved.__repr__',
                                                                'zipzi.modeling.scene.AttachmentRefUnresolved.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Preserve a package-relative path that has not '
+                                                                   'resolved to an attachment.',
                                                   'fields': [('path',
                                                               'Normalized package-relative attachment path using '
                                                               'forward slashes; absolute paths\n'
@@ -215,10 +216,11 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.AttachmentRefUnresolved.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.AttachmentRefUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.BlendMode': {'children': (),
-                                    'documentation': '',
-                                    'fields': [('NORMAL', "'normal'"),
-                                               ('ADDITIVE', "'additive'"),
-                                               ('MULTIPLICATIVE', "'multiplicative'")],
+                                    'documentation': 'Compositing mode used when drawing a drawable.',
+                                    'fields': [('NORMAL', "'normal' — Use normal compositing."),
+                                               ('ADDITIVE', "'additive' — Use additive compositing."),
+                                               ('MULTIPLICATIVE',
+                                                "'multiplicative' — Use multiplicative compositing.")],
                                     'kind': 'enum',
                                     'signature': ''},
  'zipzi.modeling.scene.Canvas': {'children': ('zipzi.modeling.scene.Canvas.__repr__',
@@ -246,7 +248,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Canvas.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginal': {'children': ('zipzi.modeling.scene.DeformerOriginal.__repr__',
                                                         'zipzi.modeling.scene.DeformerOriginal.summary'),
-                                           'documentation': '',
+                                           'documentation': 'Persistent original-shape snapshot and first-key capture '
+                                                            'policy.',
                                            'fields': [('auto_update',
                                                        'Update once when the first ordinary keyform is created. Manual '
                                                        'update disables this.'),
@@ -267,7 +270,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginal.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalAction': {'children': (),
-                                                 'documentation': '',
+                                                 'documentation': 'Capture, restore or configure the original deformer '
+                                                                  'shape.',
                                                  'fields': [],
                                                  'kind': 'alias',
                                                  'signature': 'DeformerOriginalActionUpdate | '
@@ -278,7 +282,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                'zipzi.modeling.scene.DeformerOriginalActionUpdate')},
  'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.__repr__',
                                                                         'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'Change the future first-key capture '
+                                                                            'policy.',
                                                            'fields': [('enabled',
                                                                        'Changes the future first-key policy without '
                                                                        'changing geometry or immediately replacing the '
@@ -289,7 +294,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionAutoUpdate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalActionRestore': {'children': ('zipzi.modeling.scene.DeformerOriginalActionRestore.__repr__',
                                                                      'zipzi.modeling.scene.DeformerOriginalActionRestore.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Restore the recorded original with explicit '
+                                                                         'resize permission.',
                                                         'fields': [('allow_resize',
                                                                     'Explicit permission to resample every stored Warp '
                                                                     'shape when the saved conversion density '
@@ -300,14 +306,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalActionRestore.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalActionUpdate': {'children': ('zipzi.modeling.scene.DeformerOriginalActionUpdate.__repr__',
                                                                     'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Capture the current selected shape as the new '
+                                                                        'original.',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
  'zipzi.modeling.scene.DeformerOriginalActionUpdate.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginalActionUpdate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalShape': {'children': (),
-                                                'documentation': '',
+                                                'documentation': 'Independent canvas-space Warp or Rotation original '
+                                                                 'shape.',
                                                 'fields': [],
                                                 'kind': 'alias',
                                                 'signature': 'DeformerOriginalShapeWarp | '
@@ -316,7 +324,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                               'zipzi.modeling.scene.DeformerOriginalShapeWarp')},
  'zipzi.modeling.scene.DeformerOriginalShapeRotation': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeRotation.__repr__',
                                                                      'zipzi.modeling.scene.DeformerOriginalShapeRotation.summary'),
-                                                        'documentation': '',
+                                                        'documentation': 'Store a Rotation pose in canvas space.',
                                                         'fields': [('pose',
                                                                     'Canvas origin, absolute direction (including '
                                                                     'reference angle), inherited scale and '
@@ -328,7 +336,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalShapeRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalShapeWarp': {'children': ('zipzi.modeling.scene.DeformerOriginalShapeWarp.__repr__',
                                                                  'zipzi.modeling.scene.DeformerOriginalShapeWarp.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Store a baked Warp lattice and controller in '
+                                                                     'canvas space.',
                                                     'fields': [('warp',
                                                                 'Baked Warp lattice and optional controller in canvas '
                                                                 'coordinates, X right/Y up.'),
@@ -343,7 +352,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalShapeWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalSnapshot': {'children': ('zipzi.modeling.scene.DeformerOriginalSnapshot.__repr__',
                                                                 'zipzi.modeling.scene.DeformerOriginalSnapshot.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Captured original shape and the event that '
+                                                                    'produced it.',
                                                    'fields': [('source',
                                                                'Creation, first ordinary keyform transition, or '
                                                                'explicit manual update.'),
@@ -358,15 +368,18 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DeformerOriginalSnapshot.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DeformerOriginalSnapshot.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.DeformerOriginalSource': {'children': (),
-                                                 'documentation': '',
-                                                 'fields': [('CREATED', "'created'"),
-                                                            ('FIRST_KEY', "'first_key'"),
-                                                            ('MANUAL', "'manual'")],
+                                                 'documentation': 'How a stored original deformer shape was captured.',
+                                                 'fields': [('CREATED', "'created' — Captured at deformer creation."),
+                                                            ('FIRST_KEY',
+                                                             "'first_key' — Captured when the first ordinary keyform "
+                                                             'was created.'),
+                                                            ('MANUAL', "'manual' — Captured by an explicit update.")],
                                                  'kind': 'enum',
                                                  'signature': ''},
  'zipzi.modeling.scene.DrawOrderGroup': {'children': ('zipzi.modeling.scene.DrawOrderGroup.__repr__',
                                                       'zipzi.modeling.scene.DrawOrderGroup.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Drawing-order range and ordered members owned by a Part or '
+                                                          'the root.',
                                          'fields': [('owner',
                                                      'Empty for the root; otherwise the stable ID of the Part driving '
                                                      'this group.'),
@@ -383,7 +396,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.DrawOrderGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.DrawOrderGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.Glue': {'children': ('zipzi.modeling.scene.Glue.__repr__', 'zipzi.modeling.scene.Glue.summary'),
-                               'documentation': '',
+                               'documentation': 'Connection between two mesh endpoints, with pairs and optional '
+                                                'intensity binding.',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
                                            'exported runtime_id.'),
@@ -415,7 +429,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Glue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.GlueVertexPair': {'children': ('zipzi.modeling.scene.GlueVertexPair.__repr__',
                                                       'zipzi.modeling.scene.GlueVertexPair.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Stable pair of optional endpoint vertices and their Glue '
+                                                          'weights.',
                                          'fields': [('id',
                                                      'Stable UUID of this Glue pair; not the identity of its target.'),
                                                     ('vertex_a',
@@ -476,7 +491,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ModelSetup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.Offscreen': {'children': ('zipzi.modeling.scene.Offscreen.__repr__',
                                                  'zipzi.modeling.scene.Offscreen.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Part-owned compositing group with masks and mapped appearance '
+                                                     'keyforms.',
                                     'fields': [('id',
                                                 'Stable document object ID used by references; it is distinct from the '
                                                 'exported runtime_id.'),
@@ -513,7 +529,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Offscreen.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Offscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenDeletePolicy': {'children': (),
-                                                'documentation': '',
+                                                'documentation': 'Choose how Part mappings are handled when Offscreen '
+                                                                 'keyform slots are deleted.',
                                                 'fields': [],
                                                 'kind': 'alias',
                                                 'signature': 'OffscreenDeletePolicyRejectReferences | '
@@ -524,7 +541,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                               'zipzi.modeling.scene.OffscreenDeletePolicyRemap')},
  'zipzi.modeling.scene.OffscreenDeletePolicyNeutral': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyNeutral.__repr__',
                                                                     'zipzi.modeling.scene.OffscreenDeletePolicyNeutral.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Replace references to removed slots with the '
+                                                                        'neutral mapping.',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -532,7 +550,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyNeutral.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.__repr__',
                                                                              'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.summary'),
-                                                                'documentation': '',
+                                                                'documentation': 'Reject removal of referenced keyform '
+                                                                                 'slots.',
                                                                 'fields': [],
                                                                 'kind': 'type',
                                                                 'signature': '()'},
@@ -540,7 +559,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyRejectReferences.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenDeletePolicyRemap': {'children': ('zipzi.modeling.scene.OffscreenDeletePolicyRemap.__repr__',
                                                                   'zipzi.modeling.scene.OffscreenDeletePolicyRemap.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Replace references according to the explicit '
+                                                                      'old-to-new slot mapping.',
                                                      'fields': [('replacements',
                                                                  'Deleted-keyform-slot to replacement-slot map; None '
                                                                  'selects neutral/unmapped for that\n'
@@ -551,7 +571,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenDeletePolicyRemap.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OffscreenMappingPatch': {'children': ('zipzi.modeling.scene.OffscreenMappingPatch.__repr__',
                                                              'zipzi.modeling.scene.OffscreenMappingPatch.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Assign an Offscreen keyform index to one static or '
+                                                                 'sampled Part slot.',
                                                 'fields': [('slot',
                                                             'Static Part slot or stable Part-binding sample '
                                                             'combination to remap.'),
@@ -564,7 +585,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OffscreenMappingPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OffscreenMappingPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationCollection': {'children': (),
-                                                 'documentation': '',
+                                                 'documentation': 'Select an organization collection independently of '
+                                                                  'deformation and drawing order.',
                                                  'fields': [],
                                                  'kind': 'alias',
                                                  'signature': 'OrganizationCollectionParameters | '
@@ -575,7 +597,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                'zipzi.modeling.scene.OrganizationCollectionPartMembers')},
  'zipzi.modeling.scene.OrganizationCollectionParameterGroups': {'children': ('zipzi.modeling.scene.OrganizationCollectionParameterGroups.__repr__',
                                                                              'zipzi.modeling.scene.OrganizationCollectionParameterGroups.summary'),
-                                                                'documentation': '',
+                                                                'documentation': 'Select child parameter groups under '
+                                                                                 'a parent or at the root.',
                                                                 'fields': [('parent_id',
                                                                             'Parent object ID in this hierarchy; '
                                                                             'independent of storage and drawing order. '
@@ -587,7 +610,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionParameterGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationCollectionParameters': {'children': ('zipzi.modeling.scene.OrganizationCollectionParameters.__repr__',
                                                                         'zipzi.modeling.scene.OrganizationCollectionParameters.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'Select parameters in one group or at the '
+                                                                            'root.',
                                                            'fields': [('group_id',
                                                                        'Parameter-group ID in the document metadata '
                                                                        'hierarchy. None selects the\n'
@@ -598,7 +622,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionParameters.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationCollectionPartMembers': {'children': ('zipzi.modeling.scene.OrganizationCollectionPartMembers.__repr__',
                                                                          'zipzi.modeling.scene.OrganizationCollectionPartMembers.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Select members of a Part or the root '
+                                                                             'organization.',
                                                             'fields': [('part_id',
                                                                         'Organizational Part owner ID; independent of '
                                                                         'the deformation parent. None selects\n'
@@ -608,12 +633,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.OrganizationCollectionPartMembers.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.OrganizationCollectionPartMembers.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.OrganizationDeletePolicy': {'children': (),
-                                                   'documentation': '',
-                                                   'fields': [('CONTENTS', "'contents'"), ('DISSOLVE', "'dissolve'")],
+                                                   'documentation': 'Select whether deleting organization containers '
+                                                                    'also deletes their contents.',
+                                                   'fields': [('CONTENTS',
+                                                               "'contents' — Delete the selected containers with their "
+                                                               'contents.'),
+                                                              ('DISSOLVE',
+                                                               "'dissolve' — Remove containers while preserving their "
+                                                               'contents.')],
                                                    'kind': 'enum',
                                                    'signature': ''},
  'zipzi.modeling.scene.Part': {'children': ('zipzi.modeling.scene.Part.__repr__', 'zipzi.modeling.scene.Part.summary'),
-                               'documentation': '',
+                               'documentation': 'Organizational Part with a parent, evaluation state and drawing-order '
+                                                'coordinate.',
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
                                            'exported runtime_id.'),
@@ -648,7 +680,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.PartId.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentContext': {'children': ('zipzi.modeling.scene.ReparentContext.__repr__',
                                                        'zipzi.modeling.scene.ReparentContext.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Frozen parameter values, optional domains and reference '
+                                                           'time for preservation planning.',
                                           'fields': [('parameter_values',
                                                       'Parameter-ID-to-value map used for the reparenting reference '
                                                       'pose; values use each\n'
@@ -668,7 +701,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ReparentContext.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentPlacement': {'children': ('zipzi.modeling.scene.ReparentPlacement.__repr__',
                                                          'zipzi.modeling.scene.ReparentPlacement.summary'),
-                                            'documentation': '',
+                                            'documentation': 'Optional insertion position in the destination '
+                                                             'deformation collection.',
                                             'fields': [('before',
                                                         'None appends; Some names an unselected member of the '
                                                         'destination.')],
@@ -677,15 +711,23 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ReparentPlacement.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.ReparentPlacement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ReparentStrategy': {'children': (),
-                                           'documentation': '',
-                                           'fields': [('KEEP_LOCAL_DATA', "'KeepLocalData'"),
-                                                      ('PRESERVE_EDIT_STATE', "'PreserveEditState'"),
-                                                      ('PRESERVE_PARAMETER_DOMAIN', "'PreserveParameterDomain'")],
+                                           'documentation': 'Choose how deformation reparenting treats local shape '
+                                                            'data and preservation.',
+                                           'fields': [('KEEP_LOCAL_DATA',
+                                                       "'KeepLocalData' — Retain local data; world-space appearance "
+                                                       'may change.'),
+                                                      ('PRESERVE_EDIT_STATE',
+                                                       "'PreserveEditState' — Attempt preservation at the frozen "
+                                                       'parameter values.'),
+                                                      ('PRESERVE_PARAMETER_DOMAIN',
+                                                       "'PreserveParameterDomain' — Attempt preservation across the "
+                                                       'explicitly supplied parameter domains.')],
                                            'kind': 'enum',
                                            'signature': ''},
  'zipzi.modeling.scene.RotationPose': {'children': ('zipzi.modeling.scene.RotationPose.__repr__',
                                                     'zipzi.modeling.scene.RotationPose.summary'),
-                                       'documentation': '',
+                                       'documentation': 'Rotation origin, angle, scale and reflections in its parent '
+                                                        'space.',
                                        'fields': [('origin',
                                                    'Rotation origin in parent authoring coordinates, stored at f64 '
                                                    'precision; default is (0, 0).'),
@@ -703,7 +745,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.RotationPose.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.RotationTransform': {'children': ('zipzi.modeling.scene.RotationTransform.__repr__',
                                                          'zipzi.modeling.scene.RotationTransform.summary'),
-                                            'documentation': '',
+                                            'documentation': 'Rotation reference angle and base pose.',
                                             'fields': [('base_angle',
                                                         'Reference angle in degrees used to orient the rotation '
                                                         'control.'),
@@ -716,7 +758,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.RotationTransform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.RotationTransform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollection': {'children': (),
-                                          'documentation': '',
+                                          'documentation': 'Select an organization, deformation, Glue or drawing '
+                                                           'collection.',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'SceneCollectionOrganization | SceneCollectionDeformation | '
@@ -729,7 +772,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                         'zipzi.modeling.scene.SceneCollectionOrganization')},
  'zipzi.modeling.scene.SceneCollectionDeformation': {'children': ('zipzi.modeling.scene.SceneCollectionDeformation.__repr__',
                                                                   'zipzi.modeling.scene.SceneCollectionDeformation.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Select children of a deformation parent or the '
+                                                                      'root.',
                                                      'fields': [('parent_id',
                                                                  'Parent object ID in this hierarchy; independent of '
                                                                  'storage and drawing order. None\n'
@@ -740,7 +784,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDeformation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionDrawing': {'children': ('zipzi.modeling.scene.SceneCollectionDrawing.__repr__',
                                                               'zipzi.modeling.scene.SceneCollectionDrawing.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Select members of one drawing group.',
                                                  'fields': [('owner',
                                                              'Stable owner ID for the addressed drawing group, '
                                                              'collection or reference selection.')],
@@ -750,7 +794,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDrawing.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionDrawingGroups': {'children': ('zipzi.modeling.scene.SceneCollectionDrawingGroups.__repr__',
                                                                     'zipzi.modeling.scene.SceneCollectionDrawingGroups.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Select drawing groups.',
                                                        'fields': [],
                                                        'kind': 'type',
                                                        'signature': '()'},
@@ -758,7 +802,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionDrawingGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionGlues': {'children': ('zipzi.modeling.scene.SceneCollectionGlues.__repr__',
                                                             'zipzi.modeling.scene.SceneCollectionGlues.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Select the Glue collection.',
                                                'fields': [],
                                                'kind': 'type',
                                                'signature': '()'},
@@ -766,7 +810,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionGlues.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCollectionOrganization': {'children': ('zipzi.modeling.scene.SceneCollectionOrganization.__repr__',
                                                                    'zipzi.modeling.scene.SceneCollectionOrganization.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Select members of a Part or the root '
+                                                                       'organization.',
                                                       'fields': [('part_id',
                                                                   'Organizational Part owner ID; independent of the '
                                                                   'deformation parent. None selects\n'
@@ -776,7 +821,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCollectionOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCollectionOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTarget': {'children': (),
-                                             'documentation': '',
+                                             'documentation': 'Select one mesh, Warp, Glue or Offscreen content field '
+                                                              'for an address.',
                                              'fields': [],
                                              'kind': 'alias',
                                              'signature': 'SceneContentTargetVertexPosition | '
@@ -796,7 +842,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                            'zipzi.modeling.scene.SceneContentTargetWarpPoint')},
  'zipzi.modeling.scene.SceneContentTargetGluePair': {'children': ('zipzi.modeling.scene.SceneContentTargetGluePair.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetGluePair.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Select one stable Glue pair.',
                                                      'fields': [('pair_id',
                                                                  'Stable Glue pair ID, not its offset in the pair '
                                                                  'array.')],
@@ -806,7 +852,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Select an Offscreen appearance form by '
+                                                                              'array slot.',
                                                              'fields': [('slot',
                                                                          'Zero-based slot in the addressed triangle or '
                                                                          'Offscreen keyform array; never an\n'
@@ -817,7 +864,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetOffscreenMapping': {'children': ('zipzi.modeling.scene.SceneContentTargetOffscreenMapping.__repr__',
                                                                           'zipzi.modeling.scene.SceneContentTargetOffscreenMapping.summary'),
-                                                             'documentation': '',
+                                                             'documentation': 'Select the Offscreen mapping of one '
+                                                                              'Part slot.',
                                                              'fields': [('slot',
                                                                          'Static Part slot or stable Part-binding '
                                                                          'sample combination, not an Offscreen array\n'
@@ -829,7 +877,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetOffscreenMapping.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetTriangle': {'children': ('zipzi.modeling.scene.SceneContentTargetTriangle.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetTriangle.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Select one triangle by its array slot.',
                                                      'fields': [('slot',
                                                                  'Zero-based slot in the addressed triangle or '
                                                                  'Offscreen keyform array; never an\n'
@@ -840,7 +888,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetTriangle.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetVertexPosition': {'children': ('zipzi.modeling.scene.SceneContentTargetVertexPosition.__repr__',
                                                                         'zipzi.modeling.scene.SceneContentTargetVertexPosition.summary'),
-                                                           'documentation': '',
+                                                           'documentation': 'Select one vertex position in the chosen '
+                                                                            'shape.',
                                                            'fields': [('vertex_id',
                                                                        'Stable u32 vertex ID within the mesh, not an '
                                                                        'offset into its position array.'),
@@ -856,7 +905,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetVertexPosition.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetVertexUv': {'children': ('zipzi.modeling.scene.SceneContentTargetVertexUv.__repr__',
                                                                   'zipzi.modeling.scene.SceneContentTargetVertexUv.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Select the shared base UV of one vertex.',
                                                      'fields': [('vertex_id',
                                                                  'Stable u32 vertex ID within the mesh, not an offset '
                                                                  'into its position array.')],
@@ -886,7 +935,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetWarpBezierControl.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentTargetWarpPoint': {'children': ('zipzi.modeling.scene.SceneContentTargetWarpPoint.__repr__',
                                                                    'zipzi.modeling.scene.SceneContentTargetWarpPoint.summary'),
-                                                      'documentation': '',
+                                                      'documentation': 'Select one Warp lattice point in the chosen '
+                                                                       'shape.',
                                                       'fields': [('row',
                                                                   'Zero-based lattice point row, in the inclusive '
                                                                   'range 0..rows.'),
@@ -904,7 +954,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentTargetWarpPoint.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentTargetWarpPoint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValue': {'children': (),
-                                            'documentation': '',
+                                            'documentation': 'Typed replacement content matching the selected scene '
+                                                             'content field.',
                                             'fields': [],
                                             'kind': 'alias',
                                             'signature': 'SceneContentValuePoint | SceneContentValueTriangle | '
@@ -917,7 +968,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                           'zipzi.modeling.scene.SceneContentValueTriangle')},
  'zipzi.modeling.scene.SceneContentValueGluePair': {'children': ('zipzi.modeling.scene.SceneContentValueGluePair.__repr__',
                                                                  'zipzi.modeling.scene.SceneContentValueGluePair.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Supply a complete Glue pair.',
                                                     'fields': [('value',
                                                                 'Complete replacement Glue pair with its identity and '
                                                                 'endpoint vertices.')],
@@ -928,7 +979,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValueMapping': {'children': ('zipzi.modeling.scene.SceneContentValueMapping.__repr__',
                                                                 'zipzi.modeling.scene.SceneContentValueMapping.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Supply an Offscreen keyform index or neutral '
+                                                                    'sentinel.',
                                                    'fields': [('value',
                                                                'Replacement Offscreen keyform-array index; -1 selects '
                                                                'neutral/unmapped.')],
@@ -938,7 +990,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueMapping.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValueOffscreenKeyform': {'children': ('zipzi.modeling.scene.SceneContentValueOffscreenKeyform.__repr__',
                                                                          'zipzi.modeling.scene.SceneContentValueOffscreenKeyform.summary'),
-                                                            'documentation': '',
+                                                            'documentation': 'Supply a complete Offscreen appearance '
+                                                                             'form.',
                                                             'fields': [('value',
                                                                         'Complete replacement Offscreen appearance '
                                                                         'sample.')],
@@ -949,7 +1002,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValuePoint': {'children': ('zipzi.modeling.scene.SceneContentValuePoint.__repr__',
                                                               'zipzi.modeling.scene.SceneContentValuePoint.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Supply a position, displacement or UV pair as '
+                                                                  'required by the target.',
                                                  'fields': [('value',
                                                              'Replacement XY value in the selected shape/UV space; '
                                                              'BlendShape targets use deltas.')],
@@ -960,7 +1014,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValuePoint.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneContentValueTriangle': {'children': ('zipzi.modeling.scene.SceneContentValueTriangle.__repr__',
                                                                  'zipzi.modeling.scene.SceneContentValueTriangle.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Supply three stable vertex IDs for a triangle.',
                                                     'fields': [('value',
                                                                 'Replacement triangle as three stable vertex IDs, not '
                                                                 'position-array indices.')],
@@ -969,13 +1023,16 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneContentValueTriangle.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneContentValueTriangle.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCopyScope': {'children': (),
-                                         'documentation': '',
-                                         'fields': [('SELECTED', "'selected'"),
-                                                    ('DEFORMATION_SUBTREE', "'deformation_subtree'")],
+                                         'documentation': 'Select whether scene duplication or deletion includes '
+                                                          'deformation descendants.',
+                                         'fields': [('SELECTED', "'selected' — Operate on selected objects only."),
+                                                    ('DEFORMATION_SUBTREE',
+                                                     "'deformation_subtree' — Include descendants in the deformation "
+                                                     'hierarchy.')],
                                          'kind': 'enum',
                                          'signature': ''},
  'zipzi.modeling.scene.SceneCreate': {'children': (),
-                                      'documentation': '',
+                                      'documentation': 'Select the kind and options for creating a scene object.',
                                       'fields': [],
                                       'kind': 'alias',
                                       'signature': 'SceneCreateMesh | SceneCreateWarp | SceneCreateRotation | '
@@ -987,7 +1044,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                     'zipzi.modeling.scene.SceneCreateWarp')},
  'zipzi.modeling.scene.SceneCreateGlue': {'children': ('zipzi.modeling.scene.SceneCreateGlue.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateGlue.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Create a Glue connection with explicit mesh references.',
                                           'fields': [('a',
                                                       'Mesh A endpoint of the Glue; resolved references use stable '
                                                       'mesh IDs and unresolved\n'
@@ -1004,7 +1061,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateMesh': {'children': ('zipzi.modeling.scene.SceneCreateMesh.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateMesh.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Create a mesh with an explicit texture reference.',
                                           'fields': [('texture',
                                                       'Image-asset reference; resolved values use asset IDs and '
                                                       'unresolved values retain\n'
@@ -1016,7 +1073,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateMesh.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateOffscreen': {'children': ('zipzi.modeling.scene.SceneCreateOffscreen.__repr__',
                                                             'zipzi.modeling.scene.SceneCreateOffscreen.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Create an Offscreen group.',
                                                'fields': [],
                                                'kind': 'type',
                                                'signature': '()'},
@@ -1024,7 +1081,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateRotation': {'children': ('zipzi.modeling.scene.SceneCreateRotation.__repr__',
                                                            'zipzi.modeling.scene.SceneCreateRotation.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Create a rotation transform with optional parent-space '
+                                                               'origin.',
                                               'fields': [('origin',
                                                           'Optional rotation origin in parent coordinates. None uses '
                                                           '(0, 0) for an empty\n'
@@ -1037,7 +1095,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneCreateWarp': {'children': ('zipzi.modeling.scene.SceneCreateWarp.__repr__',
                                                        'zipzi.modeling.scene.SceneCreateWarp.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Create a warp transform with optional parent-space bounds.',
                                           'fields': [('bounds',
                                                       'Optional [left, bottom, right, top] warp bounds in parent '
                                                       'coordinates; None requests\n'
@@ -1047,24 +1105,28 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneCreateWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneCreateWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneField': {'children': (),
-                                     'documentation': '',
-                                     'fields': [('LABEL', "'label'"),
-                                                ('RUNTIME_ID', "'runtime_id'"),
-                                                ('ENABLED', "'enabled'"),
-                                                ('APPEARANCE', "'appearance'"),
-                                                ('TEXTURE', "'texture'"),
-                                                ('MASKS', "'masks'"),
-                                                ('MESH_DRAWING', "'mesh_drawing'"),
-                                                ('WARP', "'warp'"),
-                                                ('ROTATION', "'rotation'"),
-                                                ('GLUE_ENDPOINTS', "'glue_endpoints'"),
-                                                ('GLUE_INTENSITY', "'glue_intensity'"),
-                                                ('OFFSCREEN', "'offscreen'"),
-                                                ('CONTEXT', "'context'")],
+                                     'documentation': 'Identifies a typed scene property for reads or field-address '
+                                                      'operations.',
+                                     'fields': [('LABEL', "'label' — Display label."),
+                                                ('RUNTIME_ID', "'runtime_id' — External runtime identifier."),
+                                                ('ENABLED', "'enabled' — Evaluation enabled flag."),
+                                                ('APPEARANCE', "'appearance' — Opacity and color factors."),
+                                                ('TEXTURE', "'texture' — Image-asset reference."),
+                                                ('MASKS', "'masks' — Clipping-mask mesh references."),
+                                                ('MESH_DRAWING', "'mesh_drawing' — Mesh drawing configuration."),
+                                                ('WARP', "'warp' — Warp transform definition."),
+                                                ('ROTATION', "'rotation' — Rotation transform definition."),
+                                                ('GLUE_ENDPOINTS', "'glue_endpoints' — Glue endpoint mesh references."),
+                                                ('GLUE_INTENSITY', "'glue_intensity' — Glue influence factor."),
+                                                ('OFFSCREEN',
+                                                 "'offscreen' — Offscreen compositing and keyform mapping."),
+                                                ('CONTEXT',
+                                                 "'context' — Organization and deformation parent identities.")],
                                      'kind': 'enum',
                                      'signature': ''},
  'zipzi.modeling.scene.SceneFieldValue': {'children': (),
-                                          'documentation': '',
+                                          'documentation': 'Typed scene property value used for exact-precondition '
+                                                           'patches.',
                                           'fields': [],
                                           'kind': 'alias',
                                           'signature': 'SceneFieldValueLabel | SceneFieldValueRuntimeId | '
@@ -1089,7 +1151,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                         'zipzi.modeling.scene.SceneFieldValueWarp')},
  'zipzi.modeling.scene.SceneFieldValueAppearance': {'children': ('zipzi.modeling.scene.SceneFieldValueAppearance.__repr__',
                                                                  'zipzi.modeling.scene.SceneFieldValueAppearance.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'Select opacity and color factors.',
                                                     'fields': [('value', 'Replacement opacity and RGB color factors.')],
                                                     'kind': 'type',
                                                     'signature': '(*, value: Appearance)',
@@ -1098,7 +1160,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueAppearance.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueContext': {'children': ('zipzi.modeling.scene.SceneFieldValueContext.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueContext.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Select organization and deformation context.',
                                                  'fields': [('part_id',
                                                              'Organizational Part owner ID; independent of the '
                                                              'deformation parent. None selects\n'
@@ -1114,7 +1176,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueContext.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueEnabled': {'children': ('zipzi.modeling.scene.SceneFieldValueEnabled.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueEnabled.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Select an evaluation enabled value.',
                                                  'fields': [('value', 'Replacement model evaluation enabled flag.')],
                                                  'kind': 'type',
                                                  'signature': '(*, value: bool)'},
@@ -1122,7 +1184,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueEnabled.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueGlueEndpoints': {'children': ('zipzi.modeling.scene.SceneFieldValueGlueEndpoints.__repr__',
                                                                     'zipzi.modeling.scene.SceneFieldValueGlueEndpoints.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Select both Glue endpoint references.',
                                                        'fields': [('a',
                                                                    'Mesh A endpoint of the Glue; resolved references '
                                                                    'use stable mesh IDs and unresolved\n'
@@ -1138,7 +1200,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueGlueEndpoints.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueGlueIntensity': {'children': ('zipzi.modeling.scene.SceneFieldValueGlueIntensity.__repr__',
                                                                     'zipzi.modeling.scene.SceneFieldValueGlueIntensity.summary'),
-                                                       'documentation': '',
+                                                       'documentation': 'Select a Glue influence factor.',
                                                        'fields': [('value', 'Replacement Glue influence factor.')],
                                                        'kind': 'type',
                                                        'signature': '(*, value: float)'},
@@ -1146,7 +1208,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueGlueIntensity.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueLabel': {'children': ('zipzi.modeling.scene.SceneFieldValueLabel.__repr__',
                                                             'zipzi.modeling.scene.SceneFieldValueLabel.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Select a display-label value.',
                                                'fields': [('value', 'Replacement display label.')],
                                                'kind': 'type',
                                                'signature': '(*, value: str)'},
@@ -1154,7 +1216,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueLabel.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueMasks': {'children': ('zipzi.modeling.scene.SceneFieldValueMasks.__repr__',
                                                             'zipzi.modeling.scene.SceneFieldValueMasks.summary'),
-                                               'documentation': '',
+                                               'documentation': 'Select the complete clipping-mask mesh list.',
                                                'fields': [('value', 'Complete ordered clipping-mask mesh selection.')],
                                                'kind': 'type',
                                                'signature': '(*, value: tuple[str, ...])'},
@@ -1162,7 +1224,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueMasks.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueMeshDrawing': {'children': ('zipzi.modeling.scene.SceneFieldValueMeshDrawing.__repr__',
                                                                   'zipzi.modeling.scene.SceneFieldValueMeshDrawing.summary'),
-                                                     'documentation': '',
+                                                     'documentation': 'Select mesh drawing configuration.',
                                                      'fields': [('draw_order',
                                                                  'Drawing-order coordinate; distinct from the final '
                                                                  'evaluated render_order. None\n'
@@ -1187,16 +1249,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueMeshDrawing.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueOffscreen': {'children': ('zipzi.modeling.scene.SceneFieldValueOffscreen.__repr__',
                                                                 'zipzi.modeling.scene.SceneFieldValueOffscreen.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Select Offscreen compositing and mapping data.',
                                                    'fields': [('blend_mode',
                                                                'Compositing mode used when drawing this object.'),
                                                               ('flags',
                                                                'Preserved format-specific Offscreen compositing '
                                                                'flags.'),
                                                               ('keyforms',
-                                                               'Shape samples for this binding; coordinate/sample '
-                                                               'identities must match its axes or\n'
-                                                               'key table.'),
+                                                               'Ordered Offscreen appearance forms; Part mapping '
+                                                               'entries select their array indices.'),
                                                               ('part_keyform_indices',
                                                                'Part-keyform-to-Offscreen-keyform mapping; entries are '
                                                                'keyform slots, not object IDs.')],
@@ -1209,7 +1270,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueRotation': {'children': ('zipzi.modeling.scene.SceneFieldValueRotation.__repr__',
                                                                'zipzi.modeling.scene.SceneFieldValueRotation.summary'),
-                                                  'documentation': '',
+                                                  'documentation': 'Select a complete Rotation definition.',
                                                   'fields': [('value', 'Complete replacement rotation definition.')],
                                                   'kind': 'type',
                                                   'signature': '(*, value: RotationTransform)',
@@ -1218,7 +1279,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueRuntimeId': {'children': ('zipzi.modeling.scene.SceneFieldValueRuntimeId.__repr__',
                                                                 'zipzi.modeling.scene.SceneFieldValueRuntimeId.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Select an external runtime identifier.',
                                                    'fields': [('value',
                                                                'Replacement external runtime identifier; an empty '
                                                                'string explicitly clears it.')],
@@ -1228,7 +1289,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueRuntimeId.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueTexture': {'children': ('zipzi.modeling.scene.SceneFieldValueTexture.__repr__',
                                                               'zipzi.modeling.scene.SceneFieldValueTexture.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Select an image-asset reference.',
                                                  'fields': [('value',
                                                              'Resolved image-asset reference or explicitly unresolved '
                                                              'texture runtime identifier.')],
@@ -1239,7 +1300,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueTexture.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneFieldValueWarp': {'children': ('zipzi.modeling.scene.SceneFieldValueWarp.__repr__',
                                                            'zipzi.modeling.scene.SceneFieldValueWarp.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Select a complete Warp definition.',
                                               'fields': [('value',
                                                           'Complete replacement warp lattice and controller '
                                                           'definition.')],
@@ -1249,7 +1310,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneFieldValueWarp.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneFieldValueWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneReference': {'children': (),
-                                         'documentation': '',
+                                         'documentation': 'Scene target reference that preserves absent and unresolved '
+                                                          'imported targets explicitly.',
                                          'fields': [],
                                          'kind': 'alias',
                                          'signature': 'SceneReferenceUnspecified | SceneReferenceResolved | '
@@ -1259,7 +1321,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                        'zipzi.modeling.scene.SceneReferenceUnspecified')},
  'zipzi.modeling.scene.SceneReferenceResolved': {'children': ('zipzi.modeling.scene.SceneReferenceResolved.__repr__',
                                                               'zipzi.modeling.scene.SceneReferenceResolved.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Target a stable document object ID.',
                                                  'fields': [('object_id',
                                                              'Stable document ID of the object described or selected '
                                                              'by this value.')],
@@ -1269,7 +1331,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceResolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneReferenceUnresolved': {'children': ('zipzi.modeling.scene.SceneReferenceUnresolved.__repr__',
                                                                 'zipzi.modeling.scene.SceneReferenceUnresolved.summary'),
-                                                   'documentation': '',
+                                                   'documentation': 'Preserve an external runtime identifier that has '
+                                                                    'not resolved to a document object.',
                                                    'fields': [('runtime_id',
                                                                'External format/runtime identifier retained for '
                                                                'import/export; not the document\n'
@@ -1280,14 +1343,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.SceneReferenceUnresolved.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.SceneReferenceUnspecified': {'children': ('zipzi.modeling.scene.SceneReferenceUnspecified.__repr__',
                                                                  'zipzi.modeling.scene.SceneReferenceUnspecified.summary'),
-                                                    'documentation': '',
+                                                    'documentation': 'No target was specified.',
                                                     'fields': [],
                                                     'kind': 'type',
                                                     'signature': '()'},
  'zipzi.modeling.scene.SceneReferenceUnspecified.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.SceneReferenceUnspecified.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ShapeTarget': {'children': (),
-                                      'documentation': '',
+                                      'documentation': 'Select the base, an ordinary binding sample or a BlendShape '
+                                                       'sample for a content edit.',
                                       'fields': [],
                                       'kind': 'alias',
                                       'signature': 'ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlend',
@@ -1296,7 +1360,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                     'zipzi.modeling.scene.ShapeTargetOrdinary')},
  'zipzi.modeling.scene.ShapeTargetBase': {'children': ('zipzi.modeling.scene.ShapeTargetBase.__repr__',
                                                        'zipzi.modeling.scene.ShapeTargetBase.summary'),
-                                          'documentation': '',
+                                          'documentation': 'Edit the undeformed base shape.',
                                           'fields': [],
                                           'kind': 'type',
                                           'signature': '()'},
@@ -1304,7 +1368,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetBase.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ShapeTargetBlend': {'children': ('zipzi.modeling.scene.ShapeTargetBlend.__repr__',
                                                         'zipzi.modeling.scene.ShapeTargetBlend.summary'),
-                                           'documentation': '',
+                                           'documentation': 'Edit the BlendShape displacement selected by binding and '
+                                                            'sample identities.',
                                            'fields': [('binding_id',
                                                        'Stable binding ID owning the addressed axes or keyforms.'),
                                                       ('sample_id',
@@ -1317,7 +1382,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetBlend.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.ShapeTargetOrdinary': {'children': ('zipzi.modeling.scene.ShapeTargetOrdinary.__repr__',
                                                            'zipzi.modeling.scene.ShapeTargetOrdinary.summary'),
-                                              'documentation': '',
+                                              'documentation': 'Edit the ordinary shape selected by binding and sample '
+                                                               'identities.',
                                               'fields': [('binding_id',
                                                           'Stable binding ID owning the addressed axes or keyforms.'),
                                                          ('samples',
@@ -1329,7 +1395,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.ShapeTargetOrdinary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.Transform': {'children': ('zipzi.modeling.scene.Transform.__repr__',
                                                  'zipzi.modeling.scene.Transform.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Document deformation transform with independent organization and '
+                                                     'deformation parents.',
                                     'fields': [('id',
                                                 'Stable document object ID used by references; it is distinct from the '
                                                 'exported runtime_id.'),
@@ -1377,7 +1444,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.Transform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.Transform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformData': {'children': (),
-                                        'documentation': '',
+                                        'documentation': 'Typed Warp or Rotation deformation definition.',
                                         'fields': [],
                                         'kind': 'alias',
                                         'signature': 'TransformDataWarp | TransformDataRotation',
@@ -1385,7 +1452,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                       'zipzi.modeling.scene.TransformDataWarp')},
  'zipzi.modeling.scene.TransformDataRotation': {'children': ('zipzi.modeling.scene.TransformDataRotation.__repr__',
                                                              'zipzi.modeling.scene.TransformDataRotation.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Use a Rotation definition.',
                                                 'fields': [('value',
                                                             'Rotation deformation definition with its reference angle '
                                                             'and base pose.')],
@@ -1396,7 +1463,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.TransformDataRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.TransformDataWarp': {'children': ('zipzi.modeling.scene.TransformDataWarp.__repr__',
                                                          'zipzi.modeling.scene.TransformDataWarp.summary'),
-                                            'documentation': '',
+                                            'documentation': 'Use a Warp lattice definition.',
                                             'fields': [('value',
                                                         'Warp deformation definition with its baked lattice and '
                                                         'optional authoring controller.')],
@@ -1415,7 +1482,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.TransformId.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpAuthoringSettings': {'children': ('zipzi.modeling.scene.WarpAuthoringSettings.__repr__',
                                                              'zipzi.modeling.scene.WarpAuthoringSettings.summary'),
-                                                'documentation': '',
+                                                'documentation': 'Persistent editing mode, reform policy and optional '
+                                                                 'controller density for a Warp.',
                                                 'fields': [('auto_reform',
                                                             "Rebuild the edited shape's baked grid on subsequent "
                                                             'Bezier edits.'),
@@ -1435,7 +1503,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpAuthoringSettings.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezier': {'children': ('zipzi.modeling.scene.WarpBezier.__repr__',
                                                   'zipzi.modeling.scene.WarpBezier.summary'),
-                                     'documentation': '',
+                                     'documentation': 'Row-major Bezier controller for an authored Warp shape.',
                                      'fields': [('rows',
                                                  'Number of warp lattice cells vertically; a lattice has rows + 1 '
                                                  'point rows.'),
@@ -1452,7 +1520,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezier.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezierControlPatch': {'children': ('zipzi.modeling.scene.WarpBezierControlPatch.__repr__',
                                                               'zipzi.modeling.scene.WarpBezierControlPatch.summary'),
-                                                 'documentation': '',
+                                                 'documentation': 'Absolute destination for one controller anchor or '
+                                                                  'handle.',
                                                  'fields': [('node', 'Zero-based controller node in row-major order.'),
                                                             ('component',
                                                              '0 is the anchor; 1..4 are left, right, up and down '
@@ -1484,7 +1553,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                              'signature': ''},
  'zipzi.modeling.scene.WarpBezierGrid': {'children': ('zipzi.modeling.scene.WarpBezierGrid.__repr__',
                                                       'zipzi.modeling.scene.WarpBezierGrid.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Controller subdivision density, independent of baked Warp '
+                                                          'lattice density.',
                                          'fields': [('rows', 'Vertical controller cell count, from 1 to 32.'),
                                                     ('columns', 'Horizontal controller cell count, from 1 to 32.')],
                                          'kind': 'type',
@@ -1493,7 +1563,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezierGrid.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpBezierNode': {'children': ('zipzi.modeling.scene.WarpBezierNode.__repr__',
                                                       'zipzi.modeling.scene.WarpBezierNode.summary'),
-                                         'documentation': '',
+                                         'documentation': 'One controller anchor with its four handles.',
                                          'fields': [('position',
                                                      'Absolute Bezier anchor position in lattice coordinates; not a '
                                                      'handle offset.'),
@@ -1507,7 +1577,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpBezierNode.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpPointPatch': {'children': ('zipzi.modeling.scene.WarpPointPatch.__repr__',
                                                       'zipzi.modeling.scene.WarpPointPatch.summary'),
-                                         'documentation': '',
+                                         'documentation': 'Replacement lattice point at a row and column in a selected '
+                                                          'Warp shape.',
                                          'fields': [('row',
                                                      'Zero-based lattice point row, in the inclusive range 0..rows.'),
                                                     ('column',
@@ -1522,14 +1593,19 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
  'zipzi.modeling.scene.WarpPointPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.scene.WarpPointPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.scene.WarpShapeAction': {'children': (),
-                                          'documentation': '',
-                                          'fields': [('RESET_CONTROLLER', "'reset_controller'"),
-                                                     ('REFORM', "'reform'")],
+                                          'documentation': 'Choose how to synchronize a stored Warp controller and '
+                                                           'baked shape.',
+                                          'fields': [('RESET_CONTROLLER',
+                                                      "'reset_controller' — Refit a controller from the existing baked "
+                                                      'lattice, preserving the baked points.'),
+                                                     ('REFORM',
+                                                      "'reform' — Replace baked points by sampling the controller.")],
                                           'kind': 'enum',
                                           'signature': ''},
  'zipzi.modeling.scene.WarpTransform': {'children': ('zipzi.modeling.scene.WarpTransform.__repr__',
                                                      'zipzi.modeling.scene.WarpTransform.summary'),
-                                        'documentation': '',
+                                        'documentation': 'Warp lattice and optional authoring controller in the parent '
+                                                         'coordinate space.',
                                         'fields': [('bezier',
                                                     'Optional authoring Bezier controller; None leaves the baked '
                                                     'lattice without a controller.'),

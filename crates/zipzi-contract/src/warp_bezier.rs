@@ -39,6 +39,7 @@ pub enum WarpBezierEditMode {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Controller subdivision density, independent of baked Warp lattice density.
 pub struct WarpBezierGrid {
     /// Vertical controller cell count, from 1 to 32.
     pub rows: u32,
@@ -69,6 +70,7 @@ impl WarpBezierGrid {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Persistent editing mode, reform policy and optional controller density for a Warp.
 pub struct WarpAuthoringSettings {
     /// Rebuild the edited shape's baked grid on subsequent Bezier edits.
     #[serde(default)]
@@ -90,6 +92,7 @@ pub struct WarpAuthoringSettings {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Absolute destination for one controller anchor or handle.
 pub struct WarpBezierControlPatch {
     /// Zero-based controller node in row-major order.
     pub node: u32,
@@ -111,8 +114,11 @@ pub struct WarpBezierControlPatch {
     zipzi_api_derive::BinaryWire,
 )]
 #[serde(rename_all = "snake_case")]
+/// Choose how to synchronize a stored Warp controller and baked shape.
 pub enum WarpShapeAction {
+    /// Refit a controller from the existing baked lattice, preserving the baked points.
     ResetController,
+    /// Replace baked points by sampling the controller.
     Reform,
 }
 
@@ -125,6 +131,7 @@ pub enum WarpShapeAction {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// One controller anchor with its four handles.
 pub struct WarpBezierNode {
     /// Absolute Bezier anchor position in lattice coordinates; not a handle offset.
     pub position: Vec2,
@@ -140,6 +147,7 @@ pub struct WarpBezierNode {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Row-major Bezier controller for an authored Warp shape.
 pub struct WarpBezier {
     /// Number of warp lattice cells vertically; a lattice has rows + 1 point rows.
     pub rows: u32,

@@ -218,6 +218,7 @@ impl HierarchyOrder {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Drawing-order range and ordered members owned by a Part or the root.
 pub struct DrawOrderGroup {
     /// Empty for the root; otherwise the stable ID of the Part driving this group.
     pub owner: String,
@@ -247,10 +248,12 @@ pub struct PackageAttachment {
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
 pub enum AttachmentRef {
+    /// Reference a loaded package attachment by stable ID.
     Resolved {
         /// Stable package-attachment ID, distinct from its relative package path.
         attachment_id: String,
     },
+    /// Preserve a package-relative path that has not resolved to an attachment.
     Unresolved {
         /// Normalized package-relative attachment path using forward slashes; absolute paths
         /// and .. components are invalid.
@@ -270,7 +273,9 @@ impl From<&str> for AttachmentRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Create, edit, delete or assign package attachments and their references.
 pub enum AttachmentEdit {
+    /// Create an attachment at a package-relative path.
     Create {
         /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
@@ -278,6 +283,7 @@ pub enum AttachmentEdit {
         /// and .. components are invalid.
         path: String,
     },
+    /// Replace an attachment under an exact current-value precondition.
     Replace {
         /// Exact current field value used as an optimistic precondition; stale values reject
         /// the edit.
@@ -285,6 +291,7 @@ pub enum AttachmentEdit {
         /// Complete package attachment record to replace; bytes may be explicitly unavailable.
         attachment: PackageAttachment,
     },
+    /// Duplicate an attachment under a fresh ID and path.
     Duplicate {
         /// Stable ID of the existing source object to duplicate, not a filesystem path.
         source: String,
@@ -294,11 +301,13 @@ pub enum AttachmentEdit {
         /// and .. components are invalid.
         path: String,
     },
+    /// Delete an unreferenced attachment.
     Delete {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
         id: String,
     },
+    /// Delete an attachment and explicitly redirect or remove references.
     DeleteWithReplacement {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
@@ -307,6 +316,7 @@ pub enum AttachmentEdit {
         /// references.
         replacement: Option<String>,
     },
+    /// Reorder selected attachment identities.
     Reorder {
         /// Ordered stable object IDs selected for this operation; visible names and row numbers
         /// are not identities.
@@ -315,12 +325,14 @@ pub enum AttachmentEdit {
         /// the selected destination.
         before: Option<String>,
     },
+    /// Set or clear a motion registration sound attachment reference.
     SetSound {
         /// Motion-registration ID whose sound attachment is being changed.
         registration: String,
         /// Resolved attachment identity or explicitly unresolved package path.
         reference: Option<AttachmentRef>,
     },
+    /// Set or clear the user-data attachment reference.
     SetUserData {
         /// Resolved attachment identity or explicitly unresolved package path.
         reference: Option<AttachmentRef>,

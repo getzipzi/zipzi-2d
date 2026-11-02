@@ -2,6 +2,7 @@
   "_generated_by": "zipzi-python2/tools/generate.py",
   "definitions": {
     "zipzi_contract::authoring::GluePairSpec": {
+      "doc": "Input for one Glue pair connecting optional vertices from its two endpoint meshes.",
       "fields": [
         {
           "default": null,
@@ -63,6 +64,7 @@
       "name": "zipzi_contract::authoring::GluePairSpec"
     },
     "zipzi_contract::authoring::OffscreenFormSpec": {
+      "doc": "Input opacity and color factors for one Offscreen keyform.",
       "fields": [
         {
           "default": null,
@@ -111,6 +113,7 @@
       "name": "zipzi_contract::authoring::OffscreenFormSpec"
     },
     "zipzi_contract::authoring::PartCreateSpec": {
+      "doc": "Input for creating a Part in the organizational hierarchy.",
       "fields": [
         {
           "default": null,
@@ -164,11 +167,13 @@
       "name": "zipzi_contract::authoring::PartCreateSpec"
     },
     "zipzi_contract::authoring::SceneOperation": {
+      "doc": "Scene and organization candidate operations; choose a typed variant for the intended edit.",
       "kind": "union",
       "name": "zipzi_contract::authoring::SceneOperation",
       "tag": "op",
       "variants": [
         {
+          "doc": "Create an organizational Part.",
           "fields": [
             {
               "default": null,
@@ -184,6 +189,7 @@
           "wire_name": "create_part"
         },
         {
+          "doc": "Create a parameter organization group.",
           "fields": [
             {
               "default": null,
@@ -199,6 +205,7 @@
           "wire_name": "create_parameter_group"
         },
         {
+          "doc": "Create a Warp transform with separate organization and deformation placement.",
           "fields": [
             {
               "default": null,
@@ -252,6 +259,7 @@
           "wire_name": "create_warp"
         },
         {
+          "doc": "Create a Rotation transform with separate organization and deformation placement.",
           "fields": [
             {
               "default": null,
@@ -288,6 +296,7 @@
           "wire_name": "create_rotation"
         },
         {
+          "doc": "Create a Glue connection between two mesh endpoints.",
           "fields": [
             {
               "default": null,
@@ -344,6 +353,7 @@
           "wire_name": "create_glue"
         },
         {
+          "doc": "Create an Offscreen group owned by a Part.",
           "fields": [
             {
               "default": null,
@@ -379,6 +389,7 @@
           "wire_name": "create_offscreen"
         },
         {
+          "doc": "Move scene objects in the organizational Part hierarchy.",
           "fields": [
             {
               "default": null,
@@ -422,6 +433,7 @@
           "wire_name": "move_to_part"
         },
         {
+          "doc": "Move scene objects in the deformation hierarchy.",
           "fields": [
             {
               "default": null,
@@ -465,6 +477,7 @@
           "wire_name": "move_deformation"
         },
         {
+          "doc": "Move parameters between organization groups.",
           "fields": [
             {
               "default": null,
@@ -508,6 +521,7 @@
           "wire_name": "move_parameters"
         },
         {
+          "doc": "Move parameter groups in their organization hierarchy.",
           "fields": [
             {
               "default": null,
@@ -551,6 +565,7 @@
           "wire_name": "move_parameter_groups"
         },
         {
+          "doc": "Duplicate selected scene objects, optionally including their deformation subtrees.",
           "fields": [
             {
               "default": null,
@@ -602,6 +617,7 @@
           "wire_name": "duplicate_scene"
         },
         {
+          "doc": "Delete selected scene objects, optionally including deformation subtrees.",
           "fields": [
             {
               "default": null,
@@ -627,6 +643,7 @@
           "wire_name": "delete_scene"
         },
         {
+          "doc": "Delete organization containers or dissolve them while preserving their contents.",
           "fields": [
             {
               "default": null,
@@ -652,6 +669,7 @@
           "wire_name": "delete_organization"
         },
         {
+          "doc": "Replace a scene object label with an expected-value precondition.",
           "fields": [
             {
               "default": null,
@@ -682,6 +700,7 @@
           "wire_name": "set_scene_label"
         },
         {
+          "doc": "Replace scene evaluation visibility with an expected-value precondition.",
           "fields": [
             {
               "default": null,
@@ -712,6 +731,7 @@
           "wire_name": "set_scene_enabled"
         },
         {
+          "doc": "Reparent deformation objects while retaining local data; appearance may change.",
           "fields": [
             {
               "default": null,
@@ -755,6 +775,7 @@
           "wire_name": "reparent_local"
         },
         {
+          "doc": "Replace a mesh triangle list using stable vertex IDs.",
           "fields": [
             {
               "default": null,
@@ -784,6 +805,7 @@
           "wire_name": "replace_triangles"
         },
         {
+          "doc": "Reorder mesh vertex storage while retaining vertex identities and associated content.",
           "fields": [
             {
               "default": null,
@@ -809,6 +831,7 @@
           "wire_name": "reorder_mesh_vertices"
         },
         {
+          "doc": "Insert a stable mesh vertex and seed dependent shapes.",
           "fields": [
             {
               "default": null,
@@ -880,6 +903,7 @@
           "wire_name": "insert_mesh_vertex"
         },
         {
+          "doc": "Delete vertices with an explicit dependent-content policy.",
           "fields": [
             {
               "default": null,
@@ -913,6 +937,7 @@
           "wire_name": "delete_mesh_vertices"
         },
         {
+          "doc": "Create a BlendShape key table and select its neutral sample.",
           "fields": [
             {
               "default": null,
@@ -960,6 +985,7 @@
           "wire_name": "create_blend_table"
         },
         {
+          "doc": "Create a BlendShape binding from a mesh to a key table.",
           "fields": [
             {
               "default": null,
@@ -995,6 +1021,7 @@
           "wire_name": "create_mesh_blend"
         },
         {
+          "doc": "Patch mesh BlendShape displacements for a selected binding sample.",
           "fields": [
             {
               "default": null,
@@ -1037,6 +1064,7 @@
           "wire_name": "set_mesh_blend_vertices"
         },
         {
+          "doc": "Insert a stable vertex pair into a Glue connection.",
           "fields": [
             {
               "default": null,
@@ -1073,6 +1101,7 @@
           "wire_name": "insert_glue_pair"
         },
         {
+          "doc": "Delete selected stable Glue pair identities.",
           "fields": [
             {
               "default": null,
@@ -1098,6 +1127,7 @@
           "wire_name": "delete_glue_pairs"
         },
         {
+          "doc": "Replace one Offscreen keyform at a numeric slot.",
           "fields": [
             {
               "default": null,
@@ -1117,7 +1147,7 @@
             },
             {
               "default": null,
-              "doc": "Scalar value in the referenced parameter domain.",
+              "doc": "Complete Offscreen opacity and color form.",
               "name": "value",
               "shape": {
                 "kind": "ref",
@@ -1129,6 +1159,7 @@
           "wire_name": "patch_offscreen_keyform"
         },
         {
+          "doc": "Insert an Offscreen keyform at a numeric slot or append.",
           "fields": [
             {
               "default": null,
@@ -1140,7 +1171,7 @@
             },
             {
               "default": null,
-              "doc": "Scalar value in the referenced parameter domain.",
+              "doc": "Complete Offscreen opacity and color form.",
               "name": "value",
               "shape": {
                 "kind": "ref",
@@ -1151,7 +1182,7 @@
               "default": {
                 "kind": "null"
               },
-              "doc": "Optional stable vertex ID before which to insert new vertices; None appends.\nThis is not a position-array index.",
+              "doc": "Optional zero-based Offscreen keyform slot before which to insert; None appends.",
               "name": "before",
               "shape": {
                 "item": {
@@ -1165,6 +1196,7 @@
           "wire_name": "insert_offscreen_keyform"
         },
         {
+          "doc": "Map the static Part slot to an Offscreen keyform or neutral value.",
           "fields": [
             {
               "default": null,
@@ -1176,7 +1208,7 @@
             },
             {
               "default": null,
-              "doc": "Complete shape sample to insert or replace; unrelated samples are retained.",
+              "doc": "Offscreen keyform-array index; -1 selects the neutral/unmapped state.",
               "name": "keyform",
               "shape": {
                 "kind": "i32"
@@ -1189,6 +1221,7 @@
       ]
     },
     "zipzi_contract::authoring::ScenePlacement": {
+      "doc": "Independent organizational and deformation parent/ordering choices for a scene object.",
       "fields": [
         {
           "default": {
@@ -1321,11 +1354,13 @@
     },
     "zipzi_contract::document::AttachmentEdit": {
       "content": null,
+      "doc": "Create, edit, delete or assign package attachments and their references.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::AttachmentEdit",
       "tag": "op",
       "variants": [
         {
+          "doc": "Create an attachment at a package-relative path.",
           "fields": [
             {
               "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
@@ -1351,6 +1386,7 @@
           "rust_name": "Create"
         },
         {
+          "doc": "Replace an attachment under an exact current-value precondition.",
           "fields": [
             {
               "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
@@ -1378,6 +1414,7 @@
           "rust_name": "Replace"
         },
         {
+          "doc": "Duplicate an attachment under a fresh ID and path.",
           "fields": [
             {
               "doc": "Stable ID of the existing source object to duplicate, not a filesystem path.",
@@ -1412,6 +1449,7 @@
           "rust_name": "Duplicate"
         },
         {
+          "doc": "Delete an unreferenced attachment.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1428,6 +1466,7 @@
           "rust_name": "Delete"
         },
         {
+          "doc": "Delete an attachment and explicitly redirect or remove references.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -1457,6 +1496,7 @@
           "rust_name": "DeleteWithReplacement"
         },
         {
+          "doc": "Reorder selected attachment identities.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -1489,6 +1529,7 @@
           "rust_name": "Reorder"
         },
         {
+          "doc": "Set or clear a motion registration sound attachment reference.",
           "fields": [
             {
               "doc": "Motion-registration ID whose sound attachment is being changed.",
@@ -1519,6 +1560,7 @@
           "rust_name": "SetSound"
         },
         {
+          "doc": "Set or clear the user-data attachment reference.",
           "fields": [
             {
               "default": null,
@@ -1549,6 +1591,7 @@
       "tag": "kind",
       "variants": [
         {
+          "doc": "Reference a loaded package attachment by stable ID.",
           "fields": [
             {
               "doc": "Stable package-attachment ID, distinct from its relative package path.",
@@ -1565,6 +1608,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve a package-relative path that has not resolved to an attachment.",
           "fields": [
             {
               "doc": "Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.",
@@ -1583,6 +1627,7 @@
       ]
     },
     "zipzi_contract::document::DrawOrderGroup": {
+      "doc": "Drawing-order range and ordered members owned by a Part or the root.",
       "fields": [
         {
           "doc": "Empty for the root; otherwise the stable ID of the Part driving this group.",
@@ -1679,23 +1724,27 @@
     },
     "zipzi_contract::document::OffscreenDeletePolicy": {
       "content": null,
+      "doc": "Choose how Part mappings are handled when Offscreen keyform slots are deleted.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::OffscreenDeletePolicy",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Reject removal of referenced keyform slots.",
           "fields": [],
           "form": "unit",
           "name": "reject_references",
           "rust_name": "RejectReferences"
         },
         {
+          "doc": "Replace references to removed slots with the neutral mapping.",
           "fields": [],
           "form": "unit",
           "name": "neutral",
           "rust_name": "Neutral"
         },
         {
+          "doc": "Replace references according to the explicit old-to-new slot mapping.",
           "fields": [
             {
               "doc": "Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that\nslot.",
@@ -1723,6 +1772,7 @@
       ]
     },
     "zipzi_contract::document::OffscreenMappingPatch": {
+      "doc": "Assign an Offscreen keyform index to one static or sampled Part slot.",
       "fields": [
         {
           "doc": "Static Part slot or stable Part-binding sample combination to remap.",
@@ -1751,11 +1801,13 @@
     },
     "zipzi_contract::document::OrganizationCollection": {
       "content": null,
+      "doc": "Select an organization collection independently of deformation and drawing order.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::OrganizationCollection",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Select parameters in one group or at the root.",
           "fields": [
             {
               "default": null,
@@ -1776,6 +1828,7 @@
           "rust_name": "Parameters"
         },
         {
+          "doc": "Select child parameter groups under a parent or at the root.",
           "fields": [
             {
               "default": null,
@@ -1796,6 +1849,7 @@
           "rust_name": "ParameterGroups"
         },
         {
+          "doc": "Select members of a Part or the root organization.",
           "fields": [
             {
               "default": null,
@@ -1819,17 +1873,20 @@
     },
     "zipzi_contract::document::OrganizationDeletePolicy": {
       "content": null,
+      "doc": "Select whether deleting organization containers also deletes their contents.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::OrganizationDeletePolicy",
       "tag": null,
       "variants": [
         {
+          "doc": "Delete the selected containers with their contents.",
           "fields": [],
           "form": "unit",
           "name": "contents",
           "rust_name": "Contents"
         },
         {
+          "doc": "Remove containers while preserving their contents.",
           "fields": [],
           "form": "unit",
           "name": "dissolve",
@@ -1839,11 +1896,13 @@
     },
     "zipzi_contract::document::OrganizationEdit": {
       "content": null,
+      "doc": "Create, move, duplicate or delete organizational objects and parameter groups.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::OrganizationEdit",
       "tag": "operation",
       "variants": [
         {
+          "doc": "Create a parameter in the selected group.",
           "fields": [
             {
               "doc": "Complete parameter record with identity, finite range, default and runtime behavior.",
@@ -1887,6 +1946,7 @@
           "rust_name": "CreateParameter"
         },
         {
+          "doc": "Create a parameter group.",
           "fields": [
             {
               "doc": "Complete CDI parameter-group metadata record to create or replace.",
@@ -1917,6 +1977,7 @@
           "rust_name": "CreateGroup"
         },
         {
+          "doc": "Create a Part in the organizational hierarchy.",
           "fields": [
             {
               "doc": "Complete Part record, including identity, hierarchy context and enabled/drawing state.",
@@ -1947,6 +2008,7 @@
           "rust_name": "CreatePart"
         },
         {
+          "doc": "Change a parameter group assignment.",
           "fields": [
             {
               "doc": "Stable document parameter ID, not its exported runtime identifier.",
@@ -1976,6 +2038,7 @@
           "rust_name": "SetParameterGroup"
         },
         {
+          "doc": "Replace group metadata under an exact precondition.",
           "fields": [
             {
               "doc": "Exact current field value used as an optimistic precondition; stale values reject\nthe edit.",
@@ -2003,6 +2066,7 @@
           "rust_name": "PatchGroup"
         },
         {
+          "doc": "Move selected identities to an organization collection.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -2045,6 +2109,7 @@
           "rust_name": "Move"
         },
         {
+          "doc": "Duplicate selected identities into an organization collection.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -2087,6 +2152,7 @@
           "rust_name": "Duplicate"
         },
         {
+          "doc": "Delete or dissolve selected containers under the chosen policy.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -2118,6 +2184,7 @@
       ]
     },
     "zipzi_contract::document::ReparentContext": {
+      "doc": "Frozen parameter values, optional domains and reference time for preservation planning.",
       "fields": [
         {
           "doc": "Parameter-ID-to-value map used for the reparenting reference pose; values use each\nparameter domain.",
@@ -2160,6 +2227,7 @@
       "tuple": false
     },
     "zipzi_contract::document::ReparentEdit": {
+      "doc": "Request deformation reparenting with explicit strategy, placement and tolerances.",
       "fields": [
         {
           "doc": "Stable IDs of objects to reparent; source order is retained in the planned selection.",
@@ -2246,6 +2314,7 @@
       "tuple": false
     },
     "zipzi_contract::document::ReparentPlacement": {
+      "doc": "Optional insertion position in the destination deformation collection.",
       "fields": [
         {
           "default": null,
@@ -2268,23 +2337,27 @@
     },
     "zipzi_contract::document::ReparentStrategy": {
       "content": null,
+      "doc": "Choose how deformation reparenting treats local shape data and preservation.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::ReparentStrategy",
       "tag": null,
       "variants": [
         {
+          "doc": "Retain local data; world-space appearance may change.",
           "fields": [],
           "form": "unit",
           "name": "KeepLocalData",
           "rust_name": "KeepLocalData"
         },
         {
+          "doc": "Attempt preservation at the frozen parameter values.",
           "fields": [],
           "form": "unit",
           "name": "PreserveEditState",
           "rust_name": "PreserveEditState"
         },
         {
+          "doc": "Attempt preservation across the explicitly supplied parameter domains.",
           "fields": [],
           "form": "unit",
           "name": "PreserveParameterDomain",
@@ -2294,11 +2367,13 @@
     },
     "zipzi_contract::document::SceneCollection": {
       "content": null,
+      "doc": "Select an organization, deformation, Glue or drawing collection.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneCollection",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Select members of a Part or the root organization.",
           "fields": [
             {
               "default": null,
@@ -2319,6 +2394,7 @@
           "rust_name": "Organization"
         },
         {
+          "doc": "Select children of a deformation parent or the root.",
           "fields": [
             {
               "default": null,
@@ -2339,18 +2415,21 @@
           "rust_name": "Deformation"
         },
         {
+          "doc": "Select the Glue collection.",
           "fields": [],
           "form": "unit",
           "name": "glues",
           "rust_name": "Glues"
         },
         {
+          "doc": "Select drawing groups.",
           "fields": [],
           "form": "unit",
           "name": "drawing_groups",
           "rust_name": "DrawingGroups"
         },
         {
+          "doc": "Select members of one drawing group.",
           "fields": [
             {
               "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
@@ -2370,11 +2449,13 @@
     },
     "zipzi_contract::document::SceneContentEdit": {
       "content": null,
+      "doc": "Typed edits to mesh, deformer, Glue and Offscreen shape content.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneContentEdit",
       "tag": "operation",
       "variants": [
         {
+          "doc": "Capture, restore or configure the stored original deformer shape.",
           "fields": [
             {
               "doc": "Stable Warp or Rotation transform ID.",
@@ -2427,6 +2508,7 @@
           "rust_name": "DeformerOriginal"
         },
         {
+          "doc": "Patch selected stable mesh vertices in one shape.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2469,6 +2551,7 @@
           "rust_name": "MeshVertices"
         },
         {
+          "doc": "Insert mesh vertices and seed dependent shape content.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2511,6 +2594,7 @@
           "rust_name": "InsertMeshVertices"
         },
         {
+          "doc": "Delete selected vertices with an explicit dependency policy.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2549,6 +2633,7 @@
           "rust_name": "DeleteMeshVertices"
         },
         {
+          "doc": "Reorder mesh vertex storage and associated shape content.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2577,6 +2662,7 @@
           "rust_name": "ReorderMeshVertices"
         },
         {
+          "doc": "Insert a triangle of stable vertex IDs.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2619,6 +2705,7 @@
           "rust_name": "InsertTriangle"
         },
         {
+          "doc": "Replace the triangle at a numeric slot.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2657,6 +2744,7 @@
           "rust_name": "PatchTriangle"
         },
         {
+          "doc": "Delete triangles selected by numeric slots.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2685,6 +2773,7 @@
           "rust_name": "DeleteTriangles"
         },
         {
+          "doc": "Replace the complete mesh triangle list.",
           "fields": [
             {
               "doc": "Stable ID of the target mesh in this document.",
@@ -2717,6 +2806,7 @@
           "rust_name": "ReplaceTriangles"
         },
         {
+          "doc": "Patch lattice points in one Warp shape.",
           "fields": [
             {
               "doc": "Stable deformation-transform ID in this document.",
@@ -2769,6 +2859,7 @@
           "rust_name": "WarpPoints"
         },
         {
+          "doc": "Replace or remove a Warp controller and update its baked lattice.",
           "fields": [
             {
               "doc": "Stable deformation-transform ID in this document.",
@@ -2812,6 +2903,7 @@
           "rust_name": "WarpBezier"
         },
         {
+          "doc": "Edit selected controls on a stored Warp controller.",
           "fields": [
             {
               "doc": "Stable Warp transform ID.",
@@ -2854,6 +2946,7 @@
           "rust_name": "WarpBezierControls"
         },
         {
+          "doc": "Update Warp editing settings and optionally refit controllers.",
           "fields": [
             {
               "doc": "Stable Warp transform ID.",
@@ -2880,6 +2973,7 @@
           "rust_name": "WarpAuthoring"
         },
         {
+          "doc": "Reset or reform one stored Warp shape.",
           "fields": [
             {
               "doc": "Stable Warp transform ID.",
@@ -2919,6 +3013,7 @@
           "rust_name": "WarpShape"
         },
         {
+          "doc": "Replace a static Warp while compensating child shapes.",
           "fields": [
             {
               "doc": "Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.",
@@ -2945,6 +3040,7 @@
           "rust_name": "WarpKeepChildren"
         },
         {
+          "doc": "Replace a static Rotation while compensating child shapes.",
           "fields": [
             {
               "doc": "Stable ID of a static Rotation. Driven maps and ancestors are unsupported.",
@@ -2971,6 +3067,7 @@
           "rust_name": "RotationKeepChildren"
         },
         {
+          "doc": "Change the Warp lattice conversion density.",
           "fields": [
             {
               "doc": "Stable deformation-transform ID in this document.",
@@ -3014,6 +3111,7 @@
           "rust_name": "ResizeWarp"
         },
         {
+          "doc": "Insert a Glue pair with a stable identity.",
           "fields": [
             {
               "doc": "Stable Glue object ID owning the affected vertex pairs.",
@@ -3053,6 +3151,7 @@
           "rust_name": "InsertGluePair"
         },
         {
+          "doc": "Replace an existing Glue pair.",
           "fields": [
             {
               "doc": "Stable Glue object ID owning the affected vertex pairs.",
@@ -3079,6 +3178,7 @@
           "rust_name": "PatchGluePair"
         },
         {
+          "doc": "Reorder selected Glue pairs.",
           "fields": [
             {
               "doc": "Stable Glue object ID owning the affected vertex pairs.",
@@ -3120,6 +3220,7 @@
           "rust_name": "MoveGluePairs"
         },
         {
+          "doc": "Move Glue pairs to another Glue with explicit replacement records.",
           "fields": [
             {
               "doc": "Stable Glue object ID owning the affected vertex pairs.",
@@ -3131,7 +3232,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit destination collection; organization, deformation and drawing memberships\nare independent.",
+              "doc": "Stable destination Glue object ID.",
               "name": "destination",
               "rust_name": "destination",
               "shape": {
@@ -3171,6 +3272,7 @@
           "rust_name": "TransferGluePairs"
         },
         {
+          "doc": "Duplicate selected Glue pairs.",
           "fields": [
             {
               "doc": "Stable Glue object ID owning the affected vertex pairs.",
@@ -3212,6 +3314,7 @@
           "rust_name": "DuplicateGluePairs"
         },
         {
+          "doc": "Delete selected Glue pairs.",
           "fields": [
             {
               "doc": "Stable Glue object ID owning the affected vertex pairs.",
@@ -3240,6 +3343,7 @@
           "rust_name": "DeleteGluePairs"
         },
         {
+          "doc": "Insert an Offscreen appearance form at a slot or append.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",
@@ -3251,7 +3355,7 @@
               "skip": false
             },
             {
-              "doc": "Scalar value in the referenced parameter domain.",
+              "doc": "Complete Offscreen opacity and color form.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -3279,6 +3383,7 @@
           "rust_name": "InsertOffscreenKeyform"
         },
         {
+          "doc": "Replace the Offscreen form at a slot.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",
@@ -3299,7 +3404,7 @@
               "skip": false
             },
             {
-              "doc": "Scalar value in the referenced parameter domain.",
+              "doc": "Complete Offscreen opacity and color form.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -3314,6 +3419,7 @@
           "rust_name": "PatchOffscreenKeyform"
         },
         {
+          "doc": "Duplicate selected Offscreen keyform slots.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",
@@ -3355,6 +3461,7 @@
           "rust_name": "DuplicateOffscreenKeyforms"
         },
         {
+          "doc": "Reorder Offscreen forms and remap their references.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",
@@ -3383,6 +3490,7 @@
           "rust_name": "ReorderOffscreenKeyforms"
         },
         {
+          "doc": "Delete Offscreen forms using an explicit mapping policy.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",
@@ -3421,6 +3529,7 @@
           "rust_name": "DeleteOffscreenKeyforms"
         },
         {
+          "doc": "Set static or sampled Part-to-Offscreen mappings.",
           "fields": [
             {
               "doc": "Stable Offscreen object ID; not a texture asset ID.",
@@ -3453,11 +3562,13 @@
     },
     "zipzi_contract::document::SceneContentTarget": {
       "content": null,
+      "doc": "Select one mesh, Warp, Glue or Offscreen content field for an address.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneContentTarget",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Select one vertex position in the chosen shape.",
           "fields": [
             {
               "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
@@ -3487,6 +3598,7 @@
           "rust_name": "VertexPosition"
         },
         {
+          "doc": "Select the shared base UV of one vertex.",
           "fields": [
             {
               "doc": "Stable u32 vertex ID within the mesh, not an offset into its position array.",
@@ -3503,6 +3615,7 @@
           "rust_name": "VertexUv"
         },
         {
+          "doc": "Select one triangle by its array slot.",
           "fields": [
             {
               "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
@@ -3519,6 +3632,7 @@
           "rust_name": "Triangle"
         },
         {
+          "doc": "Select one Warp lattice point in the chosen shape.",
           "fields": [
             {
               "doc": "Zero-based lattice point row, in the inclusive range 0..rows.",
@@ -3596,6 +3710,7 @@
           "rust_name": "WarpBezierControl"
         },
         {
+          "doc": "Select one stable Glue pair.",
           "fields": [
             {
               "doc": "Stable Glue pair ID, not its offset in the pair array.",
@@ -3612,6 +3727,7 @@
           "rust_name": "GluePair"
         },
         {
+          "doc": "Select an Offscreen appearance form by array slot.",
           "fields": [
             {
               "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
@@ -3628,6 +3744,7 @@
           "rust_name": "OffscreenKeyform"
         },
         {
+          "doc": "Select the Offscreen mapping of one Part slot.",
           "fields": [
             {
               "doc": "Static Part slot or stable Part-binding sample combination, not an Offscreen array\noffset.",
@@ -3648,11 +3765,13 @@
     },
     "zipzi_contract::document::SceneContentValue": {
       "content": "value",
+      "doc": "Typed replacement content matching the selected scene content field.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneContentValue",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Supply a position, displacement or UV pair as required by the target.",
           "fields": [
             {
               "doc": "Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.",
@@ -3670,6 +3789,7 @@
           "rust_name": "Point"
         },
         {
+          "doc": "Supply three stable vertex IDs for a triangle.",
           "fields": [
             {
               "doc": "Replacement triangle as three stable vertex IDs, not position-array indices.",
@@ -3690,6 +3810,7 @@
           "rust_name": "Triangle"
         },
         {
+          "doc": "Supply a complete Glue pair.",
           "fields": [
             {
               "doc": "Complete replacement Glue pair with its identity and endpoint vertices.",
@@ -3707,6 +3828,7 @@
           "rust_name": "GluePair"
         },
         {
+          "doc": "Supply a complete Offscreen appearance form.",
           "fields": [
             {
               "doc": "Complete replacement Offscreen appearance sample.",
@@ -3724,6 +3846,7 @@
           "rust_name": "OffscreenKeyform"
         },
         {
+          "doc": "Supply an Offscreen keyform index or neutral sentinel.",
           "fields": [
             {
               "doc": "Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.",
@@ -3743,17 +3866,20 @@
     },
     "zipzi_contract::document::SceneCopyScope": {
       "content": null,
+      "doc": "Select whether scene duplication or deletion includes deformation descendants.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneCopyScope",
       "tag": null,
       "variants": [
         {
+          "doc": "Operate on selected objects only.",
           "fields": [],
           "form": "unit",
           "name": "selected",
           "rust_name": "Selected"
         },
         {
+          "doc": "Include descendants in the deformation hierarchy.",
           "fields": [],
           "form": "unit",
           "name": "deformation_subtree",
@@ -3763,11 +3889,13 @@
     },
     "zipzi_contract::document::SceneCreate": {
       "content": null,
+      "doc": "Select the kind and options for creating a scene object.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneCreate",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Create a mesh with an explicit texture reference.",
           "fields": [
             {
               "default": {
@@ -3788,6 +3916,7 @@
           "rust_name": "Mesh"
         },
         {
+          "doc": "Create a warp transform with optional parent-space bounds.",
           "fields": [
             {
               "default": null,
@@ -3812,6 +3941,7 @@
           "rust_name": "Warp"
         },
         {
+          "doc": "Create a rotation transform with optional parent-space origin.",
           "fields": [
             {
               "default": null,
@@ -3833,12 +3963,14 @@
           "rust_name": "Rotation"
         },
         {
+          "doc": "Create an Offscreen group.",
           "fields": [],
           "form": "unit",
           "name": "offscreen",
           "rust_name": "Offscreen"
         },
         {
+          "doc": "Create a Glue connection with explicit mesh references.",
           "fields": [
             {
               "default": {
@@ -3875,11 +4007,13 @@
     },
     "zipzi_contract::document::SceneEdit": {
       "content": null,
+      "doc": "Typed scene creation, hierarchy, property and drawing-group edits.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneEdit",
       "tag": "operation",
       "variants": [
         {
+          "doc": "Create a typed scene object at explicit organization and deformation positions.",
           "fields": [
             {
               "doc": "New stable UUID for this object; it must not conflict with an existing identity.",
@@ -3967,6 +4101,7 @@
           "rust_name": "Create"
         },
         {
+          "doc": "Replace one typed scene field if its current value matches.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -3988,7 +4123,7 @@
               "skip": false
             },
             {
-              "doc": "Scalar value in the referenced parameter domain.",
+              "doc": "Replacement field value; its variant must match expected.",
               "name": "value",
               "rust_name": "value",
               "shape": {
@@ -4013,6 +4148,7 @@
           "rust_name": "Patch"
         },
         {
+          "doc": "Move objects to the selected collection.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -4055,9 +4191,10 @@
           "rust_name": "Move"
         },
         {
+          "doc": "Reparent deformation objects under an explicit preservation strategy.",
           "fields": [
             {
-              "doc": "Edit candidate handle; None selects formal document state.",
+              "doc": "Reparent request with its source selection and preservation strategy.",
               "name": "edit",
               "rust_name": "edit",
               "shape": {
@@ -4072,6 +4209,7 @@
           "rust_name": "Reparent"
         },
         {
+          "doc": "Duplicate selected scene objects under an explicit scope.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -4129,6 +4267,7 @@
           "rust_name": "Duplicate"
         },
         {
+          "doc": "Delete scene objects under an explicit scope.",
           "fields": [
             {
               "doc": "Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.",
@@ -4159,6 +4298,7 @@
           "rust_name": "Delete"
         },
         {
+          "doc": "Transfer an Offscreen group to another Part with its mapping.",
           "fields": [
             {
               "doc": "Stable document object ID used by references; it is distinct from the exported\nruntime_id.",
@@ -4196,6 +4336,7 @@
           "rust_name": "TransferOffscreen"
         },
         {
+          "doc": "Create or retain a drawing group under the specified parent.",
           "fields": [
             {
               "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
@@ -4234,6 +4375,7 @@
           "rust_name": "EnsureDrawingGroup"
         },
         {
+          "doc": "Replace a drawing group range under an exact precondition.",
           "fields": [
             {
               "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
@@ -4276,6 +4418,7 @@
           "rust_name": "SetDrawingRange"
         },
         {
+          "doc": "Remove a drawing group while retaining its members.",
           "fields": [
             {
               "doc": "Stable owner ID for the addressed drawing group, collection or reference selection.",
@@ -4292,9 +4435,10 @@
           "rust_name": "DissolveDrawingGroup"
         },
         {
+          "doc": "Copy drawing-group structure from a source owner to a target owner.",
           "fields": [
             {
-              "doc": "Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.",
+              "doc": "Source drawing-group owner ID; an empty string selects the root group.",
               "name": "source",
               "rust_name": "source",
               "shape": {
@@ -4303,7 +4447,7 @@
               "skip": false
             },
             {
-              "doc": "Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.",
+              "doc": "Existing target Part owner ID; it must differ from the source.",
               "name": "target",
               "rust_name": "target",
               "shape": {
@@ -4320,83 +4464,97 @@
     },
     "zipzi_contract::document::SceneField": {
       "content": null,
+      "doc": "Identifies a typed scene property for reads or field-address operations.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneField",
       "tag": null,
       "variants": [
         {
+          "doc": "Display label.",
           "fields": [],
           "form": "unit",
           "name": "label",
           "rust_name": "Label"
         },
         {
+          "doc": "External runtime identifier.",
           "fields": [],
           "form": "unit",
           "name": "runtime_id",
           "rust_name": "RuntimeId"
         },
         {
+          "doc": "Evaluation enabled flag.",
           "fields": [],
           "form": "unit",
           "name": "enabled",
           "rust_name": "Enabled"
         },
         {
+          "doc": "Opacity and color factors.",
           "fields": [],
           "form": "unit",
           "name": "appearance",
           "rust_name": "Appearance"
         },
         {
+          "doc": "Image-asset reference.",
           "fields": [],
           "form": "unit",
           "name": "texture",
           "rust_name": "Texture"
         },
         {
+          "doc": "Clipping-mask mesh references.",
           "fields": [],
           "form": "unit",
           "name": "masks",
           "rust_name": "Masks"
         },
         {
+          "doc": "Mesh drawing configuration.",
           "fields": [],
           "form": "unit",
           "name": "mesh_drawing",
           "rust_name": "MeshDrawing"
         },
         {
+          "doc": "Warp transform definition.",
           "fields": [],
           "form": "unit",
           "name": "warp",
           "rust_name": "Warp"
         },
         {
+          "doc": "Rotation transform definition.",
           "fields": [],
           "form": "unit",
           "name": "rotation",
           "rust_name": "Rotation"
         },
         {
+          "doc": "Glue endpoint mesh references.",
           "fields": [],
           "form": "unit",
           "name": "glue_endpoints",
           "rust_name": "GlueEndpoints"
         },
         {
+          "doc": "Glue influence factor.",
           "fields": [],
           "form": "unit",
           "name": "glue_intensity",
           "rust_name": "GlueIntensity"
         },
         {
+          "doc": "Offscreen compositing and keyform mapping.",
           "fields": [],
           "form": "unit",
           "name": "offscreen",
           "rust_name": "Offscreen"
         },
         {
+          "doc": "Organization and deformation parent identities.",
           "fields": [],
           "form": "unit",
           "name": "context",
@@ -4406,11 +4564,13 @@
     },
     "zipzi_contract::document::SceneFieldValue": {
       "content": "value",
+      "doc": "Typed scene property value used for exact-precondition patches.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::SceneFieldValue",
       "tag": "field",
       "variants": [
         {
+          "doc": "Select a display-label value.",
           "fields": [
             {
               "doc": "Replacement display label.",
@@ -4427,6 +4587,7 @@
           "rust_name": "Label"
         },
         {
+          "doc": "Select an external runtime identifier.",
           "fields": [
             {
               "doc": "Replacement external runtime identifier; an empty string explicitly clears it.",
@@ -4443,6 +4604,7 @@
           "rust_name": "RuntimeId"
         },
         {
+          "doc": "Select an evaluation enabled value.",
           "fields": [
             {
               "doc": "Replacement model evaluation enabled flag.",
@@ -4459,6 +4621,7 @@
           "rust_name": "Enabled"
         },
         {
+          "doc": "Select opacity and color factors.",
           "fields": [
             {
               "doc": "Replacement opacity and RGB color factors.",
@@ -4476,6 +4639,7 @@
           "rust_name": "Appearance"
         },
         {
+          "doc": "Select an image-asset reference.",
           "fields": [
             {
               "doc": "Resolved image-asset reference or explicitly unresolved texture runtime identifier.",
@@ -4493,6 +4657,7 @@
           "rust_name": "Texture"
         },
         {
+          "doc": "Select the complete clipping-mask mesh list.",
           "fields": [
             {
               "doc": "Complete ordered clipping-mask mesh selection.",
@@ -4512,6 +4677,7 @@
           "rust_name": "Masks"
         },
         {
+          "doc": "Select mesh drawing configuration.",
           "fields": [
             {
               "default": null,
@@ -4573,6 +4739,7 @@
           "rust_name": "MeshDrawing"
         },
         {
+          "doc": "Select a complete Warp definition.",
           "fields": [
             {
               "doc": "Complete replacement warp lattice and controller definition.",
@@ -4590,6 +4757,7 @@
           "rust_name": "Warp"
         },
         {
+          "doc": "Select a complete Rotation definition.",
           "fields": [
             {
               "doc": "Complete replacement rotation definition.",
@@ -4607,6 +4775,7 @@
           "rust_name": "Rotation"
         },
         {
+          "doc": "Select both Glue endpoint references.",
           "fields": [
             {
               "doc": "Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.",
@@ -4634,6 +4803,7 @@
           "rust_name": "GlueEndpoints"
         },
         {
+          "doc": "Select a Glue influence factor.",
           "fields": [
             {
               "doc": "Replacement Glue influence factor.",
@@ -4650,6 +4820,7 @@
           "rust_name": "GlueIntensity"
         },
         {
+          "doc": "Select Offscreen compositing and mapping data.",
           "fields": [
             {
               "doc": "Compositing mode used when drawing this object.",
@@ -4670,7 +4841,7 @@
               "skip": false
             },
             {
-              "doc": "Shape samples for this binding; coordinate/sample identities must match its axes or\nkey table.",
+              "doc": "Ordered Offscreen appearance forms; Part mapping entries select their array indices.",
               "name": "keyforms",
               "rust_name": "keyforms",
               "shape": {
@@ -4700,6 +4871,7 @@
           "rust_name": "Offscreen"
         },
         {
+          "doc": "Select organization and deformation context.",
           "fields": [
             {
               "default": null,
@@ -4736,17 +4908,20 @@
     },
     "zipzi_contract::document::ShapeTarget": {
       "content": null,
+      "doc": "Select the base, an ordinary binding sample or a BlendShape sample for a content edit.",
       "kind": "serde_enum",
       "name": "zipzi_contract::document::ShapeTarget",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Edit the undeformed base shape.",
           "fields": [],
           "form": "unit",
           "name": "base",
           "rust_name": "Base"
         },
         {
+          "doc": "Edit the ordinary shape selected by binding and sample identities.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -4775,6 +4950,7 @@
           "rust_name": "Ordinary"
         },
         {
+          "doc": "Edit the BlendShape displacement selected by binding and sample identities.",
           "fields": [
             {
               "doc": "Stable binding ID owning the addressed axes or keyforms.",
@@ -4802,6 +4978,7 @@
       ]
     },
     "zipzi_contract::document::WarpPointPatch": {
+      "doc": "Replacement lattice point at a row and column in a selected Warp shape.",
       "fields": [
         {
           "doc": "Zero-based lattice point row, in the inclusive range 0..rows.",
@@ -4883,23 +5060,27 @@
     },
     "zipzi_contract::model::BlendMode": {
       "content": null,
+      "doc": "Compositing mode used when drawing a drawable.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::BlendMode",
       "tag": null,
       "variants": [
         {
+          "doc": "Use normal compositing.",
           "fields": [],
           "form": "unit",
           "name": "normal",
           "rust_name": "Normal"
         },
         {
+          "doc": "Use additive compositing.",
           "fields": [],
           "form": "unit",
           "name": "additive",
           "rust_name": "Additive"
         },
         {
+          "doc": "Use multiplicative compositing.",
           "fields": [],
           "form": "unit",
           "name": "multiplicative",
@@ -4964,6 +5145,7 @@
       "tuple": false
     },
     "zipzi_contract::model::DeformerOriginal": {
+      "doc": "Persistent original-shape snapshot and first-key capture policy.",
       "fields": [
         {
           "doc": "Update once when the first ordinary keyform is created. Manual update disables this.",
@@ -5018,17 +5200,20 @@
     },
     "zipzi_contract::model::DeformerOriginalAction": {
       "content": null,
+      "doc": "Capture, restore or configure the original deformer shape.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::DeformerOriginalAction",
       "tag": "action",
       "variants": [
         {
+          "doc": "Capture the current selected shape as the new original.",
           "fields": [],
           "form": "unit",
           "name": "update",
           "rust_name": "Update"
         },
         {
+          "doc": "Restore the recorded original with explicit resize permission.",
           "fields": [
             {
               "doc": "Explicit permission to resample every stored Warp shape when the saved conversion density differs.",
@@ -5045,6 +5230,7 @@
           "rust_name": "Restore"
         },
         {
+          "doc": "Change the future first-key capture policy.",
           "fields": [
             {
               "doc": "Changes the future first-key policy without changing geometry or immediately replacing the snapshot.",
@@ -5064,11 +5250,13 @@
     },
     "zipzi_contract::model::DeformerOriginalShape": {
       "content": null,
+      "doc": "Independent canvas-space Warp or Rotation original shape.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::DeformerOriginalShape",
       "tag": "kind",
       "variants": [
         {
+          "doc": "Store a baked Warp lattice and controller in canvas space.",
           "fields": [
             {
               "doc": "Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.",
@@ -5095,6 +5283,7 @@
           "rust_name": "Warp"
         },
         {
+          "doc": "Store a Rotation pose in canvas space.",
           "fields": [
             {
               "doc": "Canvas origin, absolute direction (including reference angle), inherited scale and reflections.",
@@ -5114,6 +5303,7 @@
       ]
     },
     "zipzi_contract::model::DeformerOriginalSnapshot": {
+      "doc": "Captured original shape and the event that produced it.",
       "fields": [
         {
           "doc": "Creation, first ordinary keyform transition, or explicit manual update.",
@@ -5143,23 +5333,27 @@
     },
     "zipzi_contract::model::DeformerOriginalSource": {
       "content": null,
+      "doc": "How a stored original deformer shape was captured.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::DeformerOriginalSource",
       "tag": null,
       "variants": [
         {
+          "doc": "Captured at deformer creation.",
           "fields": [],
           "form": "unit",
           "name": "created",
           "rust_name": "Created"
         },
         {
+          "doc": "Captured when the first ordinary keyform was created.",
           "fields": [],
           "form": "unit",
           "name": "first_key",
           "rust_name": "FirstKey"
         },
         {
+          "doc": "Captured by an explicit update.",
           "fields": [],
           "form": "unit",
           "name": "manual",
@@ -5168,6 +5362,7 @@
       ]
     },
     "zipzi_contract::model::Glue": {
+      "doc": "Connection between two mesh endpoints, with pairs and optional intensity binding.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -5259,6 +5454,7 @@
       "tuple": false
     },
     "zipzi_contract::model::GlueVertexPair": {
+      "doc": "Stable pair of optional endpoint vertices and their Glue weights.",
       "fields": [
         {
           "doc": "Stable UUID of this Glue pair; not the identity of its target.",
@@ -5353,6 +5549,7 @@
       "tuple": false
     },
     "zipzi_contract::model::Offscreen": {
+      "doc": "Part-owned compositing group with masks and mapped appearance keyforms.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -5462,6 +5659,7 @@
       "tuple": false
     },
     "zipzi_contract::model::Part": {
+      "doc": "Organizational Part with a parent, evaluation state and drawing-order coordinate.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -5542,6 +5740,7 @@
       "tuple": true
     },
     "zipzi_contract::model::RotationPose": {
+      "doc": "Rotation origin, angle, scale and reflections in its parent space.",
       "fields": [
         {
           "doc": "Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).",
@@ -5596,6 +5795,7 @@
       "tuple": false
     },
     "zipzi_contract::model::RotationTransform": {
+      "doc": "Rotation reference angle and base pose.",
       "fields": [
         {
           "doc": "Reference angle in degrees used to orient the rotation control.",
@@ -5623,6 +5823,7 @@
       "tuple": false
     },
     "zipzi_contract::model::Transform": {
+      "doc": "Document deformation transform with independent organization and deformation parents.",
       "fields": [
         {
           "doc": "Stable document object ID used by references; it is distinct from the exported runtime_id.",
@@ -5744,11 +5945,13 @@
     },
     "zipzi_contract::model::TransformData": {
       "content": null,
+      "doc": "Typed Warp or Rotation deformation definition.",
       "kind": "serde_enum",
       "name": "zipzi_contract::model::TransformData",
       "tag": null,
       "variants": [
         {
+          "doc": "Use a Warp lattice definition.",
           "fields": [
             {
               "doc": "Warp deformation definition with its baked lattice and optional authoring controller.",
@@ -5766,6 +5969,7 @@
           "rust_name": "Warp"
         },
         {
+          "doc": "Use a Rotation definition.",
           "fields": [
             {
               "doc": "Rotation deformation definition with its reference angle and base pose.",
@@ -5803,6 +6007,7 @@
       "tuple": true
     },
     "zipzi_contract::model::WarpTransform": {
+      "doc": "Warp lattice and optional authoring controller in the parent coordinate space.",
       "fields": [
         {
           "default": null,
@@ -5866,17 +6071,20 @@
     },
     "zipzi_contract::scene_reference::SceneReference": {
       "content": null,
+      "doc": "Scene target reference that preserves absent and unresolved imported targets explicitly.",
       "kind": "serde_enum",
       "name": "zipzi_contract::scene_reference::SceneReference",
       "tag": "kind",
       "variants": [
         {
+          "doc": "No target was specified.",
           "fields": [],
           "form": "unit",
           "name": "unspecified",
           "rust_name": "Unspecified"
         },
         {
+          "doc": "Target a stable document object ID.",
           "fields": [
             {
               "doc": "Stable document ID of the object described or selected by this value.",
@@ -5893,6 +6101,7 @@
           "rust_name": "Resolved"
         },
         {
+          "doc": "Preserve an external runtime identifier that has not resolved to a document object.",
           "fields": [
             {
               "doc": "External format/runtime identifier retained for import/export; not the document\nobject ID.",
@@ -5911,6 +6120,7 @@
       ]
     },
     "zipzi_contract::warp_bezier::WarpAuthoringSettings": {
+      "doc": "Persistent editing mode, reform policy and optional controller density for a Warp.",
       "fields": [
         {
           "default": false,
@@ -5954,6 +6164,7 @@
       "tuple": false
     },
     "zipzi_contract::warp_bezier::WarpBezier": {
+      "doc": "Row-major Bezier controller for an authored Warp shape.",
       "fields": [
         {
           "doc": "Number of warp lattice cells vertically; a lattice has rows + 1 point rows.",
@@ -5993,6 +6204,7 @@
       "tuple": false
     },
     "zipzi_contract::warp_bezier::WarpBezierControlPatch": {
+      "doc": "Absolute destination for one controller anchor or handle.",
       "fields": [
         {
           "doc": "Zero-based controller node in row-major order.",
@@ -6066,6 +6278,7 @@
       ]
     },
     "zipzi_contract::warp_bezier::WarpBezierGrid": {
+      "doc": "Controller subdivision density, independent of baked Warp lattice density.",
       "fields": [
         {
           "doc": "Vertical controller cell count, from 1 to 32.",
@@ -6092,6 +6305,7 @@
       "tuple": false
     },
     "zipzi_contract::warp_bezier::WarpBezierNode": {
+      "doc": "One controller anchor with its four handles.",
       "fields": [
         {
           "doc": "Absolute Bezier anchor position in lattice coordinates; not a handle offset.",
@@ -6125,17 +6339,20 @@
     },
     "zipzi_contract::warp_bezier::WarpShapeAction": {
       "content": null,
+      "doc": "Choose how to synchronize a stored Warp controller and baked shape.",
       "kind": "serde_enum",
       "name": "zipzi_contract::warp_bezier::WarpShapeAction",
       "tag": null,
       "variants": [
         {
+          "doc": "Refit a controller from the existing baked lattice, preserving the baked points.",
           "fields": [],
           "form": "unit",
           "name": "reset_controller",
           "rust_name": "ResetController"
         },
         {
+          "doc": "Replace baked points by sampling the controller.",
           "fields": [],
           "form": "unit",
           "name": "reform",

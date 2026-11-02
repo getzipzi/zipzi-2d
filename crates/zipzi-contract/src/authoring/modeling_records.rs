@@ -6,6 +6,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Coordinated mesh topology and dependent binding/Glue replacements for a remesh.
 pub struct TopologyReplacement {
     /// Complete replacement mesh geometry and metadata. Setting meshing to None explicitly
     /// discards previous modeling topology; ordinary mesh replacements must preserve it.
@@ -128,6 +129,7 @@ pub struct OwnedModelingRecords {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryOutput,
 )]
+/// Summary of a Manual Mesh topology transfer, its dependencies, estimated cost and appearance limits.
 pub struct ManualMeshTransferReport {
     /// Number of newly allocated vertices.
     pub added: usize,

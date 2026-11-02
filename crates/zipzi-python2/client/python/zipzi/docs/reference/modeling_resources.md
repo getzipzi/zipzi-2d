@@ -20,6 +20,8 @@ Canonical resources modeling values.
 
 `(*, unresolved_source: str | None = None, id: str, name: str, content: ImageContent | None = None)`
 
+Document image identity with optional content metadata or an unresolved imported source.
+
 Types: [ImageContent](#zipzimodelingresourcesimagecontent).
 
 **Fields**
@@ -35,6 +37,8 @@ Types: [ImageContent](#zipzimodelingresourcesimagecontent).
 
 `(*, source: str, width: int, height: int, sha256: str)`
 
+Stored image locator, dimensions and optional recorded digest; metadata access does not decode pixels.
+
 **Fields**
 
 - `source`: Stored resource location, normally a package-relative path or generated memory-resource
@@ -49,6 +53,8 @@ locator; reading metadata does not open it.
 
 `ResourceEditCreate | ResourceEditPatchName | ResourceEditSetContent | ResourceEditReorder | ResourceEditDuplicate | ResourceEditDelete`
 
+Document image-resource metadata and ordering edits; pixel preparation is separate.
+
 Types: [ResourceEditCreate](#zipzimodelingresourcesresourceeditcreate), [ResourceEditDelete](#zipzimodelingresourcesresourceeditdelete), [ResourceEditDuplicate](#zipzimodelingresourcesresourceeditduplicate), [ResourceEditPatchName](#zipzimodelingresourcesresourceeditpatchname), [ResourceEditReorder](#zipzimodelingresourcesresourceeditreorder), [ResourceEditSetContent](#zipzimodelingresourcesresourceeditsetcontent).
 
 
@@ -57,6 +63,8 @@ Types: [ResourceEditCreate](#zipzimodelingresourcesresourceeditcreate), [Resourc
 **Type**
 
 `(*, id: str, name: str, before: str | None = None)`
+
+Create an image asset without loaded content.
 
 **Fields**
 
@@ -88,6 +96,8 @@ resolved target or an unresolved/detached reference.
 
 `(*, source: str, id: str, name: str, before: str | None = None)`
 
+Duplicate an existing image asset under a fresh identity.
+
 **Fields**
 
 - `source`: Stable ID of the existing source object to duplicate, not a filesystem path.
@@ -101,6 +111,8 @@ the selected destination.
 **Type**
 
 `(*, id: str, expected: str, name: str)`
+
+Rename an image only if its existing name matches the precondition.
 
 **Fields**
 
@@ -116,6 +128,8 @@ the edit.
 
 `(*, ids: tuple[str, ...], before: str | None = None)`
 
+Reorder selected image assets relative to an optional sibling anchor.
+
 **Fields**
 
 - `ids`: Ordered stable object IDs selected for this operation; visible names and row numbers
@@ -128,6 +142,8 @@ the selected destination.
 **Type**
 
 `(*, id: str, expected: ImageContent | None = None, content: ImageContent | None = None)`
+
+Replace or clear content metadata under an exact prior-value precondition.
 
 Types: [ImageContent](#zipzimodelingresourcesimagecontent).
 

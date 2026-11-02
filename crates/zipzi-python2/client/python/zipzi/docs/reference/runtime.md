@@ -11,7 +11,7 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Module**
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 e981999ec0974a19b496ed6456d44dfae200b69c7ca62d4a01ebe32601a53281.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a5; protocol zipzi-runtime-v2; client source SHA-256 50c298fb336699cacb3e3e93ed57af6c0447d6ba4be230859a276f4431aa5dbf.
 
 
 ## zipzi.ApiDescription
@@ -725,7 +725,14 @@ Types: [Buffer](#zipzibuffer).
 
 `(width: int, height: int, rgba: bytes | bytearray | memoryview | Buffer) -> PreparedImage`
 
-Own RGBA8 bytes or an immutable Buffer and prepare a width-by-height image lease. Preparation does not edit a document. Close the lease after candidate acceptance; SDK/history owners retain their references.
+Prepare a client-owned image lease from RGBA8 bytes or a same-client Buffer.
+
+Width and height must be positive; bytes are tightly packed, row-major
+with the top row first and straight alpha, exactly width * height * 4
+bytes. The Python byte input is limited to 256 MiB; host budgets also
+apply. Preparation does not edit a document. Close the PreparedImage
+after candidate acceptance; candidate, committed document and history
+retain their own references. Recover an unknown call through its owner.
 
 Types: [Buffer](#zipzibuffer), [PreparedImage](#zipzipreparedimage).
 

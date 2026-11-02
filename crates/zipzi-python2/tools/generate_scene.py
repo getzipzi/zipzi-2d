@@ -111,7 +111,7 @@ def render_scene(contract, header, rust_header, identifier, rust_path, resolve=l
     union=resolve(contract['roots'][0])
     if union['kind'] != 'union': raise ValueError('Expected scene operation union')
     for v in union['variants']: record(v['rust_name'], v['fields'], v['wire_name'])
-    py += ['Operation = '+' | '.join(v['rust_name'] for v in union['variants']), '', 'OPERATION_TYPES = ('+', '.join(v['rust_name'] for v in union['variants'])+',)', '', 'def validate(op: Operation) -> None:', '    match op:']
+    py += ['Operation = '+' | '.join(v['rust_name'] for v in union['variants']), repr(union.get('doc', '')), '', 'OPERATION_TYPES = ('+', '.join(v['rust_name'] for v in union['variants'])+',)', '', 'def validate(op: Operation) -> None:', '    match op:']
     for v in union['variants']:
         py += ['        case '+v['rust_name']+'():']
         for f in v['fields']: py += check(f['shape'], 'op.'+f['name'], 12)

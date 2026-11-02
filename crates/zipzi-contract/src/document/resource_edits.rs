@@ -1,7 +1,9 @@
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Document image-resource metadata and ordering edits; pixel preparation is separate.
 pub enum ResourceEdit {
+    /// Create an image asset without loaded content.
     Create {
         /// New stable UUID for this object; it must not conflict with an existing identity.
         id: String,
@@ -11,6 +13,7 @@ pub enum ResourceEdit {
         /// the selected destination.
         before: Option<String>,
     },
+    /// Rename an image only if its existing name matches the precondition.
     PatchName {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
@@ -21,6 +24,7 @@ pub enum ResourceEdit {
         /// Human-readable display name; use the stable ID for identity because names can change.
         name: String,
     },
+    /// Replace or clear content metadata under an exact prior-value precondition.
     SetContent {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
@@ -32,6 +36,7 @@ pub enum ResourceEdit {
         /// content.
         content: Option<ImageContent>,
     },
+    /// Reorder selected image assets relative to an optional sibling anchor.
     Reorder {
         /// Ordered stable object IDs selected for this operation; visible names and row numbers
         /// are not identities.
@@ -40,6 +45,7 @@ pub enum ResourceEdit {
         /// the selected destination.
         before: Option<String>,
     },
+    /// Duplicate an existing image asset under a fresh identity.
     Duplicate {
         /// Stable ID of the existing source object to duplicate, not a filesystem path.
         source: String,

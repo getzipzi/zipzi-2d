@@ -7,6 +7,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Organizational Part with a parent, evaluation state and drawing-order coordinate.
 pub struct Part {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -144,6 +145,7 @@ pub enum SceneKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Authored drawable mesh with stable vertex identities, geometry and resource references.
 pub struct Mesh {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

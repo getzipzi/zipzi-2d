@@ -76,6 +76,7 @@ pub enum ModelingIntent {
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Absolute UV destination for an existing Manual Mesh vertex, selected by stable ID.
 pub struct ManualVertexTarget {
     /// Stable vertex identity in the edited mesh, not its array index.
     pub id: VertexId,
@@ -86,6 +87,8 @@ pub struct ManualVertexTarget {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Manual Mesh UV triangulation intent. Applying it through an Edit requires an exact
+/// candidate source and transfers dependent shapes through the SDK.
 pub enum ManualMeshOperation {
     /// The caller supplies a fresh ID; its allocator must not reuse canceled candidate IDs.
     InsertVertex {
@@ -118,21 +121,25 @@ pub enum ManualMeshOperation {
         /// Last accepted preview positions for swept crossing checks; None uses source positions.
         motion_from: Option<Vec<ManualVertexTarget>>,
     },
+    /// Remove the selected vertices and rebuild affected connectivity.
     DeleteVertices {
         /// Persistent vertex identities to remove atomically.
         ids: Vec<VertexId>,
     },
+    /// Add a user-fixed edge or chain between existing vertices.
     ConstrainEdge {
         /// First endpoint identity of the fixed edge.
         a: VertexId,
         /// Second endpoint identity of the fixed edge.
         b: VertexId,
     },
+    /// Release a structural edge constraint, leaving its endpoints intact.
     ReleaseConstraint {
         /// First endpoint identity of the constraint to release.
         a: VertexId,
         /// Second endpoint identity of the constraint to release.
         b: VertexId,
     },
+    /// Rebuild automatic triangulation while retaining the structural constraints.
     Reconnect,
 }

@@ -43,7 +43,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                  'signature': ''},
  'zipzi.scene.CreateBlendTable': {'children': ('zipzi.scene.CreateBlendTable.__repr__',
                                                'zipzi.scene.CreateBlendTable.summary'),
-                                  'documentation': '',
+                                  'documentation': 'Create a BlendShape key table and select its neutral sample.',
                                   'field_roles': (('kind', 'fixed-discriminator', "'scene_create_blend_table'"),),
                                   'fields': [('parameter_id',
                                               'Stable document parameter ID, not its exported runtime identifier.'),
@@ -64,7 +64,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreateBlendTable.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateBlendTable.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateGlue': {'children': ('zipzi.scene.CreateGlue.__repr__', 'zipzi.scene.CreateGlue.summary'),
-                            'documentation': '',
+                            'documentation': 'Create a Glue connection between two mesh endpoints.',
                             'field_roles': (('kind', 'fixed-discriminator', "'scene_create_glue'"),),
                             'fields': [('name',
                                         'Human-readable display name; use the stable ID for identity because names '
@@ -89,7 +89,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreateGlue.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateMeshBlend': {'children': ('zipzi.scene.CreateMeshBlend.__repr__',
                                               'zipzi.scene.CreateMeshBlend.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Create a BlendShape binding from a mesh to a key table.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'scene_create_mesh_blend'"),),
                                  'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                             ('table_id', 'Stable BlendShape key-table ID in this document.'),
@@ -103,7 +103,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreateMeshBlend.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateOffscreen': {'children': ('zipzi.scene.CreateOffscreen.__repr__',
                                               'zipzi.scene.CreateOffscreen.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Create an Offscreen group owned by a Part.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'scene_create_offscreen'"),),
                                  'fields': [('name',
                                              'Human-readable display name; use the stable ID for identity because '
@@ -120,7 +120,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreateOffscreen.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateParameterGroup': {'children': ('zipzi.scene.CreateParameterGroup.__repr__',
                                                    'zipzi.scene.CreateParameterGroup.summary'),
-                                      'documentation': '',
+                                      'documentation': 'Create a parameter organization group.',
                                       'field_roles': (('kind',
                                                        'fixed-discriminator',
                                                        "'scene_create_parameter_group'"),),
@@ -136,7 +136,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreateParameterGroup.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateParameterGroup.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreatePart': {'children': ('zipzi.scene.CreatePart.__repr__', 'zipzi.scene.CreatePart.summary'),
-                            'documentation': '',
+                            'documentation': 'Create an organizational Part.',
                             'field_roles': (('kind', 'fixed-discriminator', "'scene_create_part'"),),
                             'fields': [('spec',
                                         'Creation specification; native admission supplies identities/defaults and\n'
@@ -150,7 +150,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreatePart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateRotation': {'children': ('zipzi.scene.CreateRotation.__repr__',
                                              'zipzi.scene.CreateRotation.summary'),
-                                'documentation': '',
+                                'documentation': 'Create a Rotation transform with separate organization and '
+                                                 'deformation placement.',
                                 'field_roles': (('kind', 'fixed-discriminator', "'scene_create_rotation'"),),
                                 'fields': [('name',
                                             'Human-readable display name; use the stable ID for identity because names '
@@ -170,7 +171,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreateRotation.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.CreateRotation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.CreateWarp': {'children': ('zipzi.scene.CreateWarp.__repr__', 'zipzi.scene.CreateWarp.summary'),
-                            'documentation': '',
+                            'documentation': 'Create a Warp transform with separate organization and deformation '
+                                             'placement.',
                             'field_roles': (('kind', 'fixed-discriminator', "'scene_create_warp'"),),
                             'fields': [('name',
                                         'Human-readable display name; use the stable ID for identity because names '
@@ -193,7 +195,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.CreateWarp.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteGluePairs': {'children': ('zipzi.scene.DeleteGluePairs.__repr__',
                                               'zipzi.scene.DeleteGluePairs.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Delete selected stable Glue pair identities.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'scene_delete_glue_pairs'"),),
                                  'fields': [('glue_id', 'Stable Glue object ID owning the affected vertex pairs.'),
                                             ('ids',
@@ -208,7 +210,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.DeleteGluePairs.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteMeshVertices': {'children': ('zipzi.scene.DeleteMeshVertices.__repr__',
                                                  'zipzi.scene.DeleteMeshVertices.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Delete vertices with an explicit dependent-content policy.',
                                     'field_roles': (('kind', 'fixed-discriminator', "'scene_delete_mesh_vertices'"),),
                                     'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                                ('vertices',
@@ -225,7 +227,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.DeleteMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteOrganization': {'children': ('zipzi.scene.DeleteOrganization.__repr__',
                                                  'zipzi.scene.DeleteOrganization.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Delete organization containers or dissolve them while preserving '
+                                                     'their contents.',
                                     'field_roles': (('kind', 'fixed-discriminator', "'scene_delete_organization'"),),
                                     'fields': [('ids',
                                                 'Ordered stable object IDs selected for this operation; visible names '
@@ -242,7 +245,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.DeleteOrganization.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DeleteOrganization.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DeleteScene': {'children': ('zipzi.scene.DeleteScene.__repr__', 'zipzi.scene.DeleteScene.summary'),
-                             'documentation': '',
+                             'documentation': 'Delete selected scene objects, optionally including deformation '
+                                              'subtrees.',
                              'field_roles': (('kind', 'fixed-discriminator', "'scene_delete_scene'"),),
                              'fields': [('ids',
                                          'Ordered stable object IDs selected for this operation; visible names and '
@@ -259,7 +263,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.DeleteScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.DuplicateScene': {'children': ('zipzi.scene.DuplicateScene.__repr__',
                                              'zipzi.scene.DuplicateScene.summary'),
-                                'documentation': '',
+                                'documentation': 'Duplicate selected scene objects, optionally including their '
+                                                 'deformation subtrees.',
                                 'field_roles': (('kind', 'fixed-discriminator', "'scene_duplicate_scene'"),),
                                 'fields': [('ids',
                                             'Ordered stable object IDs selected for this operation; visible names and '
@@ -284,7 +289,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.DuplicateScene.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.DuplicateScene.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.GluePair': {'children': ('zipzi.scene.GluePair.__repr__', 'zipzi.scene.GluePair.summary'),
-                          'documentation': '',
+                          'documentation': 'Input for one Glue pair connecting optional vertices from its two endpoint '
+                                           'meshes.',
                           'fields': [('weight_a',
                                       'Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.'),
                                      ('weight_b',
@@ -303,7 +309,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.GluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertGluePair': {'children': ('zipzi.scene.InsertGluePair.__repr__',
                                              'zipzi.scene.InsertGluePair.summary'),
-                                'documentation': '',
+                                'documentation': 'Insert a stable vertex pair into a Glue connection.',
                                 'field_roles': (('kind', 'fixed-discriminator', "'scene_insert_glue_pair'"),),
                                 'fields': [('glue_id', 'Stable Glue object ID owning the affected vertex pairs.'),
                                            ('pair',
@@ -322,7 +328,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.InsertGluePair.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertMeshVertex': {'children': ('zipzi.scene.InsertMeshVertex.__repr__',
                                                'zipzi.scene.InsertMeshVertex.summary'),
-                                  'documentation': '',
+                                  'documentation': 'Insert a stable mesh vertex and seed dependent shapes.',
                                   'field_roles': (('kind', 'fixed-discriminator', "'scene_insert_mesh_vertex'"),),
                                   'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                              ('vertex_id',
@@ -349,17 +355,16 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.InsertMeshVertex.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.InsertOffscreenKeyform': {'children': ('zipzi.scene.InsertOffscreenKeyform.__repr__',
                                                      'zipzi.scene.InsertOffscreenKeyform.summary'),
-                                        'documentation': '',
+                                        'documentation': 'Insert an Offscreen keyform at a numeric slot or append.',
                                         'field_roles': (('kind',
                                                          'fixed-discriminator',
                                                          "'scene_insert_offscreen_keyform'"),),
                                         'fields': [('offscreen_id',
                                                     'Stable Offscreen object ID; not a texture asset ID.'),
-                                                   ('value', 'Scalar value in the referenced parameter domain.'),
+                                                   ('value', 'Complete Offscreen opacity and color form.'),
                                                    ('before',
-                                                    'Optional stable vertex ID before which to insert new vertices; '
-                                                    'None appends.\n'
-                                                    'This is not a position-array index.'),
+                                                    'Optional zero-based Offscreen keyform slot before which to '
+                                                    'insert; None appends.'),
                                                    ('kind',
                                                     "Fixed value 'scene_insert_offscreen_keyform' (read-only).")],
                                         'kind': 'type',
@@ -371,7 +376,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.InsertOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveDeformation': {'children': ('zipzi.scene.MoveDeformation.__repr__',
                                               'zipzi.scene.MoveDeformation.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Move scene objects in the deformation hierarchy.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'scene_move_deformation'"),),
                                  'fields': [('ids',
                                              'Ordered stable object IDs selected for this operation; visible names and '
@@ -394,7 +399,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.MoveDeformation.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveParameterGroups': {'children': ('zipzi.scene.MoveParameterGroups.__repr__',
                                                   'zipzi.scene.MoveParameterGroups.summary'),
-                                     'documentation': '',
+                                     'documentation': 'Move parameter groups in their organization hierarchy.',
                                      'field_roles': (('kind', 'fixed-discriminator', "'scene_move_parameter_groups'"),),
                                      'fields': [('ids',
                                                  'Ordered stable object IDs selected for this operation; visible names '
@@ -417,7 +422,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.MoveParameterGroups.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveParameters': {'children': ('zipzi.scene.MoveParameters.__repr__',
                                              'zipzi.scene.MoveParameters.summary'),
-                                'documentation': '',
+                                'documentation': 'Move parameters between organization groups.',
                                 'field_roles': (('kind', 'fixed-discriminator', "'scene_move_parameters'"),),
                                 'fields': [('ids',
                                             'Ordered stable object IDs selected for this operation; visible names and '
@@ -438,7 +443,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.MoveParameters.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveParameters.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.MoveToPart': {'children': ('zipzi.scene.MoveToPart.__repr__', 'zipzi.scene.MoveToPart.summary'),
-                            'documentation': '',
+                            'documentation': 'Move scene objects in the organizational Part hierarchy.',
                             'field_roles': (('kind', 'fixed-discriminator', "'scene_move_to_part'"),),
                             'fields': [('ids',
                                         'Ordered stable object IDs selected for this operation; visible names and row\n'
@@ -458,7 +463,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.MoveToPart.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.MoveToPart.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.OffscreenForm': {'children': ('zipzi.scene.OffscreenForm.__repr__', 'zipzi.scene.OffscreenForm.summary'),
-                               'documentation': '',
+                               'documentation': 'Input opacity and color factors for one Offscreen keyform.',
                                'fields': [('opacity',
                                            'Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. '
                                            'Imported values\n'
@@ -473,7 +478,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.OffscreenForm.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.OffscreenForm.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Operation': {'children': (),
-                           'documentation': '',
+                           'documentation': 'Scene and organization candidate operations; choose a typed variant for '
+                                            'the intended edit.',
                            'fields': [],
                            'kind': 'alias',
                            'signature': 'CreatePart | CreateParameterGroup | CreateWarp | CreateRotation | CreateGlue '
@@ -514,7 +520,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                          'zipzi.scene.SetSceneLabel')},
  'zipzi.scene.ParameterGroupSpec': {'children': ('zipzi.scene.ParameterGroupSpec.__repr__',
                                                  'zipzi.scene.ParameterGroupSpec.summary'),
-                                    'documentation': '',
+                                    'documentation': 'Input for creating a parameter group in the organizational '
+                                                     'hierarchy.',
                                     'fields': [('name',
                                                 'Human-readable display name; use the stable ID for identity because '
                                                 'names can change.'),
@@ -538,7 +545,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.ParameterGroupSpec.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ParameterGroupSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.PartSpec': {'children': ('zipzi.scene.PartSpec.__repr__', 'zipzi.scene.PartSpec.summary'),
-                          'documentation': '',
+                          'documentation': 'Input for creating a Part in the organizational hierarchy.',
                           'fields': [('name',
                                       'Human-readable display name; use the stable ID for identity because names can '
                                       'change.'),
@@ -560,7 +567,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.PartSpec.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.PatchOffscreenKeyform': {'children': ('zipzi.scene.PatchOffscreenKeyform.__repr__',
                                                     'zipzi.scene.PatchOffscreenKeyform.summary'),
-                                       'documentation': '',
+                                       'documentation': 'Replace one Offscreen keyform at a numeric slot.',
                                        'field_roles': (('kind',
                                                         'fixed-discriminator',
                                                         "'scene_patch_offscreen_keyform'"),),
@@ -570,7 +577,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                    'Zero-based slot in the addressed triangle or Offscreen keyform '
                                                    'array; never an\n'
                                                    'object ID.'),
-                                                  ('value', 'Scalar value in the referenced parameter domain.'),
+                                                  ('value', 'Complete Offscreen opacity and color form.'),
                                                   ('kind', "Fixed value 'scene_patch_offscreen_keyform' (read-only).")],
                                        'kind': 'type',
                                        'rule_refs': ('fixed-discriminator',),
@@ -579,7 +586,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.PatchOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.PatchOffscreenKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Placement': {'children': ('zipzi.scene.Placement.__repr__', 'zipzi.scene.Placement.summary'),
-                           'documentation': '',
+                           'documentation': 'Independent organizational and deformation parent/ordering choices for a '
+                                            'scene object.',
                            'fields': [('part_id', 'Optional organizational Part ID; None uses the root organization.'),
                                       ('parent_id', 'Optional deformation-parent transform ID; None uses model space.'),
                                       ('before',
@@ -597,7 +605,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.Placement.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReorderMeshVertices': {'children': ('zipzi.scene.ReorderMeshVertices.__repr__',
                                                   'zipzi.scene.ReorderMeshVertices.summary'),
-                                     'documentation': '',
+                                     'documentation': 'Reorder mesh vertex storage while retaining vertex identities '
+                                                      'and associated content.',
                                      'field_roles': (('kind', 'fixed-discriminator', "'scene_reorder_mesh_vertices'"),),
                                      'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                                 ('order',
@@ -611,7 +620,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.ReorderMeshVertices.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReorderMeshVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReparentLocal': {'children': ('zipzi.scene.ReparentLocal.__repr__', 'zipzi.scene.ReparentLocal.summary'),
-                               'documentation': '',
+                               'documentation': 'Reparent deformation objects while retaining local data; appearance '
+                                                'may change.',
                                'field_roles': (('kind', 'fixed-discriminator', "'scene_reparent_local'"),),
                                'fields': [('ids',
                                            'Ordered stable object IDs selected for this operation; visible names and '
@@ -634,7 +644,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.ReparentLocal.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.ReplaceTriangles': {'children': ('zipzi.scene.ReplaceTriangles.__repr__',
                                                'zipzi.scene.ReplaceTriangles.summary'),
-                                  'documentation': '',
+                                  'documentation': 'Replace a mesh triangle list using stable vertex IDs.',
                                   'field_roles': (('kind', 'fixed-discriminator', "'scene_replace_triangles'"),),
                                   'fields': [('mesh_id', 'Stable ID of the target mesh in this document.'),
                                              ('triangles',
@@ -648,7 +658,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.ReplaceTriangles.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.ReplaceTriangles.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.Sample': {'children': ('zipzi.scene.Sample.__repr__', 'zipzi.scene.Sample.summary'),
-                        'documentation': '',
+                        'documentation': 'Stable sample identity and coordinate for a BlendShape key table.',
                         'fields': [('id', 'Stable UUID assigned to this parameter sample.'),
                                    ('value', 'Finite parameter sample coordinate in the driving parameter domain.')],
                         'kind': 'type',
@@ -657,7 +667,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.Sample.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetMeshBlendVertices': {'children': ('zipzi.scene.SetMeshBlendVertices.__repr__',
                                                    'zipzi.scene.SetMeshBlendVertices.summary'),
-                                      'documentation': '',
+                                      'documentation': 'Patch mesh BlendShape displacements for a selected binding '
+                                                       'sample.',
                                       'field_roles': (('kind',
                                                        'fixed-discriminator',
                                                        "'scene_set_mesh_blend_vertices'"),),
@@ -680,15 +691,16 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.SetMeshBlendVertices.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetOffscreenStaticKeyform': {'children': ('zipzi.scene.SetOffscreenStaticKeyform.__repr__',
                                                         'zipzi.scene.SetOffscreenStaticKeyform.summary'),
-                                           'documentation': '',
+                                           'documentation': 'Map the static Part slot to an Offscreen keyform or '
+                                                            'neutral value.',
                                            'field_roles': (('kind',
                                                             'fixed-discriminator',
                                                             "'scene_set_offscreen_static_keyform'"),),
                                            'fields': [('offscreen_id',
                                                        'Stable Offscreen object ID; not a texture asset ID.'),
                                                       ('keyform',
-                                                       'Complete shape sample to insert or replace; unrelated samples '
-                                                       'are retained.'),
+                                                       'Offscreen keyform-array index; -1 selects the neutral/unmapped '
+                                                       'state.'),
                                                       ('kind',
                                                        "Fixed value 'scene_set_offscreen_static_keyform' "
                                                        '(read-only).')],
@@ -699,7 +711,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.SetOffscreenStaticKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetSceneEnabled': {'children': ('zipzi.scene.SetSceneEnabled.__repr__',
                                               'zipzi.scene.SetSceneEnabled.summary'),
-                                 'documentation': '',
+                                 'documentation': 'Replace scene evaluation visibility with an expected-value '
+                                                  'precondition.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'scene_set_scene_enabled'"),),
                                  'fields': [('id',
                                              'Stable document object ID used by references; it is distinct from the '
@@ -719,7 +732,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.SetSceneEnabled.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.SetSceneEnabled.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetSceneLabel': {'children': ('zipzi.scene.SetSceneLabel.__repr__', 'zipzi.scene.SetSceneLabel.summary'),
-                               'documentation': '',
+                               'documentation': 'Replace a scene object label with an expected-value precondition.',
                                'field_roles': (('kind', 'fixed-discriminator', "'scene_set_scene_label'"),),
                                'fields': [('id',
                                            'Stable document object ID used by references; it is distinct from the '
@@ -768,7 +781,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.Summary.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.Summary.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.VertexPatch': {'children': ('zipzi.scene.VertexPatch.__repr__', 'zipzi.scene.VertexPatch.summary'),
-                             'documentation': '',
+                             'documentation': 'Optional displacement update for one stable mesh vertex in a BlendShape '
+                                              'sample.',
                              'fields': [('vertex_id',
                                          'Stable u32 vertex ID within the mesh, not an offset into its position '
                                          'array.'),
@@ -784,13 +798,13 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.VertexPatch.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.scene.VertexPatch.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.VertexWeight': {'children': ('zipzi.scene.VertexWeight.__repr__', 'zipzi.scene.VertexWeight.summary'),
-                              'documentation': '',
+                              'documentation': 'Source vertex and weight used to seed a newly inserted mesh vertex.',
                               'fields': [('vertex_id',
                                           'Stable u32 vertex ID within the mesh, not an offset into its position '
                                           'array.'),
                                          ('weight',
-                                          'Dimensionless interpolation weight applied to the referenced source '
-                                          'vertex.')],
+                                          'Finite nonnegative weight; the nonempty set of weights must sum to 1 within '
+                                          'native tolerance.')],
                               'kind': 'type',
                               'signature': '(vertex_id: int, weight: float)'},
  'zipzi.scene.VertexWeight.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},

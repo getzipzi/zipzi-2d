@@ -7,6 +7,7 @@
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Stable pair of optional endpoint vertices and their Glue weights.
 pub struct GlueVertexPair {
     /// Stable UUID of this Glue pair; not the identity of its target.
     pub id: String,
@@ -40,6 +41,7 @@ impl Default for GlueVertexPair {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Connection between two mesh endpoints, with pairs and optional intensity binding.
 pub struct Glue {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

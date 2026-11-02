@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Mesh(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ntexture_asset_id: Image-asset reference; resolved values name the asset object ID and unresolved values\npreserve an external texture identifier.\nvertex_ids: Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.\nbase_positions: Absolute base-shape XY positions in the mesh authoring space, ordered by vertex_ids.\nuvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.\ntriangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-\narray offsets.\nmeshing: Optional single-region modeling topology in UV space; independent of posed positions.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\npart_id: Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.\ndeformer_id: Parent deformation transform ID; an empty string means model space.\nappearance: Opacity and multiply/screen color factors for this object or shape.\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order. None leaves\nthis channel unspecified for native evaluation.\nblend_mode: Compositing mode used when drawing this object.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\ndouble_sided: Whether both triangle faces contribute to drawing.\ninverted_mask: Whether to invert the combined clipping mask for this drawable.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.\nraw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.'
+    'Authored drawable mesh with stable vertex identities, geometry and resource references.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nname: Human-readable display name; use the stable ID for identity because names can change.\ntexture_asset_id: Image-asset reference; resolved values name the asset object ID and unresolved values\npreserve an external texture identifier.\nvertex_ids: Stable u32 vertex IDs in the same order as positions and UVs; IDs need not be contiguous.\nbase_positions: Absolute base-shape XY positions in the mesh authoring space, ordered by vertex_ids.\nuvs: Texture UV pairs ordered by vertex_ids; keep one UV for each position.\ntriangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute position-\narray offsets.\nmeshing: Optional single-region modeling topology in UV space; independent of posed positions.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\npart_id: Organizational Part owner ID; independent of the deformation parent. An empty string\nrepresents the root/unassigned container.\ndeformer_id: Parent deformation transform ID; an empty string means model space.\nappearance: Opacity and multiply/screen color factors for this object or shape.\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order. None leaves\nthis channel unspecified for native evaluation.\nblend_mode: Compositing mode used when drawing this object.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\ndouble_sided: Whether both triangle faces contribute to drawing.\ninverted_mask: Whether to invert the combined clipping mask for this drawable.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.\nraw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.'
     id: str
     name: str
     texture_asset_id: SceneReference
@@ -81,7 +81,7 @@ class MeshConstraintKind(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class VertexContentPatch(CompactValue):
-    '\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nposition: Replacement XY value: absolute for Base/Ordinary, displacement for BlendShape.\nNone preserves the current value in the selected shape.\nuv: Optional texture UV pair; None preserves the current UV.'
+    'Optional updates to one stable mesh vertex in a selected shape.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nposition: Replacement XY value: absolute for Base/Ordinary, displacement for BlendShape.\nNone preserves the current value in the selected shape.\nuv: Optional texture UV pair; None preserves the current UV. UV updates are permitted only\nfor the Base shape, because UV coordinates are shared by all shapes.'
     vertex_id: int
     position: (Vec2 | None) = None
     uv: (Vec2 | None) = None
@@ -90,7 +90,7 @@ VertexContentPatch.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class NewMeshVertex(CompactValue):
-    '\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nposition: Absolute XY authoring position for this vertex, not a displacement.\nuv: Texture UV pair for this vertex; not a model-space position.\nseed: Explicit policy for initializing this new vertex in dependent ordinary/BlendShape keyforms.'
+    'New stable mesh vertex, its base position and UV, and the policy for dependent shapes.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nposition: Absolute XY authoring position for this vertex, not a displacement.\nuv: Texture UV pair for this vertex; not a model-space position.\nseed: Explicit policy for initializing this new vertex in dependent ordinary/BlendShape keyforms.'
     vertex_id: int
     position: Vec2
     uv: Vec2
@@ -100,14 +100,14 @@ NewMeshVertex.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class VertexSeedBase(CompactValue):
-    ''
+    'Use the new base position for ordinary shapes and zero displacement for BlendShapes.'
     _variant: _ClassVar[str] = 'base'
 
 VertexSeedBase.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class VertexSeedInterpolate(CompactValue):
-    '\n\nFields:\nweights: Source vertex IDs and interpolation weights used to seed dependent shape content.'
+    'Interpolate dependent content from existing vertices and supplied weights.\n\nFields:\nweights: Source vertex IDs and interpolation weights used to seed dependent shape content.'
     _variant: _ClassVar[str] = 'interpolate'
     weights: tuple[VertexWeight, ...]
 
@@ -120,21 +120,21 @@ VertexSeed: TypeAlias = VertexSeedBase | VertexSeedInterpolate
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class VertexWeight(CompactValue):
-    '\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nweight: Dimensionless interpolation weight applied to the referenced source vertex.'
+    'Source vertex and interpolation weight used to initialize dependent shapes.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nweight: Finite nonnegative interpolation weight. The nonempty source weights must sum to 1\nwithin native tolerance.'
     vertex_id: int
     weight: float
 
 VertexWeight.__module__ = "zipzi.modeling.mesh"
 
 class VertexDeletePolicy(str, Enum):
-    ''
+    'Select how deletion handles triangles and other content that reference a vertex.'
     __module__ = "zipzi.modeling.mesh"
     REJECT_REFERENCES = 'reject_references'
     REMOVE_DEPENDENT_CONTENT = 'remove_dependent_content'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TopologyReplacement(CompactValue):
-    '\n\nFields:\nmesh: Complete replacement mesh geometry and metadata. Setting meshing to None explicitly\ndiscards previous modeling topology; ordinary mesh replacements must preserve it.\nbinding: Optional replacement ordinary mesh binding; None supplies no ordinary binding.\nblend_bindings: Complete replacement BlendShape bindings for the remeshed object.\nglues: Complete replacement Glue records affected by the remesh.\nvertex_mapping: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly\nremoves it.'
+    'Coordinated mesh topology and dependent binding/Glue replacements for a remesh.\n\nFields:\nmesh: Complete replacement mesh geometry and metadata. Setting meshing to None explicitly\ndiscards previous modeling topology; ordinary mesh replacements must preserve it.\nbinding: Optional replacement ordinary mesh binding; None supplies no ordinary binding.\nblend_bindings: Complete replacement BlendShape bindings for the remeshed object.\nglues: Complete replacement Glue records affected by the remesh.\nvertex_mapping: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly\nremoves it.'
     mesh: Mesh
     binding: (MeshBinding | None) = None
     blend_bindings: tuple[BlendShapeBinding, ...]
@@ -191,7 +191,7 @@ ManualMeshOperationMoveVertices.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ManualMeshOperationDeleteVertices(CompactValue):
-    '\n\nFields:\nids: Persistent vertex identities to remove atomically.'
+    'Remove the selected vertices and rebuild affected connectivity.\n\nFields:\nids: Persistent vertex identities to remove atomically.'
     _variant: _ClassVar[str] = 'delete_vertices'
     ids: tuple[int, ...]
 
@@ -202,7 +202,7 @@ ManualMeshOperationDeleteVertices.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ManualMeshOperationConstrainEdge(CompactValue):
-    '\n\nFields:\na: First endpoint identity of the fixed edge.\nb: Second endpoint identity of the fixed edge.'
+    'Add a user-fixed edge or chain between existing vertices.\n\nFields:\na: First endpoint identity of the fixed edge.\nb: Second endpoint identity of the fixed edge.'
     _variant: _ClassVar[str] = 'constrain_edge'
     a: int
     b: int
@@ -211,7 +211,7 @@ ManualMeshOperationConstrainEdge.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ManualMeshOperationReleaseConstraint(CompactValue):
-    '\n\nFields:\na: First endpoint identity of the constraint to release.\nb: Second endpoint identity of the constraint to release.'
+    'Release a structural edge constraint, leaving its endpoints intact.\n\nFields:\na: First endpoint identity of the constraint to release.\nb: Second endpoint identity of the constraint to release.'
     _variant: _ClassVar[str] = 'release_constraint'
     a: int
     b: int
@@ -220,7 +220,7 @@ ManualMeshOperationReleaseConstraint.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ManualMeshOperationReconnect(CompactValue):
-    ''
+    'Rebuild automatic triangulation while retaining the structural constraints.'
     _variant: _ClassVar[str] = 'reconnect'
 
 ManualMeshOperationReconnect.__module__ = "zipzi.modeling.mesh"
@@ -229,7 +229,7 @@ ManualMeshOperation: TypeAlias = ManualMeshOperationInsertVertex | ManualMeshOpe
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ManualVertexTarget(CompactValue):
-    '\n\nFields:\nid: Stable vertex identity in the edited mesh, not its array index.\nuv: Absolute target UV coordinate in the mesh texture domain.'
+    'Absolute UV destination for an existing Manual Mesh vertex, selected by stable ID.\n\nFields:\nid: Stable vertex identity in the edited mesh, not its array index.\nuv: Absolute target UV coordinate in the mesh texture domain.'
     id: int
     uv: Vec2
 
@@ -237,7 +237,7 @@ ManualVertexTarget.__module__ = "zipzi.modeling.mesh"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ManualMeshTransferReport(CompactValue):
-    '\n\nFields:\nadded: Number of newly allocated vertices.\nmoved: Retained identities whose UV sampling location changed.\nremoved: Retired identities, including isolated vertices removed by edge deletion.\nshape_count: Stored base, ordinary and BlendShape channels processed; no Cartesian expansion.\nreconnected: Whether triangle connectivity changed.\nglue_endpoints: Whether a referenced Glue endpoint was resampled.\nnon_affine_parent: A Warp occurs anywhere in the actual parent chain.\naffine_extension: Dependency-free affine extension outside the previous UV coverage.\nappearance_limits: Reasons the plan does not promise identical appearance in every pose.\ncost: Conservative result, workspace and history accounting.'
+    'Summary of a Manual Mesh topology transfer, its dependencies, estimated cost and appearance limits.\n\nFields:\nadded: Number of newly allocated vertices.\nmoved: Retained identities whose UV sampling location changed.\nremoved: Retired identities, including isolated vertices removed by edge deletion.\nshape_count: Stored base, ordinary and BlendShape channels processed; no Cartesian expansion.\nreconnected: Whether triangle connectivity changed.\nglue_endpoints: Whether a referenced Glue endpoint was resampled.\nnon_affine_parent: A Warp occurs anywhere in the actual parent chain.\naffine_extension: Dependency-free affine extension outside the previous UV coverage.\nappearance_limits: Reasons the plan does not promise identical appearance in every pose.\ncost: Conservative result, workspace and history accounting.'
     added: int
     moved: int
     removed: int

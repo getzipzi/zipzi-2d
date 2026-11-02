@@ -2,6 +2,7 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Stable sample identity and coordinate for a BlendShape key table.
     pub struct ScalarSample {
         /// Stable UUID assigned to this parameter sample.
         pub id: String,
@@ -14,6 +15,7 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Optional displacement update for one stable mesh vertex in a BlendShape sample.
     pub struct VertexPatchSpec {
         /// Stable u32 vertex ID within the mesh, not an offset into its position array.
         pub vertex_id: u32,
@@ -28,6 +30,7 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Input for one Glue pair connecting optional vertices from its two endpoint meshes.
     pub struct GluePairSpec {
         /// Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.
         pub weight_a: f32,
@@ -46,6 +49,7 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Input opacity and color factors for one Offscreen keyform.
     pub struct OffscreenFormSpec {
         /// Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
         /// above 1 are retained without clamping.

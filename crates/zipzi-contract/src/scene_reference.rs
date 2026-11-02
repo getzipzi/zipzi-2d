@@ -4,13 +4,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Scene target reference that preserves absent and unresolved imported targets explicitly.
 pub enum SceneReference {
     #[default]
+    /// No target was specified.
     Unspecified,
+    /// Target a stable document object ID.
     Resolved {
         /// Stable document ID of the object described or selected by this value.
         object_id: String,
     },
+    /// Preserve an external runtime identifier that has not resolved to a document object.
     Unresolved {
         /// External format/runtime identifier retained for import/export; not the document
         /// object ID.

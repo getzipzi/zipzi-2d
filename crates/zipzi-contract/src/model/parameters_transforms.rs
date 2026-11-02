@@ -113,6 +113,7 @@ scene_id!(PartId);
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Document deformation transform with independent organization and deformation parents.
 pub struct Transform {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,
@@ -167,11 +168,14 @@ impl Default for Transform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Typed Warp or Rotation deformation definition.
 pub enum TransformData {
+    /// Use a Warp lattice definition.
     Warp(
         /// Warp deformation definition with its baked lattice and optional authoring controller.
         WarpTransform,
     ),
+    /// Use a Rotation definition.
     Rotation(
         /// Rotation deformation definition with its reference angle and base pose.
         RotationTransform,
@@ -191,6 +195,7 @@ impl Default for TransformData {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Warp lattice and optional authoring controller in the parent coordinate space.
 pub struct WarpTransform {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Optional authoring Bezier controller; None leaves the baked lattice without a controller.
@@ -214,6 +219,7 @@ pub struct WarpTransform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Rotation reference angle and base pose.
 pub struct RotationTransform {
     /// Reference angle in degrees used to orient the rotation control.
     pub base_angle: f32,

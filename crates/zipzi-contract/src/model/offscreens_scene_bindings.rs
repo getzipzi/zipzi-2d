@@ -30,6 +30,7 @@ pub struct OffscreenKeyform {
     zipzi_api_derive::ApiShape,
     zipzi_api_derive::BinaryWire,
 )]
+/// Part-owned compositing group with masks and mapped appearance keyforms.
 pub struct Offscreen {
     /// Stable document object ID used by references; it is distinct from the exported runtime_id.
     pub id: String,

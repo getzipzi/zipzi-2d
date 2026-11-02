@@ -48,14 +48,14 @@ def read_WarpBezierEditMode(value: object) -> WarpBezierEditMode:
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneReferenceUnspecified(CompactValue):
-    ''
+    'No target was specified.'
     _variant: _ClassVar[str] = 'unspecified'
 
 SceneReferenceUnspecified.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneReferenceResolved(CompactValue):
-    '\n\nFields:\nobject_id: Stable document ID of the object described or selected by this value.'
+    'Target a stable document object ID.\n\nFields:\nobject_id: Stable document ID of the object described or selected by this value.'
     _variant: _ClassVar[str] = 'resolved'
     object_id: str
 
@@ -63,7 +63,7 @@ SceneReferenceResolved.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneReferenceUnresolved(CompactValue):
-    '\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
+    'Preserve an external runtime identifier that has not resolved to a document object.\n\nFields:\nruntime_id: External format/runtime identifier retained for import/export; not the document\nobject ID.'
     _variant: _ClassVar[str] = 'unresolved'
     runtime_id: str
 
@@ -85,7 +85,7 @@ class Appearance(CompactValue):
 Appearance.__module__ = "zipzi.modeling.scene"
 
 class BlendMode(str, Enum):
-    ''
+    'Compositing mode used when drawing a drawable.'
     __module__ = "zipzi.modeling.scene"
     NORMAL = 'normal'
     ADDITIVE = 'additive'
@@ -93,7 +93,7 @@ class BlendMode(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Part(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. An empty\nstring represents the root/unassigned container.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order.'
+    'Organizational Part with a parent, evaluation state and drawing-order coordinate.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. An empty\nstring represents the root/unassigned container.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order.'
     id: str
     runtime_id: str
     name: str
@@ -105,7 +105,7 @@ Part.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Transform(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.\nwarp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.\noriginal_shape: Independent original shape and its first-key update policy, retained only by native projects.'
+    'Document deformation transform with independent organization and deformation parents.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.\nwarp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.\noriginal_shape: Independent original shape and its first-key update policy, retained only by native projects.'
     id: str
     runtime_id: str
     name: str
@@ -135,7 +135,7 @@ TransformId.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TransformDataWarp(CompactValue):
-    '\n\nFields:\nvalue: Warp deformation definition with its baked lattice and optional authoring controller.'
+    'Use a Warp lattice definition.\n\nFields:\nvalue: Warp deformation definition with its baked lattice and optional authoring controller.'
     _variant: _ClassVar[str] = 'Warp'
     value: WarpTransform
 
@@ -143,7 +143,7 @@ TransformDataWarp.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TransformDataRotation(CompactValue):
-    '\n\nFields:\nvalue: Rotation deformation definition with its reference angle and base pose.'
+    'Use a Rotation definition.\n\nFields:\nvalue: Rotation deformation definition with its reference angle and base pose.'
     _variant: _ClassVar[str] = 'Rotation'
     value: RotationTransform
 
@@ -153,7 +153,7 @@ TransformData: TypeAlias = TransformDataWarp | TransformDataRotation
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpTransform(CompactValue):
-    '\n\nFields:\nbezier: Optional authoring Bezier controller; None leaves the baked lattice without a controller.\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nquad: Whether to use the quad warp interpolation mode for the lattice.\npoints: Absolute lattice points in row-major order; index = row * (columns + 1) + column.'
+    'Warp lattice and optional authoring controller in the parent coordinate space.\n\nFields:\nbezier: Optional authoring Bezier controller; None leaves the baked lattice without a controller.\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nquad: Whether to use the quad warp interpolation mode for the lattice.\npoints: Absolute lattice points in row-major order; index = row * (columns + 1) + column.'
     bezier: (WarpBezier | None) = None
     rows: int
     columns: int
@@ -167,7 +167,7 @@ WarpTransform.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpBezier(CompactValue):
-    '\n\nFields:\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nnodes: Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.'
+    'Row-major Bezier controller for an authored Warp shape.\n\nFields:\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nnodes: Bezier nodes in row-major order; exactly (rows + 1) * (columns + 1) nodes.'
     rows: int
     columns: int
     nodes: tuple[WarpBezierNode, ...]
@@ -179,7 +179,7 @@ WarpBezier.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpBezierNode(CompactValue):
-    '\n\nFields:\nposition: Absolute Bezier anchor position in lattice coordinates; not a handle offset.\nhandles: Absolute positions: left, right, up, down in lattice coordinates.'
+    'One controller anchor with its four handles.\n\nFields:\nposition: Absolute Bezier anchor position in lattice coordinates; not a handle offset.\nhandles: Absolute positions: left, right, up, down in lattice coordinates.'
     position: Vec2
     handles: tuple[Vec2, Vec2, Vec2, Vec2]
 
@@ -190,7 +190,7 @@ WarpBezierNode.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class RotationTransform(CompactValue):
-    '\n\nFields:\nbase_angle: Reference angle in degrees used to orient the rotation control.\npose: Base rotation pose; its origin is expressed in the parent authoring space.'
+    'Rotation reference angle and base pose.\n\nFields:\nbase_angle: Reference angle in degrees used to orient the rotation control.\npose: Base rotation pose; its origin is expressed in the parent authoring space.'
     base_angle: float
     pose: RotationPose
 
@@ -198,7 +198,7 @@ RotationTransform.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class RotationPose(CompactValue):
-    '\n\nFields:\norigin: Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).\nangle: Rotation angle in degrees; not radians.\nscale: Dimensionless rotation-transform scale; 1 is identity.\nreflect_x: Reflect the local X axis about the rotation origin when true.\nreflect_y: Reflect the local Y axis about the rotation origin when true.'
+    'Rotation origin, angle, scale and reflections in its parent space.\n\nFields:\norigin: Rotation origin in parent authoring coordinates, stored at f64 precision; default is (0, 0).\nangle: Rotation angle in degrees; not radians.\nscale: Dimensionless rotation-transform scale; 1 is identity.\nreflect_x: Reflect the local X axis about the rotation origin when true.\nreflect_y: Reflect the local Y axis about the rotation origin when true.'
     origin: PreciseVec2
     angle: float
     scale: float
@@ -209,7 +209,7 @@ RotationPose.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpAuthoringSettings(CompactValue):
-    "\n\nFields:\nauto_reform: Rebuild the edited shape's baked grid on subsequent Bezier edits.\nedit_mode: Neighborhood or tangent-coupling rule for subsequent control edits.\nbezier_grid: Explicit controller density shared by stored shapes; None retains imported or derived density."
+    "Persistent editing mode, reform policy and optional controller density for a Warp.\n\nFields:\nauto_reform: Rebuild the edited shape's baked grid on subsequent Bezier edits.\nedit_mode: Neighborhood or tangent-coupling rule for subsequent control edits.\nbezier_grid: Explicit controller density shared by stored shapes; None retains imported or derived density."
     auto_reform: bool = field(default_factory=lambda: _boolean(False))
     edit_mode: WarpBezierEditMode = field(default_factory=lambda: read_WarpBezierEditMode('local'))
     bezier_grid: (WarpBezierGrid | None) = None
@@ -226,7 +226,7 @@ class WarpBezierEditMode(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpBezierGrid(CompactValue):
-    '\n\nFields:\nrows: Vertical controller cell count, from 1 to 32.\ncolumns: Horizontal controller cell count, from 1 to 32.'
+    'Controller subdivision density, independent of baked Warp lattice density.\n\nFields:\nrows: Vertical controller cell count, from 1 to 32.\ncolumns: Horizontal controller cell count, from 1 to 32.'
     rows: int
     columns: int
 
@@ -234,7 +234,7 @@ WarpBezierGrid.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeformerOriginal(CompactValue):
-    '\n\nFields:\nauto_update: Update once when the first ordinary keyform is created. Manual update disables this.\nfirst_key_seen: Persistent transition marker; deleting/recreating a binding does not replace the baseline again.\nsnapshot: None means no original has been recorded, for example an imported object.\ncapture_error: Native error code if automatic capture was unavailable; None after successful capture.'
+    'Persistent original-shape snapshot and first-key capture policy.\n\nFields:\nauto_update: Update once when the first ordinary keyform is created. Manual update disables this.\nfirst_key_seen: Persistent transition marker; deleting/recreating a binding does not replace the baseline again.\nsnapshot: None means no original has been recorded, for example an imported object.\ncapture_error: Native error code if automatic capture was unavailable; None after successful capture.'
     auto_update: bool
     first_key_seen: bool
     snapshot: (DeformerOriginalSnapshot | None) = None
@@ -244,14 +244,14 @@ DeformerOriginal.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeformerOriginalSnapshot(CompactValue):
-    '\n\nFields:\nsource: Creation, first ordinary keyform transition, or explicit manual update.\nshape: Independent canvas-space shape; does not reference undo history or binding samples.'
+    'Captured original shape and the event that produced it.\n\nFields:\nsource: Creation, first ordinary keyform transition, or explicit manual update.\nshape: Independent canvas-space shape; does not reference undo history or binding samples.'
     source: DeformerOriginalSource
     shape: DeformerOriginalShape
 
 DeformerOriginalSnapshot.__module__ = "zipzi.modeling.scene"
 
 class DeformerOriginalSource(str, Enum):
-    ''
+    'How a stored original deformer shape was captured.'
     __module__ = "zipzi.modeling.scene"
     CREATED = 'created'
     FIRST_KEY = 'first_key'
@@ -259,7 +259,7 @@ class DeformerOriginalSource(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeformerOriginalShapeWarp(CompactValue):
-    '\n\nFields:\nwarp: Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.\ncontroller_canvas_exact: False when a nonlinear captured parent cannot preserve a cubic controller as cubics.'
+    'Store a baked Warp lattice and controller in canvas space.\n\nFields:\nwarp: Baked Warp lattice and optional controller in canvas coordinates, X right/Y up.\ncontroller_canvas_exact: False when a nonlinear captured parent cannot preserve a cubic controller as cubics.'
     _variant: _ClassVar[str] = 'warp'
     warp: WarpTransform
     controller_canvas_exact: bool
@@ -268,7 +268,7 @@ DeformerOriginalShapeWarp.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeformerOriginalShapeRotation(CompactValue):
-    '\n\nFields:\npose: Canvas origin, absolute direction (including reference angle), inherited scale and reflections.'
+    'Store a Rotation pose in canvas space.\n\nFields:\npose: Canvas origin, absolute direction (including reference angle), inherited scale and reflections.'
     _variant: _ClassVar[str] = 'rotation'
     pose: RotationPose
 
@@ -278,7 +278,7 @@ DeformerOriginalShape: TypeAlias = DeformerOriginalShapeWarp | DeformerOriginalS
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Glue(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nmesh_a_id: Stable mesh ID for the A endpoint of this Glue.\nmesh_b_id: Stable mesh ID for the B endpoint of this Glue.\npairs: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.\nintensity: Glue influence factor; 0 disables the connection and 1 applies its full influence.\nbinding: Optional parameter-driven Glue binding; None leaves the Glue intensity static.'
+    'Connection between two mesh endpoints, with pairs and optional intensity binding.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\nmesh_a_id: Stable mesh ID for the A endpoint of this Glue.\nmesh_b_id: Stable mesh ID for the B endpoint of this Glue.\npairs: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.\nintensity: Glue influence factor; 0 disables the connection and 1 applies its full influence.\nbinding: Optional parameter-driven Glue binding; None leaves the Glue intensity static.'
     id: str
     runtime_id: str
     name: str
@@ -295,7 +295,7 @@ Glue.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class GlueVertexPair(CompactValue):
-    '\n\nFields:\nid: Stable UUID of this Glue pair; not the identity of its target.\nvertex_a: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.\nvertex_b: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.\nweight_a: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.\nweight_b: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.'
+    'Stable pair of optional endpoint vertices and their Glue weights.\n\nFields:\nid: Stable UUID of this Glue pair; not the identity of its target.\nvertex_a: Vertex ID in endpoint mesh A; None explicitly leaves this endpoint unattached.\nvertex_b: Vertex ID in endpoint mesh B; None explicitly leaves this endpoint unattached.\nweight_a: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.\nweight_b: Dimensionless contribution of endpoint B; default Glue pair weight is 0.5.'
     id: str
     vertex_a: (int | None) = None
     vertex_b: (int | None) = None
@@ -306,7 +306,7 @@ GlueVertexPair.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Offscreen(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Owning Part object ID; it must name an existing Part rather than a root sentinel.\nenabled: Controls visibility of the composited group without changing its contents.\nblend_mode: Compositing mode used when drawing this object.\nflags: Preserved format-specific Offscreen compositing flags.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.\npart_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.'
+    'Part-owned compositing group with masks and mapped appearance keyforms.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Owning Part object ID; it must name an existing Part rather than a root sentinel.\nenabled: Controls visibility of the composited group without changing its contents.\nblend_mode: Compositing mode used when drawing this object.\nflags: Preserved format-specific Offscreen compositing flags.\nmasks: Ordered stable mesh IDs used as clipping-mask sources, not texture IDs.\npart_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or key\ntable.'
     id: str
     runtime_id: str
     name: str
@@ -326,7 +326,7 @@ class Offscreen(CompactValue):
 Offscreen.__module__ = "zipzi.modeling.scene"
 
 class ReparentStrategy(str, Enum):
-    ''
+    'Choose how deformation reparenting treats local shape data and preservation.'
     __module__ = "zipzi.modeling.scene"
     KEEP_LOCAL_DATA = 'KeepLocalData'
     PRESERVE_EDIT_STATE = 'PreserveEditState'
@@ -334,7 +334,7 @@ class ReparentStrategy(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReparentContext(CompactValue):
-    '\n\nFields:\nparameter_values: Parameter-ID-to-value map used for the reparenting reference pose; values use each\nparameter domain.\nparameter_domain: Empty for PreserveEditState. For domain preservation every unfixed\ndependency must have an explicit finite interval.\nedit_time_seconds: Finite reference pose time in seconds; zero is the default reference time.'
+    'Frozen parameter values, optional domains and reference time for preservation planning.\n\nFields:\nparameter_values: Parameter-ID-to-value map used for the reparenting reference pose; values use each\nparameter domain.\nparameter_domain: Empty for PreserveEditState. For domain preservation every unfixed\ndependency must have an explicit finite interval.\nedit_time_seconds: Finite reference pose time in seconds; zero is the default reference time.'
     parameter_values: _Mapping[str, float]
     parameter_domain: tuple[ConversionDomain, ...]
     edit_time_seconds: float
@@ -347,7 +347,7 @@ ReparentContext.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditCreate(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nobject: Native scene object kind and its creation options; not a persisted full object record.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nbefore: Stable anchor in the organization collection (`part_id`), or the\nconnection collection for Glue. None appends to that collection.\ndeformation_before: Independent stable anchor in the deformation collection (`parent_id`).\nOnly Mesh/Warp/Rotation support this position; None appends.'
+    'Create a typed scene object at explicit organization and deformation positions.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\nname: Human-readable display name; use the stable ID for identity because names can change.\nobject: Native scene object kind and its creation options; not a persisted full object record.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nbefore: Stable anchor in the organization collection (`part_id`), or the\nconnection collection for Glue. None appends to that collection.\ndeformation_before: Independent stable anchor in the deformation collection (`parent_id`).\nOnly Mesh/Warp/Rotation support this position; None appends.'
     _variant: _ClassVar[str] = 'create'
     id: str
     name: str
@@ -361,7 +361,7 @@ SceneEditCreate.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditPatch(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nvalue: Scalar value in the referenced parameter domain.\nclear_glue_pairs: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.'
+    'Replace one typed scene field if its current value matches.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nvalue: Replacement field value; its variant must match expected.\nclear_glue_pairs: Explicitly clear existing Glue vertex pairs when changing Glue endpoints.'
     _variant: _ClassVar[str] = 'patch'
     id: str
     expected: SceneFieldValue
@@ -372,7 +372,7 @@ SceneEditPatch.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditMove(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Move objects to the selected collection.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'move'
     ids: tuple[str, ...]
     destination: SceneCollection
@@ -385,7 +385,7 @@ SceneEditMove.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditReparent(CompactValue):
-    '\n\nFields:\nedit: Edit candidate handle; None selects formal document state.'
+    'Reparent deformation objects under an explicit preservation strategy.\n\nFields:\nedit: Reparent request with its source selection and preservation strategy.'
     _variant: _ClassVar[str] = 'reparent'
     edit: ReparentEdit
 
@@ -393,7 +393,7 @@ SceneEditReparent.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditDuplicate(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nscope: Native copy/delete scope specifying whether dependent deformation descendants are\nincluded.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Duplicate selected scene objects under an explicit scope.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nscope: Native copy/delete scope specifying whether dependent deformation descendants are\nincluded.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     scope: SceneCopyScope = field(default_factory=lambda: read_SceneCopyScope('selected'))
@@ -407,7 +407,7 @@ SceneEditDuplicate.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditDelete(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nscope: Native copy/delete scope specifying whether dependent deformation descendants are\nincluded.'
+    'Delete scene objects under an explicit scope.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nscope: Native copy/delete scope specifying whether dependent deformation descendants are\nincluded.'
     _variant: _ClassVar[str] = 'delete'
     ids: tuple[str, ...]
     scope: SceneCopyScope = field(default_factory=lambda: read_SceneCopyScope('selected'))
@@ -419,7 +419,7 @@ SceneEditDelete.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditTransferOffscreen(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\npart_id: Destination Part object ID; it must name an existing Part.\npart_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.'
+    'Transfer an Offscreen group to another Part with its mapping.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\npart_id: Destination Part object ID; it must name an existing Part.\npart_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.'
     _variant: _ClassVar[str] = 'transfer_offscreen'
     id: str
     part_id: str
@@ -432,7 +432,7 @@ SceneEditTransferOffscreen.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditEnsureDrawingGroup(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nparent: Drawing-group parent owner; an empty string selects the root drawing group.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create or retain a drawing group under the specified parent.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nparent: Drawing-group parent owner; an empty string selects the root drawing group.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'ensure_drawing_group'
     owner: str
     parent: str
@@ -442,7 +442,7 @@ SceneEditEnsureDrawingGroup.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditSetDrawingRange(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nrange: Inclusive lower and upper drawing-order bounds, in that order.'
+    'Replace a drawing group range under an exact precondition.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nrange: Inclusive lower and upper drawing-order bounds, in that order.'
     _variant: _ClassVar[str] = 'set_drawing_range'
     owner: str
     expected: tuple[int, int]
@@ -456,7 +456,7 @@ SceneEditSetDrawingRange.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditDissolveDrawingGroup(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
+    'Remove a drawing group while retaining its members.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
     _variant: _ClassVar[str] = 'dissolve_drawing_group'
     owner: str
 
@@ -464,7 +464,7 @@ SceneEditDissolveDrawingGroup.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneEditDuplicateDrawingGroup(CompactValue):
-    '\n\nFields:\nsource: Exact formal or candidate source captured for this result; later host changes do not\nrewrite it.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.'
+    'Copy drawing-group structure from a source owner to a target owner.\n\nFields:\nsource: Source drawing-group owner ID; an empty string selects the root group.\ntarget: Existing target Part owner ID; it must differ from the source.'
     _variant: _ClassVar[str] = 'duplicate_drawing_group'
     source: str
     target: str
@@ -475,7 +475,7 @@ SceneEdit: TypeAlias = SceneEditCreate | SceneEditPatch | SceneEditMove | SceneE
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCreateMesh(CompactValue):
-    '\n\nFields:\ntexture: Image-asset reference; resolved values use asset IDs and unresolved values retain\nexternal texture identifiers.'
+    'Create a mesh with an explicit texture reference.\n\nFields:\ntexture: Image-asset reference; resolved values use asset IDs and unresolved values retain\nexternal texture identifiers.'
     _variant: _ClassVar[str] = 'mesh'
     texture: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
 
@@ -483,7 +483,7 @@ SceneCreateMesh.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCreateWarp(CompactValue):
-    '\n\nFields:\nbounds: Optional [left, bottom, right, top] warp bounds in parent coordinates; None requests\nnative defaults.'
+    'Create a warp transform with optional parent-space bounds.\n\nFields:\nbounds: Optional [left, bottom, right, top] warp bounds in parent coordinates; None requests\nnative defaults.'
     _variant: _ClassVar[str] = 'warp'
     bounds: (tuple[float, float, float, float] | None) = None
 
@@ -494,7 +494,7 @@ SceneCreateWarp.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCreateRotation(CompactValue):
-    '\n\nFields:\norigin: Optional rotation origin in parent coordinates. None uses (0, 0) for an empty\ndeformer, or the current content center when grouping a selection.'
+    'Create a rotation transform with optional parent-space origin.\n\nFields:\norigin: Optional rotation origin in parent coordinates. None uses (0, 0) for an empty\ndeformer, or the current content center when grouping a selection.'
     _variant: _ClassVar[str] = 'rotation'
     origin: (PreciseVec2 | None) = None
 
@@ -502,14 +502,14 @@ SceneCreateRotation.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCreateOffscreen(CompactValue):
-    ''
+    'Create an Offscreen group.'
     _variant: _ClassVar[str] = 'offscreen'
 
 SceneCreateOffscreen.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCreateGlue(CompactValue):
-    '\n\nFields:\na: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.\nb: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.'
+    'Create a Glue connection with explicit mesh references.\n\nFields:\na: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.\nb: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.'
     _variant: _ClassVar[str] = 'glue'
     a: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
     b: SceneReference = field(default_factory=lambda: read_SceneReference({'kind': 'unspecified'}))
@@ -520,7 +520,7 @@ SceneCreate: TypeAlias = SceneCreateMesh | SceneCreateWarp | SceneCreateRotation
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueLabel(CompactValue):
-    '\n\nFields:\nvalue: Replacement display label.'
+    'Select a display-label value.\n\nFields:\nvalue: Replacement display label.'
     _variant: _ClassVar[str] = 'label'
     value: str
 
@@ -528,7 +528,7 @@ SceneFieldValueLabel.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueRuntimeId(CompactValue):
-    '\n\nFields:\nvalue: Replacement external runtime identifier; an empty string explicitly clears it.'
+    'Select an external runtime identifier.\n\nFields:\nvalue: Replacement external runtime identifier; an empty string explicitly clears it.'
     _variant: _ClassVar[str] = 'runtime_id'
     value: str
 
@@ -536,7 +536,7 @@ SceneFieldValueRuntimeId.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueEnabled(CompactValue):
-    '\n\nFields:\nvalue: Replacement model evaluation enabled flag.'
+    'Select an evaluation enabled value.\n\nFields:\nvalue: Replacement model evaluation enabled flag.'
     _variant: _ClassVar[str] = 'enabled'
     value: bool
 
@@ -544,7 +544,7 @@ SceneFieldValueEnabled.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueAppearance(CompactValue):
-    '\n\nFields:\nvalue: Replacement opacity and RGB color factors.'
+    'Select opacity and color factors.\n\nFields:\nvalue: Replacement opacity and RGB color factors.'
     _variant: _ClassVar[str] = 'appearance'
     value: Appearance
 
@@ -552,7 +552,7 @@ SceneFieldValueAppearance.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueTexture(CompactValue):
-    '\n\nFields:\nvalue: Resolved image-asset reference or explicitly unresolved texture runtime identifier.'
+    'Select an image-asset reference.\n\nFields:\nvalue: Resolved image-asset reference or explicitly unresolved texture runtime identifier.'
     _variant: _ClassVar[str] = 'texture'
     value: SceneReference
 
@@ -560,7 +560,7 @@ SceneFieldValueTexture.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueMasks(CompactValue):
-    '\n\nFields:\nvalue: Complete ordered clipping-mask mesh selection.'
+    'Select the complete clipping-mask mesh list.\n\nFields:\nvalue: Complete ordered clipping-mask mesh selection.'
     _variant: _ClassVar[str] = 'masks'
     value: tuple[str, ...]
 
@@ -571,7 +571,7 @@ SceneFieldValueMasks.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueMeshDrawing(CompactValue):
-    '\n\nFields:\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order. None\nleaves this channel unspecified for native evaluation.\nblend_mode: Compositing mode used when drawing this object.\nraw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.\ndouble_sided: Whether both triangle faces contribute to drawing.\ninverted_mask: Whether to invert the combined clipping mask for this drawable.'
+    'Select mesh drawing configuration.\n\nFields:\ndraw_order: Drawing-order coordinate; distinct from the final evaluated render_order. None\nleaves this channel unspecified for native evaluation.\nblend_mode: Compositing mode used when drawing this object.\nraw_blend_mode: Original format-specific blend-mode code; None means no preserved raw code.\ndouble_sided: Whether both triangle faces contribute to drawing.\ninverted_mask: Whether to invert the combined clipping mask for this drawable.'
     _variant: _ClassVar[str] = 'mesh_drawing'
     draw_order: (float | None) = None
     blend_mode: BlendMode
@@ -583,7 +583,7 @@ SceneFieldValueMeshDrawing.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueWarp(CompactValue):
-    '\n\nFields:\nvalue: Complete replacement warp lattice and controller definition.'
+    'Select a complete Warp definition.\n\nFields:\nvalue: Complete replacement warp lattice and controller definition.'
     _variant: _ClassVar[str] = 'warp'
     value: WarpTransform
 
@@ -591,7 +591,7 @@ SceneFieldValueWarp.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueRotation(CompactValue):
-    '\n\nFields:\nvalue: Complete replacement rotation definition.'
+    'Select a complete Rotation definition.\n\nFields:\nvalue: Complete replacement rotation definition.'
     _variant: _ClassVar[str] = 'rotation'
     value: RotationTransform
 
@@ -599,7 +599,7 @@ SceneFieldValueRotation.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueGlueEndpoints(CompactValue):
-    '\n\nFields:\na: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.\nb: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.'
+    'Select both Glue endpoint references.\n\nFields:\na: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.\nb: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and unresolved\nreferences retain runtime identifiers.'
     _variant: _ClassVar[str] = 'glue_endpoints'
     a: SceneReference
     b: SceneReference
@@ -608,7 +608,7 @@ SceneFieldValueGlueEndpoints.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueGlueIntensity(CompactValue):
-    '\n\nFields:\nvalue: Replacement Glue influence factor.'
+    'Select a Glue influence factor.\n\nFields:\nvalue: Replacement Glue influence factor.'
     _variant: _ClassVar[str] = 'glue_intensity'
     value: float
 
@@ -616,7 +616,7 @@ SceneFieldValueGlueIntensity.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueOffscreen(CompactValue):
-    '\n\nFields:\nblend_mode: Compositing mode used when drawing this object.\nflags: Preserved format-specific Offscreen compositing flags.\nkeyforms: Shape samples for this binding; coordinate/sample identities must match its axes or\nkey table.\npart_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.'
+    'Select Offscreen compositing and mapping data.\n\nFields:\nblend_mode: Compositing mode used when drawing this object.\nflags: Preserved format-specific Offscreen compositing flags.\nkeyforms: Ordered Offscreen appearance forms; Part mapping entries select their array indices.\npart_keyform_indices: Part-keyform-to-Offscreen-keyform mapping; entries are keyform slots, not object IDs.'
     _variant: _ClassVar[str] = 'offscreen'
     blend_mode: int
     flags: int
@@ -631,7 +631,7 @@ SceneFieldValueOffscreen.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneFieldValueContext(CompactValue):
-    '\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
+    'Select organization and deformation context.\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
     _variant: _ClassVar[str] = 'context'
     part_id: (str | None) = None
     parent_id: (str | None) = None
@@ -642,7 +642,7 @@ SceneFieldValue: TypeAlias = SceneFieldValueLabel | SceneFieldValueRuntimeId | S
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCollectionOrganization(CompactValue):
-    '\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
+    'Select members of a Part or the root organization.\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
     _variant: _ClassVar[str] = 'organization'
     part_id: (str | None) = None
 
@@ -650,7 +650,7 @@ SceneCollectionOrganization.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCollectionDeformation(CompactValue):
-    '\n\nFields:\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
+    'Select children of a deformation parent or the root.\n\nFields:\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
     _variant: _ClassVar[str] = 'deformation'
     parent_id: (str | None) = None
 
@@ -658,21 +658,21 @@ SceneCollectionDeformation.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCollectionGlues(CompactValue):
-    ''
+    'Select the Glue collection.'
     _variant: _ClassVar[str] = 'glues'
 
 SceneCollectionGlues.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCollectionDrawingGroups(CompactValue):
-    ''
+    'Select drawing groups.'
     _variant: _ClassVar[str] = 'drawing_groups'
 
 SceneCollectionDrawingGroups.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneCollectionDrawing(CompactValue):
-    '\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
+    'Select members of one drawing group.\n\nFields:\nowner: Stable owner ID for the addressed drawing group, collection or reference selection.'
     _variant: _ClassVar[str] = 'drawing'
     owner: str
 
@@ -682,7 +682,7 @@ SceneCollection: TypeAlias = SceneCollectionOrganization | SceneCollectionDeform
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReparentEdit(CompactValue):
-    "\n\nFields:\nsources: Stable IDs of objects to reparent; source order is retained in the planned selection.\nparent_id: Empty means the model root. Part organization is an independent relation.\nstrategy: Explicit reparenting/conversion strategy, including how shape differences are preserved\nor reported.\nplacement: Optional placement in the resulting deformation collection.\ntolerance: Absolute position error in model units, before Glue postprocessing.\nrelative_tolerance: Relative error times the original affected geometry's model-space scale.\ncontext: Required for preservation. These are frozen native parameter inputs;\nMotion/Physics must first be resolved to parameters by the caller."
+    "Request deformation reparenting with explicit strategy, placement and tolerances.\n\nFields:\nsources: Stable IDs of objects to reparent; source order is retained in the planned selection.\nparent_id: Empty means the model root. Part organization is an independent relation.\nstrategy: Explicit reparenting/conversion strategy, including how shape differences are preserved\nor reported.\nplacement: Optional placement in the resulting deformation collection.\ntolerance: Absolute position error in model units, before Glue postprocessing.\nrelative_tolerance: Relative error times the original affected geometry's model-space scale.\ncontext: Required for preservation. These are frozen native parameter inputs;\nMotion/Physics must first be resolved to parameters by the caller."
     sources: tuple[str, ...]
     parent_id: str
     strategy: ReparentStrategy
@@ -698,20 +698,20 @@ ReparentEdit.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ReparentPlacement(CompactValue):
-    '\n\nFields:\nbefore: None appends; Some names an unselected member of the destination.'
+    'Optional insertion position in the destination deformation collection.\n\nFields:\nbefore: None appends; Some names an unselected member of the destination.'
     before: (str | None) = None
 
 ReparentPlacement.__module__ = "zipzi.modeling.scene"
 
 class SceneCopyScope(str, Enum):
-    ''
+    'Select whether scene duplication or deletion includes deformation descendants.'
     __module__ = "zipzi.modeling.scene"
     SELECTED = 'selected'
     DEFORMATION_SUBTREE = 'deformation_subtree'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationCollectionParameters(CompactValue):
-    '\n\nFields:\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.'
+    'Select parameters in one group or at the root.\n\nFields:\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.'
     _variant: _ClassVar[str] = 'parameters'
     group_id: (str | None) = None
 
@@ -719,7 +719,7 @@ OrganizationCollectionParameters.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationCollectionParameterGroups(CompactValue):
-    '\n\nFields:\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
+    'Select child parameter groups under a parent or at the root.\n\nFields:\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.'
     _variant: _ClassVar[str] = 'parameter_groups'
     parent_id: (str | None) = None
 
@@ -727,7 +727,7 @@ OrganizationCollectionParameterGroups.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationCollectionPartMembers(CompactValue):
-    '\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
+    'Select members of a Part or the root organization.\n\nFields:\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects\nthe root/unassigned container.'
     _variant: _ClassVar[str] = 'part_members'
     part_id: (str | None) = None
 
@@ -737,7 +737,7 @@ OrganizationCollection: TypeAlias = OrganizationCollectionParameters | Organizat
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditCreateParameter(CompactValue):
-    '\n\nFields:\nparameter: Complete parameter record with identity, finite range, default and runtime behavior.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create a parameter in the selected group.\n\nFields:\nparameter: Complete parameter record with identity, finite range, default and runtime behavior.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create_parameter'
     parameter: Parameter
     group_id: (str | None) = None
@@ -747,7 +747,7 @@ OrganizationEditCreateParameter.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditCreateGroup(CompactValue):
-    '\n\nFields:\ngroup: Complete CDI parameter-group metadata record to create or replace.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create a parameter group.\n\nFields:\ngroup: Complete CDI parameter-group metadata record to create or replace.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create_group'
     group: CdiParameterGroup
     before: (str | None) = None
@@ -756,7 +756,7 @@ OrganizationEditCreateGroup.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditCreatePart(CompactValue):
-    '\n\nFields:\npart: Complete Part record, including identity, hierarchy context and enabled/drawing state.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Create a Part in the organizational hierarchy.\n\nFields:\npart: Complete Part record, including identity, hierarchy context and enabled/drawing state.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'create_part'
     part: Part
     before: (str | None) = None
@@ -765,7 +765,7 @@ OrganizationEditCreatePart.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditSetParameterGroup(CompactValue):
-    '\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.'
+    'Change a parameter group assignment.\n\nFields:\nparameter_id: Stable document parameter ID, not its exported runtime identifier.\ngroup_id: Parameter-group ID in the document metadata hierarchy. None selects the\nroot/unassigned container.'
     _variant: _ClassVar[str] = 'set_parameter_group'
     parameter_id: str
     group_id: (str | None) = None
@@ -774,7 +774,7 @@ OrganizationEditSetParameterGroup.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditPatchGroup(CompactValue):
-    '\n\nFields:\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\ngroup: Complete CDI parameter-group metadata record to create or replace.'
+    'Replace group metadata under an exact precondition.\n\nFields:\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\ngroup: Complete CDI parameter-group metadata record to create or replace.'
     _variant: _ClassVar[str] = 'patch_group'
     expected: CdiParameterGroup
     group: CdiParameterGroup
@@ -783,7 +783,7 @@ OrganizationEditPatchGroup.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditMove(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Move selected identities to an organization collection.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'move'
     ids: tuple[str, ...]
     destination: OrganizationCollection
@@ -796,7 +796,7 @@ OrganizationEditMove.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditDuplicate(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Duplicate selected identities into an organization collection.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'duplicate'
     ids: tuple[str, ...]
     destination: OrganizationCollection
@@ -809,7 +809,7 @@ OrganizationEditDuplicate.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OrganizationEditDelete(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
+    'Delete or dissolve selected containers under the chosen policy.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
     _variant: _ClassVar[str] = 'delete'
     ids: tuple[str, ...]
     policy: OrganizationDeletePolicy
@@ -822,14 +822,14 @@ OrganizationEditDelete.__module__ = "zipzi.modeling.scene"
 OrganizationEdit: TypeAlias = OrganizationEditCreateParameter | OrganizationEditCreateGroup | OrganizationEditCreatePart | OrganizationEditSetParameterGroup | OrganizationEditPatchGroup | OrganizationEditMove | OrganizationEditDuplicate | OrganizationEditDelete
 
 class OrganizationDeletePolicy(str, Enum):
-    ''
+    'Select whether deleting organization containers also deletes their contents.'
     __module__ = "zipzi.modeling.scene"
     CONTENTS = 'contents'
     DISSOLVE = 'dissolve'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditDeformerOriginal(CompactValue):
-    '\n\nFields:\ntransform_id: Stable Warp or Rotation transform ID.\ntarget: Current editable Base or stored Ordinary shape; BlendShape restore/update is unsupported.\naction: Explicit capture, restore, or first-key update policy.\ncontext: Frozen parameter inputs used to evaluate current parent spaces in canvas coordinates.'
+    'Capture, restore or configure the stored original deformer shape.\n\nFields:\ntransform_id: Stable Warp or Rotation transform ID.\ntarget: Current editable Base or stored Ordinary shape; BlendShape restore/update is unsupported.\naction: Explicit capture, restore, or first-key update policy.\ncontext: Frozen parameter inputs used to evaluate current parent spaces in canvas coordinates.'
     _variant: _ClassVar[str] = 'deformer_original'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -843,7 +843,7 @@ SceneContentEditDeformerOriginal.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditMeshVertices(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\nupdates: Ordered content patches applied together by the native edit.'
+    'Patch selected stable mesh vertices in one shape.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\nupdates: Ordered content patches applied together by the native edit.'
     _variant: _ClassVar[str] = 'mesh_vertices'
     mesh_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -856,7 +856,7 @@ SceneContentEditMeshVertices.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditInsertMeshVertices(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertices: New vertex records in insertion order; each has a stable vertex ID and explicit\ndependent-shape seed.\nbefore: Optional stable vertex ID before which to insert new vertices; None appends. This is\nnot a position-array index.'
+    'Insert mesh vertices and seed dependent shape content.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertices: New vertex records in insertion order; each has a stable vertex ID and explicit\ndependent-shape seed.\nbefore: Optional stable vertex ID before which to insert new vertices; None appends. This is\nnot a position-array index.'
     _variant: _ClassVar[str] = 'insert_mesh_vertices'
     mesh_id: str
     vertices: tuple[NewMeshVertex, ...]
@@ -869,7 +869,7 @@ SceneContentEditInsertMeshVertices.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditDeleteMeshVertices(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertices: Stable vertex IDs in this mesh, not offsets into positions.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
+    'Delete selected vertices with an explicit dependency policy.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertices: Stable vertex IDs in this mesh, not offsets into positions.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
     _variant: _ClassVar[str] = 'delete_mesh_vertices'
     mesh_id: str
     vertices: tuple[int, ...]
@@ -882,7 +882,7 @@ SceneContentEditDeleteMeshVertices.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditReorderMeshVertices(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\norder: Complete new order of stable vertex IDs; preserves identities and associated per-\nvertex payload.'
+    'Reorder mesh vertex storage and associated shape content.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\norder: Complete new order of stable vertex IDs; preserves identities and associated per-\nvertex payload.'
     _variant: _ClassVar[str] = 'reorder_mesh_vertices'
     mesh_id: str
     order: tuple[int, ...]
@@ -894,7 +894,7 @@ SceneContentEditReorderMeshVertices.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditInsertTriangle(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertices: Triangle corners as three stable vertex IDs; not position-array indices.\nbefore: Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.'
+    'Insert a triangle of stable vertex IDs.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nvertices: Triangle corners as three stable vertex IDs; not position-array indices.\nbefore: Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.'
     _variant: _ClassVar[str] = 'insert_triangle'
     mesh_id: str
     vertices: tuple[int, int, int]
@@ -907,7 +907,7 @@ SceneContentEditInsertTriangle.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditPatchTriangle(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nslot: Zero-based position within the addressed content array; not a stable object ID.\nvertices: Triangle corners as three stable vertex IDs; not position-array indices.'
+    'Replace the triangle at a numeric slot.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nslot: Zero-based position within the addressed content array; not a stable object ID.\nvertices: Triangle corners as three stable vertex IDs; not position-array indices.'
     _variant: _ClassVar[str] = 'patch_triangle'
     mesh_id: str
     slot: int
@@ -920,7 +920,7 @@ SceneContentEditPatchTriangle.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditDeleteTriangles(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nslots: Zero-based content-array positions selected by this operation.'
+    'Delete triangles selected by numeric slots.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\nslots: Zero-based content-array positions selected by this operation.'
     _variant: _ClassVar[str] = 'delete_triangles'
     mesh_id: str
     slots: tuple[int, ...]
@@ -932,7 +932,7 @@ SceneContentEditDeleteTriangles.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditReplaceTriangles(CompactValue):
-    '\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\ntriangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute\nposition-array offsets.'
+    'Replace the complete mesh triangle list.\n\nFields:\nmesh_id: Stable ID of the target mesh in this document.\ntriangles: Triangle triples of stable vertex IDs; preserve winding and do not substitute\nposition-array offsets.'
     _variant: _ClassVar[str] = 'replace_triangles'
     mesh_id: str
     triangles: tuple[tuple[int, int, int], ...]
@@ -944,7 +944,7 @@ SceneContentEditReplaceTriangles.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditWarpPoints(CompactValue):
-    '\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\nupdates: Ordered content patches applied together by the native edit.\nclear_bezier: Explicitly remove the authoring Bezier controller when editing baked lattice points.\nFalse preserves the controller and retains lattice detail for subsequent delta edits.'
+    'Patch lattice points in one Warp shape.\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\nupdates: Ordered content patches applied together by the native edit.\nclear_bezier: Explicitly remove the authoring Bezier controller when editing baked lattice points.\nFalse preserves the controller and retains lattice detail for subsequent delta edits.'
     _variant: _ClassVar[str] = 'warp_points'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -958,7 +958,7 @@ SceneContentEditWarpPoints.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditWarpBezier(CompactValue):
-    '\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\ncontroller: Complete authoring Bezier controller; its baked lattice is updated by the native edit.'
+    'Replace or remove a Warp controller and update its baked lattice.\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\ntarget: Explicit base/ordinary/BlendShape content selector; default Base edits the\nundeformed base shape.\ncontroller: Complete authoring Bezier controller; its baked lattice is updated by the native edit.'
     _variant: _ClassVar[str] = 'warp_bezier'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -968,7 +968,7 @@ SceneContentEditWarpBezier.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditWarpBezierControls(CompactValue):
-    '\n\nFields:\ntransform_id: Stable Warp transform ID.\ntarget: Explicit base or ordinary stored shape; BlendShapes have no independent controller.\nupdates: Explicit controller destinations; the stored editing mode supplies neighborhood influence.'
+    'Edit selected controls on a stored Warp controller.\n\nFields:\ntransform_id: Stable Warp transform ID.\ntarget: Explicit base or ordinary stored shape; BlendShapes have no independent controller.\nupdates: Explicit controller destinations; the stored editing mode supplies neighborhood influence.'
     _variant: _ClassVar[str] = 'warp_bezier_controls'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -981,7 +981,7 @@ SceneContentEditWarpBezierControls.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditWarpAuthoring(CompactValue):
-    '\n\nFields:\ntransform_id: Stable Warp transform ID.\nsettings: Object editing settings. An explicit grid refits all stored controllers without changing baked points.'
+    'Update Warp editing settings and optionally refit controllers.\n\nFields:\ntransform_id: Stable Warp transform ID.\nsettings: Object editing settings. An explicit grid refits all stored controllers without changing baked points.'
     _variant: _ClassVar[str] = 'warp_authoring'
     transform_id: str
     settings: WarpAuthoringSettings
@@ -990,7 +990,7 @@ SceneContentEditWarpAuthoring.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditWarpShape(CompactValue):
-    '\n\nFields:\ntransform_id: Stable Warp transform ID.\ntarget: Explicit base or ordinary stored shape; other stored shapes remain unchanged.\naction: Reset preserves baked points; Reform samples the controller and replaces baked detail.'
+    'Reset or reform one stored Warp shape.\n\nFields:\ntransform_id: Stable Warp transform ID.\ntarget: Explicit base or ordinary stored shape; other stored shapes remain unchanged.\naction: Reset preserves baked points; Reform samples the controller and replaces baked detail.'
     _variant: _ClassVar[str] = 'warp_shape'
     transform_id: str
     target: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -1000,7 +1000,7 @@ SceneContentEditWarpShape.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditWarpKeepChildren(CompactValue):
-    '\n\nFields:\ntransform_id: Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.\nwarp: Complete replacement map/controller at the existing conversion density.\nThe shared plan compensates all child shape channels atomically.'
+    'Replace a static Warp while compensating child shapes.\n\nFields:\ntransform_id: Stable ID of a static Warp. Driven Warp maps are explicitly unsupported.\nwarp: Complete replacement map/controller at the existing conversion density.\nThe shared plan compensates all child shape channels atomically.'
     _variant: _ClassVar[str] = 'warp_keep_children'
     transform_id: str
     warp: WarpTransform
@@ -1009,7 +1009,7 @@ SceneContentEditWarpKeepChildren.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditRotationKeepChildren(CompactValue):
-    '\n\nFields:\ntransform_id: Stable ID of a static Rotation. Driven maps and ancestors are unsupported.\nrotation: Complete replacement rotation; the shared plan compensates every\nstored child shape channel atomically while retaining the hierarchy.'
+    'Replace a static Rotation while compensating child shapes.\n\nFields:\ntransform_id: Stable ID of a static Rotation. Driven maps and ancestors are unsupported.\nrotation: Complete replacement rotation; the shared plan compensates every\nstored child shape channel atomically while retaining the hierarchy.'
     _variant: _ClassVar[str] = 'rotation_keep_children'
     transform_id: str
     rotation: RotationTransform
@@ -1018,7 +1018,7 @@ SceneContentEditRotationKeepChildren.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditResizeWarp(CompactValue):
-    '\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nquad: Whether to use the quad warp interpolation mode for the lattice.'
+    'Change the Warp lattice conversion density.\n\nFields:\ntransform_id: Stable deformation-transform ID in this document.\nrows: Number of warp lattice cells vertically; a lattice has rows + 1 point rows.\ncolumns: Number of warp lattice cells horizontally; a lattice has columns + 1 point columns.\nquad: Whether to use the quad warp interpolation mode for the lattice.'
     _variant: _ClassVar[str] = 'resize_warp'
     transform_id: str
     rows: int
@@ -1029,7 +1029,7 @@ SceneContentEditResizeWarp.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditInsertGluePair(CompactValue):
-    '\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\npair: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected\nmeshes.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Insert a Glue pair with a stable identity.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\npair: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected\nmeshes.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'insert_glue_pair'
     glue_id: str
     pair: GlueVertexPair
@@ -1039,7 +1039,7 @@ SceneContentEditInsertGluePair.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditPatchGluePair(CompactValue):
-    '\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\npair: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected\nmeshes.'
+    'Replace an existing Glue pair.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\npair: Complete Glue pair to insert or replace; endpoint IDs belong to the two connected\nmeshes.'
     _variant: _ClassVar[str] = 'patch_glue_pair'
     glue_id: str
     pair: GlueVertexPair
@@ -1048,7 +1048,7 @@ SceneContentEditPatchGluePair.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditMoveGluePairs(CompactValue):
-    '\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Reorder selected Glue pairs.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'move_glue_pairs'
     glue_id: str
     ids: tuple[str, ...]
@@ -1061,7 +1061,7 @@ SceneContentEditMoveGluePairs.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditTransferGluePairs(CompactValue):
-    '\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\ndestination: Explicit destination collection; organization, deformation and drawing memberships\nare independent.\npairs: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Move Glue pairs to another Glue with explicit replacement records.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\ndestination: Stable destination Glue object ID.\npairs: Ordered Glue vertex pairs with stable pair identities and endpoint vertex IDs.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'transfer_glue_pairs'
     glue_id: str
     destination: str
@@ -1075,7 +1075,7 @@ SceneContentEditTransferGluePairs.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditDuplicateGluePairs(CompactValue):
-    '\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Duplicate selected Glue pairs.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'duplicate_glue_pairs'
     glue_id: str
     ids: tuple[str, ...]
@@ -1088,7 +1088,7 @@ SceneContentEditDuplicateGluePairs.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditDeleteGluePairs(CompactValue):
-    '\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.'
+    'Delete selected Glue pairs.\n\nFields:\nglue_id: Stable Glue object ID owning the affected vertex pairs.\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.'
     _variant: _ClassVar[str] = 'delete_glue_pairs'
     glue_id: str
     ids: tuple[str, ...]
@@ -1100,7 +1100,7 @@ SceneContentEditDeleteGluePairs.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditInsertOffscreenKeyform(CompactValue):
-    '\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nvalue: Scalar value in the referenced parameter domain.\nbefore: Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.'
+    'Insert an Offscreen appearance form at a slot or append.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nvalue: Complete Offscreen opacity and color form.\nbefore: Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.'
     _variant: _ClassVar[str] = 'insert_offscreen_keyform'
     offscreen_id: str
     value: OffscreenKeyform
@@ -1110,7 +1110,7 @@ SceneContentEditInsertOffscreenKeyform.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditPatchOffscreenKeyform(CompactValue):
-    '\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.\nvalue: Scalar value in the referenced parameter domain.'
+    'Replace the Offscreen form at a slot.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.\nvalue: Complete Offscreen opacity and color form.'
     _variant: _ClassVar[str] = 'patch_offscreen_keyform'
     offscreen_id: str
     slot: int
@@ -1120,7 +1120,7 @@ SceneContentEditPatchOffscreenKeyform.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditDuplicateOffscreenKeyforms(CompactValue):
-    '\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslots: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part\nmappings.\nbefore: Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.'
+    'Duplicate selected Offscreen keyform slots.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslots: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part\nmappings.\nbefore: Optional zero-based array slot before which to insert; None appends. The anchor must\nbelong to the selected destination.'
     _variant: _ClassVar[str] = 'duplicate_offscreen_keyforms'
     offscreen_id: str
     slots: tuple[int, ...]
@@ -1133,7 +1133,7 @@ SceneContentEditDuplicateOffscreenKeyforms.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditReorderOffscreenKeyforms(CompactValue):
-    '\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\norder: Permutation of zero-based Offscreen keyform slots; native execution remaps\nreferences consistently.'
+    'Reorder Offscreen forms and remap their references.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\norder: Permutation of zero-based Offscreen keyform slots; native execution remaps\nreferences consistently.'
     _variant: _ClassVar[str] = 'reorder_offscreen_keyforms'
     offscreen_id: str
     order: tuple[int, ...]
@@ -1145,7 +1145,7 @@ SceneContentEditReorderOffscreenKeyforms.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditDeleteOffscreenKeyforms(CompactValue):
-    '\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslots: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part\nmappings.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
+    'Delete Offscreen forms using an explicit mapping policy.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslots: Zero-based Offscreen keyform slots; native execution checks/remaps dependent Part\nmappings.\npolicy: Explicit native conflict/conversion policy; no implicit removal or remapping is\nrequested.'
     _variant: _ClassVar[str] = 'delete_offscreen_keyforms'
     offscreen_id: str
     slots: tuple[int, ...]
@@ -1158,7 +1158,7 @@ SceneContentEditDeleteOffscreenKeyforms.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditSetOffscreenMapping(CompactValue):
-    '\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nupdates: Ordered content patches applied together by the native edit.'
+    'Set static or sampled Part-to-Offscreen mappings.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nupdates: Ordered content patches applied together by the native edit.'
     _variant: _ClassVar[str] = 'set_offscreen_mapping'
     offscreen_id: str
     updates: tuple[OffscreenMappingPatch, ...]
@@ -1172,14 +1172,14 @@ SceneContentEdit: TypeAlias = SceneContentEditDeformerOriginal | SceneContentEdi
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ShapeTargetBase(CompactValue):
-    ''
+    'Edit the undeformed base shape.'
     _variant: _ClassVar[str] = 'base'
 
 ShapeTargetBase.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ShapeTargetOrdinary(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nsamples: Stable sample IDs selecting one ordinary-binding combination, in active axis order.'
+    'Edit the ordinary shape selected by binding and sample identities.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nsamples: Stable sample IDs selecting one ordinary-binding combination, in active axis order.'
     _variant: _ClassVar[str] = 'ordinary'
     binding_id: str
     samples: tuple[str, ...]
@@ -1191,7 +1191,7 @@ ShapeTargetOrdinary.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ShapeTargetBlend(CompactValue):
-    '\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
+    'Edit the BlendShape displacement selected by binding and sample identities.\n\nFields:\nbinding_id: Stable binding ID owning the addressed axes or keyforms.\nsample_id: Stable sample ID from the associated axis or BlendShape key table; not a numeric\nparameter value.'
     _variant: _ClassVar[str] = 'blend'
     binding_id: str
     sample_id: str
@@ -1202,14 +1202,14 @@ ShapeTarget: TypeAlias = ShapeTargetBase | ShapeTargetOrdinary | ShapeTargetBlen
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeformerOriginalActionUpdate(CompactValue):
-    ''
+    'Capture the current selected shape as the new original.'
     _variant: _ClassVar[str] = 'update'
 
 DeformerOriginalActionUpdate.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeformerOriginalActionRestore(CompactValue):
-    '\n\nFields:\nallow_resize: Explicit permission to resample every stored Warp shape when the saved conversion density differs.'
+    'Restore the recorded original with explicit resize permission.\n\nFields:\nallow_resize: Explicit permission to resample every stored Warp shape when the saved conversion density differs.'
     _variant: _ClassVar[str] = 'restore'
     allow_resize: bool
 
@@ -1217,7 +1217,7 @@ DeformerOriginalActionRestore.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DeformerOriginalActionAutoUpdate(CompactValue):
-    '\n\nFields:\nenabled: Changes the future first-key policy without changing geometry or immediately replacing the snapshot.'
+    'Change the future first-key capture policy.\n\nFields:\nenabled: Changes the future first-key policy without changing geometry or immediately replacing the snapshot.'
     _variant: _ClassVar[str] = 'auto_update'
     enabled: bool
 
@@ -1227,7 +1227,7 @@ DeformerOriginalAction: TypeAlias = DeformerOriginalActionUpdate | DeformerOrigi
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpPointPatch(CompactValue):
-    '\n\nFields:\nrow: Zero-based lattice point row, in the inclusive range 0..rows.\ncolumn: Zero-based lattice point column, in the inclusive range 0..columns.\npoint: Replacement lattice XY value: absolute for Base/Ordinary, displacement for BlendShape.'
+    'Replacement lattice point at a row and column in a selected Warp shape.\n\nFields:\nrow: Zero-based lattice point row, in the inclusive range 0..rows.\ncolumn: Zero-based lattice point column, in the inclusive range 0..columns.\npoint: Replacement lattice XY value: absolute for Base/Ordinary, displacement for BlendShape.'
     row: int
     column: int
     point: Vec2
@@ -1236,7 +1236,7 @@ WarpPointPatch.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class WarpBezierControlPatch(CompactValue):
-    "\n\nFields:\nnode: Zero-based controller node in row-major order.\ncomponent: 0 is the anchor; 1..4 are left, right, up and down handles.\npoint: Absolute destination in the Warp's parent authoring space."
+    "Absolute destination for one controller anchor or handle.\n\nFields:\nnode: Zero-based controller node in row-major order.\ncomponent: 0 is the anchor; 1..4 are left, right, up and down handles.\npoint: Absolute destination in the Warp's parent authoring space."
     node: int
     component: int
     point: Vec2
@@ -1244,28 +1244,28 @@ class WarpBezierControlPatch(CompactValue):
 WarpBezierControlPatch.__module__ = "zipzi.modeling.scene"
 
 class WarpShapeAction(str, Enum):
-    ''
+    'Choose how to synchronize a stored Warp controller and baked shape.'
     __module__ = "zipzi.modeling.scene"
     RESET_CONTROLLER = 'reset_controller'
     REFORM = 'reform'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OffscreenDeletePolicyRejectReferences(CompactValue):
-    ''
+    'Reject removal of referenced keyform slots.'
     _variant: _ClassVar[str] = 'reject_references'
 
 OffscreenDeletePolicyRejectReferences.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OffscreenDeletePolicyNeutral(CompactValue):
-    ''
+    'Replace references to removed slots with the neutral mapping.'
     _variant: _ClassVar[str] = 'neutral'
 
 OffscreenDeletePolicyNeutral.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OffscreenDeletePolicyRemap(CompactValue):
-    '\n\nFields:\nreplacements: Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that\nslot.'
+    'Replace references according to the explicit old-to-new slot mapping.\n\nFields:\nreplacements: Deleted-keyform-slot to replacement-slot map; None selects neutral/unmapped for that\nslot.'
     _variant: _ClassVar[str] = 'remap'
     replacements: _Mapping[int, (int | None)]
 
@@ -1278,7 +1278,7 @@ OffscreenDeletePolicy: TypeAlias = OffscreenDeletePolicyRejectReferences | Offsc
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class OffscreenMappingPatch(CompactValue):
-    '\n\nFields:\nslot: Static Part slot or stable Part-binding sample combination to remap.\nkeyform: Offscreen keyform-array index; -1 explicitly selects the neutral/unmapped state.'
+    'Assign an Offscreen keyform index to one static or sampled Part slot.\n\nFields:\nslot: Static Part slot or stable Part-binding sample combination to remap.\nkeyform: Offscreen keyform-array index; -1 explicitly selects the neutral/unmapped state.'
     slot: PartKeyformSlot
     keyform: int
 
@@ -1297,7 +1297,7 @@ Canvas.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditCreate(CompactValue):
-    '\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
+    'Create an attachment at a package-relative path.\n\nFields:\nid: New stable UUID for this object; it must not conflict with an existing identity.\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
     _variant: _ClassVar[str] = 'create'
     id: str
     path: str
@@ -1306,7 +1306,7 @@ AttachmentEditCreate.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditReplace(CompactValue):
-    '\n\nFields:\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nattachment: Complete package attachment record to replace; bytes may be explicitly unavailable.'
+    'Replace an attachment under an exact current-value precondition.\n\nFields:\nexpected: Exact current field value used as an optimistic precondition; stale values reject\nthe edit.\nattachment: Complete package attachment record to replace; bytes may be explicitly unavailable.'
     _variant: _ClassVar[str] = 'replace'
     expected: PackageAttachment
     attachment: PackageAttachment
@@ -1315,7 +1315,7 @@ AttachmentEditReplace.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditDuplicate(CompactValue):
-    '\n\nFields:\nsource: Stable ID of the existing source object to duplicate, not a filesystem path.\nid: New stable UUID for this object; it must not conflict with an existing identity.\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
+    'Duplicate an attachment under a fresh ID and path.\n\nFields:\nsource: Stable ID of the existing source object to duplicate, not a filesystem path.\nid: New stable UUID for this object; it must not conflict with an existing identity.\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
     _variant: _ClassVar[str] = 'duplicate'
     source: str
     id: str
@@ -1325,7 +1325,7 @@ AttachmentEditDuplicate.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditDelete(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
+    'Delete an unreferenced attachment.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.'
     _variant: _ClassVar[str] = 'delete'
     id: str
 
@@ -1333,7 +1333,7 @@ AttachmentEditDelete.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditDeleteWithReplacement(CompactValue):
-    '\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nreplacement: Replacement attachment ID for existing references; None explicitly removes those\nreferences.'
+    'Delete an attachment and explicitly redirect or remove references.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nreplacement: Replacement attachment ID for existing references; None explicitly removes those\nreferences.'
     _variant: _ClassVar[str] = 'delete_with_replacement'
     id: str
     replacement: (str | None) = None
@@ -1342,7 +1342,7 @@ AttachmentEditDeleteWithReplacement.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditReorder(CompactValue):
-    '\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Reorder selected attachment identities.\n\nFields:\nids: Ordered stable object IDs selected for this operation; visible names and row numbers\nare not identities.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     _variant: _ClassVar[str] = 'reorder'
     ids: tuple[str, ...]
     before: (str | None) = None
@@ -1354,7 +1354,7 @@ AttachmentEditReorder.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditSetSound(CompactValue):
-    '\n\nFields:\nregistration: Motion-registration ID whose sound attachment is being changed.\nreference: Resolved attachment identity or explicitly unresolved package path.'
+    'Set or clear a motion registration sound attachment reference.\n\nFields:\nregistration: Motion-registration ID whose sound attachment is being changed.\nreference: Resolved attachment identity or explicitly unresolved package path.'
     _variant: _ClassVar[str] = 'set_sound'
     registration: str
     reference: (AttachmentRef | None) = None
@@ -1363,7 +1363,7 @@ AttachmentEditSetSound.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentEditSetUserData(CompactValue):
-    '\n\nFields:\nreference: Resolved attachment identity or explicitly unresolved package path.'
+    'Set or clear the user-data attachment reference.\n\nFields:\nreference: Resolved attachment identity or explicitly unresolved package path.'
     _variant: _ClassVar[str] = 'set_user_data'
     reference: (AttachmentRef | None) = None
 
@@ -1373,7 +1373,7 @@ AttachmentEdit: TypeAlias = AttachmentEditCreate | AttachmentEditReplace | Attac
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentRefResolved(CompactValue):
-    '\n\nFields:\nattachment_id: Stable package-attachment ID, distinct from its relative package path.'
+    'Reference a loaded package attachment by stable ID.\n\nFields:\nattachment_id: Stable package-attachment ID, distinct from its relative package path.'
     _variant: _ClassVar[str] = 'resolved'
     attachment_id: str
 
@@ -1381,7 +1381,7 @@ AttachmentRefResolved.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class AttachmentRefUnresolved(CompactValue):
-    '\n\nFields:\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
+    'Preserve a package-relative path that has not resolved to an attachment.\n\nFields:\npath: Normalized package-relative attachment path using forward slashes; absolute paths\nand .. components are invalid.'
     _variant: _ClassVar[str] = 'unresolved'
     path: str
 
@@ -1413,7 +1413,7 @@ HierarchyOrder.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class DrawOrderGroup(CompactValue):
-    '\n\nFields:\nowner: Empty for the root; otherwise the stable ID of the Part driving this group.\nitems: Stable mesh/Part IDs, in tie-breaking order. A Part references its group.\nmin_order: Inclusive lower drawing-order bound for this group.\nmax_order: Inclusive upper drawing-order bound for this group.'
+    'Drawing-order range and ordered members owned by a Part or the root.\n\nFields:\nowner: Empty for the root; otherwise the stable ID of the Part driving this group.\nitems: Stable mesh/Part IDs, in tie-breaking order. A Part references its group.\nmin_order: Inclusive lower drawing-order bound for this group.\nmax_order: Inclusive upper drawing-order bound for this group.'
     owner: str
     items: tuple[str, ...]
     min_order: int
@@ -1425,7 +1425,7 @@ class DrawOrderGroup(CompactValue):
 DrawOrderGroup.__module__ = "zipzi.modeling.scene"
 
 class SceneField(str, Enum):
-    ''
+    'Identifies a typed scene property for reads or field-address operations.'
     __module__ = "zipzi.modeling.scene"
     LABEL = 'label'
     RUNTIME_ID = 'runtime_id'
@@ -1443,7 +1443,7 @@ class SceneField(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetVertexPosition(CompactValue):
-    '\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nshape: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base\nshape.'
+    'Select one vertex position in the chosen shape.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.\nshape: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base\nshape.'
     _variant: _ClassVar[str] = 'vertex_position'
     vertex_id: int
     shape: ShapeTarget = field(default_factory=lambda: read_ShapeTarget({'kind': 'base'}))
@@ -1452,7 +1452,7 @@ SceneContentTargetVertexPosition.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetVertexUv(CompactValue):
-    '\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.'
+    'Select the shared base UV of one vertex.\n\nFields:\nvertex_id: Stable u32 vertex ID within the mesh, not an offset into its position array.'
     _variant: _ClassVar[str] = 'vertex_uv'
     vertex_id: int
 
@@ -1460,7 +1460,7 @@ SceneContentTargetVertexUv.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetTriangle(CompactValue):
-    '\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
+    'Select one triangle by its array slot.\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
     _variant: _ClassVar[str] = 'triangle'
     slot: int
 
@@ -1468,7 +1468,7 @@ SceneContentTargetTriangle.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetWarpPoint(CompactValue):
-    '\n\nFields:\nrow: Zero-based lattice point row, in the inclusive range 0..rows.\ncolumn: Zero-based lattice point column, in the inclusive range 0..columns.\nshape: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base\nshape.'
+    'Select one Warp lattice point in the chosen shape.\n\nFields:\nrow: Zero-based lattice point row, in the inclusive range 0..rows.\ncolumn: Zero-based lattice point column, in the inclusive range 0..columns.\nshape: Base, ordinary-sample or BlendShape-sample target; omitted/default selects the base\nshape.'
     _variant: _ClassVar[str] = 'warp_point'
     row: int
     column: int
@@ -1488,7 +1488,7 @@ SceneContentTargetWarpBezierControl.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetGluePair(CompactValue):
-    '\n\nFields:\npair_id: Stable Glue pair ID, not its offset in the pair array.'
+    'Select one stable Glue pair.\n\nFields:\npair_id: Stable Glue pair ID, not its offset in the pair array.'
     _variant: _ClassVar[str] = 'glue_pair'
     pair_id: str
 
@@ -1496,7 +1496,7 @@ SceneContentTargetGluePair.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetOffscreenKeyform(CompactValue):
-    '\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
+    'Select an Offscreen appearance form by array slot.\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
     _variant: _ClassVar[str] = 'offscreen_keyform'
     slot: int
 
@@ -1504,7 +1504,7 @@ SceneContentTargetOffscreenKeyform.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetOffscreenMapping(CompactValue):
-    '\n\nFields:\nslot: Static Part slot or stable Part-binding sample combination, not an Offscreen array\noffset.'
+    'Select the Offscreen mapping of one Part slot.\n\nFields:\nslot: Static Part slot or stable Part-binding sample combination, not an Offscreen array\noffset.'
     _variant: _ClassVar[str] = 'offscreen_mapping'
     slot: PartKeyformSlot
 
@@ -1514,7 +1514,7 @@ SceneContentTarget: TypeAlias = SceneContentTargetVertexPosition | SceneContentT
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentValuePoint(CompactValue):
-    '\n\nFields:\nvalue: Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.'
+    'Supply a position, displacement or UV pair as required by the target.\n\nFields:\nvalue: Replacement XY value in the selected shape/UV space; BlendShape targets use deltas.'
     _variant: _ClassVar[str] = 'point'
     value: Vec2
 
@@ -1522,7 +1522,7 @@ SceneContentValuePoint.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentValueTriangle(CompactValue):
-    '\n\nFields:\nvalue: Replacement triangle as three stable vertex IDs, not position-array indices.'
+    'Supply three stable vertex IDs for a triangle.\n\nFields:\nvalue: Replacement triangle as three stable vertex IDs, not position-array indices.'
     _variant: _ClassVar[str] = 'triangle'
     value: tuple[int, int, int]
 
@@ -1533,7 +1533,7 @@ SceneContentValueTriangle.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentValueGluePair(CompactValue):
-    '\n\nFields:\nvalue: Complete replacement Glue pair with its identity and endpoint vertices.'
+    'Supply a complete Glue pair.\n\nFields:\nvalue: Complete replacement Glue pair with its identity and endpoint vertices.'
     _variant: _ClassVar[str] = 'glue_pair'
     value: GlueVertexPair
 
@@ -1541,7 +1541,7 @@ SceneContentValueGluePair.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentValueOffscreenKeyform(CompactValue):
-    '\n\nFields:\nvalue: Complete replacement Offscreen appearance sample.'
+    'Supply a complete Offscreen appearance form.\n\nFields:\nvalue: Complete replacement Offscreen appearance sample.'
     _variant: _ClassVar[str] = 'offscreen_keyform'
     value: OffscreenKeyform
 
@@ -1549,7 +1549,7 @@ SceneContentValueOffscreenKeyform.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentValueMapping(CompactValue):
-    '\n\nFields:\nvalue: Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.'
+    'Supply an Offscreen keyform index or neutral sentinel.\n\nFields:\nvalue: Replacement Offscreen keyform-array index; -1 selects neutral/unmapped.'
     _variant: _ClassVar[str] = 'mapping'
     value: int
 

@@ -45,6 +45,7 @@ pub struct PreparedImageInfo {
 
 crate::api_record! {
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
+/// Owned decoded pixels captured from an image, independent of subsequent host reads.
 pub struct ImagePixels {
     /// Image width in pixels; prepared image content requires a positive dimension.
     pub width: u32,
@@ -58,6 +59,7 @@ pub struct ImagePixels {
 
 crate::api_record! {
 #[derive(Debug, Clone, Serialize, zipzi_api_derive::BinaryOutput)]
+/// Image identity and pixels captured at one exact formal or candidate source.
 pub struct ImageSnapshot {
     /// Exact formal or candidate source captured for this result; later host changes do not
     /// rewrite it.

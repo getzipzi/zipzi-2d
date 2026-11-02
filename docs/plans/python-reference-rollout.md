@@ -594,3 +594,35 @@ P0/P1 结构门禁继续执行。比较本批五页、runtime_session、runtime_
 failure/no-op 三个指定用例均通过 Local/Connected 和静态类型检查。CPU sweep 验证候选与正式源、
 参数顺序、插值 0/5/10 及范围钳制；mesh grid 四个 SDK 集成用例验证 Slice/Resample、零轴
 及轴变更的数值结果。`zipzi-core` 的 topology 用例增加并通过乱序顶点 ID 子集配对断言。
+
+## 14. P3 资源、场景和完整网格结构检查（2026-11-02）
+
+状态：P3 **结构门禁和指定 CPU 行为证据通过，完整语义审阅待复核**；不把非空检查
+当作领域完成。仍需逐项审阅所有 scene/content 操作、变形保形范围和资源/计划生命周期，
+并在 P4 核对地址、删除依赖，在 P5 核对附件 IO，在 P6/P7 核对采样和 GPU 交互。
+
+范围为 `resources`、`scene`、`modeling_resources`、`modeling_scene`、
+`modeling_scene_edits`、`modeling_mesh`，以及跨页 Runtime/Session/Edit 资源和网格入口。
+Rust contract 的资源、scene、organization、content、deformer、Bezier、Manual Mesh 和附件
+声明维护摘要及各分支说明；Python 的 `prepare_image` 说明字节布局、大小和租约归属。
+scene convenience union 的摘要从绑定的 Rust union 生成，来源链测试验证更改会同时传播到
+Python、catalog 和 reference。修正 Offscreen keyform 插入参数原先误写成顶点 ID，以及
+SceneEdit 字段原先误写成参数标量/Edit 句柄的说明；未改变执行逻辑。
+
+资源入口区分客户端 Buffer/PreparedImage、候选/文档持有者和独立 ImageLease；RGBA8 为紧密
+排列、首行在上、straight alpha，Python 字节输入和 host 分别受预算约束。Manual Mesh 说明
+稳定顶点 ID、UV 目标、约束、重连、精确候选 Source 及依赖形状转移；普通内容插入还区分
+基底种子和 BlendShape 零位移、UV 只能修改 Base。场景条目区分组织/变形层级、保留局部
+数据与按上下文保形，以及静态/采样 Part 到 Offscreen keyform 的索引映射。
+
+本批类型摘要缺口 223 → 0，union 分支诊断 277 → 0，enum 成员诊断 30 → 0；全局摘要
+缺口 678 → 455，稳定债务键移除 753 项，无新增。本批六页已纳入独立结构门禁。
+包含这六页、runtime、runtime_session、runtime_edit 和 common 的相同 466 个标题，正文
+223,252 → 238,194 字符，增加来自类型、分支和字段约束；公共规则正文无新增重复。
+该比较不是对所有新增说明的语义完成证明。
+
+执行无缓存生成检查、reference tooling、scene 生成器测试、`cargo test --locked -p zipzi-contract`；
+四个计划列出的 Python 用例分别验证 Manual Mesh 原始 Source、可复用 Buffer 与大图、
+图像替换后旧快照和 Undo/Redo 像素、场景组织计划，均通过 Local/Connected 及静态类型检查。
+离线 `format()` 检查资源布局、普通绑定坐标及保留局部数据的重挂载，并确认无 native/GPU 导入。
+未运行全量 SDK、GPU 或真实 Editor 服务门禁。

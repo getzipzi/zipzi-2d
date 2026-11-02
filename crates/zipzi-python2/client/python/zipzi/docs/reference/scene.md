@@ -16,6 +16,8 @@ Typed scene/organization intentions and immutable metadata projections.
 
 `(parameter_id: str, samples: tuple[Sample, ...], base_sample_id: str, id: str | None = None)`
 
+Create a BlendShape key table and select its neutral sample.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 Types: [Sample](#zipziscenesample).
@@ -34,6 +36,8 @@ must name one of them.
 **Type**
 
 `(name: str, a: str, b: str, part_id: str | None = None, id: str | None = None)`
+
+Create a Glue connection between two mesh endpoints.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -56,6 +60,8 @@ selects the root/unassigned container.
 
 `(mesh_id: str, table_id: str, id: str | None = None)`
 
+Create a BlendShape binding from a mesh to a key table.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -70,6 +76,8 @@ See [Fixed operation discriminators](common.md#fixed-discriminator).
 **Type**
 
 `(name: str, part_id: str, id: str | None = None)`
+
+Create an Offscreen group owned by a Part.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -87,6 +95,8 @@ change.
 
 `(spec: ParameterGroupSpec)`
 
+Create a parameter organization group.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 Types: [ParameterGroupSpec](#zipzisceneparametergroupspec).
@@ -103,6 +113,8 @@ rejects invalid input.
 
 `(spec: PartSpec)`
 
+Create an organizational Part.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 Types: [PartSpec](#zipziscenepartspec).
@@ -118,6 +130,8 @@ rejects invalid input.
 **Type**
 
 `(name: str, placement: Placement, id: str | None = None)`
+
+Create a Rotation transform with separate organization and deformation placement.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -137,6 +151,8 @@ anchors.
 **Type**
 
 `(name: str, placement: Placement, bounds: tuple[float, float, float, float] | None = None, id: str | None = None)`
+
+Create a Warp transform with separate organization and deformation placement.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -159,6 +175,8 @@ requests native defaults.
 
 `(glue_id: str, ids: tuple[str, ...])`
 
+Delete selected stable Glue pair identities.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -173,6 +191,8 @@ numbers are not identities.
 **Type**
 
 `(mesh_id: str, vertices: tuple[int, ...], remove_dependents: bool)`
+
+Delete vertices with an explicit dependent-content policy.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -190,6 +210,8 @@ referenced-vertex deletion.
 
 `(ids: tuple[str, ...], dissolve: bool)`
 
+Delete organization containers or dissolve them while preserving their contents.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -206,6 +228,8 @@ deleting its contents.
 
 `(ids: tuple[str, ...], subtree: bool)`
 
+Delete selected scene objects, optionally including deformation subtrees.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -220,6 +244,8 @@ numbers are not identities.
 **Type**
 
 `(ids: tuple[str, ...], subtree: bool, part_id: str | None = None, before: str | None = None)`
+
+Duplicate selected scene objects, optionally including their deformation subtrees.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -240,6 +266,8 @@ to the selected destination.
 
 `(weight_a: float, weight_b: float, id: str | None = None, vertex_a: int | None = None, vertex_b: int | None = None)`
 
+Input for one Glue pair connecting optional vertices from its two endpoint meshes.
+
 **Fields**
 
 - `weight_a`: Dimensionless contribution of endpoint A; default Glue pair weight is 0.5.
@@ -253,6 +281,8 @@ to the selected destination.
 **Type**
 
 `(glue_id: str, pair: GluePair, before: str | None = None)`
+
+Insert a stable vertex pair into a Glue connection.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -272,6 +302,8 @@ to the selected destination.
 **Type**
 
 `(mesh_id: str, vertex_id: int, position: tuple[float, float], uv: tuple[float, float], weights: tuple[VertexWeight, ...], before: int | None = None)`
+
+Insert a stable mesh vertex and seed dependent shapes.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -294,6 +326,8 @@ This is not a position-array index.
 
 `(offscreen_id: str, value: OffscreenForm, before: int | None = None)`
 
+Insert an Offscreen keyform at a numeric slot or append.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 Types: [OffscreenForm](#zipzisceneoffscreenform).
@@ -301,9 +335,8 @@ Types: [OffscreenForm](#zipzisceneoffscreenform).
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
-- `value`: Scalar value in the referenced parameter domain.
-- `before`: Optional stable vertex ID before which to insert new vertices; None appends.
-This is not a position-array index.
+- `value`: Complete Offscreen opacity and color form.
+- `before`: Optional zero-based Offscreen keyform slot before which to insert; None appends.
 - `kind`: Fixed value 'scene_insert_offscreen_keyform' (read-only).
 
 ## zipzi.scene.MoveDeformation
@@ -311,6 +344,8 @@ This is not a position-array index.
 **Type**
 
 `(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None)`
+
+Move scene objects in the deformation hierarchy.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -330,6 +365,8 @@ to the selected destination.
 
 `(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None)`
 
+Move parameter groups in their organization hierarchy.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -347,6 +384,8 @@ to the selected destination.
 **Type**
 
 `(ids: tuple[str, ...], group_id: str | None = None, before: str | None = None)`
+
+Move parameters between organization groups.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -366,6 +405,8 @@ to the selected destination.
 
 `(ids: tuple[str, ...], part_id: str | None = None, before: str | None = None)`
 
+Move scene objects in the organizational Part hierarchy.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -384,6 +425,8 @@ to the selected destination.
 
 `(opacity: float, multiply: tuple[float, float, float] | None = None, screen: tuple[float, float, float] | None = None)`
 
+Input opacity and color factors for one Offscreen keyform.
+
 **Fields**
 
 - `opacity`: Finite nonnegative opacity factor; 0 is transparent and 1 is opaque. Imported values
@@ -397,6 +440,8 @@ above 1 are retained without clamping.
 
 `CreatePart | CreateParameterGroup | CreateWarp | CreateRotation | CreateGlue | CreateOffscreen | MoveToPart | MoveDeformation | MoveParameters | MoveParameterGroups | DuplicateScene | DeleteScene | DeleteOrganization | SetSceneLabel | SetSceneEnabled | ReparentLocal | ReplaceTriangles | ReorderMeshVertices | InsertMeshVertex | DeleteMeshVertices | CreateBlendTable | CreateMeshBlend | SetMeshBlendVertices | InsertGluePair | DeleteGluePairs | PatchOffscreenKeyform | InsertOffscreenKeyform | SetOffscreenStaticKeyform`
 
+Scene and organization candidate operations; choose a typed variant for the intended edit.
+
 Types: [CreateBlendTable](#zipziscenecreateblendtable), [CreateGlue](#zipziscenecreateglue), [CreateMeshBlend](#zipziscenecreatemeshblend), [CreateOffscreen](#zipziscenecreateoffscreen), [CreateParameterGroup](#zipziscenecreateparametergroup), [CreatePart](#zipziscenecreatepart), [CreateRotation](#zipziscenecreaterotation), [CreateWarp](#zipziscenecreatewarp), [DeleteGluePairs](#zipziscenedeletegluepairs), [DeleteMeshVertices](#zipziscenedeletemeshvertices), [DeleteOrganization](#zipziscenedeleteorganization), [DeleteScene](#zipziscenedeletescene), [DuplicateScene](#zipzisceneduplicatescene), [InsertGluePair](#zipzisceneinsertgluepair), [InsertMeshVertex](#zipzisceneinsertmeshvertex), [InsertOffscreenKeyform](#zipzisceneinsertoffscreenkeyform), [MoveDeformation](#zipziscenemovedeformation), [MoveParameterGroups](#zipziscenemoveparametergroups), [MoveParameters](#zipziscenemoveparameters), [MoveToPart](#zipziscenemovetopart), [PatchOffscreenKeyform](#zipziscenepatchoffscreenkeyform), [ReorderMeshVertices](#zipziscenereordermeshvertices), [ReparentLocal](#zipziscenereparentlocal), [ReplaceTriangles](#zipziscenereplacetriangles), [SetMeshBlendVertices](#zipziscenesetmeshblendvertices), [SetOffscreenStaticKeyform](#zipziscenesetoffscreenstatickeyform), [SetSceneEnabled](#zipziscenesetsceneenabled), [SetSceneLabel](#zipziscenesetscenelabel).
 
 
@@ -405,6 +450,8 @@ Types: [CreateBlendTable](#zipziscenecreateblendtable), [CreateGlue](#zipziscene
 **Type**
 
 `(name: str, id: str | None = None, runtime_id: str | None = None, parent_id: str | None = None, before: str | None = None)`
+
+Input for creating a parameter group in the organizational hierarchy.
 
 **Fields**
 
@@ -422,6 +469,8 @@ the selected destination.
 
 `(name: str, id: str | None = None, parent_id: str | None = None, before: str | None = None)`
 
+Input for creating a Part in the organizational hierarchy.
+
 **Fields**
 
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
@@ -437,6 +486,8 @@ the selected destination.
 
 `(offscreen_id: str, slot: int, value: OffscreenForm)`
 
+Replace one Offscreen keyform at a numeric slot.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 Types: [OffscreenForm](#zipzisceneoffscreenform).
@@ -446,7 +497,7 @@ Types: [OffscreenForm](#zipzisceneoffscreenform).
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
 - `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
 object ID.
-- `value`: Scalar value in the referenced parameter domain.
+- `value`: Complete Offscreen opacity and color form.
 - `kind`: Fixed value 'scene_patch_offscreen_keyform' (read-only).
 
 ## zipzi.scene.Placement
@@ -454,6 +505,8 @@ object ID.
 **Type**
 
 `(part_id: str | None = None, parent_id: str | None = None, before: str | None = None, deformation_before: str | None = None)`
+
+Independent organizational and deformation parent/ordering choices for a scene object.
 
 **Fields**
 
@@ -470,6 +523,8 @@ collection.
 
 `(mesh_id: str, order: tuple[int, ...])`
 
+Reorder mesh vertex storage while retaining vertex identities and associated content.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -484,6 +539,8 @@ per-vertex payload.
 **Type**
 
 `(ids: tuple[str, ...], parent_id: str | None = None, before: str | None = None)`
+
+Reparent deformation objects while retaining local data; appearance may change.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -503,6 +560,8 @@ to the selected destination.
 
 `(mesh_id: str, triangles: tuple[tuple[int, int, int], ...])`
 
+Replace a mesh triangle list using stable vertex IDs.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
@@ -518,6 +577,8 @@ position-array offsets.
 
 `(id: str, value: float)`
 
+Stable sample identity and coordinate for a BlendShape key table.
+
 **Fields**
 
 - `id`: Stable UUID assigned to this parameter sample.
@@ -528,6 +589,8 @@ position-array offsets.
 **Type**
 
 `(mesh_id: str, binding_id: str, sample_id: str, updates: tuple[VertexPatch, ...])`
+
+Patch mesh BlendShape displacements for a selected binding sample.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -548,12 +611,14 @@ parameter value.
 
 `(offscreen_id: str, keyform: int)`
 
+Map the static Part slot to an Offscreen keyform or neutral value.
+
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
-- `keyform`: Complete shape sample to insert or replace; unrelated samples are retained.
+- `keyform`: Offscreen keyform-array index; -1 selects the neutral/unmapped state.
 - `kind`: Fixed value 'scene_set_offscreen_static_keyform' (read-only).
 
 ## zipzi.scene.SetSceneEnabled
@@ -561,6 +626,8 @@ See [Fixed operation discriminators](common.md#fixed-discriminator).
 **Type**
 
 `(id: str, expected: bool, enabled: bool)`
+
+Replace scene evaluation visibility with an expected-value precondition.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -578,6 +645,8 @@ reject the edit.
 **Type**
 
 `(id: str, expected: str, name: str)`
+
+Replace a scene object label with an expected-value precondition.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 
@@ -618,6 +687,8 @@ Parts/groups; None means root or not applicable.
 
 `(vertex_id: int, position: tuple[float, float] | None = None, uv: tuple[float, float] | None = None)`
 
+Optional displacement update for one stable mesh vertex in a BlendShape sample.
+
 **Fields**
 
 - `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
@@ -630,7 +701,9 @@ Parts/groups; None means root or not applicable.
 
 `(vertex_id: int, weight: float)`
 
+Source vertex and weight used to seed a newly inserted mesh vertex.
+
 **Fields**
 
 - `vertex_id`: Stable u32 vertex ID within the mesh, not an offset into its position array.
-- `weight`: Dimensionless interpolation weight applied to the referenced source vertex.
+- `weight`: Finite nonnegative weight; the nonempty set of weights must sum to 1 within native tolerance.

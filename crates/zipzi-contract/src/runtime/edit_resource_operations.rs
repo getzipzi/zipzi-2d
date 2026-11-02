@@ -25,7 +25,9 @@ crate::api_union! {
 tag = "domain";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[derive(zipzi_api_derive::BinaryWire)]
+/// Image-resource writes and source-bound plan application within an Edit candidate.
 pub enum ResourceOperation {
+    /// Create a document image using a separately owned prepared-image lease.
     CreateImage {
         /// Creation specification; native admission supplies identities/defaults and rejects
         /// invalid input.
@@ -34,6 +36,7 @@ pub enum ResourceOperation {
         /// ownership.
         image: ImageId,
     },
+    /// Replace an image asset using a separately owned prepared-image lease.
     ReplaceImage {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
@@ -42,6 +45,7 @@ pub enum ResourceOperation {
         /// ownership.
         image: ImageId,
     },
+    /// Rename an image asset, optionally requiring its previous name.
     RenameImage {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
@@ -60,7 +64,8 @@ pub enum ResourceOperation {
 
 crate::api_record! {
     #[derive(Debug, Clone, Serialize)]
-    pub struct ResourceUsage {
+    /// Runtime-wide snapshot of retained resource counts and byte-accounting totals.
+pub struct ResourceUsage {
         /// Runtime-wide retained independent Preview leases; active Jobs can retain workspace after release.
         pub previews: usize,
         /// Number of distinct retained allocations counted by Runtime resource accounting.

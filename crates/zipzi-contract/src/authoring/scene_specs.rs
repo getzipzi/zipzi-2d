@@ -26,6 +26,7 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Input for creating a Part in the organizational hierarchy.
     pub struct PartCreateSpec {
         /// Human-readable display name; use the stable ID for identity because names can change.
         pub name: String,
@@ -44,6 +45,7 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Input for creating a parameter group in the organizational hierarchy.
     pub struct ParameterGroupCreateSpec {
         /// Human-readable display name; use the stable ID for identity because names can change.
         pub name: String,
@@ -64,6 +66,7 @@ crate::api_record! {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire)]
+    /// Independent organizational and deformation parent/ordering choices for a scene object.
     pub struct ScenePlacement {
         /// Optional organizational Part ID; None uses the root organization.
         pub part_id: Option<String>,
