@@ -45,10 +45,8 @@ See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 - `name`: Human-readable display name; use the stable ID for identity because names can
 change.
-- `a`: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and
-unresolved references retain runtime identifiers.
-- `b`: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and
-unresolved references retain runtime identifiers.
+- `a`: Stable mesh A UUID; an empty string leaves this endpoint unspecified.
+- `b`: Stable mesh B UUID; an empty string leaves this endpoint unspecified.
 - `part_id`: Organizational Part owner ID; independent of the deformation parent. None
 selects the root/unassigned container.
 - `id`: Optional new object UUID; None allocates a fresh identity in the SDK.
@@ -457,7 +455,7 @@ Input for creating a parameter group in the organizational hierarchy.
 
 - `name`: Human-readable display name; use the stable ID for identity because names can change.
 - `id`: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
-- `runtime_id`: Optional external group identifier; None uses the native default empty string.
+- `runtime_id`: Optional external group identifier; None or an empty string uses the new group UUID.
 - `parent_id`: Parent object ID in this hierarchy; independent of storage and drawing order. None
 selects the root/unassigned container.
 - `before`: Optional sibling ID before which to insert; None appends. The anchor must belong to
@@ -495,8 +493,7 @@ Types: [OffscreenForm](#zipzisceneoffscreenform).
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
-- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-object ID.
+- `slot`: Zero-based slot in the Offscreen keyform array, not an object ID.
 - `value`: Complete Offscreen opacity and color form.
 - `kind`: Fixed value 'scene_patch_offscreen_keyform' (read-only).
 
@@ -627,7 +624,7 @@ See [Fixed operation discriminators](common.md#fixed-discriminator).
 
 `(id: str, expected: bool, enabled: bool)`
 
-Replace scene evaluation visibility with an expected-value precondition.
+Replace the scene evaluation enabled state with an expected-value precondition.
 
 See [Fixed operation discriminators](common.md#fixed-discriminator).
 

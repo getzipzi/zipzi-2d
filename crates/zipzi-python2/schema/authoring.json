@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python2/tools/generate.py",
-  "contract_sha256": "9c4b7af03dee44bfa60c98cd0e298527019910557377c25218a32e077845a230",
+  "contract_sha256": "44ba40eb6b7c2f26f8d8dfaf382492b5a1a4bb053fff2386bae183d321225bae",
   "format_version": 2,
   "root": {
     "binary": {
@@ -765,7 +765,7 @@
     },
     {
       "path": "types/mesh.json",
-      "sha256": "46f065ab0ee220f7e10c374ef52990ba8080b90b36462a4effe07ba563a38947"
+      "sha256": "825f379f6bf1c3794f3debe4457ce0edf1416d2070e0aff55535ccf81133d76f"
     },
     {
       "path": "types/motion.json",
@@ -777,7 +777,7 @@
     },
     {
       "path": "types/parameters.json",
-      "sha256": "cad335ad5d8b4221e29262743442b7b1145897bb973a85ca401a1b53afe7557b"
+      "sha256": "5b51b2516ad5ee301573db25fc08b4809576f308c56a621dba4745101868938c"
     },
     {
       "path": "types/physics.json",
@@ -801,7 +801,7 @@
     },
     {
       "path": "types/resources.json",
-      "sha256": "4bf30eaf28f966d7e2b6c30720284fad60386e1ddc9aabf76b022cf259437bae"
+      "sha256": "ba6812eb838ddba571cf9ffec5920376a14db112d2d0ceb5ab5437d2e726e12d"
     },
     {
       "path": "types/runtime.json",
@@ -813,7 +813,7 @@
     },
     {
       "path": "types/scene.json",
-      "sha256": "9ba8df9ff4a68da251722bfb4b8836a4bd41b01023aa870f6060902a6ae4009a"
+      "sha256": "7bdb8c2f8c33dddcff7fc556ba9fee7035c31b14f959b9f13c4ad9e9f99afb40"
     },
     {
       "path": "types/spatial.json",

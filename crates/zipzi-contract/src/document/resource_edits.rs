@@ -57,12 +57,12 @@ pub enum ResourceEdit {
         /// the selected destination.
         before: Option<String>,
     },
-    /// None rejects references; Some explicitly redirects or detaches every user.
+    /// None rejects deletion while referenced; a replacement redirects or detaches every user.
     Delete {
         /// Stable document object ID used by references; it is distinct from the exported
         /// runtime_id.
         id: String,
-        /// None rejects deletion while referenced; Some explicitly redirects users to a
+        /// None rejects deletion while referenced; a supplied reference redirects users to a
         /// resolved target or an unresolved/detached reference.
         replacement: Option<SceneReference>,
     },

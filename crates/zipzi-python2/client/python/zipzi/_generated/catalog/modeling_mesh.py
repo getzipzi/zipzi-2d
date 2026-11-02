@@ -357,7 +357,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.mesh': {'children': ('zipzi.modeling.m
                                                         ('glues',
                                                          'Complete replacement Glue records affected by the remesh.'),
                                                         ('vertex_mapping',
-                                                         'Old vertex ID to replacement ID map; Some(new_id) remaps an '
+                                                         'Old vertex ID to replacement ID map; an integer remaps an '
                                                          'identity and None explicitly\n'
                                                          'removes it.')],
                                              'kind': 'type',

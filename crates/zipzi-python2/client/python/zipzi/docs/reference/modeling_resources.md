@@ -79,7 +79,7 @@ the selected destination.
 
 `(*, id: str, replacement: SceneReference | None = None)`
 
-None rejects references; Some explicitly redirects or detaches every user.
+None rejects deletion while referenced; a replacement redirects or detaches every user.
 
 Types: [SceneReference].
 
@@ -87,7 +87,7 @@ Types: [SceneReference].
 
 - `id`: Stable document object ID used by references; it is distinct from the exported
 runtime_id.
-- `replacement`: None rejects deletion while referenced; Some explicitly redirects users to a
+- `replacement`: None rejects deletion while referenced; a supplied reference redirects users to a
 resolved target or an unresolved/detached reference.
 
 ## zipzi.modeling.resources.ResourceEditDuplicate

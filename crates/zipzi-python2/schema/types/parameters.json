@@ -140,7 +140,7 @@
           "default": {
             "kind": "null"
           },
-          "doc": "Optional external group identifier; None uses the native default empty string.",
+          "doc": "Optional external group identifier; None or an empty string uses the new group UUID.",
           "name": "runtime_id",
           "shape": {
             "item": {

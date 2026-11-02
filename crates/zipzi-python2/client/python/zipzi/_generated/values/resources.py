@@ -83,7 +83,7 @@ ResourceEditDuplicate.__module__ = "zipzi.modeling.resources"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ResourceEditDelete(CompactValue):
-    'None rejects references; Some explicitly redirects or detaches every user.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nreplacement: None rejects deletion while referenced; Some explicitly redirects users to a\nresolved target or an unresolved/detached reference.'
+    'None rejects deletion while referenced; a replacement redirects or detaches every user.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nreplacement: None rejects deletion while referenced; a supplied reference redirects users to a\nresolved target or an unresolved/detached reference.'
     _variant: _ClassVar[str] = 'delete'
     id: str
     replacement: (SceneReference | None) = None

@@ -88,15 +88,15 @@ DATA: dict[str, Entry] = {'zipzi.modeling.resources': {'children': ('zipzi.model
  'zipzi.modeling.resources.ResourceEditCreate.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.resources.ResourceEditDelete': {'children': ('zipzi.modeling.resources.ResourceEditDelete.__repr__',
                                                               'zipzi.modeling.resources.ResourceEditDelete.summary'),
-                                                 'documentation': 'None rejects references; Some explicitly redirects '
-                                                                  'or detaches every user.',
+                                                 'documentation': 'None rejects deletion while referenced; a '
+                                                                  'replacement redirects or detaches every user.',
                                                  'fields': [('id',
                                                              'Stable document object ID used by references; it is '
                                                              'distinct from the exported\n'
                                                              'runtime_id.'),
                                                             ('replacement',
-                                                             'None rejects deletion while referenced; Some explicitly '
-                                                             'redirects users to a\n'
+                                                             'None rejects deletion while referenced; a supplied '
+                                                             'reference redirects users to a\n'
                                                              'resolved target or an unresolved/detached reference.')],
                                                  'kind': 'type',
                                                  'signature': '(*, id: str, replacement: SceneReference | None = None)',

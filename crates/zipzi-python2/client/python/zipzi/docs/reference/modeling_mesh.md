@@ -283,7 +283,7 @@ discards previous modeling topology; ordinary mesh replacements must preserve it
 - `binding`: Optional replacement ordinary mesh binding; None supplies no ordinary binding.
 - `blend_bindings`: Complete replacement BlendShape bindings for the remeshed object.
 - `glues`: Complete replacement Glue records affected by the remesh.
-- `vertex_mapping`: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
+- `vertex_mapping`: Old vertex ID to replacement ID map; an integer remaps an identity and None explicitly
 removes it.
 
 ## zipzi.modeling.mesh.VertexContentPatch

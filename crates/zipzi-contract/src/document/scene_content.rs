@@ -414,8 +414,7 @@ pub enum SceneContentEdit {
     PatchOffscreenKeyform {
         /// Stable Offscreen object ID; not a texture asset ID.
         offscreen_id: String,
-        /// Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-        /// object ID.
+        /// Zero-based slot in the Offscreen keyform array, not an object ID.
         slot: usize,
         /// Complete Offscreen opacity and color form.
         value: OffscreenKeyform,

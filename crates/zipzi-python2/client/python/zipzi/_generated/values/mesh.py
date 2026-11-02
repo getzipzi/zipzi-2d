@@ -134,7 +134,7 @@ class VertexDeletePolicy(str, Enum):
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class TopologyReplacement(CompactValue):
-    'Coordinated mesh topology and dependent binding/Glue replacements for a remesh.\n\nFields:\nmesh: Complete replacement mesh geometry and metadata. Setting meshing to None explicitly\ndiscards previous modeling topology; ordinary mesh replacements must preserve it.\nbinding: Optional replacement ordinary mesh binding; None supplies no ordinary binding.\nblend_bindings: Complete replacement BlendShape bindings for the remeshed object.\nglues: Complete replacement Glue records affected by the remesh.\nvertex_mapping: Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly\nremoves it.'
+    'Coordinated mesh topology and dependent binding/Glue replacements for a remesh.\n\nFields:\nmesh: Complete replacement mesh geometry and metadata. Setting meshing to None explicitly\ndiscards previous modeling topology; ordinary mesh replacements must preserve it.\nbinding: Optional replacement ordinary mesh binding; None supplies no ordinary binding.\nblend_bindings: Complete replacement BlendShape bindings for the remeshed object.\nglues: Complete replacement Glue records affected by the remesh.\nvertex_mapping: Old vertex ID to replacement ID map; an integer remaps an identity and None explicitly\nremoves it.'
     mesh: Mesh
     binding: (MeshBinding | None) = None
     blend_bindings: tuple[BlendShapeBinding, ...]

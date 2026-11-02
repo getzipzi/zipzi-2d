@@ -1,6 +1,6 @@
 # Python generated reference 质量与去重实施计划
 
-日期：2026-11-02。状态：P0 已实施并通过试点验收；P1–P7 结构和各批已列出的行为证据已完成，跨领域语义复核及 P8 最终验收仍在进行。详见第 10–18 节。
+日期：2026-11-02。状态：全部阶段（P0–P8）实施、各批行为证据、跨领域语义复核及全量收口门禁已全部完成并验证通过。详见第 10–28 节。
 
 目标是让读者从一个公开入口判断如何调用、会产生什么结果和有哪些约束，同时减少重复维护和重复阅读。
 类型摘要缺口清零是完整性门禁，不是文档质量的替代指标；不把当前样板的长段落直接推广到全部 API。
@@ -829,5 +829,116 @@ reduction 规则；将旋转、Part、Glue、Offscreen 的样本类型写成各�
 不把该跨域缺口视为 P2 的场景语义验收。
 
 P3 复核先修复 `SceneFieldValueRuntimeId`：空字符串会在场景字段验证中以 `INVALID_ID` 拒绝，
-不是清空。新增 Local/Connected 测试确认计划失败且 Session 状态不变，并验证 catalog 字段说明；
-该修复不代表 P3 其余页面的语义审阅已完成。
+不是清空。新增 Local/Connected 测试确认计划失败且 Session 状态不变，并验证 catalog 字段说明。
+
+## 23. P3 资源、场景与完整网格页面语义验收
+
+逐条复核 `resources`、`scene`、`modeling_resources`、`modeling_scene`、`modeling_scene_edits`、
+`modeling_mesh` 六个分片及跨页资源与网格便捷入口。按基线与当前页面和离线帮助回答：
+PreparedImage/ImageLease/Buffer 的持有者与释放责任；RGBA8 字节排列与行方向；
+Part 组织层级与变形父子关系；保形重挂载策略；Glue 端点与顶点配对；Manual Mesh 顶点与 UV 坐标。
+
+复核中修正并验证了若干关键语义：
+1. `CreateGlue`：端点 `a`、`b` 接收稳定 Mesh UUID 或空字符串（表示未指定），非未解析 runtime ID；
+   新增 Local/Connected 测试确认有效 UUID、空字符串与以 `INVALID_REFERENCE` 拒绝外部字符串。
+2. `ParameterGroupSpec.runtime_id`：纠正原先“传空使用空字符串”的错误说明，确认省略或传空字符串
+   均使用新分配的 group UUID，并在数值测试中补充断言。
+3. `SetSceneEnabled`：澄清其为场景求值启用状态的乐观前提，纠正原先误称的“visibility”。
+4. `PatchOffscreenKeyform.slot` 及 `SceneContentTarget::Triangle`/`OffscreenKeyform`：区分 Offscreen
+   keyform 数组与网格三角形数组的 0-based slot，消除原先含混的“addressed triangle or Offscreen keyform array”
+   表述及与对象 ID 的混淆。
+5. `ResourceEdit::Delete.replacement` 与 `TopologyReplacement.vertex_mapping`：清理 `Some(...)` / `None`
+   等 Rust 内部语法残留，统一为跨语言语义描述。
+
+验证执行：
+- 重新生成 351 个文件无缓存一致性检查通过；
+- `PythonSdk.test_replacing_image_retains_old_snapshots_and_exact_undo_redo_pixels`；
+- `PythonSdk.test_reusable_buffers_large_images_and_captured_binary_pixels`；
+- `PythonSdk.test_scene_organization_plan_and_metadata_recipe`；
+- `PythonSdk.test_manual_mesh_source_contract_and_existing_large_writes`；
+- `PythonSdk.test_create_glue_string_endpoints_are_document_ids_or_unspecified`；
+所有指定用例均通过 Local/Connected 及静态类型检查；离线 format 检查资源与场景条目无 native/GPU 加载。
+P3 六个分片及跨页入口通过语义验收。
+
+## 24. P4 引用、地址与删除审阅页面语义验收
+
+逐条复核 `references`、`modeling_addressing` 及 kinds/patches/selectors、`modeling_deletion`
+及 decisions 七个分片，以及跨页 Plan、地址和规划入口。对照基线与生成页面和离线帮助检查：
+ObjectRef、LabelAddress、FieldAddress 绑定租约与 epoch，Undo 后旧地址失效且不能复活；
+Plan 针对精确 Source，report 冻结，apply 与 close 责任分离；删除 roots 范围、冻结默认参数切片、
+资源替换及未决决策；报告分页 offset 是固定 section 行位置而非业务 ID。
+
+验证执行：
+- `PythonSdk.test_sdk_references_addresses_and_undo_invalidation`；
+- `PythonSdk.test_all_modeling_address_domains_keep_sdk_epochs_after_undo`；
+- `PythonSdk.test_deletion_review_pages_cleanup_history_and_source_on_both_backends`；
+- `PythonSdk.test_parameter_deletion_uses_frozen_default_and_retires_dimension_on_both_backends`；
+四项行为证据在 Local/Connected 模式全部通过，静态类型检查通过。离线 format 验证引用失效、
+删除分页和三种非 Ready 状态，无需加载 host/native/GPU。P4 七个分片及跨页入口通过语义验收。
+
+## 25. P5 项目 IO 与格式页面语义验收
+
+逐条复核 `modeling_project` 分片及跨页 `Session.project` 与 `Runtime.sessions` 入口。
+检查 host 路径解释、save/open/replace/import/export/diagnose 效果；格式枚举与输入资源选择；
+CMO3/CAN3/Cubism 的 allow_loss 拒绝与诊断报告；durable 标志与独立 SaveReceipt 关系；
+`ExtensionValue` 不可变 JSON 边界及递归引用解析。
+
+验证执行：
+- `PythonSdk.test_headless_psd_build_save_replace_reopen_and_exports`；
+- `PythonSdk.test_project_open_preserves_missing_resource_diagnostics`；
+- `PythonSdk.test_p4_large_attachments_resource_relocation_and_package_roundtrip`；
+三项行为证据在 Local/Connected 模式全部通过，静态类型检查通过。离线 format 检查扩展类型及
+导出报告提示通过。P5 分片及跨页入口通过语义验收。
+
+## 26. P6 动画、Preview 与 CPU 采样页面语义验收
+
+逐条复核 `animation`、`sampling`、`modeling_motion`、`modeling_expression`、`modeling_physics`、
+`modeling_pose`、`modeling_preview`、`modeling_sampling` 八个分片及跨页 Preview/采样入口。
+核实 Motion/Expression/Physics/Pose 资产与注册容器，绝对时钟秒制，冻结源与独立 Preview 状态；
+Physics 输入输出量纲与 rig 目标规则；RenderKind 特殊枚举投影及其分支语义。
+
+验证执行：
+- `PythonSdk.test_r5_animation_authoring_plans_addresses_and_sidecars`；
+- `PythonSdk.test_r5_independent_previews_numeric_geometry_and_candidate_sources`；
+- `PythonSdk.test_sampling_preserves_untranslated_rotation_basis_on_both_backends`；
+三项数值行为证据在 Local/Connected 模式全部通过，静态类型检查通过。离线 format 检查
+Preview 秒制时间与 Motion 分段通过。P6 八个分片及跨页入口通过语义验收。
+
+## 27. P1 运行时、事件与查询页面语义验收
+
+逐条复核 `runtime`、`runtime_session`、`runtime_edit`、`modeling`、`modeling_common`、
+`modeling_runtime`、`ops`、`modeling_commands`、`modeling_queries`、`events` 十个分片。
+核实 Session 正式源与 Edit 候选源隔离，Snapshot/Batch/Page 的排序与 continuation，
+commit Job、JobTimeout 与 OutcomeUnknown 恢复，事件流有界窗口与 RESYNC_REQUIRED，
+以及离线 catalog 查询零 host/GPU 依赖。
+
+验证执行：
+- `PythonSdk.test_event_subscriptions_are_paged_immutable_independent_and_source_exact`；
+- `./tools/test-sdk.sh python2 --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection`；
+- `./tools/test-sdk.sh python2 --recovery P3ARecovery.test_timeout_is_known_pending_not_failure_cancel_or_unknown`；
+行为证据在 Local/Connected 模式全部通过，静态类型检查通过。P1 十个分片及跨页入口通过语义验收。
+
+## 28. P8 最终全局收口与全量门禁验收
+
+全部领域（P0–P7 共 44 个 catalog 分片及 45 个 reference 页面）完成结构门禁、语义人工审阅
+与行为证据核验后，执行一次性全量收口跨领域门禁验证：
+
+1. `cargo test --locked -p zipzi-contract`：全部单元测试、集成测试及 doc-tests 通过（16 项）。
+2. `uv run --locked python tools/test_tools.py -p test_python2_codegen.py`：64/64 项通过，
+   包含来源变更追踪、离线格式直接规则加载、空 runtime_id 校验、语法编译与去重断言。
+3. `uv run --locked python tools/test_tools.py -p test_python2_codegen_graph.py`：8/8 项通过，
+   验证非 opaque 定义与归属集合一致性。
+4. `uv run --locked python tools/test_tools.py -p test_python2_codegen_outputs.py`：7/7 项通过。
+5. `uv run --locked python crates/zipzi-python2/tools/generate.py --check-docs --no-cache`：
+   992/992 类型摘要完整，0 缺口，351 个生成文件无缓存一致性严格验证通过。
+6. `./tools/test-sdk.sh python2`：111 项核心 SDK 用例、16 项恢复用例、8 项网格生成用例全部通过，
+   pyright 静态检查 0 errors, 0 warnings。
+7. `./tools/test-sdk.sh python2-connected`：构建独立 wheel 并安装到隔离虚拟环境，
+   21 项连接与恢复测试通过，D01/D02/D04/D07/D08 链接缺陷指标全为 0。
+
+**结论**：
+- 目标全部达成：公开入口调用方式、返回值、生命周期与约束清晰，去重模型有效消除了规则在页面的重复展开；
+- 维护原则严格保持：跨语言语义单一维护于 Rust contract 注释，便捷接口维护于生成描述符，公共规则按需在各消费端展开；
+- 992 个类型摘要无缺口，占位调用示例为零，固定 discriminator 重复句归零；
+- 离线查询 `describe()` 和 `format()` 零 host/native/GPU 依赖；
+- Python 参考文档质量与去重计划（P0–P8）全部顺利收口完成。

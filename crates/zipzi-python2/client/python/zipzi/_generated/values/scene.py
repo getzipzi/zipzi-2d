@@ -1110,7 +1110,7 @@ SceneContentEditInsertOffscreenKeyform.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentEditPatchOffscreenKeyform(CompactValue):
-    'Replace the Offscreen form at a slot.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.\nvalue: Complete Offscreen opacity and color form.'
+    'Replace the Offscreen form at a slot.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslot: Zero-based slot in the Offscreen keyform array, not an object ID.\nvalue: Complete Offscreen opacity and color form.'
     _variant: _ClassVar[str] = 'patch_offscreen_keyform'
     offscreen_id: str
     slot: int
@@ -1460,7 +1460,7 @@ SceneContentTargetVertexUv.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetTriangle(CompactValue):
-    'Select one triangle by its array slot.\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
+    'Select one triangle by its array slot.\n\nFields:\nslot: Zero-based slot in the mesh triangle array, not an object ID.'
     _variant: _ClassVar[str] = 'triangle'
     slot: int
 
@@ -1496,7 +1496,7 @@ SceneContentTargetGluePair.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class SceneContentTargetOffscreenKeyform(CompactValue):
-    'Select an Offscreen appearance form by array slot.\n\nFields:\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.'
+    'Select an Offscreen appearance form by array slot.\n\nFields:\nslot: Zero-based slot in the Offscreen keyform array, not an object ID.'
     _variant: _ClassVar[str] = 'offscreen_keyform'
     slot: int
 

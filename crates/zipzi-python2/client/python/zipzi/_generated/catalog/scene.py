@@ -70,12 +70,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                         'Human-readable display name; use the stable ID for identity because names '
                                         'can\n'
                                         'change.'),
-                                       ('a',
-                                        'Mesh A endpoint of the Glue; resolved references use stable mesh IDs and\n'
-                                        'unresolved references retain runtime identifiers.'),
-                                       ('b',
-                                        'Mesh B endpoint of the Glue; resolved references use stable mesh IDs and\n'
-                                        'unresolved references retain runtime identifiers.'),
+                                       ('a', 'Stable mesh A UUID; an empty string leaves this endpoint unspecified.'),
+                                       ('b', 'Stable mesh B UUID; an empty string leaves this endpoint unspecified.'),
                                        ('part_id',
                                         'Organizational Part owner ID; independent of the deformation parent. None\n'
                                         'selects the root/unassigned container.'),
@@ -529,8 +525,8 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                                 'Optional new object UUID; None allocates a fresh UUID in the SDK when '
                                                 'creation executes.'),
                                                ('runtime_id',
-                                                'Optional external group identifier; None uses the native default '
-                                                'empty string.'),
+                                                'Optional external group identifier; None or an empty string uses the '
+                                                'new group UUID.'),
                                                ('parent_id',
                                                 'Parent object ID in this hierarchy; independent of storage and '
                                                 'drawing order. None\n'
@@ -574,9 +570,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
                                        'fields': [('offscreen_id',
                                                    'Stable Offscreen object ID; not a texture asset ID.'),
                                                   ('slot',
-                                                   'Zero-based slot in the addressed triangle or Offscreen keyform '
-                                                   'array; never an\n'
-                                                   'object ID.'),
+                                                   'Zero-based slot in the Offscreen keyform array, not an object ID.'),
                                                   ('value', 'Complete Offscreen opacity and color form.'),
                                                   ('kind', "Fixed value 'scene_patch_offscreen_keyform' (read-only).")],
                                        'kind': 'type',
@@ -711,7 +705,7 @@ DATA: dict[str, Entry] = {'zipzi.scene': {'children': ('zipzi.scene.CreateBlendT
  'zipzi.scene.SetOffscreenStaticKeyform.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.scene.SetSceneEnabled': {'children': ('zipzi.scene.SetSceneEnabled.__repr__',
                                               'zipzi.scene.SetSceneEnabled.summary'),
-                                 'documentation': 'Replace scene evaluation visibility with an expected-value '
+                                 'documentation': 'Replace the scene evaluation enabled state with an expected-value '
                                                   'precondition.',
                                  'field_roles': (('kind', 'fixed-discriminator', "'scene_set_scene_enabled'"),),
                                  'fields': [('id',

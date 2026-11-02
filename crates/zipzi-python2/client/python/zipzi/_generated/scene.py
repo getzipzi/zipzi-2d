@@ -90,7 +90,7 @@ class Placement(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class ParameterGroupSpec(CompactValue):
-    'Input for creating a parameter group in the organizational hierarchy.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nruntime_id: Optional external group identifier; None uses the native default empty string.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
+    'Input for creating a parameter group in the organizational hierarchy.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can change.\nid: Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.\nruntime_id: Optional external group identifier; None or an empty string uses the new group UUID.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\nbefore: Optional sibling ID before which to insert; None appends. The anchor must belong to\nthe selected destination.'
     __module__ = "zipzi.scene"
     name: str
     id: str | None = None
@@ -146,7 +146,7 @@ class CreateRotation(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class CreateGlue(CompactValue):
-    "Create a Glue connection between two mesh endpoints.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\na: Mesh A endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.\nb: Mesh B endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.\npart_id: Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed value 'scene_create_glue' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Create a Glue connection between two mesh endpoints.\n\nFields:\nname: Human-readable display name; use the stable ID for identity because names can\nchange.\na: Stable mesh A UUID; an empty string leaves this endpoint unspecified.\nb: Stable mesh B UUID; an empty string leaves this endpoint unspecified.\npart_id: Organizational Part owner ID; independent of the deformation parent. None\nselects the root/unassigned container.\nid: Optional new object UUID; None allocates a fresh identity in the SDK.\nkind: Fixed value 'scene_create_glue' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.scene"
     name: str
     a: str
@@ -258,7 +258,7 @@ class SetSceneLabel(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SetSceneEnabled(CompactValue):
-    "Replace scene evaluation visibility with an expected-value precondition.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values\nreject the edit.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nkind: Fixed value 'scene_set_scene_enabled' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Replace the scene evaluation enabled state with an expected-value precondition.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported\nruntime_id.\nexpected: Exact current field value used as an optimistic precondition; stale values\nreject the edit.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nkind: Fixed value 'scene_set_scene_enabled' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.scene"
     id: str
     expected: bool
@@ -385,7 +385,7 @@ class DeleteGluePairs(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class PatchOffscreenKeyform(CompactValue):
-    "Replace one Offscreen keyform at a numeric slot.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslot: Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.\nvalue: Complete Offscreen opacity and color form.\nkind: Fixed value 'scene_patch_offscreen_keyform' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
+    "Replace one Offscreen keyform at a numeric slot.\n\nFields:\noffscreen_id: Stable Offscreen object ID; not a texture asset ID.\nslot: Zero-based slot in the Offscreen keyform array, not an object ID.\nvalue: Complete Offscreen opacity and color form.\nkind: Fixed value 'scene_patch_offscreen_keyform' (read-only).\n\nA variant constructor supplies its fixed operation discriminator automatically. The attribute is read-only and is not a constructor argument or an editable business field. Choose a variant by its documented business effect; the discriminator identifies its wire operation."
     __module__ = "zipzi.scene"
     offscreen_id: str
     slot: int

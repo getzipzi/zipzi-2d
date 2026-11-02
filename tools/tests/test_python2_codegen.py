@@ -1238,6 +1238,11 @@ class PythonReference(unittest.TestCase):
     def test_reference_scene_runtime_id_rejects_empty(self):
         row = self.catalog['zipzi.modeling.scene.SceneFieldValueRuntimeId']
         self.assertIn('rejects an empty string', dict(row['fields'])['value'])
+        group = dict(self.catalog['zipzi.scene.ParameterGroupSpec']['fields'])
+        self.assertIn('new group UUID', group['runtime_id'])
+        glue = dict(self.catalog['zipzi.scene.CreateGlue']['fields'])
+        self.assertIn('empty string leaves', glue['a'])
+        self.assertIn('empty string leaves', glue['b'])
 
     def test_reference_private_union_does_not_hide_unknown_members(self):
         original = gen._api_codegen.render_api

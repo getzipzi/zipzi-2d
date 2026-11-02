@@ -555,8 +555,7 @@ Types: [OffscreenKeyform].
 **Fields**
 
 - `offscreen_id`: Stable Offscreen object ID; not a texture asset ID.
-- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-object ID.
+- `slot`: Zero-based slot in the Offscreen keyform array, not an object ID.
 - `value`: Complete Offscreen opacity and color form.
 
 ## zipzi.modeling.scene.SceneContentEditPatchTriangle

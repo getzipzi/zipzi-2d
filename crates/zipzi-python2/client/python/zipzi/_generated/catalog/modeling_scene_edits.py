@@ -677,9 +677,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene.AttachmentEdit': {'children': ()
                                                                             'Stable Offscreen object ID; not a texture '
                                                                             'asset ID.'),
                                                                            ('slot',
-                                                                            'Zero-based slot in the addressed triangle '
-                                                                            'or Offscreen keyform array; never an\n'
-                                                                            'object ID.'),
+                                                                            'Zero-based slot in the Offscreen keyform '
+                                                                            'array, not an object ID.'),
                                                                            ('value',
                                                                             'Complete Offscreen opacity and color '
                                                                             'form.')],

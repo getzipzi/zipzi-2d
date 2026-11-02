@@ -855,9 +855,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                              'documentation': 'Select an Offscreen appearance form by '
                                                                               'array slot.',
                                                              'fields': [('slot',
-                                                                         'Zero-based slot in the addressed triangle or '
-                                                                         'Offscreen keyform array; never an\n'
-                                                                         'object ID.')],
+                                                                         'Zero-based slot in the Offscreen keyform '
+                                                                         'array, not an object ID.')],
                                                              'kind': 'type',
                                                              'signature': '(*, slot: int)'},
  'zipzi.modeling.scene.SceneContentTargetOffscreenKeyform.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
@@ -879,8 +878,7 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                                   'zipzi.modeling.scene.SceneContentTargetTriangle.summary'),
                                                      'documentation': 'Select one triangle by its array slot.',
                                                      'fields': [('slot',
-                                                                 'Zero-based slot in the addressed triangle or '
-                                                                 'Offscreen keyform array; never an\n'
+                                                                 'Zero-based slot in the mesh triangle array, not an '
                                                                  'object ID.')],
                                                      'kind': 'type',
                                                      'signature': '(*, slot: int)'},

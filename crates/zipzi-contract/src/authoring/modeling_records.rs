@@ -18,7 +18,7 @@ pub struct TopologyReplacement {
     /// Complete replacement Glue records affected by the remesh.
     pub glues: Vec<Glue>,
     #[serde(deserialize_with = "crate::serde_maps::u32_map")]
-    /// Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly
+    /// Old vertex ID to replacement ID map; an integer remaps an identity and None explicitly
     /// removes it.
     pub vertex_mapping: HashMap<VertexId, Option<VertexId>>,
 }

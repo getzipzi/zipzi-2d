@@ -656,8 +656,7 @@ Select an Offscreen appearance form by array slot.
 
 **Fields**
 
-- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-object ID.
+- `slot`: Zero-based slot in the Offscreen keyform array, not an object ID.
 
 ## zipzi.modeling.scene.SceneContentTargetOffscreenMapping
 
@@ -684,8 +683,7 @@ Select one triangle by its array slot.
 
 **Fields**
 
-- `slot`: Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-object ID.
+- `slot`: Zero-based slot in the mesh triangle array, not an object ID.
 
 ## zipzi.modeling.scene.SceneContentTargetVertexPosition
 

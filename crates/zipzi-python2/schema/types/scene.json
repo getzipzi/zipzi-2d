@@ -308,7 +308,7 @@
             },
             {
               "default": null,
-              "doc": "Mesh A endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.",
+              "doc": "Stable mesh A UUID; an empty string leaves this endpoint unspecified.",
               "name": "a",
               "shape": {
                 "kind": "string"
@@ -316,7 +316,7 @@
             },
             {
               "default": null,
-              "doc": "Mesh B endpoint of the Glue; resolved references use stable mesh IDs and\nunresolved references retain runtime identifiers.",
+              "doc": "Stable mesh B UUID; an empty string leaves this endpoint unspecified.",
               "name": "b",
               "shape": {
                 "kind": "string"
@@ -700,7 +700,7 @@
           "wire_name": "set_scene_label"
         },
         {
-          "doc": "Replace scene evaluation visibility with an expected-value precondition.",
+          "doc": "Replace the scene evaluation enabled state with an expected-value precondition.",
           "fields": [
             {
               "default": null,
@@ -1139,7 +1139,7 @@
             },
             {
               "default": null,
-              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "doc": "Zero-based slot in the Offscreen keyform array, not an object ID.",
               "name": "slot",
               "shape": {
                 "kind": "u32"
@@ -3395,7 +3395,7 @@
               "skip": false
             },
             {
-              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "doc": "Zero-based slot in the Offscreen keyform array, not an object ID.",
               "name": "slot",
               "rust_name": "slot",
               "shape": {
@@ -3618,7 +3618,7 @@
           "doc": "Select one triangle by its array slot.",
           "fields": [
             {
-              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "doc": "Zero-based slot in the mesh triangle array, not an object ID.",
               "name": "slot",
               "rust_name": "slot",
               "shape": {
@@ -3730,7 +3730,7 @@
           "doc": "Select an Offscreen appearance form by array slot.",
           "fields": [
             {
-              "doc": "Zero-based slot in the addressed triangle or Offscreen keyform array; never an\nobject ID.",
+              "doc": "Zero-based slot in the Offscreen keyform array, not an object ID.",
               "name": "slot",
               "rust_name": "slot",
               "shape": {

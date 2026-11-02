@@ -46,11 +46,9 @@ crate::api_union! {
             /// Human-readable display name; use the stable ID for identity because names can
             /// change.
             name: String,
-            /// Mesh A endpoint of the Glue; resolved references use stable mesh IDs and
-            /// unresolved references retain runtime identifiers.
+            /// Stable mesh A UUID; an empty string leaves this endpoint unspecified.
             a: String,
-            /// Mesh B endpoint of the Glue; resolved references use stable mesh IDs and
-            /// unresolved references retain runtime identifiers.
+            /// Stable mesh B UUID; an empty string leaves this endpoint unspecified.
             b: String,
             /// Organizational Part owner ID; independent of the deformation parent. None
             /// selects the root/unassigned container.
@@ -159,7 +157,7 @@ crate::api_union! {
             /// change.
             name: String,
         },
-        /// Replace scene evaluation visibility with an expected-value precondition.
+        /// Replace the scene evaluation enabled state with an expected-value precondition.
         SetSceneEnabled {
             /// Stable document object ID used by references; it is distinct from the exported
             /// runtime_id.
@@ -280,8 +278,7 @@ crate::api_union! {
         PatchOffscreenKeyform {
             /// Stable Offscreen object ID; not a texture asset ID.
             offscreen_id: String,
-            /// Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-            /// object ID.
+            /// Zero-based slot in the Offscreen keyform array, not an object ID.
             slot: u32,
             /// Complete Offscreen opacity and color form.
             value: OffscreenFormSpec,

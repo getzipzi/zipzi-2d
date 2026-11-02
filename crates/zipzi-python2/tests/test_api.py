@@ -1180,6 +1180,21 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(rejected.exception.code, "INVALID_ID")
                 self.assertEqual(session.info(), before)
 
+    def test_create_glue_string_endpoints_are_document_ids_or_unspecified(self):
+        for mode in ("local", "connected"):
+            with self.subTest(mode=mode):
+                session = self.runtime(mode).sessions.create()
+                with session.edit("Mesh and Glue") as edit:
+                    mesh = edit.meshes.create(meshes.MeshSpec("Mesh", GEOMETRY))
+                    glue = edit.apply(scene.CreateGlue("Glue", "", mesh)).ids[0]
+                record = session.modeling.records(m.ModelingQuery(glues=(glue,))).value.glues[0]
+                self.assertIsInstance(record.mesh_a_id, m.scene.SceneReferenceUnspecified)
+                self.assertEqual(record.mesh_b_id.object_id, mesh)
+                with self.assertRaises(zipzi.SdkFailure) as invalid:
+                    with session.edit("Invalid Glue") as edit:
+                        edit.apply(scene.CreateGlue("Invalid", "external-runtime-id", mesh))
+                self.assertEqual(invalid.exception.code, "INVALID_REFERENCE")
+
     def test_read_jobs_capture_sources_allow_publication_and_cancel_without_history(self):
         for mode in ("local", "connected"):
             with self.subTest(mode=mode):
@@ -1529,6 +1544,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertEqual(batch.source.sequence, 1)
                     self.assertEqual(batch.items[0].part_id, uid(10))
                     self.assertEqual(batch.items[2].parent_id, uid(10))
+                    self.assertEqual(batch.items[3].runtime_id, uid(12))
                     self.assertEqual(batch.items[5].parent_id, uid(20))
                     self.assertEqual(tuple(v.object_kind for v in batch.items[4:]), ("transform", "transform", "glue", "offscreen"))
                     with edit.plan(scene.SetSceneLabel(uid(21), "Rotation", "Turn")) as plan:

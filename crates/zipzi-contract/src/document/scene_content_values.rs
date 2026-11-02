@@ -19,8 +19,7 @@ pub enum SceneContentTarget {
     },
     /// Select one triangle by its array slot.
     Triangle {
-        /// Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-        /// object ID.
+        /// Zero-based slot in the mesh triangle array, not an object ID.
         slot: usize,
     },
     /// Select one Warp lattice point in the chosen shape.
@@ -52,8 +51,7 @@ pub enum SceneContentTarget {
     },
     /// Select an Offscreen appearance form by array slot.
     OffscreenKeyform {
-        /// Zero-based slot in the addressed triangle or Offscreen keyform array; never an
-        /// object ID.
+        /// Zero-based slot in the Offscreen keyform array, not an object ID.
         slot: usize,
     },
     /// Select the Offscreen mapping of one Part slot.

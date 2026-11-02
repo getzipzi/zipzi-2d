@@ -51,7 +51,7 @@ crate::api_record! {
         pub name: String,
         /// Optional new object UUID; None allocates a fresh UUID in the SDK when creation executes.
         pub id: Option<String>,
-        /// Optional external group identifier; None uses the native default empty string.
+        /// Optional external group identifier; None or an empty string uses the new group UUID.
         pub runtime_id: Option<String>,
         /// Parent object ID in this hierarchy; independent of storage and drawing order. None
         /// selects the root/unassigned container.

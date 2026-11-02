@@ -617,7 +617,7 @@
           "skip": false
         },
         {
-          "doc": "Old vertex ID to replacement ID map; Some(new_id) remaps an identity and None explicitly\nremoves it.",
+          "doc": "Old vertex ID to replacement ID map; an integer remaps an identity and None explicitly\nremoves it.",
           "name": "vertex_mapping",
           "rust_name": "vertex_mapping",
           "shape": {
