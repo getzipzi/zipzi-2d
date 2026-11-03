@@ -141,5 +141,5 @@ frame and requires byte-identical output from both paths. CSV separates CPU
 submission, readback and CPU conversion; the new readback includes GPU conversion.
 Readback also includes any pending render completion when that path runs first.
 GPUI upload, presentation and OS input latency are excluded. See the
-[Windows P5 record](../../docs/plans/windows-development.md#p5-回读成本与未完成项)
+[Windows P5 record](../../docs/archive/plans/windows-development.md#p5-回读成本与未完成项)
 for paired results and separate native-window evidence.

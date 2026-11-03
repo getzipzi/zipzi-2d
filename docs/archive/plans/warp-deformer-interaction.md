@@ -157,11 +157,11 @@ macOS 原生 `warp`、`warp-authoring`、`deformer-original` 场景覆盖中英�
 
 主要代码入口：
 
-- [边框与数值调整](../../crates/zipzi-editor-core/src/deformer.rs)、[控制手势](../../crates/zipzi-editor-core/src/tools/controls.rs)。
-- [选择](../../crates/zipzi-editor-core/src/tools/select.rs)、[命中](../../crates/zipzi-editor-core/src/picking/hit.rs)、[覆盖层](../../crates/zipzi-editor-core/src/tools/overlay.rs)。
-- [控制点写回](../../crates/zipzi-editor-core/src/control_edit.rs)、[Bezier 求值](../../crates/zipzi-core/src/warp_bezier.rs)、[Warp 内容编辑](../../crates/zipzi-core/src/document/scene_content/warp.rs)。
-- [Deformer 属性定义](../../crates/zipzi-editor-core/src/property/deformer.rs)、[场景属性布局](../../crates/zipzi-editor/src/properties/scene.rs)、[Mesh 属性实现参考](../../crates/zipzi-editor-core/src/property/mesh.rs)。
-- [Transform 数据](../../crates/zipzi-contract/src/model/parameters_transforms.rs)、[外观与 RotationPose](../../crates/zipzi-contract/src/model/appearance.rs)。
+- [边框与数值调整](../../../crates/zipzi-editor-core/src/deformer.rs)、[控制手势](../../../crates/zipzi-editor-core/src/tools/controls.rs)。
+- [选择](../../../crates/zipzi-editor-core/src/tools/select.rs)、[命中](../../../crates/zipzi-editor-core/src/picking/hit.rs)、[覆盖层](../../../crates/zipzi-editor-core/src/tools/overlay.rs)。
+- [控制点写回](../../../crates/zipzi-editor-core/src/control_edit.rs)、[Bezier 求值](../../../crates/zipzi-core/src/warp_bezier.rs)、[Warp 内容编辑](../../../crates/zipzi-core/src/document/scene_content/warp.rs)。
+- [Deformer 属性定义](../../../crates/zipzi-editor-core/src/property/deformer.rs)、[场景属性布局](../../../crates/zipzi-editor/src/properties/scene.rs)、[Mesh 属性实现参考](../../../crates/zipzi-editor-core/src/property/mesh.rs)。
+- [Transform 数据](../../../crates/zipzi-contract/src/model/parameters_transforms.rs)、[外观与 RotationPose](../../../crates/zipzi-contract/src/model/appearance.rs)。
 
 ## Deformer Properties panel
 

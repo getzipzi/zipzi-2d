@@ -39,7 +39,7 @@ P0 先证明精简后仍能完成阅读任务，再扩展内容；不先补完 8
 | 固定 discriminator 通用说明 | 93 处 `Fixed operation discriminator supplied by this value type...` |
 | 占位调用示例 | 7 处 `using the arguments shown in its signature` |
 
-类型覆盖数字来源是 [type-documentation.json](../../crates/zipzi-python/client/python/zipzi/docs/type-documentation.json)，
+类型覆盖数字来源是 [type-documentation.json](../../../crates/zipzi-python/client/python/zipzi/docs/type-documentation.json)，
 不是通过统计 placeholder 文本推算。体积和重复次数来自当前生成 Markdown 的静态统计。
 实施时重新生成并读取报告；不把本表数字写成测试固定预期。该报告目前不证明枚举成员、方法参数和错误说明都完整。
 

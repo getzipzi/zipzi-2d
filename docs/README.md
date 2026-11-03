@@ -6,7 +6,7 @@
 - [Python 契约阶段 6 验收](archive/plans/python2-contract-acceptance.md): 依赖隔离、归档安装、集成回归和实际生成／native 循环耗时
 - [Python 生成代码与文档拆分实施方案](archive/plans/python-generated-code-readability/README.md): 文档去重、类型归属、领域拆分、schema 引用和分阶段验收
 - [Python 生成代码审查与验收](archive/plans/python-generated-code-readability/python-generated-code-readability-review.md)及[后续精简验收](archive/plans/python-generated-code-readability/python-generated-code-slimming.md): 类型、编解码、安装分发、实际体积和性能对照
-- [Python generated reference 全领域推广计划](plans/python-reference-rollout.md): 从 Session/Edit 与 meshes 样板推广到全部公开领域，明确说明来源、分批任务、类型引用与验收门禁
+- [Python generated reference 全领域推广计划](archive/plans/python-reference-rollout.md): 从 Session/Edit 与 meshes 样板推广到全部公开领域，明确说明来源、分批任务、类型引用与验收门禁
 - [Editor development](../crates/zipzi-editor/README.md) and [dependencies](../vendor/README.md#dependencies)
 - [Test domains and CI](../tools/README.md#test-coverage)
 - [Source, wheel and app artifacts](../tools/README.md#local-distribution-artifacts)
@@ -18,12 +18,12 @@
 - [zipzi-python P3A refactor](archive/plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
 - [Runtime R5 / Python P5 animation authoring](archive/plans/sdk-runtime/python2-r5-authoring.md): typed edits, records, SDK plans and addresses; Preview, spatial/GPU observation, fair scheduling and Editor playback isolation are delivered; [R7 acceptance](archive/plans/sdk-runtime/python2-r7-closeout.md) records final workflows, distribution and performance
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
-- [Warp Deformer 交互与属性面板方案](plans/warp-deformer-interaction.md): 画布变换、Warp／Rotation 属性透出、Bezier 整形、子对象保形编辑与原始形状恢复
-- [对象删除与依赖清理方案](plans/object-deletion.md): 按关系清理引用、统一删除范围、跨域原子计划与影响审阅
-- [观察纹理策略实施方案](plans/observation-texture-policy.md): 显式原图与预算缩图、共同尺寸规划、资源预估、批级报告和任务预算生命周期
+- [Warp Deformer 交互与属性面板方案](archive/plans/warp-deformer-interaction.md): 画布变换、Warp／Rotation 属性透出、Bezier 整形、子对象保形编辑与原始形状恢复
+- [对象删除与依赖清理方案](archive/plans/object-deletion.md): 按关系清理引用、统一删除范围、跨域原子计划与影响审阅
+- [观察纹理策略实施方案](archive/plans/observation-texture-policy.md): 显式原图与预算缩图、共同尺寸规划、资源预估、批级报告和任务预算生命周期
 - [Manual Mesh 编辑实施方案](archive/plans/manual-mesh-editing.md): authoring topology, dashed-edge caches, atomic editing and staged mesh generation
-- [Mesh Edit 保留绑定与变形依赖实施方案](plans/mesh-edit-preserve-dependencies.md): source-image/UV editing, shape transfer, preserved deformers and bindings, and operation-specific Glue limits
-- [Windows 原生开发支持实施方案](plans/windows-development.md): tooling, platform services, Runtime IPC and Python validation first; GPUI/WGPU desktop integration last
+- [Mesh Edit 保留绑定与变形依赖实施方案](archive/plans/mesh-edit-preserve-dependencies.md): source-image/UV editing, shape transfer, preserved deformers and bindings, and operation-specific Glue limits
+- [Windows 原生开发支持实施方案](archive/plans/windows-development.md): tooling, platform services, Runtime IPC and Python validation first; GPUI/WGPU desktop integration last
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 

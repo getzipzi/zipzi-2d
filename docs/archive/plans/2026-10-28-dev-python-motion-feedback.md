@@ -171,13 +171,13 @@ Warp 和 Rotation。参数通过分页及完整值读取后，在客户端建立
 
 相关公开说明和类型：
 
-- [dev-python 使用说明](../references/dev-python.md)
-- [Python SDK README](../../crates/zipzi-python/README.md)
-- [连接入口与超时说明](../../crates/zipzi-python/client/python/zipzi/__init__.py)
-- [生命周期与 EditState](../../crates/zipzi-python/client/python/zipzi/_lifecycle.py)
-- [Preview 采样与 Job 约定](../../crates/zipzi-python/client/python/zipzi/_preview.py)
-- [生成的 Motion 和 ObservationView 类型](../../crates/zipzi-python/client/python/zipzi/_generated/modeling.py)
-- [GPU 观察示例](../../crates/zipzi-python/tests/r5_observation_recipe.py)
+- [dev-python 使用说明](../../references/dev-python.md)
+- [Python SDK README](../../../crates/zipzi-python/README.md)
+- [连接入口与超时说明](../../../crates/zipzi-python/client/python/zipzi/__init__.py)
+- [生命周期与 EditState](../../../crates/zipzi-python/client/python/zipzi/_lifecycle.py)
+- [Preview 采样与 Job 约定](../../../crates/zipzi-python/client/python/zipzi/_preview.py)
+- [生成的 Motion 和 ObservationView 类型](../../../crates/zipzi-python/client/python/zipzi/_generated/modeling.py)
+- [GPU 观察示例](../../../crates/zipzi-python/tests/r5_observation_recipe.py)
 - [此前的 API 与网格工具反馈](2026-10-27-dev-python-api-feedback.md)
 
 本机临时证据位于 `target/python/scratch/`，不会作为版本化测试夹具保留：

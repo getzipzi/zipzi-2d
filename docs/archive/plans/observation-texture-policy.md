@@ -107,9 +107,9 @@ Shirousagi 小模型对照在默认等待下通过，确认无需全局放宽普
 
 ## 实施前基线与改造目标
 
-实施前的 [Runtime 入队估算](../../crates/zipzi-runtime/src/runtime/observation.rs)
+实施前的 [Runtime 入队估算](../../../crates/zipzi-runtime/src/runtime/observation.rs)
 累加文档全部图片的基础 RGBA，超过 256 MiB 时拒绝请求。
-[观察捕获](../../crates/zipzi-observe/src/lib.rs) 对实际引用纹理独立检查 256 MiB RGBA，
+[观察捕获](../../../crates/zipzi-observe/src/lib.rs) 对实际引用纹理独立检查 256 MiB RGBA，
 并在解码后再次检查 PNG 与 RGBA 合计。降低截图宽高不能绕过这些纹理限制。
 
 改造后，由共同的纹理尺寸计划决定引用集合、目标尺寸和基础 RGBA 总量。
@@ -184,7 +184,7 @@ render_rgba_bytes = Σ(w' × h' × 4)
 
 ## 缩图与 mipmap
 
-从 [现有纹理过滤](../../crates/zipzi-render/src/texture.rs) 抽出通用面积平均函数。
+从 [现有纹理过滤](../../../crates/zipzi-render/src/texture.rs) 抽出通用面积平均函数。
 每张缩图直接从源像素生成目标尺寸，不先降到某个 mip 层再缩放。
 源与派生像素保持 straight RGBA8；RGB 按 alpha 加权，alpha 按面积平均，透明像素的 RGB
 不贡献颜色。延续现有通道数值空间，不在首版引入新的色彩空间转换。
@@ -237,8 +237,8 @@ host 策略限制与 GPU 设备能力分别表达。设备未初始化时，设�
 5. 按需提取源 alpha 样本，缩图并计算渲染像素哈希，释放该张临时原始数据。
 6. 全批共享派生纹理，上传 GPU 并逐帧渲染、生成报告和输出。
 
-[磁盘读取](../../crates/zipzi-project/src/store/assets.rs) 和
-[PNG 解码](../../crates/zipzi-core/src/image.rs) 现已支持预算约束。
+[磁盘读取](../../../crates/zipzi-project/src/store/assets.rs) 和
+[PNG 解码](../../../crates/zipzi-core/src/image.rs) 现已支持预算约束。
 不能先用无限制 `fs::read` 或分配整个解码输出，再发现计划与文件不匹配。
 文件长度预检后仍需有界读取；解码器内部工作区、PNG 辅助数据和颜色转换临时空间也须受约束。
 资源尺寸变化或哈希不匹配时失败，不在执行过程中静默重算计划。
@@ -272,7 +272,7 @@ host 策略限制与 GPU 设备能力分别表达。设备未初始化时，设�
 
 ## 源 alpha 质量检查
 
-[现有覆盖率算法](../../crates/zipzi-observe/src/quality.rs) 使用源尺寸和原图 alpha，
+[现有覆盖率算法](../../../crates/zipzi-observe/src/quality.rs) 使用源尺寸和原图 alpha，
 采样步长为 `max(1, ceil(max(width, height) / 256))`，阈值为 alpha ≥ 8。
 缩图前提取同样坐标的 alpha 样本，保留源尺寸、步长、网格布局和采样规则版本。
 

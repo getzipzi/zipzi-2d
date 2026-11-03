@@ -177,7 +177,7 @@ automatic parameter workload and is recorded as `parameter_overlay.viewport_styl
 Compare against both normal Modeling and `ZIPZI_BENCH_OVERLAY_PAINT=none`, which
 still constructs the Modeling overlay. Keep viewport dimensions and selection
 identical, and verify newly presented frames and actual mesh deformation.
-See the [Windows viewport comparison](../../docs/references/windows-viewport-style.md)
+See the [Windows viewport comparison](../../docs/archive/references/windows-viewport-style.md)
 for the 2026-10-30 controlled results and reproduction commands.
 `ZIPZI_BENCH_PARAMETER_INPUT=track|number|pad` selects the real Modeling
 track, SlideNumberInput or linked two-axis pad (default `track`). `pad` links the

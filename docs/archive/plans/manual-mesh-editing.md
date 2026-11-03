@@ -1,6 +1,6 @@
 # Mesh Edit 编辑实施方案
 
-后继：[Mesh Edit 保留绑定与变形依赖](../../plans/mesh-edit-preserve-dependencies.md)。
+后继：[Mesh Edit 保留绑定与变形依赖](mesh-edit-preserve-dependencies.md)。
 后继方案已替代本文关于父变形器、普通绑定、BlendShape、Glue 和全局仿射入口禁令，
 以及以模型平面显示源图的旧规则；稳定 VertexId、UV 拓扑和单次手势历史仍沿用。
 
@@ -47,7 +47,7 @@ Generate Mesh 位于 Mesh Edit 的顶部二级工具栏。默认交互统一为�
 | [Runtime 网格读取](../../../crates/zipzi-runtime/src/runtime/mesh_read.rs) | 手写 borrowed 输出及布局断言；同步类型、预算及快照 |
 | [画布拓扑缓存](../../../crates/zipzi-editor-core/src/canvas_topology.rs) | 已缓存顶点、三角形、去重边、边界；扩展分类并按 Mesh 共享 |
 | [边绘制](../../../crates/zipzi-editor/src/mesh_edges.rs) | 批量绘制直线；增加固定屏幕长度的虚线与有界缓存 |
-| [视口交互](../../references/viewport-interactions.md) | capture token、过期帧拒绝、多视口所有权；新工具沿用 |
+| [视口交互](../references/viewport-interactions.md) | capture token、过期帧拒绝、多视口所有权；新工具沿用 |
 
 Core 负责持久化类型、结构不变量和原子应用；SDK 负责纯算法、编辑语义和依赖处理；Runtime 负责会话、版本、candidate、Job 和唯一历史；Editor Core 负责模式、选择、输入状态和派生缓存；Editor 负责界面、命中反馈和绘制。三角化算法不进入 UI 或语言绑定。
 
@@ -459,5 +459,5 @@ Editor shell gate 会清除 ZIPZI_DEV_SESSION_DIR；直接执行 Editor Cargo �
 
 - [Spine Mesh attachments](https://en.esotericsoftware.com/spine-meshes)：编辑模式、轮廓、手工边与自动三角边，以及无孔洞限制。
 - [Spine 关于 UV 交叉的说明](https://es.esotericsoftware.com/forum/d/10330-cant-move-big-groups-of-vertices-in-edit-mesh-mode/13)：UV 拓扑约束与显示姿态的区别。
-- [视口交互约定](../../references/viewport-interactions.md)：输入所有权、capture 和生命周期。
+- [视口交互约定](../references/viewport-interactions.md)：输入所有权、capture 和生命周期。
 - [SDK README](../../../crates/zipzi-sdk/README.md)：会话历史和当前 Alpha 生成契约。

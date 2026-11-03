@@ -11,7 +11,7 @@ content again; an unmeasured or hidden viewport keeps its initial fit pending.
 
 ## Where behavior lives
 
-[`zipzi-editor-core/src/tools/`](../../crates/zipzi-editor-core/src/tools/) groups interaction
+[`zipzi-editor-core/src/tools/`](../../../crates/zipzi-editor-core/src/tools/) groups interaction
 behavior by operation:
 
 - `select.rs`: shared hit/selection preparation, deferred object clicks,
@@ -155,7 +155,7 @@ requires a current displayed frame. Text inputs retain their own Select All acti
 
 ## Lifecycle
 
-[`viewport/interaction.rs`](../../crates/zipzi-editor-core/src/viewport/interaction.rs)
+[`viewport/interaction.rs`](../../../crates/zipzi-editor-core/src/viewport/interaction.rs)
 owns interaction acquisition and
 release for both UI and synchronous core clients:
 
@@ -243,7 +243,7 @@ Run focused checks from the repository root:
 ```
 
 The shell entrypoint clears `ZIPZI_DEV_SESSION_DIR`. See
-[test coverage](../../tools/README.md#test-coverage) for broader gates.
+[test coverage](../../../tools/README.md#test-coverage) for broader gates.
 
 
 Core integration cases cover current-frame rejection, delayed frames, original

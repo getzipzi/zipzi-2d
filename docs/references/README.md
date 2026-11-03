@@ -5,7 +5,6 @@ the current Editor and developer tools. Consult the relevant guide when changing
 
 | Reference | Purpose | Implementation |
 | --- | --- | --- |
-| [Viewport tools and gestures](viewport-interactions.md) | Gesture ownership, capture lifecycle, cancellation and input routing | `zipzi-editor-core` tools/viewport modules and `zipzi-editor` input routing |
 | [UI performance](ui-performance.md) | Selecting focused checks for redraws, caching, lists and rendering | Headless UI work-count tests and native benchmark harnesses |
 | [dev-python (internal)](dev-python.md) | Developer/agent experiments against current SDK source | `tools/dev-python` |
 
