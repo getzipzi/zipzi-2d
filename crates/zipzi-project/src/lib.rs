@@ -56,7 +56,9 @@ pub use store::{
     read_project_texture_bounded, DocumentSession, DocumentSnapshot, DocumentStore,
     ImageResourceStore, PreparedImageContent, ProjectResult, ResourceDiagnostic, VerifiedTexture,
 };
-pub use transfer::{resolve_model3_entry, TransferFormat, TransferSnapshot};
+pub use transfer::{
+    resolve_model3_entry, TransferFormat, TransferPublishOptions, TransferSnapshot,
+};
 pub use zipzi_cmo3::{
     Can3Artifact, Can3Options, Cmo3Artifact, Cmo3Diagnostic, Cmo3Error, Cmo3Options, Cmo3Report,
     CubismArtifact, CubismOptions, DiagnosticSeverity as Cmo3DiagnosticSeverity, LossPolicy,

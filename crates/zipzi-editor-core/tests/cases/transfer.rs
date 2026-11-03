@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 use zipzi_core::{Canvas, ExportSettings, Vec2};
-use zipzi_editor_core::{Document, Editor, ExportCanvas, LoadRequest, TransferFormat};
+use zipzi_editor_core::{
+    Document, Editor, ExportCanvas, LoadRequest, TransferFormat, TransferPublishOptions,
+};
 fn local(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../models/local/mao")
@@ -493,6 +495,78 @@ fn model_only_cubism_group_has_no_empty_can3_and_rejects_unmanaged_output() -> a
             .is_err()
     );
     assert_eq!(std::fs::read(path.join("unrelated.txt"))?, b"keep");
+    Ok(())
+}
+#[test]
+fn cubism_export_with_allow_loss_handles_display_metadata() -> anyhow::Result<()> {
+    use zipzi_editor_core::{EditorCommand, NewParameter};
+
+    for animated in [false, true] {
+        let mut editor = Editor::new()?;
+        let id = editor.active_id().unwrap();
+
+        editor.execute(EditorCommand::CreateParameter(NewParameter {
+            name: "ParamA".into(),
+            runtime_id: "ParamA".into(),
+            ..Default::default()
+        }))?;
+        editor.execute(EditorCommand::CreateParameter(NewParameter {
+            name: "ParamB".into(),
+            runtime_id: "ParamB".into(),
+            ..Default::default()
+        }))?;
+
+        let p0 = editor.document().unwrap().parameters()[0].id.clone();
+        editor.execute(EditorCommand::ToggleParameterLink { parameter_id: p0 })?;
+        assert!(!editor.document().unwrap().parameter_links().is_empty());
+
+        if animated {
+            editor.set_editing_context(zipzi_editor_core::EditingContext::Animation)?;
+            editor.create_timeline_motion(id)?;
+        }
+        let revision = editor.document().unwrap().model_generation();
+        let canvas = editor.export_canvas(id)?;
+        let snapshot = editor.prepare_export(id, revision, canvas)?;
+
+        let temp = tempfile::tempdir()?;
+        let path = temp.path().join("model");
+
+        let strict_err = snapshot
+            .publish_with_options(
+                TransferFormat::Cubism,
+                &path,
+                &TransferPublishOptions { allow_loss: false },
+            )
+            .unwrap_err();
+        assert_eq!(strict_err.code, "CUBISM_TRANSFER");
+        assert!(strict_err.message.contains("DISPLAY_METADATA"));
+        assert!(!path.exists(), "Rejected export must not publish output");
+
+        let snapshot = editor.prepare_export(id, revision, canvas)?;
+        let publication = snapshot
+            .publish_with_options(
+                TransferFormat::Cubism,
+                &path,
+                &TransferPublishOptions { allow_loss: true },
+            )
+            .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
+
+        assert!(path.join("model.cmo3").is_file());
+        assert_eq!(path.join("model.can3").is_file(), animated);
+        assert!(path.join("export-report.json").is_file());
+        assert!(!publication.notices.is_empty());
+
+        let report: zipzi_cmo3::Cmo3Report =
+            serde_json::from_slice(&std::fs::read(path.join("export-report.json"))?)?;
+        assert!(report.has_loss());
+        assert!(
+            report
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "DISPLAY_METADATA")
+        );
+    }
+
     Ok(())
 }
 #[test]

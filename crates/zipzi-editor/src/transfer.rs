@@ -1,7 +1,9 @@
 //! Per-format settings followed by the native save panel.
 use super::*;
 use std::path::PathBuf;
-use zipzi_editor_core::{Command, CommandId, DocumentId, TransferFormat, TransferSnapshot};
+use zipzi_editor_core::{
+    Command, CommandId, DocumentId, TransferFormat, TransferPublishOptions, TransferSnapshot,
+};
 impl EditorView {
     pub(super) fn open_export(
         &mut self,
@@ -42,6 +44,7 @@ impl EditorView {
         id: DocumentId,
         format: TransferFormat,
         snapshot: TransferSnapshot,
+        publish_options: TransferPublishOptions,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -96,7 +99,9 @@ impl EditorView {
                     std::thread::Builder::new()
                         .name("zipzi-export".into())
                         .stack_size(8 * 1024 * 1024)
-                        .spawn(move || snapshot.publish(format, &destination))
+                        .spawn(move || {
+                            snapshot.publish_with_options(format, &destination, &publish_options)
+                        })
                         .map_err(anyhow::Error::from)
                         .and_then(|worker| {
                             worker

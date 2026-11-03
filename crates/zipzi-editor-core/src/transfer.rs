@@ -1,7 +1,7 @@
 //! Export form values are independent of view framing and parameter previews.
 use anyhow::{Result, ensure};
 use zipzi_core::{Canvas, ExportSettings};
-pub use zipzi_project::{TransferFormat, TransferSnapshot};
+pub use zipzi_project::{TransferFormat, TransferPublishOptions, TransferSnapshot};
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ExportCanvas {
     pub manual: bool,

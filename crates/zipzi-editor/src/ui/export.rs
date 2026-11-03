@@ -6,7 +6,7 @@ use gpui_kit::component::{
     input::{Input, InputEvent, InputState},
 };
 use gpui_kit::{prelude::*, *};
-use zipzi_editor_core::{DocumentId, ExportCanvas, TransferFormat};
+use zipzi_editor_core::{DocumentId, ExportCanvas, TransferFormat, TransferPublishOptions};
 
 pub(crate) struct ExportForm {
     owner: WeakEntity<EditorView>,
@@ -17,6 +17,7 @@ pub(crate) struct ExportForm {
     inputs: [Entity<InputState>; 8],
     dialog: FormDialogState,
     invalid: Option<usize>,
+    allow_loss: bool,
     _subscriptions: Vec<Subscription>,
 }
 impl ExportForm {
@@ -81,6 +82,7 @@ impl ExportForm {
                 inputs,
                 dialog: FormDialogState::new(cx),
                 invalid: None,
+                allow_loss: true,
                 _subscriptions: subscriptions,
             };
             state.validate(cx);
@@ -187,9 +189,12 @@ impl FormDialogView for ExportForm {
         })?;
         let document = self.document;
         let format = self.format;
+        let publish_options = TransferPublishOptions {
+            allow_loss: self.allow_loss,
+        };
         window.defer(cx, move |window, cx| {
             owner.update(cx, |view, cx| {
-                view.pick_export(document, format, snapshot, window, cx)
+                view.pick_export(document, format, snapshot, publish_options, window, cx)
             })
         });
         Ok(())
@@ -227,6 +232,18 @@ impl Render for ExportForm {
                         cx.notify();
                     })),
             );
+        if self.format == TransferFormat::Cubism {
+            content = content.child(
+                Checkbox::new("export-allow-loss")
+                    .label(t!("transfer.allow_loss").into_owned())
+                    .checked(self.allow_loss)
+                    .on_click(cx.listener(|this, value: &bool, _, cx| {
+                        this.allow_loss = *value;
+                        this.dialog.edited();
+                        cx.notify();
+                    })),
+            );
+        }
         let ids = [
             "export-ppu",
             "export-width",

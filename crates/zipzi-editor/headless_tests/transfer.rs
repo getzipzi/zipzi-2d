@@ -135,3 +135,28 @@ fn continue_remembers_settings_before_native_save_cancellation(cx: &mut TestAppC
         );
     });
 }
+#[gpui_kit::test]
+fn cubism_export_exposes_allow_loss_checkbox(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    open(&harness, CommandId::ExportCubism, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("export-allow-loss").visible());
+        assert_eq!(window.find("export-allow-loss").checked(), Some(true));
+        window.click("export-allow-loss", cx);
+        window.render_frame(cx);
+        assert_eq!(window.find("export-allow-loss").checked(), Some(false));
+        window.click("export-cancel", cx);
+    })
+    .unwrap();
+    settle(cx);
+
+    open(&harness, CommandId::ExportRuntime, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("export-allow-loss").is_none());
+        window.click("export-cancel", cx);
+    })
+    .unwrap();
+    settle(cx);
+}

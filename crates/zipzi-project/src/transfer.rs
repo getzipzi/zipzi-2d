@@ -14,6 +14,13 @@ pub enum TransferFormat {
     Cubism,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TransferPublishOptions {
+    /// Permit reported Cubism conversion losses. Defaults to strict rejection;
+    /// runtime package exports do not use this option.
+    pub allow_loss: bool,
+}
+
 pub struct TransferSnapshot {
     document: Document,
     resources: HashMap<String, CapturedAsset>,
@@ -180,6 +187,14 @@ impl TransferSnapshot {
         format: TransferFormat,
         destination: &Path,
     ) -> Result<Publication, Status> {
+        self.publish_with_options(format, destination, &TransferPublishOptions::default())
+    }
+    pub fn publish_with_options(
+        self,
+        format: TransferFormat,
+        destination: &Path,
+        publish_options: &TransferPublishOptions,
+    ) -> Result<Publication, Status> {
         let parent = destination
             .parent()
             .ok_or_else(|| Status::error("INVALID_DESTINATION", "Missing output parent"))?;
@@ -239,6 +254,11 @@ impl TransferSnapshot {
                         }
                     })
                 };
+                let loss_policy = if publish_options.allow_loss {
+                    zipzi_cmo3::LossPolicy::Allow
+                } else {
+                    zipzi_cmo3::LossPolicy::Reject
+                };
                 let options = zipzi_cmo3::Cmo3Options {
                     model_name: self
                         .document
@@ -248,6 +268,7 @@ impl TransferSnapshot {
                         .and_then(|value| value.as_str())
                         .unwrap_or(name)
                         .into(),
+                    loss_policy,
                     ..Default::default()
                 };
                 if self.document.motion_order().is_empty()
