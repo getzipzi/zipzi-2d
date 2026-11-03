@@ -27,7 +27,7 @@ catalog and reference so their embedded package version is synchronized:
 
 ```sh
 python3 tools/packaging/release.py set 0.1.0-alpha.3
-uv run --locked python crates/zipzi-python2/tools/generate.py
+uv run --locked python crates/zipzi-python/tools/generate.py
 cargo metadata --locked --offline --no-deps --format-version 1 > /dev/null
 python3 tools/packaging/release.py check --tag v0.1.0-alpha.3
 ```
@@ -141,17 +141,17 @@ Packaging success does not establish native UI/GPU or licensed-model acceptance.
 
 The public client distribution is **`zipzi`**, imported as `zipzi`. The optional
 native backend is **`zipzi-native`**, imported as `zipzi_native`. Their sources
-remain at `crates/zipzi-python2/client` and `crates/zipzi-python2`; the Rust
-adapter retains its internal `zipzi-python2` name. Equivalent local preparation:
+remain at `crates/zipzi-python/client` and `crates/zipzi-python`; the Rust
+adapter retains its internal `zipzi-python` name. Equivalent local preparation:
 
 ```sh
 uv sync --locked
 python3 tools/packaging/release.py check
-uv run --locked python crates/zipzi-python2/tools/distribution.py \
+uv run --locked python crates/zipzi-python/tools/distribution.py \
   --output target/python-release-0.1.0a3
 ```
 
-Both distributions use `crates/zipzi-python2/client/PYPI.md` for their PyPI
+Both distributions use `crates/zipzi-python/client/PYPI.md` for their PyPI
 description, with absolute web links and instructions for locating installed
 documentation. Source READMEs retain relative links. The client wheel includes
 `zipzi/README.md` and `zipzi/docs/`, whose links resolve within the installed
@@ -186,8 +186,8 @@ credentials. No current workflow runs `cargo publish`.
 ```sh
 uv run --locked python tools/test_tools.py -p test_release.py -v
 uv run --locked python tools/test_tools.py -p test_workspace_entrypoints.py -v
-uv run --locked python tools/test_tools.py -p test_python2_tools.py -v
-uv run --locked python tools/test_tools.py -p test_python2_distribution.py -v
+uv run --locked python tools/test_tools.py -p test_python_tools.py -v
+uv run --locked python tools/test_tools.py -p test_python_distribution.py -v
 uv run --locked python tools/test_tools.py -p test_package_source.py -v
 ```
 

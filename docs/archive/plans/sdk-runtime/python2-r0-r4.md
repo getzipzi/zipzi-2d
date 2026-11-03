@@ -102,7 +102,7 @@ cargo build --locked -p zipzi-editor
 ./tools/test-sdk.sh python2-connected --editor-host "$PWD/target/debug/zipzi-editor"
 
 # 聚焦的真实 Editor + 安装新客户端 + Metal 验收，不跑昂贵全套。
-ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python2/tools/connected.py --install-only) \
+ZIPZI_CLIENT_PYTHON=$(python3 crates/zipzi-python/tools/connected.py --install-only) \
   env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor \
   --features test-support --test runtime_ipc_acceptance
 ```

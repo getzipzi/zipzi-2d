@@ -1,7 +1,7 @@
 # Documentation
 
 - [Repository layout](../MONOREPO.md) and [licensing](../LICENSING.md)
-- [SDK boundaries](../MONOREPO.md#sdk-and-language-boundaries), [Python SDK](../crates/zipzi-python2/README.md)
+- [SDK boundaries](../MONOREPO.md#sdk-and-language-boundaries), [Python SDK](../crates/zipzi-python/README.md)
 - [Python SDK 契约拆分方案](archive/plans/python2-contract-extraction.md): 生成器脱离 Core、SDK、Runtime 实现依赖，保留 Rust 契约来源与本地独立生成
 - [Python 契约阶段 6 验收](archive/plans/python2-contract-acceptance.md): 依赖隔离、归档安装、集成回归和实际生成／native 循环耗时
 - [Python 生成代码与文档拆分实施方案](archive/plans/python-generated-code-readability/README.md): 文档去重、类型归属、领域拆分、schema 引用和分阶段验收
@@ -13,9 +13,9 @@
 - [Versioning, Alpha releases and package publication preparation](RELEASING.md)
 - [Tool guide](../tools/README.md) and [model inventory](../models/README.md)
 - [Runtime evidence](archive/plans/runtime/README.md) and [Runtime plan](archive/plans/sdk-runtime-implementation-plan.md), [R2 Editor migration](archive/plans/sdk-runtime/r2-editor.md)
-- [zipzi-python2 construction plan](archive/plans/python-sdk-rewrite-plan.md): independent package, typed API, shared Runtime execution and bounded generation
+- [zipzi-python construction plan](archive/plans/python-sdk-rewrite-plan.md): independent package, typed API, shared Runtime execution and bounded generation
 - [Python P7 closeout](archive/plans/python-sdk-rewrite/p7.md): current macOS/CPython 3.14 scope complete; capability/contract evidence, generated/manual responsibilities, costs, agent results and final artifact identity
-- [zipzi-python2 P3A refactor](archive/plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
+- [zipzi-python P3A refactor](archive/plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
 - [Runtime R5 / Python P5 animation authoring](archive/plans/sdk-runtime/python2-r5-authoring.md): typed edits, records, SDK plans and addresses; Preview, spatial/GPU observation, fair scheduling and Editor playback isolation are delivered; [R7 acceptance](archive/plans/sdk-runtime/python2-r7-closeout.md) records final workflows, distribution and performance
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
 - [Warp Deformer 交互与属性面板方案](plans/warp-deformer-interaction.md): 画布变换、Warp／Rotation 属性透出、Bezier 整形、子对象保形编辑与原始形状恢复

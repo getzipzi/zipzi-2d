@@ -440,7 +440,7 @@ cargo test --locked -p zipzi-sdk --test integration manual_mesh::
 ./tools/test-editor.sh ui manual_mesh
 
 # P0 协议和生成类型变更后
-uv run --locked python crates/zipzi-python2/tools/generate.py --check
+uv run --locked python crates/zipzi-python/tools/generate.py --check
 ./tools/test-sdk.sh python2
 
 # P4 改动公共生成算法后

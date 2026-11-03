@@ -18,7 +18,7 @@
 ## 当前基线
 
 基线为提交 `0d5692db` 的生成产物。以下是静态统计，不是运行时性能测量。
-表中路径均相对 `crates/zipzi-python2/`。
+表中路径均相对 `crates/zipzi-python/`。
 
 | 产物 | 行数 | 主要问题 |
 | --- | ---: | --- |
@@ -44,12 +44,12 @@
 
 主要实现入口：
 
-- [generate.py](../../../../crates/zipzi-python2/tools/generate.py)：调度、缓存、输出所有权与写入。
-- [generate_modeling.py](../../../../crates/zipzi-python2/tools/generate_modeling.py)：类型、校验和 Python/Rust 转换。
-- [generate_catalog.py](../../../../crates/zipzi-python2/tools/generate_catalog.py)：AST 分析、文档和 catalog，目前还改写 Python 源码。
-- [generate_dtos.py](../../../../crates/zipzi-python2/tools/generate_dtos.py)、[generate_api.py](../../../../crates/zipzi-python2/tools/generate_api.py)：领域投影与公开导出。
+- [generate.py](../../../../crates/zipzi-python/tools/generate.py)：调度、缓存、输出所有权与写入。
+- [generate_modeling.py](../../../../crates/zipzi-python/tools/generate_modeling.py)：类型、校验和 Python/Rust 转换。
+- [generate_catalog.py](../../../../crates/zipzi-python/tools/generate_catalog.py)：AST 分析、文档和 catalog，目前还改写 Python 源码。
+- [generate_dtos.py](../../../../crates/zipzi-python/tools/generate_dtos.py)、[generate_api.py](../../../../crates/zipzi-python/tools/generate_api.py)：领域投影与公开导出。
 - [authoring_schema.rs](../../../../crates/zipzi-contract/src/bin/authoring_schema.rs)：编译导出入口。
-- [installed_contract.py](../../../../crates/zipzi-python2/tests/installed_contract.py)：离线符号、类型、文档与指纹验收。
+- [installed_contract.py](../../../../crates/zipzi-python/tests/installed_contract.py)：离线符号、类型、文档与指纹验收。
 
 ## 目标结构与边界
 
@@ -78,7 +78,7 @@ docstring 注入、`__all__` 添加和 `read`/`wire` 重命名，迁到类型/AP
 以下为目标骨架，`<domain>` 按下一节的归属规则展开；不是按固定行数切出的编号文件。
 
 ```text
-crates/zipzi-python2/
+crates/zipzi-python/
   tools/codegen/
     model.py                  # 类型图、公开符号、字段与方法文档模型
     normalize.py              # 定义去重、引用解析、冲突检查
@@ -283,13 +283,13 @@ P1 可以先在现有 AST 分析基础上实现规范条目引用；P2 再替换
 | 改动 | 运行命令或验证入口 |
 | --- | --- |
 | P0/P1/P2 快速 codegen 回归 | `uv run --locked python tools/test_tools.py -p test_python2_codegen.py -k Python2Codegen` |
-| 生成漂移与无缓存重放 | `uv run --locked python crates/zipzi-python2/tools/generate.py --check --no-cache` |
+| 生成漂移与无缓存重放 | `uv run --locked python crates/zipzi-python/tools/generate.py --check --no-cache` |
 | 离线帮助与发现行为 | `./tools/test-sdk.sh python2 --discovery` |
 | 契约导出/schema 变化 | `cargo test --locked -p zipzi-contract` |
 | 类型、Python 与 native 联动 | `./tools/test-sdk.sh python2` |
 | 纯 wheel 与真实 subprocess host | `./tools/test-sdk.sh python2-connected` |
 | 代码生成隔离阶段验收 | `uv run --locked python tools/test_tools.py -p test_python2_codegen.py`，包含昂贵的隔离 checkout 测试 |
-| 分发门禁 | `uv run --locked python crates/zipzi-python2/tools/distribution.py --output target/python2/codegen-readability/distribution` |
+| 分发门禁 | `uv run --locked python crates/zipzi-python/tools/distribution.py --output target/python2/codegen-readability/distribution` |
 
 上述 Python2Codegen 选择仍包含 Rust 编译类用例，日常修改可继续用具体方法名 `-k` 缩小。
 无需例行运行 SDK/Editor full，也不为此结构重构要求 GPU；若修改观察路径的实际行为，

@@ -42,8 +42,8 @@ def members(root=ROOT):
 
 def check(root=ROOT, tag=None):
     info = metadata(root, tag)
-    client = tomllib.loads((root / 'crates/zipzi-python2/client/pyproject.toml').read_text())['project']
-    native = tomllib.loads((root / 'crates/zipzi-python2/pyproject.toml').read_text())['project']
+    client = tomllib.loads((root / 'crates/zipzi-python/client/pyproject.toml').read_text())['project']
+    native = tomllib.loads((root / 'crates/zipzi-python/pyproject.toml').read_text())['project']
     if client['name'] != 'zipzi' or native['name'] != 'zipzi-native':
         raise ValueError('Public Python distributions must be zipzi and zipzi-native')
     if client['version'] != info['python_version'] or f'zipzi=={info["python_version"]}' not in native['dependencies']:
@@ -83,9 +83,9 @@ def set_version(version, root=ROOT):
                 return match[1] + f' version = "={version}", ' + fields + ' ' + match[3]
             text = re.sub(pattern, update, text)
         manifest.write_text(text)
-    client = root / 'crates/zipzi-python2/client/pyproject.toml'
+    client = root / 'crates/zipzi-python/client/pyproject.toml'
     client.write_text(re.sub(r'(?m)^version = "[^"]+"', f'version = "{info["python_version"]}"', client.read_text()))
-    native = root / 'crates/zipzi-python2/pyproject.toml'
+    native = root / 'crates/zipzi-python/pyproject.toml'
     native.write_text(re.sub(r'zipzi==[^"\s]+', f'zipzi=={info["python_version"]}', native.read_text()))
     lock = root / 'Cargo.lock'
     blocks = lock.read_text().split('[[package]]')
@@ -102,7 +102,7 @@ def cargo_order(root=ROOT):
     packages = {name: tomllib.loads(path.read_text()) for name, path in members(root).items()}
     public = {name for name, data in packages.items()
               if data['package'].get('publish', True) is not False
-              and name != 'zipzi-python2'}
+              and name != 'zipzi-python'}
     pending = {name: set(packages[name].get('dependencies', {})) & public for name in public}
     order = []
     while pending:

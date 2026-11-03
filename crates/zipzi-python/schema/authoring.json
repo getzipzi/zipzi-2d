@@ -1,0 +1,823 @@
+{
+  "_generated_by": "zipzi-python/tools/generate.py",
+  "contract_sha256": "44ba40eb6b7c2f26f8d8dfaf382492b5a1a4bb053fff2386bae183d321225bae",
+  "format_version": 2,
+  "root": {
+    "binary": {
+      "binding_signature": "6e1a318eb5a16ff93ca800ec381f81ea",
+      "edit_variants": [
+        "Modeling",
+        "Scene",
+        "MeshBinding",
+        "Parameter",
+        "Mesh",
+        "Resource"
+      ],
+      "image": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::ImageSnapshot"
+      },
+      "image_signature": "ad87c1c5f654d24b33239bad6607e861",
+      "input_signature": "47dbe9859095cb84bb676251e98980e7",
+      "inputs": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ModelingCommand"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::SceneOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::MeshOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ParameterOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::MeshBindingOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ResourceOperation"
+        }
+      ],
+      "mesh": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::MeshSnapshot"
+      },
+      "mesh_signature": "f38a4fcb442823db2a155a06e4994cf2",
+      "observation": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::ObservationBatch"
+      },
+      "observation_signature": "1ae17387c3769738f50f4bba4d24ab7b",
+      "output": {
+        "kind": "ref",
+        "name": "zipzi_contract::authoring::OwnedModelingRecords"
+      },
+      "output_signature": "f06d940f192c4a820cc9a75f50efe089",
+      "preview": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::PreviewBatch"
+      },
+      "preview_signature": "524a7adb4389f52840391c8e502a5414",
+      "sample_signature": "ef5b4e5a2e2a2c42e9845480d6815742",
+      "samples": {
+        "kind": "ref",
+        "name": "zipzi_contract::authoring::ModelingSamples"
+      },
+      "source_fields": [
+        [
+          "session",
+          "version"
+        ],
+        [
+          "session",
+          "edit",
+          "base",
+          "sequence"
+        ]
+      ],
+      "source_variants": [
+        "Formal",
+        "Edit"
+      ],
+      "spatial": {
+        "kind": "ref",
+        "name": "zipzi_contract::spatial::SpatialSamples"
+      },
+      "spatial_signature": "f3baf2f6b72d920298a21191aaf823a2",
+      "version": 1
+    },
+    "bindings": [
+      {
+        "form": "point",
+        "module": "meshes",
+        "name": "Point",
+        "path": "zipzi_core::Vec2",
+        "rust": "zipzi_contract::model::Vec2"
+      },
+      {
+        "form": "enum",
+        "module": "meshes",
+        "name": "ConstraintKind",
+        "path": "zipzi_core::MeshConstraintKind",
+        "rust": "zipzi_contract::model::MeshConstraintKind"
+      },
+      {
+        "form": "owned_record",
+        "module": "meshes",
+        "name": "Constraint",
+        "path": "zipzi_core::MeshConstraint",
+        "rust": "zipzi_contract::model::MeshConstraint"
+      },
+      {
+        "form": "owned_record",
+        "module": "meshes",
+        "name": "Meshing",
+        "path": "zipzi_core::MeshMeshing",
+        "rust": "zipzi_contract::model::MeshMeshing"
+      },
+      {
+        "form": "owned_record",
+        "module": "meshes",
+        "name": "Geometry",
+        "path": "zipzi_sdk::MeshGeometry",
+        "rust": "zipzi_contract::authoring::MeshGeometry"
+      },
+      {
+        "form": "record",
+        "module": "meshes",
+        "name": "MeshSpec",
+        "path": "zipzi_sdk::MeshCreateSpec",
+        "rust": "zipzi_contract::authoring::MeshCreateSpec"
+      },
+      {
+        "form": "snapshot",
+        "module": "meshes",
+        "name": "Mesh",
+        "path": "zipzi_runtime::authoring::MeshSnapshot",
+        "rust": "zipzi_contract::runtime::MeshSnapshot"
+      },
+      {
+        "form": "union",
+        "module": "ops",
+        "name": "MeshOperation",
+        "path": "zipzi_sdk::MeshOperation",
+        "rust": "zipzi_contract::authoring::MeshOperation"
+      },
+      {
+        "form": "query",
+        "module": "backend",
+        "name": "MeshQuery",
+        "path": "zipzi_runtime::authoring::MeshQuery",
+        "rust": "zipzi_contract::runtime::MeshQuery"
+      },
+      {
+        "form": "token",
+        "module": "native",
+        "name": "SessionToken",
+        "path": "zipzi_runtime::SessionId",
+        "rust": "zipzi_contract::runtime::SessionId"
+      },
+      {
+        "form": "token",
+        "module": "native",
+        "name": "EditToken",
+        "path": "zipzi_runtime::EditId",
+        "rust": "zipzi_contract::runtime::EditId"
+      },
+      {
+        "form": "source",
+        "module": "_values",
+        "name": "Source",
+        "path": "zipzi_runtime::SourceRef",
+        "rust": "zipzi_contract::runtime::SourceRef"
+      }
+    ],
+    "dtos": {
+      "bindings": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::MeshBindingOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::model::MeshBinding"
+        }
+      ],
+      "events": {
+        "cursor": {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::EventCursor"
+        },
+        "event": {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::RuntimeEvent"
+        },
+        "kind": {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::EventKind"
+        },
+        "origin": {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ClientId"
+        }
+      },
+      "parameters": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ParameterOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::model::Parameter"
+        }
+      ],
+      "planning": {
+        "kind": "ref",
+        "name": "zipzi_contract::authoring::ModelingIntent"
+      },
+      "references": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::SceneCapabilities"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ObjectKind"
+        }
+      ],
+      "sampling": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::GeometryChecks"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ModelingSamples"
+        }
+      ],
+      "sampling_outer": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::ModelingSampleData"
+      },
+      "version": 1
+    },
+    "modeling": {
+      "input_roots": [
+        0,
+        1,
+        2,
+        4,
+        5,
+        6,
+        7,
+        9,
+        11,
+        14,
+        17,
+        19,
+        24
+      ],
+      "native_only_roots": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ParameterOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::MeshBindingOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::GeometryChecks"
+        }
+      ],
+      "roots": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ModelingCommand"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ModelingIntent"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ModelingQuery"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::OwnedModelingRecords"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::AddressSelector"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::AddressPatch"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::CapabilityDomain"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::CollectionQuery"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::Capabilities"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ObjectKind"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ModelingSamples"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::project::ProjectRequest"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::project::ProjectReport"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::EditorContext"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::PreviewCommand"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::PreviewState"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::PreviewBatch"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::spatial::SpatialQuery"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::spatial::SpatialSamples"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ObservationView"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ObservationBatch"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::ManualMeshTransferReport"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::DeletionSummary"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::DeletionPage"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::DeletionSection"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ObservationEstimate"
+        }
+      ],
+      "version": 1
+    },
+    "operations": [
+      {
+        "backend": "mesh",
+        "capability": "typed_meshes",
+        "category": "query",
+        "handler": "zipzi_runtime::authoring::MESH_QUERY",
+        "input": {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::MeshQuery"
+        },
+        "name": "mesh_snapshot",
+        "output": {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::MeshSnapshot"
+        }
+      }
+    ],
+    "protocol": "zipzi-runtime-v2",
+    "resources": {
+      "binary": null,
+      "bindings": [
+        {
+          "form": "record",
+          "module": "resources",
+          "name": "ImageSpec",
+          "path": "zipzi_sdk::ImageCreateSpec",
+          "rust": "zipzi_contract::authoring::ImageCreateSpec"
+        },
+        {
+          "form": "record",
+          "module": "resources",
+          "name": "Usage",
+          "path": "zipzi_runtime::authoring::ResourceUsage",
+          "rust": "zipzi_contract::runtime::ResourceUsage"
+        },
+        {
+          "form": "record",
+          "module": "resources",
+          "name": "ImagePixels",
+          "path": "zipzi_runtime::authoring::ImagePixels",
+          "rust": "zipzi_contract::runtime::ImagePixels"
+        },
+        {
+          "form": "snapshot",
+          "module": "resources",
+          "name": "Image",
+          "path": "zipzi_runtime::authoring::ImageSnapshot",
+          "rust": "zipzi_contract::runtime::ImageSnapshot"
+        },
+        {
+          "form": "record",
+          "module": "plans",
+          "name": "PlanCost",
+          "path": "zipzi_sdk::ConversionCost",
+          "rust": "zipzi_contract::document::ConversionCost"
+        },
+        {
+          "form": "external",
+          "module": "plans",
+          "name": "DeletionSummary",
+          "path": "zipzi_sdk::DeletionSummary",
+          "rust": "zipzi_contract::authoring::DeletionSummary"
+        },
+        {
+          "form": "record",
+          "module": "plans",
+          "name": "PlanReport",
+          "path": "zipzi_sdk::ModelingPlanReport",
+          "rust": "zipzi_contract::authoring::ModelingPlanReport"
+        },
+        {
+          "form": "record",
+          "module": "backend",
+          "name": "PlanSnapshot",
+          "path": "zipzi_runtime::authoring::PlanSnapshot",
+          "rust": "zipzi_contract::runtime::PlanSnapshot"
+        },
+        {
+          "form": "record",
+          "module": "backend",
+          "name": "PreparedImageInfo",
+          "path": "zipzi_runtime::authoring::PreparedImageInfo",
+          "rust": "zipzi_contract::runtime::PreparedImageInfo"
+        },
+        {
+          "form": "union",
+          "module": "ops",
+          "name": "ResourceOperation",
+          "path": "zipzi_runtime::authoring::ResourceOperation",
+          "rust": "zipzi_contract::runtime::ResourceOperation"
+        },
+        {
+          "form": "union",
+          "module": "plans",
+          "name": "Intent",
+          "path": "zipzi_runtime::authoring::PlanIntent",
+          "rust": "zipzi_contract::runtime::PlanIntent"
+        },
+        {
+          "form": "query",
+          "module": "backend",
+          "name": "ImageQuery",
+          "path": "zipzi_runtime::authoring::ImageQuery",
+          "rust": "zipzi_contract::runtime::ImageQuery"
+        },
+        {
+          "form": "query",
+          "module": "backend",
+          "name": "PlanQuery",
+          "path": "zipzi_runtime::authoring::PlanQuery",
+          "rust": "zipzi_contract::runtime::PlanQuery"
+        },
+        {
+          "form": "query",
+          "module": "backend",
+          "name": "PreparedPixelsQuery",
+          "path": "zipzi_runtime::authoring::PreparedPixelsQuery",
+          "rust": "zipzi_contract::runtime::PreparedPixelsQuery"
+        },
+        {
+          "form": "handle",
+          "module": "resources",
+          "name": "PreparedImage",
+          "path": "zipzi_runtime::ImageId",
+          "rust": "zipzi_contract::runtime::ImageId"
+        },
+        {
+          "form": "handle",
+          "module": "plans",
+          "name": "Plan",
+          "path": "zipzi_runtime::PlanId",
+          "rust": "zipzi_contract::runtime::PlanId"
+        },
+        {
+          "form": "token",
+          "module": "native",
+          "name": "SessionToken",
+          "path": "zipzi_runtime::SessionId",
+          "rust": "zipzi_contract::runtime::SessionId"
+        },
+        {
+          "form": "token",
+          "module": "native",
+          "name": "EditToken",
+          "path": "zipzi_runtime::EditId",
+          "rust": "zipzi_contract::runtime::EditId"
+        },
+        {
+          "form": "source",
+          "module": "_values",
+          "name": "Source",
+          "path": "zipzi_runtime::SourceRef",
+          "rust": "zipzi_contract::runtime::SourceRef"
+        },
+        {
+          "form": "version",
+          "module": "_values",
+          "name": "Version",
+          "path": "zipzi_sdk::Version",
+          "rust": "zipzi_contract::authoring::Version"
+        }
+      ],
+      "dtos": null,
+      "modeling": null,
+      "operations": [
+        {
+          "backend": "image",
+          "capability": "typed_resources_plans",
+          "category": "query",
+          "handler": "zipzi_runtime::authoring::IMAGE_QUERY",
+          "input": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ImageQuery"
+          },
+          "name": "image_snapshot",
+          "output": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ImageSnapshot"
+          }
+        },
+        {
+          "backend": "prepared_pixels",
+          "capability": "typed_resources_plans",
+          "category": "query",
+          "handler": "zipzi_runtime::authoring::PREPARED_PIXELS_QUERY",
+          "input": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::PreparedPixelsQuery"
+          },
+          "name": "prepared_pixels",
+          "output": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::ImagePixels"
+          }
+        },
+        {
+          "backend": "plan",
+          "capability": "typed_resources_plans",
+          "category": "planning",
+          "handler": "zipzi_runtime::authoring::PLAN_QUERY",
+          "input": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::PlanQuery"
+          },
+          "name": "plan_authoring",
+          "output": {
+            "kind": "ref",
+            "name": "zipzi_contract::runtime::PlanSnapshot"
+          }
+        }
+      ],
+      "protocol": "zipzi-runtime-v2",
+      "roots": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ResourceOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::PlanIntent"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::PreparedImageInfo"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::runtime::ResourceUsage"
+        }
+      ],
+      "runtime": null,
+      "version": 1
+    },
+    "roots": [
+      {
+        "kind": "ref",
+        "name": "zipzi_contract::authoring::MeshGeometry"
+      },
+      {
+        "kind": "ref",
+        "name": "zipzi_contract::authoring::MeshCreateSpec"
+      },
+      {
+        "kind": "ref",
+        "name": "zipzi_contract::authoring::MeshOperation"
+      }
+    ],
+    "runtime": {
+      "ObjectSummary": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::ObjectSummary"
+      },
+      "RuntimeCapabilities": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::RuntimeCapabilities"
+      },
+      "RuntimeLimits": {
+        "kind": "ref",
+        "name": "zipzi_contract::runtime::RuntimeLimits"
+      }
+    },
+    "scene": {
+      "bindings": [
+        {
+          "form": "union",
+          "module": "scene",
+          "name": "Operation",
+          "path": "zipzi_sdk::SceneOperation",
+          "rust": "zipzi_contract::authoring::SceneOperation"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "PartSpec",
+          "path": "zipzi_sdk::PartCreateSpec",
+          "rust": "zipzi_contract::authoring::PartCreateSpec"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "ParameterGroupSpec",
+          "path": "zipzi_sdk::ParameterGroupCreateSpec",
+          "rust": "zipzi_contract::authoring::ParameterGroupCreateSpec"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "Placement",
+          "path": "zipzi_sdk::ScenePlacement",
+          "rust": "zipzi_contract::authoring::ScenePlacement"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "Summary",
+          "path": "zipzi_sdk::SceneSummary",
+          "rust": "zipzi_contract::authoring::SceneSummary"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "VertexWeight",
+          "path": "zipzi_sdk::VertexWeightSpec",
+          "rust": "zipzi_contract::authoring::VertexWeightSpec"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "Sample",
+          "path": "zipzi_sdk::ScalarSample",
+          "rust": "zipzi_contract::authoring::ScalarSample"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "VertexPatch",
+          "path": "zipzi_sdk::VertexPatchSpec",
+          "rust": "zipzi_contract::authoring::VertexPatchSpec"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "GluePair",
+          "path": "zipzi_sdk::GluePairSpec",
+          "rust": "zipzi_contract::authoring::GluePairSpec"
+        },
+        {
+          "form": "record",
+          "module": "scene",
+          "name": "OffscreenForm",
+          "path": "zipzi_sdk::OffscreenFormSpec",
+          "rust": "zipzi_contract::authoring::OffscreenFormSpec"
+        }
+      ],
+      "roots": [
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::SceneOperation"
+        },
+        {
+          "kind": "ref",
+          "name": "zipzi_contract::authoring::SceneSummary"
+        }
+      ],
+      "version": 1
+    },
+    "version": 1
+  },
+  "shards": [
+    {
+      "path": "types/addressing.json",
+      "sha256": "5bd752667ffc04c41ac6c0249dbd6f17bcabbf675844fd486cc0662ef6270676"
+    },
+    {
+      "path": "types/bindings.json",
+      "sha256": "d5b79c48394e7b2c37c1d8be1ce9475f19e364c8b848a54d0bdc5793646dad54"
+    },
+    {
+      "path": "types/commands.json",
+      "sha256": "36ca786b8cab8173c64f314e1427f197240a311eb041360b57d8b55b9eba205d"
+    },
+    {
+      "path": "types/common.json",
+      "sha256": "363095e9d03e6f18bfd49a64fc6c1961c95b27da3ca53208cf1c328428f1966e"
+    },
+    {
+      "path": "types/deletion.json",
+      "sha256": "d7229538778ee6b9883227dc33facad84ab239132cc6d982d3b69ed7a3cad87e"
+    },
+    {
+      "path": "types/expression.json",
+      "sha256": "18f8ec75cf231462b3581d6e0fc51d4878f967bca58261338e0e779f23bd5e92"
+    },
+    {
+      "path": "types/external.json",
+      "sha256": "6eeb71127da2d18658e0d75a0532e8001c5f623116cda1e15d191cec2a852000"
+    },
+    {
+      "path": "types/mesh.json",
+      "sha256": "a857646bc01923b01ac5ef5da9c6a3b44aa4e27b6e7de3f68b33009d7ef3367b"
+    },
+    {
+      "path": "types/motion.json",
+      "sha256": "904f396bc61ff503c8e8b067a37bdb244a9ccc1b78706881dd30c14dded8d341"
+    },
+    {
+      "path": "types/observation.json",
+      "sha256": "8165d1ad9de1449352e5f98c1c5138475385ea19cc06578327ff85568f7effbf"
+    },
+    {
+      "path": "types/parameters.json",
+      "sha256": "cd3fadcb998c7468ced89dfa3993d02d246e03d45bfd2bdabb11541c41861e64"
+    },
+    {
+      "path": "types/physics.json",
+      "sha256": "125db51308b2825389d7a824c0ca5d5dc6f4b8c45e95a3cd68a3d58de1fe14a5"
+    },
+    {
+      "path": "types/pose.json",
+      "sha256": "33aa165757c13e8b3f71d5b04e78ae44abaa348c421c0db9347cf8b5d9ea2039"
+    },
+    {
+      "path": "types/preview.json",
+      "sha256": "610cfb7338a5fe7acfa89900158d39549d76b5c5371b3a4414e6404b08d193fa"
+    },
+    {
+      "path": "types/project.json",
+      "sha256": "61afe82902d3b2c1a128191d77dd9b55bf02bfb7ea24a4a1cb4b7c1bc2c75255"
+    },
+    {
+      "path": "types/queries.json",
+      "sha256": "3db3bfcfe8af77c809fce245973ddd2d83eacab60cee479ba3c75a67f983c71f"
+    },
+    {
+      "path": "types/resources.json",
+      "sha256": "9079cde896c81b3c88fda264411c749defe4c65633ca94143fa065dab7c7e02f"
+    },
+    {
+      "path": "types/runtime.json",
+      "sha256": "f33580373b0ee2b17bbb311a9f840de5b8ff1fa30af980600e1d917a33180f5f"
+    },
+    {
+      "path": "types/sampling.json",
+      "sha256": "ce6935086cf3f4c08ef16c773a6da381bc7466b18c96f068a36c6b1f7749d198"
+    },
+    {
+      "path": "types/scene.json",
+      "sha256": "9265bc1e3a9959466eb890346723b5ef4e45dbcbc80eb8364c49b141fe26ed22"
+    },
+    {
+      "path": "types/spatial.json",
+      "sha256": "a3cb7be57c00c1cd7f1f957510a127f88b3f5758e05cad2d2a2e666b397feb24"
+    }
+  ]
+}

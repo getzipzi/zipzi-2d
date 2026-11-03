@@ -26,7 +26,7 @@ with native `zipzi-python2-18`; earlier records retain their historical contract
 
 ## Active Python implementation
 
-The current Python work uses the independent `crates/zipzi-python2` package.
+The current Python work uses the independent `crates/zipzi-python` package.
 See the [R0–R4 reconnection record](../sdk-runtime/python2-r0-r4.md) and
 [new-client coverage](python2-coverage.json). Host discovery, session binding and
 the selected real Editor publication recipe have new installed-client evidence.

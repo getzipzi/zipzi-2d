@@ -7,7 +7,7 @@
 
 随后已通过 CPU、隔离安装纯客户端及真实 Editor/Metal 闭环，具体范围与限制见 [R6 交付记录](sdk-runtime/python2-r6-handoff.md)。
 
-2026-10-25：Python 实现切换到独立 `crates/zipzi-python2`，按
+2026-10-25：Python 实现切换到独立 `crates/zipzi-python`，按
 [R0–R4 接回记录](sdk-runtime/python2-r0-r4.md)补齐新客户端验收。新包 Local 也通过
 显式拥有的 LocalHost 进入 Runtime；Connected 绑定桌面 Runtime，两者复用 SDK
 领域契约。下文旧 Python 路径及旧交付证据属于历史基线，不是继续扩展旧包的入口。

@@ -2,16 +2,16 @@
 
 `tasks.py` defines the frozen G01–G08 seeds, finite task data and hidden independent
 expectations. It does not include agent answers. Prompts and budgets remain in
-`tools/python/python2_acceptance.py` from P3A-0.
+`tools/python/python_acceptance.py` from P3A-0.
 
-`tools/python/python2_agent_tasks.py --help` prepares an isolated installed-wheel
+`tools/python/python_agent_tasks.py --help` prepares an isolated installed-wheel
 packet and an adjacent private controller manifest. Agent execution must deny
 access to the private directory, repository, inherited instructions and network
 from its shell; the controller and independent verifier run outside that sandbox.
 The fixture is not an isolation mechanism by itself. Preparing a packet does not
 run an agent or prove any task passed.
 
-`python2_agent_runner.py` executes installed packets with a single external
+`python_agent_runner.py` executes installed packets with a single external
 MCP shell. On macOS, Seatbelt denies repository/controller reads, installed-package
 writes and Internet access. Connected uses a transparent IPC relay: it drops real
 host replies after processing, preserving original request recovery. It records
@@ -49,7 +49,7 @@ complete raw stdout and its digest remain in external logs. When a page is not
 complete, its `read_output_command` retrieves the next page through the same
 shell tool. Each page consumes a tool call; time/call/log limits still apply.
 
-`python2_agent_matrix.py` freezes a cohort's CLI, harness, prompts, packages and
+`python_agent_matrix.py` freezes a cohort's CLI, harness, prompts, packages and
 host and retains each fixed task/seed once. The user confirmed the configured
 model/effort as `gpt-6.1-sol/high` and removed the model/service identity gate.
 Optional lifecycle metadata is report-only and cannot block acceptance or dispatch. Offline invented-API

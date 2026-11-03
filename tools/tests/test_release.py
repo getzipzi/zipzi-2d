@@ -38,7 +38,7 @@ zipzi-core = { version = "=0.1.0-alpha.1", path = "crates/zipzi-core" }
             (path / 'Cargo.toml').write_text(f'[package]\nname = "{name}"\nversion.workspace = true\n')
         with (root / 'crates/zipzi-sdk/Cargo.toml').open('a') as manifest:
             manifest.write('[dependencies]\nzipzi-core = { version = "=0.1.0-alpha.1", path = "../zipzi-core" }\n')
-        client = root / 'crates/zipzi-python2/client'
+        client = root / 'crates/zipzi-python/client'
         client.mkdir(parents=True)
         (client / 'pyproject.toml').write_text('[project]\nname = "zipzi"\nversion = "0.1.0a1"\n')
         (client.parent / 'pyproject.toml').write_text('[project]\nname = "zipzi-native"\ndependencies = ["zipzi==0.1.0a1"]\n')

@@ -40,14 +40,14 @@ arguments and output paths.
 | --- | --- |
 | `dev.py` | Cross-platform test dispatch, source SDK Python and development process lifecycle; use `--help` for commands |
 | `test_tools.py` | Repository tooling tests; accepts unittest discovery flags (`-p`, `-k`, `-v`) |
-| `test-sdk.sh` | SDK fast, mesh, regression, stress, Python2 and full gates |
+| `test-sdk.sh` | SDK fast, mesh, regression, stress, Python and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
 | `dev-python` | Source SDK experiments ([internal developer reference](../docs/references/dev-python.md)) |
-| `python/python2_contract.py` | P3A inventory, source/artifact freeze, complete target map/signatures, agent configuration and P3A-0 exit gate |
-| `python/python2_pairs.py` | Counterbalanced comparisons of frozen Python2 clients/Release binaries with the unchanged P0 workload and thresholds |
-| `python/python2_p0_migration.py` | Freeze an explicit shared P3A API adapter for both generations; guard original inputs, operations, assertions, measurement core and policy |
-| `python/python2_codegen_bench.py` | CPU codegen benchmarks through `./tools/dev-python`; `--source` selects a frozen client for paired comparisons, with JSON/binary fingerprints |
-| `../crates/zipzi-python2/tools/connected.py` | Build/install the independent pure client; real subprocess startup/session acceptance; `--install-only` supplies Editor's interpreter |
+| `python/python_contract.py` | P3A inventory, source/artifact freeze, complete target map/signatures, agent configuration and P3A-0 exit gate |
+| `python/python_pairs.py` | Counterbalanced comparisons of frozen Python clients/Release binaries with the unchanged P0 workload and thresholds |
+| `python/python_p0_migration.py` | Freeze an explicit shared P3A API adapter for both generations; guard original inputs, operations, assertions, measurement core and policy |
+| `python/python_codegen_bench.py` | CPU codegen benchmarks through `./tools/dev-python`; `--source` selects a frozen client for paired comparisons, with JSON/binary fingerprints |
+| `../crates/zipzi-python/tools/connected.py` | Build/install the independent pure client; real subprocess startup/session acceptance; `--install-only` supplies Editor's interpreter |
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
 | `build-editor-app.sh` | macOS app bundle construction |
@@ -104,8 +104,8 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
 | SDK `mesh` / `regression` | Daily alpha mesh / all 19 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
-| SDK `python2` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
-| SDK `python2-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |
+| SDK `python` | New Runtime-backed package: refreshed native adapter, Local/Connected behavior, strict positive/negative types and generation drift |
+| SDK `python-connected` | New pure wheel in an isolated environment; real cold-start/ownership/recovery; optional `--editor-host /absolute/path/to/zipzi-editor` adds production desktop acceptance |
 | SDK `full` | SDK formatting and complete 17-package Cargo test invocation (examples/doctests included) |
 | Editor `fast` | zipzi-editor-core library and synthetic integration |
 | Editor `ui` / `regression` | All three Editor libraries / libraries plus synthetic integration, with test-support |
@@ -191,7 +191,7 @@ not require editing a shell-script module list.
 
 ```sh
 uv run --locked python tools/test_tools.py
-uv run --locked python tools/test_tools.py -p test_python2_tools.py -v
+uv run --locked python tools/test_tools.py -p test_python_tools.py -v
 uv run --locked python tools/test_tools.py -k failure
 ```
 
@@ -199,7 +199,7 @@ SDK `fast`/`mesh` gates run CPU behavior, while observe/render tests need a GPU.
 Editor UI and native gates require macOS and Metal. Full local licensed-model
 requirements are documented in the [Editor README](../crates/zipzi-editor/README.md#local-model-acceptance).
 
-Editor `runtime_ipc_acceptance` and `runtime_handoff_acceptance` exercise the independent `zipzi-python2`
+Editor `runtime_ipc_acceptance` and `runtime_handoff_acceptance` exercise the independent `zipzi-python`
 client. The handoff case covers Python batch publication, native human refinement,
 fresh-client continuation and shared history/Metal without licensed assets.
 Acceptance/full prepares its installed pure wheel unless
@@ -208,7 +208,7 @@ distribution without `zipzi_native`; the acceptance test checks this explicitly.
 
 See [test layout and prerequisites](tests/README.md). These tests exercise
 tooling, not the built SDK extension. Maintained Python SDK checks use
-`test-sdk.sh python2` or `test-sdk.sh python2-connected`.
+`test-sdk.sh python` or `test-sdk.sh python-connected`.
 
 Daily SDK `mesh` and `regression` skip only `alpha_mesh_stress::`; the 65536-vertex
 boundary remains in daily checks. `stress`, plain `cargo test -p zipzi-sdk` and
@@ -260,16 +260,16 @@ ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/win
 
 `runtime/runtime_inventory.py`, `runtime/runtime_baseline.py` and `runtime/runtime-migration-inventory.py`
 support [Runtime preparation](../docs/archive/plans/runtime/README.md).
-The independent [zipzi-python2 package](../crates/zipzi-python2/README.md) owns its
-P0/P1 tools under `crates/zipzi-python2/tools/`. `test.py` builds its native adapter
+The independent [zipzi-python package](../crates/zipzi-python/README.md) owns its
+P0/P1 tools under `crates/zipzi-python/tools/`. `test.py` builds its native adapter
 and validates Local/Connected behavior and public static types; `baseline.py`
-measures this package's selected workloads. `./tools/test-sdk.sh python2` is the
+measures this package's selected workloads. `./tools/test-sdk.sh python` is the
 repository entrypoint. The Python generator exports from `zipzi-contract` into a
-checkout-local `target/python2/schema-cargo` build directory. Generation and
+checkout-local `target/python/schema-cargo` build directory. Generation and
 checking share a checkout-local lock; `--check` verifies tracked outputs without
 rewriting them.
 
-`test_python2_codegen.py` checks the resolved normal/build dependency graph on
+`test_python_codegen.py` checks the resolved normal/build dependency graph on
 all targets and features, then changes real Core/SDK/Runtime function bodies and
 contract declarations in a temporary source copy. It verifies Cargo freshness,
 byte-identical generated outputs, drift detection, cache deletion and compilation
@@ -280,7 +280,7 @@ To collect five warm samples per scenario, including export, rendering/cache and
 output comparison timings, use a new output directory:
 
 ```sh
-uv run --locked python tools/python/python2_codegen_acceptance.py --output target/python2/contract-acceptance
+uv run --locked python tools/python/python_codegen_acceptance.py --output target/python/contract-acceptance
 ```
 
 The runner retains its copied sources, logs and JSON measurements in that
@@ -298,11 +298,11 @@ changed inputs and still records the results. It does not rebuild fixtures or
 claim installed-package, agent, performance or Editor acceptance.
 
 ```sh
-uv run --locked python tools/python/python2_contract.py inventory --output target/python2/p3a-inventory.json
-uv run --locked python tools/python/python2_contract.py freeze --output target/python2/p3a-freeze.json
-./tools/test-sdk.sh python2 PythonSdk.test_shared_recipe
-uv run --locked python tools/python/python2_contract.py baseline --output target/python2/p3a-baseline.json
-uv run --locked python tools/test_tools.py -p test_python2_contract.py -v
+uv run --locked python tools/python/python_contract.py inventory --output target/python/p3a-inventory.json
+uv run --locked python tools/python/python_contract.py freeze --output target/python/p3a-freeze.json
+./tools/test-sdk.sh python PythonSdk.test_shared_recipe
+uv run --locked python tools/python/python_contract.py baseline --output target/python/p3a-baseline.json
+uv run --locked python tools/test_tools.py -p test_python_contract.py -v
 ```
 
 `freeze --wheel /absolute/path/to/package.whl` records exact wheel identities;
@@ -317,23 +317,23 @@ agents. `check-freeze` validates both, the original failure evidence and copied
 Release P0 binaries. See the [P3A-0 record](../docs/archive/plans/python-sdk-rewrite/p3a-0.md)
 for the completed acceptance result. Historical JSON artifacts have been removed
 from the plan directories. These one-off historical checks require their original
-inputs under `target/python2/p3a-reports/`; they are not prerequisites for later
+inputs under `target/python/p3a-reports/`; they are not prerequisites for later
 implementation. Do not recreate removed reports merely to repeat an accepted stage.
 
-`./tools/test-sdk.sh python2 --recovery` runs the focused P3A-1 module and strict
-positive/negative types. The ordinary `python2` gate includes that module.
-`python/python2_pairs.py --help` describes the layout for two copied client/Release
+`./tools/test-sdk.sh python --recovery` runs the focused P3A-1 module and strict
+positive/negative types. The ordinary `python` gate includes that module.
+`python/python_pairs.py --help` describes the layout for two copied client/Release
 trees. Pairing uses the original workload and policy, alternates AB/BA, measures
 latency before separate probes, records every run and rejects noise. Preserve
 historical failures when diagnosing environment drift; paired evidence does not
 overwrite them.
 
-For an explicit public API migration, `python/python2_p0_migration.py --help`
+For an explicit public API migration, `python/python_p0_migration.py --help`
 prepares two copied clients running one identical worker and an immutable
 `migration.json` under the requested temporary directory. Pass it to
-`python2_pairs.py --migration`; the default path still requires the original
+`python_pairs.py --migration`; the default path still requires the original
 worker hash. Inputs, operations, assertions, samples, probe loops and original
-thresholds remain guarded. `crates/zipzi-python2/tools/test.py --release --build-only
+thresholds remain guarded. `crates/zipzi-python/tools/test.py --release --build-only
 --output <directory>` builds/copies paired timing artifacts without repeating
 behavior/type tests; add `--instrumented` with a different output for probes.
 
@@ -367,7 +367,7 @@ It retains all 21 crate paths, Editor crate assets, patches, docs and both licen
 Extract the `zipzi-2d/` directory and build from that workspace root.
 
 Python package artifacts are built and verified by the maintained
-[zipzi-python2 workflow](../crates/zipzi-python2/README.md).
+[zipzi-python workflow](../crates/zipzi-python/README.md).
 
 Both app profiles place the binary reported by Cargo in `Contents/MacOS`, the
 application icon and MIT/GPL/licensing/notices in `Contents/Resources`, and retain
@@ -382,23 +382,23 @@ notarize apps, change remote repositories or verify GitHub license presentation.
 
 P3A-3/4/5 was committed without acceptance, by user request. Subsequent selected
 checks and remaining gates are recorded in [P3A-6](../docs/archive/plans/python-sdk-rewrite/p3a-6.md).
-`./tools/test-sdk.sh python2 --discovery` selects the new focused collection,
+`./tools/test-sdk.sh python --discovery` selects the new focused collection,
 Session lifecycle and offline catalog regressions. For installed-only checks,
 run `tests/installed_contract.py --output /absolute/temporary/result.md` with the
 pure-wheel environment's Python `-I`, or `tests/installed_examples.py local|connected`
 with the corresponding normal wheel environment (paths relative to
-`crates/zipzi-python2/`; Connected examples require `ZIPZI_PYTHON2_HOST`). The offline
+`crates/zipzi-python/`; Connected examples require `ZIPZI_PYTHON_HOST`). The offline
 audit exits nonzero for missing semantic docs and does not constitute a complete
 manual D02 review. `--drop apply_authoring|commit|job` on the Connected example
 harness runs public recovery examples with an external test-support host.
-`uv run --locked python tools/python/python2_agent_tasks.py --help` describes fixed
+`uv run --locked python tools/python/python_agent_tasks.py --help` describes fixed
 installed-only packets, bounded recording, and a separate `--preflight <directory>`
 service availability probe. Preparation runs no model; preflight executes no SDK task
 and cannot mark G01–G08 passed. Fixture data lives in
 `fixtures/python_sdk_agent/`; private controller manifests and raw run events belong
 under `target/`, while plan directories keep Markdown conclusions only.
 
-`tools/python/python2_agent_runner.py --help` runs installed-only diagnostic tasks
+`tools/python/python_agent_runner.py --help` runs installed-only diagnostic tasks
 with a macOS Seatbelt MCP shell and a Connected IPC fault relay. It retains every
 failed attempt. Per user instruction on 2026-10-26, token usage has no limit and is
 reported after testing as input/output/total; unavailable counts are not zero-filled
@@ -406,7 +406,7 @@ or failed. Time, tool call/byte and log budgets still apply.
 Local page/Plan interference and pre-close independent state/history capture are
 connected through the controlled `sdk-python` workflow launcher. Shell responses
 are paginated within 16 KiB; raw output stays in external logs and subsequent
-pages consume tool calls. `python2_agent_matrix.py --help` freezes one 42-run
+pages consume tool calls. `python_agent_matrix.py --help` freezes one 42-run
 cohort and decides acceptance from functional results. See the
 [agent fixture notes](../fixtures/python_sdk_agent/README.md) and
 [P3A-6 results](../docs/archive/plans/python-sdk-rewrite/p3a-6.md) for coverage and all

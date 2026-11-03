@@ -1,4 +1,4 @@
-//! Selected typed API for zipzi-python2. Both local
+//! Selected typed API for zipzi-python. Both local
 //! and IPC adapters use these values and the same Runtime handlers.
 use crate::SourceRef;
 use serde::{Deserialize, Serialize};

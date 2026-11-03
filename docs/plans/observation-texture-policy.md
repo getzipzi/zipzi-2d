@@ -27,11 +27,11 @@
 | `./tools/test-sdk.sh runtime` | CPU Runtime 回归通过 |
 | GPU Runtime `observation` / `observation_estimates` / `previews` / `scheduling` | 3 / 4 / 6 / 9 项通过，含 ignored GPU 用例 |
 | CPU Runtime `runtime::observation_estimates::tests::` | 2 项通过，检查无副作用及细长输出 readback 对齐 |
-| `./tools/test-sdk.sh python2 --observation` | 10 项 Local/Connected 观察与恢复用例、正反类型检查通过 |
-| `./tools/test-sdk.sh python2` | 104 项常规用例 + 16 项恢复用例、正反类型检查通过 |
-| `./tools/test-sdk.sh python2-connected` | 21 项已安装纯客户端测试通过 |
+| `./tools/test-sdk.sh python --observation` | 10 项 Local/Connected 观察与恢复用例、正反类型检查通过 |
+| `./tools/test-sdk.sh python` | 104 项常规用例 + 16 项恢复用例、正反类型检查通过 |
+| `./tools/test-sdk.sh python-connected` | 21 项已安装纯客户端测试通过 |
 | `generate.py --check --no-cache` | 348 个生成文件一致 |
-| `tools/test_tools.py -p test_python2_codegen.py` | 33 项生成与隔离测试通过 |
+| `tools/test_tools.py -p test_python_codegen.py` | 33 项生成与隔离测试通过 |
 | 默认 Metal / 显式 WGPU / 非 macOS GPU / CPU 依赖矩阵 | 5 项通过 |
 | `env -u ZIPZI_DEV_SESSION_DIR cargo check --locked -p zipzi-editor --tests` | Editor 集成编译通过；未运行 GUI 验收 |
 
@@ -55,7 +55,7 @@ Apple M4、macOS arm64、debug native Metal，512×512 输出。
 | 观察准备与渲染合计 | 约 24.85 秒 |
 | PNG 缓存 / 状态 | 观察后仍为零；文档版本和历史未变 |
 
-已检查完整画面截图；实测脚本、JSON 和 inspection 均留在忽略目录 `target/python2/scratch/`，
+已检查完整画面截图；实测脚本、JSON 和 inspection 均留在忽略目录 `target/python/scratch/`，
 不提交第三方模型与图像。临时峰值和结果释放另由可控 Runtime 测试验证。
 
 在 Rust 观察管线中提供显式纹理策略，让大型模型可以在指定基础 RGBA 预算内生成观察用缩图。
@@ -101,9 +101,9 @@ Shirousagi 小模型对照在默认等待下通过，确认无需全局放宽普
 
 产物：
 
-- `target/python2/scratch/deepseek-texture-validation/20261030-205555/`：三档截图、inspection 和首轮完整检查记录。
-- `target/python2/scratch/deepseek-texture-validation/followup-20261030-210223/`：Preview 默认额度与取消清理记录。
-- `target/python2/scratch/deepseek-editor-validation/extended-20261030-210450/results.json`：原生交互指标。
+- `target/python/scratch/deepseek-texture-validation/20261030-205555/`：三档截图、inspection 和首轮完整检查记录。
+- `target/python/scratch/deepseek-texture-validation/followup-20261030-210223/`：Preview 默认额度与取消清理记录。
+- `target/python/scratch/deepseek-editor-validation/extended-20261030-210450/results.json`：原生交互指标。
 
 ## 实施前基线与改造目标
 
@@ -372,7 +372,7 @@ Job 结果、错误、冻结源、传输 blob 及 Preview 状态继续按其实�
 | zipzi-core 与 zipzi-project | 受预算约束的读取解码、分配前验证、共享内存像素和内容身份 |
 | zipzi-observe | CPU 尺寸规划、逐张准备、源 alpha 样本、派生内容摘要和批内共享 |
 | zipzi-runtime | 统一准入、实际计费与释放，Session、Edit、Preview 的预估与观察接入 |
-| zipzi-python2 | 生成类型与编解码，Local/Connected 入口、公开文档和 inspection 报告 |
+| zipzi-python | 生成类型与编解码，Local/Connected 入口、公开文档和 inspection 报告 |
 | Editor 与协议宿主 | 使用共同 Runtime 配置与新签名，验证集成与资源生命周期 |
 
 按以下顺序实施，每步完成对应聚焦测试后继续：
@@ -409,9 +409,9 @@ Job 结果、错误、冻结源、传输 blob 及 Preview 状态继续按其实�
 不只比较最终图片。
 
 契约与生成阶段运行 `cargo test --locked -p zipzi-contract` 和
-`uv run --locked python tools/test_tools.py -p test_python2_codegen.py`。
-集成阶段按变更范围选择 `./tools/test-sdk.sh runtime`、`python2`、`python2-connected`，
-实际 GPU 观察使用 `./tools/test-sdk.sh python2 --observation`。
+`uv run --locked python tools/test_tools.py -p test_python_codegen.py`。
+集成阶段按变更范围选择 `./tools/test-sdk.sh runtime`、`python`、`python-connected`，
+实际 GPU 观察使用 `./tools/test-sdk.sh python --observation`。
 运行前检查各脚本 `--help` 和 crate README，避免无参数触发全量测试。
 Editor 仅运行相关聚焦门禁；直接执行 Editor Cargo 测试时清除 `ZIPZI_DEV_SESSION_DIR`。
 

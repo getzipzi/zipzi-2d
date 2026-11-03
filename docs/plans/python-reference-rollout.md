@@ -39,7 +39,7 @@ P0 先证明精简后仍能完成阅读任务，再扩展内容；不先补完 8
 | 固定 discriminator 通用说明 | 93 处 `Fixed operation discriminator supplied by this value type...` |
 | 占位调用示例 | 7 处 `using the arguments shown in its signature` |
 
-类型覆盖数字来源是 [type-documentation.json](../../crates/zipzi-python2/client/python/zipzi/docs/type-documentation.json)，
+类型覆盖数字来源是 [type-documentation.json](../../crates/zipzi-python/client/python/zipzi/docs/type-documentation.json)，
 不是通过统计 placeholder 文本推算。体积和重复次数来自当前生成 Markdown 的静态统计。
 实施时重新生成并读取报告；不把本表数字写成测试固定预期。该报告目前不证明枚举成员、方法参数和错误说明都完整。
 
@@ -200,7 +200,7 @@ P0 先证明精简后仍能完成阅读任务，再扩展内容；不先补完 8
    不为每个类型添加镜像测试，也不把整页文字快照当成语义测试。
 5. 校验非空摘要报告的边界：`type-documentation.json` 目前不逐项审计 enum 成员、callable 参数/返回说明。
    增加相应诊断或人工审阅清单；不能把类型摘要缺口为零解释为这些内容也完整。
-6. 修复已有 graph 测试的基线问题：`test_python2_codegen_graph.py` 中固定的 311 个类型归属项
+6. 修复已有 graph 测试的基线问题：`test_python_codegen_graph.py` 中固定的 311 个类型归属项
    与当前 331 个不符（这是 `graph.domains` 的条目数，不是文档领域数）。2026-11-02 审阅时已复现。
    将断言改为与非 opaque 定义集合/归属一致，
    保留明确的关键类型归属断言，不能只把数字改成 331。
@@ -214,7 +214,7 @@ P0 复用 exporter、`type_refs` 和类型覆盖报告；仅增加试点证明�
 
 ## 6. 各批实施任务
 
-以下 Python 源路径相对 `crates/zipzi-python2/`，Rust 源路径相对 `crates/zipzi-contract/src/`。
+以下 Python 源路径相对 `crates/zipzi-python/`，Rust 源路径相对 `crates/zipzi-contract/src/`。
 共同涉及 `tools/generate_api.py`、`tools/generate_dtos.py`、`tools/generate_modeling.py` 及
 `tools/codegen/{python_api,model,catalog_output,projections}.py`；只改确有投影差异的配置。
 
@@ -347,9 +347,9 @@ mesh generation 先运行已有无 Editor/GPU 测试，再按能力验证真实 
 每批修改源说明后：
 
 ```sh
-uv run --locked python crates/zipzi-python2/tools/generate.py
-uv run --locked python crates/zipzi-python2/tools/generate.py --check --no-cache
-uv run --locked python tools/test_tools.py -p test_python2_codegen.py -k reference
+uv run --locked python crates/zipzi-python/tools/generate.py
+uv run --locked python crates/zipzi-python/tools/generate.py --check --no-cache
+uv run --locked python tools/test_tools.py -p test_python_codegen.py -k reference
 ```
 
 涉及 P0 文档模型、catalog 或离线格式的修改，还要运行对应 model/alias/offline 用例；
@@ -359,27 +359,27 @@ uv run --locked python tools/test_tools.py -p test_python2_codegen.py -k referen
 
 ```sh
 # P1：离线发现与精确分页
-./tools/test-sdk.sh python2 --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection
-./tools/test-sdk.sh python2 --recovery P3ARecovery.test_timeout_is_known_pending_not_failure_cancel_or_unknown
+./tools/test-sdk.sh python --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection
+./tools/test-sdk.sh python --recovery P3ARecovery.test_timeout_is_known_pending_not_failure_cancel_or_unknown
 
 # P2：同一用例包含 Local/Connected 验证
-./tools/test-sdk.sh python2 PythonSdk.test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields
+./tools/test-sdk.sh python PythonSdk.test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields
 
 # P4：依赖清理的冻结报告与历史
-./tools/test-sdk.sh python2 PythonSdk.test_deletion_review_pages_cleanup_history_and_source_on_both_backends
+./tools/test-sdk.sh python PythonSdk.test_deletion_review_pages_cleanup_history_and_source_on_both_backends
 
 # P6：Preview 数值与冻结源
-./tools/test-sdk.sh python2 PythonSdk.test_r5_independent_previews_numeric_geometry_and_candidate_sources
+./tools/test-sdk.sh python PythonSdk.test_r5_independent_previews_numeric_geometry_and_candidate_sources
 
 # P7：CPU 几何与可选服务的本地逻辑
-./tools/test-sdk.sh python2 PythonSdk.test_r5_spatial_frozen_sources_hidden_geometry_and_animated_numerics
-./tools/dev-python crates/zipzi-python2/tests/test_mesh_generation.py
+./tools/test-sdk.sh python PythonSdk.test_r5_spatial_frozen_sources_hidden_geometry_and_animated_numerics
+./tools/dev-python crates/zipzi-python/tests/test_mesh_generation.py
 
 # P7：有可用 GPU 时才执行
-./tools/test-sdk.sh python2 --observation Observation.test_texture_policy_estimates_reports_and_source_alpha_on_both_backends
+./tools/test-sdk.sh python --observation Observation.test_texture_policy_estimates_reports_and_source_alpha_on_both_backends
 ```
 
-`python2` 的命名过滤默认交给 `test_api.py`；`--discovery`、`--recovery`、`--observation`
+`python` 的命名过滤默认交给 `test_api.py`；`--discovery`、`--recovery`、`--observation`
 分别切换测试模块，不能把其他模块的类名直接传给默认入口。
 SDK gate 同时执行静态类型检查；不另用全局 Python 或自行设置 PYTHONPATH 绕过环境。
 仅修改文字且既有行为证据仍适用时，不需要为了每个条目重新构建 native。
@@ -391,16 +391,16 @@ SDK gate 同时执行静态类型检查；不另用全局 Python 或自行设置
 
 ```sh
 cargo test --locked -p zipzi-contract
-uv run --locked python tools/test_tools.py -p test_python2_codegen.py
-uv run --locked python tools/test_tools.py -p test_python2_codegen_graph.py
-uv run --locked python tools/test_tools.py -p test_python2_codegen_outputs.py
-uv run --locked python crates/zipzi-python2/tools/generate.py --check-docs --no-cache
-./tools/test-sdk.sh python2
-./tools/test-sdk.sh python2-connected
+uv run --locked python tools/test_tools.py -p test_python_codegen.py
+uv run --locked python tools/test_tools.py -p test_python_codegen_graph.py
+uv run --locked python tools/test_tools.py -p test_python_codegen_outputs.py
+uv run --locked python crates/zipzi-python/tools/generate.py --check-docs --no-cache
+./tools/test-sdk.sh python
+./tools/test-sdk.sh python-connected
 ```
 
 可选服务的最终证据还需 P7 的 GPU gate，以及对应 Editor 服务的验证。
-真实 Editor 安装包检查使用已有 `python2-connected --editor-host <absolute-path>` 入口；
+真实 Editor 安装包检查使用已有 `python-connected --editor-host <absolute-path>` 入口；
 在记录中替换为实际可执行文件路径，不把 CPU fixture 成功解释为真实 Editor 服务成功。
 普通离线文档查询必须在没有 native/Editor/GPU 的环境仍然工作。
 
@@ -496,16 +496,16 @@ create 返回 ID、rename/set_positions/patch 返回 WriteResult，显式 commit
 **实际验证**：
 
 - `generate.py` 重新生成 351 个文件；`generate.py --check --no-cache` 通过。
-- `uv run --locked python tools/test_tools.py -p test_python2_codegen.py -k Python2Codegen`：40 项通过；
+- `uv run --locked python tools/test_tools.py -p test_python_codegen.py -k PythonCodegen`：40 项通过；
   `-k reference`：17 项通过，含 8 项新增 P0 门禁。
   原有摘要/分支/字段来源变更测试和新增参数分支、描述符及公共规则变更测试覆盖三种消费端，
   并检查同名的其他领域操作不变。离线子进程只加载目标 catalog 分片及直接规则，不加载 native/GPU。
-- `test_python2_codegen_graph.py`：8 项通过；`test_python2_codegen_outputs.py`：7 项通过；
+- `test_python_codegen_graph.py`：8 项通过；`test_python_codegen_outputs.py`：7 项通过；
   `cargo test --locked -p zipzi-contract`：16 项通过；pyright 正反例通过。
-- `./tools/test-sdk.sh python2 PythonSdk.test_generated_reference_pilot_examples_on_both_backends PythonSdk.test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields` 通过。
+- `./tools/test-sdk.sh python PythonSdk.test_generated_reference_pilot_examples_on_both_backends PythonSdk.test_typed_parameters_share_a_mixed_batch_and_preserve_unspecified_fields` 通过。
   新用例从实际 docstring 读取同一份示例，fixture 提供 Runtime/Geometry/参数，验证候选、正式内容及发布后的结果。
-- `./tools/test-sdk.sh python2 --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection P3ADiscovery.test_candidate_cursor_undo_and_wrong_collection_fail_without_aborting_reads P3ADiscovery.test_recovered_page_keeps_captured_source_after_peer_publication` 通过。
-- `./tools/test-sdk.sh python2 --recovery P3ARecovery.test_confirmed_busy_and_domain_failure_have_distinct_guidance_without_retry P3ARecovery.test_typed_helper_executes_public_write_once_and_retains_complete_projection` 通过。
+- `./tools/test-sdk.sh python --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection P3ADiscovery.test_candidate_cursor_undo_and_wrong_collection_fail_without_aborting_reads P3ADiscovery.test_recovered_page_keeps_captured_source_after_peer_publication` 通过。
+- `./tools/test-sdk.sh python --recovery P3ARecovery.test_confirmed_busy_and_domain_failure_have_distinct_guidance_without_retry P3ARecovery.test_typed_helper_executes_public_write_once_and_retains_complete_projection` 通过。
 - `git diff --check` 及受影响 Rust 文件的 rustfmt 检查通过。
 
 未运行全局 `--check-docs` 成功门禁、完整 SDK、隔离 checkout 构建接受测试或真实 Editor/GPU 门禁；
@@ -533,7 +533,7 @@ Python 入口维护生命周期和投影说明，事件 DTO 生成器直接使�
 离线帮助的全面人工审阅、发现与恢复的额外行为用例仍待执行。
 
 已运行生成及无缓存一致性检查、reference tooling 门禁、`cargo test --locked -p zipzi-contract`，
-以及 `./tools/test-sdk.sh python2 PythonSdk.test_event_subscriptions_are_paged_immutable_independent_and_source_exact`；
+以及 `./tools/test-sdk.sh python PythonSdk.test_event_subscriptions_are_paged_immutable_independent_and_source_exact`；
 后者通过 Local/Connected 行为与静态类型检查。新来源链路用例覆盖事件投影、查询和命令分支。
 后续应先解决剩余诊断并完成 P1 全部阅读问题和行为证据，再登记已验收范围。
 
@@ -561,8 +561,8 @@ Snapshot/Batch/Page 的排序和 continuation、commit Job、JobTimeout 与 Outc
 没有把这些检查扩展为所有跨领域条目的完整人工验收。
 
 执行：`generate.py --check --no-cache`、reference tooling 门禁、graph 测试，以及
-`./tools/test-sdk.sh python2 --discovery` 的离线 catalog、候选 cursor 和恢复页面三项用例；
-`./tools/test-sdk.sh python2 --recovery` 的 JobTimeout 和 Busy/领域失败两项用例。
+`./tools/test-sdk.sh python --discovery` 的离线 catalog、候选 cursor 和恢复页面三项用例；
+`./tools/test-sdk.sh python --recovery` 的 JobTimeout 和 Busy/领域失败两项用例。
 两个 SDK gate 均通过 Local/Connected 测试与静态类型检查。事件 Local/Connected 行为证据
 见前一记录；尚未执行完整 SDK、GPU 或真实 Editor 服务门禁。
 
@@ -590,7 +590,7 @@ P0/P1 结构门禁继续执行。比较本批五页、runtime_session、runtime_
 公共规则正文无新增重复，不以增加或减少字符数替代语义验收。
 
 已执行 `generate.py --check --no-cache`、reference tooling、`cargo test --locked -p zipzi-contract`；
-`./tools/test-sdk.sh python2` 的 typed parameter mixed batch、mesh binding CPU sweep、binding
+`./tools/test-sdk.sh python` 的 typed parameter mixed batch、mesh binding CPU sweep、binding
 failure/no-op 三个指定用例均通过 Local/Connected 和静态类型检查。CPU sweep 验证候选与正式源、
 参数顺序、插值 0/5/10 及范围钳制；mesh grid 四个 SDK 集成用例验证 Slice/Resample、零轴
 及轴变更的数值结果。`zipzi-core` 的 topology 用例增加并通过乱序顶点 ID 子集配对断言。
@@ -738,10 +738,10 @@ P7 开始时全局缺少 20 个类型摘要、18 个分支诊断；本批结束�
 
 验证通过：`generate.py --check-docs --no-cache`；reference 生成测试 29 项；
 `PythonSdk.test_r5_spatial_frozen_sources_hidden_geometry_and_animated_numerics`；
-`./tools/dev-python crates/zipzi-python2/tests/test_mesh_generation.py`（8 项）；
+`./tools/dev-python crates/zipzi-python/tests/test_mesh_generation.py`（8 项）；
 GPU observation 两项指定测试（Local/Connected，含纹理预算、像素、动画和 inspection）；
 当前源码 `cargo build --locked -p zipzi-editor` 后，使用独立临时端点运行
-`./tools/dev-python crates/zipzi-python2/tests/editor_mesh_generation.py --host /Users/liangbohao/web/zipzi-2d/target/debug/zipzi-editor`，
+`./tools/dev-python crates/zipzi-python/tests/editor_mesh_generation.py --host /Users/liangbohao/web/zipzi-2d/target/debug/zipzi-editor`，
 实际验证五种算法、阶段、Edit 提交、参数验证及 Local 拒绝。`cargo test --locked -p zipzi-contract`
 和 codegen graph/output 测试通过。结构门禁和所列行为证据通过；全套 SDK、安装客户端、
 跨领域人工语义验收及真实 Editor 安装客户端 gate 继续在 P8 处理。
@@ -750,7 +750,7 @@ GPU observation 两项指定测试（Local/Connected，含纹理预算、像素�
 
 全局严格检查报告 992/992 类型摘要、结构诊断为零，所有分片有结构范围归属；
 `cargo test --locked -p zipzi-contract`、codegen graph/output 测试、完整
-`./tools/test-sdk.sh python2` 通过。`python2-connected --editor-host` 首次执行发现安装包
+`./tools/test-sdk.sh python` 通过。`python-connected --editor-host` 首次执行发现安装包
 的 `MeshDraft` 公开模块无法解析类型注解，以及两个 reference-intros 源片段在安装包中的相对链接
 失效；修复公开模块类型注解解析并让链接在源片段和生成页面均有效后，重跑安装 wheel 离线审计
 （D01/D02/D04/D07/D08 均零）、21 项连接测试和真实 Editor 冷启动/保存/重开测试均通过。
@@ -914,8 +914,8 @@ commit Job、JobTimeout 与 OutcomeUnknown 恢复，事件流有界窗口与 RES
 
 验证执行：
 - `PythonSdk.test_event_subscriptions_are_paged_immutable_independent_and_source_exact`；
-- `./tools/test-sdk.sh python2 --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection`；
-- `./tools/test-sdk.sh python2 --recovery P3ARecovery.test_timeout_is_known_pending_not_failure_cancel_or_unknown`；
+- `./tools/test-sdk.sh python --discovery P3ADiscovery.test_offline_catalog_aliases_fields_and_cycle_detection`；
+- `./tools/test-sdk.sh python --recovery P3ARecovery.test_timeout_is_known_pending_not_failure_cancel_or_unknown`；
 行为证据在 Local/Connected 模式全部通过，静态类型检查通过。P1 十个分片及跨页入口通过语义验收。
 
 ## 28. P8 最终全局收口与全量门禁验收
@@ -924,16 +924,16 @@ commit Job、JobTimeout 与 OutcomeUnknown 恢复，事件流有界窗口与 RES
 与行为证据核验后，执行一次性全量收口跨领域门禁验证：
 
 1. `cargo test --locked -p zipzi-contract`：全部单元测试、集成测试及 doc-tests 通过（16 项）。
-2. `uv run --locked python tools/test_tools.py -p test_python2_codegen.py`：64/64 项通过，
+2. `uv run --locked python tools/test_tools.py -p test_python_codegen.py`：64/64 项通过，
    包含来源变更追踪、离线格式直接规则加载、空 runtime_id 校验、语法编译与去重断言。
-3. `uv run --locked python tools/test_tools.py -p test_python2_codegen_graph.py`：8/8 项通过，
+3. `uv run --locked python tools/test_tools.py -p test_python_codegen_graph.py`：8/8 项通过，
    验证非 opaque 定义与归属集合一致性。
-4. `uv run --locked python tools/test_tools.py -p test_python2_codegen_outputs.py`：7/7 项通过。
-5. `uv run --locked python crates/zipzi-python2/tools/generate.py --check-docs --no-cache`：
+4. `uv run --locked python tools/test_tools.py -p test_python_codegen_outputs.py`：7/7 项通过。
+5. `uv run --locked python crates/zipzi-python/tools/generate.py --check-docs --no-cache`：
    992/992 类型摘要完整，0 缺口，351 个生成文件无缓存一致性严格验证通过。
-6. `./tools/test-sdk.sh python2`：111 项核心 SDK 用例、16 项恢复用例、8 项网格生成用例全部通过，
+6. `./tools/test-sdk.sh python`：111 项核心 SDK 用例、16 项恢复用例、8 项网格生成用例全部通过，
    pyright 静态检查 0 errors, 0 warnings。
-7. `./tools/test-sdk.sh python2-connected`：构建独立 wheel 并安装到隔离虚拟环境，
+7. `./tools/test-sdk.sh python-connected`：构建独立 wheel 并安装到隔离虚拟环境，
    21 项连接与恢复测试通过，D01/D02/D04/D07/D08 链接缺陷指标全为 0。
 
 **结论**：

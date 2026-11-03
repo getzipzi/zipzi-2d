@@ -596,7 +596,7 @@ cargo test --locked -p zipzi-core --lib warp_bezier
 
 SDK 转换、项目存储和新增 UI 手势按实际新增测试目标补充聚焦门禁。契约变化时运行
 `cargo test --locked -p zipzi-contract` 和
-`uv run --locked python tools/test_tools.py -p test_python2_codegen.py`，并同步生成客户端。
+`uv run --locked python tools/test_tools.py -p test_python_codegen.py`，并同步生成客户端。
 原生验收检查旋转柄命中、边框重叠、缩放后操作精度、颜色预览及输入框焦点；Windows
 覆盖 UI 逻辑，Metal 截图验收使用 macOS。文档完成不代表上述功能或测试已完成。
 

@@ -18,8 +18,8 @@ Windows 图形原型、GPUI 合成改造和真实窗口验收全部放在最后�
 | 范围 | 当前基础与需要处理的事项 | 主要位置 |
 | --- | --- | --- |
 | 开发入口 | 日常测试、Editor 启动和 SDK 实验依赖 shell；路径辅助函数仅识别 `/` 开头的绝对路径；开发进程依赖 `ps`、Unix 信号和 `.app` 目录 | `tools/test-sdk.sh`、`tools/test-editor.sh`、`tools/dev-editor.sh`、`tools/dev-python`、`tools/workspace/workspace.sh` |
-| Python 环境 | `fcntl`、`venv/bin/python`、`cwd="/tmp"`、无扩展名的 host 路径仍存在；部分基准工具只发现 `_native*.so`；已有 Cargo JSON 产物发现逻辑可复用 | `tools/python/dev_python.py`、`crates/zipzi-python2/tools/`、`tools/python/` |
-| Runtime IPC | endpoint、权限、所有权锁、冷启动和连接都依赖 Unix；Python 拒绝非 POSIX；协议认证上下文及二进制处理也依赖 `local` 和 `cfg(unix)` | `crates/zipzi-runtime/src/local.rs`、`src/protocol/`；`crates/zipzi-python2/client/python/zipzi/_endpoint.py`、`backends/connected.py` |
+| Python 环境 | `fcntl`、`venv/bin/python`、`cwd="/tmp"`、无扩展名的 host 路径仍存在；部分基准工具只发现 `_native*.so`；已有 Cargo JSON 产物发现逻辑可复用 | `tools/python/dev_python.py`、`crates/zipzi-python/tools/`、`tools/python/` |
+| Runtime IPC | endpoint、权限、所有权锁、冷启动和连接都依赖 Unix；Python 拒绝非 POSIX；协议认证上下文及二进制处理也依赖 `local` 和 `cfg(unix)` | `crates/zipzi-runtime/src/local.rs`、`src/protocol/`；`crates/zipzi-python/client/python/zipzi/_endpoint.py`、`backends/connected.py` |
 | 文件与源码身份 | 项目锁已有 Windows 分支；目录同步、覆盖发布、文件占用需要实测；SDK 构建身份使用本机路径字符串和原始文件字节 | `crates/zipzi-project/src/filesystem.rs`、`crates/zipzi-runtime/build.rs`、`.gitattributes` |
 | 平台服务 | Settings 已有 `%APPDATA%` 分支，键盘策略已有 Windows 分支；目录解析与 host 查找仍需统一；Windows IPC 尚未实现 | `crates/zipzi-editor/src/settings.rs`、`project.rs`、`transfer.rs`、`menus.rs`、`ipc.rs`；`crates/zipzi-editor-core/src/keyboard.rs` |
 | 场景渲染 | 已有共享 WGPU 后端、`WgpuSceneRenderer` 和 macOS WGPU→Metal 预览接入；Editor 的帧、设备、overlay 与显示仍直接使用 Metal | `crates/zipzi-render-wgpu/`、`crates/zipzi-editor-render/src/wgpu.rs`、`wgpu_macos.rs`；`crates/zipzi-editor/src/preview.rs`、`presentation.rs`、`viewports/` |
@@ -274,7 +274,7 @@ P2 listener 接线：新增 `local/windows.rs`，以用户 SID、runtime directo
 P2 纯 Python 传输：`_windows_pipe.py` 通过 ctypes 封装 token SID、服务端进程身份、
 本机 pipe 名、overlapped 有界读写、超时取消回收与关闭，无 native adapter 依赖。
 设置 `ZIPZI_PYTHON2_HOST` 指向已构建的 Windows fixture 后，运行
-`python crates/zipzi-python2/tests/test_windows_transport.py -v`，真实握手与 idle timeout
+`python crates/zipzi-python/tests/test_windows_transport.py -v`，真实握手与 idle timeout
 1 项通过。公开 ConnectedBackend、endpoint 冷启动流程和严格静态类型尚待接线验证。
 
 Connected 接线：新增 Stream 协议、平台工厂和 Windows endpoint 分派，纯 Python

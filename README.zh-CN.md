@@ -8,7 +8,7 @@
 
 Zipzi 2D 是 Live2D Cubism Editor 的开源替代选择，使用 Rust 和 GPUI 构建。名字来自粤语「摺紙」（*zip3 zi2*）。
 
-[**下载 Alpha**](https://github.com/getzipzi/zipzi-2d/releases) · [Python SDK](crates/zipzi-python2/README.md) · [反馈问题](https://github.com/getzipzi/zipzi-2d/issues) · [参与贡献](#参与贡献)
+[**下载 Alpha**](https://github.com/getzipzi/zipzi-2d/releases) · [Python SDK](crates/zipzi-python/README.md) · [反馈问题](https://github.com/getzipzi/zipzi-2d/issues) · [参与贡献](#参与贡献)
 
 ![Zipzi 2D 编辑器的建模工作区](docs/editor-screenshot.png)
 
@@ -18,7 +18,7 @@ Zipzi 2D 是 Live2D Cubism Editor 的开源替代选择，使用 Rust 和 GPUI �
 
 向 AI 编程 agent 描述需求。它通过 Python SDK 检查模型、查看渲染图，并进行可在编辑器中检查和撤销的修改。你和 agent 操作同一份文档，共享撤销历史。
 
-使用你自己的、能够运行 Python 的 agent，并向它提供 [SDK 指南](crates/zipzi-python2/client/python/zipzi/docs/guide.md)。
+使用你自己的、能够运行 Python 的 agent，并向它提供 [SDK 指南](crates/zipzi-python/client/python/zipzi/docs/guide.md)。
 
 ### 第一段代码：让 AI 为每个网格起一个有意义的名字
 
@@ -26,7 +26,7 @@ Zipzi 2D 是 Live2D Cubism Editor 的开源替代选择，使用 Rust 和 GPUI �
 
 告诉 agent：**「看看每个网格，给它起个有意义的名字。」**
 
-安装 [Python 客户端](crates/zipzi-python2/README.md#installation)（需要 CPython 3.14），启动支持 GPU 观察功能的兼容编辑器，并打开一个模型。能够看图的编程 agent 可以完成以下两步。
+安装 [Python 客户端](crates/zipzi-python/README.md#installation)（需要 CPython 3.14），启动支持 GPU 观察功能的兼容编辑器，并打开一个模型。能够看图的编程 agent 可以完成以下两步。
 
 **1. Agent 观察每个网格。**它生成的脚本为每个网格导出一张图片，在带纹理的模型上高亮该网格的线框，同时生成 JSON 命名清单。`observe` 提供图像依据，agent 负责理解语义。
 
@@ -134,18 +134,18 @@ with zipzi.connect() as runtime:
     print("Review the names in the editor. Undo to revert, or save to keep them.")
 ```
 
-脚本不会自动保存项目。名称检查可以发现网格被重命名或删除，但无法检测所有几何或纹理变化；模型有变化时，应重新观察。更多工作流见[能力指南](crates/zipzi-python2/CAPABILITIES.md)。
+脚本不会自动保存项目。名称检查可以发现网格被重命名或删除，但无法检测所有几何或纹理变化；模型有变化时，应重新观察。更多工作流见[能力指南](crates/zipzi-python/CAPABILITIES.md)。
 
 ## 也适合亲手创作
 
 使用网格、参数、变形器和 BlendShapes 建模，再到动画工作区制作动画。自动生成网格，或手动调整细节。Mesh Edit 支持在当前变形后的模型上编辑，也可切换到原图视图；几何变化时，会重新采样已存储的形态。
 
-Python 脚本也可通过本地 Runtime 独立运行，在编辑器之外完成自动化。建模、动画编辑、预览和检查功能见 [Python SDK](crates/zipzi-python2/README.md)。
+Python 脚本也可通过本地 Runtime 独立运行，在编辑器之外完成自动化。建模、动画编辑、预览和检查功能见 [Python SDK](crates/zipzi-python/README.md)。
 
 ## 试用 Zipzi 2D
 
 - **使用编辑器：**从 [GitHub Releases](https://github.com/getzipzi/zipzi-2d/releases) 下载 Alpha 版本，查看发行说明中的平台构建和运行要求。
-- **用 Python 自动化：**参考[安装与连接指南](crates/zipzi-python2/README.md)。SDK 目前需要 CPython 3.14。
+- **用 Python 自动化：**参考[安装与连接指南](crates/zipzi-python/README.md)。SDK 目前需要 CPython 3.14。
 - **构建自己的工具：**通过 [Rust SDK](crates/zipzi-sdk/README.md) 以编程方式编辑模型。
 
 ### 当前能力
@@ -158,13 +158,13 @@ Python 脚本也可通过本地 Runtime 独立运行，在编辑器之外完成�
 | 自动化 | Python 会话、批量编辑、共享撤销／重做、项目操作与模型检查 |
 | 平台 | macOS；Windows 开发原型 |
 
-详情见 [SDK 能力指南](crates/zipzi-python2/CAPABILITIES.md)。GPU 检查需要兼容的宿主和可用 GPU。支持某种格式并不意味着所有模型都能无损往返转换。
+详情见 [SDK 能力指南](crates/zipzi-python/CAPABILITIES.md)。GPU 检查需要兼容的宿主和可用 GPU。支持某种格式并不意味着所有模型都能无损往返转换。
 
 ## 参与贡献
 
 试用 Alpha 版本，并[告诉我们遇到的问题](https://github.com/getzipzi/zipzi-2d/issues)。报告问题时，请提供构建版本、平台和复现步骤；仅分享你有权提供的模型素材。
 
-贡献代码可从[仓库结构](MONOREPO.md)、[编辑器指南](crates/zipzi-editor/README.md)或 [Python SDK 指南](crates/zipzi-python2/README.md)开始。更多参考资料见[文档索引](docs/README.md)。开发命令和针对性测试说明如下。
+贡献代码可从[仓库结构](MONOREPO.md)、[编辑器指南](crates/zipzi-editor/README.md)或 [Python SDK 指南](crates/zipzi-python/README.md)开始。更多参考资料见[文档索引](docs/README.md)。开发命令和针对性测试说明如下。
 
 ## 开发
 
@@ -185,7 +185,7 @@ cargo run --locked -p zipzi-editor
 uv run --locked python tools/test_tools.py
 ```
 
-对于 Python SDK，`./tools/test-sdk.sh python2` 会更新原生适配器，并检查 Local／Connected 行为和静态类型。`python2-connected` 会安装纯 Python wheel，验证真实子进程宿主发现和会话绑定；添加 `--editor-host /absolute/path/to/zipzi-editor` 可指定当前桌面宿主。根目录的 `pyproject.toml` 和 `uv.lock` 管理开发工具。
+对于 Python SDK，`./tools/test-sdk.sh python` 会更新原生适配器，并检查 Local／Connected 行为和静态类型。`python-connected` 会安装纯 Python wheel，验证真实子进程宿主发现和会话绑定；添加 `--editor-host /absolute/path/to/zipzi-editor` 可指定当前桌面宿主。根目录的 `pyproject.toml` 和 `uv.lock` 管理开发工具。
 
 ## 测试
 
@@ -198,19 +198,19 @@ uv run --locked python tools/test_tools.py
 | --- | --- |
 | 单个 Rust crate／模块 | `cargo test --locked -p <crate> --lib <filter>`; 涉及集成行为时，添加对应集成测试目标 |
 | Runtime 所有权／任务／事件 | `./tools/test-sdk.sh runtime` |
-| 本地协议／已安装的 Python 客户端 | `./tools/test-sdk.sh python2-connected` |
+| 本地协议／已安装的 Python 客户端 | `./tools/test-sdk.sh python-connected` |
 | SDK 编辑行为 | `./tools/test-sdk.sh fast <filter>` |
 | 编辑器自适应网格生成 | `./tools/test-editor.sh fast adaptive_mesh::`; `./tools/test-editor.sh fast mesh_generation::` |
 | SDK 基于 alpha 的网格生成 | `./tools/test-sdk.sh mesh` |
 | wgpu 后端／本地 GPU 一致性 | `cargo test --locked -p zipzi-render-wgpu --tests`; [宿主选择](crates/zipzi-render-wgpu/README.md#application-routes-on-macos) |
 | 编辑器协调逻辑 | `./tools/test-editor.sh fast <filter>` |
 | 编辑器 UI（macOS／Metal） | `./tools/test-editor.sh ui <filter>` |
-| Runtime Python SDK（`zipzi-python2`）、Local／Connected 与类型 | `./tools/test-sdk.sh python2` ([范围](crates/zipzi-python2/README.md)) |
-| 共享编辑契约／独立 Python 生成 | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python2_codegen.py` |
-| Runtime GPU 观察／检查（需要可用 GPU） | `./tools/test-sdk.sh python2 --observation` |
-| Python 完整调用恢复、Edit 状态与 Job 超时 | `./tools/test-sdk.sh python2 --recovery` （可选 `P3ARecovery.test_name`） |
-| Python 集合分页、Session 分离／关闭与离线目录 | `./tools/test-sdk.sh python2 --discovery` |
-| 新客户端安装、宿主发现与会话绑定 | `./tools/test-sdk.sh python2-connected` （可选 `--editor-host /absolute/path/to/zipzi-editor`） |
+| Runtime Python SDK（`zipzi-python`）、Local／Connected 与类型 | `./tools/test-sdk.sh python` ([范围](crates/zipzi-python/README.md)) |
+| 共享编辑契约／独立 Python 生成 | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python_codegen.py` |
+| Runtime GPU 观察／检查（需要可用 GPU） | `./tools/test-sdk.sh python --observation` |
+| Python 完整调用恢复、Edit 状态与 Job 超时 | `./tools/test-sdk.sh python --recovery` （可选 `P3ARecovery.test_name`） |
+| Python 集合分页、Session 分离／关闭与离线目录 | `./tools/test-sdk.sh python --discovery` |
+| 新客户端安装、宿主发现与会话绑定 | `./tools/test-sdk.sh python-connected` （可选 `--editor-host /absolute/path/to/zipzi-editor`） |
 | 仓库工具 | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
 过滤条件和文件名均为占位示例；省略它们即可运行所选测试范围。各 crate 的集成测试目标见其 README 和 `tests/`，或用 `cargo test --locked -p <crate> --test <target> -- --list` 列出用例。Editor shell 测试入口会清除 `ZIPZI_DEV_SESSION_DIR`；直接运行 Editor Cargo 测试时，请手动清除。

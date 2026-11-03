@@ -166,7 +166,7 @@ jobs:
       - run: uv sync --locked
       - name: Build and test Python distributions from source archives
         shell: bash
-        run: uv run --locked python crates/zipzi-python2/tools/distribution.py --output target/python-release --cargo-target "$CARGO_TARGET_DIR"
+        run: uv run --locked python crates/zipzi-python/tools/distribution.py --output target/python-release --cargo-target "$CARGO_TARGET_DIR"
       - uses: actions/upload-artifact@v7
         with:
           name: alpha-python-${{ matrix.platform }}

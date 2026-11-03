@@ -116,7 +116,7 @@ R5 新增 `--read-batches` / `ZIPZI_RUNTIME_INTERACTION_READS=1`：在同一 Run
 真实模型流程可用安装纯 wheel 的解释器重跑（输出目录必须不存在，模型需含可解析参数轨道的 Motion）：
 
 ```sh
-/absolute/venv/bin/python -I crates/zipzi-python2/tests/installed_model_workflow.py \
+/absolute/venv/bin/python -I crates/zipzi-python/tests/installed_model_workflow.py \
   --host "/absolute/Zipzi Editor.app/Contents/MacOS/zipzi-editor" \
   --model /absolute/mao_pro.model3.json --output /absolute/new-output
 ```

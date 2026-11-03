@@ -24,7 +24,7 @@
 2026-10-25 本轮收尾：[R4 完整连接实现与验收记录](sdk-runtime/python2-r4-complete.md)已接通完整 Modeling/地址/资源/IO、可取消读取及 Editor 投影，并取得两后端、安装和十对 UI 性能证据。P0 最后发现的普通批次/Plan 临时堆问题已做 Box 布局修复并通过 Runtime 回归；按用户“直接收尾”要求，未继续最后的 Release 与发行复验，**R4 仍为实施中**。具体未通过项与冻结产物见该记录，不将 Python P3A 标为完成。
 
 
-2026-10-25 执行主线更新：Python 接入以全新的 `crates/zipzi-python2` 为唯一实现。
+2026-10-25 执行主线更新：Python 接入以全新的 `crates/zipzi-python` 为唯一实现。
 原 R0–R3 交付记录保留为历史；新包涉及的 Python/安装/真实宿主证据独立补齐，
 不直接沿用旧客户端的通过结论。接回差距与本批宿主/会话验收见
 [新包 R0–R4 记录](sdk-runtime/python2-r0-r4.md)及

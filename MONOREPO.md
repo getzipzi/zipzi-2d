@@ -25,7 +25,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-observe` | Immutable inspection and GPU capture |
 | `zipzi-observe-backend` | Optional observation GPU platform dependency selection |
-| [`zipzi-python2`](crates/zipzi-python2/README.md) | Independent typed Python client and optional Runtime-native adapter |
+| [`zipzi-python`](crates/zipzi-python/README.md) | Independent typed Python client and optional Runtime-native adapter |
 | `cubism-matrix-zipzi` | SDK comparison benchmark runner |
 | [`zipzi-editor-core`](crates/zipzi-editor-core/README.md) | UI-independent Editor state and SDK coordination |
 | [`zipzi-editor-render`](crates/zipzi-editor-render/README.md) | Editor scene/overlay adapter to Metal |
@@ -40,7 +40,7 @@ crates are MIT. Shared directories do not imply a shared license:
 
 ## SDK and language boundaries
 
-`zipzi-python2` builds a pure Python client and an optional native adapter as
+`zipzi-python` builds a pure Python client and an optional native adapter as
 separate distributions. Both backends enter the shared Runtime. Model
 invariants and evaluation rules belong in the Rust core/format crates;
 transactions, history and authoring rules belong in `zipzi-sdk`; resource I/O
@@ -54,7 +54,7 @@ binary metadata, and typed operation declarations. Its `authoring-schema` binary
 exports Python projections without compiling execution packages. Core, SDK and
 Runtime consume the same types; their algorithms and resource leases stay in
 the implementation crates. The dependency/freshness checks live in
-`tools/tests/test_python2_codegen.py`.
+`tools/tests/test_python_codegen.py`.
 
 `zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU
@@ -90,7 +90,7 @@ and the Purism submodule have their own build/test lifecycles.
 Root `pyproject.toml` and `uv.lock` pin development Python dependencies. Use
 `uv add --group dev <package>` and commit both files when adding one. The Python
 Runtime-backed Python SDK has its native build configuration under
-`crates/zipzi-python2` and pure client configuration under its `client/` directory.
+`crates/zipzi-python` and pure client configuration under its `client/` directory.
 
 CI runs SDK and Editor consumer validation on every push and pull request.
 Tooling tests are automatically discovered from `tools/tests/test_*.py`; native tests,

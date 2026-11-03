@@ -157,7 +157,7 @@ From the repository root:
 ./tools/test-sdk.sh runtime
 cargo test --locked -p zipzi-runtime --test host
 cargo test --locked -p zipzi-runtime --test protocol
-./tools/test-sdk.sh python2-connected
+./tools/test-sdk.sh python-connected
 # Requires a usable GPU:
 cargo test --locked -p zipzi-runtime --features gpu-observation --test observation -- --include-ignored
 ```

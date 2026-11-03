@@ -11,7 +11,7 @@ edit the same model, share undo history, and build on each other’s changes.
 Zipzi 2D is an open-source alternative to Live2D Cubism Editor, built with Rust
 and GPUI. Its name comes from Cantonese 摺紙 (*zip3 zi2*), meaning “origami”.
 
-[**Download Alpha**](https://github.com/getzipzi/zipzi-2d/releases) · [Python SDK](crates/zipzi-python2/README.md) · [Report an issue](https://github.com/getzipzi/zipzi-2d/issues) · [Contribute](#contributing)
+[**Download Alpha**](https://github.com/getzipzi/zipzi-2d/releases) · [Python SDK](crates/zipzi-python/README.md) · [Report an issue](https://github.com/getzipzi/zipzi-2d/issues) · [Contribute](#contributing)
 
 ![Zipzi 2D editor showing the modeling workspace](docs/editor-screenshot.png)
 
@@ -26,7 +26,7 @@ models, view rendered images and make edits you can review and undo in the edito
 You and your agent work on the same document, with shared undo history.
 
 Bring your own Python-capable agent and point it to the
-[SDK guide](crates/zipzi-python2/client/python/zipzi/docs/guide.md).
+[SDK guide](crates/zipzi-python/client/python/zipzi/docs/guide.md).
 
 ### First code: let AI give every mesh a meaningful name
 
@@ -38,7 +38,7 @@ results in the editor.
 
 Ask your agent: **“Look at every mesh and give it a meaningful name.”**
 
-Install the [Python client](crates/zipzi-python2/README.md#installation)
+Install the [Python client](crates/zipzi-python/README.md#installation)
 (CPython 3.14), start a compatible Editor with GPU observation support, and open
 one model. An image-capable coding agent can run the following two steps.
 
@@ -161,7 +161,7 @@ with zipzi.connect() as runtime:
 No project save happens automatically. The name check detects renamed or removed
 meshes, not every possible geometry or texture change; repeat the inspection if
 the model has changed. For more workflows, see the
-[capability guide](crates/zipzi-python2/CAPABILITIES.md).
+[capability guide](crates/zipzi-python/CAPABILITIES.md).
 
 ## Built for hands-on creation, too
 
@@ -171,7 +171,7 @@ Edit lets you work on the posed model or switch to the source image, while
 resampling stored shapes as the geometry changes.
 
 Python scripts can also run independently with a local Runtime for automation
-outside the editor. Explore the [Python SDK](crates/zipzi-python2/README.md)
+outside the editor. Explore the [Python SDK](crates/zipzi-python/README.md)
 for modeling, animation authoring, previews and inspection.
 
 ## Try Zipzi 2D
@@ -180,7 +180,7 @@ for modeling, animation authoring, previews and inspection.
   [GitHub Releases](https://github.com/getzipzi/zipzi-2d/releases). Check the
   release notes for the available platform builds and requirements.
 - **Automate with Python:** Follow the
-  [installation and connection guide](crates/zipzi-python2/README.md).
+  [installation and connection guide](crates/zipzi-python/README.md).
   The SDK currently requires CPython 3.14.
 - **Build your own tools:** Explore the [Rust SDK](crates/zipzi-sdk/README.md)
   for programmatic authoring.
@@ -195,7 +195,7 @@ for modeling, animation authoring, previews and inspection.
 | Automation | Python sessions, batch edits, shared undo/redo, project operations and model inspection |
 | Platforms | macOS; Windows development prototype |
 
-See the [SDK capability guide](crates/zipzi-python2/CAPABILITIES.md) for details.
+See the [SDK capability guide](crates/zipzi-python/CAPABILITIES.md) for details.
 GPU inspection requires a compatible host and usable GPU. Format support does
 not imply lossless round trips for every model.
 
@@ -207,7 +207,7 @@ share model assets only when you have permission to do so.
 
 For code contributions, start with the [repository map](MONOREPO.md),
 [editor guide](crates/zipzi-editor/README.md) or
-[Python SDK guide](crates/zipzi-python2/README.md). The
+[Python SDK guide](crates/zipzi-python/README.md). The
 [documentation index](docs/README.md) covers deeper references.
 Development commands and focused test selection are below.
 
@@ -234,8 +234,8 @@ cargo run --locked -p zipzi-editor
 uv run --locked python tools/test_tools.py
 ```
 
-For the Python SDK, `./tools/test-sdk.sh python2` refreshes its native adapter
-and runs Local/Connected behavior and static types. `python2-connected` installs
+For the Python SDK, `./tools/test-sdk.sh python` refreshes its native adapter
+and runs Local/Connected behavior and static types. `python-connected` installs
 the pure wheel and validates real subprocess host discovery and session binding;
 add `--editor-host /absolute/path/to/zipzi-editor` for the current desktop host.
 Root `pyproject.toml` and `uv.lock` manage development tools.
@@ -254,19 +254,19 @@ commands from the repository root; inspect available modes with
 | --- | --- |
 | One Rust crate/module | `cargo test --locked -p <crate> --lib <filter>`; add its integration target when relevant |
 | Runtime ownership/jobs/events | `./tools/test-sdk.sh runtime` |
-| Local protocol / installed Python client | `./tools/test-sdk.sh python2-connected` |
+| Local protocol / installed Python client | `./tools/test-sdk.sh python-connected` |
 | SDK authoring behavior | `./tools/test-sdk.sh fast <filter>` |
 | Editor adaptive mesh generation | `./tools/test-editor.sh fast adaptive_mesh::`; `./tools/test-editor.sh fast mesh_generation::` |
 | SDK alpha mesh generation | `./tools/test-sdk.sh mesh` |
 | wgpu backend / local GPU parity | `cargo test --locked -p zipzi-render-wgpu --tests`; [host selection](crates/zipzi-render-wgpu/README.md#application-routes-on-macos) |
 | Editor coordination | `./tools/test-editor.sh fast <filter>` |
 | Editor UI (macOS/Metal) | `./tools/test-editor.sh ui <filter>` |
-| Runtime Python SDK (`zipzi-python2`), Local/Connected and types | `./tools/test-sdk.sh python2` ([scope](crates/zipzi-python2/README.md)) |
-| Shared authoring contract / isolated Python generation | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python2_codegen.py` |
-| Runtime GPU observation / inspection (usable GPU required) | `./tools/test-sdk.sh python2 --observation` |
-| Python complete-call recovery, Edit state and Job timeout | `./tools/test-sdk.sh python2 --recovery` (optional `P3ARecovery.test_name`) |
-| Python collection pages, Session detach/close and offline catalog | `./tools/test-sdk.sh python2 --discovery` |
-| Installed new client, host discovery and session binding | `./tools/test-sdk.sh python2-connected` (optional `--editor-host /absolute/path/to/zipzi-editor`) |
+| Runtime Python SDK (`zipzi-python`), Local/Connected and types | `./tools/test-sdk.sh python` ([scope](crates/zipzi-python/README.md)) |
+| Shared authoring contract / isolated Python generation | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python_codegen.py` |
+| Runtime GPU observation / inspection (usable GPU required) | `./tools/test-sdk.sh python --observation` |
+| Python complete-call recovery, Edit state and Job timeout | `./tools/test-sdk.sh python --recovery` (optional `P3ARecovery.test_name`) |
+| Python collection pages, Session detach/close and offline catalog | `./tools/test-sdk.sh python --discovery` |
+| Installed new client, host discovery and session binding | `./tools/test-sdk.sh python-connected` (optional `--editor-host /absolute/path/to/zipzi-editor`) |
 | Repository tools | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
 Filters and filenames are placeholders; omit them to run the selected gate.

@@ -45,13 +45,13 @@ cargo run --locked -p zipzi-editor
 For ad hoc SDK scripts, use `./tools/dev-python`, not global Python or a custom
 `PYTHONPATH`. It prepares CPython 3.14, installs the editable client and
 incrementally builds the native adapter before execution. Keep disposable
-scripts and output under `target/python2/scratch/` or a temporary directory.
+scripts and output under `target/python/scratch/` or a temporary directory.
 
 ```sh
-./tools/dev-python target/python2/scratch/probe.py
+./tools/dev-python target/python/scratch/probe.py
 
 # Cross-platform equivalent, including Windows
-uv run --locked python tools/dev.py python target/python2/scratch/probe.py
+uv run --locked python tools/dev.py python target/python/scratch/probe.py
 ```
 
 See the [internal SDK scripting reference](docs/references/dev-python.md) for
@@ -76,13 +76,13 @@ the affected target. Omit a filter only when the entire selected gate is needed.
 | Editor adaptive mesh generation | `./tools/test-editor.sh fast adaptive_mesh::`; `./tools/test-editor.sh fast mesh_generation::` |
 | Editor UI logic | `./tools/test-editor.sh ui <filter>` |
 | wgpu backend / GPU parity | `cargo test --locked -p zipzi-render-wgpu --tests` (requires a usable GPU) |
-| Python SDK Local/Connected behavior, types and generation drift | `./tools/test-sdk.sh python2` |
-| Installed Python client, host discovery and session binding | `./tools/test-sdk.sh python2-connected` |
-| Production Editor host with the installed Python client | `./tools/test-sdk.sh python2-connected --editor-host /absolute/path/to/zipzi-editor` |
-| Python GPU observation / inspection | `./tools/test-sdk.sh python2 --observation` (requires a usable GPU) |
-| Python call recovery, Edit state or Job timeout | `./tools/test-sdk.sh python2 --recovery` |
-| Python pagination, Session detach/close or offline catalog | `./tools/test-sdk.sh python2 --discovery` |
-| Shared authoring contract / isolated Python generation | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python2_codegen.py` |
+| Python SDK Local/Connected behavior, types and generation drift | `./tools/test-sdk.sh python` |
+| Installed Python client, host discovery and session binding | `./tools/test-sdk.sh python-connected` |
+| Production Editor host with the installed Python client | `./tools/test-sdk.sh python-connected --editor-host /absolute/path/to/zipzi-editor` |
+| Python GPU observation / inspection | `./tools/test-sdk.sh python --observation` (requires a usable GPU) |
+| Python call recovery, Edit state or Job timeout | `./tools/test-sdk.sh python --recovery` |
+| Python pagination, Session detach/close or offline catalog | `./tools/test-sdk.sh python --discovery` |
+| Shared authoring contract / isolated Python generation | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python_codegen.py` |
 | Repository tooling | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
 For integration targets, inspect the affected crate's README and `tests/`, or
@@ -116,8 +116,8 @@ uv run --locked python tools/dev.py test tools -p test_<tool>.py
 uv run --locked python tools/test_tools.py --help
 ```
 
-- SDK modes: `fast`, `runtime`, `mesh`, `regression`, `stress`, `python2`,
-  `python2-connected`, `full`.
+- SDK modes: `fast`, `runtime`, `mesh`, `regression`, `stress`, `python`,
+  `python-connected`, `full`.
 - Editor modes: `fast`, `ui`, `regression`, `acceptance`, `tools`, `full`.
 - No mode on either domain shell script displays help. Select `full` explicitly
   when broad coverage is warranted.

@@ -14,7 +14,7 @@
 
 本次计划修订以提交 `ad868c8a`（独立新包基础）、`7cf4bed`（资源与 Plan）、`f2ef33c`（生命周期与 P0 门禁）、`1e0043f`（P2 网格生成）、`acc54907`（宿主/会话接回）、`c0e186b`（R3 事件/参数/批量）和 2026-10-25 工作区为依据。当前主线按 [Runtime R0–R4](sdk-runtime/python2-r0-r4.md) 推进；已提交的[事件、参数及批量读取](sdk-runtime/python2-r3-events.md)贯通新包 R3 最小链路；工作区中的[网格绑定和显式 CPU 采样](sdk-runtime/python2-r4-bindings.md)接回首批 R4 数值链路，生成器随能力推进。本文区分已提交基础、已有验证记录、工作区实现和后续目标，不改写此前验收结果。
 
-本计划按用户决定，从一个全新的 `crates/zipzi-python2` 开始。把 `zipzi-python` 视为不存在：不读取或导入其实现，不复用其包装、stub、构建入口或测试 recipe，不以其接口数量、行数和性能作为交付基准，也不承担迁移、兼容或删除旧包的任务。先前放在旧 crate 内的 P1 试验代码已迁入新包；旧 crate 的接线改动已撤回。
+本计划按用户决定，从一个全新的 `crates/zipzi-python` 开始。把 `zipzi-python` 视为不存在：不读取或导入其实现，不复用其包装、stub、构建入口或测试 recipe，不以其接口数量、行数和性能作为交付基准，也不承担迁移、兼容或删除旧包的任务。先前放在旧 crate 内的 P1 试验代码已迁入新包；旧 crate 的接线改动已撤回。
 
 本计划独立于 [SDK Runtime 设计](sdk-runtime-design.md)和[实施计划](sdk-runtime-implementation-plan.md)，不重写其 R0–R7 阶段。可复用的是共享 Rust SDK/core/project/animation、Runtime 和它们独立的领域测试。为新 Python 能力补强这些共享层，也必须计入本项目的实现与复杂度。
 
@@ -37,7 +37,7 @@
 3. SDK/core 定义领域默认值、身份、不变量、算法、编辑、历史与求值；Runtime 管理会话、候选、来源、任务和预算；Python 只组织类型、生命周期、恢复和错误呈现。
 4. 公共便利方法构造同一组类型化操作；显式批次按序执行，提交独立发生。不暴露任意字典/JSON 作为主要创作路径。
 5. 只声明明确选出的操作。生成器负责领域值、转换、统一的领域方法包装、返回投影及其文档；包装调用手写执行原语，不生成领域规则、资源策略、事务状态机或行为预期。
-6. 新包的 Python 源码、薄桥接、构建配置、P0/P1 工具和包级测试均放在 `crates/zipzi-python2`。共享 Rust 行为留在 SDK/Runtime；仓库级工具回归遵循根测试布局。
+6. 新包的 Python 源码、薄桥接、构建配置、P0/P1 工具和包级测试均放在 `crates/zipzi-python`。共享 Rust 行为留在 SDK/Runtime；仓库级工具回归遵循根测试布局。
 
 本项目不引入通用 RPC/IDL 平台、远程网络服务、Python 插件执行引擎或完整 asyncio API。同步调用和显式 Job 支撑首版；资源、动画、GPU 和格式 IO 是明确的后续能力，不阻塞第一条 CPU 调用链。
 
@@ -45,18 +45,18 @@
 
 ### 2.1 已有实现与证据
 
-下表保留各早期切片的范围与当时待办，不作为当前 API 使用说明。后续完整 R4 接线见 [R4 记录](sdk-runtime/python2-r4-complete.md)，P3A 当前实现/验收见 [P3A-6](python-sdk-rewrite/p3a-6.md)，当前用法见[包 README](../../../crates/zipzi-python2/README.md)。历史“已验证”不代表本次重跑了全部测试；R4 接线完整也不代表其最后性能/发行退出门槛通过。
+下表保留各早期切片的范围与当时待办，不作为当前 API 使用说明。后续完整 R4 接线见 [R4 记录](sdk-runtime/python2-r4-complete.md)，P3A 当前实现/验收见 [P3A-6](python-sdk-rewrite/p3a-6.md)，当前用法见[包 README](../../../crates/zipzi-python/README.md)。历史“已验证”不代表本次重跑了全部测试；R4 接线完整也不代表其最后性能/发行退出门槛通过。
 
 | 切片 | 当前事实与代码位置 | 仍未交付 |
 | --- | --- | --- |
-| 独立包与分发 | `crates/zipzi-python2`；纯包 `client/` 与原生 `native/` 分开；Cargo/测试域已接入 | 发布构建矩阵及 CI 门禁；配对 sdist 见本轮验收 |
-| 公共 API | [meshes.py](../../../crates/zipzi-python2/client/python/zipzi/meshes.py)、[ops.py](../../../crates/zipzi-python2/client/python/zipzi/ops.py)：Geometry、MeshSpec、Snapshot 和 Create/Rename/SetPositions | 其余领域和更复杂 Plan 意图；操作联合现已覆盖 Mesh、图片与 ApplyPlan |
-| 生命周期 | [_lifecycle.py](../../../crates/zipzi-python2/client/python/zipzi/_lifecycle.py)：Runtime/Session/Edit/Job、明确的恢复归属 | 选定 P1 矩阵已通过；P4 长任务/格式和 P6 平台验收另列 |
-| 本地执行 | [PyO3 桥接](../../../crates/zipzi-python2/src/lib.rs)进入 [LocalHost](../../../crates/zipzi-runtime/src/host.rs)；输入在释放 GIL 前取得所有权；本地不经 JSON 字符串或 Value 树；网格转换已生成 | 工作区已有 Buffer/二进制实现和测试，验收范围需按 P4 单独核对，不沿用小资源结论 |
-| 连接执行 | [ConnectedBackend](../../../crates/zipzi-python2/client/python/zipzi/backends/connected.py)进入相同 Runtime 处理器；保留不可变字节和原 RequestId；发现/启动、会话绑定、类型化事件/参数、批量查询及真实 Editor recipe 已通过 | R4 完整 Modeling、二进制负载和完整发行构建配对 |
+| 独立包与分发 | `crates/zipzi-python`；纯包 `client/` 与原生 `native/` 分开；Cargo/测试域已接入 | 发布构建矩阵及 CI 门禁；配对 sdist 见本轮验收 |
+| 公共 API | [meshes.py](../../../crates/zipzi-python/client/python/zipzi/meshes.py)、[ops.py](../../../crates/zipzi-python/client/python/zipzi/ops.py)：Geometry、MeshSpec、Snapshot 和 Create/Rename/SetPositions | 其余领域和更复杂 Plan 意图；操作联合现已覆盖 Mesh、图片与 ApplyPlan |
+| 生命周期 | [_lifecycle.py](../../../crates/zipzi-python/client/python/zipzi/_lifecycle.py)：Runtime/Session/Edit/Job、明确的恢复归属 | 选定 P1 矩阵已通过；P4 长任务/格式和 P6 平台验收另列 |
+| 本地执行 | [PyO3 桥接](../../../crates/zipzi-python/src/lib.rs)进入 [LocalHost](../../../crates/zipzi-runtime/src/host.rs)；输入在释放 GIL 前取得所有权；本地不经 JSON 字符串或 Value 树；网格转换已生成 | 工作区已有 Buffer/二进制实现和测试，验收范围需按 P4 单独核对，不沿用小资源结论 |
+| 连接执行 | [ConnectedBackend](../../../crates/zipzi-python/client/python/zipzi/backends/connected.py)进入相同 Runtime 处理器；保留不可变字节和原 RequestId；发现/启动、会话绑定、类型化事件/参数、批量查询及真实 Editor recipe 已通过 | R4 完整 Modeling、二进制负载和完整发行构建配对 |
 | 网格与历史 | 创建、位置、改名、候选查询、顺序批次、commit/Undo/Redo、保存重开 | 已接回选定网格绑定/关键形与显式 CPU 采样；拓扑、BlendShape 和完整建模能力仍待扩展 |
-| 行为和类型测试 | P3 场景/身份记录包含 57 项源码行为和 16 条类型反例；[当前测试](../../../crates/zipzi-python2/tests/test_api.py)继续扩展 | 数量以对应记录为准；P3A 重新验证恢复返回、公共状态、文档、自省及安装包任务 |
-| 初步安装 | 记录中两个 wheel 分别构建，并在纯包连接环境及纯包+原生本地环境执行 [installed_recipe.py](../../../crates/zipzi-python2/tests/installed_recipe.py) | 安装 recipe 已覆盖纹理、候选 Plan、混合历史及新宿主保存重开；真实 Editor、全领域安装及 sdist 待验收 |
+| 行为和类型测试 | P3 场景/身份记录包含 57 项源码行为和 16 条类型反例；[当前测试](../../../crates/zipzi-python/tests/test_api.py)继续扩展 | 数量以对应记录为准；P3A 重新验证恢复返回、公共状态、文档、自省及安装包任务 |
+| 初步安装 | 记录中两个 wheel 分别构建，并在纯包连接环境及纯包+原生本地环境执行 [installed_recipe.py](../../../crates/zipzi-python/tests/installed_recipe.py) | 安装 recipe 已覆盖纹理、候选 Plan、混合历史及新宿主保存重开；真实 Editor、全领域安装及 sdist 待验收 |
 | 代码生成 | P2 原记录为 18 个产物；加入场景后当前为 20 个受管产物，覆盖选定值/操作/codec/接线 | P3A 统一领域包装和返回投影，补齐已有参数/绑定/采样等机械声明；覆盖率不等于公开契约完整 |
 
 共享 Rust 和新包现均有图片、来源绑定 Plan 的固定行为测试。工作区中的 `ImageCreateSpec`、PreparedImage 资源表、图片快照及 `EditOperation` / `PlanIntent` 已由两后端和独立 wheel 验证；仅承诺当前选定的小资源/改名 Plan 试点，不等于完整 P1 或后续领域已完成。
@@ -139,7 +139,7 @@ Edit 失败与恢复、Plan/快照来源、图片/Buffer 所有权、有界传�
 
 ## 8. 新包结构与分发
 
-所有新包代码位于 `crates/zipzi-python2`：
+所有新包代码位于 `crates/zipzi-python`：
 
 ```text
 zipzi-python2/
@@ -274,7 +274,7 @@ P3A 的详细设计、7 个子任务及退出条件已拆到[独立方案](pytho
 ```sh
 # 先检查实际参数；两个领域 shell 脚本无参数会运行昂贵全量。
 ./tools/test-sdk.sh --help
-uv run --locked python crates/zipzi-python2/tools/test.py --help
+uv run --locked python crates/zipzi-python/tools/test.py --help
 ```
 
 新包自身入口为：
@@ -284,7 +284,7 @@ uv run --locked python crates/zipzi-python2/tools/test.py --help
 ./tools/test-sdk.sh python2 PythonSdk.test_shared_recipe
 ./tools/test-sdk.sh python2 --release
 ./tools/test-sdk.sh python2 --release --instrumented
-uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/python2/baseline-first
+uv run --locked python crates/zipzi-python/tools/baseline.py --output target/python2/baseline-first
 cargo test --locked -p zipzi-runtime --test authoring --test resources --test modeling --test protocol
 cargo test --locked -p zipzi-sdk --test integration image_edit::
 cargo test --locked -p zipzi-runtime --test host
@@ -293,7 +293,7 @@ uv run --locked python tools/test_tools.py -p test_python2_tools.py -v
 python3 tools/workspace/cargo_domain.py --check
 ```
 
-新包行为测试及类型用例在 `crates/zipzi-python2/tests/`；生成器等仓库工具的回归仍在 `tools/tests/`；共享领域 fixture 在 `fixtures/`。不依赖其他 Python SDK 的环境、测试入口或安装产物。
+新包行为测试及类型用例在 `crates/zipzi-python/tests/`；生成器等仓库工具的回归仍在 `tools/tests/`；共享领域 fixture 在 `fixtures/`。不依赖其他 Python SDK 的环境、测试入口或安装产物。
 
 ### 10.4 公共契约、文档与自省验收
 

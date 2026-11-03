@@ -9,7 +9,7 @@
 
 - [清单与基线工具](../../../../tools/python/python2_contract.py)：`inventory`、`freeze`、`baseline`
   三个入口都有 `--help`，输出路径必须是新文件，不覆盖旧证据。
-- [严格目标测试](../../../../crates/zipzi-python2/tests/test_p3a_contract.py)：使用实际 Local
+- [严格目标测试](../../../../crates/zipzi-python/tests/test_p3a_contract.py)：使用实际 Local
   适配器和独立 Connected 测试宿主，恢复故障由现有宿主 fixture 丢弃响应触发。
   没有 `expectedFailure`、跳过或假后端答案来把缺口记作通过。
 - [工具回归](../../../../tools/tests/test_python2_contract.py)：验证确定性、继承方法、领域入口、

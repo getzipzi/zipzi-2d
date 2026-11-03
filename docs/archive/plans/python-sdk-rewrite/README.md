@@ -1,6 +1,6 @@
 # zipzi-python2 实施记录
 
-日期：2026-10-25，2026-10-27 更新。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../../crates/zipzi-python2/README.md)。
+日期：2026-10-25，2026-10-27 更新。对应[建设计划](../python-sdk-rewrite-plan.md)及[独立新包](../../../../crates/zipzi-python/README.md)。
 
 **Python P7 当前承诺范围已完成。** [总验收记录](p7.md)对应全部能力、统一契约、生成/手写责任规模、包装/分页/二进制/后台任务/agent 成本和当前发行身份。本轮 40 个生成产物一致、19 项生成器回归、正常安装离线审计及两后端分页/摘要观察通过；核对 R7 最终产物哈希、源码与 wheel 配对，沿用各阶段适用的行为/类型/安装/Editor/性能证据。范围为 macOS arm64 / CPython 3.14，原 P0 限制和用户豁免不扩大。
 
@@ -36,7 +36,7 @@
 
 ## 项目边界
 
-本项目从新包 `crates/zipzi-python2` 开始，Python 导入名为 `zipzi`。P0/P1 的公共类型、生命周期、两后端、薄 PyO3、包级测试、构建和测量工具均已移入新目录。旧 crate 中的临时特性接线和源码改动已撤回；旧接口去向清单和旧包性能采集工具不再属于本项目。
+本项目从新包 `crates/zipzi-python` 开始，Python 导入名为 `zipzi`。P0/P1 的公共类型、生命周期、两后端、薄 PyO3、包级测试、构建和测量工具均已移入新目录。旧 crate 中的临时特性接线和源码改动已撤回；旧接口去向清单和旧包性能采集工具不再属于本项目。
 
 可复用的是共享 Rust SDK/Runtime 和独立 Rust 测试。`MeshCreateSpec`、`MeshOperation` 及默认值/ID 分配在 SDK；`LocalHost`、候选写入、来源、任务与预算在 Runtime。新包仅适配这些类型化处理器。共享层的新增代码单独计数。
 
@@ -55,7 +55,7 @@
 | P6 | 当前 macOS arm64 / CPython 3.14 分发范围已验收 | 正常 wheel/sdist、真实 app 安装发现与完整领域组合通过；其他平台另行验证 |
 | P7 | [当前承诺范围收尾完成](p7.md)；能力、契约、复杂度、成本、agent 和发行证据已逐项核对 | 当前平台 macOS arm64 / CPython 3.14；未来能力、平台和公开发布另列，原历史失败不改记通过 |
 
-能力范围见 [`CAPABILITIES.md`](../../../../crates/zipzi-python2/CAPABILITIES.md)。源码接线、独立验证和阶段验收分别记录；[P7](p7.md)已按当前承诺范围汇总完成，P0 统计范围和历史失败保持，未来能力不计入当前交付。
+能力范围见 [`CAPABILITIES.md`](../../../../crates/zipzi-python/CAPABILITIES.md)。源码接线、独立验证和阶段验收分别记录；[P7](p7.md)已按当前承诺范围汇总完成，P0 统计范围和历史失败保持，未来能力不计入当前交付。
 
 ## P1 当前链路
 
@@ -102,8 +102,8 @@ uv run --locked python tools/test_tools.py -p test_python2_tools.py -v
 uv run --locked python tools/test_tools.py -p test_runtime_dependencies.py -v
 
 # 互不覆盖 Python namespace 的两个分发。
-uv build --wheel --out-dir target/python2/client-wheels crates/zipzi-python2/client
-uv build --wheel --out-dir target/python2/native-wheels crates/zipzi-python2
+uv build --wheel --out-dir target/python2/client-wheels crates/zipzi-python/client
+uv build --wheel --out-dir target/python2/native-wheels crates/zipzi-python
 ```
 
 已验证 Debug 源码两后端、严格 Pyright 正例以及准确位于三条错误参数行的反例；两个 wheel 已分别构建，并在纯包连接环境和纯包+原生本地环境运行 `tests/installed_recipe.py`。测试从 `/tmp` 使用 `-I`，不插入源码路径。wheel 内容分别为 `zipzi/` 与 `zipzi_native/`。
@@ -143,7 +143,7 @@ Fault 控制与计数分配器分别位于 `test-support` / `bench-instrumentati
 ```sh
 ./tools/test-sdk.sh python2 --release
 ./tools/test-sdk.sh python2 --release --instrumented
-uv run --locked python crates/zipzi-python2/tools/baseline.py --output target/python2/baseline-first
+uv run --locked python crates/zipzi-python/tools/baseline.py --output target/python2/baseline-first
 ```
 
 已测小查询、单项编辑、100 项批次、位置数组、256×256 RGBA 准备/创建/提交/释放，以及正式 Plan 创建/应用/提交/释放。CPU 采样留待 P5；Connected 性能仍待补测。每次 4 次预热、32 个计时样本，默认 5 次独立进程。计时与 Python profile/tracemalloc 探针分开；校验 Release 构建元数据与实际加载扩展哈希。

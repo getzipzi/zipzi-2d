@@ -1,7 +1,7 @@
 # zipzi-editor
 
 The Zipzi 2D desktop editor provides modeling and animation workspaces and hosts
-Runtime sessions for the [Python SDK](../zipzi-python2/README.md). It is built
+Runtime sessions for the [Python SDK](../zipzi-python/README.md). It is built
 with GPUI Kit and uses [`zipzi-editor-core`](../zipzi-editor-core/README.md) for
 editing state and [`zipzi-editor-render`](../zipzi-editor-render/README.md) for
 rendering.
@@ -53,7 +53,7 @@ Choose a focused test for the change:
 ./tools/test-editor.sh ui mesh_generation::
 
 # Python client connected to an installed editor host
-./tools/test-sdk.sh python2-connected --editor-host /absolute/path/to/zipzi-editor
+./tools/test-sdk.sh python-connected --editor-host /absolute/path/to/zipzi-editor
 ```
 
 On Windows, use `uv run --locked python tools/dev.py test editor` or
@@ -79,7 +79,7 @@ documents and history. When connected clients, pending jobs or an explicit
 reopening a window attaches the resident sessions. Closing a document tab also
 detaches its view. Otherwise, closing the last window exits after any unsaved
 documents are resolved. Use Quit to explicitly exit. See the
-[Python SDK guide](../zipzi-python2/client/python/zipzi/docs/guide.md) for
+[Python SDK guide](../zipzi-python/client/python/zipzi/docs/guide.md) for
 connection and session usage.
 
 ## Local model acceptance

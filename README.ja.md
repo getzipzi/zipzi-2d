@@ -8,7 +8,7 @@
 
 Zipzi 2D は、Rust と GPUI で開発された Live2D Cubism Editor のオープンソースの代替ツールです。名前は広東語の「摺紙」（*zip3 zi2*、折り紙の意味）に由来します。
 
-[**Alpha をダウンロード**](https://github.com/getzipzi/zipzi-2d/releases) · [Python SDK](crates/zipzi-python2/README.md) · [問題を報告](https://github.com/getzipzi/zipzi-2d/issues) · [開発への参加](#開発への参加)
+[**Alpha をダウンロード**](https://github.com/getzipzi/zipzi-2d/releases) · [Python SDK](crates/zipzi-python/README.md) · [問題を報告](https://github.com/getzipzi/zipzi-2d/issues) · [開発への参加](#開発への参加)
 
 ![Zipzi 2D エディターのモデリングワークスペース](docs/editor-screenshot.png)
 
@@ -18,7 +18,7 @@ Zipzi 2D は、Rust と GPUI で開発された Live2D Cubism Editor のオー�
 
 AI コーディングエージェントに、やりたいことを伝えてください。エージェントは Python SDK でモデルを調べ、レンダリング画像を見て編集します。変更はエディターで確認でき、取り消すこともできます。同じドキュメントと取り消し履歴を共有して作業できます。
 
-Python を実行できるエージェントを用意し、[SDK ガイド](crates/zipzi-python2/client/python/zipzi/docs/guide.md)を渡してください。
+Python を実行できるエージェントを用意し、[SDK ガイド](crates/zipzi-python/client/python/zipzi/docs/guide.md)を渡してください。
 
 ### 最初のコード：AI にすべてのメッシュをわかりやすく命名してもらう
 
@@ -26,7 +26,7 @@ Python を実行できるエージェントを用意し、[SDK ガイド](crates
 
 エージェントへの依頼：**「各メッシュを見て、わかりやすい名前を付けて。」**
 
-[Python クライアント](crates/zipzi-python2/README.md#installation)をインストールし（CPython 3.14 が必要）、GPU 観察機能に対応したエディターを起動してモデルをひとつ開きます。画像を読み取れるコーディングエージェントが、次の 2 段階を実行できます。
+[Python クライアント](crates/zipzi-python/README.md#installation)をインストールし（CPython 3.14 が必要）、GPU 観察機能に対応したエディターを起動してモデルをひとつ開きます。画像を読み取れるコーディングエージェントが、次の 2 段階を実行できます。
 
 **1. エージェントが各メッシュを観察します。**生成したスクリプトが、テクスチャ付きモデル上で対象メッシュのワイヤーフレームを強調した画像と、命名用の JSON 一覧を出力します。`observe` が画像を提供し、エージェントが意味を読み取ります。
 
@@ -134,18 +134,18 @@ with zipzi.connect() as runtime:
     print("Review the names in the editor. Undo to revert, or save to keep them.")
 ```
 
-プロジェクトは自動保存されません。名前のチェックでは、メッシュの改名や削除は検出できますが、形状やテクスチャの変更をすべて検出できるわけではありません。モデルを変更した場合は観察をやり直してください。その他のワークフローは[機能ガイド](crates/zipzi-python2/CAPABILITIES.md)を参照してください。
+プロジェクトは自動保存されません。名前のチェックでは、メッシュの改名や削除は検出できますが、形状やテクスチャの変更をすべて検出できるわけではありません。モデルを変更した場合は観察をやり直してください。その他のワークフローは[機能ガイド](crates/zipzi-python/CAPABILITIES.md)を参照してください。
 
 ## 手作業での制作にも
 
 メッシュ、パラメーター、デフォーマ、BlendShapes でモデルを作り、アニメーションワークスペースで動きを付けられます。メッシュの自動生成も、手作業での調整も可能です。Mesh Edit では変形後のモデル上で編集でき、元画像の表示にも切り替えられます。形状の変更に合わせて、保存されたシェイプを再サンプリングします。
 
-Python スクリプトはローカル Runtime でも単独実行でき、エディター外の自動化にも使えます。モデリング、アニメーション編集、プレビュー、検査については [Python SDK](crates/zipzi-python2/README.md)をご覧ください。
+Python スクリプトはローカル Runtime でも単独実行でき、エディター外の自動化にも使えます。モデリング、アニメーション編集、プレビュー、検査については [Python SDK](crates/zipzi-python/README.md)をご覧ください。
 
 ## Zipzi 2D を試す
 
 - **エディターを使う：**[GitHub Releases](https://github.com/getzipzi/zipzi-2d/releases) から Alpha 版をダウンロードできます。提供プラットフォームと動作要件はリリースノートを確認してください。
-- **Python で自動化する：**[インストール・接続ガイド](crates/zipzi-python2/README.md)を参照してください。SDK は現在 CPython 3.14 を必要とします。
+- **Python で自動化する：**[インストール・接続ガイド](crates/zipzi-python/README.md)を参照してください。SDK は現在 CPython 3.14 を必要とします。
 - **独自のツールを作る：**[Rust SDK](crates/zipzi-sdk/README.md) でモデルをプログラムから編集できます。
 
 ### 現在の機能
@@ -158,13 +158,13 @@ Python スクリプトはローカル Runtime でも単独実行でき、エデ�
 | 自動化 | Python セッション、一括編集、取り消し／やり直し履歴の共有、プロジェクト操作、モデル検査 |
 | プラットフォーム | macOS、Windows 開発用プロトタイプ |
 
-詳細は [SDK 機能ガイド](crates/zipzi-python2/CAPABILITIES.md)を参照してください。GPU 検査には対応ホストと利用可能な GPU が必要です。形式への対応は、すべてのモデルを情報損失なく往復変換できることを意味しません。
+詳細は [SDK 機能ガイド](crates/zipzi-python/CAPABILITIES.md)を参照してください。GPU 検査には対応ホストと利用可能な GPU が必要です。形式への対応は、すべてのモデルを情報損失なく往復変換できることを意味しません。
 
 ## 開発への参加
 
 Alpha 版を試し、[困った点を教えてください](https://github.com/getzipzi/zipzi-2d/issues)。不具合報告にはビルドのバージョン、プラットフォーム、再現手順を添えてください。モデル素材は、共有する権利がある場合にのみ提供してください。
 
-コードの貢献は、[リポジトリ構成](MONOREPO.md)、[エディターガイド](crates/zipzi-editor/README.md)、[Python SDK ガイド](crates/zipzi-python2/README.md)から始められます。詳しい資料は[ドキュメント一覧](docs/README.md)にあります。開発コマンドと変更箇所に応じたテストは以下のとおりです。
+コードの貢献は、[リポジトリ構成](MONOREPO.md)、[エディターガイド](crates/zipzi-editor/README.md)、[Python SDK ガイド](crates/zipzi-python/README.md)から始められます。詳しい資料は[ドキュメント一覧](docs/README.md)にあります。開発コマンドと変更箇所に応じたテストは以下のとおりです。
 
 ## 開発
 
@@ -185,7 +185,7 @@ cargo run --locked -p zipzi-editor
 uv run --locked python tools/test_tools.py
 ```
 
-Python SDK の `./tools/test-sdk.sh python2` はネイティブアダプターを更新し、Local／Connected の動作と静的型を検証します。`python2-connected` は pure Python wheel をインストールして、実際の子プロセスでホスト検出とセッション接続を検証します。現在のデスクトップホストを指定するには `--editor-host /absolute/path/to/zipzi-editor` を追加してください。ルートの `pyproject.toml` と `uv.lock` が開発ツールを管理します。
+Python SDK の `./tools/test-sdk.sh python` はネイティブアダプターを更新し、Local／Connected の動作と静的型を検証します。`python-connected` は pure Python wheel をインストールして、実際の子プロセスでホスト検出とセッション接続を検証します。現在のデスクトップホストを指定するには `--editor-host /absolute/path/to/zipzi-editor` を追加してください。ルートの `pyproject.toml` と `uv.lock` が開発ツールを管理します。
 
 ## テスト
 
@@ -198,19 +198,19 @@ Python SDK の `./tools/test-sdk.sh python2` はネイティブアダプター�
 | --- | --- |
 | 単一の Rust crate／モジュール | `cargo test --locked -p <crate> --lib <filter>`; 必要に応じて統合テストのターゲットを追加 |
 | Runtime の所有権／ジョブ／イベント | `./tools/test-sdk.sh runtime` |
-| ローカルプロトコル／インストール済み Python クライアント | `./tools/test-sdk.sh python2-connected` |
+| ローカルプロトコル／インストール済み Python クライアント | `./tools/test-sdk.sh python-connected` |
 | SDK の編集動作 | `./tools/test-sdk.sh fast <filter>` |
 | エディターの適応型メッシュ生成 | `./tools/test-editor.sh fast adaptive_mesh::`; `./tools/test-editor.sh fast mesh_generation::` |
 | SDK のアルファ値に基づくメッシュ生成 | `./tools/test-sdk.sh mesh` |
 | wgpu バックエンド／ローカル GPU の一致性 | `cargo test --locked -p zipzi-render-wgpu --tests`; [ホストの選択](crates/zipzi-render-wgpu/README.md#application-routes-on-macos) |
 | エディターの連携処理 | `./tools/test-editor.sh fast <filter>` |
 | エディター UI（macOS／Metal） | `./tools/test-editor.sh ui <filter>` |
-| Runtime Python SDK（`zipzi-python2`）、Local／Connected と型 | `./tools/test-sdk.sh python2` ([対象範囲](crates/zipzi-python2/README.md)) |
-| 共有編集契約／独立した Python 生成 | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python2_codegen.py` |
-| Runtime GPU 観察／検査（利用可能な GPU が必要） | `./tools/test-sdk.sh python2 --observation` |
-| Python の呼び出し復旧、Edit 状態、Job タイムアウト | `./tools/test-sdk.sh python2 --recovery` （任意：`P3ARecovery.test_name`） |
-| Python コレクションのページング、Session の切断／終了、オフラインカタログ | `./tools/test-sdk.sh python2 --discovery` |
-| 新クライアントのインストール、ホスト検出、セッション接続 | `./tools/test-sdk.sh python2-connected` （任意：`--editor-host /absolute/path/to/zipzi-editor`） |
+| Runtime Python SDK（`zipzi-python`）、Local／Connected と型 | `./tools/test-sdk.sh python` ([対象範囲](crates/zipzi-python/README.md)) |
+| 共有編集契約／独立した Python 生成 | `cargo test --locked -p zipzi-contract`; `uv run --locked python tools/test_tools.py -p test_python_codegen.py` |
+| Runtime GPU 観察／検査（利用可能な GPU が必要） | `./tools/test-sdk.sh python --observation` |
+| Python の呼び出し復旧、Edit 状態、Job タイムアウト | `./tools/test-sdk.sh python --recovery` （任意：`P3ARecovery.test_name`） |
+| Python コレクションのページング、Session の切断／終了、オフラインカタログ | `./tools/test-sdk.sh python --discovery` |
+| 新クライアントのインストール、ホスト検出、セッション接続 | `./tools/test-sdk.sh python-connected` （任意：`--editor-host /absolute/path/to/zipzi-editor`） |
 | リポジトリのツール | `uv run --locked python tools/test_tools.py -p test_<tool>.py` |
 
 フィルターとファイル名はプレースホルダーです。省略すると選択したテスト範囲全体を実行します。各 crate の統合テストは、その README と `tests/` を参照するか、`cargo test --locked -p <crate> --test <target> -- --list` で一覧を確認してください。Editor のシェル経由のテストは `ZIPZI_DEV_SESSION_DIR` を解除します。Editor の Cargo テストを直接実行する場合は手動で解除してください。

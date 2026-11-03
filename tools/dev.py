@@ -11,8 +11,8 @@ import cargo_domain
 
 HELP = '''Usage: python tools/dev.py COMMAND [arguments...]
 
-  test sdk MODE       fast, runtime, mesh, regression, stress, python2,
-                      python2-connected, full
+  test sdk MODE       fast, runtime, mesh, regression, stress, python,
+                      python-connected, python2, python2-connected, full
   test editor MODE    fast, ui, regression, acceptance, tools, full
   test tools ARGS     unittest discovery arguments (-p, -k, -v)
   python ARGS         source SDK Python
@@ -30,9 +30,9 @@ def test_commands(domain, mode, args):
     def cargo(operation, *flags):
         return cargo_domain.command(groups, domain, operation, list(flags))
     if domain == 'sdk':
-        if mode in {'python2', 'python2-connected'}:
-            name = 'test.py' if mode == 'python2' else 'connected.py'
-            return [[python, str(ROOT / 'crates/zipzi-python2/tools' / name), *args]]
+        if mode in {'python', 'python2', 'python-connected', 'python2-connected'}:
+            name = 'test.py' if mode in {'python', 'python2'} else 'connected.py'
+            return [[python, str(ROOT / 'crates/zipzi-python/tools' / name), *args]]
         selectors = {
             'fast': ['-p', 'zipzi-sdk', '--lib', '--test', 'integration'],
             'runtime': ['-p', 'zipzi-runtime'],
@@ -130,7 +130,7 @@ def main(argv=None):
             return
         if not environment.get('ZIPZI_CLIENT_PYTHON'):
             environment['ZIPZI_CLIENT_PYTHON'] = subprocess.check_output(
-                [sys.executable, str(ROOT / 'crates/zipzi-python2/tools/connected.py'), '--install-only'],
+                [sys.executable, str(ROOT / 'crates/zipzi-python/tools/connected.py'), '--install-only'],
                 cwd=ROOT, env=environment, text=True, encoding='utf-8').strip()
     if domain == 'editor':
         environment.pop('ZIPZI_DEV_SESSION_DIR', None)

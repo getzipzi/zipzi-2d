@@ -25,7 +25,7 @@ class DevPython(unittest.TestCase):
             target = self.root / "tools" / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / "tools" / name, target)
-        self.package = self.root / "crates/zipzi-python2"
+        self.package = self.root / "crates/zipzi-python"
         self.source = self.package / "client/python/zipzi/__init__.py"
         self.source.parent.mkdir(parents=True)
         self.source.write_text('value = "initial"\n')
@@ -55,10 +55,10 @@ assert os.path.isabs(os.environ['PYO3_PYTHON'])
 with (root/'build-calls').open('a') as log: log.write('build\\n')
 print('native build check',file=sys.stderr)
 if os.environ.get('FAIL_BUILD'): sys.exit(17)
-target=pathlib.Path(args[args.index('--target-dir')+1])/'debug/libzipzi_python2_native.so'
+target=pathlib.Path(args[args.index('--target-dir')+1])/'debug/libzipzi_python_native.so'
 target.parent.mkdir(parents=True,exist_ok=True)
 target.write_bytes((root/'native-source').read_bytes())
-print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi_python2_native'},'filenames':[str(target)]}))
+print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi_python_native'},'filenames':[str(target)]}))
 ''')
         self.env = dict(os.environ, PATH=f"{self.bin}{os.pathsep}{os.environ['PATH']}")
         self.entry = [sys.executable, '-I', str(self.root / 'tools/python/dev_python.py')]

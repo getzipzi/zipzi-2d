@@ -30,12 +30,12 @@ def runtime(mode,host):
         return
     with tempfile.TemporaryDirectory(prefix='zzr4-',dir='/tmp') as folder:
         env={k:v for k,v in os.environ.items() if not k.startswith('ZIPZI_') and k not in {'PYTHONPATH','PYTHONHOME'}}
-        env.update(ZIPZI_RUNTIME_DIR=folder,ZIPZI_RUNTIME_PROFILE='python2')
+        env.update(ZIPZI_RUNTIME_DIR=folder,ZIPZI_RUNTIME_PROFILE='python')
         process=subprocess.Popen([host],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         try:
             deadline=time.monotonic()+30
             while True:
-                try:value=zipzi.connect(endpoint=Path(folder)/'python2.sock');break
+                try:value=zipzi.connect(endpoint=Path(folder)/'python.sock');break
                 except (FileNotFoundError,ConnectionRefusedError):
                     if process.poll() is not None:raise RuntimeError(process.stderr.read().decode())
                     if time.monotonic()>deadline:raise TimeoutError('host startup')

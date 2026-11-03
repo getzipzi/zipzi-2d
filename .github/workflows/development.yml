@@ -56,7 +56,7 @@ jobs:
           shared-key: contract-tooling
           workspaces: |
             . -> target/ci-cargo
-            . -> target/python2/schema-cargo
+            . -> target/python/schema-cargo
           cache-bin: false
       - uses: astral-sh/setup-uv@v10.3.3
         with:
@@ -67,8 +67,8 @@ jobs:
       - run: uv sync --locked
       - run: uv run --locked python tools/workspace/cargo_domain.py --check
       - run: cargo test --locked -p zipzi-contract
-      - run: uv run --locked python tools/dev.py test tools -p test_python2_codegen.py -v
-      - run: uv run --locked python tools/dev.py test tools -p test_python2_distribution.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_python_codegen.py -v
+      - run: uv run --locked python tools/dev.py test tools -p test_python_distribution.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_dev_entrypoint.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_dev_process.py -v
       - run: uv run --locked python tools/dev.py test tools -p test_dev_lifecycle.py -v
@@ -127,7 +127,7 @@ jobs:
           shared-key: python-runtime
           workspaces: |
             . -> target/ci-cargo
-            . -> target/python2/schema-cargo
+            . -> target/python/schema-cargo
           cache-bin: false
       - uses: astral-sh/setup-uv@v10.3.3
         with:
@@ -136,7 +136,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
       - run: uv sync --locked
-      - run: uv run --locked python tools/dev.py test sdk python2
-      - run: uv run --locked python tools/dev.py test sdk python2-connected
-      - run: uv run --locked python tools/dev.py test sdk python2 --discovery
-      - run: uv run --locked python tools/dev.py python crates/zipzi-python2/tests/test_native_publication.py -v
+      - run: uv run --locked python tools/dev.py test sdk python
+      - run: uv run --locked python tools/dev.py test sdk python-connected
+      - run: uv run --locked python tools/dev.py test sdk python --discovery
+      - run: uv run --locked python tools/dev.py python crates/zipzi-python/tests/test_native_publication.py -v

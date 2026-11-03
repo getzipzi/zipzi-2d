@@ -8,7 +8,7 @@ GPU 渲染、提交和正式读回均完成。主要改进方向是复杂工作�
 预算诊断，以及曲线构造便利性。
 
 本记录区分实际异常、待定位的现象、易用性建议和调用者错误。
-读取过 `zipzi-python2` 源码、测试和相关文档，不能据此判断公开帮助无法独立完成任务。
+读取过 `zipzi-python` 源码、测试和相关文档，不能据此判断公开帮助无法独立完成任务。
 未检查 Runtime 或 Editor 内部实现，未定位宿主调度或渲染根因。
 
 ## 完成范围与验证边界
@@ -172,15 +172,15 @@ Warp 和 Rotation。参数通过分页及完整值读取后，在客户端建立
 相关公开说明和类型：
 
 - [dev-python 使用说明](../references/dev-python.md)
-- [Python SDK README](../../crates/zipzi-python2/README.md)
-- [连接入口与超时说明](../../crates/zipzi-python2/client/python/zipzi/__init__.py)
-- [生命周期与 EditState](../../crates/zipzi-python2/client/python/zipzi/_lifecycle.py)
-- [Preview 采样与 Job 约定](../../crates/zipzi-python2/client/python/zipzi/_preview.py)
-- [生成的 Motion 和 ObservationView 类型](../../crates/zipzi-python2/client/python/zipzi/_generated/modeling.py)
-- [GPU 观察示例](../../crates/zipzi-python2/tests/r5_observation_recipe.py)
+- [Python SDK README](../../crates/zipzi-python/README.md)
+- [连接入口与超时说明](../../crates/zipzi-python/client/python/zipzi/__init__.py)
+- [生命周期与 EditState](../../crates/zipzi-python/client/python/zipzi/_lifecycle.py)
+- [Preview 采样与 Job 约定](../../crates/zipzi-python/client/python/zipzi/_preview.py)
+- [生成的 Motion 和 ObservationView 类型](../../crates/zipzi-python/client/python/zipzi/_generated/modeling.py)
+- [GPU 观察示例](../../crates/zipzi-python/tests/r5_observation_recipe.py)
 - [此前的 API 与网格工具反馈](2026-10-27-dev-python-api-feedback.md)
 
-本机临时证据位于 `target/python2/scratch/`，不会作为版本化测试夹具保留：
+本机临时证据位于 `target/python/scratch/`，不会作为版本化测试夹具保留：
 
 - `session-model-info/`：模型结构清单及 JSON。
 - `create_gentle_greeting.py`、`gentle-greeting-result.json`：简单 Motion 脚本与提交结果。

@@ -49,7 +49,7 @@ class RuntimeDependencies(unittest.TestCase):
 
     def test_default_metal_hosts_do_not_depend_on_wgpu(self):
         for package, features in [('zipzi-observe', None), ('zipzi-runtime', 'gpu-observation'),
-                                  ('zipzi-editor', None), ('zipzi-python2', None)]:
+                                  ('zipzi-editor', None), ('zipzi-python', None)]:
             with self.subTest(package=package):
                 deps = self.dependencies(package, features, target='aarch64-apple-darwin')
                 self.assertIn('zipzi-render-metal', deps)
@@ -57,7 +57,7 @@ class RuntimeDependencies(unittest.TestCase):
                 self.assertFalse({name for name in deps if name.startswith('wgpu')}, deps)
 
     def test_explicit_macos_wgpu_and_other_platform_gpu_builds_enable_wgpu(self):
-        for package in ['zipzi-observe', 'zipzi-runtime', 'zipzi-editor', 'zipzi-python2']:
+        for package in ['zipzi-observe', 'zipzi-runtime', 'zipzi-editor', 'zipzi-python']:
             with self.subTest(package=package, target='aarch64-apple-darwin'):
                 deps = self.dependencies(package, 'wgpu-backend', target='aarch64-apple-darwin')
                 self.assertIn('zipzi-render-wgpu', deps)

@@ -32,7 +32,7 @@ production native backend instead.
 | `tools/tests/` | Regression tests for repository tools |
 | `crates/<crate>/src/` | Rust unit tests near their implementation |
 | `crates/<crate>/tests/` | Crate-owned integration and native acceptance tests |
-| `crates/zipzi-python2/tests/` | Maintained Python client tests |
+| `crates/zipzi-python/tests/` | Maintained Python client tests |
 | `fixtures/` | [Shared test data](../../fixtures/README.md), independent of tooling |
 | `models/local/` | Ignored, separately obtained licensed model assets |
 

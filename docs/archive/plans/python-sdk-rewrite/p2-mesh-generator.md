@@ -38,8 +38,8 @@ Runtime 的 `Registered<MeshQuery, MeshSnapshot>` 要求真实的类型化处理
 ## 验证
 
 ```sh
-uv run --locked python crates/zipzi-python2/tools/generate.py
-uv run --locked python crates/zipzi-python2/tools/generate.py --check
+uv run --locked python crates/zipzi-python/tools/generate.py
+uv run --locked python crates/zipzi-python/tools/generate.py --check
 uv run --locked python tools/test_tools.py -p test_python2_codegen.py -v
 ./tools/test-sdk.sh python2 --release
 ./tools/test-sdk.sh python2 --release --instrumented

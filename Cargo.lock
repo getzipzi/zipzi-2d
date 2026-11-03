@@ -9367,7 +9367,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zipzi-python2"
+name = "zipzi-python"
 version = "0.1.0-alpha.6"
 dependencies = [
  "pyo3",

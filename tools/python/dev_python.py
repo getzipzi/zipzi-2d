@@ -58,7 +58,7 @@ def publish_native(state: Path, site: Path, initializer: Path, library: Path, su
 
 
 def prepare(root: Path, environment: dict[str, str]) -> Path:
-    state = root / "target/python2/dev"
+    state = root / "target/python/dev"
     state.mkdir(parents=True, exist_ok=True)
     python = venv_python(state / 'venv')
     # Serialize environment creation, editable installation and artifact publication.
@@ -75,14 +75,14 @@ def prepare(root: Path, environment: dict[str, str]) -> Path:
         ], env=environment, capture_output=True, text=True).stdout)
         if info["version"] != [3, 14]:
             raise RuntimeError(f"Expected CPython 3.14 in {python.parent.parent}; remove that environment and retry")
-        package = root / "crates/zipzi-python2"
+        package = root / "crates/zipzi-python"
         run(["uv", "pip", "install", "--quiet", "--python", str(python), "--no-deps",
              "--editable", str(package / "client")],
             cwd=root, env=environment, stdout=sys.stderr)
 
         # A dedicated target keeps ordinary source builds separate from the SDK's
         # test-support and instrumented fixtures. Cargo checks freshness each run.
-        command = ["cargo", "rustc", "--locked", "-p", "zipzi-python2", "--lib",
+        command = ["cargo", "rustc", "--locked", "-p", "zipzi-python", "--lib",
                    "--target-dir", str(state / "cargo"), "--message-format=json-render-diagnostics"]
         if sys.platform == "darwin":
             command += ["--", "-C", "link-arg=-Wl,-undefined,dynamic_lookup"]
@@ -92,7 +92,7 @@ def prepare(root: Path, environment: dict[str, str]) -> Path:
             Path(filename)
             for line in result.stdout.splitlines()
             if (row := json.loads(line)).get("reason") == "compiler-artifact"
-            and row.get("target", {}).get("name") == "zipzi_python2_native"
+            and row.get("target", {}).get("name") == "zipzi_python_native"
             for filename in row["filenames"]
             if Path(filename).suffix in {".so", ".dylib", ".dll"}
         }

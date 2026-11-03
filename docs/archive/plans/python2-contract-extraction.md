@@ -32,15 +32,15 @@ Local／Connected 仍是现有执行路径，生成命令不选择或启动任�
 
 ## 当前构建为什么受实现变化影响
 
-[generate.py](../../../crates/zipzi-python2/tools/generate.py) 每次先调用
+[generate.py](../../../crates/zipzi-python/tools/generate.py) 每次先调用
 `cargo run -p zipzi-python2 --features schema-export --example authoring_schema`。
 渲染缓存发生在导出之后，无法省掉此前的 Rust 构建。
 
-[zipzi-python2 的依赖](../../../crates/zipzi-python2/Cargo.toml) 包含 PyO3、Core、SDK
+[zipzi-python2 的依赖](../../../crates/zipzi-python/Cargo.toml) 包含 PyO3、Core、SDK
 和启用 `gpu-observation` 的 Runtime。`schema-export` 排除了旧生成 adapter 的
 源码，但没有消除上述依赖。
 
-迁移前导出器（原 `crates/zipzi-python2/examples/authoring_schema.rs`）读取真实类型的
+迁移前导出器（原 `crates/zipzi-python/examples/authoring_schema.rs`）读取真实类型的
 `ApiShape`、`ApiFields` 和二进制签名，还读取包含 Runtime handler 的注册项。
 [Runtime build.rs](../../../crates/zipzi-runtime/build.rs) 又把多个实现包的源码纳入
 SDK 构建身份，因此实现变更可以进一步触发生成链路构建。
@@ -251,7 +251,7 @@ cargo test --locked -p zipzi-contract
 uv run --locked python tools/test_tools.py -p test_python2_codegen.py
 uv run --locked python tools/test_tools.py -p test_python2_distribution.py
 python3 tools/workspace/cargo_domain.py --check
-uv run --locked python crates/zipzi-python2/tools/generate.py --check
+uv run --locked python crates/zipzi-python/tools/generate.py --check
 ```
 
 Core／SDK 各阶段选择对应模块或 integration target。Runtime 阶段覆盖 handler、

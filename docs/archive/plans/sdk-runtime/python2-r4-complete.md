@@ -1,6 +1,6 @@
 # Python2 / Runtime R4 完整连接验收
 
-2026-10-25 历史实现与验收记录，2026-10-26 收尾完成。实现位于 `crates/zipzi-python2`，公共导入为 `zipzi`；Runtime/SDK/Editor 使用同一工作区。**R4 已交付，见[最终复验](#2026-10-26-r4-最终复验)。R4 主体实现先于 Python P3 拆分为 P3A/P3B；下文保留当时完成范围和最后 Box 修复尚未复验的历史结论。P3A 后来重构公开包装，本轮使用新接口复验已有 R4 能力。** 当前记录不把这些既有领域重新列成 P3B/P4 的待开发功能。
+2026-10-25 历史实现与验收记录，2026-10-26 收尾完成。实现位于 `crates/zipzi-python`，公共导入为 `zipzi`；Runtime/SDK/Editor 使用同一工作区。**R4 已交付，见[最终复验](#2026-10-26-r4-最终复验)。R4 主体实现先于 Python P3 拆分为 P3A/P3B；下文保留当时完成范围和最后 Box 修复尚未复验的历史结论。P3A 后来重构公开包装，本轮使用新接口复验已有 R4 能力。** 当前记录不把这些既有领域重新列成 P3B/P4 的待开发功能。
 
 R4 的共享入口现已覆盖完整 Modeling、Plan/能力/身份与字段地址、二进制资源、工程 IO、可取消读取和 Editor 投影。`ModelingCommand` 为穷尽 Rust 分派，规则由 SDK/core 执行；生成器从编译后的 Rust 类型导出字段、默认值、枚举和有限二进制布局。输入先做不分配的长度/展开检查，再构造具体类型；Native 直接创建类型化 Python 值，Connected 大数组从借用的 SDK 字段编码，不构造完整 JSON 模型树。
 
@@ -36,7 +36,7 @@ cargo test --locked -p zipzi-sdk --test integration
 cargo test --locked -p zipzi-cmo3 --test import host_workspace
 cargo test --locked -p zipzi-core --lib binary_wire
 cargo test --locked -p zipzi-project --lib resource_budget
-uv run --locked python crates/zipzi-python2/tools/test.py
+uv run --locked python crates/zipzi-python/tools/test.py
 uv run --locked python tools/test_tools.py -p test_python2_codegen.py
 uv run --locked python tools/test_tools.py -p test_runtime_shared_inventory.py
 python3 tools/runtime/runtime_inventory.py --shared-only --check

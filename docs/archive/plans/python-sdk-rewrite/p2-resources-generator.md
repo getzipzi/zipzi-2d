@@ -79,7 +79,7 @@ Pyright 正例无错误，反例精确检查 12 条实参类型诊断。
 ./tools/test-sdk.sh python2 --release
 ./tools/test-sdk.sh python2 --release --instrumented
 uv run --locked python tools/test_tools.py -p 'test_python2*.py' -v
-uv run --locked python crates/zipzi-python2/tools/distribution.py --output target/python2/source-acceptance
+uv run --locked python crates/zipzi-python/tools/distribution.py --output target/python2/source-acceptance
 ```
 
 复杂度按责任在整体验收时统计：手写公共/生命周期、手写适配、生成产物、
