@@ -29,7 +29,7 @@ impl Document {
     pub fn validate_structure(&self) -> Vec<StructureIssue> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.validate_structure");
-        self.validate_structure_impl(None, false)
+        self.validate_structure_impl(None, None, false)
     }
 
     /// Reuse only checks whose persistent data AND cross-domain dependencies
@@ -70,6 +70,7 @@ impl Document {
         let valid = baseline.structure_is_validated() || baseline.validate_structure().is_empty();
         let identities = valid && self.same_authoring_identities(baseline);
         self.validate_structure_impl(
+            valid.then_some(baseline),
             (identities && self.same_binding_validation_dependencies(baseline)).then_some(baseline),
             identities
                 && self.same_domain(baseline, super::DocumentDomain::Motions)
@@ -94,6 +95,7 @@ impl Document {
 
     fn validate_structure_impl(
         &self,
+        geometry_baseline: Option<&Document>,
         binding_baseline: Option<&Document>,
         reuse_motions: bool,
     ) -> Vec<StructureIssue> {
@@ -323,7 +325,13 @@ impl Document {
         for (id, mesh) in &self.content.meshes {
             #[cfg(feature = "bench-instrumentation")]
             crate::benchmark::count("core.validate_structure.full.mesh_checks", 1);
-            let status = self.validate_mesh_snapshot(mesh);
+            // Geometry is self-contained, so an identical shared record keeps
+            // its proof even when another mesh changes topology or identities.
+            // References and runtime identity still need checking in this graph.
+            let geometry_validated = geometry_baseline
+                .and_then(|b| b.get_mesh(id))
+                .is_some_and(|previous| std::ptr::eq(previous, mesh));
+            let status = self.validate_mesh_snapshot(mesh, geometry_validated);
             add_issue(id, status);
         }
         for (id, parameter) in &self.content.parameters {
@@ -417,7 +425,7 @@ impl Document {
         issues
     }
 
-    pub(in crate::document) fn validate_mesh_snapshot(&self, mesh: &Mesh) -> Status {
+    fn validate_mesh_snapshot(&self, mesh: &Mesh, geometry_validated: bool) -> Status {
         if !mesh.texture_asset_id.validate().is_ok() {
             return mesh.texture_asset_id.validate();
         }
@@ -440,6 +448,11 @@ impl Document {
                 );
             }
         }
+        if geometry_validated {
+            return Status::ok();
+        }
+        #[cfg(feature = "bench-instrumentation")]
+        crate::benchmark::count("core.validate_structure.full.mesh_geometry_checks", 1);
         if mesh.vertex_ids.len() != mesh.base_positions.len() {
             return Status::error("INVALID_LENGTH", "Vertex IDs must match positions.");
         }

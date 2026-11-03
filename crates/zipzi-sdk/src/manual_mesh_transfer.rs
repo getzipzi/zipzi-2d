@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 use zipzi_core::{
-    document::{AuthoringLimits, ConversionControl},
+    document::{AuthoringLimits, ConversionControl, ConversionCost, DocumentSnapshotId},
     DeltaKeyforms, Document, Mesh, Vec2, VertexId,
 };
 
@@ -34,6 +34,47 @@ fn image_domain(g: &MeshGeometry, mesh_id: &str) -> Result<(), SdkError> {
 }
 fn status(s: zipzi_core::Status) -> SdkError {
     SdkError::from_status(s, "plan_manual_mesh", vec![])
+}
+
+fn transfer_cost(
+    document: &Document,
+    combinations: usize,
+    payload: usize,
+    workspace: usize,
+    dependencies: usize,
+    retained: usize,
+    limits: AuthoringLimits,
+) -> Result<ConversionCost, SdkError> {
+    let overflow = || {
+        error(
+            "AUTHORING_CAPACITY_OVERFLOW",
+            "Mesh transfer workspace",
+            vec![],
+        )
+    };
+    // Three snapshot copies (source, proposed result, Core validation) plus one
+    // metadata/index workspace for validation and commit. Record payloads and
+    // per-mesh vertex indexes share Arcs; only edited dependencies detach.
+    let temporary_bytes = document
+        .estimated_snapshot_bytes()
+        .checked_mul(4)
+        .and_then(|n| n.checked_add(document.estimated_authoring_index_bytes()))
+        .and_then(|n| n.checked_add(workspace))
+        .and_then(|n| dependencies.checked_mul(2).and_then(|d| n.checked_add(d)))
+        .and_then(|n| payload.checked_mul(3).and_then(|p| n.checked_add(p)))
+        .ok_or_else(overflow)?;
+    let history_bytes = retained
+        .checked_mul(2)
+        .and_then(|n| n.checked_add(payload))
+        .ok_or_else(overflow)?;
+    limits
+        .check_cost(ConversionCost {
+            sample_combinations: combinations,
+            payload_bytes: payload,
+            temporary_bytes,
+            history_bytes,
+        })
+        .map_err(status)
 }
 
 #[derive(Clone, Debug)]
@@ -349,6 +390,8 @@ pub struct ManualMeshSource {
     sampler: UvSampler,
     meshing: zipzi_core::MeshMeshing,
     estimated_bytes: usize,
+    workspace_bytes: usize,
+    dependency_bytes: usize,
     affine_extension: Option<AffineUvMap>,
     pub geometry_space: GeometrySpace,
     pub referenced_vertices: Vec<VertexId>,
@@ -410,17 +453,23 @@ impl ManualMeshSource {
         } else {
             GeometrySpace::RotationLocal(mesh.deformer_id.clone())
         };
+        let workspace_bytes = geometry
+            .vertex_ids
+            .len()
+            .saturating_mul(128)
+            .saturating_add(geometry.triangles.len() * 160)
+            .saturating_add(meshing.boundary.len() * std::mem::size_of::<VertexId>())
+            .saturating_add(
+                meshing.constraints.len() * std::mem::size_of::<zipzi_core::MeshConstraint>(),
+            );
         Ok(Self {
             estimated_bytes: document
                 .estimated_content_bytes()
-                .saturating_add(geometry.vertex_ids.len() * 128)
-                .saturating_add(geometry.triangles.len() * 160)
-                .saturating_add(meshing.boundary.len() * std::mem::size_of::<VertexId>())
-                .saturating_add(
-                    meshing.constraints.len() * std::mem::size_of::<zipzi_core::MeshConstraint>(),
-                ),
+                .saturating_add(workspace_bytes),
+            workspace_bytes,
+            dependency_bytes: document.estimated_mesh_dependency_bytes(mesh_id),
             meshing,
-            document: document.clone(),
+            document: document.fork_candidate(),
             mesh_id: mesh_id.into(),
             sampler: UvSampler::new(&geometry),
             slots: geometry
@@ -445,6 +494,27 @@ impl ManualMeshSource {
     }
     pub fn estimated_bytes(&self) -> usize {
         self.estimated_bytes
+    }
+    pub(crate) fn estimated_workspace_bytes(&self) -> usize {
+        self.document
+            .estimated_snapshot_bytes()
+            .saturating_add(self.workspace_bytes)
+    }
+    fn cost(
+        &self,
+        combinations: usize,
+        payload: usize,
+        limits: AuthoringLimits,
+    ) -> Result<ConversionCost, SdkError> {
+        transfer_cost(
+            &self.document,
+            combinations,
+            payload,
+            self.workspace_bytes,
+            self.dependency_bytes,
+            self.estimated_bytes,
+            limits,
+        )
     }
     pub fn can_rebuild(&self) -> bool {
         self.referenced_vertices.is_empty()
@@ -542,7 +612,7 @@ impl ManualMeshSource {
             .into_iter()
             .cloned()
             .collect();
-        let mut candidate = current.clone();
+        let mut candidate = current.fork_candidate();
         let result = candidate.replace_mesh_topology(mesh, binding, blends, glues, mapping);
         if !result.status.is_ok() {
             return Err(status(result.status));
@@ -624,9 +694,7 @@ impl ManualMeshSource {
             .saturating_add(geometry.triangles.len().saturating_mul(160));
         // Include the old spatial index, candidate copy and retained history before
         // allocating any channel arrays. Limits remain caller-reducible.
-        let cost = limits
-            .check_conversion(shape_count, payload, self.estimated_bytes())
-            .map_err(status)?;
+        let cost = self.cost(shape_count, payload, limits)?;
         let mut provenance = Vec::with_capacity(geometry.vertex_ids.len());
         let (mut added, mut moved, mut extension) = (0, 0, false);
         for (i, (&vertex, &uv)) in geometry.vertex_ids.iter().zip(&geometry.uvs).enumerate() {
@@ -775,14 +843,14 @@ impl ManualMeshSource {
             appearance_limits.push("Glue is evaluated after local shape transfer".into());
         }
         let mesh_id = mesh.id.clone();
-        let mut candidate = current.clone();
+        let mut candidate = current.fork_candidate();
         let check = candidate.replace_mesh_topology(mesh, binding, blend_bindings, glues, mapping);
         if !check.status.is_ok() {
             return Err(status(check.status));
         }
         Ok(ManualMeshPlan {
             version,
-            publication_source: current.clone(),
+            publication_source: current.snapshot_id(),
             mesh_id,
             validated: candidate,
             changes: check,
@@ -830,17 +898,15 @@ impl ManualMeshSource {
         control: &ConversionControl,
     ) -> Result<ManualMeshPlan, SdkError> {
         // Bound topology workspace before cloning or triangulating input.
-        limits
-            .check_conversion(
-                1,
-                self.geometry
-                    .vertex_ids
-                    .len()
-                    .saturating_add(1)
-                    .saturating_mul(256),
-                self.estimated_bytes(),
-            )
-            .map_err(status)?;
+        self.cost(
+            1,
+            self.geometry
+                .vertex_ids
+                .len()
+                .saturating_add(1)
+                .saturating_mul(256),
+            limits,
+        )?;
         let result = edit_manual_uv_candidate(&self.geometry, self.meshing.clone(), operation)
             .map_err(|mut e| {
                 if e.object_ids.is_empty() {
@@ -868,7 +934,7 @@ impl ManualMeshSource {
 #[derive(Clone, Debug)]
 pub struct ManualMeshPlan {
     version: Version,
-    publication_source: Document,
+    publication_source: DocumentSnapshotId,
     mesh_id: String,
     validated: Document,
     changes: zipzi_core::EditResult,
@@ -893,7 +959,7 @@ impl ManualMeshPlan {
 
 pub(crate) struct ManualMeshBaseline {
     pub source: Arc<ManualMeshSource>,
-    pub publication: Document,
+    pub publication: DocumentSnapshotId,
     pub moving_ids: Vec<VertexId>,
 }
 impl EditSession<'_> {
@@ -930,9 +996,15 @@ impl EditSession<'_> {
         limits: AuthoringLimits,
     ) -> Result<ManualMeshPlan, SdkError> {
         self.ensure_active("plan_manual_mesh")?;
-        limits
-            .check_conversion(1, 0, current.estimated_content_bytes())
-            .map_err(status)?;
+        transfer_cost(
+            current,
+            1,
+            0,
+            0,
+            current.estimated_mesh_dependency_bytes(mesh_id),
+            current.estimated_content_bytes(),
+            limits,
+        )?;
         let mut operation = operation;
         if let ManualMeshOperation::MoveVertices {
             targets,
@@ -987,7 +1059,7 @@ impl EditSession<'_> {
                 .filter(|b| {
                     b.source.mesh_id == mesh_id
                         && b.moving_ids == moving_ids
-                        && b.publication.is_same_snapshot(baseline_publication)
+                        && b.publication.matches(baseline_publication)
                 })
                 .map(|b| b.source.clone())
         } else {
@@ -1014,9 +1086,7 @@ impl EditSession<'_> {
     ) -> Result<ManualMeshTransferReport, SdkError> {
         self.ensure_active("apply_manual_mesh_plan")?;
         if plan.version != self.base_version()
-            || !plan
-                .publication_source
-                .is_same_snapshot(self.candidate_document())
+            || !plan.publication_source.matches(self.candidate_document())
         {
             return Err(error(
                 "STALE_MANUAL_MESH_PLAN",
@@ -1030,7 +1100,13 @@ impl EditSession<'_> {
         // and channel arrays can change, so no object-key inventory is retired.
         self.candidate_content_bytes.take();
         self.candidate = Some(plan.validated);
-        self.binding_cost = Some(plan.report.cost);
+        let cost = plan.report.cost;
+        self.binding_cost = Some(self.binding_cost.map_or(cost, |old| ConversionCost {
+            sample_combinations: old.sample_combinations.max(cost.sample_combinations),
+            payload_bytes: old.payload_bytes.max(cost.payload_bytes),
+            temporary_bytes: old.temporary_bytes.max(cost.temporary_bytes),
+            history_bytes: old.history_bytes.max(cost.history_bytes),
+        }));
         self.record(plan.changes, "apply_manual_mesh_plan", &plan.mesh_id)?;
         self.manual_baselines.clear();
         if let Some(source) = plan.baseline {
@@ -1038,7 +1114,7 @@ impl EditSession<'_> {
                 plan.mesh_id,
                 ManualMeshBaseline {
                     source,
-                    publication: self.candidate_document().clone(),
+                    publication: self.candidate_document().snapshot_id(),
                     moving_ids: plan.moving_ids,
                 },
             );
@@ -1061,23 +1137,45 @@ impl EditSession<'_> {
                 vec![],
             ));
         }
-        let publication = self.candidate_document().clone();
-        let mut candidate = publication.clone();
-        let mut plans = Vec::with_capacity(operations.len());
+        let mut plans: Vec<ManualMeshPlan> = Vec::with_capacity(operations.len());
         let mut bytes = 0usize;
         for (id, operation) in operations {
-            bytes = bytes.saturating_add(candidate.estimated_content_bytes());
-            self.authoring_limits
-                .check_conversion(plans.len() + 1, bytes, self.estimated_bytes())
-                .map_err(status)?;
-            let plan = self.plan_manual_mesh_at(
-                &candidate,
-                &publication,
+            // Earlier plans retain their map/metadata copies and edited records,
+            // while all unaffected records stay shared. Reserve that workspace
+            // before planning another mesh, without copying its entire document.
+            let mut limits = self.authoring_limits;
+            limits.max_conversion_bytes = limits
+                .max_conversion_bytes
+                .checked_sub(bytes)
+                .ok_or_else(|| {
+                    error(
+                        "AUTHORING_MEMORY_LIMIT",
+                        "Mesh batch exceeds the session budget",
+                        vec![],
+                    )
+                })?;
+            let current = plans
+                .last()
+                .map_or(self.candidate_document(), |p| &p.validated);
+            let mut plan = self.plan_manual_mesh_at(
+                current,
+                self.candidate_document(),
                 &id,
                 operation,
-                self.authoring_limits,
+                limits,
             )?;
-            candidate = plan.validated.clone();
+            plan.report.cost.temporary_bytes =
+                plan.report.cost.temporary_bytes.saturating_add(bytes);
+            self.authoring_limits
+                .check_cost(plan.report.cost)
+                .map_err(status)?;
+            bytes = bytes
+                .saturating_add(plan.validated.estimated_snapshot_bytes())
+                .saturating_add(plan.report.cost.payload_bytes)
+                .saturating_add(plan.baseline.as_ref().map_or(0, |s| {
+                    s.estimated_workspace_bytes()
+                        .saturating_add(s.dependency_bytes)
+                }));
             plans.push(plan);
         }
         let baselines: Vec<_> = plans
@@ -1096,7 +1194,7 @@ impl EditSession<'_> {
         for plan in plans {
             reports.push(self.apply_manual_mesh_plan(plan)?);
         }
-        let publication = self.candidate_document().clone();
+        let publication = self.candidate_document().snapshot_id();
         self.manual_baselines = baselines
             .into_iter()
             .map(|(id, source, moving_ids)| {

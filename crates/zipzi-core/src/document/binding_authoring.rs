@@ -106,6 +106,18 @@ impl AuthoringLimits {
             temporary_bytes: temporary,
             history_bytes: history,
         };
+        self.check_cost(cost)
+    }
+
+    /// Validate an operation-specific estimate without imposing a full-document
+    /// copy multiplier on planners that share immutable records.
+    pub fn check_cost(self, cost: ConversionCost) -> Result<ConversionCost, Status> {
+        let ConversionCost {
+            sample_combinations: combinations,
+            temporary_bytes: temporary,
+            history_bytes: history,
+            ..
+        } = cost;
         if combinations > self.max_sample_combinations {
             return Err(Status::error(
                 "AUTHORING_GRID_LIMIT",

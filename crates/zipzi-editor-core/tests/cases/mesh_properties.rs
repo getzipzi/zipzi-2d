@@ -138,6 +138,7 @@ fn mesh_deformer_property_reparents_bound_meshes_with_warp_root_and_undo() -> an
             .collect::<Vec<_>>()
     };
     let original_bindings = bindings(&doc);
+    let original_frame = doc.snapshot()?.runtime_frame;
     let history = doc.history_lengths();
     let stale = patch(
         &doc,
@@ -153,6 +154,13 @@ fn mesh_deformer_property_reparents_bound_meshes_with_warp_root_and_undo() -> an
     assert_eq!(doc.history_lengths(), (history.0 + 1, 0));
     assert_eq!(doc.part_tree(), organization);
     assert_eq!(bindings(&doc), original_bindings);
+    let after = doc.snapshot()?.runtime_frame;
+    for before in &original_frame.drawables {
+        let after = after.drawables.iter().find(|d| d.id == before.id).unwrap();
+        for (a, b) in before.positions.iter().zip(&after.positions) {
+            assert!((a.x - b.x).hypot(a.y - b.y) < 0.001, "{a:?} != {b:?}");
+        }
+    }
     assert!(
         doc.deformer_tree()
             .iter()

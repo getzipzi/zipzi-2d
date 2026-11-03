@@ -44,6 +44,14 @@ through a drag; unchanged vertex slots are copied once per stored channel and
 only changed samples are patched. Conversion budgets, lock checks and cancellation
 remain part of planning.
 
+Mesh transfer budgets count copied snapshot metadata, affected records, geometry
+workspace and rebuilt identity indexes. Publication reuses the candidate's vertex
+indexes, including those shared with unrelated meshes. Unchanged shared records
+do not consume the operation's temporary workspace; retained history keeps its
+logical content charge. The default conversion ceiling remains 64 MiB. To verify
+allocation peaks against estimates on a local native project without saving it, run
+`cargo run --locked -p zipzi-sdk --example manual_mesh_project_profile -- PROJECT`.
+
 `EditSession::edit_manual_mesh_batch` preflights one operation per mesh before
 publishing any candidate change. Moves retain separate frozen sources for each
 mesh across increments, and rejection preserves the entire last accepted batch.
@@ -162,12 +170,27 @@ default parameter values within 0.01 model units plus a relative 1e-6 tolerance.
 This numeric check supplements the structural checks; it does not prove the
 entire animated parameter domain.
 
-`ReparentEdit` preservation supports static rectangular Warp lattices as affine
-parent spaces, including nested Rotation/Warp chains. Mesh base shapes, ordinary
-keyforms and BlendShape deltas convert together. Animated or nonrectangular Warp
-lattices reject preservation; `KeepLocalData` remains an explicit low-level
-operation and performs no coordinate conversion. Numeric tolerances and native
-parameter-domain checks still apply.
+`ReparentEdit` domain preservation supports static affine Warp lattices as parent
+spaces, including nested Rotation/Warp chains. Lattice admission allows float32
+construction rounding. Its discarded lattice residual is charged to the geometry
+error bound over ordinary and active BlendShape coordinate envelopes, including
+descendant Warp extrapolation. Rounded Warp spaces that leave Rotation direction
+unproved reject full-domain preservation. Mesh and Warp base shapes, controllers,
+ordinary keyforms and BlendShape deltas convert together. Moving a Warp also
+compensates scalar scale inheritance at the first Rotation on each descendant
+branch. Subtree structure and independent canvas original-shape records remain intact.
+
+`PreserveEditState` explicitly bakes a nonlinear source parent's captured effect
+into Mesh, Warp or Rotation channels. Ordinary binding identities and scalar
+channels remain editable; nonlinear sample conversion is recentered to preserve
+the captured native pose. Other parameter poses and future Bezier edits may
+change. It requires an affine destination with a unique inverse; distorted
+destinations still reject. `KeepLocalData` remains explicit and performs no
+coordinate conversion. All preservation plans verify native geometry, including
+hidden meshes, at captured parameter inputs and enforce the requested absolute
+plus relative tolerance. Editor parent properties, tree moves and deletion
+share this conversion pipeline; Editor moves default to full parameter scope
+and the deletion tolerance of 0.001 model units plus relative 1e-6.
 
 Rotation subtree roots also support preservation: reparenting compensates the
 root's base reference angle, origin and scale and its ordinary/BlendShape origin

@@ -14,13 +14,13 @@ use crate::types::{
     RotationKeyform, SceneBinding, SceneTrack, Transform, TransformData, Vec2, WarpKeyform,
 };
 
-use super::super::DocumentContent;
 use super::super::PackageAttachment;
 use super::super::PhysicsAsset;
 use super::super::{
     CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterGroup, CdiParameterRef,
     CdiPartEntry, DisplayInfo,
 };
+use super::super::{Document, DocumentContent};
 use super::super::{ExpressionAsset, ExpressionEntry, ExpressionTarget};
 use super::super::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
 use super::super::{
@@ -509,6 +509,122 @@ pub(super) fn estimated_content_bytes(content: &DocumentContent) -> usize {
     #[cfg(feature = "bench-instrumentation")]
     let _benchmark_span = crate::benchmark::span("core.estimate_content_size");
     size_of::<DocumentContent>() + content.extra_bytes()
+}
+
+fn shared_map_descriptor_bytes<T>(records: &HashMap<String, std::sync::Arc<T>>) -> usize {
+    records.keys().map(String::capacity).sum::<usize>()
+        + records.capacity() * (size_of::<(String, std::sync::Arc<T>)>() + 1)
+}
+
+pub(super) fn estimated_snapshot_bytes(document: &Document) -> usize {
+    // Map buckets, keys and document metadata are copied; Arc-owned records
+    // stay shared until written. Avoid traversing their channel arrays here.
+    let content = &document.content;
+    macro_rules! owned_fields {
+        ($($($field:ident).+),+ $(,)?) => { 0 $(+ content.$($field).+.extra_bytes())+ };
+    }
+    size_of::<Document>()
+        + document.mesh_runtime_ids.extra_bytes()
+        + shared_map_descriptor_bytes(&document.vertex_slots)
+        + shared_map_descriptor_bytes(&content.meshes)
+        + shared_map_descriptor_bytes(&content.transforms)
+        + shared_map_descriptor_bytes(&content.bindings)
+        + shared_map_descriptor_bytes(&content.scene_bindings)
+        + shared_map_descriptor_bytes(&content.blend_bindings)
+        + shared_map_descriptor_bytes(&content.motions)
+        + owned_fields! {
+            id, assets, asset_order, parts, part_order, transform_order, mesh_order,
+            parameters, parameter_order, binding_order, scene_binding_order,
+            draw_order_groups, blend_key_tables, blend_key_table_order,
+            blend_constraints, blend_constraint_order, blend_binding_order,
+            glues, glue_order, offscreens, offscreen_order, display_info,
+            editor_state.objects, hierarchy_order.organization,
+            hierarchy_order.deformation, hierarchy_order.glues,
+            expressions, expression_order, motion_order, motion_groups,
+            motion_roots, missing_attachments, model3_settings, package_attachments,
+        }
+}
+
+pub(super) fn estimated_mesh_dependency_bytes(document: &Document, mesh_id: &str) -> usize {
+    document
+        .get_mesh(mesh_id)
+        .map_or(0, |m| size_of::<Mesh>() + m.extra_bytes())
+        + document
+            .binding_for_mesh(mesh_id)
+            .map_or(0, |b| size_of::<MeshBinding>() + b.extra_bytes())
+        + document
+            .blend_binding_order()
+            .iter()
+            .filter_map(|id| document.get_blend_binding(id))
+            .filter(|b| b.target_id == mesh_id)
+            .map(|b| size_of::<BlendShapeBinding>() + b.extra_bytes())
+            .sum::<usize>()
+        + document
+            .glues_for_mesh(mesh_id)
+            .iter()
+            .map(|g| size_of::<Glue>() + g.extra_bytes())
+            .sum::<usize>()
+}
+
+pub(super) fn estimated_authoring_index_bytes(document: &Document) -> usize {
+    // Dependency validation may rebuild BindingLookup after a topology change.
+    // Count its identity vector, owned strings and hash slots without creating
+    // the index as a side effect of admission itself.
+    let content = &document.content;
+    let (mut count, mut strings, mut slot_strings) = (0usize, 0usize, 0usize);
+    let mut item = |id: &str, owner: &str, axis: Option<&str>| {
+        count = count.saturating_add(1);
+        strings = strings
+            .saturating_add(id.len())
+            .saturating_add(owner.len())
+            .saturating_add(axis.map_or(0, str::len));
+        slot_strings = slot_strings.saturating_add(id.len());
+    };
+    for (owner, axes) in content
+        .bindings
+        .values()
+        .map(|b| (&b.id, &b.axes))
+        .chain(content.scene_bindings.values().map(|b| (&b.id, &b.axes)))
+        .chain(
+            content
+                .glues
+                .values()
+                .filter_map(|g| g.binding.as_ref().map(|b| (&g.id, &b.axes))),
+        )
+    {
+        for axis in axes {
+            item(&axis.id, owner, None);
+            for sample in &axis.samples {
+                item(&sample.id, owner, Some(&axis.id));
+            }
+        }
+    }
+    for table in content.blend_key_tables.values() {
+        for sample in &table.samples {
+            item(&sample.id, &table.id, None);
+        }
+    }
+    for constraint in content.blend_constraints.values() {
+        for sample in &constraint.samples {
+            item(&sample.id, &constraint.id, None);
+        }
+    }
+    if count == 0 {
+        return 0;
+    }
+    let capacity = count
+        .checked_next_power_of_two()
+        .unwrap_or(usize::MAX)
+        .max(4);
+    capacity
+        .saturating_mul(size_of::<super::super::BindingIdentity>())
+        .saturating_add(
+            capacity
+                .saturating_mul(2)
+                .saturating_mul(size_of::<(String, usize)>() + 1),
+        )
+        .saturating_add(strings)
+        .saturating_add(slot_strings)
 }
 
 pub(super) fn expression_entries_bytes(entries: &Vec<ExpressionEntry>) -> usize {

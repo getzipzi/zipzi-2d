@@ -333,14 +333,23 @@ fn whole_rotation_tree_move_compensates_driven_parent_at_current_pose_and_expire
         sources: vec![object(501)],
         ..request(&d, Some(object(502)), P::Inside)
     };
-    let old = d.plan_palette_move(move_request.clone())?;
+    assert!(d.plan_palette_move(move_request.clone()).is_err());
+    let old = d.capture_palette_reparent()?.plan(
+        move_request.clone(),
+        S::EditState,
+        &ConversionControl::default(),
+    )?;
     let history = d.history_lengths();
     d.set_preview_parameter(&uuid::Uuid::from_u128(701).to_string(), 0.7)?;
-    assert!(d.execute_palette_move(&old).is_err());
+    assert!(d.execute_palette_reparent(&old).is_err());
     assert_eq!(d.history_lengths(), history);
     let before = d.snapshot()?.runtime_frame;
-    let plan = d.plan_palette_move(move_request)?;
-    d.execute_palette_move(&plan)?;
+    let plan = d.capture_palette_reparent()?.plan(
+        move_request,
+        S::EditState,
+        &ConversionControl::default(),
+    )?;
+    d.execute_palette_reparent(&plan)?;
     let after = d.snapshot()?.runtime_frame;
     for before in &before.drawables {
         let after = after.drawables.iter().find(|a| a.id == before.id).unwrap();
@@ -436,13 +445,31 @@ fn default_mesh_tree_moves_into_and_out_of_warp_keep_visible_geometry_and_undo()
 }
 
 #[test]
-fn default_tolerance_is_never_relaxed_and_explicit_tolerance_is_in_the_review() -> anyhow::Result<()>
+fn default_tolerance_matches_deletion_and_explicit_tolerance_is_never_relaxed() -> anyhow::Result<()>
 {
     let (d, _assets) = support::sample_document_for_reparent(false)?;
     let r = request(&d, Some(object(502)), P::Inside);
     let capture = d.capture_palette_reparent()?;
+    let default = capture.plan(r.clone(), S::EditState, &ConversionControl::default())?;
+    assert_eq!(
+        default
+            .scene()
+            .conversion_report()
+            .unwrap()
+            .reparent_guarantee
+            .as_ref()
+            .unwrap()
+            .tolerance,
+        0.001
+    );
     let error = capture
-        .plan(r.clone(), S::EditState, &ConversionControl::default())
+        .plan_with_tolerance(
+            r.clone(),
+            S::EditState,
+            1e-15,
+            0.,
+            &ConversionControl::default(),
+        )
         .unwrap_err();
     assert_eq!(
         error

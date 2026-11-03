@@ -99,4 +99,5 @@ fn parent_edit(strategy: ReparentStrategy, parent: &str) -> E {
 mod mesh_grid;
 mod parameter_range;
 mod reparent;
+mod reparent_preservation;
 mod validation;

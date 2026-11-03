@@ -39,7 +39,14 @@ impl PaletteReparentCapture {
         scope: PalettePreservation,
         control: &ConversionControl,
     ) -> Result<PaletteReparentPlan> {
-        self.plan_with_tolerance(request, scope, 1e-5, 1e-6, control)
+        let tolerance = zipzi_sdk::DeletionTolerance::default();
+        self.plan_with_tolerance(
+            request,
+            scope,
+            tolerance.absolute,
+            tolerance.relative,
+            control,
+        )
     }
     pub fn plan_with_tolerance(
         &self,
@@ -120,7 +127,7 @@ pub(super) fn deformation_destination(
     };
     Ok((collection, before))
 }
-fn reparent_edit(
+pub(super) fn reparent_edit(
     model: &zipzi_core::Document,
     request: &PaletteMove,
     mut context: ReparentContext,
@@ -156,6 +163,7 @@ fn reparent_edit(
     if scope == PalettePreservation::EditState {
         context.parameter_domain.clear();
     }
+    let tolerance = zipzi_sdk::DeletionTolerance::default();
     Ok(ReparentEdit {
         sources: request.sources.iter().map(|s| s.id.clone()).collect(),
         parent_id: parent_id.unwrap_or_default(),
@@ -164,8 +172,8 @@ fn reparent_edit(
             PalettePreservation::EditState => ReparentStrategy::PreserveEditState,
         },
         placement: Some(ReparentPlacement { before }),
-        tolerance: 1e-5,
-        relative_tolerance: 1e-6,
+        tolerance: tolerance.absolute,
+        relative_tolerance: tolerance.relative,
         context: Some(context),
     })
 }

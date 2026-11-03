@@ -358,14 +358,29 @@ impl Document {
                 Ok(plan) => plan,
                 Err(status) if status.code.starts_with("AUTHORING_") => return Err(status),
                 Err(status) => {
+                    let mut choices = vec![];
+                    if migration.strategy != ReparentStrategy::PreserveEditState
+                        && request.conversion_context.is_some()
+                    {
+                        let state = self.deletion_reparent_edit(
+                            request,
+                            &migration.object,
+                            migration.parent_id.clone(),
+                            ReparentStrategy::PreserveEditState,
+                        );
+                        if candidate.deletion_reparent_supported(&state).is_ok() {
+                            choices.push(DeletionChoice::PreserveEditState);
+                        }
+                    }
+                    choices.extend([
+                        DeletionChoice::KeepLocalData,
+                        DeletionChoice::DeleteSubtree,
+                        DeletionChoice::Cancel,
+                    ]);
                     report.decisions.push(DeletionDecision {
                         object: migration.object.clone(),
                         reason: DeletionDecisionReason::ConversionUnproven { code: status.code },
-                        choices: vec![
-                            DeletionChoice::KeepLocalData,
-                            DeletionChoice::DeleteSubtree,
-                            DeletionChoice::Cancel,
-                        ],
+                        choices,
                     });
                     return Ok(false);
                 }

@@ -10,8 +10,9 @@ use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues}
 use anyhow::bail;
 
 enum PropertyPayload {
+    Unchanged,
     Object(serde_json::Value),
-    DeformerParent(crate::PaletteMovePlan),
+    DeformationParent(crate::PaletteMovePlan),
     Physics(zipzi_core::document::PhysicsPatch),
     Motion(zipzi_core::document::MotionEdit),
     Pose(zipzi_core::document::PoseEdit),
@@ -345,16 +346,20 @@ impl Document {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.checked_payload");
         self.validate_property_baseline(object, patch)?;
-        if object.kind == ObjectKind::Deformer
-            && patch
-                .changes
-                .contains_key(&crate::property::deformer::PARENT.key)
-        {
+        let parent_field = match object.kind {
+            ObjectKind::Deformer => Some(crate::property::deformer::PARENT.key),
+            ObjectKind::Mesh => Some(crate::property::mesh::DEFORMER.key),
+            _ => None,
+        };
+        if let Some(field) = parent_field.filter(|field| patch.changes.contains_key(field)) {
             ensure!(
                 patch.changes.len() == 1,
                 "Parent changes must be independent"
             );
-            let parent = patch.changes[&crate::property::deformer::PARENT.key].text();
+            let parent = patch.changes[&field].text();
+            if self.model().scene_deformer_parent(&object.id) == Some(parent.as_str()) {
+                return Ok(PropertyPayload::Unchanged);
+            }
             return self
                 .plan_palette_move(crate::PaletteMove {
                     projection: crate::PaletteProjection::Deformation,
@@ -363,7 +368,7 @@ impl Document {
                         .then(|| ObjectRef::new(ObjectKind::Deformer, parent)),
                     position: crate::PalettePosition::Inside,
                 })
-                .map(PropertyPayload::DeformerParent);
+                .map(PropertyPayload::DeformationParent);
         }
         let specs = crate::property_specs(object.kind);
         if object.kind == ObjectKind::PhysicsGroup {
@@ -445,7 +450,8 @@ impl Document {
             return Ok(edit.patch_physics(&patch)?);
         }
         let payload = match payload {
-            PropertyPayload::DeformerParent(plan) => {
+            PropertyPayload::Unchanged => return Ok(()),
+            PropertyPayload::DeformationParent(plan) => {
                 return plan.apply_to(edit, self.preview_revision());
             }
             PropertyPayload::Motion(intent) => return Ok(edit.edit_motion(intent)?),
@@ -471,24 +477,6 @@ impl Document {
                 .any(|key| crate::property::part::is_offscreen(*key))
         {
             return crate::property::part::apply_offscreen(edit, &object.id, patch, &payload);
-        }
-        if object.kind == ObjectKind::Mesh
-            && patch
-                .changes
-                .contains_key(&crate::property::mesh::DEFORMER.key)
-        {
-            ensure!(
-                patch.changes.len() == 1,
-                "Deformer changes must be independent"
-            );
-            // Use the same native reparent operation as tree dragging so locks,
-            // deformation order and undo are validated together.
-            return Ok(edit.edit_scene(zipzi_sdk::SceneEdit::Reparent {
-                edit: zipzi_sdk::ReparentEdit::keep_local(
-                    vec![object.id.clone()],
-                    payload["deformer_id"].as_str().unwrap().into(),
-                ),
-            })?);
         }
         if object.kind == ObjectKind::Mesh
             && patch

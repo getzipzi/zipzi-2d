@@ -30,8 +30,10 @@ mod pose;
 mod property;
 mod publication;
 pub use publication::DocumentDomain;
+mod record_map;
 mod reference_authoring;
 mod references;
+use record_map::RecordMap;
 pub use reference_authoring::*;
 mod reference_entry;
 pub use reference_entry::{ReferenceEntry, ReferenceEntryAllocation};
@@ -108,7 +110,7 @@ pub struct Document {
     staged_edits: Vec<DocumentEdit>,
 
     mesh_runtime_ids: HashMap<String, String>,
-    vertex_slots: HashMap<String, HashMap<VertexId, usize>>,
+    vertex_slots: RecordMap<HashMap<VertexId, usize>>,
 
     saved_content: Option<Arc<DocumentContent>>,
     // Valid until persistent content or its saved baseline changes. OnceLock
@@ -125,6 +127,15 @@ pub struct Document {
     scene_projection: OnceLock<Arc<SceneProjection>>,
     organization_index: OnceLock<Arc<organization::OrganizationIndex>>,
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
+}
+
+/// An exact immutable-content identity without retaining the document payload.
+#[derive(Debug, Clone)]
+pub struct DocumentSnapshotId(Arc<()>);
+impl DocumentSnapshotId {
+    pub fn matches(&self, document: &Document) -> bool {
+        Arc::ptr_eq(&self.0, &document.snapshot_identity)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -145,22 +156,22 @@ struct DocumentContent {
     asset_order: Vec<String>,
     parts: HashMap<String, Part>,
     part_order: Vec<String>,
-    transforms: HashMap<String, Transform>,
+    transforms: RecordMap<Transform>,
     transform_order: Vec<String>,
-    meshes: HashMap<String, Mesh>,
+    meshes: RecordMap<Mesh>,
     mesh_order: Vec<String>,
     parameters: HashMap<String, Parameter>,
     parameter_order: Vec<String>,
-    bindings: HashMap<String, MeshBinding>,
+    bindings: RecordMap<MeshBinding>,
     binding_order: Vec<String>,
-    scene_bindings: HashMap<String, SceneBinding>,
+    scene_bindings: RecordMap<SceneBinding>,
     scene_binding_order: Vec<String>,
     draw_order_groups: Option<Vec<DrawOrderGroup>>,
     blend_key_tables: HashMap<String, BlendShapeKeyTable>,
     blend_key_table_order: Vec<String>,
     blend_constraints: HashMap<String, BlendShapeConstraint>,
     blend_constraint_order: Vec<String>,
-    blend_bindings: HashMap<String, BlendShapeBinding>,
+    blend_bindings: RecordMap<BlendShapeBinding>,
     blend_binding_order: Vec<String>,
     glues: HashMap<String, Glue>,
     glue_order: Vec<String>,
@@ -295,6 +306,10 @@ impl Document {
     /// Saved-state and evaluation caches are not part of this comparison.
     pub fn is_same_snapshot(&self, other: &Document) -> bool {
         Arc::ptr_eq(&self.snapshot_identity, &other.snapshot_identity)
+    }
+
+    pub fn snapshot_id(&self) -> DocumentSnapshotId {
+        DocumentSnapshotId(self.snapshot_identity.clone())
     }
 
     pub fn same_content(&self, other: &Document) -> bool {

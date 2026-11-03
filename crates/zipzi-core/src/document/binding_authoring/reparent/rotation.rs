@@ -295,7 +295,7 @@ impl Document {
         Ok(radius * scale)
     }
 
-    pub(super) fn verify_rotation_reparent(
+    pub(super) fn verify_reparent_geometry(
         &self,
         plan: &mut ReparentPlan,
         control: &ConversionControl,
@@ -320,37 +320,62 @@ impl Document {
         let affected: HashSet<_> = plan.affected.iter().map(String::as_str).collect();
         let mut measured = 0.0f64;
         let mut bounds: Option<[f64; 4]> = None;
-        for (before, after) in before.drawables.iter().zip(&after.drawables) {
+        let mut check = |a: Vec2, b: Vec2| {
+            measured = measured
+                .max((f64::from(a.x) - f64::from(b.x)).hypot(f64::from(a.y) - f64::from(b.y)));
+            let (x, y) = (f64::from(a.x), f64::from(a.y));
+            bounds = Some(bounds.map_or([x, y, x, y], |[x0, y0, x1, y1]| {
+                [x0.min(x), y0.min(y), x1.max(x), y1.max(y)]
+            }));
+        };
+        let after_meshes: std::collections::HashMap<_, _> =
+            after.drawables.iter().map(|d| (d.id.as_str(), d)).collect();
+        for before in &before.drawables {
             control.checkpoint()?;
             if !affected.contains(before.id.as_str()) {
                 continue;
             }
+            let after = after_meshes[before.id.as_str()];
             for (a, b) in before.positions.iter().zip(&after.positions) {
-                measured = measured
-                    .max((f64::from(a.x) - f64::from(b.x)).hypot(f64::from(a.y) - f64::from(b.y)));
-                let (x, y) = (f64::from(a.x), f64::from(a.y));
-                bounds = Some(bounds.map_or([x, y, x, y], |[x0, y0, x1, y1]| {
-                    [x0.min(x), y0.min(y), x1.max(x), y1.max(y)]
-                }));
+                check(*a, *b);
             }
         }
+        // Include the moved deformers' own geometry in the reference scale and
+        // native check, even when a subtree has no Mesh or only a tiny child.
+        let after_deformers: std::collections::HashMap<_, _> =
+            after.deformers.iter().map(|d| (d.id.as_str(), d)).collect();
+        for before in &before.deformers {
+            control.checkpoint()?;
+            if !affected.contains(before.id.as_str()) {
+                continue;
+            }
+            let after = after_deformers[before.id.as_str()];
+            for (a, b) in before.points.iter().zip(&after.points) {
+                check(*a, *b);
+            }
+        }
+        let residual = if plan.guarantee.strategy == ReparentStrategy::PreserveParameterDomain {
+            self.reparent_residual_bound(&candidate, plan, context, control)?
+        } else {
+            0.
+        };
         let g = &mut plan.guarantee;
         g.reference_scale = g
             .reference_scale
             .max(bounds.map_or(1., |[x0, y0, x1, y1]| (x1 - x0).hypot(y1 - y0).max(1.)));
         g.measured_error = g.measured_error.max(measured);
-        g.error_bound += measured;
-        g.position_scope = if g.strategy == ReparentStrategy::PreserveParameterDomain {
-            "Rotation inherited-frame compensation over the declared parameter domain; numeric verification at captured native edit inputs"
-        } else {
-            "Rotation channel compensation at the frozen ancestor pose; numeric verification at captured native edit inputs"
-        }.into();
+        g.error_bound = g.error_bound.max(measured) + residual;
         if !g.error_bound.is_finite()
             || g.error_bound > g.tolerance + g.relative_tolerance * g.reference_scale
         {
             return Err(Status::error(
                 "REPARENT_TOLERANCE_EXCEEDED",
-                "Rotation subtree conversion exceeds the requested position tolerance",
+                format!(
+                    "Native geometry error {} (bound {}) exceeds {} model units",
+                    g.measured_error,
+                    g.error_bound,
+                    g.tolerance + g.relative_tolerance * g.reference_scale
+                ),
             ));
         }
         plan.report.reparent_guarantee = Some(g.clone());

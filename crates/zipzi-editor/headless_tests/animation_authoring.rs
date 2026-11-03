@@ -164,6 +164,56 @@ fn new_expression_has_no_members_and_member_creation_focuses_parameter(cx: &mut 
 }
 
 #[gpui_kit::test]
+fn motion_registration_folds_without_hiding_clip_fields_or_editing(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let h = setup_with_document(cx, document, assets);
+    cx.update_window(h.window, |_, window, cx| {
+        window.resize(gpui_kit::size(gpui_kit::px(1200.), gpui_kit::px(1500.)));
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window.click(("animation-motion", 0usize), cx);
+        window.render_frame(cx);
+        let entry = h
+            .view
+            .read(cx)
+            .editor
+            .animation()
+            .unwrap()
+            .motion
+            .as_ref()
+            .unwrap()
+            .entry
+            .clone()
+            .unwrap();
+        let registration_group = format!("property-group-authoring.current_registration-{entry}");
+        let registration_field = format!("property-input-registration_fade_in-{entry}");
+        let registration_status = format!("registration-status-registration_fade_in-{entry}");
+        assert!(window.find("property-input-name").visible());
+        assert!(window.find(registration_field.clone()).visible());
+        assert!(
+            window
+                .try_find("property-group-authoring.clip_content")
+                .is_none()
+        );
+
+        window.click(registration_group.clone(), cx);
+        window.render_frame(cx);
+        assert!(window.try_find(registration_field.clone()).is_none());
+        assert!(window.try_find(registration_status).is_none());
+        assert!(window.find("property-input-name").visible());
+
+        window.click(registration_group, cx);
+        window.render_frame(cx);
+        assert!(window.find(registration_field).visible());
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn registration_fade_fields_edit_only_current_registration_and_clear_override(
     cx: &mut TestAppContext,
 ) {

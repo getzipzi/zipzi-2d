@@ -92,32 +92,13 @@ impl Document {
         {
             return Ok(None);
         }
-        let (SceneCollection::Deformation { parent_id }, before) =
-            super::reparenting::deformation_destination(&self.model(), request)?
-        else {
-            unreachable!()
-        };
-        let rotation = request
-            .sources
-            .iter()
-            .any(|o| o.kind == ObjectKind::Deformer);
-        let mut context = self.preservation_context();
-        if rotation {
-            context.parameter_domain.clear();
-        }
-        Ok(Some(ReparentEdit {
-            sources: request.sources.iter().map(|o| o.id.clone()).collect(),
-            parent_id: parent_id.unwrap_or_default(),
-            strategy: if rotation {
-                ReparentStrategy::PreserveEditState
-            } else {
-                ReparentStrategy::PreserveParameterDomain
-            },
-            placement: Some(ReparentPlacement { before }),
-            tolerance: 0.01,
-            relative_tolerance: 1e-6,
-            context: Some(context),
-        }))
+        super::reparenting::reparent_edit(
+            &self.model(),
+            request,
+            self.preservation_context(),
+            crate::PalettePreservation::ParameterDomain,
+        )
+        .map(Some)
     }
 
     /// Tree hover checks structural support without converting every keyform.

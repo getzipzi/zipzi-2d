@@ -293,8 +293,10 @@ impl ReparentReview {
                 }
                 cx.notify();
             });
-            let tolerance = ["0.00001", "0.000001"]
-                .map(|value| cx.new(|cx| InputState::new(window, cx).default_value(value)));
+            let defaults = zipzi_sdk::DeletionTolerance::default();
+            let tolerance = [defaults.absolute, defaults.relative].map(|value| {
+                cx.new(|cx| InputState::new(window, cx).default_value(value.to_string()))
+            });
             let tolerance_events = tolerance
                 .iter()
                 .map(|input| {
@@ -317,7 +319,7 @@ impl ReparentReview {
                 fixed,
                 choices,
                 destination,
-                scope: Scope::EditState,
+                scope: Scope::ParameterDomain,
                 tolerance,
                 _tolerance_events: tolerance_events,
                 plan: None,

@@ -80,6 +80,42 @@ pub(crate) fn authoring_rotation_pose(
     pose
 }
 
+/// Native Warp lattice at fixed parameter inputs, before parent inheritance.
+pub(crate) fn authoring_warp_positions(
+    doc: &crate::Document,
+    id: &str,
+    values: &PreviewValues,
+) -> Result<Vec<crate::Vec2>, crate::Status> {
+    let transform = doc.get_transform(id).unwrap();
+    let values = normalized_authoring_values(doc, values);
+    let mut positions = transform.warp().unwrap().points.clone();
+    if let Some(binding) = doc
+        .binding_for_scene(id)
+        .filter(|b| b.axes.iter().any(|a| !a.parameter_id.is_empty()))
+    {
+        let mut out = selection::Selection::default();
+        let sel = selection::select(doc, &values, &binding.axes, &mut out);
+        selection::blend_positions(
+            doc,
+            transform.parent(),
+            sel,
+            |i| binding.track.sample(i).positions,
+            &mut positions,
+        )?;
+    }
+    for binding in doc.iter_active_blend_bindings_for_target(id) {
+        if let crate::DeltaKeyforms::Warp(forms) = &binding.keyforms {
+            for (i, w) in selection::evaluate_blend_binding(doc, &values, binding) {
+                for (p, d) in positions.iter_mut().zip(&forms[i].points) {
+                    p.x += d.x * w;
+                    p.y += d.y * w;
+                }
+            }
+        }
+    }
+    Ok(positions)
+}
+
 /// Shared scalar normalization for authoring converters; the caller validates finiteness.
 pub(crate) fn normalize_authoring_parameter(parameter: &crate::Parameter, value: f32) -> f32 {
     parameters::normalize(parameter, value).0

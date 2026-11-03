@@ -1,7 +1,7 @@
 use super::*;
 use crate::geometry::validate_positions;
 use crate::types::{ChangeKind, EditResult, Status, Transform};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use zipzi_core::SceneTrackEvaluation;
 
 impl Document {
@@ -191,7 +191,7 @@ impl Document {
 
         fn visit(
             id: &str,
-            transforms: &HashMap<String, Transform>,
+            transforms: &RecordMap<Transform>,
             seen: &mut HashSet<String>,
             result: &mut Vec<String>,
         ) {

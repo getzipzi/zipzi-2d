@@ -352,3 +352,83 @@ fn full_entrypoint_and_checkpoint_clone_restore_boundaries_keep_full_validation(
     after.restore_from(&before);
     assert!(differential(&before, &after, false).is_empty());
 }
+
+#[test]
+fn shared_geometry_reuses_its_proof_but_rechecks_references_and_detached_records() {
+    let mut before = fixture();
+    assert!(before
+        .create_part(Part {
+            id: id(6),
+            ..Default::default()
+        })
+        .status
+        .is_ok());
+    assert!(before
+        .create_transform(Transform {
+            id: id(7),
+            ..Default::default()
+        })
+        .status
+        .is_ok());
+    let mut mesh = before.get_mesh(&id(2)).unwrap().clone();
+    mesh.part_id = id(6);
+    mesh.deformer_id = id(7);
+    mesh.masks = vec![id(3)];
+    assert!(before.replace_mesh(mesh).status.is_ok());
+    assert!(before.validate_structure().is_empty());
+
+    let mut after = before.fork_candidate();
+    let mut mesh = after.get_mesh(&id(3)).unwrap().clone();
+    mesh.vertex_ids = vec![10, 20, 30];
+    mesh.triangles = vec![[10, 20, 30]];
+    assert!(after.replace_mesh(mesh).status.is_ok());
+    assert!(std::ptr::eq(
+        before.get_mesh(&id(2)).unwrap(),
+        after.get_mesh(&id(2)).unwrap()
+    ));
+    #[cfg(feature = "bench-instrumentation")]
+    let capture = crate::benchmark::Capture::start();
+    assert!(after.validate_structure_since(&before).is_empty());
+    #[cfg(feature = "bench-instrumentation")]
+    {
+        let work = capture.finish();
+        assert_eq!(
+            work["core.validate_structure.full.mesh_geometry_checks"].calls,
+            1
+        );
+    }
+
+    for (n, expected) in [
+        (6, "MISSING_PART"),
+        (7, "MISSING_TRANSFORM"),
+        (3, "MISSING_MESH"),
+    ] {
+        let mut after = before.fork_candidate();
+        match n {
+            6 => {
+                after.content.parts.remove(&id(n));
+            }
+            7 => {
+                after.content.transforms.remove(&id(n));
+            }
+            _ => {
+                after.content.meshes.remove(&id(n));
+            }
+        }
+        assert!(differential(&before, &after, false)
+            .iter()
+            .any(|i| i.object_id == id(2) && i.status.code == expected));
+    }
+    let mut after = before.fork_candidate();
+    after
+        .content
+        .meshes
+        .get_mut(&id(3))
+        .unwrap()
+        .base_positions
+        .pop();
+    assert!(!differential(&before, &after, false).is_empty());
+    let mut invalid = before.fork_candidate();
+    invalid.content.meshes.get_mut(&id(3)).unwrap().vertex_ids[1] = 1;
+    assert!(!differential(&invalid, &invalid.fork_candidate(), false).is_empty());
+}

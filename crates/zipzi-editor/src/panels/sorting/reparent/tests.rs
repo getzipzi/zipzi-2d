@@ -57,8 +57,8 @@ fn open(
         })
         .unwrap();
     cx.update_window(h.window, |_, window, cx| {
-        assert_eq!(v.read(cx).scope, Scope::EditState);
-        assert_eq!(v.read(cx).tolerance[0].read(cx).value(), "0.00001");
+        assert_eq!(v.read(cx).scope, Scope::ParameterDomain);
+        assert_eq!(v.read(cx).tolerance[0].read(cx).value(), "0.001");
         window.render_frame(cx);
         window.click("reparent-absolute", cx);
         window.press("cmd-a", cx);
@@ -114,7 +114,7 @@ fn fixed_review_reports_native_proof_and_commits_once_with_selection_and_undo(
     v.read_with(cx, |v, _| {
         assert!(v.plan.is_some(), "{:?}", v.reason);
         assert_eq!(v.plans_built.load(std::sync::atomic::Ordering::Relaxed), 1);
-        assert_eq!(v.scope, Scope::EditState);
+        assert_eq!(v.scope, Scope::ParameterDomain);
     });
     cx.update_window(h.window, |_, window, cx| {
         window.click("reparent-domain", cx)
@@ -173,7 +173,7 @@ fn fixed_review_reports_native_proof_and_commits_once_with_selection_and_undo(
             v.read(cx)
                 .plans_built
                 .load(std::sync::atomic::Ordering::Relaxed),
-            2
+            1
         );
         assert!(!window.has_active_dialog(cx));
         assert!(
@@ -210,15 +210,6 @@ fn full_domain_failure_requires_explicit_scope_change_before_submit(cx: &mut Tes
         cx,
     );
     v.read_with(cx, |v, _| {
-        assert!(v.plan.is_some(), "{:?}", v.reason);
-        assert_eq!(v.scope, Scope::EditState);
-    });
-    cx.update_window(h.window, |_, window, cx| {
-        window.click("reparent-domain", cx)
-    })
-    .unwrap();
-    settle(cx);
-    v.read_with(cx, |v, _| {
         assert!(v.plan.is_none());
         assert!(v.reason.as_ref().unwrap().contains("full parameter range"));
         assert_eq!(v.scope, Scope::ParameterDomain);
@@ -233,7 +224,7 @@ fn full_domain_failure_requires_explicit_scope_change_before_submit(cx: &mut Tes
     v.read_with(cx, |v, _| {
         assert!(v.plan.is_some(), "{:?}", v.reason);
         assert_eq!(v.scope, Scope::EditState);
-        assert_eq!(v.plans_built.load(std::sync::atomic::Ordering::Relaxed), 3);
+        assert_eq!(v.plans_built.load(std::sync::atomic::Ordering::Relaxed), 2);
         assert_eq!(
             v.plan
                 .as_ref()

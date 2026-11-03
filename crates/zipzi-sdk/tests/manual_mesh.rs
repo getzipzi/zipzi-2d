@@ -1353,6 +1353,144 @@ fn transfer_budget_and_cancellation_reject_before_channel_allocation() {
 }
 
 #[test]
+fn transfer_workspace_shares_unrelated_records_and_retains_budget_and_history_checks() {
+    let mut s = session();
+    let mut unrelated = s.mesh(&id(2)).unwrap();
+    unrelated.id = id(3);
+    unrelated.runtime_id = id(3);
+    // An unrelated record larger than the old 64 MiB / 6 admission ceiling.
+    // Its data must remain shared through source capture, planning and history.
+    unrelated.name = "x".repeat(12 * 1024 * 1024);
+    // Publication must also reuse the unrelated mesh's large vertex index.
+    // Rebuilding it alone exceeds this edit's 1 MiB temporary budget.
+    unrelated.meshing = None;
+    for vertex in 100..120_100 {
+        unrelated.vertex_ids.push(vertex);
+        unrelated.base_positions.push(Vec2::default());
+        unrelated.uvs.push(Vec2::default());
+    }
+    s.edit("unrelated content", None, |e| e.create_mesh(unrelated))
+        .unwrap();
+    let original = s.document().fork_candidate();
+    let before = s.mesh(&id(2)).unwrap();
+    assert!(original.estimated_content_bytes() > 64 * 1024 * 1024 / 6);
+    let limits = zipzi_core::document::AuthoringLimits {
+        max_conversion_bytes: 1024 * 1024,
+        ..Default::default()
+    };
+    s.set_authoring_limits(limits).unwrap();
+    let insertion = || ManualMeshOperation::InsertVertex {
+        id: 50,
+        uv: Vec2::new(0.4, 0.3),
+    };
+    for batch in [false, true] {
+        let mut edit = s
+            .begin_owned_edit("small mesh in large document", None)
+            .unwrap();
+        let reports = if batch {
+            edit.edit_manual_mesh_batch(vec![(id(2), insertion())])
+                .unwrap()
+        } else {
+            let plan = edit.plan_manual_mesh(&id(2), insertion()).unwrap();
+            vec![edit.apply_manual_mesh_plan(plan).unwrap()]
+        };
+        assert!(reports[0].cost.temporary_bytes < limits.max_conversion_bytes);
+        assert!(std::ptr::eq(
+            original.get_mesh(&id(3)).unwrap(),
+            edit.candidate_document().get_mesh(&id(3)).unwrap()
+        ));
+        assert_eq!(original.get_mesh(&id(2)).unwrap(), &before);
+        edit.commit_to(&mut s).unwrap();
+        assert_eq!(s.mesh(&id(2)).unwrap().vertex_ids.len(), 5);
+        s.undo().unwrap();
+        assert_eq!(s.mesh(&id(2)).unwrap(), before);
+        s.redo().unwrap();
+        assert_eq!(s.mesh(&id(2)).unwrap().vertex_ids.len(), 5);
+        s.undo().unwrap();
+    }
+    let edit = s.begin_owned_edit("restricted", None).unwrap();
+    for (limits, expected) in [
+        (
+            zipzi_core::document::AuthoringLimits {
+                max_conversion_bytes: 1,
+                ..limits
+            },
+            "AUTHORING_MEMORY_LIMIT",
+        ),
+        (
+            zipzi_core::document::AuthoringLimits {
+                max_history_bytes: 1,
+                ..limits
+            },
+            "AUTHORING_HISTORY_LIMIT",
+        ),
+    ] {
+        assert_eq!(
+            edit.plan_manual_mesh_with_limits(&id(2), insertion(), limits)
+                .unwrap_err()
+                .code
+                .as_ref(),
+            expected
+        );
+        assert!(!edit.is_aborted());
+    }
+}
+
+#[test]
+fn transfer_batch_reserves_prior_plans_before_publishing_any_mesh() {
+    let id = dependencies::id;
+    let mut session = mixed();
+    let batch = || {
+        vec![
+            (id(2), ManualMeshOperation::Reconnect),
+            (id(4), ManualMeshOperation::Reconnect),
+        ]
+    };
+    let mut probe = session.begin_owned_edit("measure batch", None).unwrap();
+    let single = [2, 4]
+        .into_iter()
+        .map(|n| {
+            probe
+                .plan_manual_mesh(&id(n), ManualMeshOperation::Reconnect)
+                .unwrap()
+                .report
+                .cost
+                .temporary_bytes
+        })
+        .max()
+        .unwrap();
+    let batch_peak = probe
+        .edit_manual_mesh_batch(batch())
+        .unwrap()
+        .iter()
+        .map(|r| r.cost.temporary_bytes)
+        .max()
+        .unwrap();
+    assert!(batch_peak > single);
+    drop(probe);
+    session
+        .set_authoring_limits(zipzi_core::document::AuthoringLimits {
+            max_conversion_bytes: single,
+            ..Default::default()
+        })
+        .unwrap();
+    let before = session.document().fork_candidate();
+    let mut edit = session.begin_owned_edit("restricted batch", None).unwrap();
+    assert_eq!(
+        edit.edit_manual_mesh_batch(batch())
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "AUTHORING_MEMORY_LIMIT"
+    );
+    assert!(edit.candidate_document().is_same_snapshot(&before));
+    assert!(!edit.is_aborted());
+    // Rejection retains a usable candidate and does not publish the first plan.
+    edit.edit_manual_mesh(&id(2), ManualMeshOperation::Reconnect)
+        .unwrap();
+}
+
+#[test]
 fn transfer_plans_reject_same_revision_branches_and_changed_dependencies() {
     let id = dependencies::id;
     let s = mixed();

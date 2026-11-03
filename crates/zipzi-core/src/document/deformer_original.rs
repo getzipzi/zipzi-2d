@@ -170,7 +170,10 @@ impl OriginalParentSpace {
         }
         Ok(result)
     }
-    fn direction(&self, origin: Vec2) -> f32 {
+    pub(super) fn inherited_scale(&self) -> f32 {
+        self.scale
+    }
+    pub(super) fn direction(&self, origin: Vec2) -> f32 {
         if self.identity {
             return 0.;
         }

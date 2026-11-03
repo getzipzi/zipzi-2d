@@ -164,6 +164,7 @@ impl PropertiesPanel {
         }
         let mut section = None;
         let mut entity = None;
+        let mut section_collapsed = false;
         for spec in &self.definition.fields {
             if !self.form.fields.contains_key(&spec.binding.key)
                 || (target.object.kind == zipzi_editor_core::ObjectKind::Deformer
@@ -173,12 +174,21 @@ impl PropertiesPanel {
             }
             let next_entity = spec.binding.key.entity_id();
             if spec.section != section || next_entity != entity {
+                section_collapsed = false;
                 if let Some(label) = spec.section {
-                    rows.push(Row::Detail(properties::DetailRow::Heading(
-                        t!(label).into(),
-                    )));
+                    let key = next_entity
+                        .as_ref()
+                        .map_or_else(|| label.to_owned(), |id| format!("{label}-{id}"));
+                    section_collapsed = self.collapsed.contains(&key);
+                    rows.push(Row::Group {
+                        key,
+                        label: t!(label).into_owned(),
+                        collapsed: section_collapsed,
+                    });
                 }
-                if spec.binding.key.object_kind() == zipzi_editor_core::ObjectKind::ExpressionEntry
+                if !section_collapsed
+                    && spec.binding.key.object_kind()
+                        == zipzi_editor_core::ObjectKind::ExpressionEntry
                 {
                     if let Some(id) = &next_entity {
                         rows.push(Row::AnimationActions(ObjectRef::new(
@@ -189,6 +199,9 @@ impl PropertiesPanel {
                 }
                 section = spec.section;
                 entity = next_entity;
+            }
+            if section_collapsed {
+                continue;
             }
             rows.push(Row::Field(spec.binding.key));
             if let Some(status) =

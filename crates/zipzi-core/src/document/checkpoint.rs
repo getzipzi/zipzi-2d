@@ -57,6 +57,20 @@ impl Document {
         let _benchmark_span = crate::benchmark::span("core.document_size");
         size::estimated_content_bytes(&self.content)
     }
+    /// Persistent allocations copied by `fork_candidate`, excluding shared
+    /// record payloads. Includes mutable lookup descriptors; saved state and
+    /// derived evaluation caches are omitted.
+    pub fn estimated_snapshot_bytes(&self) -> usize {
+        size::estimated_snapshot_bytes(self)
+    }
+    /// Records a complete mesh topology replacement may detach or rebuild.
+    pub fn estimated_mesh_dependency_bytes(&self, mesh_id: &str) -> usize {
+        size::estimated_mesh_dependency_bytes(self, mesh_id)
+    }
+    /// Temporary identity inventory rebuilt during dependency validation.
+    pub fn estimated_authoring_index_bytes(&self) -> usize {
+        size::estimated_authoring_index_bytes(self)
+    }
     pub fn checkpoint(&self) -> DocumentCheckpoint {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.checkpoint_clone");
@@ -68,14 +82,18 @@ impl Document {
     pub fn fork_candidate(&self) -> Document {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.fork_candidate");
-        let mut candidate = Document::new();
-        let mut content = self.checkpoint();
-        candidate.swap_checkpoint(&mut content, true);
-        candidate.snapshot_identity = self.snapshot_identity.clone();
-        candidate.revision = self.revision;
-        candidate.evaluation_revision = self.evaluation_revision;
-        candidate.original_capture_context = self.original_capture_context.clone();
-        candidate
+        // A fork keeps the same content, so immutable per-mesh vertex indexes
+        // remain valid and shared. Checkpoint restoration still rebuilds them.
+        Document {
+            content: self.content.clone(),
+            mesh_runtime_ids: self.mesh_runtime_ids.clone(),
+            vertex_slots: self.vertex_slots.clone(),
+            snapshot_identity: self.snapshot_identity.clone(),
+            revision: self.revision,
+            evaluation_revision: self.evaluation_revision,
+            original_capture_context: self.original_capture_context.clone(),
+            ..Document::new()
+        }
     }
 
     /// Publish a candidate as one revision while retaining this document's saved
@@ -109,10 +127,13 @@ impl Document {
         } else {
             false
         };
-        let mut candidate = candidate;
-        let mut content = DocumentCheckpoint(DocumentContent::default(), false);
-        candidate.swap_checkpoint(&mut content, true);
-        let validated = self.swap_checkpoint(&mut content, !metadata_only);
+        let validated = candidate.structure_is_validated();
+        let mut content = DocumentCheckpoint(candidate.content, validated);
+        let validated = self.swap_checkpoint_content(&mut content, !metadata_only);
+        // Candidate authoring maintains these indexes together with its content.
+        // Move them on publication instead of rebuilding every mesh's vertex map.
+        self.mesh_runtime_ids = candidate.mesh_runtime_ids;
+        self.vertex_slots = candidate.vertex_slots;
         self.advance_checkpoint_revision(!metadata_only);
         if validated {
             self.remember_valid_structure();
@@ -327,26 +348,7 @@ impl Document {
     fn swap_checkpoint(&mut self, checkpoint: &mut DocumentCheckpoint, invalidate: bool) -> bool {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.checkpoint_swap_indexes");
-        self.tracking = Default::default();
-        self.modified_cache.take();
-        self.expression_entries.take();
-        self.motion_lookup.take();
-        if invalidate
-            || !super::organization::same_metadata_shape(
-                &self.content.display_info,
-                &checkpoint.0.display_info,
-            )
-            || self.content.hierarchy_order.organization
-                != checkpoint.0.hierarchy_order.organization
-        {
-            self.organization_index.take();
-        }
-        self.reference_index.take();
-        self.reference_projection.take();
-        let validated = checkpoint.1;
-        checkpoint.1 = self.structure_is_validated();
-        self.forget_valid_structure();
-        std::mem::swap(&mut self.content, &mut checkpoint.0);
+        let validated = self.swap_checkpoint_content(checkpoint, invalidate);
         self.mesh_runtime_ids = self
             .content
             .meshes
@@ -367,6 +369,34 @@ impl Document {
                 (id.clone(), slots)
             })
             .collect();
+        validated
+    }
+
+    fn swap_checkpoint_content(
+        &mut self,
+        checkpoint: &mut DocumentCheckpoint,
+        invalidate: bool,
+    ) -> bool {
+        self.tracking = Default::default();
+        self.modified_cache.take();
+        self.expression_entries.take();
+        self.motion_lookup.take();
+        if invalidate
+            || !super::organization::same_metadata_shape(
+                &self.content.display_info,
+                &checkpoint.0.display_info,
+            )
+            || self.content.hierarchy_order.organization
+                != checkpoint.0.hierarchy_order.organization
+        {
+            self.organization_index.take();
+        }
+        self.reference_index.take();
+        self.reference_projection.take();
+        let validated = checkpoint.1;
+        checkpoint.1 = self.structure_is_validated();
+        self.forget_valid_structure();
+        std::mem::swap(&mut self.content, &mut checkpoint.0);
         if invalidate {
             self.lookup.take();
             self.binding_lookup.take();
@@ -395,4 +425,63 @@ impl Document {
 
 pub(super) fn expression_entries_bytes(entries: &Vec<super::ExpressionEntry>) -> usize {
     size::expression_entries_bytes(entries)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Mesh, ModelSetup, Vec2};
+
+    #[test]
+    fn publication_moves_candidate_indexes_and_checkpoint_exchange_restores_topology() {
+        let id = |n| format!("00000000-0000-4000-8000-{n:012x}");
+        let mut document = Document::new();
+        assert!(document.initialize(id(1), ModelSetup::default()).is_ok());
+        for n in [2, 3] {
+            assert!(document
+                .create_mesh(Mesh {
+                    id: id(n),
+                    vertex_ids: vec![1, 2, 3],
+                    base_positions: vec![Vec2::default(); 3],
+                    uvs: vec![Vec2::default(); 3],
+                    triangles: vec![[1, 2, 3]],
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+        }
+        let original = document.fork_candidate();
+        let mut undo = document.checkpoint();
+        let mut candidate = document.fork_candidate();
+        let mut mesh = candidate.get_mesh(&id(2)).unwrap().clone();
+        mesh.vertex_ids = vec![30, 20, 10];
+        mesh.triangles = vec![[30, 20, 10]];
+        assert!(candidate.replace_mesh(mesh).status.is_ok());
+        assert!(candidate.validate_structure().is_empty());
+        let indexes = candidate.vertex_slots.clone();
+        let revision = document.revision();
+        assert!(document
+            .publish_candidate(candidate, ChangeKind::Structure, true)
+            .unwrap());
+        assert!(document.revision() > revision);
+        assert!(document.structure_is_validated());
+        for n in [2, 3] {
+            assert!(std::ptr::eq(
+                document.vertex_slots.get(&id(n)).unwrap(),
+                indexes.get(&id(n)).unwrap(),
+            ));
+        }
+        assert!(std::ptr::eq(
+            document.vertex_slots.get(&id(3)).unwrap(),
+            original.vertex_slots.get(&id(3)).unwrap(),
+        ));
+        assert_eq!(document.vertex_slot(&id(2), 30), Some(0));
+        assert_eq!(document.vertex_slot(&id(2), 1), None);
+        document.exchange_checkpoint(&mut undo).unwrap();
+        assert_eq!(document.vertex_slot(&id(2), 1), Some(0));
+        assert_eq!(document.vertex_slot(&id(2), 30), None);
+        document.exchange_checkpoint(&mut undo).unwrap();
+        assert_eq!(document.vertex_slot(&id(2), 30), Some(0));
+        assert!(document.validate_structure().is_empty());
+    }
 }

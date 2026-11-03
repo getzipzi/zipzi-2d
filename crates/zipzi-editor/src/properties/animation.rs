@@ -271,9 +271,6 @@ pub(crate) fn expression_info(resource: &zipzi_editor_core::ExpressionResource) 
 pub(super) fn definition(target: &PropertyTarget, editor: &Editor) -> FormDefinition {
     let mut definition = fields(target.object.kind);
     if target.object.kind == ObjectKind::Motion {
-        for field in &mut definition.fields {
-            field.section = Some("authoring.clip_content");
-        }
         if let Some(entry) = target.motion.as_ref().and_then(|m| m.entry.as_deref()) {
             for mut field in fields(ObjectKind::MotionRegistration).fields {
                 field.binding.key = field.binding.key.for_entity(entry);

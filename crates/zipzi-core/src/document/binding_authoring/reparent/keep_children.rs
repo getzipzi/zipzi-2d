@@ -6,7 +6,7 @@ use crate::{DeltaKeyforms, SceneTrack, TransformData, WarpTransform};
 use std::collections::HashMap;
 
 impl ParentMap {
-    fn warp(w: &WarpTransform, parent: Self) -> Result<Self, Status> {
+    pub(super) fn warp(w: &WarpTransform, parent: Self) -> Result<Self, Status> {
         require_ok(crate::geometry::validate_positions(&w.points))?;
         let o = w.points[0];
         let x = w.points[w.columns as usize];
@@ -43,7 +43,7 @@ impl ParentMap {
             origin: PsmVec2::default(),
             ..parent
         };
-        let result = Self {
+        let mut result = Self {
             base: 0.,
             angle: 0.,
             scale: parent.scale,
@@ -51,7 +51,9 @@ impl ParentMap {
             rx: false,
             ry: false,
             warp_basis: Some([linear.point(x), linear.point(y)]),
+            residual: ParentResidual::default(),
         };
+        result.residual = ParentResidual::warp(w, parent, result);
         result.inverse(origin)?;
         Ok(result)
     }
@@ -392,7 +394,7 @@ impl Document {
     }
 }
 
-fn measure_error(maximum: &mut f64, before: Vec2, after: Vec2) -> Result<(), Status> {
+pub(super) fn measure_error(maximum: &mut f64, before: Vec2, after: Vec2) -> Result<(), Status> {
     let error =
         (f64::from(before.x) - f64::from(after.x)).hypot(f64::from(before.y) - f64::from(after.y));
     if !error.is_finite() {
@@ -405,7 +407,7 @@ fn measure_error(maximum: &mut f64, before: Vec2, after: Vec2) -> Result<(), Sta
     Ok(())
 }
 
-fn convert_controller(
+pub(super) fn convert_controller(
     controller: &mut Option<crate::WarpBezier>,
     convert: &mut impl FnMut(&mut [Vec2], bool) -> Result<(), Status>,
 ) -> Result<(), Status> {
