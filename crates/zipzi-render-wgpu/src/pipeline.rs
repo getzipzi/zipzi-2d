@@ -145,7 +145,7 @@ impl Pipelines {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
                         min_binding_size: std::num::NonZeroU64::new(
-                            std::mem::size_of::<Uniform>() as u64,
+                            std::mem::size_of::<Uniform>() as u64
                         ),
                     },
                     count: None,

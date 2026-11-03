@@ -204,6 +204,9 @@ impl FormDialogView for OriginalRestoreDialog {
 }
 impl Render for OriginalRestoreDialog {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.dialog.closed() {
+            return div().into_any_element();
+        }
         if !self.current(cx) {
             self.dialog.error = Some(t!("properties.warp_preview_expired").into_owned());
             self.dialog.set_validation(false, true);
@@ -258,6 +261,6 @@ impl Render for OriginalRestoreDialog {
                     .child(error.clone()),
             );
         }
-        body
+        body.into_any_element()
     }
 }

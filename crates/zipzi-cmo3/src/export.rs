@@ -12,7 +12,7 @@ use crate::{
     *,
 };
 use std::collections::{BTreeSet, HashMap};
-use zipzi_core::{Document, types::*};
+use zipzi_core::{types::*, Document};
 
 const ROOT_DEFORMER: &str = "71fae776-e218-4aee-873e-78e8ac0cb48a";
 const ROOT_PARAMETER_GROUP: &str = "e9fe6eff-953b-4ce2-be7c-4a7c3913686b";

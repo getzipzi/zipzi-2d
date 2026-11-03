@@ -88,7 +88,7 @@ with zipzi.connect() as runtime:
    track=clip.tracks[0]
    end=replace(track.segments[0].end,value=.8)
    track=replace(track,segments=(replace(track.segments[0],end=end),))
-   edit.apply(m.ModelingCommandReplaceMotion(clip=replace(clip,name='Agent motion',tracks=(track,))))
+   edit.apply(m.commands.ModelingCommandReplaceMotion(clip=replace(clip,name='Agent motion',tracks=(track,))))
    receipt=edit.commit().wait()
    assert receipt.changed and receipt.before==before.version
   assert edit.receipt==receipt
@@ -234,7 +234,7 @@ with zipzi.connect() as runtime:
   current=edit.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
   track=current.tracks[0]
   track=replace(track,initial=replace(track.initial,value=.2))
-  edit.apply(m.ModelingCommandReplaceMotion(clip=replace(current,tracks=(track,))))
+  edit.apply(m.commands.ModelingCommandReplaceMotion(clip=replace(current,tracks=(track,))))
   receipt=edit.commit().wait()
   assert receipt.before==before and receipt.changed
  assert s.info().history==(4,0)
@@ -373,11 +373,11 @@ with zipzi.connect() as runtime:
  after=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
  assert after==before and abs(after.tracks[0].segments[0].end.value-float(sys.argv[7]))<1e-5
  assert s.info().history==(0,0)
- exported=s.project.export(folder/'clip.motion3.json',m.ExportFormat.MOTION3,object_id=sys.argv[5]).wait()
+ exported=s.project.export(folder/'clip.motion3.json',m.project.ExportFormat.MOTION3,object_id=sys.argv[5]).wait()
  assert exported.published
  motion=json.loads((folder/'clip.motion3.json').read_text())
  assert abs(motion['Curves'][0]['Segments'][-1]-float(sys.argv[7]))<1e-5
- package=s.project.export(folder/'package',m.ExportFormat.PACKAGE,allow_loss=True).wait()
+ package=s.project.export(folder/'package',m.project.ExportFormat.PACKAGE,allow_loss=True).wait()
  assert package.published and (folder/'package/model.model3.json').is_file()
  with wave.open(str(folder/'package/test.wav'),'rb') as sound:
   assert sound.getframerate()==8000 and sound.readframes(800)==bytes(1600)

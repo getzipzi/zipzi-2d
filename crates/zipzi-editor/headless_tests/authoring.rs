@@ -47,6 +47,11 @@ fn deleting_a_parameter_settles_text_once_and_undo_restores_the_committed_name(
         });
     })
     .unwrap();
+    super::settle_object_deletion(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tree-deletion-submit", cx);
+    })
+    .unwrap();
     cx.run_until_parked();
     h.view.update(cx, |view, _| {
         assert!(

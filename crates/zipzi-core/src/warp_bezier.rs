@@ -330,7 +330,11 @@ impl WarpBezierEvaluation for WarpBezier {
             }
         }
         let valid = next.validate();
-        if valid.is_ok() { Ok(next) } else { Err(valid) }
+        if valid.is_ok() {
+            Ok(next)
+        } else {
+            Err(valid)
+        }
     }
 }
 
@@ -413,10 +417,9 @@ mod tests {
         }
         let mut zero = before.clone();
         zero.nodes[5].handles[1] = zero.nodes[5].position;
-        assert!(
-            zero.edit_controls(&patch, WarpBezierEditMode::PreserveStructure)
-                .is_err()
-        );
+        assert!(zero
+            .edit_controls(&patch, WarpBezierEditMode::PreserveStructure)
+            .is_err());
         assert_eq!(before.nodes[5].position, Vec2::new(1., 1.));
     }
     #[test]

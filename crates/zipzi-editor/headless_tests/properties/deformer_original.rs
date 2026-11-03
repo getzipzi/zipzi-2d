@@ -82,6 +82,10 @@ fn deformer_properties_original_restore_reviews_shared_density_and_cancel_is_unc
                 },
                 cx,
             );
+        })
+        .unwrap();
+        cx.run_until_parked();
+        cx.update_window(h.window, |_, window, cx| {
             window.render_frame(cx);
             if !cancel {
                 assert!(
@@ -98,7 +102,6 @@ fn deformer_properties_original_restore_reviews_shared_density_and_cancel_is_unc
             }
         })
         .unwrap();
-        cx.run_until_parked();
         h.view.read_with(cx, |view, _| {
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
             let doc = view.editor.document().unwrap();

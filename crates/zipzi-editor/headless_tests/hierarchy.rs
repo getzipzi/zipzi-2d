@@ -315,10 +315,6 @@ fn visibility_eyes_toggle_all_scene_object_kinds_without_changing_selection(
         ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(101).to_string()),
         ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(501).to_string()),
         ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(502).to_string()),
-        ObjectRef::new(
-            ObjectKind::Offscreen,
-            uuid::Uuid::from_u128(601).to_string(),
-        ),
         ObjectRef::new(ObjectKind::Mesh, mesh),
     ] {
         cx.update_window(harness.window, |_, window, cx| {

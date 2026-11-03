@@ -2,7 +2,7 @@
 //! lattice through its parent, so a captured canvas lattice retains that Warp's
 //! complete runtime interpolation, including below nonlinear parents.
 use super::*;
-use crate::deformers::{PsmVec2, rotation_parent_angle, warp_points};
+use crate::deformers::{rotation_parent_angle, warp_points, PsmVec2};
 use crate::evaluation::PreviewValues;
 use crate::{
     DeformerOriginal, DeformerOriginalShape, DeformerOriginalSnapshot, DeformerOriginalSource,
@@ -198,7 +198,11 @@ impl OriginalParentSpace {
 }
 
 fn require_ok(status: Status) -> Result<(), Status> {
-    if status.is_ok() { Ok(()) } else { Err(status) }
+    if status.is_ok() {
+        Ok(())
+    } else {
+        Err(status)
+    }
 }
 impl Document {
     /// Set frozen inputs for automatic creation/first-key baselines in an owned

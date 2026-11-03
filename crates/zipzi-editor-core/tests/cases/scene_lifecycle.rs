@@ -49,14 +49,16 @@ fn pending_scene_objects_remain_visible_inspectable_and_persistent() -> anyhow::
         assert!(object.diagnostic.is_some());
     }
     let tree = d.part_tree();
-    assert!(tree
-        .iter()
-        .flat_map(|n| n.children.iter())
-        .any(|n| n.id == mesh));
-    assert!(tree
-        .iter()
-        .flat_map(|n| n.children.iter())
-        .any(|n| n.id == warp));
+    assert!(
+        tree.iter()
+            .flat_map(|n| n.children.iter())
+            .any(|n| n.id == mesh)
+    );
+    assert!(
+        tree.iter()
+            .flat_map(|n| n.children.iter())
+            .any(|n| n.id == warp)
+    );
     let snapshot = d.snapshot()?;
     assert_eq!(snapshot.viewport_frame.drawables.len(), 1);
     assert!(!snapshot.viewport_frame.drawables[0].renderable);
@@ -65,12 +67,14 @@ fn pending_scene_objects_remain_visible_inspectable_and_persistent() -> anyhow::
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("pending.zipzi"))?;
     let reopened = Document::open(&saved.manifest)?;
-    assert!(reopened
-        .object_index()
-        .get(&ObjectRef::new(ObjectKind::Glue, glue))
-        .unwrap()
-        .diagnostic
-        .is_some());
+    assert!(
+        reopened
+            .object_index()
+            .get(&ObjectRef::new(ObjectKind::Glue, glue))
+            .unwrap()
+            .diagnostic
+            .is_some()
+    );
     Ok(())
 }
 #[test]
@@ -88,9 +92,10 @@ fn scene_copy_and_delete_refresh_canvas_topology_and_keep_context() -> anyhow::R
     })?;
     let copy = p.copied_ids()[&source].clone();
     let r = d.execute_scene_authoring(&p)?;
-    assert!(r
-        .suggested_selection
-        .contains(&ObjectRef::new(ObjectKind::Mesh, &copy)));
+    assert!(
+        r.suggested_selection
+            .contains(&ObjectRef::new(ObjectKind::Mesh, &copy))
+    );
     assert_eq!(d.context().selections, selected);
     let after = d.snapshot()?;
     let canvas = d.geometry(&after);
@@ -141,9 +146,10 @@ fn scene_label_patch_reuses_relations_and_keeps_retained_canvas_labels() -> anyh
     assert_eq!(current_geometry.index.name(&mesh), "After");
     assert_eq!(geometry.index.name(&mesh), old_name);
     d.undo()?;
-    assert!(d
-        .plan_scene_field_patch(&address, V::Label("Other".into()), false)
-        .is_err());
+    assert!(
+        d.plan_scene_field_patch(&address, V::Label("Other".into()), false)
+            .is_err()
+    );
     assert_eq!(d.object_index().name(&mesh), old_name);
     Ok(())
 }
@@ -161,10 +167,11 @@ fn drawing_roles_are_independent_objects_and_survive_part_organization() -> anyh
         },
     )?;
     assert!(d.object_index().get(&object).is_none());
-    assert!(d
-        .object_index()
-        .get(&ObjectRef::new(ObjectKind::Part, &owner))
-        .is_some());
+    assert!(
+        d.object_index()
+            .get(&ObjectRef::new(ObjectKind::Part, &owner))
+            .is_some()
+    );
     d.undo()?;
     assert!(d.object_index().get(&object).is_some());
     let address = d.drawing_group_address(&owner)?;
@@ -261,15 +268,19 @@ fn tree_deletion_uses_native_scope_and_is_atomic_and_undoable() -> anyhow::Resul
     assert_eq!(d.context().selections, vec![part.clone()]);
     assert_eq!(d.history_lengths(), (history.0 + 1, 0));
     editor.execute(zipzi_editor_core::EditorCommand::Undo)?;
-    assert!(editor
-        .document()
-        .unwrap()
-        .object_index()
-        .get(&mesh)
-        .is_some());
-    assert!(editor
-        .execute_tree_deletion(document, &deformation)
-        .is_err());
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&mesh)
+            .is_some()
+    );
+    assert!(
+        editor
+            .execute_tree_deletion(document, &deformation)
+            .is_err()
+    );
     Ok(())
 }
 
@@ -311,9 +322,10 @@ fn tree_deletion_reviews_locked_descendants_and_cleans_external_references() -> 
             scope: Scope::Selected,
         },
     )?;
-    assert!(d
-        .plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
-        .is_ok());
+    assert!(
+        d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))
+            .is_ok()
+    );
     Ok(())
 }
 
@@ -424,8 +436,8 @@ fn tree_deletion_completion_releases_jobs_after_source_view_is_dropped() -> anyh
 }
 
 #[test]
-fn tree_deletion_parameter_uses_document_default_and_is_independent_of_preview_revision(
-) -> anyhow::Result<()> {
+fn tree_deletion_parameter_uses_document_default_and_is_independent_of_preview_revision()
+-> anyhow::Result<()> {
     let mut d = Document::new_blank()?;
     let parameter = d.create_parameter(zipzi_editor_core::NewParameter::default())?;
     let target = ObjectRef::new(ObjectKind::Parameter, &parameter);
@@ -444,8 +456,8 @@ fn tree_deletion_parameter_uses_document_default_and_is_independent_of_preview_r
     Ok(())
 }
 #[test]
-fn tree_deletion_business_resource_can_execute_in_animation_workspace_without_switching(
-) -> anyhow::Result<()> {
+fn tree_deletion_business_resource_can_execute_in_animation_workspace_without_switching()
+-> anyhow::Result<()> {
     let (d, _assets) = super::support::combined_animation_document()?;
     let mut editor = super::support::editor_from_document(d);
     let doc = editor.active_id().unwrap();
@@ -464,19 +476,23 @@ fn tree_deletion_business_resource_can_execute_in_animation_workspace_without_sw
         editor.editing_context(),
         Some(zipzi_editor_core::EditingContext::Animation)
     );
-    assert!(editor
-        .document()
-        .unwrap()
-        .object_index()
-        .get(&target)
-        .is_none());
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&target)
+            .is_none()
+    );
     editor.execute(zipzi_editor_core::EditorCommand::Undo)?;
-    assert!(editor
-        .document()
-        .unwrap()
-        .object_index()
-        .get(&target)
-        .is_some());
+    assert!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&target)
+            .is_some()
+    );
     Ok(())
 }
 
@@ -514,9 +530,10 @@ fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() 
         plan.summary().state,
         zipzi_sdk::DeletionReviewState::Blocked
     );
-    assert!(d
-        .unlock_deletion_source(&plan, "unreported-source")
-        .is_err());
+    assert!(
+        d.unlock_deletion_source(&plan, "unreported-source")
+            .is_err()
+    );
     assert_eq!(d.history_lengths(), (0, 0));
     d.unlock_deletion_source(&plan, &asset)?;
     assert!(!plan.valid_for(&d));

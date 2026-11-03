@@ -364,8 +364,8 @@ with zipzi.connect() as c:
     scene.CreateMeshBlend(mesh,u(12),id=u(13))))
    asset=e.resources.create_image('R4 memory texture',image,id=u(14))
    value=e.modeling.records(m.ModelingQuery(meshes=(mesh,))).value.meshes[0]
-   e.apply(m.ModelingCommandReplaceMesh(mesh=replace(value,name='R4 property name',texture_asset_id=m.SceneReferenceResolved(object_id=asset))))
-   e.apply(m.ModelingCommandAttachment(intent=m.AttachmentEditCreate(id=u(15),path='extras/projection.bin')))
+   e.apply(m.commands.ModelingCommandReplaceMesh(mesh=replace(value,name='R4 property name',texture_asset_id=m.scene.SceneReferenceResolved(object_id=asset))))
+   e.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditCreate(id=u(15),path='extras/projection.bin')))
  deadline=time.monotonic()+5
  while True:
   context=s.editor_context().value

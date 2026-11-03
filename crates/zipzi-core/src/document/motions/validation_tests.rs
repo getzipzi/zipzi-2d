@@ -24,14 +24,13 @@ fn clip() -> MotionClip {
 fn fixture() -> Document {
     let mut d = Document::new();
     assert!(d.initialize(id(1), ModelSetup::default()).is_ok());
-    assert!(
-        d.create_parameter(Parameter {
+    assert!(d
+        .create_parameter(Parameter {
             id: id(2),
             ..Default::default()
         })
         .status
-        .is_ok()
-    );
+        .is_ok());
     for intent in [
         PhysicsEdit::CreateGroup {
             asset_id: id(10),

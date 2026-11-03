@@ -104,24 +104,27 @@ fn application_menu_dispatches_text_actions_to_the_original_input(cx: &mut TestA
 #[gpui_kit::test]
 fn application_menu_preserves_text_undo_when_editor_rebuilds_menus(cx: &mut TestAppContext) {
     let harness = super::setup(cx);
-    let input = cx
-        .update_window(harness.window, |_, window, cx| {
-            let view = window.replace_root(cx, |window, cx| MenuHarness {
+    let (window, view) = cx.update(|cx| {
+        gpui_kit::open_window(WindowOptions::default(), cx, |window, cx| {
+            cx.new(|cx| MenuHarness {
                 input: cx.new(|cx| InputState::new(window, cx).default_value("original")),
                 editor: Some(harness.view.clone()),
-            });
-            window.render_frame(cx);
-            let input = view.read(cx).input.clone();
-            input.focus_handle(cx).focus(window, cx);
-            input.update(cx, |input, cx| input.select_all(window, cx));
-            window.render_frame(cx);
-            cx.write_to_clipboard(ClipboardItem::new_string("replacement".into()));
-            window.dispatch_action(Box::new(input::Paste), cx);
-            input
+            })
         })
-        .unwrap();
+        .unwrap()
+    });
+    let input = view.read_with(cx, |view, _| view.input.clone());
+    cx.update_window(window, |_, window, cx| {
+        window.render_frame(cx);
+        input.focus_handle(cx).focus(window, cx);
+        input.update(cx, |input, cx| input.select_all(window, cx));
+        window.render_frame(cx);
+        cx.write_to_clipboard(ClipboardItem::new_string("replacement".into()));
+        window.dispatch_action(Box::new(input::Paste), cx);
+    })
+    .unwrap();
     cx.run_until_parked();
-    cx.update_window(harness.window, |_, window, cx| {
+    cx.update_window(window, |_, window, cx| {
         window.render_frame(cx);
         assert_eq!(input.read(cx).value().as_ref(), "replacement");
         assert!(harness.view.read(cx).menu_state.text);
@@ -149,7 +152,7 @@ fn application_menu_preserves_text_undo_when_editor_rebuilds_menus(cx: &mut Test
     })
     .unwrap();
     cx.run_until_parked();
-    cx.update_window(harness.window, |_, window, cx| {
+    cx.update_window(window, |_, window, cx| {
         window.render_frame(cx);
         assert_eq!(input.read(cx).value().as_ref(), "original");
         assert!(input.focus_handle(cx).is_focused(window));

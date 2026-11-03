@@ -22,12 +22,12 @@ mod keyboard;
 mod locks;
 #[path = "cases/mesh_generation.rs"]
 mod mesh_generation;
-#[path = "cases/multi_mesh_edit.rs"]
-mod multi_mesh_edit;
 #[path = "cases/mesh_properties.rs"]
 mod mesh_properties;
 #[path = "cases/mesh_thumbnails.rs"]
 mod mesh_thumbnails;
+#[path = "cases/multi_mesh_edit.rs"]
+mod multi_mesh_edit;
 #[path = "cases/panels.rs"]
 mod panels;
 #[path = "cases/parameter_creation.rs"]

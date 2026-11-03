@@ -9,8 +9,8 @@ mod projection;
 pub use projection::*;
 mod drawing;
 mod fields;
-mod lifecycle;
 mod grouping;
+mod lifecycle;
 pub use zipzi_contract::document::{
     SceneCollection, SceneCopyScope, SceneCreate, SceneEdit, SceneField, SceneFieldValue,
 };

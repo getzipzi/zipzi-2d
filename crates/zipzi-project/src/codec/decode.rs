@@ -1,4 +1,3 @@
-use zipzi_core::Document;
 use zipzi_core::types::{
     Appearance, BindingAxis, BlendMode, BlendShapeBinding, BlendShapeConstraint,
     BlendShapeKeyTable, DeltaGlueKeyform, DeltaKeyforms, DeltaMeshKeyform, DeltaOffscreenKeyform,
@@ -6,6 +5,7 @@ use zipzi_core::types::{
     MeshBinding, MeshKeyform, Offscreen, OffscreenKeyform, RotationPose, SceneBinding, Status,
     Transform, TransformKind, Vec2,
 };
+use zipzi_core::Document;
 use zipzi_core::{PartKeyform, RotationKeyform, SceneTrack, WarpKeyform};
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 

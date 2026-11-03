@@ -373,13 +373,12 @@ fn rotation_keep_children_rejects_driven_roots_locked_children_and_singular_maps
         if case == 2 {
             rotation.pose.scale = 0.;
         }
-        assert!(
-            s.plan_scene_content(E::RotationKeepChildren {
+        assert!(s
+            .plan_scene_content(E::RotationKeepChildren {
                 transform_id: id(2),
                 rotation
             })
-            .is_err()
-        );
+            .is_err());
         assert!(s.document().same_content(&before));
         assert_eq!(s.history_lengths(), history);
     }
@@ -694,29 +693,27 @@ fn preservation_noop_budget_and_cancellation_keep_history_and_missing_controller
     assert_eq!(history, s.history_state());
     let cancel = ConversionControl::default();
     cancel.cancel();
-    assert!(
-        s.plan_scene_content_with_control(
+    assert!(s
+        .plan_scene_content_with_control(
             E::WarpKeepChildren {
                 transform_id: id(2),
                 warp: next(&s)
             },
             &cancel
         )
-        .is_err()
-    );
+        .is_err());
     let desired = next(&s);
     s.set_authoring_limits(AuthoringLimits {
         max_conversion_bytes: 1,
         ..Default::default()
     })
     .unwrap();
-    assert!(
-        s.plan_scene_content(E::WarpKeepChildren {
+    assert!(s
+        .plan_scene_content(E::WarpKeepChildren {
             transform_id: id(2),
             warp: desired
         })
-        .is_err()
-    );
+        .is_err());
     assert_eq!(version, s.version());
     assert_eq!(history, s.history_state());
 }

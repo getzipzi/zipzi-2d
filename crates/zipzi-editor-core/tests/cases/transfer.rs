@@ -9,8 +9,8 @@ fn local(name: &str) -> PathBuf {
 
 #[test]
 fn local_v3a9_cubism_import_through_editor_loads_both_entry_files() -> anyhow::Result<()> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../models/local/v3a9_315702_nxss");
+    let root =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../models/local/v3a9_315702_nxss");
     if !root.join("v3a9_315702_nxss.can3").is_file()
         || !root.join("v3a9_315702_nxss.cmo3").is_file()
     {

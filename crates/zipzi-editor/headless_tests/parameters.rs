@@ -158,6 +158,7 @@ fn parameter_indirect_button_selects_the_nearest_bound_ancestor(cx: &mut TestApp
         })
         .unwrap();
     document.toggle_parameter_link(&parameter).unwrap();
+    document.focus_parameter(&parameter).unwrap();
     let history = document.history_lengths();
     let harness = setup_with_document(cx, document, assets);
     cx.update_window(harness.window, |_, window, cx| {

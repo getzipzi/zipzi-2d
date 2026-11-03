@@ -11,6 +11,8 @@ mod binding_authoring;
 mod cdi_authoring;
 #[path = "cmo3_export.rs"]
 mod cmo3_export;
+#[path = "deformer_grouping.rs"]
+mod deformer_grouping;
 mod deletion;
 #[path = "document_operations.rs"]
 mod document_operations;
@@ -30,8 +32,6 @@ mod hierarchy_order;
 mod history_budget;
 #[path = "manual_mesh.rs"]
 mod manual_mesh;
-#[path = "deformer_grouping.rs"]
-mod deformer_grouping;
 #[path = "mesh_binding_editing.rs"]
 mod mesh_binding_editing;
 #[path = "mesh_editing.rs"]

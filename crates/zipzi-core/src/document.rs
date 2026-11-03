@@ -19,7 +19,7 @@ mod offscreen;
 mod organization;
 mod parameters;
 pub use organization::*;
-pub use parameters::{ParameterRangeError, validate_parameter_range};
+pub use parameters::{validate_parameter_range, ParameterRangeError};
 mod scene;
 pub use scene::*;
 mod scene_content;
@@ -45,7 +45,7 @@ mod validation;
 mod vertices;
 
 pub use attachments::{
-    AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment, valid_attachment_path,
+    valid_attachment_path, AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment,
 };
 pub use binding_authoring::*;
 pub use checkpoint::DocumentCheckpoint;

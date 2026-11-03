@@ -753,6 +753,7 @@ fn deleting_last_physics_channel_keeps_parent_available_for_creation(cx: &mut Te
         .unwrap();
         cx.run_until_parked();
         click(&h, format!("physics-channel-{output}-1"), cx);
+        click(&h, "tree-deletion-submit", cx);
         h.view.read_with(cx, |v, _| {
             let d = v.editor.document().unwrap();
             let rig = &d.physics_definition().unwrap().data.settings[0];

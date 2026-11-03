@@ -949,7 +949,7 @@ mod tests {
                     doc.begin_control_edit(std::slice::from_ref(&edit))?;
                     let selected = [ComponentRef {
                         object: object.clone(),
-                        id: crate::warp_bezier::component_id(0, 1),
+                        id: crate::warp_bezier::component_id(0, 2),
                     }];
                     doc.preview_control_edit(
                         std::slice::from_ref(&edit),
@@ -958,13 +958,13 @@ mod tests {
                     )?;
                     let model = doc.model();
                     let warp = model.get_transform(&id(20)).unwrap().warp().unwrap();
-                    assert_eq!((warp.rows, warp.columns), (4, 4));
+                    assert_eq!((warp.rows, warp.columns), (1, 1));
                     let DeltaKeyforms::Warp(forms) =
                         &model.get_blend_binding(&id(21)).unwrap().keyforms
                     else {
                         panic!()
                     };
-                    assert_eq!(forms[0].points, vec![Vec2::default(); 25]);
+                    assert_eq!(forms[0].points, vec![Vec2::default(); 4]);
                     for p in &forms[1].points {
                         close(p.x, 2.);
                         close(p.y, 3.);

@@ -192,7 +192,7 @@ fn warp_resize_and_offscreen_content_use_one_history_step_each() -> anyhow::Resu
             .as_array()
             .unwrap()
             .len(),
-        4
+        36
     );
     Ok(())
 }

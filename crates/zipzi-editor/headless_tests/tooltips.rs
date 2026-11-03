@@ -49,7 +49,7 @@ fn long_editor_tooltips_wrap_inside_narrow_windows(cx: &mut TestAppContext) {
                             WindowOptions {
                                 window_bounds: Some(WindowBounds::Windowed(Bounds::new(
                                     point(px(0.), px(0.)),
-                                    size(px(width), px(600.)),
+                                    size(px(width), px(1400.)),
                                 ))),
                                 ..Default::default()
                             },

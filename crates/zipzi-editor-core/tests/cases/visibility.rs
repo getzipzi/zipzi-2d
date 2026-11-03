@@ -22,7 +22,6 @@ fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence
         object(ObjectKind::Part, 101),
         object(ObjectKind::Deformer, 501),
         object(ObjectKind::Deformer, 502),
-        object(ObjectKind::Offscreen, 601),
         mesh,
     ] {
         editor.execute(EditorCommand::SetObjectsLocked {

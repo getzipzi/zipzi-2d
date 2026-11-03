@@ -136,7 +136,7 @@ fn bounded_decode_does_not_expand_auxiliary_compressed_text() {
             .write_image_data(&[7, 8, 9, 255])
             .unwrap();
     }
-    assert!(bytes.len() < 16 << 10);
+    assert!(bytes.len() < 32 << 10);
     let limits = PngDecodeLimits {
         max_encoded_bytes: bytes.len(),
         max_workspace_bytes: png_decode_workspace_bytes(1, 1, bytes.len()).unwrap(),

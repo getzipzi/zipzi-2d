@@ -33,8 +33,11 @@ DOMAINS = {
     "authoring_collections": ("identity-collections", "R4", ["A04", "A05", "A15"]),
     "geometry": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
     "manual_mesh": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
+    "manual_mesh_transfer": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
+    "mesh_quality": ("geometry-binding", "R4", ["A04", "A05", "A15"]),
     "alpha_mesh": ("geometry-binding", "R4", ["A04", "A15", "A17"]),
     "binding_authoring": ("geometry-binding", "R4", ["A04", "A05", "A15", "A17"]),
+    "deletion": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "scene_authoring": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "scene_edit": ("scene-document", "R4", ["A04", "A05", "A15"]),
     "scene_content": ("scene-document", "R4", ["A04", "A05", "A15"]),
@@ -117,16 +120,23 @@ def rust_methods(source: str) -> list[dict]:
     impls = []
     for match in re.finditer(r"(?m)^\s*impl\b([^{}]+)\{", masked):
         header = match[1].strip()
+        trait_match = re.match(r"(?:crate::)?(\w+)\s+for\s+", header)
+        trait_name = trait_match[1] if trait_match else None
         owner = re.search(r"(?:^|\s)(?:crate::)?(\w+)(?:<[^>]*>)?\s*$", header)
         if owner is None:
             raise ValueError(f"unrecognized impl: {header}")
-        impls.append((match.end(), closing(masked, match.end() - 1), owner[1]))
+        impls.append((match.end(), closing(masked, match.end() - 1), owner[1], trait_name))
     result = []
-    for match in re.finditer(r"\bpub\s+(?:async\s+|const\s+)?fn\s+(\w+)", masked):
+    for match in re.finditer(r"\b(?:pub\s+)?(?:async\s+|const\s+)?fn\s+(\w+)", masked):
         start = masked.find("{", match.end())
         if start < 0:
             raise ValueError("public function without body")
-        owner = next((owner for a, b, owner in reversed(impls) if a <= match.start() < b), "free")
+        matching_impl = next(((owner, trait) for a, b, owner, trait in reversed(impls) if a <= match.start() < b), None)
+        owner = matching_impl[0] if matching_impl else "free"
+        trait = matching_impl[1] if matching_impl else None
+        is_pub = match.group(0).startswith("pub")
+        if not is_pub and (trait is None or not (trait.endswith(("Apply", "Read")) or "Validation" in trait)):
+            continue
         signature = " ".join(source[match.start():start].split())
         result.append({"owner": owner, "name": match[1], "signature": signature,
                        "line": source.count("\n", 0, match.start()) + 1})
@@ -241,7 +251,8 @@ def collect(root: Path = ROOT, *, shared_only: bool = False) -> dict:
         raise ValueError("inventory must describe this paired checkout")
     rows = []
     sdk_paths = sorted((ROOT / "crates/zipzi-sdk/src").rglob("*.rs"))
-    public_owners = {name for path in sdk_paths for name in re.findall(
+    contract_paths = sorted((ROOT / "crates/zipzi-contract/src").rglob("*.rs"))
+    public_owners = {name for path in sdk_paths + contract_paths for name in re.findall(
         r"\bpub\s+(?:struct|enum)\s+(\w+)", mask_rust(path.read_text()))}
     for path in sdk_paths:
         for method in rust_methods(path.read_text()):
@@ -327,7 +338,7 @@ def value_types() -> list[dict]:
 def domain_intents() -> list[dict]:
     """Include the actual shared SDK/core intent variants, not private PyO3 Command."""
     result = []
-    for directory in [ROOT / "crates/zipzi-sdk/src", ROOT / "crates/zipzi-core/src/document"]:
+    for directory in [ROOT / "crates/zipzi-sdk/src", ROOT / "crates/zipzi-core/src/document", ROOT / "crates/zipzi-contract/src"]:
         for path in sorted(directory.rglob("*.rs")):
             source = path.read_text()
             masked = mask_rust(source)

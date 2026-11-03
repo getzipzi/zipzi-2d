@@ -5,8 +5,8 @@ fn manual_previews() -> (MotionPreview, MotionPreview, Vec<String>) {
     let mut inputs = vec![PARAM.to_owned()];
     for i in 0..4 {
         let id = format!("00000000-0000-4000-8000-000000000f0{i}");
-        assert!(
-            doc.create_parameter(Parameter {
+        assert!(doc
+            .create_parameter(Parameter {
                 id: id.clone(),
                 runtime_id: if i == 0 {
                     "ParamY".into()
@@ -19,8 +19,7 @@ fn manual_previews() -> (MotionPreview, MotionPreview, Vec<String>) {
                 ..Default::default()
             })
             .status
-            .is_ok()
-        );
+            .is_ok());
         if i > 0 {
             inputs.push(id);
         }
@@ -99,10 +98,9 @@ fn future_manual_inputs_survive_fractional_restore_cached_seek_and_cancellation(
             .clone();
         assert_eq!(actual, *cold.seek(4.02).unwrap(), "start {start}");
         assert!(work <= 2, "future inputs replayed {work} old steps");
-        assert!(
-            live.advance_to_with_progress(4.1, |done, _| done < 2)
-                .is_err()
-        );
+        assert!(live
+            .advance_to_with_progress(4.1, |done, _| done < 2)
+            .is_err());
         for time in [4.1, 4.02, 3., 4.1] {
             assert_eq!(
                 live.advance_to_with_progress(time, |_, _| true).unwrap(),
@@ -218,10 +216,9 @@ fn fractional_sampling_cancellation_and_schedule_changes_preserve_canonical_hist
     let before = live.snapshot().clone();
     assert!(live.advance_to_with_progress(1.01, |_, _| false).is_err());
     assert_eq!(live.snapshot(), &before);
-    assert!(
-        live.advance_to_with_progress(1.025, |done, total| done < total)
-            .is_err()
-    );
+    assert!(live
+        .advance_to_with_progress(1.025, |done, total| done < total)
+        .is_err());
     assert_eq!(live.snapshot(), cold.seek(61. / 60.).unwrap());
     assert_eq!(
         live.advance_to_with_progress(1.033, |_, _| true).unwrap(),

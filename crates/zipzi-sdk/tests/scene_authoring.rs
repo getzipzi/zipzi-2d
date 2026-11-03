@@ -7,7 +7,7 @@ use zipzi_core::{
     RotationPose, RotationTransform, SceneBinding, SceneKeyform, SceneTrack, Transform,
     TransformData, TransformId, Vec2, WarpKeyform, WarpTransform,
 };
-use zipzi_sdk::{AuthoringSession, GeometrySpace, ObjectKind, prepare_png_asset, rectangle_mesh};
+use zipzi_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, GeometrySpace, ObjectKind};
 
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
@@ -422,10 +422,9 @@ fn session_preview_caches_frames_and_rejects_bad_requests_without_state_change()
         })
     })
     .unwrap();
-    assert!(
-        sdk.set_preview_values(PreviewValues::from([(id(7), 0.5)]))
-            .unwrap()
-    );
+    assert!(sdk
+        .set_preview_values(PreviewValues::from([(id(7), 0.5)]))
+        .unwrap());
     let first = sdk.preview_frame().unwrap();
     assert!(Arc::ptr_eq(&first, &sdk.preview_frame().unwrap()));
     let count = sdk.preview_evaluation_count();
@@ -518,11 +517,10 @@ fn bezier_authoring_rejects_invalid_metadata_and_incomplete_grid_migration_atomi
             b.nodes[0].handles[0].x = f32::NAN;
             w.bezier = Some(b);
         }
-        assert!(
-            sdk.edit("invalid", None, |e| e
+        assert!(sdk
+            .edit("invalid", None, |e| e
                 .replace_warp_authoring(changed, Some(binding.clone())))
-                .is_err()
-        );
+            .is_err());
         assert_eq!(sdk.version(), version);
         assert_eq!(sdk.transform(&id(6)), Some(original.clone()));
         assert_eq!(sdk.scene_binding(&id(10)), Some(binding.clone()));

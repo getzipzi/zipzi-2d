@@ -315,14 +315,12 @@ fn restore_under_changed_rotation_parent_keeps_its_current_pose_and_uses_canvas_
         },
     );
     let mut frame = DrawableFrame::default();
-    assert!(
-        zipzi_core::evaluation::evaluate_frame_including_hidden(
-            s.document(),
-            &Default::default(),
-            &mut frame
-        )
-        .is_ok()
-    );
+    assert!(zipzi_core::evaluation::evaluate_frame_including_hidden(
+        s.document(),
+        &Default::default(),
+        &mut frame
+    )
+    .is_ok());
     let restored = &frame
         .deformers
         .iter()
@@ -464,8 +462,8 @@ fn topology_restore_requires_review_and_resamples_every_stored_shape_and_control
     );
     let before = s.document().clone();
     let version = s.version();
-    assert!(
-        s.plan_scene_content(E::DeformerOriginal {
+    assert!(s
+        .plan_scene_content(E::DeformerOriginal {
             transform_id: id(2),
             target: ShapeTarget::Base,
             action: DeformerOriginalAction::Restore {
@@ -473,8 +471,7 @@ fn topology_restore_requires_review_and_resamples_every_stored_shape_and_control
             },
             context: Default::default()
         })
-        .is_err()
-    );
+        .is_err());
     assert!(s.document().same_content(&before));
     assert_eq!(s.version(), version);
     let plan = s
@@ -505,15 +502,14 @@ fn topology_restore_requires_review_and_resamples_every_stored_shape_and_control
     s.undo().unwrap();
     assert!(s.document().same_content(&before));
     lock(&mut s, &id(3));
-    assert!(
-        s.plan_scene_content(E::DeformerOriginal {
+    assert!(s
+        .plan_scene_content(E::DeformerOriginal {
             transform_id: id(2),
             target: ShapeTarget::Base,
             action: DeformerOriginalAction::Restore { allow_resize: true },
             context: Default::default()
         })
-        .is_err()
-    );
+        .is_err());
 }
 
 #[test]
@@ -659,14 +655,12 @@ fn creation_and_first_key_capture_the_frozen_authoring_parent_pose() {
             panic!()
         };
         let mut frame = DrawableFrame::default();
-        assert!(
-            zipzi_core::evaluation::evaluate_frame_including_hidden(
-                s.document(),
-                &values,
-                &mut frame
-            )
-            .is_ok()
-        );
+        assert!(zipzi_core::evaluation::evaluate_frame_including_hidden(
+            s.document(),
+            &values,
+            &mut frame
+        )
+        .is_ok());
         let points = &frame
             .deformers
             .iter()

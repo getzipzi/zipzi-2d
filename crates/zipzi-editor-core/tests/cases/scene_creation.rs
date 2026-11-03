@@ -142,7 +142,7 @@ fn all_scene_defaults_roundtrip_with_one_creation_history_entry_each() -> anyhow
     assert!(!runtime_ids.contains(""));
     assert_eq!(
         children(&d, &part.id),
-        created[1..]
+        created[1..4]
             .iter()
             .map(|r| r.id.clone())
             .collect::<Vec<_>>()

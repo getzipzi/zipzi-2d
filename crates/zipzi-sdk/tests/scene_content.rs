@@ -58,15 +58,13 @@ fn warp_content_addresses_expire_after_organization_context_roundtrip() {
         })
         .unwrap();
     s.execute_organization_plan(&plan).unwrap();
-    assert!(
-        s.plan_scene_content_patch(&address, address.expected().clone())
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .is_err());
     s.undo().unwrap();
-    assert!(
-        s.plan_scene_content_patch(&address, address.expected().clone())
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .is_err());
 }
 
 #[test]
@@ -105,29 +103,27 @@ fn unchanged_synthetic_bezier_control_does_not_materialize_controller() {
     assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
-    assert!(
-        s.document()
-            .get_transform(&id(2))
-            .unwrap()
-            .warp()
-            .unwrap()
-            .bezier
-            .is_none()
-    );
+    assert!(s
+        .document()
+        .get_transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .bezier
+        .is_none());
     let plan = s
         .plan_scene_content_patch(&address, V::Point(Vec2::new(2., 3.)))
         .unwrap();
     assert!(!plan.is_noop());
     s.execute_scene_content_plan(&plan).unwrap();
-    assert!(
-        s.document()
-            .get_transform(&id(2))
-            .unwrap()
-            .warp()
-            .unwrap()
-            .bezier
-            .is_some()
-    );
+    assert!(s
+        .document()
+        .get_transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .bezier
+        .is_some());
 }
 
 #[test]
@@ -153,13 +149,12 @@ fn unchanged_implicit_offscreen_mapping_preserves_redo() {
     assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
-    assert!(
-        s.document()
-            .get_offscreen(&id(23))
-            .unwrap()
-            .part_keyform_indices
-            .is_empty()
-    );
+    assert!(s
+        .document()
+        .get_offscreen(&id(23))
+        .unwrap()
+        .part_keyform_indices
+        .is_empty());
     s.redo().unwrap();
     assert!(s.document().get_mesh(&id(30)).is_some());
 }
@@ -255,10 +250,9 @@ fn shape_address_rejects_recreated_binding_with_identical_content() {
     })
     .unwrap();
     assert!(s.resolve_handle(&handle).is_err());
-    assert!(
-        s.plan_scene_content_patch(&address, V::Point(Vec2::new(8., 9.)))
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&address, V::Point(Vec2::new(8., 9.)))
+        .is_err());
 }
 fn run(s: &mut AuthoringSession, e: E) -> zipzi_sdk::EditReceipt {
     let p = s.plan_scene_content(e).unwrap();
@@ -582,49 +576,43 @@ fn warp_authoring_density_refits_all_stored_controllers_and_roundtrips_without_c
         })
         .unwrap();
     let version = reopened.version();
-    assert!(
-        reopened
-            .plan_scene_content(E::WarpAuthoring {
-                transform_id: id(2),
-                settings: WarpAuthoringSettings {
-                    bezier_grid: Some(WarpBezierGrid {
-                        rows: 2,
-                        columns: 2
-                    }),
-                    ..settings.clone()
-                }
-            })
-            .is_err()
-    );
-    assert!(
-        reopened
-            .plan_scene_content(E::WarpAuthoring {
-                transform_id: id(2),
-                settings: WarpAuthoringSettings {
-                    bezier_grid: Some(WarpBezierGrid {
-                        rows: 0,
-                        columns: 2
-                    }),
-                    ..settings.clone()
-                }
-            })
-            .is_err()
-    );
+    assert!(reopened
+        .plan_scene_content(E::WarpAuthoring {
+            transform_id: id(2),
+            settings: WarpAuthoringSettings {
+                bezier_grid: Some(WarpBezierGrid {
+                    rows: 2,
+                    columns: 2
+                }),
+                ..settings.clone()
+            }
+        })
+        .is_err());
+    assert!(reopened
+        .plan_scene_content(E::WarpAuthoring {
+            transform_id: id(2),
+            settings: WarpAuthoringSettings {
+                bezier_grid: Some(WarpBezierGrid {
+                    rows: 0,
+                    columns: 2
+                }),
+                ..settings.clone()
+            }
+        })
+        .is_err());
     assert_eq!(reopened.transform(&id(2)), Some(before));
     assert_eq!(reopened.scene_binding(&id(4)), Some(old_binding));
     assert_eq!(reopened.version(), version);
-    assert!(
-        reopened
-            .plan_scene_content(E::WarpShape {
-                transform_id: id(2),
-                target: ShapeTarget::Blend {
-                    binding_id: id(4),
-                    sample_id: id(5)
-                },
-                action: WarpShapeAction::Reform
-            })
-            .is_err()
-    );
+    assert!(reopened
+        .plan_scene_content(E::WarpShape {
+            transform_id: id(2),
+            target: ShapeTarget::Blend {
+                binding_id: id(4),
+                sample_id: id(5)
+            },
+            action: WarpShapeAction::Reform
+        })
+        .is_err());
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -932,18 +920,16 @@ fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
     let h = s.handle(ObjectKind::GlueVertexPair, &id(5)).unwrap();
     assert_eq!(s.scene_projection().pair_slots[&id(6)].source_slot, 1);
     assert!(!s.scene_projection().pair_slots.contains_key(&id(5)));
-    assert!(
-        s.scene_projection()
-            .disabled
-            .iter()
-            .any(|d| d.id == id(5) && d.usage == SceneUse::GluePair)
-    );
-    assert!(
-        s.document()
-            .scene_export_omissions()
-            .iter()
-            .any(|d| d.id == id(5))
-    );
+    assert!(s
+        .scene_projection()
+        .disabled
+        .iter()
+        .any(|d| d.id == id(5) && d.usage == SceneUse::GluePair));
+    assert!(s
+        .document()
+        .scene_export_omissions()
+        .iter()
+        .any(|d| d.id == id(5)));
     let address = s
         .scene_content_address(&id(4), T::GluePair { pair_id: id(5) })
         .unwrap();
@@ -956,10 +942,9 @@ fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
         },
     );
     s.resolve_handle(&h).unwrap();
-    assert!(
-        s.plan_scene_content_patch(&address, V::GluePair(pair(5, Some(2), Some(2))))
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&address, V::GluePair(pair(5, Some(2), Some(2))))
+        .is_err());
     let a = s
         .scene_content_address(&id(4), T::GluePair { pair_id: id(5) })
         .unwrap();
@@ -1009,10 +994,9 @@ fn pair_transfer_keeps_handle_but_expires_owner_address() {
     s.resolve_handle(&h).unwrap();
     assert_eq!(s.document().glue_pair_owner(&id(5)), Some(id(6).as_str()));
     s.undo().unwrap();
-    assert!(
-        s.plan_scene_content_patch(&a, a.expected().clone())
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&a, a.expected().clone())
+        .is_err());
 }
 #[test]
 fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
@@ -1040,17 +1024,15 @@ fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
         },
     );
     s.undo().unwrap();
-    assert!(
-        s.plan_scene_content_patch(&a, V::Triangle([1, 3, 2]))
-            .is_err()
-    );
-    assert!(
-        s.plan_scene_content(E::ReplaceTriangles {
+    assert!(s
+        .plan_scene_content_patch(&a, V::Triangle([1, 3, 2]))
+        .is_err());
+    assert!(s
+        .plan_scene_content(E::ReplaceTriangles {
             mesh_id: id(2),
             triangles: vec![[1, 2, 99]]
         })
-        .is_err()
-    );
+        .is_err());
     let a = s
         .scene_content_address(
             &id(2),
@@ -1062,10 +1044,9 @@ fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
         .unwrap();
     s.edit("Label", None, |e| e.rename_mesh(&id(2), "Face"))
         .unwrap();
-    assert!(
-        s.plan_scene_content_patch(&a, V::Point(Vec2::new(2., 3.)))
-            .is_ok()
-    );
+    assert!(s
+        .plan_scene_content_patch(&a, V::Point(Vec2::new(2., 3.)))
+        .is_ok());
 }
 #[test]
 fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
@@ -1088,10 +1069,9 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
             .part_keyform_indices,
         [1, 0]
     );
-    assert!(
-        s.plan_scene_content_patch(&a, a.expected().clone())
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&a, a.expected().clone())
+        .is_err());
     run(
         &mut s,
         E::InsertOffscreenKeyform {
@@ -1110,14 +1090,13 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
             .part_keyform_indices,
         [2, 1]
     );
-    assert!(
-        s.plan_scene_content(E::DeleteOffscreenKeyforms {
+    assert!(s
+        .plan_scene_content(E::DeleteOffscreenKeyforms {
             offscreen_id: id(23),
             slots: vec![2],
             policy: OffscreenDeletePolicy::RejectReferences
         })
-        .is_err()
-    );
+        .is_err());
     run(
         &mut s,
         E::DeleteOffscreenKeyforms {
@@ -1240,15 +1219,14 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
         .plan_scene_content_patch(&a, V::Point(Vec2::new(6., 2.)))
         .unwrap();
     s.execute_scene_content_plan(&p).unwrap();
-    assert!(
-        s.document()
-            .get_transform(&id(2))
-            .unwrap()
-            .warp()
-            .unwrap()
-            .bezier
-            .is_some()
-    );
+    assert!(s
+        .document()
+        .get_transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap()
+        .bezier
+        .is_some());
     let a = s
         .scene_content_address(
             &id(2),
@@ -1301,10 +1279,9 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
         12
     );
     s.undo().unwrap();
-    assert!(
-        s.plan_scene_content_patch(&a, a.expected().clone())
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&a, a.expected().clone())
+        .is_err());
 }
 #[test]
 fn content_failures_locks_noops_budget_and_cancellation_are_atomic() {
@@ -1350,13 +1327,12 @@ fn content_failures_locks_noops_budget_and_cancellation_are_atomic() {
     assert_eq!(s.version(), v);
     s.set_authoring_limits(Default::default()).unwrap();
     lock(&mut s, &id(2));
-    assert!(
-        s.plan_scene_content(E::DeleteTriangles {
+    assert!(s
+        .plan_scene_content(E::DeleteTriangles {
             mesh_id: id(2),
             slots: vec![0]
         })
-        .is_err()
-    );
+        .is_err());
 }
 
 #[test]
@@ -1530,12 +1506,10 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
         unreachable!()
     };
     assert_eq!(forms[1].points.len(), 12);
-    assert!(
-        forms[1]
-            .points
-            .iter()
-            .all(|p| (p.x - 2.).abs() < 1e-5 && (p.y - 3.).abs() < 1e-5)
-    );
+    assert!(forms[1]
+        .points
+        .iter()
+        .all(|p| (p.x - 2.).abs() < 1e-5 && (p.y - 3.).abs() < 1e-5));
     assert_eq!(s.document().get_blend_key_table(&id(6)), Some(&table));
     run(
         &mut s,
@@ -1575,14 +1549,13 @@ fn content_reference_receipts_invert_and_locked_pair_flags_are_not_dropped() {
     assert_eq!(undo.changes.content_references[0].after, edge.before);
     lock(&mut s, &id(5));
     let v = s.version();
-    assert!(
-        s.plan_scene_content(E::DeleteMeshVertices {
+    assert!(s
+        .plan_scene_content(E::DeleteMeshVertices {
             mesh_id: id(2),
             vertices: vec![1],
             policy: VertexDeletePolicy::RemoveDependentContent
         })
-        .is_err()
-    );
+        .is_err());
     assert_eq!(s.version(), v);
     let mut g = s.document().get_glue(&id(4)).unwrap().clone();
     g.pairs.clear();
@@ -1593,14 +1566,13 @@ fn content_reference_receipts_invert_and_locked_pair_flags_are_not_dropped() {
             .as_ref(),
         "OBJECT_LOCKED"
     );
-    assert!(
-        s.plan_scene_content(E::InsertGluePair {
+    assert!(s
+        .plan_scene_content(E::InsertGluePair {
             glue_id: id(4),
             pair: pair(2, None, None),
             before: None
         })
-        .is_err()
-    );
+        .is_err());
 }
 #[test]
 fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice() {
@@ -1674,8 +1646,7 @@ fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice()
         .unwrap();
     assert!(matches!(value.expected(), V::Point(_)));
     s.undo().unwrap();
-    assert!(
-        s.plan_scene_content_patch(&address, address.expected().clone())
-            .is_err()
-    );
+    assert!(s
+        .plan_scene_content_patch(&address, address.expected().clone())
+        .is_err());
 }
