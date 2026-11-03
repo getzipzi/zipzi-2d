@@ -15,6 +15,8 @@ def main():
     parser.add_argument("--expected-geometry", type=Path,
                         help="Compare a single CMO3 against captured Zipzi poses (canvas pixels and optional render_order)")
     parser.add_argument("--geometry-tolerance-px", type=float, default=0.05)
+    parser.add_argument("--check-textures", action="store_true",
+                        help="Check GPU UV padding and preserve texture coordinates through Cubism texture-input initialization")
     parser.add_argument("--expected-animation", type=Path,
                         help="Compare a single CAN3 against captured parameter/part values, optional subframe checks and scene FPS; validate serialized curves separately from native Bezier approximation")
     parser.add_argument("--resave-animation", type=Path,
@@ -24,6 +26,8 @@ def main():
         parser.error("--geometry-tolerance-px must be positive and finite")
     if args.expected_geometry and (len(args.models) != 1 or args.models[0].suffix != ".cmo3"):
         parser.error("--expected-geometry requires exactly one CMO3 file")
+    if args.check_textures and any(model.suffix != ".cmo3" for model in args.models):
+        parser.error("--check-textures requires CMO3 files")
     if args.expected_animation and (len(args.models) != 1 or args.models[0].suffix != ".can3"):
         parser.error("--expected-animation requires exactly one CAN3 file")
     if args.resave_animation and (len(args.models) != 1 or args.models[0].suffix != ".can3"):
@@ -50,6 +54,8 @@ def main():
             geometry = [str(args.expected_animation.resolve())]
         if args.resave_animation:
             geometry += ["--resave", str(args.resave_animation.resolve())]
+        if args.check_textures:
+            geometry += ["--check-textures"]
         result = subprocess.run(["java", "-Djava.awt.headless=true", "-cp",
                                  os.pathsep.join([str(classes), str(res / "*")]),
                                  "zipzi.cmo3probe.ReadCmo3", str(model.resolve()), *geometry],
@@ -62,7 +68,7 @@ def main():
             raise SystemExit(result.returncode or 1)
         print(model)
         print("\n".join(line for line in result.stdout.splitlines()
-                        if line.startswith(("Cubism read:", "Objects:", "Geometry:", "Draw order:", "Animation:", "Expression operations:"))))
+                        if line.startswith(("Cubism read:", "Objects:", "Geometry:", "Textures:", "Draw order:", "Animation:", "Expression operations:"))))
 
 
 if __name__ == "__main__":

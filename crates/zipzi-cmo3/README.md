@@ -141,9 +141,11 @@ cargo test --locked -p zipzi-cmo3 -p zipzi-project
 cargo run --locked -p zipzi-cmo3 --example fixture -- /tmp/model.cmo3
 # Optional: validate with a local Cubism Editor installation.
 uv run --locked python tools/validation/check_cmo3.py \
-  --editor '/Applications/Live2D Cubism 5.4 alpha' /tmp/model.cmo3
+  --editor '/Applications/Live2D Cubism 5.4 alpha' --check-textures /tmp/model.cmo3
 ```
 
 The optional probe uses Cubism internals and may need adaptation for other
-versions. It does not test GUI rendering or editing. Local model integration
+versions. `--check-textures` checks GPU padding and rebuilds UVs through Cubism's
+texture-input initialization, including the original-shape mesh. It does not
+test GUI rendering or editing. Local model integration
 requires separately obtained assets; see [models](../../models/README.md).

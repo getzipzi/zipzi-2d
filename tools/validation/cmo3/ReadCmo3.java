@@ -17,6 +17,8 @@ public final class ReadCmo3 {
         catch (Throwable error) { error.printStackTrace(); System.exit(1); }
     }
     private static java.util.Map<String,String> check(String[] args) throws Exception {
+        boolean checkTextures = args[args.length - 1].equals("--check-textures");
+        if (checkTextures) args = java.util.Arrays.copyOf(args, args.length - 1);
         ArchiveReader archive = new ArchiveReader(new File(args[0]));
         byte[] xml = archive.getFirstFileByTag("main_xml");
         Document doc = new SAXBuilder().build(new java.io.ByteArrayInputStream(xml));
@@ -77,6 +79,7 @@ public final class ReadCmo3 {
         CModelSource model = (CModelSource)root;
         System.out.println("Cubism read: " + model.getName());
         model.setup();
+        if (checkTextures) checkTextures(model);
         System.out.println("Objects: " + model.getAllArtMeshes().size() + " meshes, "
             + model.getAllDeformers().size() + " deformers, " + model.getAllParameters().size()
             + " parameters, " + model.getAllGlues().size() + " glues");
@@ -90,6 +93,37 @@ public final class ReadCmo3 {
         if (args.length > 1) checkGeometry(model, instance, new File(args[1]), Double.parseDouble(args[2]));
         archive.close();
         return java.util.Collections.emptyMap();
+    }
+    private static void checkTextures(CModelSource model) {
+        int vertices = 0;
+        double maximum = 0;
+        String worst = "";
+        for (var mesh : model.getAllArtMeshes()) {
+            float[] before = mesh.getUvs().clone();
+            var texture = (com.live2d.graphics3d.texture.GTexture2D)mesh.getTexture();
+            int level = Math.max(1, texture.getMipmapLevel());
+            int width = (texture.getWidth() + level - 1) / level * level;
+            int height = (texture.getHeight() + level - 1) / level * level;
+            var transform = texture.getTransformImageResource01toLogical01();
+            if (Math.abs(transform.getM00() * width - texture.getWidth()) > 0.001
+                || Math.abs(transform.getM11() * height - texture.getHeight()) > 0.001) {
+                throw new AssertionError("Texture transform disagrees with GPU padding: " + mesh.getId());
+            }
+            // The GUI initializes texture inputs after loading. Deserialization
+            // and geometry evaluation alone do not exercise this UV rebuild.
+            mesh.getTextureInputExtension().updateArtMeshSourceUvs();
+            float[] after = mesh.getUvs();
+            for (int i = 0; i < before.length; i += 2) {
+                double error = Math.hypot((before[i] - after[i]) * width,
+                                         (before[i + 1] - after[i + 1]) * height);
+                if (!Double.isFinite(error)) throw new AssertionError("Non-finite texture UV: " + mesh.getId());
+                if (error > maximum) { maximum = error; worst = mesh.getId() + " vertex " + i / 2; }
+                vertices++;
+            }
+        }
+        System.out.println("Textures: " + model.getAllArtMeshes().size() + " meshes, " + vertices
+            + " vertices, max initialization error " + maximum + " px");
+        if (maximum > 0.05) throw new AssertionError("Texture UV changed during Cubism initialization: " + worst);
     }
     private static java.util.Map<String,String> expressionOperations(com.live2d.cubism.doc.animation.CAnimation animation) {
         java.util.Map<String,String> result = new HashMap<>();

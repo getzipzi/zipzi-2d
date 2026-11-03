@@ -175,7 +175,10 @@ fn self_contained_graph_and_signed_xor_keys() {
             .find(|n| n.tag_name().name() == "CArtMeshSource" && n.has_attribute("xs.id"))
             .unwrap();
         assert_eq!(field(mesh, "indices").text(), Some("0 2 1"));
-        assert_eq!(field(mesh, "uvs").text(), Some("0 1 1 1 0 0"));
+        assert_eq!(
+            field(mesh, "uvs").text(),
+            Some("0 0.03125 0.03125 0.03125 0 0")
+        );
         let name = xml.descendants().find(|n| {
             n.attribute("xs.n") == Some("localName")
                 && n.text() == Some(d.get_mesh(MESH).unwrap().name.as_str())
@@ -706,7 +709,7 @@ fn canvas_reversal_matches_runtime_geometry_texture_uvs_and_triangle_orientation
     let expected: Vec<_> = drawable
         .uvs
         .iter()
-        .flat_map(|uv| [uv.x, 1. - uv.y])
+        .flat_map(|uv| [uv.x / 32., (1. - uv.y) / 32.])
         .collect();
     let actual: Vec<f32> = field(mesh, "uvs")
         .text()
@@ -738,4 +741,138 @@ fn an_unused_empty_image_is_reported_by_identity_before_reading_pixels() {
     )
     .unwrap_err();
     assert!(matches!(error,Cmo3Error::Asset{asset_id,..} if asset_id==id));
+}
+
+#[test]
+fn texture_coordinates_survive_cubism_padding_and_original_shape_uv_rebuild() {
+    for (width, height) in [(2, 2), (64, 128), (67, 129)] {
+        let (mut doc, _) = fixture();
+        let mut asset = doc.get_asset(ASSET).unwrap().clone();
+        let content = asset.content.as_mut().unwrap();
+        content.width = width;
+        content.height = height;
+        assert!(doc.replace_asset(asset).status.is_ok());
+        let mut mesh = doc.get_mesh(MESH).unwrap().clone();
+        mesh.id = "00000000-0000-4000-8000-000000000080".into();
+        mesh.runtime_id = "NonAffine".into();
+        mesh.vertex_ids = vec![0, 1, 2, 3];
+        mesh.base_positions = vec![
+            Vec2::new(8., 12.),
+            Vec2::new(104., 12.),
+            Vec2::new(74., 40.),
+            Vec2::new(8., 60.),
+        ];
+        mesh.uvs = vec![
+            Vec2::new(0., 0.),
+            Vec2::new(1., 0.),
+            Vec2::new(1., 1.),
+            Vec2::new(0., 1.),
+        ];
+        mesh.triangles = vec![[0, 1, 2], [0, 2, 3]];
+        assert!(doc.create_mesh(mesh.clone()).status.is_ok());
+        mesh.id = "00000000-0000-4000-8000-000000000081".into();
+        mesh.runtime_id = "Collapsed".into();
+        mesh.base_positions.fill(Vec2::new(10., 20.));
+        assert!(doc.create_mesh(mesh).status.is_ok());
+        let mut png = Vec::new();
+        let mut encoder = png::Encoder::new(&mut png, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder
+            .write_header()
+            .unwrap()
+            .write_image_data(&vec![255; (width * height * 4) as usize])
+            .unwrap();
+        let artifact = encode(&doc, &png, 1);
+        write_probe_artifact(&format!("texture-padding-{width}-{height}"), &artifact);
+        let imported = import_model(&artifact.bytes).unwrap();
+        for original in doc.mesh_order().iter().map(|id| doc.get_mesh(id).unwrap()) {
+            let actual = imported
+                .document
+                .mesh_order()
+                .iter()
+                .map(|id| imported.document.get_mesh(id).unwrap())
+                .find(|m| m.runtime_id == original.runtime_id)
+                .unwrap();
+            for (a, b) in actual.uvs.iter().zip(&original.uvs) {
+                assert!((a.x - b.x).abs() < 0.00001 && (a.y - b.y).abs() < 0.00001);
+            }
+            for (a, b) in actual.base_positions.iter().zip(&original.base_positions) {
+                assert!((a.x - b.x).abs() < 0.0001 && (a.y - b.y).abs() < 0.0001);
+            }
+        }
+        let entries = archive(&artifact.bytes);
+        let xml =
+            roxmltree::Document::parse(std::str::from_utf8(&entries.last().unwrap().3).unwrap())
+                .unwrap();
+        let floats = |node: roxmltree::Node<'_, '_>| -> Vec<f64> {
+            node.text()
+                .unwrap()
+                .split_whitespace()
+                .map(|v| v.parse().unwrap())
+                .collect()
+        };
+        for source in xml
+            .descendants()
+            .filter(|n| n.has_tag_name("CArtMeshSource") && n.has_attribute("xs.id"))
+        {
+            let id = field(field(source, "super"), "id")
+                .attribute("idstr")
+                .unwrap();
+            let original = doc
+                .mesh_order()
+                .iter()
+                .map(|id| doc.get_mesh(id).unwrap())
+                .find(|m| m.runtime_id == id)
+                .unwrap();
+            let positions = floats(field(source, "positions"));
+            let uvs = floats(field(source, "uvs"));
+            let owner_ref = source.attribute("xs.id").unwrap();
+            let input = xml
+                .descendants()
+                .find(|n| {
+                    n.has_tag_name("CTextureInputExtension")
+                        && n.has_attribute("xs.id")
+                        && field(field(*n, "super"), "_owner").attribute("xs.ref")
+                            == Some(owner_ref)
+                })
+                .unwrap();
+            let region_ref = field(input, "currentTextureInputData")
+                .attribute("xs.ref")
+                .unwrap();
+            let region = xml
+                .descendants()
+                .find(|n| n.attribute("xs.id") == Some(region_ref))
+                .unwrap();
+            let transform = field(region, "inputImageLocalToCanvasTransform");
+            let [a, b, tx, c, d, ty] = ["m00", "m01", "m02", "m10", "m11", "m12"]
+                .map(|key| transform.attribute(key).unwrap().parse::<f64>().unwrap());
+            let det = a * d - b * c;
+            assert!(det.abs() > 1e-12);
+            let padded_width = width.div_ceil(64) * 64;
+            let padded_height = height.div_ceil(64) * 64;
+            for ((p, uv), expected) in positions
+                .chunks_exact(2)
+                .zip(uvs.chunks_exact(2))
+                .zip(&original.uvs)
+            {
+                let x = p[0] - tx;
+                let y = p[1] - ty;
+                // Cubism reconstructs physical GPU UVs from the original shape.
+                let rebuilt = [
+                    (d * x - b * y) / det / padded_width as f64,
+                    (-c * x + a * y) / det / padded_height as f64,
+                ];
+                assert!((rebuilt[0] - uv[0]).abs() < 0.00001);
+                assert!((rebuilt[1] - uv[1]).abs() < 0.00001);
+                assert!(
+                    (uv[0] * padded_width as f64 - expected.x as f64 * width as f64).abs() < 0.0001
+                );
+                assert!(
+                    (uv[1] * padded_height as f64 - (1. - expected.y as f64) * height as f64).abs()
+                        < 0.0001
+                );
+            }
+        }
+    }
 }

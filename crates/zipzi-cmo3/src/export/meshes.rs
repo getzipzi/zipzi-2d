@@ -10,6 +10,23 @@ impl Exporter<'_> {
             let uvs: Vec<_> = m.uvs.iter().map(|uv| Vec2::new(uv.x, 1. - uv.y)).collect();
             let binding = self.doc.binding_for_mesh(id).filter(|b| !b.axes.is_empty());
             let rest = self.rest[id].clone();
+            let asset = self.doc.get_asset(&m.texture_asset_id).unwrap();
+            let content = asset.content.as_ref().unwrap();
+            let placement = fit_texture(&uvs, &rest, content.width, content.height);
+            // Cubism rebuilds UVs from source positions and the image placement.
+            // Keep that original-shape mesh in texture space; keyforms
+            // retain the exact posed geometry, including non-affine UV maps.
+            let texture_positions: Vec<_> = uvs
+                .iter()
+                .map(|uv| {
+                    let x = uv.x as f64 * content.width as f64;
+                    let y = uv.y as f64 * content.height as f64;
+                    Vec2::new(
+                        (placement[0] * x + placement[1] * y + placement[2]) as f32,
+                        (placement[3] * x + placement[4] * y + placement[5]) as f32,
+                    )
+                })
+                .collect();
             let mut guids = Vec::new();
             let mut forms = Vec::new();
             let samples: Vec<MeshSample<'_>> = binding
@@ -80,7 +97,7 @@ impl Exporter<'_> {
             let editable = N::new("GEditableMesh2")
                 .attr("nextPointUid", m.vertex_ids.len())
                 .attr("useDelaunayTriangulation", false)
-                .field("point", points(&rest))
+                .field("point", points(&texture_positions))
                 .field(
                     "pointPriority",
                     N::array("byte-array", std::iter::repeat_n(10, m.vertex_ids.len())),
@@ -106,9 +123,9 @@ impl Exporter<'_> {
             let TextureBinding {
                 texture,
                 atlas_guid,
+                uv_scale,
             } = &textures[m.texture_asset_id.as_str()];
             let input = self.graph.reserve("CTextureInputExtension");
-            let asset = self.doc.get_asset(&m.texture_asset_id).unwrap();
             let region = self.graph.add(
                 N::new("CTextureInput_TextureAtlasRegion")
                     .field(
@@ -118,15 +135,7 @@ impl Exporter<'_> {
                             .field("_owner", input.clone()),
                     )
                     .field("textureAtlasGuid", atlas_guid.clone())
-                    .field(
-                        "inputImageLocalToCanvasTransform",
-                        affine(fit_texture(
-                            &uvs,
-                            &rest,
-                            asset.content.as_ref().unwrap().width,
-                            asset.content.as_ref().unwrap().height,
-                        )),
-                    ),
+                    .field("inputImageLocalToCanvasTransform", affine(placement)),
             );
             let input_base = self.extension_base(&owner);
             self.graph.set(
@@ -176,8 +185,15 @@ impl Exporter<'_> {
                 .field("super", drawable)
                 .field("indices", N::array("int-array", indices))
                 .field("keyforms", N::list("carray_list", forms))
-                .field("positions", points(&rest))
-                .field("uvs", points(&uvs))
+                .field("positions", points(&texture_positions))
+                .field(
+                    "uvs",
+                    points(
+                        &uvs.iter()
+                            .map(|uv| Vec2::new(uv.x * uv_scale.x, uv.y * uv_scale.y))
+                            .collect::<Vec<_>>(),
+                    ),
+                )
                 .field("texture", texture.clone())
                 .field(
                     "colorComposition",

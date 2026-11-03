@@ -169,6 +169,7 @@ fn appearance(n: N, a: Appearance) -> N {
 struct TextureBinding {
     texture: N,
     atlas_guid: N,
+    uv_scale: Vec2,
 }
 struct TextureSet {
     manager: N,
@@ -580,14 +581,22 @@ fn fit_texture(uvs: &[Vec2], positions: &[Vec2], w: u32, h: u32) -> [f64; 6] {
             }
         }
     }
-    [
+    let placement = [
         matrix[0][3],
         matrix[1][3],
         matrix[2][3],
         matrix[0][4],
         matrix[1][4],
         matrix[2][4],
-    ]
+    ];
+    let determinant = placement[0] * placement[4] - placement[1] * placement[3];
+    if !determinant.is_finite() || determinant.abs() < 1e-12 {
+        // Even a collapsed pose needs an invertible original-image placement
+        // for Cubism's UV initialization. Posed forms are stored separately.
+        [1., 0., 0., 0., 1., 0.]
+    } else {
+        placement
+    }
 }
 
 pub(crate) fn encode(

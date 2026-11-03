@@ -1,5 +1,20 @@
 use super::*;
 
+// Cubism pads GPU textures to multiples of the mipmap level without resizing
+// the embedded PNG. Serialized UVs and the resource-to-logical transform must
+// both account for that padding, just like CCachedImage does on initialization.
+pub(super) fn texture_scale(w: u32, h: u32) -> Vec2 {
+    Vec2::new(
+        w as f32 / (w.div_ceil(64) * 64) as f32,
+        h as f32 / (h.div_ceil(64) * 64) as f32,
+    )
+}
+
+fn texture_transform(w: u32, h: u32) -> N {
+    let scale = texture_scale(w, h);
+    affine([scale.x as f64, 0., 0., 0., scale.y as f64, 0.])
+}
+
 impl Exporter<'_> {
     pub(super) fn cache(&mut self, resource: N, w: u32, h: u32) -> N {
         let cached = N::new("CCachedImage")
@@ -13,17 +28,7 @@ impl Exporter<'_> {
             .field("mipmapLevel", i(64))
             .field("hasMargin", b(false))
             .field("isCleaned", b(false))
-            .field(
-                "transformRawImageToCachedImage",
-                affine([
-                    w as f64 / w.div_ceil(64) as f64 / 64.,
-                    0.,
-                    0.,
-                    0.,
-                    h as f64 / h.div_ceil(64) as f64 / 64.,
-                    0.,
-                ]),
-            );
+            .field("transformRawImageToCachedImage", texture_transform(w, h));
         N::new("CCachedImageManager")
             .field(
                 "defaultCacheType",
@@ -104,7 +109,10 @@ impl Exporter<'_> {
                             .field("anisotropy", N::enumeration("Anisotropy", "ON")),
                     )
                     .field("srcImageResource", resource)
-                    .field("transformImageResource01toLogical01", identity())
+                    .field(
+                        "transformImageResource01toLogical01",
+                        texture_transform(content.width, content.height),
+                    )
                     .field("mipmapLevel", i(64))
                     .field("isPremultiplied", b(true)),
             );
@@ -113,6 +121,7 @@ impl Exporter<'_> {
                 TextureBinding {
                     texture,
                     atlas_guid,
+                    uv_scale: texture_scale(content.width, content.height),
                 },
             );
         }
