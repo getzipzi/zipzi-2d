@@ -18,23 +18,35 @@ Focused native controls: `cargo test --locked -p zipzi-project --lib filesystem:
 privilege and report missing coverage explicitly when unavailable. Ordinary file,
 case-alias, lock and replacement tests always execute.
 
-## Native archive P0 prototype
+## Native project container
 
-The `archive-prototype` feature contains the storage experiment for the native
-single-file project proposal. It is intentionally separate from the current
-directory project API and writes archives with an explicit experimental
-`required_features` marker. Run the focused checks with:
+`archive::ProjectArchiveStore` reads and atomically publishes native ZIP files:
+container version 1, document identifier `zipzi-project`, document version 22.
+Stored PNG entries use complete SHA-256 names; JSON uses Deflate. ZIP admission
+checks central-directory limits before indexing, validates ZIP64, local headers,
+data descriptors and non-overlapping regions. Unsupported entries and required
+features fail explicitly. Missing or corrupt images produce repair diagnostics;
+they cannot silently become missing content during save.
+
+The host supplies a private working-set parent and can share a
+`ProjectDiskBudget` across stores. `ProjectResourceLease` retains immutable
+resources until its last holder drops. Recognized abandoned working sets and
+staging files can be reclaimed using owner metadata and locks. Staging is bounded,
+streamed, finalized, synchronized and revalidated before publication. Replacement
+requires a captured full-file fingerprint. A successful publish followed by a
+directory-sync failure returns a published receipt with a durability warning.
+
+Session/SDK integration is the next stage; their existing entrypoints still use
+the directory backend at this intermediate commit. The optional
+`archive-prototype` example retains the explicitly marked v21 experiment solely
+for reproducing the P0 measurements, which production readers reject.
 
 ```sh
-cargo test --locked -p zipzi-project --lib archive:: --features archive-prototype
+cargo test --locked -p zipzi-project --lib archive::
+cargo test --locked -p zipzi-project --test project_tests
 cargo run --locked --release -p zipzi-project --features archive-prototype \
   --example project_archive_prototype -- fixtures target/archive-p0/fixtures
 ```
-
-The prototype uses the existing v21 JSON codec, stores content-addressed PNG
-bytes, and keeps the private extraction directory alive through a cloneable
-lease. P1 still needs to move ZIP admission before allocation and connect this
-path to the Project/SDK publication transaction.
 
 ## Import artwork
 

@@ -1,29 +1,35 @@
-//! P0 storage experiment, available only with `archive-prototype`.
-//!
-//! This deliberately uses the current v21 codec, advertised as a required
-//! experimental feature. It is not a second production project backend. The
-//! reader is for locally generated benchmark inputs: central-directory admission
-//! and full local/central header validation are still required before exposing
-//! it to user input. Publication and Session integration belong to P1/P2.
+//! Native single-file project container, resource leases and atomic publication.
 
+mod publication;
+mod reader;
 mod stream;
+mod structure;
+mod working_set;
+mod writer;
+pub use publication::{
+    ArchiveFileSystem, ArchiveLock, ArchiveStaging, ArchiveStream, NativeArchiveFileSystem,
+};
+pub use working_set::{ProjectDiskBudget, ProjectResourceLease};
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tempfile::TempDir;
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 use zipzi_core::{Document, Status};
 
-use crate::{content_sha256, decode_project, encode_project, read_project_texture_bounded};
+#[cfg(any(test, feature = "archive-prototype"))]
+use crate::encode_project;
+use crate::{content_sha256, decode_project, read_project_texture_bounded};
 
 pub use stream::{IoCounts, MeteredIo, ProjectFingerprint};
 
 const EXPERIMENT: &str = "prototype-directory-document-v21";
+const NATIVE_FORMAT: &str = "zipzi-project";
+const NATIVE_DOCUMENT_VERSION: u64 = 22;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ArchiveError {
@@ -35,9 +41,9 @@ pub enum ArchiveError {
     Json(#[from] serde_json::Error),
     #[error("{code}: {message}")]
     Document { code: String, message: String },
-    #[error("Invalid prototype archive: {0}")]
+    #[error("Invalid project archive: {0}")]
     Invalid(String),
-    #[error("Prototype limit exceeded: {0}")]
+    #[error("Project limit exceeded: {0}")]
     Limit(&'static str),
     #[error("Archive operation cancelled before completion")]
     Cancelled,
@@ -52,29 +58,25 @@ impl From<Status> for ArchiveError {
     }
 }
 
-pub type Result<T> = std::result::Result<T, ArchiveError>;
-
-/// Experimental ceilings, not yet the host's shared admission/disk budget.
-#[derive(Clone, Copy, Debug)]
-pub struct PrototypeLimits {
-    pub archive_bytes: u64,
-    pub format_bytes: u64,
-    pub document_bytes: u64,
-    pub expanded_bytes: u64,
-    pub entries: usize,
-}
-
-impl Default for PrototypeLimits {
-    fn default() -> Self {
-        Self {
-            archive_bytes: 16 << 30,
-            format_bytes: 64 << 10,
-            document_bytes: 256 << 20,
-            expanded_bytes: 16 << 30,
-            entries: 100_000,
+impl From<ArchiveError> for Status {
+    fn from(error: ArchiveError) -> Self {
+        match error {
+            ArchiveError::Document { code, message } => Status::error(code, message),
+            ArchiveError::Cancelled => {
+                Status::error("CANCELLED", "Project I/O cancelled before publication")
+            }
+            ArchiveError::Limit(message) => Status::error("PROJECT_LIMIT_EXCEEDED", message),
+            ArchiveError::Io(error) => Status::error("PROJECT_IO", error.to_string()),
+            error => Status::error("INVALID_PROJECT", error.to_string()),
         }
     }
 }
+
+pub type Result<T> = std::result::Result<T, ArchiveError>;
+
+/// Compatibility name for the opt-in P0 benchmark API.
+#[cfg(any(test, feature = "archive-prototype"))]
+pub type PrototypeLimits = ArchiveIoLimits;
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -106,12 +108,255 @@ pub struct OpenedArchive {
     pub unique_assets: usize,
     pub asset_bytes: u64,
     pub peak_working_bytes: u64,
-    working_set: Arc<TempDir>,
+    pub diagnostics: Vec<crate::ResourceDiagnostic>,
+    working_set: ProjectResourceLease,
 }
 
 impl OpenedArchive {
     pub fn asset_root(&self) -> &Path {
         self.working_set.path()
+    }
+
+    pub fn resource_lease(&self) -> ProjectResourceLease {
+        self.working_set.clone()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ArchiveDocumentFormat {
+    #[cfg(any(test, feature = "archive-prototype"))]
+    Prototype,
+    NativeV22,
+}
+
+#[derive(Debug, Clone)]
+pub struct ArchiveSaveReceipt {
+    pub document: Document,
+    pub path: PathBuf,
+    pub fingerprint: ProjectFingerprint,
+    pub published: bool,
+    pub durable: bool,
+    pub warnings: Vec<String>,
+    pub document_bytes: u64,
+    pub asset_bytes: u64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ArchiveIoLimits {
+    pub archive_bytes: u64,
+    pub directory_bytes: u64,
+    pub format_bytes: u64,
+    pub document_bytes: u64,
+    pub expanded_bytes: u64,
+    pub entries: usize,
+}
+
+impl Default for ArchiveIoLimits {
+    fn default() -> Self {
+        Self {
+            archive_bytes: 16 << 30,
+            directory_bytes: 64 << 20,
+            format_bytes: 64 << 10,
+            document_bytes: 256 << 20,
+            expanded_bytes: 16 << 30,
+            entries: 100_000,
+        }
+    }
+}
+
+pub struct ProjectArchiveStore {
+    workspace_parent: PathBuf,
+    limits: ArchiveIoLimits,
+    filesystem: Arc<dyn ArchiveFileSystem>,
+    disk_budget: ProjectDiskBudget,
+}
+
+impl ProjectArchiveStore {
+    pub fn new(workspace_parent: impl Into<PathBuf>) -> Self {
+        Self {
+            workspace_parent: workspace_parent.into(),
+            limits: ArchiveIoLimits::default(),
+            filesystem: Arc::new(NativeArchiveFileSystem),
+            disk_budget: ProjectDiskBudget::default(),
+        }
+    }
+
+    pub fn with_filesystem(mut self, filesystem: Arc<dyn ArchiveFileSystem>) -> Self {
+        self.filesystem = filesystem;
+        self
+    }
+
+    pub fn with_disk_budget(mut self, budget: ProjectDiskBudget) -> Self {
+        self.disk_budget = budget;
+        self
+    }
+
+    pub fn with_limits(mut self, limits: ArchiveIoLimits) -> Self {
+        self.limits = limits;
+        self
+    }
+
+    /// Capture a replacement baseline through the same path and full-file hash
+    /// rules used immediately before publication. This does not mutate the file.
+    pub fn fingerprint(
+        &self,
+        path: &Path,
+        mut keep_going: impl FnMut() -> bool,
+    ) -> Result<ProjectFingerprint> {
+        crate::filesystem::reject_symlink(path)?;
+        let path = crate::filesystem::local_path(path)?;
+        let metadata = fs::metadata(&path)?;
+        if !metadata.is_file() {
+            return Err(
+                Status::error("UNSUPPORTED_PROJECT_PATH", "Expected a project file").into(),
+            );
+        }
+        #[cfg(unix)]
+        if std::os::unix::fs::MetadataExt::nlink(&metadata) > 1 {
+            return Err(Status::error(
+                "INVALID_PATH",
+                "Hard-linked project paths are not writable",
+            )
+            .into());
+        }
+        ProjectFingerprint::read(
+            &mut File::open(path)?,
+            self.limits.archive_bytes,
+            &mut keep_going,
+        )
+    }
+
+    pub fn open(&self, path: &Path, keep_going: impl FnMut() -> bool) -> Result<OpenedArchive> {
+        reader::open(
+            path,
+            &self.workspace_parent,
+            self.limits,
+            self.disk_budget.clone(),
+            false,
+            keep_going,
+        )
+    }
+
+    pub fn save(
+        &self,
+        document: &Document,
+        resources: &ProjectResourceLease,
+        target: &Path,
+        expected: Option<&ProjectFingerprint>,
+        mut keep_going: impl FnMut() -> bool,
+    ) -> Result<ArchiveSaveReceipt> {
+        check(&mut keep_going)?;
+        crate::filesystem::reject_symlink(target)?;
+        let target = crate::filesystem::local_path(target)?;
+        let parent = target
+            .parent()
+            .ok_or_else(|| invalid("Missing target parent"))?;
+        std::fs::create_dir_all(parent)?;
+        crate::filesystem::reject_symlink(&target).map_err(ArchiveError::from)?;
+        let _lock = self
+            .filesystem
+            .acquire_lock(&target)
+            .map_err(|e| Status::error("PROJECT_BUSY", e.to_string()))?;
+        check_archive_target(&target, expected, &mut keep_going)?;
+        let prepared = writer::prepare(
+            document,
+            resources.path(),
+            self.limits,
+            &mut keep_going,
+            ArchiveDocumentFormat::NativeV22,
+        )?;
+        let _reservation = self.disk_budget.reserve(prepared.extent)?;
+        let mut stage = self.filesystem.create_staging(parent)?;
+        let mut writer = self.filesystem.staging_stream(&mut stage.file);
+        let written = writer::write(prepared, &mut writer, &mut keep_going)?;
+        drop(writer);
+        self.filesystem.sync_file(&stage.file)?;
+        let length = stage.file.metadata()?.len();
+        structure::validate(&mut stage.file, length, self.limits, &mut keep_going)?;
+        stage.file.rewind()?;
+        let fingerprint =
+            ProjectFingerprint::read(&mut stage.file, self.limits.archive_bytes, &mut keep_going)?;
+        check_archive_target(&target, expected, &mut keep_going)?;
+        check(&mut keep_going)?;
+        if expected.is_some() {
+            self.filesystem.publish_replace(&stage.path, &target)?;
+        } else {
+            self.filesystem.publish_no_replace(&stage.path, &target)?;
+        }
+        let mut warnings = Vec::new();
+        if let Err(error) = self.filesystem.sync_directory(parent) {
+            warnings.push(format!(
+                "Published, but directory synchronization failed: {error}"
+            ));
+        }
+        Ok(ArchiveSaveReceipt {
+            document: written.document,
+            path: target,
+            fingerprint,
+            published: true,
+            durable: warnings.is_empty(),
+            warnings,
+            document_bytes: written.document_bytes,
+            asset_bytes: written.asset_bytes,
+        })
+    }
+}
+
+fn check_archive_target(
+    target: &Path,
+    expected: Option<&ProjectFingerprint>,
+    keep_going: &mut impl FnMut() -> bool,
+) -> Result<()> {
+    match std::fs::symlink_metadata(target) {
+        Ok(metadata) if !metadata.is_file() && !metadata.file_type().is_symlink() => {
+            Err(Status::error(
+                "UNSUPPORTED_PROJECT_PATH",
+                "Destination must be a regular file; directory projects are unsupported",
+            )
+            .into())
+        }
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            Err(Status::error("INVALID_PATH", "Destination is a symlink").into())
+        }
+        Ok(metadata) => {
+            #[cfg(unix)]
+            if std::os::unix::fs::MetadataExt::nlink(&metadata) > 1 {
+                return Err(Status::error(
+                    "INVALID_PATH",
+                    "Hard-linked project paths are not writable",
+                )
+                .into());
+            }
+            if expected.is_none() {
+                return Err(Status::error("PROJECT_EXISTS", "Destination exists").into());
+            }
+            let baseline = expected.expect("existing target requires a baseline");
+            if baseline.length != metadata.len() {
+                return Err(
+                    Status::error("PROJECT_CONFLICT", "On-disk archive length changed").into(),
+                );
+            }
+            let actual =
+                ProjectFingerprint::read(&mut File::open(target)?, baseline.length, keep_going)?;
+            if expected.is_some_and(|baseline| baseline != &actual) {
+                return Err(ArchiveError::Document {
+                    code: "PROJECT_CONFLICT".into(),
+                    message: "On-disk archive changed".into(),
+                });
+            }
+            Ok(())
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            if expected.is_some() {
+                Err(ArchiveError::Document {
+                    code: "PROJECT_CONFLICT".into(),
+                    message: "Expected archive not found".into(),
+                })
+            } else {
+                Ok(())
+            }
+        }
+        Err(error) => Err(error.into()),
     }
 }
 
@@ -151,142 +396,38 @@ fn options(method: CompressionMethod) -> SimpleFileOptions {
         .large_file(true)
 }
 
-/// Write to a fresh, disposable seekable stream. The caller must discard it on
-/// any error, then finalize/sync/hash it before considering publication. Only
-/// encoded disk resources are supported here; unsaved memory drafts come in P2.
-/// No PNG encoder or RGBA decoder runs on this path.
+/// Write a prototype archive to a fresh, disposable seekable stream.
+#[cfg(any(test, feature = "archive-prototype"))]
 pub fn write_archive<W: Write + Seek>(
     document: &Document,
     asset_root: &Path,
     output: &mut W,
     limits: PrototypeLimits,
-    mut keep_going: impl FnMut() -> bool,
+    keep_going: impl FnMut() -> bool,
 ) -> Result<WrittenArchive> {
-    check(&mut keep_going)?;
-    if document.transaction_active() {
-        return Err(Status::error("TRANSACTION_ACTIVE", "Commit or cancel edits first").into());
-    }
-    if output.stream_position()? != 0 {
-        return Err(invalid("Writer must start at offset zero"));
-    }
-    let mut candidate = document.fork_candidate();
-    let mut resources = BTreeMap::<String, Resource>::new();
-    let mut prepared = BTreeMap::<PathBuf, String>::new();
-    let mut asset_bytes = 0;
-    let mut read_bytes = 0;
-    for id in document.asset_order() {
-        check(&mut keep_going)?;
-        let mut asset = document.get_asset(id).unwrap().clone();
-        let Some(content) = asset.content.as_mut() else {
-            continue;
-        };
-        let path = crate::store::asset_path(asset_root, document.get_asset(id).unwrap())?;
-        let hash = if let Some(hash) = prepared.get(&path) {
-            hash.clone()
-        } else {
-            let mut file = File::open(&path)?;
-            let size = file.metadata()?.len();
-            if size > limits.expanded_bytes {
-                return Err(ArchiveError::Limit("PNG bytes"));
-            }
-            let mut header = [0; 33];
-            file.read_exact(&mut header)?;
-            read_bytes += header.len() as u64;
-            let dimensions = zipzi_core::image::png_dimensions(&header)?;
-            file.rewind()?;
-            let fingerprint = ProjectFingerprint::read(&mut file, size, &mut keep_going)?;
-            read_bytes += fingerprint.length;
-            if fingerprint.length != size {
-                return Err(invalid("Resource changed during preparation"));
-            }
-            let hash = fingerprint.sha256.clone();
-            if !resources.contains_key(&hash) {
-                add(&mut asset_bytes, size, limits.expanded_bytes)?;
-                resources.insert(
-                    hash.clone(),
-                    Resource {
-                        path: path.clone(),
-                        fingerprint,
-                        dimensions,
-                    },
-                );
-            }
-            prepared.insert(path, hash.clone());
-            hash
-        };
-        let resource = &resources[&hash];
-        if !content.sha256.is_empty() && content.sha256 != hash {
-            return Err(Status::error("RESOURCE_HASH", &asset.id).into());
-        }
-        if (content.width, content.height) != resource.dimensions {
-            return Err(Status::error("RESOURCE_DIMENSIONS", &asset.id).into());
-        }
-        content.source = format!("assets/{hash}.png");
-        content.sha256 = hash;
-        let result = candidate.replace_asset(asset);
-        if !result.status.is_ok() {
-            return Err(result.status.into());
-        }
-    }
-    if resources
-        .len()
-        .checked_add(2)
-        .is_none_or(|n| n > limits.entries)
-    {
-        return Err(ArchiveError::Limit("entries"));
-    }
-    let json = encode_project(&candidate)?;
-    if json.len() as u64 > limits.document_bytes {
-        return Err(ArchiveError::Limit("document bytes"));
-    }
-    let format = serde_json::to_vec(&Format {
-        format: "zipzi-project-package".into(),
-        container_version: 1,
-        document: "project.json".into(),
-        document_sha256: content_sha256(json.as_bytes()),
-        required_features: vec![EXPERIMENT.into()],
-    })?;
-    if format.len() as u64 > limits.format_bytes {
-        return Err(ArchiveError::Limit("format bytes"));
-    }
-    let mut expanded = asset_bytes;
-    add(&mut expanded, json.len() as u64, limits.expanded_bytes)?;
-    add(&mut expanded, format.len() as u64, limits.expanded_bytes)?;
-    let mut zip = ZipWriter::new(&mut *output);
-    zip.start_file("format.json", options(CompressionMethod::Deflated))?;
-    zip.write_all(&format)?;
-    zip.start_file("project.json", options(CompressionMethod::Deflated))?;
-    zip.write_all(json.as_bytes())?;
-    for (hash, resource) in &resources {
-        check(&mut keep_going)?;
-        zip.start_file(
-            format!("assets/{hash}.png"),
-            options(CompressionMethod::Stored),
-        )?;
-        let actual = stream::copy_exact(
-            &mut File::open(&resource.path)?,
-            &mut zip,
-            resource.fingerprint.length,
-            &mut keep_going,
-        )?;
-        read_bytes += actual.length;
-        if actual != resource.fingerprint {
-            return Err(invalid("Resource changed while writing"));
-        }
-    }
-    check(&mut keep_going)?;
-    zip.finish()?;
-    if output.stream_position()? > limits.archive_bytes {
-        return Err(ArchiveError::Limit("archive bytes"));
-    }
-    check(&mut keep_going)?;
-    Ok(WrittenArchive {
-        document: candidate,
-        unique_assets: resources.len(),
-        asset_bytes,
-        document_bytes: json.len() as u64,
-        resource_read_bytes: read_bytes,
-    })
+    write_archive_inner(
+        document,
+        asset_root,
+        output,
+        limits,
+        keep_going,
+        ArchiveDocumentFormat::Prototype,
+    )
+}
+
+/// Low-level experimental writer for benchmarks and codec fixtures.
+#[cfg(any(test, feature = "archive-prototype"))]
+fn write_archive_inner<W: Write + Seek>(
+    document: &Document,
+    asset_root: &Path,
+    output: &mut W,
+    limits: PrototypeLimits,
+    keep_going: impl FnMut() -> bool,
+    format_kind: ArchiveDocumentFormat,
+) -> Result<WrittenArchive> {
+    let mut keep_going = keep_going;
+    let prepared = writer::prepare(document, asset_root, limits, &mut keep_going, format_kind)?;
+    writer::write(prepared, output, keep_going)
 }
 
 fn asset_hash(name: &str) -> Option<&str> {
@@ -298,180 +439,26 @@ fn asset_hash(name: &str) -> Option<&str> {
     .then_some(hash)
 }
 
-fn read_json<R: Read + Seek>(zip: &mut ZipArchive<R>, name: &str, limit: u64) -> Result<Vec<u8>> {
-    let mut entry = zip.by_name(name)?;
-    if entry.size() > limit {
-        return Err(ArchiveError::Limit("JSON bytes"));
-    }
-    let size = entry.size();
-    let mut bytes = Vec::new();
-    // copy performs actual-length checks as well as driving the ZIP CRC reader.
-    stream::copy_exact(&mut entry, &mut bytes, size, &mut || true)?;
-    Ok(bytes)
-}
-
-/// Copy first, then open only the private archive. This is a benchmark reader,
-/// not the P1 hardened reader. Failures drop the entire candidate directory.
-/// PNGs are fully decoded one at a time after extraction to match directory-open
-/// resource validation; only the encoded files survive in the returned lease.
+/// Experimental v21 reader for reproducible P0 benchmarks only.
+#[cfg(any(test, feature = "archive-prototype"))]
 pub fn open_archive(
     path: &Path,
     workspace_parent: &Path,
     limits: PrototypeLimits,
-    mut keep_going: impl FnMut() -> bool,
+    keep_going: impl FnMut() -> bool,
 ) -> Result<OpenedArchive> {
-    check(&mut keep_going)?;
-    if !fs::symlink_metadata(path)?.is_file() {
-        return Err(invalid("Expected regular archive file"));
-    }
-    let working_set = Arc::new(
-        tempfile::Builder::new()
-            .prefix("zipzi-archive-p0-")
-            .tempdir_in(workspace_parent)?,
-    );
-    let copy_path = working_set.path().join("input.zip");
-    let mut source = MeteredIo::new(File::open(path)?);
-    let before = source.inner().metadata()?;
-    if before.len() > limits.archive_bytes {
-        return Err(ArchiveError::Limit("archive bytes"));
-    }
-    let mut copy = MeteredIo::new(
-        File::options()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .open(&copy_path)?,
-    );
-    let fingerprint = stream::copy_exact(&mut source, &mut copy, before.len(), &mut keep_going)?;
-    let after = source.inner().metadata()?;
-    if before.len() != after.len() || before.modified()? != after.modified()? {
-        return Err(invalid("Source changed during copy"));
-    }
-    copy.rewind()?;
-    let mut zip = ZipArchive::new(copy)?;
-    // P1 must move admission before constructing ZipArchive, and must validate
-    // every local header against the central directory. Do not expose to UI yet.
-    if zip.len() > limits.entries {
-        return Err(ArchiveError::Limit("entries"));
-    }
-    if zip.has_overlapping_entries()? {
-        return Err(invalid("Overlapping ZIP entries"));
-    }
-    let mut names = BTreeSet::new();
-    let mut expanded = 0;
-    for index in 0..zip.len() {
-        let entry = zip.by_index(index)?;
-        let name = std::str::from_utf8(entry.name_raw())
-            .map_err(|_| invalid("Invalid UTF-8 entry name"))?;
-        if !names.insert(name.to_owned()) {
-            return Err(invalid("Duplicate ZIP entry"));
-        }
-        if entry.encrypted()
-            || !matches!(
-                entry.compression(),
-                CompressionMethod::Stored | CompressionMethod::Deflated
-            )
-            || entry
-                .unix_mode()
-                .is_some_and(|m| !matches!(m & 0o170000, 0 | 0o100000 | 0o040000))
-        {
-            return Err(invalid("Unsupported ZIP entry type"));
-        }
-        if !matches!(name, "format.json" | "project.json")
-            && asset_hash(name).is_none()
-            && !(name == "assets/" && entry.size() == 0 && entry.is_dir())
-        {
-            return Err(invalid(format!("Unknown ZIP entry: {name}")));
-        }
-        if name != "assets/" && !entry.is_file() {
-            return Err(invalid("Expected regular entry"));
-        }
-        add(&mut expanded, entry.size(), limits.expanded_bytes)?;
-    }
-    let format: Format =
-        serde_json::from_slice(&read_json(&mut zip, "format.json", limits.format_bytes)?)?;
-    if format.format != "zipzi-project-package"
-        || format.container_version != 1
-        || format.document != "project.json"
-        || format.required_features != [EXPERIMENT]
-    {
-        return Err(invalid("Unsupported prototype format/version/feature"));
-    }
-    let bytes = read_json(&mut zip, "project.json", limits.document_bytes)?;
-    if content_sha256(&bytes) != format.document_sha256 {
-        return Err(invalid("Document hash mismatch"));
-    }
-    let document = decode_project(
-        std::str::from_utf8(&bytes).map_err(|_| invalid("Invalid UTF-8 document"))?,
-    )?;
-    let mut assets = BTreeMap::<String, Vec<&zipzi_core::ImageAsset>>::new();
-    for id in document.asset_order() {
-        let asset = document.get_asset(id).unwrap();
-        let Some(content) = &asset.content else {
-            continue;
-        };
-        if asset_hash(&content.source) != Some(content.sha256.as_str()) {
-            return Err(invalid("Invalid content-addressed source"));
-        }
-        assets
-            .entry(content.source.clone())
-            .or_default()
-            .push(asset);
-    }
-    if names
-        .iter()
-        .any(|n| asset_hash(n).is_some() && !assets.contains_key(n))
-    {
-        return Err(invalid("Unreferenced ZIP resource"));
-    }
-    fs::create_dir(working_set.path().join("assets"))?;
-    let mut asset_bytes = 0;
-    for (name, references) in &assets {
-        check(&mut keep_going)?;
-        let mut entry = zip.by_name(name)?;
-        let size = entry.size();
-        // `name` was checked against the fixed full-hash grammar above.
-        let target = working_set.path().join(name);
-        let mut output = File::options().write(true).create_new(true).open(&target)?;
-        let actual = stream::copy_exact(&mut entry, &mut output, size, &mut keep_going)?;
-        if actual.sha256 != asset_hash(name).unwrap() {
-            return Err(invalid("Resource hash mismatch"));
-        }
-        asset_bytes += size;
-        drop(output);
-        for asset in references {
-            read_project_texture_bounded(
-                working_set.path(),
-                asset,
-                zipzi_core::image::PngDecodeLimits::default(),
-                &mut keep_going,
-            )?;
-        }
-    }
-    let copy = zip.into_inner();
-    let mut counts = source.counts() + copy.counts();
-    // Bounded validation rereads each asset reference. Decoder reads from the
-    // acquired bytes in memory, so it adds no further filesystem traffic.
-    for (name, references) in &assets {
-        counts.read_bytes +=
-            fs::metadata(working_set.path().join(name))?.len() * references.len() as u64;
-    }
-    counts.write_bytes += asset_bytes;
-    let unique_assets = assets.len();
-    drop(assets);
-    drop(copy);
-    fs::remove_file(copy_path)?;
-    check(&mut keep_going)?;
-    Ok(OpenedArchive {
-        document,
-        fingerprint: fingerprint.clone(),
-        counts,
-        unique_assets,
-        asset_bytes,
-        peak_working_bytes: fingerprint.length + asset_bytes,
-        working_set,
-    })
+    reader::open(
+        path,
+        workspace_parent,
+        limits,
+        ProjectDiskBudget::default(),
+        true,
+        keep_going,
+    )
 }
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod publication_tests;

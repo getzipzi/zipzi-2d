@@ -138,3 +138,47 @@ impl<T: Seek> Seek for MeteredIo<T> {
         self.inner.seek(pos)
     }
 }
+
+/// Enforce the output extent while writing, including ZIP header backpatches.
+/// Checking only the final file length would permit an unbounded staging file.
+pub(super) struct BoundedWriter<'a, W> {
+    inner: &'a mut W,
+    position: u64,
+    limit: u64,
+}
+impl<'a, W: Write + Seek> BoundedWriter<'a, W> {
+    pub fn new(inner: &'a mut W, limit: u64) -> Self {
+        Self {
+            inner,
+            position: 0,
+            limit,
+        }
+    }
+}
+impl<W: Write + Seek> Write for BoundedWriter<'_, W> {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        if bytes.len() as u64 > self.limit.saturating_sub(self.position) {
+            return Err(std::io::Error::other(
+                "Project archive output limit exceeded",
+            ));
+        }
+        let n = self.inner.write(bytes)?;
+        self.position += n as u64;
+        Ok(n)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+impl<W: Write + Seek> Seek for BoundedWriter<'_, W> {
+    fn seek(&mut self, offset: SeekFrom) -> std::io::Result<u64> {
+        let position = self.inner.seek(offset)?;
+        if position > self.limit {
+            return Err(std::io::Error::other(
+                "Project archive output limit exceeded",
+            ));
+        }
+        self.position = position;
+        Ok(position)
+    }
+}

@@ -10,7 +10,7 @@ description = "Project persistence, document codec, resource management and publ
 [features]
 bench-instrumentation = []
 binary-prototype = ["dep:ciborium"]
-archive-prototype = ["dep:zip", "dep:tempfile"]
+archive-prototype = []
 
 [dependencies]
 zipzi-contract.workspace = true
@@ -27,8 +27,8 @@ sha2 = { workspace = true }
 png = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
 ciborium = { version = "0.2.2", optional = true }
-zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"], optional = true }
-tempfile = { workspace = true, optional = true }
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+tempfile.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

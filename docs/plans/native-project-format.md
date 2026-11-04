@@ -1,6 +1,6 @@
 # Zipzi 原生工程 `.zipzi` 设计方案
 
-状态：设计提案，尚未实现。日期：2026-11-04。调研基线：`f59db0f0`。
+状态：实施中，P0 原型及 P1 Project 层已落地；P2–P4 继续实施。日期：2026-11-04。调研基线：`f59db0f0`。
 
 ## 1. 建议决策
 
@@ -415,3 +415,31 @@ authoring 数据，不能只验证“能解开 ZIP”或“显示了成功提示
 推荐实施从 P0 开始，以测得的资源成本和平台原语确定首版限额，再按 P1 → P4 落地。
 若产品阶段只需要统一名字而不需要跨平台单文件交付，可单独选择目录方案；
 本提案的推荐目标保持为一个自包含 `.zipzi` 文件。
+
+
+## 14. 实施记录
+
+### P0 原型：`1547069e`
+
+已测量五类合成样本和 24 Mesh 的真实 cat 工程，详见
+[可复现基准记录](../archive/benchmarks/2026-11-04-native-project-format-p0.md)。
+该记录是原型成本测量，并未满足真实中大型样本、产品保存耗时预算以及 Windows
+文件原语的完整 P0 验收；这些仍列入最终验收，不以 macOS 结果代替。
+
+### P1 Project 层（2026-11-04）
+
+- 增加正式容器 v1 / 文档 v22 读写 API；生产读取拒绝 P0 实验标记。
+- 在 ZIP 索引分配前检查中央目录字节与条目数，检查 ZIP64、local/central 头、descriptor、
+  CRC/长度、路径、条目类型、数据区边界及重叠。未知能力与版本保留独立状态码。
+- 打开先复制、hash，再从私有副本读取；缺失/损坏图片产生诊断，错误文件不会进入工作集。
+- 工作集由资源租约持有，包含共享磁盘预算、owner 元数据和锁；仅回收确认无人持有的
+  自有遗留目录/staging。保存直接复制 PNG，输出限额贯穿 ZIP finalize。
+- 流式 staging 同目录发布；新建使用 no-replace，替换必须有完整 fingerprint；
+  发布前失败保持目标，发布后取消/目录同步警告保持 published 语义。
+- Session、History、SDK 等用户入口在 P2 统一切换；本阶段没有将旧目录工程当作新归档打开。
+
+验证：Project lib（含 archive、working set、filesystem）及 `project_tests`；
+`cargo check --locked -p zipzi-project --features archive-prototype --examples`；
+`uv run --locked python tools/workspace/cargo_domain.py --check`。
+故障测试包含 write/finalize/sync/publish、no-replace 竞争、基线重检和发布后取消。
+Windows 原生文件占用、系统关联和真实交互尚待对应平台验收。

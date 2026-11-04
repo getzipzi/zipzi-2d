@@ -12,6 +12,16 @@ pub fn encode_project(document: &Document) -> Result<String, Status> {
     Ok(out)
 }
 
+pub(crate) fn encode_native_project(document: &Document) -> Result<Vec<u8>, Status> {
+    let mut project = encode_wire(document)?;
+    project.format = "zipzi-project".into();
+    project.format_version = 22;
+    let mut out = serde_json::to_vec(&project)
+        .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
+    out.push(b'\n');
+    Ok(out)
+}
+
 pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
     if !document.initialized() {
         return Err(Status::error(
