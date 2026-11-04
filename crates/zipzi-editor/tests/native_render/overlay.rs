@@ -348,6 +348,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 })
                 .collect(),
                 deformers: vec![OverlayDeformer {
+                    outline_only: false,
                     kind: zipzi_editor_core::ControlKind::Rotation,
                     lines: vec![(pt(8., 50.), pt(210., 50.))],
                     selected: true,

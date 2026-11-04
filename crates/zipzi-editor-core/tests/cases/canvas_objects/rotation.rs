@@ -347,7 +347,7 @@ fn imported_bone_length_and_scale_reference_survive_save_and_reopen() -> anyhow:
     let mut saving =
         Document::attach_runtime(document.runtime_host(), document.runtime_session_id())?;
     let saved = saving.save(&dir.path().join("saved.zipzi"))?;
-    let doc = Document::open(&saved.manifest)?;
+    let doc = Document::open(&saved.path)?;
     assert!(!doc.modified());
     let mut reopened = crate::support::editor_from_document(doc);
     reopened.reset_view();
@@ -1269,7 +1269,7 @@ fn imported_bone_lengths_use_nested_mesh_bounds_and_persist_without_resizing() -
         Document::attach_runtime(document.runtime_host(), document.runtime_session_id())?;
     editing.set_object_property(&child, "rotation.bone_length", serde_json::json!(180.))?;
     let saved = editing.save(&dir.path().join("length.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert!(!reopened.modified());
     let key = zipzi_editor_core::property::deformer::BONE_LENGTH.key;
     assert_eq!(

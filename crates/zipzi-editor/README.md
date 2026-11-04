@@ -151,6 +151,13 @@ overlays, live modifier changes, angle readouts, uniform scaling and Alt/Option
 display-length adjustment in all three languages. Set `ZIPZI_SCREENSHOT_SAVE=1`
 to save all fifteen images.
 
+Unselected Warp deformers show their evaluated outer lattice outline by default.
+Click the outline to select the Warp; its interior remains available for Mesh picking.
+The title-bar eye button hides unselected Warp outlines and Rotation bones in that
+viewport, including direct picking, while selected editing controls remain available.
+All/ancestor Warp grid commands add reference detail to these outlines.
+Object and Warp transform frames share a 6 logical-pixel margin.
+
 ## Deformer creation
 
 New Warp and New Rotation wrap the current selection in one undo step. Toolbar,

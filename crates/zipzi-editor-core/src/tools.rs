@@ -38,6 +38,7 @@ pub enum ToolId {
 }
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DeformerVisibility {
+    pub hide_unselected: bool,
     pub ancestors: bool,
     pub all: bool,
 }
@@ -56,6 +57,7 @@ pub struct CanvasFrame {
 }
 #[derive(Default)]
 pub struct ToolController {
+    pub(crate) hidden_deformer_viewports: std::collections::HashSet<crate::ViewportId>,
     pub active: ToolId,
     pub deformer_visibility: DeformerVisibility,
     pub deformer_grid: bool,
@@ -78,6 +80,18 @@ pub struct ToolController {
     overlay_builds: std::sync::atomic::AtomicUsize,
 }
 impl ToolController {
+    pub(crate) fn deformer_visibility_for(&self, frame: &CanvasFrame) -> DeformerVisibility {
+        DeformerVisibility {
+            hide_unselected: self
+                .hidden_deformer_viewports
+                .contains(&frame.version.binding.viewport),
+            ..self.deformer_visibility
+        }
+    }
+    pub(crate) fn clear_hover(&mut self) {
+        self.hovered = None;
+        self.hovered_binding = None;
+    }
     fn rotation_length_target(&self) -> Option<&crate::ObjectRef> {
         match &self.gesture {
             Some(Gesture::Controls(g)) if g.adjusting_bone_length() => Some(g.target.object()),
@@ -109,7 +123,11 @@ impl ToolController {
                 if gesture.press.version.binding.viewport == frame.version.binding.viewport {
                     let mut gizmos = gesture.press.warp_selection.clone().unwrap_or_default();
                     if let Some((_, gizmo)) = gizmos.items.iter_mut().find(|(o, _)| o == object) {
-                        *gizmo = info.frame.gizmo(frame.transform);
+                        *gizmo = if gizmos.objects.is_empty() {
+                            info.frame.gizmo(frame.transform)
+                        } else {
+                            info.frame.object_gizmo(frame.transform)
+                        };
                     }
                     return Some(gizmos);
                 }
@@ -130,7 +148,7 @@ impl ToolController {
                                 control,
                                 &document.context().selections,
                                 self.active,
-                                self.deformer_visibility,
+                                self.deformer_visibility_for(frame),
                             )
                     })
             })
@@ -158,7 +176,7 @@ impl ToolController {
                             c,
                             &document.context().selections,
                             self.active,
-                            self.deformer_visibility,
+                            self.deformer_visibility_for(frame),
                         )
                 })
                 .filter_map(|c| {

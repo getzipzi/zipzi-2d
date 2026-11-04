@@ -16,16 +16,18 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
     let p = |x, y| f.transform.to_viewport(ModelPoint { x, y });
     let scene = &f.geometry;
     let selection = &editor.document().unwrap().context().selections;
-    assert!(
-        scene
-            .hit(
-                p(32., 90.),
-                f.transform,
-                selection,
-                ToolId::Select,
-                DeformerVisibility::default()
-            )
-            .is_none()
+    assert_eq!(
+        scene.hit(
+            p(32., 90.),
+            f.transform,
+            selection,
+            ToolId::Select,
+            DeformerVisibility::default()
+        ),
+        Some(HitTarget::Object(ObjectRef::new(
+            ObjectKind::Deformer,
+            &warp
+        )))
     );
     assert_eq!(
         scene.hit(
@@ -136,11 +138,17 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
             "only the selected mesh outline"
         );
         let empty = frame.transform.to_viewport(ModelPoint { x: 32., y: 90. });
+        let hits = editor.pick_candidates(empty, Some(frame.version));
+        assert_eq!(
+            hits.iter().any(|c| c.object.id == warp),
+            tool != ToolId::Hand
+        );
         assert!(
-            editor
-                .pick_candidates(empty, Some(frame.version))
-                .is_empty(),
-            "hidden ancestor lines must not intercept clicks"
+            overlay
+                .deformers
+                .iter()
+                .filter(|d| d.kind == ControlKind::Warp)
+                .all(|d| d.outline_only)
         );
     }
     editor.execute(EditorCommand::SelectObject(ObjectRef::new(
@@ -168,7 +176,7 @@ fn mesh_selection_and_tool_changes_do_not_reveal_deformer_helpers() -> anyhow::R
 }
 
 #[test]
-fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> anyhow::Result<()> {
+fn deformer_detail_is_opt_in_per_document_while_outlines_remain_pickable() -> anyhow::Result<()> {
     let (doc, _dir, warp, rotation, _) = rich_document()?;
     let mut editor = crate::support::editor_from_document(doc);
     editor.set_canvas_metrics(ViewportMetrics {
@@ -195,7 +203,7 @@ fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> an
             .map(|c| c.object.id.clone())
             .collect::<Vec<_>>()
     };
-    assert_eq!(visible(&editor), [rotation.clone()]);
+    assert_eq!(visible(&editor), [warp.clone(), rotation.clone()]);
     editor.dispatch(editor.command(CommandId::ToggleAncestorDeformers))?;
     assert_eq!(visible(&editor), [warp.clone(), rotation.clone()]);
     let point = frame.transform.to_viewport(ModelPoint { x: 32., y: 90. });
@@ -210,13 +218,22 @@ fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> an
     assert_eq!(all.len(), 2);
     assert!(all.contains(&warp) && all.contains(&rotation));
     editor.dispatch(editor.command(CommandId::ToggleDeformers))?;
-    assert_eq!(visible(&editor), [warp, rotation.clone()]);
+    assert_eq!(visible(&editor), [warp.clone(), rotation.clone()]);
     editor.dispatch(editor.command(CommandId::ToggleAncestorDeformers))?;
-    assert_eq!(visible(&editor), [rotation]);
+    assert_eq!(visible(&editor), [warp.clone(), rotation]);
     assert!(
         editor
             .pick_candidates(point, Some(frame.version))
-            .is_empty()
+            .iter()
+            .any(|c| c.object.id == warp)
+    );
+    assert!(
+        editor
+            .overlay()
+            .deformers
+            .iter()
+            .filter(|d| d.kind == ControlKind::Warp)
+            .all(|d| d.outline_only)
     );
     assert_eq!(
         editor.evaluation_count(),
@@ -231,6 +248,7 @@ fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> an
     assert_eq!(
         editor.deformer_visibility(),
         DeformerVisibility {
+            hide_unselected: false,
             ancestors: true,
             all: false
         }

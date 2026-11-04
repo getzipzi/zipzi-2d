@@ -3,8 +3,8 @@ use crate::{CanvasScene, ControlGeometry, ControlKind, ViewportPoint, ViewportTr
 
 // Model-space display length, independent of the authored deformation.
 pub(crate) const ROTATION_BONE_LENGTH: f32 = zipzi_core::document::DEFAULT_ROTATION_BONE_LENGTH;
-// Fixed logical-pixel gap between the Warp control grid and its outer frame.
-const WARP_FRAME_PADDING: f32 = 12.;
+// Fixed logical-pixel gap between editable geometry and its transform frame.
+const FRAME_PADDING: f32 = 6.;
 const WARP_ROTATE_OFFSET: f32 = 24.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -199,10 +199,18 @@ impl DeformerGizmo {
         Self::warp_oriented(b, 0.)
     }
 
+    pub(crate) fn object(b: [f32; 4]) -> Self {
+        Self::object_oriented(b, 0.)
+    }
+    pub(crate) fn object_oriented(b: [f32; 4], frame_angle: f32) -> Self {
+        Self::box_oriented(b, frame_angle, FRAME_PADDING)
+    }
     pub(crate) fn warp_oriented(b: [f32; 4], frame_angle: f32) -> Self {
+        Self::box_oriented(b, frame_angle, FRAME_PADDING)
+    }
+    fn box_oriented(b: [f32; 4], frame_angle: f32, padding: f32) -> Self {
         let p = |x, y| ViewportPoint { x, y };
         let center = p((b[0] + b[2]) / 2., (b[1] + b[3]) / 2.);
-        let padding = WARP_FRAME_PADDING;
         let [x0, y0, x1, y1] = [
             b[0] - padding,
             b[1] - padding,

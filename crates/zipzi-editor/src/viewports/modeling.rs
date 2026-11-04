@@ -146,7 +146,7 @@ impl ModelingViewport {
         }
     }
 }
-viewport_panel!(ModelingViewport, "dock.modeling_viewport", 232.);
+viewport_panel!(ModelingViewport, "dock.modeling_viewport", 260.);
 
 impl ViewportSurface {
     pub(super) fn modeling_input(

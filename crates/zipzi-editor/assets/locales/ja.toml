@@ -185,8 +185,8 @@ tool_select_hint = "選択 (V)\nShift: 選択に追加・切り替え\nOption: �
 edit_base = "ベース形状を編集中"
 edit_keyform = "キーフォームを編集中"
 tool_glue = "グルー"
-show_deformers = "すべてのデフォーマを表示"
-show_ancestor_deformers = "祖先デフォーマを表示"
+show_deformers = "すべてのワープグリッドを表示"
+show_ancestor_deformers = "親ワープグリッドを表示"
 no_canvas_objects = "この位置にオブジェクトはありません"
 tool_generate_mesh = "メッシュを生成 (Shift+M)"
 manual_mesh_edit_hint = "メッシュ編集\n空白または辺をクリック: 点を追加\n点をドラッグ: 移動 · 空白をドラッグ: 矩形選択\nDelete / Backspace: 選択項目を削除\n⌘ + 破線の辺をクリック: 辺を固定\n⌘ + 頂点からドラッグ: 頂点を接続\n辺を右クリック: 制約 / 解除 · Esc: キャンセル / 終了"
@@ -261,6 +261,7 @@ save_published = "保存済み"
 load_others = "他 %{count} 件"
 
 [dock]
+regular_deformers = "未選択のデフォーマを表示"
 modeling_viewport = "モデリングビュー"
 animation_viewport = "アニメーションビュー"
 zoom_controls = "キャンバスの拡大率"

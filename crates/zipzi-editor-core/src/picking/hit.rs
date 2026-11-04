@@ -9,6 +9,43 @@ use crate::{
 use std::collections::HashSet;
 
 impl CanvasScene {
+    fn warp_outline_hits(
+        &self,
+        point: ViewportPoint,
+        t: ViewportTransform,
+        selection: &[ObjectRef],
+        tool: ToolId,
+        visibility: DeformerVisibility,
+        locks: &crate::ObjectStateIndex,
+    ) -> Vec<ObjectRef> {
+        if tool == ToolId::Hand {
+            return Vec::new();
+        }
+        let mut hits: Vec<_> = self
+            .controls
+            .iter()
+            .filter(|c| {
+                c.kind == ControlKind::Warp
+                    && !locks.is_locked(&c.object)
+                    && self.control_visible(c, selection, tool, visibility)
+            })
+            .filter_map(|c| {
+                let distance = self
+                    .warp_outline(c, t)
+                    .into_iter()
+                    .map(|(a, b)| segment_distance2(point, a, b))
+                    .min_by(f32::total_cmp)?;
+                (distance <= 36.).then_some((distance, c.object.clone()))
+            })
+            .collect();
+        hits.sort_by(|a, b| {
+            a.0.total_cmp(&b.0)
+                .then_with(|| self.ancestors(&b.1).len().cmp(&self.ancestors(&a.1).len()))
+                .then(a.1.id.cmp(&b.1.id))
+        });
+        hits.into_iter().map(|(_, o)| o).collect()
+    }
+
     pub fn hit(
         &self,
         point: ViewportPoint,
@@ -101,11 +138,10 @@ impl CanvasScene {
                 if frames.objects.iter().any(|o| locks.is_locked(o)) {
                     continue;
                 }
-                if let Some((h, _)) = gizmo
-                    .handles
-                    .iter()
-                    .find(|(_, p)| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
-                {
+                if let Some((h, _)) = gizmo.handles.iter().find(|(_, p)| {
+                    (point.x - p.x).abs() <= CONTROL_RADIUS
+                        && (point.y - p.y).abs() <= CONTROL_RADIUS
+                }) {
                     return Some(HitTarget::DeformerHandle(object.clone(), *h));
                 }
                 if gizmo
@@ -131,6 +167,9 @@ impl CanvasScene {
         controls.sort_by_key(|c| !selection.contains(&c.object));
         let mut object_hit = None;
         for c in controls {
+            if c.kind == ControlKind::Warp && !selection.contains(&c.object) {
+                continue; // Unselected Warps participate through their outline below.
+            }
             let points = self.control_points(c, t);
             let editing = c.kind != ControlKind::Glue && selection.contains(&c.object);
             if c.kind == ControlKind::Rotation
@@ -248,6 +287,13 @@ impl CanvasScene {
                 }
             }
         }
+        if object_hit.is_none() {
+            object_hit = self
+                .warp_outline_hits(point, t, selection, tool, visibility, locks)
+                .into_iter()
+                .next()
+                .map(HitTarget::Object);
+        }
         if object_hit.is_some() {
             return object_hit;
         }
@@ -300,6 +346,7 @@ impl CanvasScene {
                 }
             }
         }
+        objects.extend(self.warp_outline_hits(point, t, selection, tool, visibility, locks));
         for id in self.mesh_hits(t.to_model(point)) {
             let mesh = ObjectRef::new(K::Mesh, id);
             objects.push(mesh.clone());

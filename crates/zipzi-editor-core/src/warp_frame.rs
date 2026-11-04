@@ -65,6 +65,11 @@ impl WarpFrame {
             radians: -g.frame_angle,
         }
     }
+    pub(crate) fn object_gizmo(self, t: ViewportTransform) -> DeformerGizmo {
+        let p = t.to_viewport(self.center);
+        let [w, h] = self.half_size.map(|v| v * t.scale);
+        DeformerGizmo::object_oriented([p.x - w, p.y - h, p.x + w, p.y + h], -self.radians)
+    }
     pub(crate) fn gizmo(self, t: ViewportTransform) -> DeformerGizmo {
         let p = t.to_viewport(self.center);
         let [w, h] = self.half_size.map(|v| v * t.scale);

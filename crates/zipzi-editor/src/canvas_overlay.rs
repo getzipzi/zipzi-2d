@@ -149,7 +149,13 @@ pub(crate) fn paint_lines(
     lines(&overlay.accent_lines, 1., p.mesh.opacity(0.8));
     lines(&overlay.hover_lines, 1., p.mesh);
     for deformer in &overlay.deformers {
-        let (width, alpha) = if deformer.kind == zipzi_editor_core::ControlKind::Warp {
+        let (width, alpha) = if deformer.outline_only {
+            if deformer.hovered {
+                (1., 0.75)
+            } else {
+                (0.5, 0.1)
+            }
+        } else if deformer.kind == zipzi_editor_core::ControlKind::Warp {
             (
                 0.5,
                 if deformer.hovered {

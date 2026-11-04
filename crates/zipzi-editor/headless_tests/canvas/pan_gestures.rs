@@ -238,7 +238,9 @@ fn canvas_owns_floating_tools_and_right_aligned_header_zoom_controls(cx: &mut Te
         let controls = window.find("canvas-zoom-controls").bounds();
         let background = window.find("btn_transparency_grid").bounds();
         let origin = window.find("btn_origin_crosshair").bounds();
-        assert_eq!(background.left(), zoom.left());
+        let deformers = window.find("btn_regular_deformers").bounds();
+        assert_eq!(deformers.left(), zoom.left());
+        assert_eq!(deformers.right() - px(1.), background.left());
         assert_eq!(background.right() - px(1.), origin.left());
         assert!(origin.right() < controls.left());
         assert!((origin.center().y - zoom.center().y).abs() <= px(1.));
@@ -890,6 +892,20 @@ fn modeling_isolation_header_toggles_fixed_scope_and_context_display(cx: &mut Te
         assert_eq!(window.find("btn_isolate_selection").checked(), Some(false));
         window.click("workspace-animation", cx);
         assert!(window.try_find("btn_isolate_selection").is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn regular_deformer_titlebar_toggle(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    super::common::present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert_eq!(window.find("btn_regular_deformers").checked(), Some(true));
+        window.click("btn_regular_deformers", cx);
+        assert_eq!(window.find("btn_regular_deformers").checked(), Some(false));
+        window.click("btn_regular_deformers", cx);
+        assert_eq!(window.find("btn_regular_deformers").checked(), Some(true));
     })
     .unwrap();
 }

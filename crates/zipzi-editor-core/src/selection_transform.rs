@@ -162,7 +162,7 @@ impl crate::tools::ToolController {
         Some(crate::deformer::WarpGizmos {
             local,
             objects,
-            items: vec![(selection.first()?.clone(), DeformerGizmo::warp(bounds))],
+            items: vec![(selection.first()?.clone(), DeformerGizmo::object(bounds))],
             adjusting: vec![],
         })
     }
