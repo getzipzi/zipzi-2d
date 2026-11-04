@@ -103,57 +103,58 @@ fn parent_choices(
     if key != PARENT.key {
         return None;
     }
-    use zipzi_editor_core::{PaletteMove, PalettePosition, PaletteProjection};
+    use zipzi_editor_core::PaletteProjection;
+    let started = gpui_kit::frame_trace::enabled().then(std::time::Instant::now);
     let index = document.object_index();
-    Some(
-        document
-            .palette_move_destinations(PaletteProjection::Deformation)
-            .unwrap_or_default()
-            .into_iter()
-            .filter_map(|destination| {
-                let mut current = destination.object.clone();
-                let mut seen = std::collections::HashSet::new();
-                while let Some(candidate) = current {
-                    if candidate == *object || !seen.insert(candidate.id.clone()) {
-                        return None;
-                    }
-                    let parent = index.get(&candidate)?.properties["parent_id"]
-                        .as_str()?
-                        .to_owned();
-                    current =
-                        (!parent.is_empty()).then(|| ObjectRef::new(ObjectKind::Deformer, parent));
-                }
-                if destination
-                    .object
-                    .as_ref()
-                    .is_some_and(|o| document.object_state(o).locked())
-                {
+    let choices: Vec<_> = document
+        .palette_move_destinations(PaletteProjection::Deformation)
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|destination| {
+            let mut current = destination.object.clone();
+            let mut seen = std::collections::HashSet::new();
+            while let Some(candidate) = current {
+                if candidate == *object || !seen.insert(candidate.id.clone()) {
                     return None;
                 }
-                let request = PaletteMove {
-                    projection: PaletteProjection::Deformation,
-                    sources: vec![object.clone()],
-                    target: destination.object.clone(),
-                    position: PalettePosition::Inside,
-                };
-                let title = if destination.path.is_empty() {
-                    t!("properties.no_deformer").into_owned()
-                } else {
-                    destination.path
-                };
-                let label = match document.palette_deformation_move_support(&request) {
-                    Ok(_) => title,
-                    Err(error) => {
-                        format!("{title} · {}", crate::authoring::authoring_error(&error))
-                    }
-                };
-                Some(Choice {
-                    label: label.into(),
-                    value: destination.object.map_or_else(String::new, |o| o.id),
-                })
+                let parent = index.get(&candidate)?.properties["parent_id"]
+                    .as_str()?
+                    .to_owned();
+                current =
+                    (!parent.is_empty()).then(|| ObjectRef::new(ObjectKind::Deformer, parent));
+            }
+            if destination
+                .object
+                .as_ref()
+                .is_some_and(|o| document.object_state(o).locked())
+            {
+                return None;
+            }
+            // Full support checks walk the source subtree and parameter domain.
+            // Validate the chosen move at commit, not every potential parent
+            // while selecting an object and building its inspector.
+            let label = if destination.path.is_empty() {
+                t!("properties.no_deformer").into_owned()
+            } else {
+                destination.path
+            };
+            Some(Choice {
+                label: label.into(),
+                value: destination.object.map_or_else(String::new, |o| o.id),
             })
-            .collect(),
-    )
+        })
+        .collect();
+    if let Some(started) = started {
+        gpui_kit::frame_trace::emit(
+            gpui_kit::frame_trace::next_id(),
+            "deformer_parent_choices",
+            &[
+                ("duration_ns", started.elapsed().as_nanos() as u64),
+                ("choices", choices.len() as u64),
+            ],
+        );
+    }
+    Some(choices)
 }
 
 pub(super) fn definition(target: &PropertyTarget, editor: &Editor) -> FormDefinition {
@@ -245,9 +246,9 @@ mod tests {
     }
 
     #[test]
-    fn deformer_parent_choices_exclude_self_and_descendants_and_explain_unsupported_moves()
+    fn deformer_parent_choices_exclude_cycles_and_locks_and_validate_the_committed_move()
     -> anyhow::Result<()> {
-        let (doc, _assets) = crate::test_fixture::sample_document_with_scene_objects()?;
+        let (mut doc, _assets) = crate::test_fixture::sample_document_with_scene_objects()?;
         let rotation = crate::test_fixture::object(ObjectKind::Deformer, 501);
         let warp = crate::test_fixture::object(ObjectKind::Deformer, 502);
         let choices = parent_choices(&doc, &rotation, PARENT.key).unwrap();
@@ -256,8 +257,38 @@ mod tests {
         let choices = parent_choices(&doc, &warp, PARENT.key).unwrap();
         assert!(choices.iter().all(|c| c.value != warp.id));
         let root = choices.iter().find(|c| c.value.is_empty()).unwrap();
-        assert_ne!(root.label.as_ref(), t!("properties.no_deformer").as_ref());
+        assert_eq!(root.label.as_ref(), t!("properties.no_deformer").as_ref());
         assert!(choices.iter().any(|c| c.value == rotation.id));
+        let before = doc
+            .object_index()
+            .get(&rotation)
+            .unwrap()
+            .properties
+            .clone();
+        let history = doc.history_lengths();
+        assert!(
+            doc.set_object_property(&rotation, PARENT.path, serde_json::json!(warp.id))
+                .is_err()
+        );
+        assert!(
+            doc.set_object_property(&warp, PARENT.path, serde_json::json!(warp.id))
+                .is_err()
+        );
+        assert_eq!(
+            doc.object_index().get(&rotation).unwrap().properties,
+            before
+        );
+        assert_eq!(doc.history_lengths(), history);
+        doc.set_objects_locked(std::slice::from_ref(&rotation), true)?;
+        let choices = parent_choices(&doc, &warp, PARENT.key).unwrap();
+        assert!(choices.iter().all(|c| c.value != rotation.id));
+        doc.set_objects_locked(std::slice::from_ref(&warp), true)?;
+        let history = doc.history_lengths();
+        assert!(
+            doc.set_object_property(&warp, PARENT.path, serde_json::json!(""))
+                .is_err()
+        );
+        assert_eq!(doc.history_lengths(), history);
         Ok(())
     }
 }

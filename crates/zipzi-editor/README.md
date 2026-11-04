@@ -399,6 +399,27 @@ every texture size. The defaults and scaling rules are defined in
 [adaptive mesh reference](../zipzi-editor-core/src/adaptive_mesh/README.md) for
 the generator and its limits.
 
+## Deformer selection benchmark
+
+The opt-in selection workload alternates between two deformers in a native
+window and verifies that the inspector follows without adding history entries:
+
+```sh
+cargo build --locked --release -p zipzi-editor --features test-support
+env -u ZIPZI_DEV_SESSION_DIR ZIPZI_CONFIG_DIR="$PWD/target/selection-config" \
+  ZIPZI_WINDOW_BENCH=1 ZIPZI_FRAME_TRACE="$PWD/target/selection-trace.jsonl" \
+  ZIPZI_BENCH_MODEL=/absolute/path/to/model.zipzi \
+  ZIPZI_BENCH_DEFORMER_SELECTION=1 ZIPZI_BENCH_SAMPLES=12 ZIPZI_BENCH_WARMUP=2 \
+  target/release/zipzi-editor
+```
+
+The default targets are the first two deformers. Set
+`ZIPZI_BENCH_SELECTION_OBJECTS=id1,id2` to select two specific objects, including
+deep leaves with many potential parents. The trace records `selection_tick`,
+`selection_dispatch_end` and `deformer_parent_choices`, alongside native draw
+and presentation events. Command injection excludes OS input delivery and tree
+hit testing. Each run requires a new trace path; existing traces are preserved.
+
 ## Distribution
 
 `./tools/build-editor-app.sh` builds a macOS app bundle. Windows portable

@@ -122,11 +122,12 @@ impl Document {
         &self,
         projection: PaletteProjection,
     ) -> Result<Vec<PaletteMoveDestination>> {
+        if projection == PaletteProjection::Deformation {
+            return Ok(self.deformation_move_destinations());
+        }
         let index = self.object_index();
         let kind = if projection == PaletteProjection::Organization {
             ObjectKind::Part
-        } else if projection == PaletteProjection::Deformation {
-            ObjectKind::Deformer
         } else {
             ObjectKind::ParameterGroup
         };
@@ -145,18 +146,9 @@ impl Document {
                 path: path.clone(),
             });
             let mut children = Vec::new();
-            let handles = if projection == PaletteProjection::Deformation {
-                self.session
-                    .scene_collection(&SceneCollection::Deformation {
-                        parent_id: object.as_ref().map(|o| o.id.clone()),
-                    })?
-            } else {
-                self.session.organization_collection(collection)?
-            };
+            let handles = self.session.organization_collection(collection)?;
             for handle in handles {
                 if (kind == ObjectKind::Part && handle.kind() != zipzi_sdk::ObjectKind::Part)
-                    || (kind == ObjectKind::Deformer
-                        && handle.kind() != zipzi_sdk::ObjectKind::Transform)
                     || !seen.insert(handle.id().to_owned())
                 {
                     continue;
@@ -175,6 +167,49 @@ impl Document {
             pending.extend(children.into_iter().rev());
         }
         Ok(result)
+    }
+
+    fn deformation_move_destinations(&self) -> Vec<PaletteMoveDestination> {
+        let index = self.object_index();
+        let model = self.model();
+        let mut children = std::collections::HashMap::<&str, Vec<&str>>::new();
+        let mut seen = std::collections::HashSet::new();
+        // Match SceneCollection::Deformation's native sibling order, but group
+        // every parent in one pass instead of rescanning the scene per deformer.
+        for id in model
+            .hierarchy_order()
+            .deformation
+            .iter()
+            .chain(model.transform_order())
+        {
+            if let Some(transform) = model.get_transform(id).filter(|_| seen.insert(id.as_str())) {
+                children.entry(transform.parent()).or_default().push(id);
+            }
+        }
+        let mut result = Vec::with_capacity(seen.len() + 1);
+        let mut pending = vec![("", String::new())];
+        seen.clear();
+        while let Some((id, path)) = pending.pop() {
+            let object = (!id.is_empty()).then(|| ObjectRef::new(ObjectKind::Deformer, id));
+            result.push(PaletteMoveDestination {
+                object,
+                path: path.clone(),
+            });
+            for &child in children.get(id).into_iter().flatten().rev() {
+                if !seen.insert(child) {
+                    continue;
+                }
+                let object = ObjectRef::new(ObjectKind::Deformer, child);
+                let name = index.name(&object);
+                let child_path = if path.is_empty() {
+                    name.to_owned()
+                } else {
+                    format!("{path} / {name}")
+                };
+                pending.push((child, child_path));
+            }
+        }
+        result
     }
 
     pub fn plan_palette_move(&self, request: PaletteMove) -> Result<PaletteMovePlan> {

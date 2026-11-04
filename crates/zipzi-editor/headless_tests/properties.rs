@@ -62,10 +62,22 @@ fn deformer_properties_part_and_parent_choices_use_native_plans(cx: &mut TestApp
         let doc = view.editor.document().unwrap();
         assert_eq!(
             doc.property_values(&object).unwrap()[&schema::deformer::PARENT.key],
+            PropertyValue::Text(String::new())
+        );
+        assert_eq!(doc.history_lengths(), (2, 0));
+        assert!(view.edit_error.is_none());
+    });
+    h.view.update(cx, |view, cx| {
+        let result = view.editor.execute(zipzi_editor_core::EditorCommand::Undo);
+        view.complete_edit(result, cx);
+    });
+    h.view.read_with(cx, |view, _| {
+        let doc = view.editor.document().unwrap();
+        assert_eq!(
+            doc.property_values(&object).unwrap()[&schema::deformer::PARENT.key],
             PropertyValue::Text(document_fixture::object(ObjectKind::Deformer, 501).id)
         );
-        assert_eq!(doc.history_lengths(), (1, 0));
-        assert!(view.edit_error.is_some());
+        assert_eq!(doc.history_lengths(), (1, 1));
     });
 }
 

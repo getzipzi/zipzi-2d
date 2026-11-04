@@ -7,6 +7,8 @@ pub(crate) mod parameter_overlay;
 #[cfg(feature = "test-support")]
 mod properties;
 #[cfg(feature = "test-support")]
+mod selection;
+#[cfg(feature = "test-support")]
 #[path = "../acceptance/timeline/variants.rs"]
 mod timeline_variants;
 use anyhow::{Context as _, ensure};
@@ -50,6 +52,7 @@ struct Config {
     manual_mesh: bool,
     animation: bool,
     properties: bool,
+    deformer_selection: bool,
     ui_only: bool,
     vertices: usize,
     mesh: Option<String>,
@@ -137,6 +140,8 @@ pub fn init() -> anyhow::Result<()> {
         let manual_mesh = std::env::var("ZIPZI_BENCH_MANUAL_MESH").is_ok_and(|s| s == "1");
         let animation = std::env::var("ZIPZI_BENCH_ANIMATION").is_ok_and(|s| s == "1");
         let properties = std::env::var("ZIPZI_BENCH_PROPERTIES").is_ok_and(|s| s == "1");
+        let deformer_selection =
+            std::env::var("ZIPZI_BENCH_DEFORMER_SELECTION").is_ok_and(|s| s == "1");
         #[cfg(feature = "test-support")]
         let timeline_fixture = if let Ok(variant) = std::env::var("ZIPZI_BENCH_TIMELINE_VARIANT") {
             ensure!(
@@ -160,8 +165,8 @@ pub fn init() -> anyhow::Result<()> {
         };
         let ui_only = std::env::var("ZIPZI_BENCH_UI_ONLY").is_ok_and(|s| s == "1");
         ensure!(
-            !properties || cfg!(feature = "test-support"),
-            "properties benchmark requires --features test-support"
+            !(properties || deformer_selection) || cfg!(feature = "test-support"),
+            "properties and selection benchmarks require --features test-support"
         );
         ensure!(
             (parameters_only as u8
@@ -169,6 +174,7 @@ pub fn init() -> anyhow::Result<()> {
                 + manual_mesh as u8
                 + animation as u8
                 + properties as u8
+                + deformer_selection as u8
                 + ui_only as u8)
                 <= 1,
             "choose one benchmark workload"
@@ -195,6 +201,7 @@ pub fn init() -> anyhow::Result<()> {
                 manual_mesh,
                 animation,
                 properties,
+                deformer_selection,
                 ui_only,
                 vertices,
                 mesh: std::env::var("ZIPZI_BENCH_MESH").ok(),
@@ -257,9 +264,11 @@ pub fn init() -> anyhow::Result<()> {
                 "manual_mesh": config.is_some_and(|c| c.manual_mesh),
                 "animation_drag": std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").ok(),
                 "properties": config.map(|c| c.properties),
+                "deformer_selection": config.map(|c| c.deformer_selection),
+                "selection_objects": std::env::var("ZIPZI_BENCH_SELECTION_OBJECTS").ok(),
                 "property_cases": property_cases,
                 "property_case": std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok(),
-                "workloads": config.map(|c| if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.deformations { vec![5, 6, 7, 8] }
+                "workloads": config.map(|c| if c.deformer_selection { vec![310] } else if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
@@ -456,6 +465,12 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 );
             }
             executor.timer(Duration::from_millis(500)).await;
+            #[cfg(feature = "test-support")]
+            if config.deformer_selection {
+                selection::run(&view, cx, config).await?;
+                frame_trace::emit(frame_trace::next_id(), "benchmark_done", &[]);
+                return Ok(());
+            }
             if config.parameters_only {
                 view.update_in(cx, |view, window, cx| {
                     parameter_overlay::prepare(view, window, cx)

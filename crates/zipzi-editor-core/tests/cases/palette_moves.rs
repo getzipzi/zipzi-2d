@@ -211,6 +211,82 @@ fn destination_metadata_uses_typed_containers_in_native_preorder_without_history
 }
 
 #[test]
+fn deformation_destinations_follow_native_order_after_moves_renames_and_undo() -> anyhow::Result<()>
+{
+    let (mut d, _assets) = support::sample_document_with_scene_objects()?;
+    let rotation = object(K::Deformer, 501);
+    let warp = object(K::Deformer, 502);
+    let plan = d.plan_scene_object_creation(
+        zipzi_editor_core::SceneObjectType::Rotation,
+        "Sibling".into(),
+        &[],
+    )?;
+    let sibling = d.execute_scene_object_creation(&plan)?.suggested_selection[0].clone();
+    let ids = |d: &Document| -> anyhow::Result<Vec<Option<ObjectRef>>> {
+        let before = d.history_lengths();
+        let choices = d.palette_move_destinations(V::Deformation)?;
+        assert_eq!(d.history_lengths(), before);
+        Ok(choices.into_iter().map(|c| c.object).collect())
+    };
+    let original = vec![
+        None,
+        Some(rotation.clone()),
+        Some(warp.clone()),
+        Some(sibling.clone()),
+    ];
+    assert_eq!(ids(&d)?, original);
+    apply(
+        &mut d,
+        V::Deformation,
+        vec![sibling.clone()],
+        Some(rotation.clone()),
+        P::Before,
+    )?;
+    assert_eq!(
+        ids(&d)?,
+        [
+            None,
+            Some(sibling.clone()),
+            Some(rotation.clone()),
+            Some(warp.clone())
+        ]
+    );
+    d.set_object_property(&sibling, "name", serde_json::json!("Renamed"))?;
+    assert_eq!(
+        d.palette_move_destinations(V::Deformation)?[1].path,
+        "Renamed"
+    );
+    apply(
+        &mut d,
+        V::Deformation,
+        vec![sibling.clone()],
+        Some(rotation.clone()),
+        P::Inside,
+    )?;
+    assert_eq!(
+        ids(&d)?,
+        [
+            None,
+            Some(rotation.clone()),
+            Some(warp.clone()),
+            Some(sibling.clone())
+        ]
+    );
+    assert!(
+        d.palette_move_destinations(V::Deformation)?
+            .last()
+            .unwrap()
+            .path
+            .ends_with(" / Renamed")
+    );
+    d.undo()?;
+    d.undo()?;
+    d.undo()?;
+    assert_eq!(ids(&d)?, original);
+    Ok(())
+}
+
+#[test]
 fn parameter_destinations_include_empty_folders_and_cycle_rejection_stays_in_planner()
 -> anyhow::Result<()> {
     let (d, _assets) = support::sample_document_with_parameter_groups()?;
