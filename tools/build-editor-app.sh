@@ -42,4 +42,5 @@ done
 cp "$repo_root/vendor/README.md" "$app/Contents/Resources/vendor-notices/README.md"
 cp "$icon_asset" "$app/Contents/Resources/AppIcon.icns"
 python3 "$repo_root/tools/packaging/release.py" app-plist "$app/Contents/Info.plist"
+python3 "$repo_root/tools/packaging/build_project_preview.py" --app "$app" --profile "$profile"
 printf '%s\n' "$app"

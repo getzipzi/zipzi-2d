@@ -22,13 +22,19 @@ def check_executable(data):
         raise ValueError('Editor executable must target Windows x86-64')
 
 
-def package(binary, output, revision, root=ROOT):
+def package(binary, output, revision, root=ROOT, preview_dll=None):
     info = metadata(root)
     data = binary.read_bytes()
     check_executable(data)
+    if preview_dll is None:
+        raise ValueError('A built x64 preview DLL is required')
+    preview = preview_dll.read_bytes()
+    check_executable(preview)
     if not revision or any(c not in '0123456789abcdef' for c in revision.lower()) or len(revision) != 40:
         raise ValueError('Expected a full 40-character source commit SHA')
     files = {'zipzi-editor.exe': data,
+             'ZipziProjectPreview.dll': preview,
+             'Register-ProjectPreview.ps1': (Path(__file__).parent / 'Register-ProjectPreview.ps1').read_bytes(),
              'Register-FileAssociation.ps1': (Path(__file__).parent / 'Register-FileAssociation.ps1').read_bytes(),
              'FILE-ASSOCIATION.txt': (
                  'Run PowerShell from this directory:\r\n'
@@ -36,6 +42,7 @@ def package(binary, output, revision, root=ROOT):
                  'Unregister this location:\r\n'
                  '  powershell -ExecutionPolicy Bypass -File .\\Register-FileAssociation.ps1 -Unregister\r\n'
                  'Select Zipzi Editor in Windows Open With / Default apps. Moving the portable app requires registering again.\r\n'
+                 'Registration also enables static thumbnails and the Explorer preview pane.\r\n'
              ).encode()}
     for name in NOTICES:
         files[name] = (root / name).read_bytes()
@@ -62,10 +69,11 @@ def package(binary, output, revision, root=ROOT):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
+    parser.add_argument('--preview-dll', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--revision', required=True)
     args = parser.parse_args()
-    package(args.binary, args.output, args.revision)
+    package(args.binary, args.output, args.revision, preview_dll=args.preview_dll)
 
 
 if __name__ == '__main__':
