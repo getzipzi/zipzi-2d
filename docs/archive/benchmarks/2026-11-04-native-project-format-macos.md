@@ -42,3 +42,34 @@ env -u ZIPZI_DEV_SESSION_DIR cargo build --locked -p zipzi-editor
 正式 bundle 的默认类型选择、Finder 双击，以及 Windows 原生构建、关联注册/卸载、
 占用句柄、no-replace 和原生对话框/Explorer 状态矩阵仍待对应环境验收。
 因此整个 plan 的两平台最终退出条件尚未满足。
+
+## Finder 默认关联补充验收与收尾
+
+2026-11-04 补充运行，Editor 二进制与上述原生对话框验收相同。使用发布版的
+`Owner` 文档类型元数据、独立 bundle 标识与私有宿主目录；先核对三个文件的系统
+默认应用，再在 Finder 中选中文件执行“打开”（Command-O，与双击共用默认入口）。
+这不是鼠标双击自动化，也不证明安装后的签名或首次运行体验。
+
+`target/native-project-finder-06/results.json` 留有通过的 cold 场景记录：
+冷启动打开两份工程，ready 前追加第三份，三个相同文档 UUID 的副本各有独立 Session；
+中文、空格、前导 `-`、大写后缀完整保留，资源诊断为空，运行中重复打开与第二进程
+IPC 均激活已有 Session，最近工程使用归档路径，输入字节未改变。
+
+同轮 resident 场景在等待三个 ready Session 时超时，未计为通过。复用 bundle 的
+`LSEnvironment` 与 Finder 事件投递尚待进一步定位，因此工具目前仅开放 cold 的
+默认关联验收；已有指定应用的 resident 验收结论保持独立。
+
+```sh
+./tools/dev-python tools/runtime/native_project_macos.py target/debug/zipzi-editor \
+  --finder-default --case cold --output target/native-project-finder-new
+```
+
+临时默认关联由独立 Swift guardian 持有，父进程关闭管道时恢复，并删除自建临时
+bundle，避免 Spotlight 再注册 `Owner` 应用。最终清理已确认默认应用回到
+`com.apple.archiveutility`，测试进程全部退出，原开发 Editor 继续运行。
+收尾改动通过 Python 语法检查、Swift typecheck 和 `git diff --check`；guardian 的
+最终删除逻辑经过静态检查，未重新执行完整交互矩阵。
+
+剩余：Finder 无窗口状态、实际鼠标双击与安装体验，以及 Windows 原生构建、
+关联注册/卸载、占用句柄替换、no-replace 和对话框/Explorer 状态矩阵。
+本机为 macOS，未发现可用的 Windows 虚拟机；跨平台最终验收仍未完成。

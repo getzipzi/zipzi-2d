@@ -3,8 +3,9 @@
 Run with ./tools/dev-python tools/runtime/native_project_macos.py --help.
 Creates an isolated development bundle and private host directories, opens only
 copies of repository fixtures, and terminates only the host it started. Does not
-change the default application. Optional dialog checks require Accessibility
-access and English native panel labels. This is not Windows acceptance.
+change the default application unless --finder-default is selected, which uses
+a separate guardian process to restore the previous handler on exit. Optional
+dialog checks require Accessibility access and English native panel labels.
 """
 from __future__ import annotations
 
@@ -17,6 +18,7 @@ from pathlib import Path
 import plistlib
 import shutil
 import signal
+import select
 import subprocess
 import sys
 import tempfile
@@ -52,7 +54,7 @@ def window_count(pid):
         ['osascript', '-l', 'JavaScript', '-e', script], text=True, timeout=10))
 
 
-def make_bundle(binary, directory):
+def make_bundle(binary, directory, *, finder_default=False):
     bundle = directory / 'Zipzi Native Acceptance.app'
     contents = bundle / 'Contents'
     (contents / 'MacOS').mkdir(parents=True)
@@ -66,9 +68,47 @@ def make_bundle(binary, directory):
     metadata = dict(CFBundleIdentifier='dev.zipzi.native-acceptance.' + uuid.uuid4().hex,
         CFBundleName='Zipzi Native Acceptance', CFBundleExecutable='zipzi-editor',
         CFBundlePackageType='APPL', CFBundleVersion='1', CFBundleIconFile='AppIcon',
-        NSHighResolutionCapable=True, **release.project_document_types(development=True))
+        NSHighResolutionCapable=True,
+        **release.project_document_types(development=not finder_default))
     (contents / 'Info.plist').write_bytes(plistlib.dumps(metadata))
     return bundle
+
+
+class DefaultHandler:
+    """The child owns restoration; closing its pipe also works on parent crash."""
+    def __init__(self, bundle):
+        self.bundle = bundle
+        self.child = subprocess.Popen(['swift', str(Path(__file__).with_name(
+            'project_file_handler.swift')), str(bundle)], stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, text=True)
+        self.evidence = None
+        try:
+            if not select.select([self.child.stdout], [], [], 30)[0]:
+                raise TimeoutError('temporary default handler readiness')
+            self.evidence = json.loads(self.child.stdout.readline())
+            assert self.evidence['active'] == self.evidence['temporary'], self.evidence
+        except BaseException:
+            self.close()
+            raise
+
+    def close(self):
+        self.child.stdin.close()
+        # communicate() must not try to flush the closed pipe.
+        self.child.stdin = None
+        output, _ = self.child.communicate(timeout=20)
+        # Spotlight can re-register an Owner-ranked .app left on disk. This is
+        # our throwaway bundle; remove it before checking effective restoration.
+        if self.bundle.exists():
+            shutil.rmtree(self.bundle)
+        if self.evidence is not None:
+            restored = json.loads(output)
+            def actual_handler():
+                actual = json.loads(subprocess.check_output(['swift', str(Path(__file__).with_name(
+                    'project_file_handler.swift')), '--query'], text=True, timeout=10))
+                return actual if actual['active'] == self.evidence['previous'] else None
+            restored['verified_after_unregister'] = wait_for(actual_handler, 'previous default handler restored')
+            self.evidence['restoration'] = restored
+            assert self.child.returncode == 0, restored
 
 
 def accessibility(pid, body, *values):
@@ -148,7 +188,7 @@ def check_dialogs(pid, output, runtime, original):
     return checks
 
 
-def run_case(bundle, output, mode, dialogs=False):
+def run_case(bundle, output, mode, dialogs=False, finder_default=False):
     import zipzi
 
     output.mkdir()
@@ -171,7 +211,24 @@ def run_case(bundle, output, mode, dialogs=False):
         environment = {k: v for k, v in os.environ.items()
                        if not k.startswith(('ZIPZI_', 'MTL_HUD'))}
         environment.update(variables)
+        guard = None
+        if finder_default:
+            # Finder starts the cold host without a shell environment.
+            plist = bundle / 'Contents/Info.plist'
+            metadata = plistlib.loads(plist.read_bytes())
+            metadata['LSEnvironment'] = variables
+            plist.write_bytes(plistlib.dumps(metadata))
         def launch(paths=(), arguments=(), new=False):
+            if finder_default and paths:
+                script = ('on run argv\nset projectFiles to {}\n'
+                          'repeat with p in argv\nset end of projectFiles to (POSIX file (contents of p)) as alias\nend repeat\n'
+                          'tell application "Finder"\nactivate\nreveal projectFiles\n'
+                          'set selection to projectFiles\nend tell\n'
+                          'tell application "System Events" to tell application process "Finder" '
+                          'to keystroke "o" using command down\nend run')
+                subprocess.run(['osascript', '-e', script, *map(str, paths)],
+                               check=True, timeout=15)
+                return
             command = ['open', '-a', str(bundle)]
             if '--no-window' in arguments:
                 command += ['-g']
@@ -187,6 +244,20 @@ def run_case(bundle, output, mode, dialogs=False):
                 command += ['--args', *arguments]
             subprocess.run(command, env=environment, check=True, timeout=15)
         try:
+            if finder_default:
+                guard = DefaultHandler(bundle)
+                result['default_handler'] = guard.evidence
+                def file_handlers_ready():
+                    actual = json.loads(subprocess.check_output(['swift', str(Path(__file__).with_name(
+                        'project_file_handler.swift')), '--query', *map(str, projects)], text=True, timeout=10))
+                    return actual if actual['applications'] == [str(bundle)] * len(projects) else None
+                result['default_handler']['file_lookup'] = wait_for(file_handlers_ready, 'all files use the test bundle')
+                accessibility_script = ('on run argv\nrepeat with p in argv\n'
+                    'set projectFile to (POSIX file (contents of p)) as alias\n'
+                    'tell application "Finder" to update projectFile\n'
+                    'end repeat\nend run')
+                subprocess.run(['osascript', '-e', accessibility_script, *map(str, projects)],
+                               check=True, timeout=10)
             if mode == 'resident':
                 launch(arguments=('--no-window',), new=True)
             else:
@@ -245,17 +316,25 @@ def run_case(bundle, output, mode, dialogs=False):
                     for p in projects} == original_hashes
             result['checks']['input_bytes_unchanged'] = True
         finally:
-            # Verify ownership again before signalling; never stop another Editor.
-            if pid is None and (output / 'host.pid').exists():
-                pid = int((output / 'host.pid').read_text())
-            if pid is not None:
-                command = subprocess.run(['ps', '-p', str(pid), '-o', 'command='],
-                                         capture_output=True, text=True, check=False).stdout.strip()
-                if command.startswith(str(bundle / 'Contents/MacOS/zipzi-editor')):
-                    os.kill(pid, signal.SIGTERM)
-                    wait_for(lambda: subprocess.run(['ps', '-p', str(pid)],
-                        stdout=subprocess.DEVNULL).returncode != 0, 'owned host exit', timeout=10)
+            try:
+                stop_owned_host(bundle, output, pid)
+            finally:
+                if guard is not None:
+                    guard.close()
     return result
+
+
+def stop_owned_host(bundle, output, pid):
+    # Verify ownership again before signalling; never stop another Editor.
+    if pid is None and (output / 'host.pid').exists():
+        pid = int((output / 'host.pid').read_text())
+    if pid is not None:
+        command = subprocess.run(['ps', '-p', str(pid), '-o', 'command='],
+                                 capture_output=True, text=True, check=False).stdout.strip()
+        if command.startswith(str(bundle / 'Contents/MacOS/zipzi-editor')):
+            os.kill(pid, signal.SIGTERM)
+            wait_for(lambda: subprocess.run(['ps', '-p', str(pid)],
+                stdout=subprocess.DEVNULL).returncode != 0, 'owned host exit', timeout=10)
 
 
 def main():
@@ -263,23 +342,30 @@ def main():
     parser.add_argument('binary', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--dialogs', action='store_true', help='exercise English native panels via Accessibility')
+    parser.add_argument('--finder-default', action='store_true',
+        help='temporarily select this bundle as the .zipzi default and open via Finder; restore on exit')
+    parser.add_argument('--case', choices=('cold', 'resident'),
+        help='run one case; otherwise run both specified-application cases')
     args = parser.parse_args()
     if sys.platform != 'darwin':
         parser.error('requires macOS and a usable native desktop')
+    if args.finder_default and args.case != 'cold':
+        parser.error('--finder-default currently requires --case cold; resident Finder acceptance is unfinished')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
-    bundle = make_bundle(args.binary.resolve(strict=True), output)
+    bundle = make_bundle(args.binary.resolve(strict=True), output, finder_default=args.finder_default)
     results = []
     try:
-        for mode in ('cold', 'resident'):
-            result = run_case(bundle, output / mode, mode, args.dialogs)
+        for mode in (args.case,) if args.case else ('cold', 'resident'):
+            result = run_case(bundle, output / mode, mode, args.dialogs, args.finder_default)
             results.append(result)
             print(json.dumps(result, ensure_ascii=False), flush=True)
     finally:
         (output / 'results.json').write_text(json.dumps(results, ensure_ascii=False, indent=2) + '\n')
         # Remove only this throwaway bundle from LaunchServices registration.
-        subprocess.run(['/System/Library/Frameworks/CoreServices.framework/Frameworks/'
-            'LaunchServices.framework/Support/lsregister', '-u', str(bundle)], check=False)
+        if bundle.exists():
+            subprocess.run(['/System/Library/Frameworks/CoreServices.framework/Frameworks/'
+                'LaunchServices.framework/Support/lsregister', '-u', str(bundle)], check=False)
 
 
 if __name__ == '__main__':

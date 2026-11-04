@@ -51,7 +51,7 @@ arguments and output paths.
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
 | `build-editor-app.sh` | macOS app bundle construction |
-| `runtime/native_project_macos.py` | Opt-in real Editor process and LaunchServices file-event acceptance; `--dialogs` also verifies English native panels with Accessibility access. Uses private host/config/cache directories and preserves the default application. |
+| `runtime/native_project_macos.py` | Opt-in real Editor process and LaunchServices file-event acceptance; `--dialogs` verifies English native panels. `--finder-default --case cold` temporarily uses release document metadata and opens the selected files through Finder with Accessibility access; an independent guardian restores the previous handler and removes the temporary bundle. Resident Finder acceptance remains unfinished. |
 | `packaging/package_windows.py` | Build and verify a Windows x86-64 portable archive from a compiled Editor |
 | `packaging/collect_python.py` | Verify acceptance reports and collect the Python release distributions |
 | `packaging/reuse_release.py` | Select a successful default-branch build and verify its commit, version and publication hashes before tag promotion |

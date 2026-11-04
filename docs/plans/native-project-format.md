@@ -1,6 +1,6 @@
 # Zipzi 原生工程 `.zipzi` 设计方案
 
-状态：P0–P3 实现已落地，P4 本地工程、故障及 macOS 指定应用文件事件/原生对话框已验证；Finder 默认关联与 Windows 原生交互待验收。日期：2026-11-04。调研基线：`f59db0f0`。
+状态：P0–P3 实现已落地，P4 本地工程、故障、macOS 指定应用事件/原生对话框及 Finder 默认入口冷启动已验证；Finder 无窗口/鼠标双击和 Windows 原生交互待验收。日期：2026-11-04。调研基线：`f59db0f0`。
 
 ## 1. 建议决策
 
@@ -414,7 +414,8 @@ authoring 数据，不能只验证“能解开 ZIP”或“显示了成功提示
 原生归档、生命周期、契约及 Editor 平台入口已按 P0 → P3 实现。
 P4 已加入真实中大型工程、跨进程移动/冲突、快照观察、故障及预算验证，详见下方记录。
 macOS 指定应用的 LaunchServices 和原生保存对话框已追加实机验证。
-下一步完成 Finder 默认关联与 Windows 原生交互验收；此前不宣称跨平台退出条件全部满足。
+Finder 默认入口冷启动已补测；无窗口场景尚有失败，鼠标双击和 Windows 原生交互仍待验收。
+按用户要求在此收尾，保留未完成项，不宣称跨平台退出条件全部满足。
 
 
 ## 14. 实施记录
@@ -498,3 +499,15 @@ Editor project UI 21 项、Observe GPU 租约测试及样本校验。阶段内 E
 
 详见[macOS 实机记录](../archive/benchmarks/2026-11-04-native-project-format-macos.md)。
 指定应用打开不证明默认文件关联，Finder 双击与 Windows 原生验收仍待完成。
+
+### 收尾：Finder 默认入口部分验收（2026-11-04）
+
+- 发布文档类型元数据下，核对系统默认应用后通过 Finder 选中文件执行“打开”；
+  cold、多文件、ready 前追加、重复激活、第二进程 IPC、资源诊断及原文件字节检查通过。
+- resident 场景等待 ready Session 超时，尚未定位；工具只开放 `--finder-default --case cold`，
+  不把失败场景计入通过。实际鼠标双击、安装体验与 Windows 仍未验收。
+- 清理全部临时验收 bundle 和进程，确认恢复原默认应用；原开发 Editor 未停止。
+- 本轮最终工具改动经 Python/Swift 静态检查；交互结果、失败及复现命令见
+  [macOS 实机记录补充](../archive/benchmarks/2026-11-04-native-project-format-macos.md)。
+
+P4 跨平台退出条件未满足；本次按用户要求收尾，未将整个 plan 标为完成。
