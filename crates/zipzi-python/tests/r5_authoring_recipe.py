@@ -170,7 +170,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
     assert expression["Parameters"] == [{"Id": "P", "Value": .75, "Blend": "Overwrite"}]
     assert session.info() == info
     saved = session.project.save(folder / "project").wait()
-    session.project.open(saved.manifest).wait()
+    session.project.open(saved.path).wait()
     restored = session.modeling.records(query).value
     assert restored.motions == candidate.value.motions and restored.expressions == candidate.value.expressions
     assert restored.physics == candidate.value.physics and restored.pose == candidate.value.pose

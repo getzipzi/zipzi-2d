@@ -110,6 +110,7 @@ pub struct Runtime {
     read_turns: VecDeque<ClientId>,
     registry: EventLog,
     image_budget: zipzi_project::ImageMemoryBudget,
+    project_archive: zipzi_project::archive::ProjectArchiveStore,
     plans: HashMap<PlanId, modeling::PlanEntry>,
     prepared_images: HashMap<ImageId, resources::ImageEntry>,
     object_refs: HashMap<ObjectRefId, references::RefEntry>,
@@ -147,6 +148,10 @@ impl Runtime {
             previews: HashMap::new(),
             #[cfg(feature = "test-support")]
             control: Arc::default(),
+            project_archive: zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
+                .with_disk_budget(zipzi_project::archive::ProjectDiskBudget::new(
+                    limits.project_disk_bytes,
+                )),
             image_budget,
             external_bytes: 0,
             editor_contexts: HashMap::new(),
@@ -226,6 +231,23 @@ impl Runtime {
     pub fn instance_id(&self) -> RuntimeInstanceId {
         self.instance
     }
+    /// Configure the private resource root and shared budgets for future I/O.
+    pub fn configure_project_io(
+        &mut self,
+        archive: zipzi_project::archive::ProjectArchiveStore,
+    ) -> Result<()> {
+        if !self.jobs.is_empty() {
+            return Err(RuntimeError::Busy);
+        }
+        self.project_archive = archive;
+        for entry in self.sessions.values_mut() {
+            if let Some(sdk) = entry.sdk.as_mut() {
+                sdk.configure_project_io(self.project_archive.clone());
+            }
+        }
+        Ok(())
+    }
+
     pub fn limits(&self) -> &RuntimeLimits {
         &self.limits
     }
@@ -425,6 +447,7 @@ impl Runtime {
         {
             return Err(RuntimeError::Budget("history"));
         }
+        sdk.configure_project_io(self.project_archive.clone());
         sdk.set_image_memory_budget(self.image_budget.clone())?;
         let id = SessionId::from_parts(self.instance, self.serial());
         let info = SessionInfo {
@@ -905,9 +928,9 @@ impl Runtime {
         client: ClientId,
         session: SessionId,
         path: &Path,
-        target_sha256: &str,
+        target_fingerprint: &zipzi_contract::authoring::ProjectFingerprint,
     ) -> Result<JobId> {
-        self.request_save_inner(client, session, path, Some(target_sha256.to_owned()))
+        self.request_save_inner(client, session, path, Some(target_fingerprint.clone()))
     }
 
     fn request_save_inner(
@@ -915,7 +938,7 @@ impl Runtime {
         client: ClientId,
         session: SessionId,
         path: &Path,
-        target_sha256: Option<String>,
+        target_fingerprint: Option<zipzi_contract::authoring::ProjectFingerprint>,
     ) -> Result<JobId> {
         self.client(client)?;
         self.exclusive(session)?;
@@ -930,7 +953,8 @@ impl Runtime {
             session,
             Task::Save {
                 path: path.clone(),
-                target_sha256,
+                target_fingerprint,
+                progress: Default::default(),
             },
             Some(path),
             0,
@@ -993,12 +1017,10 @@ impl Runtime {
     ) -> Result<JobId> {
         let transfer = match &task {
             Task::Project { _lease, .. } => Some(_lease.clone()),
-            Task::Open(path) => {
-                let length = std::fs::metadata(path).map_or(0, |m| m.len() as usize);
+            Task::Open(_) => {
                 self.refresh_memory_budget();
-                Some(Arc::new(self.reserve_transfer(
-                    length.saturating_mul(128).saturating_add(4096),
-                )?))
+                // The worker grows this using the validated index and expanded JSON.
+                Some(Arc::new(self.reserve_transfer(4096)?))
             }
             Task::Import(_) => {
                 self.refresh_memory_budget();

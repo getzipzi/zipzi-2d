@@ -13,6 +13,7 @@ use zipzi_core::{
 };
 
 pub struct EditSession<'a> {
+    pub(crate) _resource_lease: Option<zipzi_project::archive::ProjectResourceLease>,
     pub(crate) identity: std::sync::Arc<()>,
     pub(crate) sequence: u64,
     pub(crate) manual_baselines:
@@ -1114,6 +1115,7 @@ impl EditSession<'_> {
                 checkpoint,
                 identity_keys,
                 root: session.project.root(),
+                resource_lease: session.project.resource_lease(),
             };
             let _ = entry
                 .estimated_bytes_cache

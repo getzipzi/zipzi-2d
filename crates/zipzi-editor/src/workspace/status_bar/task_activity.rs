@@ -8,7 +8,9 @@ use gpui_kit::{
 };
 use std::{path::PathBuf, time::Duration};
 use uuid::Uuid;
-use zipzi_editor_core::{LoadProgress, LoadStage};
+use zipzi_editor_core::{
+    LoadProgress, LoadStage, ProjectSaveProgress, ProjectSaveStage, ProjectSaveState,
+};
 
 pub(super) struct TaskActivity {
     id: Uuid,
@@ -16,6 +18,7 @@ pub(super) struct TaskActivity {
     importing: bool,
     stage: LoadStage,
     operation: Option<String>,
+    save: Option<ProjectSaveState>,
     _refresh: Option<Task<()>>,
 }
 
@@ -56,6 +59,7 @@ impl StatusBar {
             importing,
             stage,
             operation: None,
+            save: None,
             _refresh: Some(refresh),
         });
         cx.notify();
@@ -75,9 +79,44 @@ impl StatusBar {
             importing: false,
             stage: LoadStage::Queued,
             operation: Some(operation),
+            save: None,
             _refresh: None,
         });
         cx.notify();
+        id
+    }
+
+    pub(crate) fn begin_save(
+        &mut self,
+        source: PathBuf,
+        progress: ProjectSaveProgress,
+        cx: &mut Context<Self>,
+    ) -> Uuid {
+        let id = self.begin_task(t!("status.saving").into_owned(), source, cx);
+        let state = progress.state();
+        let task = self.tasks.iter_mut().find(|task| task.id == id).unwrap();
+        task.save = Some(state);
+        task._refresh = Some(cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor()
+                    .timer(Duration::from_millis(100))
+                    .await;
+                let state = progress.state();
+                let active = this.update(cx, |this, cx| {
+                    let Some(task) = this.tasks.iter_mut().find(|task| task.id == id) else {
+                        return false;
+                    };
+                    if task.save != Some(state) {
+                        task.save = Some(state);
+                        cx.notify();
+                    }
+                    true
+                });
+                if !matches!(active, Ok(true)) {
+                    break;
+                }
+            }
+        }));
         id
     }
 
@@ -115,7 +154,20 @@ impl TaskActivity {
                 .file_name()
                 .unwrap_or(self.source.as_os_str())
                 .to_string_lossy();
-            return format!("{operation} · {name}");
+            let stage = self.save.map(|state| {
+                t!(match state.stage {
+                    ProjectSaveStage::Queued => "project.load_queued",
+                    ProjectSaveStage::PreparingResources => "project.save_preparing",
+                    ProjectSaveStage::Writing => "project.save_writing",
+                    ProjectSaveStage::Finishing => "project.save_finishing",
+                    ProjectSaveStage::Published => "project.save_published",
+                })
+                .into_owned()
+            });
+            return stage.map_or_else(
+                || format!("{operation} · {name}"),
+                |stage| format!("{operation} · {name} · {stage}"),
+            );
         }
         let action = if self.importing {
             t!("project.import")
@@ -141,6 +193,10 @@ pub(super) fn render_task_activity(tasks: &[TaskActivity], cx: &App) -> AnyEleme
     let Some(current) = tasks.first() else {
         return div().into_any_element();
     };
+    let percentage = current
+        .save
+        .filter(|state| state.stage == ProjectSaveStage::Writing && state.total_bytes > 0)
+        .map(|state| state.completed_bytes as f32 / state.total_bytes as f32 * 100.);
     let details = tasks
         .iter()
         .map(|load| format!("{}\n{}", load.label(), load.source.display()))
@@ -158,7 +214,8 @@ pub(super) fn render_task_activity(tasks: &[TaskActivity], cx: &App) -> AnyEleme
         .child(
             div().w(compact::rem(48.)).flex_shrink_0().child(
                 Progress::new("app-status-task-progress")
-                    .loading(true)
+                    .loading(percentage.is_none())
+                    .value(percentage.unwrap_or(0.))
                     .xsmall()
                     .accessibility_label(current.label()),
             ),

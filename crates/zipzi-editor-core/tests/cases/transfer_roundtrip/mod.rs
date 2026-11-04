@@ -66,7 +66,7 @@ fn transfer(
     match format {
         "K" => {
             let saved = current.save_project(destination, None).context("save")?;
-            load(&saved.manifest, "K").context("reimport")
+            load(&saved.path, "K").context("reimport")
         }
         "C" | "R" => {
             let snapshot = current.transfer_snapshot().context("capture")?;

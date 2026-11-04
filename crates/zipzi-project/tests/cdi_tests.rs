@@ -188,9 +188,11 @@ fn nonempty_cdi_survives_store_save_and_session_open() {
     let target = root.join("project");
     let (result, snapshot) = DocumentStore::new().save(&candidate, &root, &target, None);
     assert!(result.status.is_ok(), "{result:?}");
-    let manifest = snapshot.unwrap().manifest;
-    let saved: Value = serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
-    assert_eq!(saved["format_version"], 21);
+    let manifest = snapshot.unwrap().path.unwrap();
+    let mut archive = zip::ZipArchive::new(std::fs::File::open(&manifest).unwrap()).unwrap();
+    let saved: Value = serde_json::from_reader(archive.by_name("project.json").unwrap()).unwrap();
+    assert_eq!(saved["format"], "zipzi-project");
+    assert_eq!(saved["format_version"], 22);
     assert!(saved["document"]["display_info"]["extensions"]["Future"].is_object());
     let mut session = DocumentSession::new();
     let opened = session.open(&manifest);

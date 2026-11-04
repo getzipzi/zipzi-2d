@@ -24,10 +24,20 @@ def check_app(path):
     assert plist['CFBundleIdentifier'] == 'dev.zipzi.editor'
     assert plist['CFBundleName'] == 'Zipzi Editor'
     assert plist['CFBundleExecutable'] == 'zipzi-editor'
+    assert plist['CFBundleDocumentTypes'][0]['LSItemContentTypes'] == ['dev.zipzi.project']
+    assert plist['UTExportedTypeDeclarations'][0]['UTTypeConformsTo'] == ['public.zip-archive']
     version = metadata()
     assert plist['CFBundleShortVersionString'] == version['app_version']
     assert plist['ZipziReleaseVersion'] == version['version']
     assert plist['CFBundleVersion'] and plist['ZipziSourceRevision']
+    from build_project_preview import extension_plist
+    for thumbnail in (True, False):
+        name = 'ZipziThumbnail' if thumbnail else 'ZipziPreview'
+        contents = path / 'Contents/PlugIns' / (name + '.appex') / 'Contents'
+        expected = extension_plist(plist['CFBundleIdentifier'] + '.' + name,
+                                  plist['CFBundleShortVersionString'], plist['CFBundleVersion'], thumbnail)
+        assert plistlib.loads((contents / 'Info.plist').read_bytes()) == expected
+        assert (contents / 'MacOS/zipzi-preview').stat().st_mode & 0o111
     binary = path/'Contents/MacOS'/plist['CFBundleExecutable']
     assert binary.is_file() and binary.stat().st_mode & 0o111
     data = binary.read_bytes()

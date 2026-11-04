@@ -221,6 +221,12 @@ aggregate_key_marks = "キーマークは各対象の保存済みキーをまと
 binding_key_marks = "アクティブなバインドの軸は自身のキーを表示し、他の軸は集約したマークを表示します。"
 
 [project]
+extension_error = "Zipzi プロジェクトには .zipzi 拡張子を使用してください。"
+replace = "%{path} を置き換えますか？"
+replace_action = "置き換える"
+conflict = "プロジェクトが外部で変更されています。"
+conflict_help = "ディスクの内容を開き直すか、変更を別のファイルに保存してください。"
+reopen = "開き直す"
 untitled = "名称未設定"
 saved = "%{path} を保存しました"
 cancel = "キャンセル"
@@ -248,6 +254,10 @@ load_queued = "開始待ち"
 load_reading = "プロジェクトとリソースを読み込み中"
 load_importing = "モデルとリソースをインポート中"
 load_preparing_view = "エディタ画面を準備中"
+save_preparing = "リソースを準備中"
+save_writing = "プロジェクトを書き込み中"
+save_finishing = "保存を完了中"
+save_published = "保存済み"
 load_others = "他 %{count} 件"
 
 [dock]

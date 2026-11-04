@@ -410,7 +410,7 @@ fn confirmed_replacement_recovers_failed_save_and_preserves_conflict_checks() ->
     let original_id = original.active_id().unwrap();
     let task = original.prepare_save(original_id, &target, false)?;
     original.finish_save(&mut task.run())?;
-    let manifest = target.join("project.zipzi.json");
+    let manifest = target.clone();
     let old_bytes = std::fs::read(&manifest)?;
 
     let (document, _assets) = support::sample_document()?;
@@ -421,7 +421,7 @@ fn confirmed_replacement_recovers_failed_save_and_preserves_conflict_checks() ->
     let source_canvas = editor.document().unwrap().source_canvas();
     let task = editor.prepare_save(document, &target, false)?;
     let error = editor.finish_save(&mut task.run()).err().unwrap();
-    assert!(error.to_string().contains("DESTINATION_EXISTS"), "{error}");
+    assert!(error.to_string().contains("PROJECT_EXISTS"), "{error}");
     assert!(!editor.is_busy());
     assert!(editor.document().unwrap().modified());
     assert_eq!(std::fs::read(&manifest)?, old_bytes);
@@ -455,5 +455,34 @@ fn confirmed_replacement_recovers_failed_save_and_preserves_conflict_checks() ->
     // Subsequent ordinary saves use the newly installed baseline.
     let task = editor.prepare_save(document, &target, false)?;
     editor.finish_save(&mut task.run())?;
+    Ok(())
+}
+
+#[test]
+fn reopen_preserves_dirty_document_on_failure_and_installs_disk_version_on_success()
+-> anyhow::Result<()> {
+    let output = tempfile::tempdir()?;
+    let target = output.path().join("角色.zipzi");
+    let mut editor = crate::support::new_editor()?;
+    let id = editor.active_id().unwrap();
+    let task = editor.prepare_save(id, &target, false)?;
+    editor.finish_save(&mut task.run())?;
+    let original = std::fs::read(&target)?;
+    let old_version = editor.document().unwrap().model_generation();
+    std::fs::write(&target, b"broken archive")?;
+    let task = editor.prepare_reopen(id, &target)?;
+    assert!(editor.is_busy());
+    assert!(editor.finish_load(task.run()).is_err());
+    assert!(!editor.is_busy());
+    assert_eq!(editor.active_id(), Some(id));
+    assert_eq!(editor.document().unwrap().model_generation(), old_version);
+    std::fs::write(&target, original)?;
+    let task = editor.prepare_reopen(id, &target)?;
+    editor.finish_load(task.run())?;
+    assert!(!editor.is_busy());
+    assert_eq!(editor.active_id(), Some(id));
+    assert_eq!(editor.documents().len(), 1);
+    assert_eq!(editor.documents()[0].title.as_deref(), Some("角色"));
+    assert!(!editor.document().unwrap().modified());
     Ok(())
 }

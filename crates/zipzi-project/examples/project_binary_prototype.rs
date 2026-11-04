@@ -9,8 +9,8 @@ use std::path::Path;
 use std::time::Instant;
 use zipzi_core::Document;
 use zipzi_project::{
-    decode_project, decode_project_cbor, encode_project, encode_project_cbor, DocumentSnapshot,
-    DocumentStore,
+    decode_project, decode_project_cbor, encode_project, encode_project_cbor,
+    store::DirectorySnapshot, DocumentStore,
 };
 
 #[derive(Clone, Copy)]
@@ -56,9 +56,9 @@ impl Format {
         }
     }
 
-    fn open(self, store: &DocumentStore, path: &Path) -> DocumentSnapshot {
+    fn open(self, store: &DocumentStore, path: &Path) -> DirectorySnapshot {
         let (result, snapshot) = match self {
-            Self::Json => store.open(path),
+            Self::Json => store.open_directory_prototype(path),
             Self::Cbor => store.open_cbor(path),
         };
         assert!(
@@ -77,9 +77,9 @@ impl Format {
         source_root: &Path,
         path: &Path,
         expected: Option<&str>,
-    ) -> DocumentSnapshot {
+    ) -> DirectorySnapshot {
         let (result, snapshot) = match self {
-            Self::Json => store.save(document, source_root, path, expected),
+            Self::Json => store.save_directory_prototype(document, source_root, path, expected),
             Self::Cbor => store.save_cbor(document, source_root, path, expected),
         };
         assert!(

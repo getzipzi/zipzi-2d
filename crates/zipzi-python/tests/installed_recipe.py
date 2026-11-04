@@ -147,7 +147,7 @@ def main():
                 save_job.cancel()  # A terminal success remains success.
                 saved = save_job.wait()
                 assert save_job.state() == "succeeded"
-                assert saved.manifest.is_file()
+                assert saved.path.is_file()
                 assert any(isinstance(e, events.Saved) and e.receipt == saved for e in stream.poll())
                 import runpy
                 r4=runpy.run_path(str(Path(__file__).with_name("r4_recipe.py")))["run"](runtime,Path(__file__).resolve().parents[3],folder/"r4")
@@ -182,7 +182,7 @@ def main():
             else:
                 fresh = zipzi.local()
             with fresh:
-                reopened = fresh.sessions.open(saved.manifest).wait()
+                reopened = fresh.sessions.open(saved.path).wait()
                 assert reopened.resources.get(asset).value.name == "Texture"
                 assert reopened.resources.get(asset).value.pixels.rgba == bytes((21, 43, 65, 255))
                 assert reopened.meshes.get(face).value.name == "Installed"

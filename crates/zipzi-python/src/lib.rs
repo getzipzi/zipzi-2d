@@ -775,7 +775,7 @@ impl NativeRuntime {
                     d.set_item("kind", "saved")?;
                     d.set_item("before", version(py, r.before)?)?;
                     d.set_item("after", version(py, r.after)?)?;
-                    d.set_item("manifest", r.manifest.to_string_lossy().as_ref())?;
+                    d.set_item("path", r.path.to_string_lossy().as_ref())?;
                     d.set_item("durable", r.durable)?;
                     d
                 }

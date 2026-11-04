@@ -360,7 +360,7 @@ uv run --locked python tools/benchmarks/property-chain-benchmark.py \
 
 Requires the local model and the SDK sources in this workspace; no sibling
 checkout is needed. A saved
-`project.zipzi.json` can also be supplied. Missing resources are explicitly
+`.zipzi` archive can also be supplied. Missing resources are explicitly
 reported as skips; a missing model, failed edit or incomplete run is an error.
 Output directories must be new. Source model files are never saved or modified.
 

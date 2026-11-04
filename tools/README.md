@@ -51,7 +51,9 @@ arguments and output paths.
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
 | `build-editor-app.sh` | macOS app bundle construction |
+| `runtime/native_project_macos.py` | Opt-in real Editor process and LaunchServices file-event acceptance; `--dialogs` verifies English native panels. `--finder-default --case cold` temporarily uses release document metadata and opens the selected files through Finder with Accessibility access; an independent guardian restores the previous handler and removes the temporary bundle. Resident Finder acceptance remains unfinished. |
 | `packaging/package_windows.py` | Build and verify a Windows x86-64 portable archive from a compiled Editor |
+| `packaging/build_project_preview.py` | Build macOS Quick Look extensions / Windows Shell preview DLL; `--test` checks native providers |
 | `packaging/collect_python.py` | Verify acceptance reports and collect the Python release distributions |
 | `packaging/reuse_release.py` | Select a successful default-branch build and verify its commit, version and publication hashes before tag promotion |
 | `packaging/release_downloads.py` | Prepare the Mac DMG, Windows ZIP, full source and matching checksums; generate desktop download links and Python install instructions |
@@ -376,7 +378,14 @@ in the binary rather than copied to a second runtime asset tree. The verifier
 checks the actual embedded bytes and language text. The output path is reused
 between profiles; retain a separate copy under `target/` when comparing both.
 
-These commands create local unsigned artifacts. They do not upload releases,
+The macOS builder includes sandboxed, signed Thumbnail and Preview extensions in
+`Contents/PlugIns`. Sign the enclosing app after its extensions; preserve their
+sandbox entitlements by signing the outer app without recursive re-signing.
+Windows portable packaging requires `--preview-dll`; its registration script
+registers both Open With and static Shell previews. See the [native preview
+instructions](../native/project-preview/README.md) for builds and platform gates.
+
+The enclosing macOS app still needs its final signature. These commands do not upload releases,
 notarize apps, change remote repositories or verify GitHub license presentation.
 
 

@@ -92,7 +92,7 @@ fn mesh_properties_colors_masks_culling_and_blends_validate_roundtrip_and_undo()
     }
     let saved = doc.save(&assets.path().join("complete-mesh.zipzi"))?;
     assert_eq!(
-        Document::open(&saved.manifest)?.property_values(&object)?,
+        Document::open(&saved.path)?.property_values(&object)?,
         values
     );
     for _ in 0..7 {
@@ -182,7 +182,7 @@ fn mesh_deformer_property_reparents_bound_meshes_with_warp_root_and_undo() -> an
     doc.redo()?;
     let saved = doc.save(&assets.path().join("reparented.zipzi"))?;
     assert_eq!(
-        Document::open(&saved.manifest)?.property_values(&object)?[&fields::DEFORMER.key],
+        Document::open(&saved.path)?.property_values(&object)?[&fields::DEFORMER.key],
         PropertyValue::Text(warp.id.clone())
     );
     doc.set_object_property(&object, "deformer_id", json!(""))?;
@@ -484,7 +484,7 @@ fn mesh_properties_keyform_targets_preview_cancel_history_and_parameter_navigati
         false,
     )?;
     let saved = editor.finish_save(&mut task.run())?;
-    let mut reopened = Document::open(&saved.manifest)?;
+    let mut reopened = Document::open(&saved.path)?;
     reopened.set_preview_parameter(&reopened.parameters()[0].id.clone(), 1.)?;
     assert_eq!(
         reopened.property_values(&object)?[&fields::OPACITY.key],

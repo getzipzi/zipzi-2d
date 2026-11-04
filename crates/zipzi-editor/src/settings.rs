@@ -249,7 +249,7 @@ pub fn normalize_key(key: &str, mapper: &dyn PlatformKeyboardMapper) -> anyhow::
 
 #[cfg(test)]
 mod tests {
-    use super::{Settings, normalize_key};
+    use super::{normalize_key, Settings};
     use gpui_kit::DummyKeyboardMapper;
     use zipzi_editor_core::{CommandId, ConfigStore, ShortcutOverride, ShortcutOverrides};
     #[test]
@@ -262,11 +262,7 @@ mod tests {
         store.write(
             "recent-files.json",
             &RecentFiles {
-                paths: vec![
-                    first.join("project.zipzi.json"),
-                    second.clone(),
-                    first.clone(),
-                ],
+                paths: vec![first.clone(), second.clone(), first.clone()],
             },
         )?;
         let mut settings = Settings::from_store(store.clone(), &DummyKeyboardMapper);
@@ -278,7 +274,7 @@ mod tests {
             store.read::<RecentFiles>("recent-files.json")?,
             Some(settings.recent_files.clone())
         );
-        settings.push_recent_file(second.join("project.zipzi.json"))?;
+        settings.push_recent_file(second.clone())?;
         assert_eq!(settings.recent_files.paths, vec![second, first]);
         assert_eq!(
             Settings::from_store(store, &DummyKeyboardMapper).recent_files,
@@ -333,8 +329,8 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn workspace_preference_survives_reload_and_invalid_config_defaults_to_modeling()
-    -> anyhow::Result<()> {
+    fn workspace_preference_survives_reload_and_invalid_config_defaults_to_modeling(
+    ) -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let store = ConfigStore::new(dir.path());
         let mut settings = Settings::from_store(store.clone(), &DummyKeyboardMapper);
@@ -357,8 +353,8 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn failed_config_keeps_previous_valid_bindings_and_defaults_can_be_restored()
-    -> anyhow::Result<()> {
+    fn failed_config_keeps_previous_valid_bindings_and_defaults_can_be_restored(
+    ) -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let store = ConfigStore::new(dir.path());
         let valid = ShortcutOverrides {
@@ -402,20 +398,16 @@ mod tests {
                 .collect::<Vec<_>>()
         );
         std::fs::write(dir.path().join("keybindings.json"), "{")?;
-        assert!(
-            !Settings::from_store(store.clone(), &DummyKeyboardMapper)
-                .notices
-                .is_empty()
-        );
+        assert!(!Settings::from_store(store.clone(), &DummyKeyboardMapper)
+            .notices
+            .is_empty());
         store.write("keybindings.json", &ShortcutOverrides::default())?;
         let restored = Settings::from_store(store, &DummyKeyboardMapper);
         assert!(restored.notices.is_empty());
-        assert!(
-            restored
-                .bindings
-                .iter()
-                .any(|b| b.command == CommandId::Save)
-        );
+        assert!(restored
+            .bindings
+            .iter()
+            .any(|b| b.command == CommandId::Save));
         Ok(())
     }
     #[test]
@@ -433,14 +425,12 @@ mod tests {
                 keys: vec!["secondary-s".into()],
             }],
         };
-        assert!(
-            config
-                .resolve(&super::keyboard_policy(), |s| normalize_key(
-                    s,
-                    &DummyKeyboardMapper
-                ))
-                .is_err()
-        );
+        assert!(config
+            .resolve(&super::keyboard_policy(), |s| normalize_key(
+                s,
+                &DummyKeyboardMapper
+            ))
+            .is_err());
         for key in ["a", "cmd-c", "ctrl-a"] {
             let config = ShortcutOverrides {
                 bindings: vec![ShortcutOverride {
@@ -449,14 +439,12 @@ mod tests {
                     keys: vec![key.into()],
                 }],
             };
-            assert!(
-                config
-                    .resolve(&super::keyboard_policy(), |s| normalize_key(
-                        s,
-                        &DummyKeyboardMapper
-                    ))
-                    .is_err()
-            );
+            assert!(config
+                .resolve(&super::keyboard_policy(), |s| normalize_key(
+                    s,
+                    &DummyKeyboardMapper
+                ))
+                .is_err());
         }
         Ok(())
     }

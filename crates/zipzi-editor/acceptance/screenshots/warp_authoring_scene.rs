@@ -98,7 +98,7 @@ pub(super) fn fixture_with_density(
         })
     })?;
     let saved = sdk.save_project(&assets.path().join("authoring"), None)?;
-    Ok((Document::open(&saved.manifest)?, assets, object))
+    Ok((Document::open(&saved.path)?, assets, object))
 }
 
 pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {

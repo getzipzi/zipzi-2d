@@ -1,0 +1,148 @@
+{
+  "platform": "macOS 27.0.1 arm64",
+  "rust": "1.99.0",
+  "repetitions": 3,
+  "profile": "release",
+  "baseline": "a8af647f with P4 changes",
+  "notes": [
+    "No OS cache flush; repeated warm reads.",
+    "Peak RSS covers the entire benchmark process, including setup, codec probes and simultaneous verification Sessions.",
+    "Licensed local models are not included.",
+    "Logical resource and authoring equality are checked for every Save As."
+  ],
+  "samples": {
+    "mao": {
+      "assets": 260,
+      "bindings": 185,
+      "document_bytes": 3591559,
+      "input_archive_bytes": 9995883,
+      "meshes": 260,
+      "motions": 7,
+      "repeats": 3,
+      "resource_bytes_equal": true,
+      "roundtrip_equal": true,
+      "saved_archive_bytes": 9995883,
+      "times": {
+        "decode_ms": [
+          127.55574999999999,
+          108.337375,
+          108.341208
+        ],
+        "encode_ms": [
+          5.667666,
+          5.560292,
+          5.525333000000001
+        ],
+        "open_ms": [
+          258.06941700000004,
+          257.095375,
+          261.15387499999997
+        ],
+        "save_as_ms": [
+          173.30325,
+          172.096667,
+          178.152292
+        ],
+        "save_ms": [
+          184.957458,
+          182.14425,
+          184.123708
+        ]
+      },
+      "peak_rss_bytes": 78069760,
+      "process_scope": "setup, three open/save/save-as iterations, codec and byte verification",
+      "import": {
+        "archive_bytes": 9995883,
+        "asset_bytes": 9055325,
+        "assets": 260,
+        "bindings": 185,
+        "first_open_ms": 251.994708,
+        "import_diagnostics": [
+          "UNRESOLVED_PART: $.Parts[28].Id: PartSketch is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[104].Id: ParamRabbitEliminationEffect is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[109].Id: Param5 is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[104].Id: ParamRabbitEliminationEffect is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[109].Id: Param5 is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[104].Id: ParamRabbitEliminationEffect is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[109].Id: Param5 is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[104].Id: ParamRabbitEliminationEffect is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[109].Id: Param5 is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[104].Id: ParamRabbitEliminationEffect is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[109].Id: Param5 is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[104].Id: ParamRabbitEliminationEffect is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[109].Id: Param5 is absent from the model",
+          "UNRESOLVED_PART: $.Curves[131].Id: PartSketch is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[104].Id: ParamRabbitEliminationEffect is absent from the model",
+          "UNRESOLVED_PARAMETER: $.Curves[109].Id: Param5 is absent from the model"
+        ],
+        "import_ms": 357.70379099999997,
+        "import_warnings": 0,
+        "initial_save_ms": 196.566708,
+        "meshes": 260,
+        "moc_version": 5,
+        "roundtrip_equal": true,
+        "source_model3": "models/local/mao/runtime/mao_pro.model3.json",
+        "unimported_attachments": 0
+      }
+    },
+    "fish": {
+      "assets": 715,
+      "bindings": 30,
+      "document_bytes": 48060538,
+      "input_archive_bytes": 56238737,
+      "meshes": 715,
+      "motions": 0,
+      "repeats": 3,
+      "resource_bytes_equal": true,
+      "roundtrip_equal": true,
+      "saved_archive_bytes": 56238737,
+      "times": {
+        "decode_ms": [
+          1305.5738749999998,
+          1301.613417,
+          1302.6871250000002
+        ],
+        "encode_ms": [
+          80.979084,
+          80.59049999999999,
+          80.67845799999999
+        ],
+        "open_ms": [
+          2175.968625,
+          2216.910125,
+          2131.589709
+        ],
+        "save_as_ms": [
+          1014.2308330000001,
+          1008.219916,
+          1196.915542
+        ],
+        "save_ms": [
+          1061.026,
+          1054.776417,
+          1067.255375
+        ]
+      },
+      "peak_rss_bytes": 774979584,
+      "process_scope": "setup, three open/save/save-as iterations, codec and byte verification",
+      "import": {
+        "archive_bytes": 56238737,
+        "asset_bytes": 41335967,
+        "assets": 715,
+        "bindings": 30,
+        "first_open_ms": 2129.672208,
+        "import_diagnostics": [
+          "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+        ],
+        "import_ms": 3256.133333,
+        "import_warnings": 0,
+        "initial_save_ms": 1144.438541,
+        "meshes": 715,
+        "moc_version": 5,
+        "roundtrip_equal": true,
+        "source_model3": "models/local/DeepSeek/大肥鱼.model3.json",
+        "unimported_attachments": 0
+      }
+    }
+  }
+}

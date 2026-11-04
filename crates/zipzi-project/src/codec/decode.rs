@@ -107,56 +107,47 @@ fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh, Status> {
 pub fn decode_project(text: &str) -> Result<Document, Status> {
     validate_json_syntax(text)?;
 
-    let header: serde_json::Value =
+    #[derive(serde::Deserialize)]
+    struct Header {
+        format: Option<String>,
+        format_version: Option<u64>,
+    }
+    let header: Header =
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
-    if header.get("format").and_then(|v| v.as_str()) == Some("zipzi-directory-project")
-        && header.get("format_version").and_then(|v| v.as_u64()) != Some(21)
+    let format = header.format.as_deref();
+    let version = header.format_version;
+    if format == Some("zipzi-project") && version.is_some_and(|v| v < 21) {
+        return Err(Status::error(
+            "LEGACY_PROJECT",
+            "Experimental project version is unsupported; reimport the source asset",
+        ));
+    }
+    if matches!(format, Some("zipzi-directory-project" | "zipzi-project"))
+        && !matches!(
+            (format, version),
+            (Some("zipzi-directory-project"), Some(21)) | (Some("zipzi-project"), Some(22))
+        )
     {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
-            "Only directory-project version 21 is supported; reimport the source asset",
+            "Unsupported project document version",
         ));
     }
-    let root: ProjectWire = match serde_json::from_str(text) {
-        Ok(r) => r,
-        Err(e) => {
-            // Check legacy format
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(text) {
-                if let Some(fmt) = v.get("format").and_then(|f| f.as_str()) {
-                    if fmt == "zipzi-project" {
-                        let ver = v
-                            .get("format_version")
-                            .map(|x| x.to_string())
-                            .unwrap_or_else(|| "\"missing\"".to_string());
-                        return Err(Status::error(
-                            "LEGACY_PROJECT",
-                            format!(
-                                "Experimental zipzi-project version {ver} is unsupported; no automatic migration"
-                            ),
-                        ));
-                    }
-                }
-            }
-            return Err(Status::error("INVALID_PROJECT", e.to_string()));
-        }
-    };
+    let root: ProjectWire =
+        serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
 
     decode_wire(root)
 }
 
 pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
-    if root.format == "zipzi-project" {
-        return Err(Status::error(
-            "LEGACY_PROJECT",
-            "Experimental zipzi-project version is unsupported; no automatic migration",
-        ));
-    }
-
-    if root.format != "zipzi-directory-project" {
+    if root.format != "zipzi-directory-project" && root.format != "zipzi-project" {
         return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
     }
 
-    if root.format_version != 21 {
+    if !matches!(
+        (root.format.as_str(), root.format_version),
+        ("zipzi-directory-project", 21) | ("zipzi-project", 22)
+    ) {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             format!(

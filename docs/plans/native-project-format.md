@@ -1,6 +1,6 @@
 # Zipzi 原生工程 `.zipzi` 设计方案
 
-状态：设计提案，尚未实现。日期：2026-11-04。调研基线：`f59db0f0`。
+状态：P0–P3 实现已落地，P4 本地工程、故障、macOS 指定应用事件/原生对话框及 Finder 默认入口冷启动已验证；Finder 无窗口/鼠标双击和 Windows 原生交互待验收。日期：2026-11-04。调研基线：`f59db0f0`。
 
 ## 1. 建议决策
 
@@ -59,6 +59,7 @@
 角色.zipzi                 # 普通文件，标准 ZIP；无自定义前导字节
 ├── format.json
 ├── project.json
+├── preview.png（可选静态预览）
 └── assets/
     ├── <64 位小写 SHA-256>.png
     └── ...
@@ -77,6 +78,9 @@
 ```
 
 - `format.json` 和 `project.json` 各有且仅有一个，路径固定；不能通过字段指定任意入口。
+- 容器保持 v1。可选 `preview.png` 使用 `format.json.preview` 声明其 SHA-256、width、height；
+  最大 1024×1024 静态 RGBA8，保存时重新生成或省略。它不属于 authoring 内容，
+  不增加 required feature；缺失或损坏时系统预览回退，Editor 不解码该图片。
 - JSON 使用 UTF-8。容器版本描述打包规则，文档版本描述 authoring 数据结构，分别检查。
 - `project.json` 复用现有文档结构，将标识改为 `zipzi-project`，文档版本拟递增至 22。
   实施时若主线已增加版本，使用当时的下一个版本；不重编号已存在的文档版本。
@@ -411,7 +415,103 @@ authoring 数据，不能只验证“能解开 ZIP”或“显示了成功提示
 
 ## 13. 本次设计交付与下一步
 
-本次仅增加设计文档与索引，未修改工程格式、公共 API、用户文件或系统关联。
-推荐实施从 P0 开始，以测得的资源成本和平台原语确定首版限额，再按 P1 → P4 落地。
-若产品阶段只需要统一名字而不需要跨平台单文件交付，可单独选择目录方案；
-本提案的推荐目标保持为一个自包含 `.zipzi` 文件。
+原生归档、生命周期、契约及 Editor 平台入口已按 P0 → P3 实现。
+P4 已加入真实中大型工程、跨进程移动/冲突、快照观察、故障及预算验证，详见下方记录。
+macOS 指定应用的 LaunchServices 和原生保存对话框已追加实机验证。
+Finder 默认入口冷启动已补测；无窗口场景尚有失败，鼠标双击和 Windows 原生交互仍待验收。
+按用户要求在此收尾，保留未完成项，不宣称跨平台退出条件全部满足。
+
+
+## 14. 实施记录
+
+### P0 原型：`1547069e`
+
+已测量五类合成样本和 24 Mesh 的真实 cat 工程，详见
+[可复现基准记录](../archive/benchmarks/2026-11-04-native-project-format-p0.md)。
+该记录是原型成本测量，并未满足真实中大型样本、产品保存耗时预算以及 Windows
+文件原语的完整 P0 验收；这些仍列入最终验收，不以 macOS 结果代替。
+
+### P1 Project 层（2026-11-04）
+
+- 增加正式容器 v1 / 文档 v22 读写 API；生产读取拒绝 P0 实验标记。
+- 在 ZIP 索引分配前检查中央目录字节与条目数，检查 ZIP64、local/central 头、descriptor、
+  CRC/长度、路径、条目类型、数据区边界及重叠。未知能力与版本保留独立状态码。
+- 打开先复制、hash，再从私有副本读取；缺失/损坏图片产生诊断，错误文件不会进入工作集。
+- 工作集由资源租约持有，包含共享磁盘预算、owner 元数据和锁；仅回收确认无人持有的
+  自有遗留目录/staging。保存直接复制 PNG，输出限额贯穿 ZIP finalize。
+- 流式 staging 同目录发布；新建使用 no-replace，替换必须有完整 fingerprint；
+  发布前失败保持目标，发布后取消/目录同步警告保持 published 语义。
+- Session、History、SDK 等用户入口在 P2 统一切换；本阶段没有将旧目录工程当作新归档打开。
+
+验证：Project lib（含 archive、working set、filesystem）及 `project_tests`；
+`cargo check --locked -p zipzi-project --features archive-prototype --examples`；
+`uv run --locked python tools/workspace/cargo_domain.py --check`。
+故障测试包含 write/finalize/sync/publish、no-replace 竞争、基线重检和发布后取消。
+Windows 原生文件占用、系统关联和真实交互尚待对应平台验收。
+
+### P2 SDK / Runtime / Python（2026-11-04）
+
+- Session 正式入口统一使用归档；工程路径、完整 fingerprint、私有资源根分离。
+- 保存前流式绑定当前及全部历史磁盘资源，保持同一工作集；历史缺少旧 hash 时保留警告。
+- History、AuthoringSnapshot、Edit 候选与 ObservationInput 持有工作集租约；导出保护显式包含原归档。
+- Runtime 共享磁盘预算并允许宿主配置归档存储；取消贯穿资源复制与归档读写，发布后结果保持成功。
+- SaveReceipt/PsdImportReceipt 使用 `path`；明确替换使用完整 fingerprint。协议升级为 v3，Python 从契约生成。
+- 目录/裸 JSON 用户入口已移除；P0/CBOR 目录能力仅保留在显式实验 feature。
+
+验证：Project lib 48 项、project_tests 51 项；SDK integration 的 project_io 21 项（含候选/快照最后租约清理、删除外部素材与旧归档后的历史）；Runtime host 5 项及 runtime 30 项；Contract；Python 111 项行为、16 项 recovery、8 项 mesh 与正反静态类型；安装后 Connected 21 项；Python codegen 64 项；实验 examples 编译。
+Windows 原生交互仍需对应平台最终验收。
+
+### P3 Editor 文件入口与平台关联（2026-11-04）
+
+- 文件对话框限制为 `.zipzi` 普通文件，打开支持多选；补充 GPUI macOS/Windows 原生扩展名过滤接口。
+- 保存名称先规范后缀，补写后缀导致目标变化时再次确认最终目标；同路径另存为沿用原基线，不能绕过外部修改冲突。
+- 标题、状态栏和最近工程统一使用归档路径；冲突提供重新打开、另存为和取消。重新打开通过 SDK 事务执行，失败保留原 Session。
+- 在 endpoint claim 前用 `args_os()` 解析多路径和 `--`；启动、系统文件事件、菜单与 IPC 共用有界队列（128 路径 / 1 MiB）。队列按顺序打开，失败继续，同工程激活已有文档。
+- Editor 工作集使用平台缓存目录及共享 Runtime 磁盘预算；无窗口 host 仍能接收请求并创建窗口。
+- 发布与开发 plist 复用工程类型声明，开发关联优先级为 None；Windows 便携包携带当前用户注册/卸载脚本，保留系统默认应用选择。
+- 更新 Editor/acceptance 测试与样本的原生 receipt 字段及归档路径断言。
+
+验证：Editor `--lib project` 21 项、`headless_tests::runtime_host` 24 项、`headless_tests::recent_files` 2 项、启动参数 2 项；Editor core workspace 10 项（含重新打开失败/成功）；Runtime IPC 队列限额和请求重放 1 项；release 6 项、Windows 包 2 项、workspace entrypoints 5 项。`cargo check --locked -p zipzi-editor` 通过。
+macOS 原生构建通过；系统双击与 Windows 文件关联交互仍列入 P4 实机验收，未以逻辑测试替代。
+
+### P4 本地工程和故障验收（2026-11-04）
+
+- 真实 Mao（260 Mesh、7 Motion）和大肥鱼（715 Mesh）执行三轮打开、保存、另存为，
+  每轮核对完整 authoring 内容与所有有效 PNG 字节。release 普通保存分别为 182–185 ms
+  和 1055–1067 ms。方法、内存与容量限制见[验收记录](../archive/benchmarks/2026-11-04-native-project-format-p4.md)。
+- 独立子进程验证归档移动、原素材删除、旧工作集回收和两进程过时保存冲突。
+- 修复锁定资产无法绑定存储路径的问题；保留锁与 authoring 内容，缺失资产不会被错误补全。
+- 补齐保存阶段和真实 payload 字节进度，覆盖 finalize/publish 失败及发布后目录同步警告。
+- 共享内存 admission 改为按中央目录、解压 JSON 及单 PNG workspace 预留，
+  Job 完成前持续持有；高压缩率输入拒绝后保留旧 Session 并回收候选资源。
+- Observe 冻结输入跨 Session 重置/关闭仍可渲染，最终租约释放后清理。
+- 样本、生成脚本与压力工具统一为 `.zipzi` 归档；底层 codec/P0 实验保留诊断用途。
+
+已通过 Project lib 51 项、Project integration 51 项、SDK project_io 23 项、Runtime 31 项、Editor core runtime 22 项、
+Editor project UI 21 项、Observe GPU 租约测试及样本校验。阶段内 Editor core 完整 integration
+617 项通过；Python Local/Connected 行为、recovery、mesh、静态类型与安装后 Connected 门禁
+按验收记录命令执行；独立 Python 代码生成工具检查 64 项通过。原生 Windows 和系统双击状态矩阵仍待实机验收。
+
+### P4 macOS 原生事件与保存对话框（2026-11-04）
+
+- 新增隔离的实际 Editor/LaunchServices 验收脚本，覆盖冷启动、ready 前追加、多文件、
+  无窗口、运行中重复打开及第二进程 IPC，核对 Session 身份与归档资源。
+- 真实面板暴露并修复静默追加其他后缀、规范化后漏掉覆盖确认的问题；
+  在原生 replacement 检查前补齐缺失后缀，保留显式大小写/双后缀及其他后缀纠正提示。
+- Save As 三种名称均比较完整 authoring 和 PNG 字节；覆盖取消保持原文件和 Session。
+- 原生构建、脚本全部场景及 release/dev bundle 工具各 6 项通过。
+
+详见[macOS 实机记录](../archive/benchmarks/2026-11-04-native-project-format-macos.md)。
+指定应用打开不证明默认文件关联，Finder 双击与 Windows 原生验收仍待完成。
+
+### 收尾：Finder 默认入口部分验收（2026-11-04）
+
+- 发布文档类型元数据下，核对系统默认应用后通过 Finder 选中文件执行“打开”；
+  cold、多文件、ready 前追加、重复激活、第二进程 IPC、资源诊断及原文件字节检查通过。
+- resident 场景等待 ready Session 超时，尚未定位；工具只开放 `--finder-default --case cold`，
+  不把失败场景计入通过。实际鼠标双击、安装体验与 Windows 仍未验收。
+- 清理全部临时验收 bundle 和进程，确认恢复原默认应用；原开发 Editor 未停止。
+- 本轮最终工具改动经 Python/Swift 静态检查；交互结果、失败及复现命令见
+  [macOS 实机记录补充](../archive/benchmarks/2026-11-04-native-project-format-macos.md)。
+
+P4 跨平台退出条件未满足；本次按用户要求收尾，未将整个 plan 标为完成。

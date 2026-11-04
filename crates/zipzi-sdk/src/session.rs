@@ -74,6 +74,8 @@ pub struct AuthoringSnapshot {
     document: Document,
     version: Version,
     project_path: Option<PathBuf>,
+    asset_root: PathBuf,
+    resource_lease: Option<zipzi_project::archive::ProjectResourceLease>,
     clone_elapsed_ns: u64,
     memory_images: HashMap<String, zipzi_project::PreparedImageContent>,
 }
@@ -104,6 +106,8 @@ impl AuthoringSnapshot {
             version: self.version,
             memory_images: self.memory_images.clone(),
             project_path: self.project_path.clone(),
+            asset_root: self.asset_root.clone(),
+            resource_lease: self.resource_lease.clone(),
             clone_elapsed_ns: started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
         })
     }
@@ -117,6 +121,13 @@ impl AuthoringSnapshot {
 
     pub fn version(&self) -> Version {
         self.version
+    }
+
+    pub fn asset_root(&self) -> &std::path::Path {
+        &self.asset_root
+    }
+    pub fn resource_lease(&self) -> Option<zipzi_project::archive::ProjectResourceLease> {
+        self.resource_lease.clone()
     }
 
     pub fn project_path(&self) -> Option<&std::path::Path> {
@@ -210,6 +221,8 @@ impl AuthoringSession {
             document,
             version,
             project_path: self.project_path().map(std::path::Path::to_path_buf),
+            asset_root: self.project.asset_root(),
+            resource_lease: self.project.resource_lease(),
             clone_elapsed_ns: started.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64,
         }
     }
@@ -754,6 +767,7 @@ impl AuthoringSession {
         }
         let (base_keys, base_key_bytes) = self.object_keys_with_bytes();
         Ok(EditSession {
+            _resource_lease: self.project.resource_lease(),
             identity: std::sync::Arc::new(()),
             sequence: 0,
             manual_baselines: Default::default(),
@@ -1535,7 +1549,7 @@ mod history_estimates {
             session.session_id
         ));
         let before = session.version();
-        let path = directory.join("saved/project.zipzi.json");
+        let path = directory.join("saved/project.zipzi");
         session.save_project(&path, None).unwrap();
         assert_eq!(session.version().session_id, before.session_id);
         verify_recount(&mut session);
@@ -1578,7 +1592,7 @@ mod history_estimates {
             session.session_id
         ));
         session
-            .save_project(&directory.join("history/project.zipzi.json"), None)
+            .save_project(&directory.join("history/project.zipzi"), None)
             .unwrap();
         verify_recount(&mut session);
         session.redo().unwrap();

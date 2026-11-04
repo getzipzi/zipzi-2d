@@ -13,6 +13,17 @@ SPEC.loader.exec_module(release)
 
 
 class ReleaseVersions(unittest.TestCase):
+    def test_native_project_file_type_and_development_rank(self):
+        for development, rank in [(False, 'Owner'), (True, 'None')]:
+            info = release.project_document_types(development)
+            handler = info['CFBundleDocumentTypes'][0]
+            self.assertEqual(handler['LSHandlerRank'], rank)
+            self.assertEqual(handler['LSItemContentTypes'], ['dev.zipzi.project'])
+            declared = info['UTExportedTypeDeclarations'][0]
+            self.assertEqual(declared['UTTypeConformsTo'], ['public.zip-archive'])
+            self.assertEqual(declared['UTTypeTagSpecification']['public.filename-extension'], ['zipzi'])
+            self.assertNotIn('LSTypeIsPackage', handler)
+
     def test_python_prerelease_translation_and_invalid_versions(self):
         for rust, python in [('0.1.0-alpha.1', '0.1.0a1'), ('0.1.0-beta.2', '0.1.0b2'),
                              ('0.1.0-rc.3', '0.1.0rc3'), ('0.1.0', '0.1.0')]:

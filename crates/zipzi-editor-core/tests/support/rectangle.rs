@@ -145,7 +145,7 @@ fn rectangle_with_texture(
         Ok(())
     })?;
     let saved = session.save_project(&dir.path().join("rectangle.zipzi"), None)?;
-    let mut document = Document::open(&saved.manifest)?;
+    let mut document = Document::open(&saved.path)?;
     document.select(&mesh.id)?;
     Ok((document, dir))
 }
@@ -171,7 +171,7 @@ pub fn mixed_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
         e.replace_mesh(context)
     })?;
     let saved = sdk.save_project(&dir.path().join("mixed.zipzi"), None)?;
-    let mut doc = Document::open(&saved.manifest)?;
+    let mut doc = Document::open(&saved.path)?;
     doc.select(&id(2))?;
     Ok((doc, dir))
 }

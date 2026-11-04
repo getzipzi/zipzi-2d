@@ -116,7 +116,7 @@ fn heijiao_imports_with_clipping_and_survives_save_reopen() -> anyhow::Result<()
     }
     let output = tempfile::tempdir()?;
     let receipt = document.save(&output.path().join("heijiao.zipzi"))?;
-    let mut reopened = Document::open(&receipt.manifest)?;
+    let mut reopened = Document::open(&receipt.path)?;
     let restored = reopened.snapshot()?;
     assert_eq!(
         restored.viewport_frame.drawables.len(),

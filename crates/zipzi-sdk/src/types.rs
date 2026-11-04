@@ -43,7 +43,7 @@ pub struct PsdImportReceipt {
     pub project: ProjectResult,
     pub report: PsdImportReport,
     /// Published manifest, or an empty path for an in-memory import.
-    pub manifest: PathBuf,
+    pub path: PathBuf,
 }
 
 pub use zipzi_contract::authoring::{GeometrySnapshot, GeometrySpace, ObjectKind};
@@ -124,6 +124,7 @@ pub(crate) struct HistoryEntry {
     pub(crate) checkpoint: DocumentCheckpoint,
     pub(crate) identity_keys: HashSet<ObjectKey>,
     pub(crate) root: PathBuf,
+    pub(crate) resource_lease: Option<zipzi_project::archive::ProjectResourceLease>,
 }
 
 impl HistoryEntry {

@@ -107,8 +107,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert!((rotated.x - 1500.).abs() < 0.001 && (rotated.y - 500.).abs() < 0.001);
     let saved = sdk.save_project(&output, None)?;
     let mut reopened = AuthoringSession::new(&id(99), zipzi_core::ModelSetup::default())?;
-    reopened.open_project(&saved.manifest, None)?;
+    reopened.open_project(&saved.path, None)?;
     assert_eq!(reopened.evaluate(&Default::default())?, before);
-    println!("{}", saved.manifest.display());
+    println!("{}", saved.path.display());
     Ok(())
 }

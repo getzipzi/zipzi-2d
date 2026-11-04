@@ -69,7 +69,7 @@ fn pose_projects_native_identities_pending_rows_and_history() -> anyhow::Result<
     );
     d.redo()?;
     let path = tempfile::tempdir()?;
-    d.save(path.path())?;
+    d.save(&path.path().join("project.zipzi"))?;
     Ok(())
 }
 #[test]

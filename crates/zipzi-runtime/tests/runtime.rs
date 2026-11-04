@@ -355,26 +355,17 @@ fn a02_path_aliases_reuse_session_and_copies_have_distinct_identity() {
         OpenRequest::Existing(s)
     );
     assert_eq!(
-        host.request_open(b, &target.join("project.zipzi.json"))
-            .unwrap(),
+        host.request_open(b, &target).unwrap(),
         OpenRequest::Existing(s)
     );
     let alias = dir.path().join("alias");
     #[cfg(unix)]
     {
         std::os::unix::fs::symlink(&target, &alias).unwrap();
-        assert_eq!(
-            host.request_open(b, &alias).unwrap(),
-            OpenRequest::Existing(s)
-        );
+        assert!(host.request_open(b, &alias).is_err());
     }
     let copy = dir.path().join("copy");
-    std::fs::create_dir(&copy).unwrap();
-    std::fs::copy(
-        target.join("project.zipzi.json"),
-        copy.join("project.zipzi.json"),
-    )
-    .unwrap();
+    std::fs::copy(target, &copy).unwrap();
     let OpenRequest::Pending(job) = host.request_open(b, &copy).unwrap() else {
         panic!()
     };
@@ -384,6 +375,94 @@ fn a02_path_aliases_reuse_session_and_copies_have_distinct_identity() {
     };
     assert_ne!(other, s);
     assert_eq!(host.list_sessions().len(), 2);
+}
+
+#[test]
+fn every_export_format_preserves_its_source_archive_and_path_aliases() {
+    use zipzi_runtime::project_io::{ExportFormat, ProjectRequest};
+    let (mut host, client, _, session) = setup();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("source.zipzi");
+    let save = host.request_save(client, session, &path).unwrap();
+    finish(&mut host);
+    assert!(host.job_info(client, save).unwrap().result.unwrap().is_ok());
+    host.release_job(client, save).unwrap();
+    let before = std::fs::read(&path).unwrap();
+    let version = host.session(session).unwrap().version();
+    let mut paths = vec![path.clone()];
+    let case_alias = dir.path().join("SOURCE.ZIPZI");
+    if case_alias.exists() {
+        paths.push(case_alias);
+    }
+    #[cfg(unix)]
+    {
+        let alias = dir.path().join("alias");
+        std::os::unix::fs::symlink(dir.path(), &alias).unwrap();
+        paths.push(alias.join("source.zipzi"));
+    }
+    for path in paths {
+        for format in [
+            ExportFormat::Package,
+            ExportFormat::Cmo3,
+            ExportFormat::Can3,
+            ExportFormat::Cubism,
+            ExportFormat::Motion3,
+            ExportFormat::Expression3,
+            ExportFormat::Physics3,
+            ExportFormat::Pose3,
+            ExportFormat::Cdi3,
+        ] {
+            let job = host
+                .request_project(
+                    client,
+                    session,
+                    ProjectRequest::Export {
+                        path: path.clone(),
+                        format,
+                        name: "export".into(),
+                        object_id: None,
+                        allow_loss: false,
+                        bake_animation: false,
+                        auto_frame_rate: false,
+                    },
+                )
+                .unwrap();
+            finish(&mut host);
+            let result = host.job_info(client, job).unwrap().result.unwrap();
+            assert!(
+                matches!(result, Err(RuntimeError::Sdk(ref e)) if e.code.as_ref() == "INVALID_DESTINATION"),
+                "{format:?}: {result:?}"
+            );
+            host.release_job(client, job).unwrap();
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            assert_eq!(host.session(session).unwrap().version(), version);
+            assert!(!host.session(session).unwrap().modified());
+        }
+    }
+    // Rejection must release the destination reservation and leave exports usable.
+    let output = dir.path().join("display.cdi3.json");
+    let job = host
+        .request_project(
+            client,
+            session,
+            ProjectRequest::Export {
+                path: output.clone(),
+                format: ExportFormat::Cdi3,
+                name: "export".into(),
+                object_id: None,
+                allow_loss: false,
+                bake_animation: false,
+                auto_frame_rate: false,
+            },
+        )
+        .unwrap();
+    finish(&mut host);
+    assert!(host.job_info(client, job).unwrap().result.unwrap().is_ok());
+    assert!(output.is_file());
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    let job = host.request_save(client, session, &path).unwrap();
+    finish(&mut host);
+    assert!(host.job_info(client, job).unwrap().result.unwrap().is_ok());
 }
 
 #[test]
@@ -414,12 +493,9 @@ fn a02_cross_session_save_as_and_open_reservations_release_only_on_terminal() {
     let second = host.request_save(b, t, &target).unwrap();
     finish(&mut host);
     assert_eq!(host.job_info(b, second).unwrap().state, JobState::Succeeded);
-    let manifest = std::fs::read(target.join("project.zipzi.json")).unwrap();
+    let manifest = std::fs::read(&target).unwrap();
     assert_eq!(host.request_save(a, s, &target), Err(RuntimeError::Busy));
-    assert_eq!(
-        std::fs::read(target.join("project.zipzi.json")).unwrap(),
-        manifest
-    );
+    assert_eq!(std::fs::read(&target).unwrap(), manifest);
     assert_eq!(host.session(t).unwrap().source_canvas(), Some(canvas(200.)));
 }
 
@@ -431,10 +507,7 @@ fn a02_inflight_open_blocks_save_as_and_failure_allows_retry() {
     let OpenRequest::Pending(job) = host.request_open(b, &target).unwrap() else {
         panic!()
     };
-    assert_eq!(
-        host.request_open(a, &target.join("project.zipzi.json")),
-        Err(RuntimeError::Busy)
-    );
+    assert_eq!(host.request_open(a, &target), Err(RuntimeError::Busy));
     assert_eq!(host.request_save(a, s, &target), Err(RuntimeError::Busy));
     assert_eq!(host.subscribe_registry().sessions.len(), 1);
     finish(&mut host);
@@ -447,6 +520,64 @@ fn a02_inflight_open_blocks_save_as_and_failure_allows_retry() {
         host.request_open(b, &target).unwrap(),
         OpenRequest::Existing(s)
     );
+}
+
+#[test]
+fn native_open_accounts_expanded_document_through_completion_and_rejects_without_state_loss() {
+    let root = tempfile::tempdir().unwrap();
+    let large = root.path().join("compressed.zipzi");
+    let small = root.path().join("small.zipzi");
+    let mut source = AuthoringSession::new(&id(50), canvas(100.)).unwrap();
+    source
+        .edit("compressed metadata", None, |edit| {
+            edit.create_asset(zipzi_core::ImageAsset {
+                id: id(51),
+                name: "a".repeat(1 << 20),
+                content: None,
+                unresolved_source: None,
+            })
+        })
+        .unwrap();
+    source.save_project(&large, None).unwrap();
+    assert!(std::fs::metadata(&large).unwrap().len() < 10 << 10);
+    AuthoringSession::new(&id(52), canvas(100.))
+        .unwrap()
+        .save_project(&small, None)
+        .unwrap();
+    let mut host = Runtime::new(RuntimeLimits {
+        accounted_bytes: 64 << 20,
+        ..Default::default()
+    });
+    let client = host.register_client().unwrap();
+    let session = host.create_session(client, &id(1), canvas(100.)).unwrap();
+    let before = host.session(session).unwrap().version();
+    let OpenRequest::Pending(job) = host.request_open(client, &large).unwrap() else {
+        panic!()
+    };
+    let completion = host.take_work(job).unwrap().run();
+    assert!(host.image_memory_usage().transfer_bytes >= 2 << 20);
+    host.complete(completion);
+    assert_eq!(host.job_info(client, job).unwrap().state, JobState::Failed);
+    assert_eq!(host.list_sessions().len(), 1);
+    assert_eq!(host.image_memory_usage().transfer_bytes, 0);
+    let job = host
+        .request_project(client, session, ProjectRequest::Open { path: large })
+        .unwrap();
+    finish(&mut host);
+    assert_eq!(host.job_info(client, job).unwrap().state, JobState::Failed);
+    assert_eq!(host.session(session).unwrap().version(), before);
+    assert_eq!(host.image_memory_usage().transfer_bytes, 0);
+    let OpenRequest::Pending(job) = host.request_open(client, &small).unwrap() else {
+        panic!()
+    };
+    let completion = host.take_work(job).unwrap().run();
+    assert!(host.image_memory_usage().transfer_bytes >= 2 << 20);
+    host.complete(completion);
+    assert_eq!(
+        host.job_info(client, job).unwrap().state,
+        JobState::Succeeded
+    );
+    assert_eq!(host.image_memory_usage().transfer_bytes, 0);
 }
 
 #[test]
@@ -486,7 +617,7 @@ fn a08_normal_sdk_save_failure_returns_same_session_and_history_then_retry() {
     resize(&mut host, a, s, 120.);
     let version = host.session(s).unwrap().version();
     let parent = dir.path().join("blocked");
-    std::fs::create_dir_all(parent.join("project.zipzi.json")).unwrap();
+    std::fs::write(&parent, b"occupied").unwrap();
     let job = host.request_save(a, s, &parent).unwrap();
     finish(&mut host);
     assert_eq!(host.job_info(a, job).unwrap().state, JobState::Failed);
@@ -498,7 +629,7 @@ fn a08_normal_sdk_save_failure_returns_same_session_and_history_then_retry() {
     );
     assert!(host.session(s).unwrap().modified());
     assert_eq!(host.session(s).unwrap().history_lengths(), (1, 0));
-    std::fs::remove_dir(parent.join("project.zipzi.json")).unwrap();
+    std::fs::remove_file(&parent).unwrap();
     host.request_save(a, s, &parent).unwrap();
     finish(&mut host);
     assert!(!host.session(s).unwrap().modified());
@@ -533,6 +664,11 @@ fn a08_real_thread_worker_panic_faults_only_its_session_and_retains_frozen_sourc
     let sdk =
         AuthoringSession::with_filesystem(&id(2), canvas(200.), Arc::new(PanicFilesystem)).unwrap();
     let s = host.adopt_session(a, sdk).unwrap();
+    host.configure_project_io(
+        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
+            .with_filesystem(Arc::new(PanicFilesystem)),
+    )
+    .unwrap();
     let job = host
         .request_save(a, s, &dir.path().join("project"))
         .unwrap();
@@ -588,7 +724,9 @@ fn a08_background_save_result_survives_client_and_view_detach_and_success_wins_c
     let dir = tempfile::tempdir().unwrap();
     resize(&mut host, a, s, 120.);
     let cursor = host.subscribe(s).unwrap().cursor;
-    let job = host.request_save(a, s, dir.path()).unwrap();
+    let job = host
+        .request_save(a, s, &dir.path().join("model.zipzi"))
+        .unwrap();
     let mut executor = Manual::default();
     host.dispatch(&mut executor);
     // Session detach cannot abandon a live Job. Client expiry (or closing the
@@ -612,7 +750,8 @@ fn a08_background_save_result_survives_client_and_view_detach_and_success_wins_c
         1
     );
     assert_eq!(
-        host.request_open(b, dir.path()).unwrap(),
+        host.request_open(b, &dir.path().join("model.zipzi"))
+            .unwrap(),
         OpenRequest::Existing(s)
     );
 }
@@ -1076,12 +1215,15 @@ fn confirmed_replacement_respects_open_session_ownership_and_retains_history() {
     let (mut host, a, b, s) = setup();
     let dir = tempfile::tempdir().unwrap();
     let target = dir.path().join("replace.zipzi");
-    let manifest = target.join("project.zipzi.json");
+    let manifest = target.clone();
     let owner = host.create_session(b, &id(2), canvas(200.)).unwrap();
     host.request_save(b, owner, &target).unwrap();
     finish(&mut host);
     let bytes = std::fs::read(&manifest).unwrap();
-    let hash = zipzi_project::content_sha256(&bytes);
+    let hash = zipzi_sdk::ProjectFingerprint {
+        sha256: zipzi_project::content_sha256(&bytes),
+        length: bytes.len() as u64,
+    };
     assert_eq!(
         host.request_save_replacing(a, s, &target, &hash),
         Err(RuntimeError::Busy)
@@ -1105,4 +1247,25 @@ fn confirmed_replacement_respects_open_session_ownership_and_retains_history() {
     host.undo(a, s).unwrap();
     assert_eq!(host.session(s).unwrap().source_canvas(), Some(canvas(100.)));
     assert!(host.session(s).unwrap().modified());
+}
+
+impl zipzi_project::archive::ArchiveFileSystem for PanicFilesystem {
+    fn create_staging(&self, _: &Path) -> std::io::Result<zipzi_project::archive::ArchiveStaging> {
+        panic!("injected worker panic")
+    }
+    fn sync_file(&self, _: &std::fs::File) -> std::io::Result<()> {
+        unreachable!()
+    }
+    fn publish_no_replace(&self, _: &Path, _: &Path) -> std::io::Result<()> {
+        unreachable!()
+    }
+    fn publish_replace(&self, _: &Path, _: &Path) -> std::io::Result<()> {
+        unreachable!()
+    }
+    fn sync_directory(&self, _: &Path) -> std::io::Result<()> {
+        unreachable!()
+    }
+    fn acquire_lock(&self, path: &Path) -> std::io::Result<zipzi_project::archive::ArchiveLock> {
+        zipzi_project::archive::NativeArchiveFileSystem.acquire_lock(path)
+    }
 }

@@ -48,7 +48,7 @@ fn event<'py>(py: Python<'py>, value: &RuntimeEvent) -> PyResult<Bound<'py, PyDi
             let data = PyDict::new(py);
             data.set_item("before", version(py, r.before)?)?;
             data.set_item("after", version(py, r.after)?)?;
-            data.set_item("manifest", r.manifest.to_string_lossy().as_ref())?;
+            data.set_item("path", r.path.to_string_lossy().as_ref())?;
             data.set_item("durable", r.durable)?;
             ("saved", data)
         }

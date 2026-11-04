@@ -149,7 +149,7 @@ fn all_scene_defaults_roundtrip_with_one_creation_history_entry_each() -> anyhow
     );
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("creation.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.part_tree(), d.part_tree());
     assert_eq!(reopened.deformer_tree(), d.deformer_tree());
     for document in [&d, &reopened] {

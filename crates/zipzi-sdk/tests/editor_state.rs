@@ -303,7 +303,7 @@ fn saving_both_flags_roundtrips_and_establishes_history_clean_baseline() {
     s.redo().unwrap();
     assert!(!s.document().modified());
     let mut reopened = session();
-    reopened.open_project(&saved.manifest, None).unwrap();
+    reopened.open_project(&saved.path, None).unwrap();
     assert_eq!(reopened.document().editor_state(), &state);
 }
 

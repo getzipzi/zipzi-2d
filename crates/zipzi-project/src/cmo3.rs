@@ -35,11 +35,7 @@ pub fn encode_project_cmo3(
     let snapshot = snapshot.ok_or_else(|| {
         Cmo3Error::InvalidDocument(format!("{}: {}", result.status.code, result.status.message))
     })?;
-    encode_document_cmo3(
-        &snapshot.document,
-        snapshot.manifest.parent().unwrap(),
-        options,
-    )
+    encode_document_cmo3(&snapshot.document, snapshot.asset_root(), options)
 }
 
 /// Publish captured CMO3 bytes by staging and atomic rename. Encoding failures
@@ -88,6 +84,8 @@ impl DocumentSession {
         destination: &Path,
         options: &Cmo3Options,
     ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
+        self.validate_export_destination(destination)
+            .map_err(|s| Cmo3Error::InvalidDocument(format!("{}: {}", s.code, s.message)))?;
         let artifact = self.encode_cmo3(options)?;
         let publication = publish_cmo3(&artifact, destination)?;
         Ok((artifact.report, publication))

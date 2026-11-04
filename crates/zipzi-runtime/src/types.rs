@@ -105,7 +105,7 @@ impl JobValue {
             Self::PreparedImage(_) | Self::ImagePrepared(_) | Self::Opened(_) => 1024,
             Self::Published(receipt) => receipt.estimated_bytes().saturating_mul(4),
             Self::Saved(receipt) => receipt
-                .manifest
+                .path
                 .as_os_str()
                 .len()
                 .saturating_add(

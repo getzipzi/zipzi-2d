@@ -1,8 +1,6 @@
 //! Model3/MOC3/PSD import assembly and attachment preservation.
-use super::manifest::publication_result;
 use super::{DocumentSnapshot, DocumentStore, ProjectResult, ResourceDiagnostic};
-use crate::codec::encode_project;
-use crate::filesystem::{self as io, Publication};
+use crate::filesystem::{self as io};
 use crate::resources::content_sha256;
 use sha2::{Digest, Sha256};
 use std::{
@@ -683,11 +681,7 @@ impl DocumentStore {
         }
 
         self.remember_imported_assets(&res.document);
-        let snapshot = DocumentSnapshot {
-            document: res.document,
-            manifest: PathBuf::new(),
-            manifest_sha256: String::new(),
-        };
+        let snapshot = DocumentSnapshot::imported(res.document);
 
         (project_result, Some(snapshot), Some(res.report))
     }
@@ -729,11 +723,7 @@ impl DocumentStore {
         }
 
         self.remember_imported_assets(&res.document);
-        let snapshot = DocumentSnapshot {
-            document: res.document,
-            manifest: PathBuf::new(),
-            manifest_sha256: String::new(),
-        };
+        let snapshot = DocumentSnapshot::imported(res.document);
 
         (project_result, Some(snapshot), Some(res.report))
     }
@@ -764,61 +754,27 @@ impl DocumentStore {
         if let Some(issue) = bundle.document.validate_structure().into_iter().next() {
             return Err(issue.status);
         }
-        let manifest_text = encode_project(&bundle.document)?;
-        io::reject_symlink(destination)?;
-        let destination = io::local_path(destination)?;
-        let parent = destination
-            .parent()
-            .filter(|_| destination.file_name().is_some())
-            .ok_or_else(|| {
-                Status::error(
-                    "INVALID_DESTINATION",
-                    "Cannot create a project at a filesystem root",
-                )
-            })?;
-        fs::create_dir_all(parent).map_err(io::io_error)?;
-        let _lock = io::lock(parent)?;
-        io::reject_symlink(&destination)?;
-        if destination.exists() {
-            return Err(Status::error(
-                "DESTINATION_EXISTS",
-                "PSD project destination already exists",
-            ));
-        }
-        let stage = io::Stage::new(parent)?;
-        let assets_dir = stage.0.join("assets");
-        fs::create_dir(&assets_dir).map_err(io::io_error)?;
-        let files = self.filesystem.as_ref();
+        let resources = self.new_resources()?;
         for asset in &bundle.assets {
-            files
-                .write_new(&stage.0.join(&asset.source), &asset.bytes)
-                .map_err(io::io_error)?;
+            let hash = content_sha256(&asset.bytes);
+            resources
+                .insert_png(&asset.bytes, &hash)
+                .map_err(Status::from)?;
         }
-        files
-            .write_new(
-                &stage.0.join("project.zipzi.json"),
-                manifest_text.as_bytes(),
-            )
-            .map_err(io::io_error)?;
-        files.sync_directory(&assets_dir).map_err(io::io_error)?;
-        files.sync_directory(&stage.0).map_err(io::io_error)?;
-        io::reject_symlink(&destination)?;
-        if destination.exists() {
-            return Err(Status::error(
-                "DESTINATION_EXISTS",
-                "PSD project destination already exists",
-            ));
+        let mut candidate = bundle.document;
+        for id in candidate.asset_order().to_vec() {
+            let mut asset = candidate.get_asset(&id).unwrap().clone();
+            if let Some(content) = &mut asset.content {
+                content.source = format!("assets/{}.png", content.sha256);
+            }
+            let edit = candidate.replace_asset(asset);
+            if !edit.status.is_ok() {
+                return Err(edit.status);
+            }
         }
-        let manifest = destination.join("project.zipzi.json");
-        let mut document = bundle.document;
-        document.mark_saved();
-        let snapshot = DocumentSnapshot {
-            document,
-            manifest,
-            manifest_sha256: content_sha256(manifest_text.as_bytes()),
-        };
-        files.rename(&stage.0, &destination).map_err(io::io_error)?;
-        let mut result = publication_result(Publication::finish(files, parent));
+        let (mut result, snapshot) =
+            self.save_prepared(&candidate, resources, destination, None, &mut || true);
+        let snapshot = snapshot.ok_or_else(|| result.status.clone())?;
         result
             .warnings
             .extend(bundle.report.warnings.iter().cloned());

@@ -53,7 +53,7 @@ fn edit_is_atomic_preserves_identity_and_persists_group_order() -> anyhow::Resul
     doc.redo()?;
     assert_eq!(doc.parameter_draft(&p)?, next);
     let receipt = doc.save(&assets.path().join("edited.zipzi"))?;
-    let reopened = Document::open(&receipt.manifest)?;
+    let reopened = Document::open(&receipt.path)?;
     assert_eq!(reopened.parameter_draft(&p)?, next);
     Ok(())
 }
@@ -146,7 +146,7 @@ fn groups_reject_cycles_and_dissolve_only_one_level() -> anyhow::Result<()> {
     assert_eq!(doc.parameter_draft(&id(3))?.group_id, None);
     assert_eq!(doc.parameter_group_draft(&pupil)?.parent_id, None);
     let saved = doc.save(&assets.path().join("groups.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.parameter_groups(), doc.parameter_groups());
     assert_eq!(reopened.parameters(), doc.parameters());
     Ok(())
@@ -239,7 +239,7 @@ fn imported_unresolved_members_and_extensions_survive_group_dissolution_and_expo
     let face = info.parameter_groups.as_ref().unwrap()[0].id.clone();
     let eyes = info.parameter_groups.as_ref().unwrap()[1].id.clone();
     let saved = session.save_project(&assets.path().join("imported.zipzi"), None)?;
-    let mut doc = Document::open(&saved.manifest)?;
+    let mut doc = Document::open(&saved.path)?;
     let mut draft = doc.parameter_draft(&p)?;
     draft.runtime_id = "Changed".into();
     let history = doc.history_lengths();
@@ -257,8 +257,8 @@ fn imported_unresolved_members_and_extensions_survive_group_dissolution_and_expo
     assert_eq!(doc.parameter_draft(&p)?.runtime_id, "ParamX");
     assert_eq!(doc.parameter_group_delete_counts(&eyes)?, (1, 1, 0));
     doc.delete_parameter_group(&eyes, doc.parameter_model_revision())?;
-    let saved = doc.save(&saved.manifest)?;
-    session.open_project(&saved.manifest, None)?;
+    let saved = doc.save(&saved.path)?;
+    session.open_project(&saved.path, None)?;
     let after = session.document().display_info();
     assert_eq!(after.extensions, info.extensions);
     assert_eq!(after.opaque_source_ids, info.opaque_source_ids);
@@ -320,7 +320,7 @@ fn promoting_a_legacy_group_to_root_preserves_members_and_supports_history_and_s
     assert_eq!(doc.parameter_group_draft(&id(102))?.parent_id, None);
     let receipt = doc.save(&assets.path().join("promoted.zipzi"))?;
     assert_eq!(
-        Document::open(&receipt.manifest)?.parameter_groups(),
+        Document::open(&receipt.path)?.parameter_groups(),
         doc.parameter_groups()
     );
     Ok(())

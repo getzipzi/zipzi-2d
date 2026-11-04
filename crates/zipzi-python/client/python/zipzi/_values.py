@@ -150,8 +150,8 @@ class Receipt(CompactValue):
 
 @dataclass(frozen=True, repr=False)
 class SaveReceipt(CompactValue):
-    'Confirmed save outcome; inspect durable and the actual host manifest path.\n\nFields:\nmanifest: Absolute manifest path reported by the host; not a path resolved on the client.\ndurable: Whether the save achieved its persistence guarantee; completion alone does not imply true.\nbefore: SDK version captured before saving.\nafter: SDK version reported after saving.'
-    manifest: Path
+    'Confirmed save outcome; inspect durable and the actual host archive path.\n\nFields:\npath: Absolute archive path reported by the host; not a path resolved on the client.\ndurable: Whether the save achieved its persistence guarantee; completion alone does not imply true.\nbefore: SDK version captured before saving.\nafter: SDK version reported after saving.'
+    path: Path
     durable: bool
     before: Version
     after: Version
@@ -161,7 +161,7 @@ class SaveReceipt(CompactValue):
         r = record(value)
         if type(r["durable"]) is not bool:
             raise TypeError("Expected durability flag")
-        return cls(Path(string(r["manifest"])), r["durable"], Version._read(r["before"]), Version._read(r["after"]))
+        return cls(Path(string(r["path"])), r["durable"], Version._read(r["before"]), Version._read(r["after"]))
 
 @dataclass(frozen=True, repr=False)
 class SessionInfo(CompactValue):

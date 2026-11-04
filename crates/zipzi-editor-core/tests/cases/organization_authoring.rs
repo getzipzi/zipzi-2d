@@ -84,7 +84,7 @@ fn nested_organization_and_copy_project_stable_ids_through_save_and_history() ->
     );
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("organization.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.parameter_groups(), d.parameter_groups());
     d.undo()?;
     assert!(

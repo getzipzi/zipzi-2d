@@ -49,10 +49,10 @@ fn new_parameter_is_one_history_entry_with_stable_identity_and_exact_persistence
     assert_eq!(document.parameters()[0], parameter);
     let destination = tempfile::tempdir()?;
     let saved = document.save(&destination.path().join("parameter.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.parameters()[0], parameter);
     let mut session = AuthoringSession::new(&uuid(), Canvas::new(256., 256., Vec2::default(), 1.))?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let model = session.document();
     assert_eq!(model.get_parameter(&id).unwrap().runtime_id, "ParamExact");
     assert!(
@@ -247,7 +247,7 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
         edit.replace_display_info(info.clone())
     })?;
     let receipt = session.save_project(&source.path().join("fixture.zipzi"), None)?;
-    let mut document = Document::open(&receipt.manifest)?;
+    let mut document = Document::open(&receipt.path)?;
     assert_eq!(document.suggested_parameter_id(), "ParamNew3");
     assert_eq!(
         document.validate_new_parameter(&NewParameter {
@@ -286,7 +286,7 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
     );
     document.redo()?;
     let saved = document.save(&source.path().join("created.zipzi"))?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let final_info = session.document().display_info();
     assert_eq!(final_info.origin, info.origin);
     assert_eq!(final_info.parameter_groups, info.parameter_groups);
@@ -297,7 +297,7 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
     assert!(
         matches!(&final_info.parameters.as_ref().unwrap()[2], CdiParameterEntry::Resolved { parameter_id, group_id: Some(group_id), .. } if parameter_id == &id && group_id == &child)
     );
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.parameter_groups(), document.parameter_groups());
     assert_eq!(
         reopened.parameters().last().unwrap().group_id.as_ref(),

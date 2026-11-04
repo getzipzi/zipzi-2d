@@ -11,7 +11,7 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Module**
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a7; protocol zipzi-runtime-v2; client source SHA-256 9bfc4d09626ee0a6dff955de54a1c2fb3f0602cc2d9b2612d7e99adde9305bb4.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a7; protocol zipzi-runtime-v3; client source SHA-256 b44f3af4e3aaa32c4d01dae723250b2ca34d8ea2e7c82b3025a5899db7576ef5.
 
 
 ## zipzi.ApiDescription
@@ -861,13 +861,14 @@ This cached observation is not a guarantee for a later render; CPU sampling is i
 
 **Type**
 
-`(observation_texture_rgba_bytes: int, observation_output_bytes: int, observation_frames: int, observation_max_dimension: int, observation_encoded_bytes: int, observation_workspace_bytes: int, observation_metadata_bytes: int, previews_per_client: int, preview_bytes: int, preview_schedule_entries: int, preview_seek_cache_bytes: int, collection_records: int, collection_bytes: int, collection_scan: int, clients: int, sessions: int, edits_per_client_session: int, edits_per_session: int, edits_total: int, candidate_bytes: int, frozen_bytes: int, accounted_bytes: int, image_bytes: int, plans_per_client: int, references_per_client: int, prepared_images_per_client: int, plan_bytes: int, blob_bytes: int, blobs_per_client: int, history_bytes: int, jobs_total: int, jobs_per_client: int, running_jobs: int, session_events: int, session_event_bytes: int, registry_events: int, registry_event_bytes: int)`
+`(project_disk_bytes: int, observation_texture_rgba_bytes: int, observation_output_bytes: int, observation_frames: int, observation_max_dimension: int, observation_encoded_bytes: int, observation_workspace_bytes: int, observation_metadata_bytes: int, previews_per_client: int, preview_bytes: int, preview_schedule_entries: int, preview_seek_cache_bytes: int, collection_records: int, collection_bytes: int, collection_scan: int, clients: int, sessions: int, edits_per_client_session: int, edits_per_session: int, edits_total: int, candidate_bytes: int, frozen_bytes: int, accounted_bytes: int, image_bytes: int, plans_per_client: int, references_per_client: int, prepared_images_per_client: int, plan_bytes: int, blob_bytes: int, blobs_per_client: int, history_bytes: int, jobs_total: int, jobs_per_client: int, running_jobs: int, session_events: int, session_event_bytes: int, registry_events: int, registry_event_bytes: int)`
 
 R0 defaults for the objects enabled in R1. Estimates conservatively count
 shared document content per holder; these are not RSS or GPU limits.
 
 **Fields**
 
+- `project_disk_bytes`: Aggregate native archive staging and private resource disk budget for this host.
 - `observation_texture_rgba_bytes`: Maximum logical observation base RGBA bytes per referenced asset set.
 - `observation_output_bytes`: Maximum aggregate RGBA plus conservative PNG output bytes per batch.
 - `observation_frames`: Maximum frames in an observation batch; a Preview without a View uses SDK CPU limits.
@@ -910,15 +911,15 @@ shared document content per holder; these are not RSS or GPU limits.
 
 **Type**
 
-`(manifest: Path, durable: bool, before: Version, after: Version)`
+`(path: Path, durable: bool, before: Version, after: Version)`
 
-Confirmed save outcome; inspect durable and the actual host manifest path.
+Confirmed save outcome; inspect durable and the actual host archive path.
 
 Types: [Version](#zipziversion).
 
 **Fields**
 
-- `manifest`: Absolute manifest path reported by the host; not a path resolved on the client.
+- `path`: Absolute archive path reported by the host; not a path resolved on the client.
 - `durable`: Whether the save achieved its persistence guarantee; completion alone does not imply true.
 - `before`: SDK version captured before saving.
 - `after`: SDK version reported after saving.

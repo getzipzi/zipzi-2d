@@ -1,6 +1,6 @@
 use super::*;
-use crate::PropertyValue;
 use crate::property::part as fields;
+use crate::PropertyValue;
 use serde_json::json;
 use zipzi_core::{
     BindingAxis, BindingAxisEditing, OffscreenLookup, Part, PartKeyform, SceneBinding, SceneTrack,
@@ -76,7 +76,7 @@ fn part_offscreen_toggle_preserves_part_and_roundtrips_history_and_project() -> 
     let stored = doc.model().offscreen_for_part(&part.id).unwrap().clone();
     let directory = tempfile::tempdir()?;
     let receipt = doc.save(&directory.path().join("offscreen.zipzi"))?;
-    let reopened = Document::open(&receipt.manifest)?;
+    let reopened = Document::open(&receipt.path)?;
     assert_eq!(reopened.model().offscreen_for_part(&part.id), Some(&stored));
     doc.set_object_property(&part, fields::OFFSCREEN.path, json!(false))?;
     assert!(doc.model().offscreen_for_part(&part.id).is_none());
@@ -144,8 +144,8 @@ fn part_offscreen_stored_form_edits_preserve_aliases_and_neutral_sentinels() -> 
 }
 
 #[test]
-fn part_offscreen_interpolated_appearance_is_guarded_and_static_settings_remain_editable()
--> Result<()> {
+fn part_offscreen_interpolated_appearance_is_guarded_and_static_settings_remain_editable(
+) -> Result<()> {
     let (mut doc, part, parameter) = fixture(true)?;
     doc.set_object_property(&part, fields::OFFSCREEN.path, json!(true))?;
     doc.set_preview_parameter(&parameter, 0.5)?;
@@ -154,10 +154,9 @@ fn part_offscreen_interpolated_appearance_is_guarded_and_static_settings_remain_
         PropertyScope::InterpolatedOffscreen
     );
     let before = doc.history_lengths();
-    assert!(
-        doc.set_object_property(&part, fields::OPACITY.path, json!(0.5))
-            .is_err()
-    );
+    assert!(doc
+        .set_object_property(&part, fields::OPACITY.path, json!(0.5))
+        .is_err());
     assert_eq!(doc.history_lengths(), before);
     doc.set_object_property(&part, fields::COLOR_BLEND.path, json!("screen"))?;
     doc.set_object_property(&part, fields::INVERTED_MASK.path, json!(true))?;
@@ -263,14 +262,12 @@ fn part_offscreen_stale_component_baselines_and_locks_reject_without_history() -
     for object in [os, part.clone()] {
         doc.set_objects_locked(std::slice::from_ref(&object), true)?;
         let before = doc.history_lengths();
-        assert!(
-            doc.set_object_property(&part, fields::OPACITY.path, json!(0.5))
-                .is_err()
-        );
-        assert!(
-            doc.set_object_property(&part, fields::OFFSCREEN.path, json!(false))
-                .is_err()
-        );
+        assert!(doc
+            .set_object_property(&part, fields::OPACITY.path, json!(0.5))
+            .is_err());
+        assert!(doc
+            .set_object_property(&part, fields::OFFSCREEN.path, json!(false))
+            .is_err());
         assert_eq!(doc.history_lengths(), before);
         doc.set_objects_locked(std::slice::from_ref(&object), false)?;
     }
@@ -360,10 +357,9 @@ fn part_offscreen_deletion_cleans_owned_blends_but_retains_shared_animation_and_
         .clone();
     native_lock(&mut doc, &own_blend, true)?;
     let history = doc.history_lengths();
-    assert!(
-        doc.set_object_property(&part, fields::OFFSCREEN.path, json!(false))
-            .is_err()
-    );
+    assert!(doc
+        .set_object_property(&part, fields::OFFSCREEN.path, json!(false))
+        .is_err());
     assert_eq!(doc.history_lengths(), history);
     assert_eq!(doc.model().offscreen_for_part(&part.id), Some(&offscreen));
     assert_eq!(doc.model().get_blend_binding(&own_blend), Some(&own));
@@ -504,10 +500,9 @@ fn part_offscreen_enabled_recovery_honors_component_locks_atomically() -> Result
         })?;
         doc.invalidate_projection(true);
         let history = doc.history_lengths();
-        assert!(
-            doc.set_object_property(&part, fields::ENABLED.path, json!(true))
-                .is_err()
-        );
+        assert!(doc
+            .set_object_property(&part, fields::ENABLED.path, json!(true))
+            .is_err());
         assert_eq!(doc.history_lengths(), history);
         assert_eq!(
             doc.model().get_part(&part.id).unwrap().enabled,

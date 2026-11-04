@@ -37,11 +37,7 @@ pub fn encode_project_cubism(
     let snapshot = snapshot.ok_or_else(|| {
         Cmo3Error::InvalidDocument(format!("{}: {}", result.status.code, result.status.message))
     })?;
-    encode_document_cubism(
-        &snapshot.document,
-        snapshot.manifest.parent().unwrap(),
-        options,
-    )
+    encode_document_cubism(&snapshot.document, snapshot.asset_root(), options)
 }
 /// Stage and atomically rename a standalone animation file.
 pub fn publish_can3(artifact: &Can3Artifact, destination: &Path) -> Result<Publication, Cmo3Error> {
@@ -250,6 +246,8 @@ impl DocumentSession {
         destination: &Path,
         options: &Can3Options,
     ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
+        self.validate_export_destination(destination)
+            .map_err(status)?;
         let artifact = self.encode_can3(options)?;
         let publication = publish_can3(&artifact, destination)?;
         Ok((artifact.report, publication))
@@ -273,6 +271,8 @@ impl DocumentSession {
         destination: &Path,
         options: &CubismOptions,
     ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
+        self.validate_export_destination(destination)
+            .map_err(status)?;
         let artifact = self.encode_cubism(options)?;
         let publication = publish_cubism(&artifact, destination)?;
         Ok((artifact.report, publication))

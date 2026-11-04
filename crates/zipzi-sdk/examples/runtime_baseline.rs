@@ -96,12 +96,12 @@ fn probe(sdk: &mut AuthoringSession, output: PathBuf, session_live_bytes: usize)
         let saved = measure("save_warm", index, || {
             Ok(sdk.save_project(&output, Some(version))?)
         })?;
-        assert_eq!(saved.manifest, receipt.manifest);
+        assert_eq!(saved.path, receipt.path);
         assert_eq!(sdk.version(), version);
         assert_eq!(sdk.history_lengths(), history);
     }
     let mut reopened = AuthoringSession::new(&fixture::id(99), zipzi_core::ModelSetup::default())?;
-    reopened.open_project(&receipt.manifest, None)?;
+    reopened.open_project(&receipt.path, None)?;
     assert_eq!(reopened.mesh_ids(), sdk.mesh_ids());
     assert_eq!(reopened.motion_ids(), sdk.motion_ids());
     for id in sdk.motion_ids() {
@@ -113,7 +113,7 @@ fn probe(sdk: &mut AuthoringSession, output: PathBuf, session_live_bytes: usize)
     );
     println!(
         "{}",
-        json!({"type":"complete", "validated":true, "saved_manifest":receipt.manifest})
+        json!({"type":"complete", "validated":true, "saved_path":receipt.path})
     );
     Ok(())
 }
@@ -122,7 +122,7 @@ fn main() -> Result<()> {
     let mut args = std::env::args().skip(1);
     let output = PathBuf::from(
         args.next()
-            .ok_or("supply a fresh absolute output directory")?,
+            .ok_or("supply a fresh absolute output .zipzi path")?,
     );
     if !output.is_absolute() || output.exists() {
         return Err("output must be absolute and must not exist".into());

@@ -123,7 +123,7 @@ fn references_inherit_defaults_use_sibling_position_and_respect_locked_destinati
     );
     assert_eq!(d.motion_groups()[0].entries[2], group.entries[1]);
     assert_eq!(d.history_lengths(), (1, 0));
-    let path = d.save(&assets.path().join("locked.zipzi"))?.manifest;
+    let path = d.save(&assets.path().join("locked.zipzi"))?.path;
     let mut session = zipzi_sdk::AuthoringSession::new(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),

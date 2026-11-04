@@ -457,7 +457,7 @@ fn ambiguous_warp_direction_is_rejected_without_changing_the_frame_or_history() 
         })
     })?;
     let saved = sdk.save_project(&dir.path().join("ambiguous"), None)?;
-    let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,
@@ -481,7 +481,7 @@ fn selected_points_across_warps_share_frame_state_and_numeric_pivot() -> anyhow:
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::ModelSetup::default(),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let mut copy = sdk.transform(&warp).unwrap();
     copy.id = uuid::Uuid::new_v4().to_string();
     copy.runtime_id = "SecondWarp".into();
@@ -490,9 +490,9 @@ fn selected_points_across_warps_share_frame_state_and_numeric_pivot() -> anyhow:
     }
     let second = ObjectRef::new(ObjectKind::Deformer, &copy.id);
     sdk.edit("Second Warp", None, |edit| edit.create_transform(copy))?;
-    sdk.save_project(&saved.manifest, None)?;
+    sdk.save_project(&saved.path, None)?;
     let first = ObjectRef::new(ObjectKind::Deformer, &warp);
-    let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {
         width: 1024.,
         height: 768.,

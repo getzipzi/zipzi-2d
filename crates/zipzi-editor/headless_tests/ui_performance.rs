@@ -451,7 +451,7 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
     let saved = session
         .save_project(&assets.path().join("dense.zipzi"), None)
         .unwrap();
-    let document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    let document = zipzi_editor_core::Document::open(&saved.path).unwrap();
     let fields: Vec<_> = crate::panels::document_panel::property_rows(
         &document.object_index().objects[0].properties,
     )

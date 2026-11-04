@@ -69,7 +69,7 @@ available shared budget; limits are admission ceilings, not preallocated memory.
 The `protocol` and Unix `local` modules provide authenticated connections,
 request deduplication, recovery, reconnect grace and endpoint ownership. The
 Editor assembles the listener on its application thread. The protocol uses
-bounded JSON control frames and binary blobs. `zipzi-runtime-v2` identifies the
+bounded JSON control frames and binary blobs. `zipzi-runtime-v3` identifies the
 wire **major**, independently of package versions, source hashes and additive API
 changes. A disconnected client can resume within its grace period; expiry
 releases its edits but retains formal sessions and entered jobs.
@@ -93,7 +93,7 @@ Compatibility rules for Connected clients and Editor hosts:
   and request deduplication are always enforced.
 
 The contract extraction moves Rust type identities and binary layout signatures
-to `zipzi-contract`, so v1 clients and hosts require a coordinated upgrade to v2.
+to `zipzi-contract`, so v1 clients and hosts require a coordinated upgrade to v3.
 The earlier feature-specific `rN` protocols also require a coordinated upgrade to
 this baseline. The in-process `zipzi-native` adapter still pairs with its Python
 package and is independent of this Connected compatibility policy.

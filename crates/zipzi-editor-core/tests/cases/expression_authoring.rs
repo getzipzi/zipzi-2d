@@ -322,7 +322,7 @@ fn save_finishes_expression_candidate_and_roundtrips_once() -> anyhow::Result<()
     assert!(!document.modified());
     assert!(document.commit_expression_entry_edit(token).is_err());
     assert_eq!(document.history_lengths(), (history.0 + 1, 0));
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(
         reopened.expression_definition(A).unwrap().entries[0].value,
         0.8

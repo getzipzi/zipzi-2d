@@ -7,9 +7,7 @@ use super::helpers::*;
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
 use zipzi_core::types::{Transform, TransformKind, Vec2};
 use zipzi_moc3::encode_moc3;
-use zipzi_project::{
-    content_sha256, decode_project, encode_project, DocumentSession, DocumentStore,
-};
+use zipzi_project::{decode_project, encode_project, DocumentSession, DocumentStore};
 
 #[test]
 fn test_document_session_lifecycle() {
@@ -36,8 +34,8 @@ fn test_document_session_lifecycle() {
     let (res, snapshot) = store.save(&doc, &assets_dir, &project_dir, None);
     assert!(res.status.is_ok(), "Save failed: {:?}", res.status);
     let snapshot = snapshot.unwrap();
-    assert!(snapshot.manifest.exists());
-    let short_source = format!("assets/{}.png", &sha1[..16]);
+    assert!(snapshot.path.as_ref().unwrap().exists());
+    let short_source = format!("assets/{}.png", sha1);
     assert_eq!(
         snapshot
             .document
@@ -60,11 +58,16 @@ fn test_document_session_lifecycle() {
             .source,
         short_source
     );
-    assert_eq!(fs::read_dir(project_dir.join("assets")).unwrap().count(), 1);
+    assert_eq!(
+        fs::read_dir(snapshot.asset_root().join("assets"))
+            .unwrap()
+            .count(),
+        1
+    );
 
     // Open project in session
     let mut session = DocumentSession::new();
-    let open_res = session.open(&snapshot.manifest);
+    let open_res = session.open(snapshot.path.as_deref().unwrap());
     assert!(
         open_res.status.is_ok(),
         "Open failed: {:?}",
@@ -80,7 +83,7 @@ fn test_document_session_lifecycle() {
         .is_ok());
     assert!(session.document().modified());
 
-    let save_res = session.save(&snapshot.manifest);
+    let save_res = session.save(snapshot.path.as_deref().unwrap());
     assert!(save_res.status.is_ok());
     assert!(!session.document().modified());
     assert_eq!(
@@ -98,9 +101,12 @@ fn test_document_session_lifecycle() {
     // Second session attempting concurrent overwrite with stale sha
     let (conf_res, _) = store.save(
         &doc,
-        &project_dir.join("assets"),
-        &snapshot.manifest,
-        Some("stale_hash_that_does_not_match_current"),
+        &assets_dir,
+        snapshot.path.as_deref().unwrap(),
+        Some(&zipzi_project::archive::ProjectFingerprint {
+            sha256: "0".repeat(64),
+            length: 1,
+        }),
     );
     assert_eq!(conf_res.status.code, "PROJECT_CONFLICT");
 
@@ -260,7 +266,7 @@ fn parameter_range_changes_validate_mesh_and_scene_bindings() {
 fn save_as_refuses_existing_project_and_preserves_session() {
     let tmp = TestDirectory::new();
     let original = tmp.saved_session();
-    let manifest = original.manifest();
+    let manifest = original.project_path().unwrap();
     let before = fs::read(manifest).unwrap();
     let mut other = DocumentSession::new();
     assert!(other
@@ -268,10 +274,10 @@ fn save_as_refuses_existing_project_and_preserves_session() {
         .initialize(id(999), original.document().source_canvas().unwrap())
         .is_ok());
     let result = other.save(manifest);
-    assert_eq!(result.status.code, "DESTINATION_EXISTS");
+    assert_eq!(result.status.code, "PROJECT_EXISTS");
     assert!(!result.published);
     assert_eq!(before, fs::read(manifest).unwrap());
-    assert!(other.manifest().as_os_str().is_empty());
+    assert!(other.project_path().is_none());
     assert!(other.document().modified());
 }
 
@@ -279,8 +285,8 @@ fn save_as_refuses_existing_project_and_preserves_session() {
 fn concurrent_writers_cannot_both_publish_the_same_baseline() {
     let tmp = TestDirectory::new();
     let session = tmp.saved_session();
-    let manifest = session.manifest().to_path_buf();
-    let hash = content_sha256(&fs::read(&manifest).unwrap());
+    let manifest = session.project_path().unwrap().to_path_buf();
+    let hash = session.fingerprint().unwrap().clone();
     let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));
     let workers: Vec<_> = (0..8)
         .map(|i| {
@@ -310,39 +316,16 @@ fn concurrent_writers_cannot_both_publish_the_same_baseline() {
 }
 
 #[test]
-fn save_repairs_corrupt_asset_name_without_overwriting_old_bytes() {
+fn same_named_directory_is_rejected_without_modification() {
     let tmp = TestDirectory::new();
     let (doc, input) = tmp.fixture();
-    let destination = tmp.0.join("destination");
-    let sha = &doc
-        .get_asset(&id(2))
-        .unwrap()
-        .content
-        .as_ref()
-        .unwrap()
-        .sha256;
-    fs::create_dir_all(destination.join("assets")).unwrap();
-    let corrupted = destination.join(format!("assets/{}.png", &sha[..16]));
-    fs::write(&corrupted, b"partial old file").unwrap();
+    let destination = tmp.0.join("destination.zipzi");
+    fs::create_dir(&destination).unwrap();
+    fs::write(destination.join("keep"), b"keep").unwrap();
     let (result, snapshot) = DocumentStore::new().save(&doc, &input, &destination, None);
-    assert!(result.status.is_ok(), "{result:?}");
-    assert_eq!(fs::read(corrupted).unwrap(), b"partial old file");
-    let snapshot = snapshot.unwrap();
-    assert_eq!(
-        snapshot
-            .document
-            .get_asset(&id(2))
-            .unwrap()
-            .content
-            .as_ref()
-            .unwrap()
-            .source,
-        format!("assets/{}.png", &sha[..24])
-    );
-    assert!(DocumentStore::new()
-        .open(&destination)
-        .0
-        .resources_complete());
+    assert_eq!(result.status.code, "UNSUPPORTED_PROJECT_PATH");
+    assert!(snapshot.is_none());
+    assert_eq!(fs::read(destination.join("keep")).unwrap(), b"keep");
 }
 
 #[test]
@@ -350,15 +333,13 @@ fn precommit_failures_preserve_manifest_document_revision_and_saved_baseline() {
     for fault in [
         Failure::ShortWrite,
         Failure::FileSync,
-        Failure::DirectorySync(1),
-        Failure::DirectorySync(2),
         Failure::Rename(vec![1]),
     ] {
         let tmp = TestDirectory::new();
         let initial = tmp.saved_session();
-        let path = initial.manifest().to_path_buf();
+        let path = initial.project_path().unwrap().to_path_buf();
         let original_bytes = fs::read(&path).unwrap();
-        let mut session = DocumentSession::with_filesystem(FailingFileSystem::new(fault));
+        let mut session = archive_session(FailingFileSystem::new(fault));
         assert!(session.open(&path).status.is_ok());
         assert!(session
             .document_mut()
@@ -385,9 +366,8 @@ fn precommit_failures_preserve_manifest_document_revision_and_saved_baseline() {
 fn postcommit_sync_failure_reports_publication_and_advances_baseline() {
     let tmp = TestDirectory::new();
     let initial = tmp.saved_session();
-    let path = initial.manifest().to_path_buf();
-    let mut session =
-        DocumentSession::with_filesystem(FailingFileSystem::new(Failure::DirectorySync(3)));
+    let path = initial.project_path().unwrap().to_path_buf();
+    let mut session = archive_session(FailingFileSystem::new(Failure::DirectorySync(1)));
     assert!(session.open(&path).status.is_ok());
     assert!(session
         .document_mut()
@@ -401,8 +381,11 @@ fn postcommit_sync_failure_reports_publication_and_advances_baseline() {
     assert!(!result.warnings.is_empty());
     assert!(!session.document().modified());
     assert_eq!(
-        decode_project(&fs::read_to_string(&path).unwrap())
+        DocumentStore::new()
+            .open(&path)
+            .1
             .unwrap()
+            .document
             .get_mesh(&id(4))
             .unwrap()
             .name,
@@ -416,10 +399,10 @@ fn postcommit_sync_failure_reports_publication_and_advances_baseline() {
 fn save_rechecks_baseline_after_staging() {
     let tmp = TestDirectory::new();
     let initial = tmp.saved_session();
-    let path = initial.manifest().to_path_buf();
-    let mut session = DocumentSession::with_filesystem(FailingFileSystem::new(
-        Failure::ExternalChange(path.clone()),
-    ));
+    let path = initial.project_path().unwrap().to_path_buf();
+    let mut session = archive_session(FailingFileSystem::new(Failure::ExternalChange(
+        path.clone(),
+    )));
     assert!(session.open(&path).status.is_ok());
     let before = session.document().clone();
     let result = session.save(&path);
@@ -637,14 +620,13 @@ fn test_project_failure_preserves_document() {
 fn confirmed_replacement_preserves_destination_on_io_failure_and_can_retry() {
     let tmp = TestDirectory::new();
     let original = tmp.saved_session();
-    let destination = original.manifest().to_path_buf();
+    let destination = original.project_path().unwrap().to_path_buf();
     let old_bytes = fs::read(&destination).unwrap();
-    let approved_hash = content_sha256(&old_bytes);
+    let approved_hash = original.fingerprint().unwrap().clone();
     let unrelated = original.root().join("notes.txt");
     fs::write(&unrelated, b"keep me").unwrap();
 
-    let mut replacement =
-        DocumentSession::with_filesystem(FailingFileSystem::new(Failure::Rename(vec![1])));
+    let mut replacement = archive_session(FailingFileSystem::new(Failure::Rename(vec![1])));
     let setup = original.document().source_canvas().unwrap();
     assert!(replacement
         .document_mut()
@@ -654,7 +636,7 @@ fn confirmed_replacement_preserves_destination_on_io_failure_and_can_retry() {
     let result = replacement.save_replacing(&destination, &approved_hash);
     assert_eq!(result.status.code, "PROJECT_IO");
     assert!(!result.published);
-    assert!(replacement.manifest().as_os_str().is_empty());
+    assert!(replacement.project_path().is_none());
     assert!(replacement.document().same_content(&before));
     assert!(replacement.document().modified());
     assert_eq!(fs::read(&destination).unwrap(), old_bytes);
@@ -668,8 +650,11 @@ fn confirmed_replacement_preserves_destination_on_io_failure_and_can_retry() {
     assert!(!replacement.document().modified());
     assert_eq!(fs::read(&unrelated).unwrap(), b"keep me");
     assert_eq!(
-        decode_project(&fs::read_to_string(&destination).unwrap())
+        DocumentStore::new()
+            .open(&destination)
+            .1
             .unwrap()
+            .document
             .id(),
         id(999)
     );

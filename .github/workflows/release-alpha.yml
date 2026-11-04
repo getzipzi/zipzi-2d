@@ -8,6 +8,7 @@ on:
       - 'crates/**'
       - 'vendor/**'
       - 'tools/**'
+      - 'native/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'pyproject.toml'
@@ -96,8 +97,9 @@ jobs:
           ZIPZI_BUILD_NUMBER: ${{ github.run_number }}.${{ github.run_attempt }}
         run: |
           sh tools/build-editor-app.sh editor release
+          python3 tools/packaging/build_project_preview.py --app 'target/Zipzi Editor.app' --test
           python3 tools/packaging/verify_artifacts.py --app 'target/Zipzi Editor.app'
-          codesign --force --deep --sign - 'target/Zipzi Editor.app'
+          codesign --force --sign - 'target/Zipzi Editor.app'
           codesign --verify --deep --strict 'target/Zipzi Editor.app'
       - name: Package macOS app and source
         if: matrix.platform == 'macos'
@@ -110,12 +112,14 @@ jobs:
           python3 tools/packaging/verify_artifacts.py --source "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
       - name: Build Windows Editor
         if: matrix.platform == 'windows'
-        run: cargo build --locked --release -p zipzi-editor
+        run: |
+          cargo build --locked --release -p zipzi-editor
+          python tools/packaging/build_project_preview.py --dll "${env:CARGO_TARGET_DIR}/release/ZipziProjectPreview.dll" --test
       - name: Package and verify Windows Editor
         if: matrix.platform == 'windows'
         env:
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-        run: python tools/packaging/package_windows.py --binary "${env:CARGO_TARGET_DIR}/release/zipzi-editor.exe" --output "target/releases/Zipzi-Editor-${env:RELEASE_TAG}-windows-x86_64.zip" --revision "${env:GITHUB_SHA}"
+        run: python tools/packaging/package_windows.py --binary "${env:CARGO_TARGET_DIR}/release/zipzi-editor.exe" --preview-dll "${env:CARGO_TARGET_DIR}/release/ZipziProjectPreview.dll" --output "target/releases/Zipzi-Editor-${env:RELEASE_TAG}-windows-x86_64.zip" --revision "${env:GITHUB_SHA}"
       - uses: actions/upload-artifact@v7
         with:
           name: alpha-${{ matrix.platform }}-app

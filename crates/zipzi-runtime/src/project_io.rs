@@ -95,7 +95,9 @@ pub(crate) fn execute(
             project_report_result(before, session.version(), value)
         }
         ProjectRequest::Open { path } => {
-            let result = session.open_project(&path, Some(before))?;
+            let result = session.open_project_controlled(&path, Some(before), &mut || {
+                !cancel.load(Ordering::Acquire)
+            })?;
             project_report_result(before, session.version(), result)
         }
         ProjectRequest::New { document_id, setup } => {
@@ -111,6 +113,7 @@ pub(crate) fn execute(
             bake_animation,
             auto_frame_rate,
         } => {
+            session.validate_export_destination(&path)?;
             let loss_policy = if allow_loss {
                 LossPolicy::Allow
             } else {

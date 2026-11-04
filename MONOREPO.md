@@ -14,6 +14,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-live2d` | Live2D motion, expression, pose and physics formats |
 | `zipzi-animation` | Animation evaluation |
 | `zipzi-project` | Project persistence, resources and package publication |
+| `zipzi-project-preview` | Bounded embedded-image reader and C ABI for native Shell previews |
 | `zipzi-moc3` | MOC3 import/export and safety validation |
 | `zipzi-cmo3` | Cubism editor document import/export |
 | `zipzi-psd` | PSD import |

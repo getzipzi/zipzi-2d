@@ -46,7 +46,7 @@ fn bezier_tangent_bends_lattice_persists_and_undo_restores_legacy_shape() -> any
     let id = editor.active_id().unwrap();
     let task = editor.prepare_save(id, &dir.path().join("bezier-saved"), false)?;
     let receipt = editor.finish_save(&mut task.run())?;
-    let reopened = Document::open(&receipt.manifest)?;
+    let reopened = Document::open(&receipt.path)?;
     assert_eq!(
         reopened.object_index().get(&object).unwrap().properties["warp"]["bezier"],
         stored
@@ -345,7 +345,7 @@ fn bezier_keyform_edit_preserves_other_shapes_and_explicit_density() -> anyhow::
         let id = editor.active_id().unwrap();
         let task = editor.prepare_save(id, &dir.path().join("bezier-bound"), false)?;
         let receipt = editor.finish_save(&mut task.run())?;
-        let mut reopened = crate::support::editor_from_document(Document::open(&receipt.manifest)?);
+        let mut reopened = crate::support::editor_from_document(Document::open(&receipt.path)?);
         reopened.set_canvas_metrics(ViewportMetrics {
             width: 512.,
             height: 512.,
@@ -421,7 +421,7 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
         let receipt = source.save(&dir.path().join("glue-source"))?;
         let id = uuid::Uuid::new_v4().to_string();
         let mut sdk = AuthoringSession::new(&id, Canvas::new(256., 256., Vec2::new(0., 0.), 1.))?;
-        sdk.open_project(&receipt.manifest, None)?;
+        sdk.open_project(&receipt.path, None)?;
         let meshes = sdk.mesh_ids().to_vec();
         sdk.edit("Glue fixture", None, |edit| {
             edit.create_glue(Glue {
@@ -450,8 +450,8 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
                 binding: None,
             })
         })?;
-        sdk.save_project(&receipt.manifest, None)?;
-        let mut editor = crate::support::editor_from_document(Document::open(&receipt.manifest)?);
+        sdk.save_project(&receipt.path, None)?;
+        let mut editor = crate::support::editor_from_document(Document::open(&receipt.path)?);
         editor.set_canvas_metrics(ViewportMetrics {
             width: 512.,
             height: 512.,

@@ -421,3 +421,72 @@ fn in_memory_image_content_survives_session_drop_in_a_readonly_capture() {
     assert_eq!(frame.textures.len(), 1);
     assert!(frame.rgba.as_chunks::<4>().0.iter().any(|p| p[3] > 0));
 }
+
+#[test]
+fn archive_observation_input_retains_working_set_until_bytes_are_captured() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = directory.path().join("source.png");
+    std::fs::copy(texture_path(), &source).unwrap();
+    let mut session = fixture(&source);
+    session.configure_project_io(zipzi_project::archive::ProjectArchiveStore::new(
+        directory.path().join("cache"),
+    ));
+    let project = directory.path().join("角色 observation.zipzi");
+    session.save_project(&project, None).unwrap();
+    let working = session.asset_root();
+    let snapshot = session.read_snapshot();
+    let input = ObservationInput::capture_from_snapshot(&snapshot, &PreviewValues::new()).unwrap();
+    drop(snapshot);
+    session
+        .new_project(DOCUMENT, Canvas::default(), None)
+        .unwrap();
+    drop(session);
+    std::fs::remove_file(source).unwrap();
+    std::fs::remove_file(project).unwrap();
+    assert!(working.is_dir());
+    let scene = resolve(input);
+    assert!(working.is_dir());
+    let mut observer = Observer::new(ObserverConfig {
+        width: 64,
+        height: 64,
+    })
+    .unwrap();
+    let frame = observer.render(&scene, view()).unwrap();
+    assert_eq!(frame.textures.len(), 1);
+    assert!(frame.rgba.as_chunks::<4>().0.iter().any(|p| p[3] > 0));
+    drop(scene);
+    assert!(!working.exists());
+}
+
+#[test]
+fn static_project_preview_has_pixels_preserves_pose_and_observes_cancellation() {
+    let mut session = fixture(&texture_path());
+    session.set_preview_parameter(PARAMETER, 0.75).unwrap();
+    let snapshot = session.read_snapshot();
+    let version = session.version();
+    let image = zipzi_observe::render_project_preview(&snapshot, &ConversionControl::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (image.descriptor().width, image.descriptor().height),
+        (1024, 1024)
+    );
+    let mut png = png::Decoder::new(std::io::Cursor::new(image.png()))
+        .read_info()
+        .unwrap();
+    let mut pixels = vec![0; png.output_buffer_size()];
+    png.next_frame(&mut pixels).unwrap();
+    assert!(pixels.chunks_exact(4).any(|p| p[3] > 0));
+    assert_eq!(session.version(), version);
+    assert_eq!(session.preview_values().get(PARAMETER), Some(&0.75));
+    let flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    assert_eq!(
+        zipzi_observe::render_project_preview(
+            &snapshot,
+            &ConversionControl::from_cancel_flag(flag)
+        )
+        .unwrap_err()
+        .code,
+        "CANCELLED"
+    );
+}

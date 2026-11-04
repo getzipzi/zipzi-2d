@@ -151,7 +151,7 @@ fn mixed_organization_owners_do_not_change_the_shared_deformation_parent() {
     );
     let dir = tempfile::tempdir().unwrap();
     let saved = d.save(&dir.path().join("deformation.zipzi")).unwrap();
-    let reopened = Document::open(&saved.manifest).unwrap();
+    let reopened = Document::open(&saved.path).unwrap();
     assert_eq!(reopened.deformer_tree(), d.deformer_tree());
     assert_eq!(reopened.part_tree(), d.part_tree());
 }
@@ -231,7 +231,7 @@ fn selected_part_groups_its_members_without_changing_ownership_and_roundtrips() 
         assert_eq!(d.deformer_tree(), after);
         let directory = tempfile::tempdir().unwrap();
         let saved = d.save(&directory.path().join("group.zipzi")).unwrap();
-        let reopened = Document::open(&saved.manifest).unwrap();
+        let reopened = Document::open(&saved.path).unwrap();
         assert_eq!(reopened.deformer_tree(), after);
         assert_eq!(reopened.part_tree(), d.part_tree());
     }

@@ -397,7 +397,7 @@ class PythonSdk(unittest.TestCase):
                 session.redo().wait()
                 self.assertEqual(session.modeling.records(query).value,current)
                 saved=session.project.save(self.folder/(mode+"-mixed-manual")).wait()
-                reopened=self.runtime(mode).sessions.open(saved.manifest).wait()
+                reopened=self.runtime(mode).sessions.open(saved.path).wait()
                 self.assertEqual(reopened.modeling.records(query).value,current)
                 results.append((current.meshes[0].base_positions,current.bindings[0].keyforms[1].positions))
         self.assertEqual(results[0],results[1])
@@ -713,7 +713,7 @@ class PythonSdk(unittest.TestCase):
                     with session.edit("do not discard structure") as edit:
                         edit.apply(m.commands.ModelingCommandReplaceMesh(mesh=replace(before, meshing=None)))
                 saved = session.project.save(self.folder / (mode + "-manual-mesh")).wait()
-                reopened = self.runtime(mode).sessions.open(saved.manifest).wait()
+                reopened = self.runtime(mode).sessions.open(saved.path).wait()
                 self.assertEqual(reopened.meshes.get(mesh).value.geometry, expected)
 
     def test_p4_large_attachments_resource_relocation_and_package_roundtrip(self):
@@ -1088,7 +1088,7 @@ class PythonSdk(unittest.TestCase):
                     self.assertTrue(session.info().modified)
                 saved=session.project.save(folder/"project").wait()
                 with session.reference("mesh",mesh) as reference:
-                    report=session.project.open(saved.manifest).wait()
+                    report=session.project.open(saved.path).wait()
                     self.assertGreater(report.after.generation,report.before.generation)
                     with self.assertRaises(zipzi.SdkFailure):reference.resolve()
                 self.assertEqual(session.resources.get(asset).value.pixels.rgba,pixels)
@@ -1281,10 +1281,12 @@ class PythonSdk(unittest.TestCase):
                 path = self.folder / mode / "project.zipzi"
                 path.parent.mkdir()
                 session.project.save(path).wait()
-                images = tuple(path.parent.rglob("*.png"))
-                self.assertTrue(images)
-                for image in images:
-                    image.unlink()
+                import zipfile
+                with zipfile.ZipFile(path) as archive:
+                    entries = [(item, archive.read(item)) for item in archive.infolist() if not item.filename.startswith("assets/")]
+                with zipfile.ZipFile(path, "w") as archive:
+                    for item, data in entries:
+                        archive.writestr(item, data)
                 report = session.project.open(path).wait()
                 self.assertTrue(report.published)
                 self.assertTrue(any(d.object_id == asset for d in report.diagnostics))
@@ -1806,9 +1808,9 @@ class PythonSdk(unittest.TestCase):
         self.assertEqual(session.info().history, (1, 1))
         session.redo().wait()
         saved = session.project.save(destination).wait()
-        self.assertTrue(saved.manifest.is_file())
+        self.assertTrue(saved.path.is_file())
         self.assertFalse(session.info().modified)
-        return face, saved.manifest, (session.meshes.get(face).value.name, formal.value.geometry.positions, session.info().history)
+        return face, saved.path, (session.meshes.get(face).value.name, formal.value.geometry.positions, session.info().history)
 
     def test_session_listing_identity_and_attach_use_the_same_runtime(self):
         for mode in ("local", "connected"):
@@ -1917,7 +1919,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(session.bindings.get(uid(4)).value.axes, binding.value.axes)
                 saved = session.project.save(self.folder / (mode+"-binding")).wait()
                 with self.runtime(mode) as fresh:
-                    reopened = fresh.sessions.open(saved.manifest).wait()
+                    reopened = fresh.sessions.open(saved.path).wait()
                     self.assertEqual(reopened.bindings.get(uid(4)).value.axes, binding.value.axes)
                     self.assertEqual(reopened.modeling.sample(({uid(3): .5},)).value.frames[0].drawables[0].positions[0][0], 10.)
 
@@ -2396,7 +2398,7 @@ class PythonSdk(unittest.TestCase):
                 runtime.close()
                 if mode == "connected":
                     self.stop_host()
-                reopened = self.runtime(mode).sessions.open(saved.manifest).wait()
+                reopened = self.runtime(mode).sessions.open(saved.path).wait()
                 self.assertEqual(reopened.meshes.get(uid(3)).value.name, "Final batch")
                 self.assertEqual(reopened.resources.get(uid(2)).value.pixels.rgba, snapshot.value.pixels.rgba)
                 self.assertEqual(reopened.info().history, (0, 0))
@@ -2680,12 +2682,12 @@ class PythonSdk(unittest.TestCase):
                 job.cancel()
                 self.assertEqual(job.state(), "cancelling")
                 self.control(runtime, "release_io")
-                saved = job.wait()
-                self.assertTrue(saved.manifest.is_file())
-                self.assertEqual(job.state(), "succeeded")
-                self.assertIs(job.wait(), saved)
+                with self.assertRaises(zipzi.SdkFailure) as cancelled:
+                    job.wait()
+                self.assertEqual(cancelled.exception.code, "CANCELLED")
+                self.assertFalse((self.folder / mode).exists())
                 self.assertEqual(session.info().history, (1, 0))
-                self.assertFalse(session.info().modified)
+                self.assertTrue(session.info().modified)
                 self.assertEqual(session.meshes.get(face).value.name, "Face")
 
     def test_worker_failure_and_panic_have_distinct_recovery_scopes(self):
@@ -2836,10 +2838,8 @@ class PythonSdk(unittest.TestCase):
         self.control(runtime, "release_io")
         thread.join(timeout=5)
         self.assertFalse(thread.is_alive())
-        manifest = self.folder / "close-inflight/project.zipzi.json"
-        self.assertTrue(manifest.is_file(), "Entered save was silently rolled back by close")
-        reopened = self.runtime("local").sessions.open(manifest).wait()
-        self.assertFalse(reopened.info().modified)
+        manifest = self.folder / "close-inflight"
+        self.assertFalse(manifest.exists(), "Close must cancel an unpublished archive")
 
     def test_retained_job_budget_refusal_keeps_edit_retryable(self):
         for mode in ("local", "connected"):
@@ -2889,7 +2889,7 @@ class PythonSdk(unittest.TestCase):
                 self.assertEqual(invalid.read_bytes(), b"keep")
                 self.assertEqual(session.info(), before)
                 self.assertEqual(session.meshes.get(face).value.name, "Face")
-                self.assertTrue(session.project.save(self.folder / f"{mode}-retry").wait().manifest.is_file())
+                self.assertTrue(session.project.save(self.folder / f"{mode}-retry").wait().path.is_file())
 
     def test_last_native_owner_releases_project_lock_and_unsaved_memory(self):
         runtime = zipzi.local()
@@ -2911,7 +2911,7 @@ class PythonSdk(unittest.TestCase):
         del image, unused, edit, session, runtime
         gc.collect()
         self.assertIsNone(backend(), "A final Python owner still retains the native host")
-        reopened = self.runtime("local").sessions.open(saved.manifest).wait()
+        reopened = self.runtime("local").sessions.open(saved.path).wait()
         self.assertEqual(reopened.resources.get(asset).value.pixels, pixels)
         with self.assertRaises(zipzi.SdkFailure) as unsaved:
             reopened.resources.get(draft)
@@ -2981,7 +2981,7 @@ class PythonSdk(unittest.TestCase):
         while retained.info().modified:
             self.assertLess(time.monotonic(), deadline)
             time.sleep(.005)
-        self.assertTrue((self.folder / "detached-save/project.zipzi.json").is_file())
+        self.assertTrue((self.folder / "detached-save").is_file())
         self.assertEqual(retained.meshes.get(face).value.name, "Face")
         self.assertEqual(retained.info().history, (1, 0))
 
@@ -3136,7 +3136,7 @@ class PythonSdk(unittest.TestCase):
                     with self.assertRaises(zipzi.OutcomeUnknown) as error:
                         session.project.save(self.folder / "save-loss")
                     job = error.exception.recover()
-                    self.assertTrue(job.wait().manifest.is_file())
+                    self.assertTrue(job.wait().path.is_file())
                 if lost in {"undo", "redo"}:
                     if lost == "redo":
                         session.undo().wait()
@@ -3249,7 +3249,7 @@ assert meshes.Geometry((0,), ((0., 0.),), ((0., 0.),), ()).vertex_ids == (0,)
             with session.project.save(self.folder / "direct-save") as job:
                 saved = job.wait()
             self.assertEqual(job.wait(), saved)
-            self.assertTrue(saved.manifest.is_file())
+            self.assertTrue(saved.path.is_file())
 
 if __name__ == "__main__":
     unittest.main()

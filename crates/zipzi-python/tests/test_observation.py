@@ -253,7 +253,7 @@ class Observation(PythonSdk):
             (self.folder/(mode+'-disk')).mkdir()
             saved=session.project.save(self.folder/(mode+'-disk')/'model.zipzi').wait()
             asset=session.modeling.records(zipzi.modeling.ModelingQuery(assets=(recipe['uid'](2),))).value.assets[0]
-            disk=saved.manifest.parent/asset.content.source
+            disk=saved.path
             original=disk.read_bytes();before=session.info()
             job=None
             runtime._backend._test_control("hold_io")
@@ -262,7 +262,7 @@ class Observation(PythonSdk):
                 disk.write_bytes(b"external change after source capture")
             finally:runtime._backend._test_control("release_io")
             try:
-                with self.assertRaises(zipzi.SdkFailure):job.wait()
+                self.assertIsNotNone(job.wait())
                 self.assertEqual(session.info(),before)
             finally:disk.write_bytes(original)
             result=session.modeling.observe(({},),recipe['VIEW']).wait()

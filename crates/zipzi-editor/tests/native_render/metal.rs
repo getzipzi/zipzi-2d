@@ -59,7 +59,7 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
             edit.create_mesh(mesh)
         })?;
         let saved = session.save_project(&dir.path().join("solid.zipzi"), None)?;
-        let mut doc = Document::open(&saved.manifest)?;
+        let mut doc = Document::open(&saved.path)?;
         let source = doc.mesh_generation_source(&ObjectRef::new(ObjectKind::Mesh, mesh_id))?;
         let plan = source.generate(MeshGenerationOptions::Alpha(MeshSettings {
             edge_spacing: 16.,
@@ -211,7 +211,7 @@ fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result
             &uuid::Uuid::new_v4().to_string(),
             Canvas::new(256., 256., Vec2::default(), 1.),
         )?;
-        sdk.open_project(&saved.manifest, None)?;
+        sdk.open_project(&saved.path, None)?;
         let ids = sdk.mesh_ids().to_vec();
         let mut source = sdk.mesh(&ids[0]).unwrap();
         let mut masked = sdk.mesh(&ids[1]).unwrap();
@@ -231,8 +231,8 @@ fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result
             e.replace_mesh(source)?;
             e.replace_mesh(masked)
         })?;
-        sdk.save_project(&saved.manifest, None)?;
-        let mut document = Document::open(&saved.manifest)?;
+        sdk.save_project(&saved.path, None)?;
+        let mut document = Document::open(&saved.path)?;
         document.set_object_visible(
             &zipzi_editor_core::ObjectRef::new(zipzi_editor_core::ObjectKind::Mesh, &ids[0]),
             false,
@@ -681,9 +681,7 @@ fn check_animation_opacity(
         let canvas = document
             .source_canvas()
             .expect("fixture has a source rectangle");
-        let manifest = document
-            .save(&assets.path().join("opacity.zipzi"))?
-            .manifest;
+        let manifest = document.save(&assets.path().join("opacity.zipzi"))?.path;
         let mut sdk = zipzi_sdk::AuthoringSession::new(
             &uuid::Uuid::new_v4().to_string(),
             Canvas::new(256., 256., Vec2::default(), 1.),
@@ -987,7 +985,7 @@ fn check_modeling_isolation_composite(nested: bool, overlap_opacity: f32) -> any
             edit.create_mesh(overlap)
         })?;
         let saved = sdk.save_project(&directory.path().join("isolation.zipzi"), None)?;
-        let mut editor = Editor::from_document(Document::open(&saved.manifest)?);
+        let mut editor = Editor::from_document(Document::open(&saved.path)?);
         let viewport = ViewportId::new();
         editor.register_primary_viewport(viewport, ViewportKind::Modeling)?;
         let binding = editor.viewport_binding(viewport).unwrap();

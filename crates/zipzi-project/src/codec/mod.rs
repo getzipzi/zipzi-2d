@@ -8,5 +8,6 @@ mod validation;
 #[cfg(feature = "binary-prototype")]
 pub use binary_prototype::{decode_project_cbor, encode_project_cbor};
 pub use decode::decode_project;
+pub(crate) use encode::encode_native_project;
 pub use encode::encode_project;
 pub use validation::validate_json_syntax;

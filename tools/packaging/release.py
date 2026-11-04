@@ -114,6 +114,18 @@ def cargo_order(root=ROOT):
     return order
 
 
+def project_document_types(development=False):
+    """One native project declaration for release and development bundles."""
+    return dict(
+        CFBundleDocumentTypes=[dict(CFBundleTypeName='Zipzi Project', CFBundleTypeRole='Editor',
+            LSHandlerRank='None' if development else 'Owner', CFBundleTypeIconFile='AppIcon',
+            LSItemContentTypes=['dev.zipzi.project'])],
+        UTExportedTypeDeclarations=[dict(UTTypeIdentifier='dev.zipzi.project',
+            UTTypeDescription='Zipzi Project', UTTypeConformsTo=['public.zip-archive'],
+            UTTypeIconFile='AppIcon', UTTypeTagSpecification={
+                'public.filename-extension': ['zipzi'], 'public.mime-type': 'application/x-zipzi-project'})])
+
+
 def app_plist(output, root=ROOT):
     info = metadata(root)
     build = os.environ.get('ZIPZI_BUILD_NUMBER', '1')
@@ -128,6 +140,7 @@ def app_plist(output, root=ROOT):
                 CFBundleShortVersionString=info['app_version'], CFBundleVersion=build,
                 ZipziReleaseVersion=info['version'], ZipziSourceRevision=revision,
                 CFBundleIconFile='AppIcon', NSHighResolutionCapable=True)
+    data.update(project_document_types())
     output.write_bytes(plistlib.dumps(data))
 
 

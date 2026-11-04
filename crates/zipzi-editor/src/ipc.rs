@@ -7,7 +7,7 @@ use zipzi_runtime::{
     protocol::CONTRACT,
 };
 
-pub(super) fn reopen(endpoint: &Endpoint) -> std::io::Result<u32> {
+pub(super) fn reopen(endpoint: &Endpoint, paths: &[std::path::PathBuf]) -> std::io::Result<u32> {
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         match endpoint.connect(
@@ -22,10 +22,15 @@ pub(super) fn reopen(endpoint: &Endpoint) -> std::io::Result<u32> {
                 let Some(ok) = hello.get("ok") else {
                     return Err(std::io::Error::other(hello.to_string()));
                 };
+                let operation = if paths.is_empty() {
+                    serde_json::json!({"op": "show_window", "session": null})
+                } else {
+                    serde_json::json!({"op": "open_projects", "paths": paths})
+                };
                 write_frame(
                     &mut stream,
                     &serde_json::json!({"protocol": CONTRACT, "runtime": ok["runtime"],
-                    "client": ok["client"], "request_id": 1, "operation": {"op": "show_window", "session": null}}),
+                    "client": ok["client"], "request_id": 1, "operation": operation}),
                 )?;
                 let response = read_frame(&mut stream)?;
                 return if response.get("ok").is_some() {

@@ -490,9 +490,7 @@ impl Runtime {
             .saturating_add(8 << 20);
         let io = match &request {
             ProjectRequest::Import { .. } => 256 << 20,
-            ProjectRequest::Open { path } => std::fs::metadata(path)
-                .map_or(0, |m| m.len() as usize)
-                .saturating_mul(128),
+            ProjectRequest::Open { .. } => 4096,
             _ => 0,
         };
         self.refresh_memory_budget();

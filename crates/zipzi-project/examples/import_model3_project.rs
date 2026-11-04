@@ -1,5 +1,5 @@
 //! Import a real model3/MOC3 model into a self-contained editable project.
-//! Usage: cargo run --release -p zipzi-project --example import_model3_project -- MODEL3 OUTPUT_DIR
+//! Usage: cargo run --release -p zipzi-project --example import_model3_project -- MODEL3 OUTPUT.zipzi
 
 use std::fs;
 use std::path::Path;
@@ -9,22 +9,20 @@ use zipzi_project::{encode_project, DocumentSession};
 fn main() {
     let args: Vec<_> = std::env::args_os().collect();
     if args.len() != 3 {
-        eprintln!("Usage: import_model3_project MODEL3 OUTPUT_DIR");
+        eprintln!("Usage: import_model3_project MODEL3 OUTPUT.zipzi");
         std::process::exit(2);
     }
     let source = Path::new(&args[1]);
     let output = Path::new(&args[2]);
     assert!(source.is_absolute() && output.is_absolute());
-    assert!(
-        !output.join("project.zipzi.json").exists(),
-        "OUTPUT_DIR already contains a project"
-    );
+    assert!(!output.exists(), "Output already exists");
 
     let mut session = DocumentSession::new();
     let start = Instant::now();
     let (imported, report) = session.import_model3_authoring(source);
     assert!(imported.status.is_ok(), "{imported:?}");
-    assert!(imported.resources_complete(), "{imported:?}");
+    let import_diagnostics = imported.diagnostics.clone();
+    assert!(session.diagnose().is_empty(), "Invalid image resources");
     let import_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     let report = report.expect("successful import has a report");
@@ -71,7 +69,7 @@ fn main() {
         }
     }
 
-    let asset_bytes: u64 = fs::read_dir(output.join("assets"))
+    let asset_bytes: u64 = fs::read_dir(session.asset_root().join("assets"))
         .unwrap()
         .map(|entry| entry.unwrap().metadata().unwrap().len())
         .sum();
@@ -83,13 +81,14 @@ fn main() {
             "meshes": meshes,
             "bindings": bindings,
             "assets": assets,
-            "manifest_bytes": fs::metadata(output.join("project.zipzi.json")).unwrap().len(),
+            "archive_bytes": fs::metadata(output).unwrap().len(),
             "asset_bytes": asset_bytes,
             "import_ms": import_ms,
             "initial_save_ms": initial_save_ms,
             "first_open_ms": first_open_ms,
             "roundtrip_equal": roundtrip_equal,
             "import_warnings": report.warnings.len(),
+            "import_diagnostics": import_diagnostics.iter().map(|d| format!("{}: {}", d.code, d.message)).collect::<Vec<_>>(),
             "unimported_attachments": report.unimported_attachments.len()
         }))
         .unwrap()

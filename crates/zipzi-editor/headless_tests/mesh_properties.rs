@@ -67,7 +67,7 @@ fn mesh_properties_revisit_interpolated_and_stored_meshes(cx: &mut TestAppContex
         zipzi_core::ModelSetup::default(),
     )
     .unwrap();
-    session.open_project(&saved.manifest, None).unwrap();
+    session.open_project(&saved.path, None).unwrap();
     let mesh = session.mesh(&other.id).unwrap();
     let other_parameter = uuid::Uuid::new_v4().to_string();
     session
@@ -98,8 +98,8 @@ fn mesh_properties_revisit_interpolated_and_stored_meshes(cx: &mut TestAppContex
             })
         })
         .unwrap();
-    session.save_project(&saved.manifest, None).unwrap();
-    let doc = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    session.save_project(&saved.path, None).unwrap();
+    let doc = zipzi_editor_core::Document::open(&saved.path).unwrap();
     let h = setup_with_document(cx, doc, assets);
     command(
         &h,
@@ -714,7 +714,7 @@ fn mesh_properties_many_masks_virtualize_and_keep_the_last_reference_reachable(
         zipzi_core::ModelSetup::default(),
     )
     .unwrap();
-    session.open_project(&saved.manifest, None).unwrap();
+    session.open_project(&saved.path, None).unwrap();
     let template = session.mesh(&object.id).unwrap();
     let ids: Vec<_> = (0..80).map(|_| uuid::Uuid::new_v4().to_string()).collect();
     session
@@ -729,8 +729,8 @@ fn mesh_properties_many_masks_virtualize_and_keep_the_last_reference_reachable(
             Ok(())
         })
         .unwrap();
-    session.save_project(&saved.manifest, None).unwrap();
-    let mut doc = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    session.save_project(&saved.path, None).unwrap();
+    let mut doc = zipzi_editor_core::Document::open(&saved.path).unwrap();
     doc.set_object_property(&object, "masks", serde_json::json!(ids))
         .unwrap();
     doc.navigate(object.clone()).unwrap();

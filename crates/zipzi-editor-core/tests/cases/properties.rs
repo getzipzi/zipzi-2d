@@ -76,7 +76,7 @@ fn mesh_properties_validate_preserve_payload_and_roundtrip() -> anyhow::Result<(
     assert_eq!(doc.property_values(&object)?, updated);
     let saved = doc.save(&assets.path().join("mesh-properties.zipzi"))?;
     assert_eq!(
-        Document::open(&saved.manifest)?.property_values(&object)?,
+        Document::open(&saved.path)?.property_values(&object)?,
         updated
     );
 
@@ -595,7 +595,7 @@ fn identity_fields_preserve_scene_objects_references_and_undo() -> anyhow::Resul
         assert_eq!(doc.property_values(object)?, original);
     }
     let saved = doc.save(&assets.path().join("identity.zipzi"))?;
-    Document::open(&saved.manifest)?;
+    Document::open(&saved.path)?;
     Ok(())
 }
 
@@ -622,7 +622,7 @@ fn parameter_runtime_id_keeps_animation_and_physics_bindings_and_roundtrips() ->
         )
     );
     let saved = doc.save(&assets.path().join("renamed.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(
         reopened.parameter_draft(&parameter.id)?.runtime_id,
         "ParamRenamed"
@@ -817,7 +817,7 @@ fn document_export_properties_preserve_geometry_and_support_history() -> anyhow:
     assert!(doc.set_object_properties(&object, &invalid).is_err());
     let saved = doc.save(&assets.path().join("settings.zipzi"))?;
     assert_eq!(
-        Document::open(&saved.manifest)?.export_settings(),
+        Document::open(&saved.path)?.export_settings(),
         doc.export_settings()
     );
     Ok(())

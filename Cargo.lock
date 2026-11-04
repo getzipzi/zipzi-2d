@@ -9223,6 +9223,7 @@ dependencies = [
  "sys-locale",
  "tempfile",
  "toml 0.8.23",
+ "url",
  "uuid",
  "wgpu",
  "windows 0.62.2",
@@ -9344,13 +9345,27 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "uuid",
+ "zip",
  "zipzi-api-derive",
  "zipzi-cmo3",
  "zipzi-contract",
  "zipzi-core",
  "zipzi-live2d",
  "zipzi-moc3",
+ "zipzi-project-preview",
  "zipzi-psd",
+]
+
+[[package]]
+name = "zipzi-project-preview"
+version = "0.1.0-alpha.7"
+dependencies = [
+ "png 0.17.16",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror 2.0.20",
+ "zip",
 ]
 
 [[package]]
@@ -9428,6 +9443,7 @@ dependencies = [
  "zipzi-core",
  "zipzi-observe",
  "zipzi-project",
+ "zipzi-project-preview",
  "zipzi-sdk",
 ]
 

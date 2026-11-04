@@ -2,7 +2,10 @@
 //! once, including buffers retained by textures after their registry entry dies.
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, Weak},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex, Weak,
+    },
 };
 use zipzi_core::Status;
 
@@ -148,7 +151,7 @@ impl ImageMemoryBudget {
         state.transfer += bytes;
         Ok(TransferReservation {
             budget: self.clone(),
-            bytes,
+            bytes: AtomicUsize::new(bytes),
         })
     }
     /// Atomically replace a completed task's host reservation with retained
@@ -180,7 +183,7 @@ impl ImageMemoryBudget {
         state.host_limit = host_limit;
         Ok(TransferReservation {
             budget: self.clone(),
-            bytes,
+            bytes: AtomicUsize::new(bytes),
         })
     }
     pub fn reserve(&self, bytes: usize) -> Result<ImageMemoryReservation, Status> {
@@ -266,12 +269,43 @@ impl ImageMemoryBudget {
 #[derive(Debug)]
 pub struct TransferReservation {
     budget: ImageMemoryBudget,
-    bytes: usize,
+    bytes: AtomicUsize,
+}
+impl TransferReservation {
+    pub fn reserved_bytes(&self) -> usize {
+        self.bytes.load(Ordering::Relaxed)
+    }
+
+    /// Grow a worker's reservation after bounded metadata admission.
+    /// Shared-budget locking makes concurrent growth atomic.
+    pub fn ensure_at_least(&self, bytes: usize) -> Result<(), Status> {
+        let mut state = self.budget.0.lock().unwrap_or_else(|p| p.into_inner());
+        let previous = self.bytes.load(Ordering::Relaxed);
+        if bytes <= previous {
+            return Ok(());
+        }
+        let growth = bytes - previous;
+        if state
+            .usage()
+            .total_bytes()
+            .checked_add(state.host_bytes)
+            .and_then(|n| n.checked_add(growth))
+            .is_none_or(|n| n > state.host_limit)
+        {
+            return Err(Status::error(
+                "BUDGET_EXCEEDED",
+                "Project decode workspace exceeds host memory budget",
+            ));
+        }
+        state.transfer += growth;
+        self.bytes.store(bytes, Ordering::Relaxed);
+        Ok(())
+    }
 }
 impl Drop for TransferReservation {
     fn drop(&mut self) {
         let mut state = self.budget.0.lock().unwrap_or_else(|p| p.into_inner());
-        state.transfer -= self.bytes;
+        state.transfer -= self.bytes.load(Ordering::Relaxed);
     }
 }
 /// A preparation reservation is released on every failure/unwind. Commit replaces
@@ -359,6 +393,24 @@ pub fn rgba_copy_bytes(reset: bool) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn worker_reservation_growth_shares_admission_and_releases_the_full_peak() {
+        let budget = ImageMemoryBudget::new(1024);
+        budget.bind_host_budget(10, 100);
+        let first = Arc::new(budget.reserve_transfer(10).unwrap());
+        let second = budget.reserve_transfer(20).unwrap();
+        first.ensure_at_least(60).unwrap();
+        first.ensure_at_least(30).unwrap();
+        assert_eq!(first.reserved_bytes(), 60);
+        assert_eq!(budget.usage().transfer_bytes, 80);
+        assert!(second.ensure_at_least(31).is_err());
+        assert_eq!(budget.usage().transfer_bytes, 80);
+        drop(first);
+        second.ensure_at_least(90).unwrap();
+        drop(second);
+        assert_eq!(budget.usage().transfer_bytes, 0);
+    }
+
     #[test]
     fn completed_peak_is_atomically_replaced_by_a_retained_result_lease() {
         let budget = ImageMemoryBudget::new(1024);

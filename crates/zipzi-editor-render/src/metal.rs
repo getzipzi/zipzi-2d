@@ -399,14 +399,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires models/local/mao_pro.zipzi/project.zipzi.json"]
+    #[ignore = "requires models/local/mao_pro.zipzi"]
     fn mao_high_zoom_crops_masks_with_stable_pixels_after_panning() -> anyhow::Result<()> {
         objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
             use zipzi_editor_core::ViewportPoint;
             use zipzi_render_metal::read_rgba8;
 
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../models/local/mao_pro.zipzi/project.zipzi.json")
+                .join("../../models/local/mao_pro.zipzi")
                 .canonicalize()?;
             let mut document = Document::open(&path)?;
             let scene = document.snapshot()?;

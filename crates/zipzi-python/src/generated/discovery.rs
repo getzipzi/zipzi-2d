@@ -39,6 +39,7 @@ pub(crate) fn write_runtimelimits<'py>(
     v: &zipzi_runtime::RuntimeLimits,
 ) -> PyResult<Bound<'py, PyDict>> {
     let d = PyDict::new(py);
+    d.set_item("project_disk_bytes", &v.project_disk_bytes)?;
     d.set_item(
         "observation_texture_rgba_bytes",
         &v.observation_texture_rgba_bytes,

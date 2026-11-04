@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-04",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "base_revision": "0a1c30f57a0bfd20adc446973a72f31a106aac28",
+  "binary_sha256": "d356eb166293f2f209392d1d942bff7e5a0ec2e4b50a2e6d63bd6272f0871594",
+  "command": "./tools/dev-python tools/runtime/native_project_macos.py target/debug/zipzi-editor --dialogs --output target/native-project-macos-09",
+  "results": [
+    {
+      "mode": "cold",
+      "checks": {
+        "event_sent_before_ready": true,
+        "distinct_paths_same_document_uuid": 3,
+        "window_created": true,
+        "repeat_event_preserves_sessions_and_activates": true,
+        "second_process_reuses_host": true,
+        "all_resources_valid_and_two_meshes_per_project": true,
+        "recent_files_are_archives": true,
+        "input_bytes_unchanged": true
+      }
+    },
+    {
+      "mode": "resident",
+      "checks": {
+        "initial_window_count": 0,
+        "distinct_paths_same_document_uuid": 3,
+        "window_created": true,
+        "repeat_event_preserves_sessions_and_activates": true,
+        "second_process_reuses_host": true,
+        "all_resources_valid_and_two_meshes_per_project": true,
+        "recent_files_are_archives": true,
+        "input_bytes_unchanged": true
+      },
+      "dialogs": {
+        "suggested_name_and_parent_directory": true,
+        "save_cancel": true,
+        "wrong_extension_requires_explicit_correction": true,
+        "normalized_overwrite_cancel_preserves_target_and_session": true,
+        "missing_uppercase_and_double_extension_save_full_document_and_resources": true,
+        "open_panel_cancel": true
+      }
+    }
+  ],
+  "limits": [
+    "Explicit LaunchServices application selection; Finder default association is not tested.",
+    "English native panels and existing Accessibility permission.",
+    "Windows native acceptance is not tested."
+  ]
+}

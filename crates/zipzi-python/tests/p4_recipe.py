@@ -5,6 +5,7 @@ from dataclasses import replace
 import hashlib
 import json
 import os
+import zipfile
 from pathlib import Path
 
 import zipzi
@@ -69,11 +70,11 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
     first = session.project.save(folder / "original").wait()
     # Native Windows publication cannot sync the parent directory; a successful
     # save must report that limitation instead of claiming crash durability.
-    assert first.durable == (os.name != 'nt') and first.manifest.is_file()
+    assert first.durable == (os.name != 'nt') and first.path.is_file()
     saved_history = session.info().history
 
     # Project storage preserves unavailable and empty files as different values.
-    opened = session.project.open(first.manifest).wait()
+    opened = session.project.open(first.path).wait()
     assert opened.after.generation > opened.before.generation
     selected = session.modeling.records(m.ModelingQuery(attachments=(data_id, empty_id, absent_id)))
     assert tuple(a.bytes for a in selected.value.attachments) == (content, b"", None)
@@ -95,50 +96,34 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
                 edit.resources.replace_image(asset, image)
         history = session.info().history
         saved = session.project.save(folder / "relocated").wait()
-        assert saved.durable == (os.name != 'nt') and saved.manifest.is_file()
+        assert saved.durable == (os.name != 'nt') and saved.path.is_file()
         assert session.info().history == history
         assert session.info().modified is False
-        parked = folder / "parked-original"
-        first.manifest.parent.rename(parked)
-        try:
-            assert session.resources.get(asset).value.pixels.rgba == pixels_b
-            session.undo().wait()
-            rejected(lambda: session.resources.get(asset))
-            assert original.pixels().rgba == pixels_a
-            session.redo().wait()
-            assert session.resources.get(asset).value.pixels.rgba == pixels_b
-        finally:
-            parked.rename(first.manifest.parent)
+        first.path.unlink()
+        assert session.resources.get(asset).value.pixels.rgba == pixels_b
         session.undo().wait()
         historical = session.modeling.records(m.ModelingQuery(assets=(asset,))).value.assets[0]
-        assert Path(historical.content.source).is_absolute()
-        assert Path(historical.content.source).is_relative_to(first.manifest.parent)
+        assert not Path(historical.content.source).is_absolute()
         assert session.resources.get(asset).value.pixels.rgba == pixels_a
         assert session.project.diagnose().wait().diagnostics == ()
         session.redo().wait()
         assert session.resources.get(asset).value.pixels.rgba == pixels_b
         assert original.pixels().rgba == pixels_a
 
-        # A disk capture pins bytes; a new read still verifies current disk data.
         captured = leases.enter_context(session.resources.snapshot(asset))
         value = session.modeling.records(m.ModelingQuery(assets=(asset,))).value.assets[0]
-        relative = Path(value.content.source)
-        assert not relative.is_absolute() and ".." not in relative.parts
-        disk = saved.manifest.parent / relative
-        png = disk.read_bytes()
+        with zipfile.ZipFile(saved.path) as archive:
+            png = archive.read(value.content.source)
         assert hashlib.sha256(png).hexdigest() == value.content.sha256
         before = session.info()
-        disk.write_bytes(b"changed after image snapshot")
-        try:
-            rejected(lambda: session.resources.get(asset))
-            assert captured.pixels().rgba == pixels_b
-            assert original.pixels().rgba == pixels_a
-            assert session.project.diagnose().wait().diagnostics
-            assert session.info() == before
-        finally:
-            disk.write_bytes(png)
+        # The private working set survives changes to the user archive.
+        saved_bytes = saved.path.read_bytes()
+        saved.path.write_bytes(b"external replacement")
         assert session.resources.get(asset).value.pixels.rgba == pixels_b
-        assert session.project.diagnose().wait().diagnostics == ()
+        rejected(lambda: session.project.save(saved.path).wait(), "PROJECT_CONFLICT")
+        assert captured.pixels().rgba == pixels_b
+        assert session.info() == before
+        saved.path.write_bytes(saved_bytes)
 
         # A failed import or write cannot publish a partial project/candidate.
         invalid = folder / "invalid.psd"
@@ -159,7 +144,7 @@ def run(runtime: zipzi.Runtime, folder: Path) -> dict[str, object]:
         # Reopening changes generation and invalidates pre-open identities/plans.
         reference = leases.enter_context(session.reference("asset", asset))
         plan = leases.enter_context(session.plan(resources.RenameImage(asset, "Stale", expected_name="Texture")))
-        report = session.project.open(saved.manifest).wait()
+        report = session.project.open(saved.path).wait()
         assert report.after.generation > report.before.generation
         rejected(reference.resolve, "STALE_HANDLE")
         stale = session.edit("Old generation plan")

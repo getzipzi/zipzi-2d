@@ -812,7 +812,7 @@ impl Platform for WindowsPlatform {
             .and_then(|hwnd| self.window_from_hwnd(hwnd))
             .map(|window| window.dialog_owner.clone());
         crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
-            file_open_dialog(options, Some(window))
+            file_open_dialog(options, Some(window), None)
         })
     }
 
@@ -828,10 +828,30 @@ impl Platform for WindowsPlatform {
             .and_then(|hwnd| self.window_from_hwnd(hwnd))
             .map(|window| window.dialog_owner.clone());
         crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
-            file_save_dialog(directory, suggested_name, Some(window))
+            file_save_dialog(directory, suggested_name, Some(window), None)
         })
     }
 
+    fn prompt_for_paths_with_extension(
+        &self, options: PathPromptOptions, extension: &str,
+    ) -> Receiver<Result<Option<Vec<PathBuf>>>> {
+        let extension = extension.to_owned();
+        let owner = self.find_current_active_window().and_then(|hwnd| self.window_from_hwnd(hwnd)).map(|window| window.dialog_owner.clone());
+        crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
+            file_open_dialog(options, Some(window), Some(extension))
+        })
+    }
+    fn prompt_for_new_path_with_extension(
+        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
+    ) -> Receiver<Result<Option<PathBuf>>> {
+        let directory = directory.to_owned();
+        let suggested_name = suggested_name.map(str::to_owned);
+        let extension = extension.to_owned();
+        let owner = self.find_current_active_window().and_then(|hwnd| self.window_from_hwnd(hwnd)).map(|window| window.dialog_owner.clone());
+        crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
+            file_save_dialog(directory, suggested_name, Some(window), Some(extension))
+        })
+    }
     fn can_select_mixed_files_and_dirs(&self) -> bool {
         // The FOS_PICKFOLDERS flag toggles between "only files" and "only folders".
         false
@@ -1533,6 +1553,7 @@ fn open_target_in_explorer(target: &Path) -> Result<()> {
 fn file_open_dialog(
     options: PathPromptOptions,
     window: Option<HWND>,
+    extension: Option<String>,
 ) -> Result<Option<Vec<PathBuf>>> {
     let folder_dialog: IFileOpenDialog =
         unsafe { CoCreateInstance(&FileOpenDialog, None, CLSCTX_ALL)? };
@@ -1547,6 +1568,11 @@ fn file_open_dialog(
 
     unsafe {
         folder_dialog.SetOptions(dialog_options)?;
+        if let Some(extension) = extension {
+            let label = HSTRING::from(format!("Zipzi project (*.{extension})"));
+            let pattern = HSTRING::from(format!("*.{extension}"));
+            folder_dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC { pszName: windows::core::PCWSTR(label.as_ptr()), pszSpec: windows::core::PCWSTR(pattern.as_ptr()) }])?;
+        }
 
         if let Some(prompt) = options.prompt {
             let prompt: &str = &prompt;
@@ -1581,6 +1607,7 @@ fn file_save_dialog(
     directory: PathBuf,
     suggested_name: Option<String>,
     window: Option<HWND>,
+    extension: Option<String>,
 ) -> Result<Option<PathBuf>> {
     let dialog: IFileSaveDialog = unsafe { CoCreateInstance(&FileSaveDialog, None, CLSCTX_ALL)? };
     if !directory.to_string_lossy().is_empty()
@@ -1611,10 +1638,16 @@ fn file_save_dialog(
     }
 
     unsafe {
-        dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC {
-            pszName: windows::core::w!("All files"),
-            pszSpec: windows::core::w!("*.*"),
-        }])?;
+        if let Some(extension) = extension {
+            let label = HSTRING::from(format!("Zipzi project (*.{extension})"));
+            let pattern = HSTRING::from(format!("*.{extension}"));
+            dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC { pszName: windows::core::PCWSTR(label.as_ptr()), pszSpec: windows::core::PCWSTR(pattern.as_ptr()) }])?;
+            dialog.SetDefaultExtension(&HSTRING::from(extension))?;
+        } else {
+            dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC {
+                pszName: windows::core::w!("All files"), pszSpec: windows::core::w!("*.*"),
+            }])?;
+        }
         if let Err(error) = dialog.Show(window) {
             if error.code() == HRESULT::from_win32(ERROR_CANCELLED.0) {
                 return Ok(None);

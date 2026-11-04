@@ -7,7 +7,9 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use zipzi_core::{Canvas, Vec2};
-use zipzi_project::{FileSystem, NativeFileSystem};
+use zipzi_project::archive::{
+    ArchiveFileSystem, ArchiveLock, ArchiveStaging, NativeArchiveFileSystem, ProjectArchiveStore,
+};
 use zipzi_sdk::{
     prepare_png_asset, prepare_png_asset_from_base, prepare_relocated_asset, rectangle_mesh,
     AuthoringSession, ObjectKind,
@@ -70,7 +72,7 @@ fn psd_draft_keeps_assets_in_memory_until_save_and_relocates_history() {
         AuthoringSession::new(DOCUMENT, Canvas::new(8.0, 8.0, Vec2::default(), 1.0)).unwrap();
     let receipt = sdk.import_psd_in_memory(&source, None).unwrap();
     assert!(!receipt.project.published);
-    assert!(receipt.manifest.as_os_str().is_empty());
+    assert!(receipt.path.as_os_str().is_empty());
     assert!(sdk.project_path().is_none());
     assert!(sdk.modified());
     assert_eq!(fs::read_dir(&temp.0).unwrap().count(), 1);
@@ -121,14 +123,11 @@ fn psd_draft_keeps_assets_in_memory_until_save_and_relocates_history() {
     assert!(!sdk.modified());
     let mut reopened =
         AuthoringSession::new(DOCUMENT, Canvas::new(8.0, 8.0, Vec2::default(), 1.0)).unwrap();
-    reopened.open_project(&saved.manifest, None).unwrap();
+    reopened.open_project(&saved.path, None).unwrap();
     assert_eq!(reopened.read_asset(&asset_id).unwrap().rgba, original.rgba);
     let asset = sdk.asset(&asset_id).unwrap();
     fs::write(
-        saved
-            .manifest
-            .parent()
-            .unwrap()
+        sdk.asset_root()
             .join(&asset.content.as_ref().unwrap().source),
         b"changed",
     )
@@ -248,20 +247,21 @@ fn psd_import_publishes_assets_and_replaces_session_only_on_success() {
     assert_eq!((receipt.report.width, receipt.report.height), (8, 8));
     assert_eq!(receipt.report.raster_layers, 1);
     assert!(receipt.project.durable);
-    assert_eq!(receipt.manifest, destination.join("project.zipzi.json"));
+    assert_eq!(receipt.path, destination);
     assert!(!sdk.modified());
     assert_eq!(sdk.history_lengths(), (0, 0));
     assert!(sdk.mesh(MESH).is_none());
     assert!(sdk.diagnose_resources().is_empty());
     let asset = sdk.asset(&sdk.asset_ids()[0]).unwrap();
-    assert!(destination
+    assert!(sdk
+        .asset_root()
         .join(&asset.content.as_ref().unwrap().source)
         .exists());
     assert_eq!(sdk.mesh(&sdk.mesh_ids()[0]).unwrap().name, "face");
 
     let mut reopened =
         AuthoringSession::new(DOCUMENT, Canvas::new(1.0, 1.0, Vec2::new(0.0, 0.0), 1.0)).unwrap();
-    reopened.open_project(&receipt.manifest, None).unwrap();
+    reopened.open_project(&receipt.path, None).unwrap();
     assert_eq!(reopened.mesh_ids(), sdk.mesh_ids());
     assert!(reopened.diagnose_resources().is_empty());
 
@@ -270,23 +270,32 @@ fn psd_import_publishes_assets_and_replaces_session_only_on_success() {
             .unwrap_err()
             .code
             .as_ref(),
-        "DESTINATION_EXISTS"
+        "PROJECT_EXISTS"
     );
     assert_eq!(sdk.version(), receipt.after);
 }
 
 struct FailPsdPublish;
 
-impl FileSystem for FailPsdPublish {
-    fn write_new(&self, path: &Path, bytes: &[u8]) -> io::Result<()> {
-        NativeFileSystem.write_new(path, bytes)
+impl ArchiveFileSystem for FailPsdPublish {
+    fn create_staging(&self, parent: &Path) -> io::Result<ArchiveStaging> {
+        NativeArchiveFileSystem.create_staging(parent)
+    }
+    fn acquire_lock(&self, target: &Path) -> io::Result<ArchiveLock> {
+        NativeArchiveFileSystem.acquire_lock(target)
+    }
+    fn sync_file(&self, file: &fs::File) -> io::Result<()> {
+        NativeArchiveFileSystem.sync_file(file)
+    }
+    fn publish_no_replace(&self, _from: &Path, _to: &Path) -> io::Result<()> {
+        Err(io::Error::other("injected project publication failure"))
     }
 
     fn sync_directory(&self, path: &Path) -> io::Result<()> {
-        NativeFileSystem.sync_directory(path)
+        NativeArchiveFileSystem.sync_directory(path)
     }
 
-    fn rename(&self, _from: &Path, _to: &Path) -> io::Result<()> {
+    fn publish_replace(&self, _from: &Path, _to: &Path) -> io::Result<()> {
         Err(io::Error::other("injected project publication failure"))
     }
 }
@@ -297,12 +306,14 @@ fn psd_import_publish_failure_preserves_session_and_destination() {
     let source = temp.path("art.psd");
     let destination = temp.path("art-project");
     fs::write(&source, LAYERED_PSD).unwrap();
-    let mut sdk = AuthoringSession::with_filesystem(
+    let mut sdk = AuthoringSession::new(
         DOCUMENT,
         Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0),
-        Arc::new(FailPsdPublish),
     )
     .unwrap();
+    sdk.configure_project_io(
+        ProjectArchiveStore::new(std::env::temp_dir()).with_filesystem(Arc::new(FailPsdPublish)),
+    );
     let before = sdk.version();
     assert_eq!(
         sdk.import_psd(&source, &destination, None)
@@ -470,12 +481,10 @@ fn publication_failure_preserves_checkpoint_history_and_saved_baseline() {
     saved.save_project(&path, None).unwrap();
     let original = saved.mesh(MESH).unwrap();
     let manifest = fs::read(saved.project_path().unwrap()).unwrap();
-    let mut sdk = AuthoringSession::with_filesystem(
-        DOCUMENT,
-        saved.source_canvas().unwrap(),
-        Arc::new(FailPsdPublish),
-    )
-    .unwrap();
+    let mut sdk = AuthoringSession::new(DOCUMENT, saved.source_canvas().unwrap()).unwrap();
+    sdk.configure_project_io(
+        ProjectArchiveStore::new(std::env::temp_dir()).with_filesystem(Arc::new(FailPsdPublish)),
+    );
     sdk.open_project(&path, None).unwrap();
     sdk.edit("unsaved", None, |edit| {
         edit.rename_mesh(MESH, "unsaved")?;
@@ -528,7 +537,7 @@ fn save_relocates_unhashed_history_and_redo_reaches_saved_baseline() {
     let receipt = sdk.save_project(&temp.path("first"), Some(before)).unwrap();
     assert_eq!(receipt.before, before);
     assert_eq!(receipt.after, sdk.version());
-    assert!(receipt.manifest.exists());
+    assert!(receipt.path.exists());
     assert!(receipt.durable);
     assert_eq!(receipt.history_warnings.len(), 1);
     assert!(receipt.history_warnings[0].contains(ASSET));
@@ -560,7 +569,7 @@ fn save_relocates_unhashed_history_and_redo_reaches_saved_baseline() {
     )
     .unwrap();
     assert!(reopened
-        .open_project(&receipt.manifest, None)
+        .open_project(&receipt.path, None)
         .unwrap()
         .diagnostics
         .is_empty());
@@ -614,10 +623,7 @@ fn save_as_keeps_old_resource_for_same_id_and_new_resource_for_redo() {
         old.content.as_ref().unwrap().sha256,
         saved.content.as_ref().unwrap().sha256
     );
-    assert_eq!(
-        sdk.project_path(),
-        Some(second.join("project.zipzi.json").as_path())
-    );
+    assert_eq!(sdk.project_path(), Some(second.as_path()));
     assert!(!sdk.modified());
 
     sdk.undo().unwrap();
@@ -628,10 +634,7 @@ fn save_as_keeps_old_resource_for_same_id_and_new_resource_for_redo() {
     );
     assert_eq!(
         restored.content.as_ref().unwrap().source,
-        temp.path("first")
-            .join(&old.content.as_ref().unwrap().source)
-            .to_str()
-            .unwrap()
+        old.content.as_ref().unwrap().source
     );
     assert!(sdk.diagnose_resources().is_empty());
     assert!(sdk.modified());
@@ -652,6 +655,15 @@ fn deleted_historical_asset_is_rebased_to_its_original_project() {
         .unwrap();
     sdk.save_project(&temp.path("second"), None).unwrap();
     assert!(sdk.asset_ids().is_empty());
+    let historical_png = sdk.asset_root().join(&old.content.as_ref().unwrap().source);
+    assert!(historical_png.is_file());
+    assert_eq!(
+        sdk.validate_export_destination(&historical_png)
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "INVALID_DESTINATION"
+    );
     sdk.undo().unwrap();
     assert_eq!(
         sdk.asset(ASSET).unwrap().content.as_ref().unwrap().sha256,
@@ -659,10 +671,7 @@ fn deleted_historical_asset_is_rebased_to_its_original_project() {
     );
     assert_eq!(
         sdk.asset(ASSET).unwrap().content.as_ref().unwrap().source,
-        temp.path("first")
-            .join(&old.content.as_ref().unwrap().source)
-            .to_str()
-            .unwrap()
+        old.content.as_ref().unwrap().source
     );
     assert!(sdk.diagnose_resources().is_empty());
     sdk.redo().unwrap();
@@ -687,11 +696,10 @@ fn failed_save_and_open_preserve_state_successful_open_resets_generation() {
     let frame = sdk.preview_frame().unwrap();
 
     let existing = temp.path("existing");
-    fs::create_dir(&existing).unwrap();
-    fs::write(existing.join("project.zipzi.json"), &original_manifest).unwrap();
+    fs::write(&existing, &original_manifest).unwrap();
     assert_eq!(
         sdk.save_project(&existing, None).unwrap_err().code.as_ref(),
-        "DESTINATION_EXISTS"
+        "PROJECT_EXISTS"
     );
     fs::write(&manifest, [original_manifest.as_slice(), b" "].concat()).unwrap();
     assert_eq!(
@@ -723,11 +731,16 @@ fn failed_save_and_open_preserve_state_successful_open_resets_generation() {
     );
 
     let asset = sdk.asset(ASSET).unwrap();
-    fs::remove_file(path.join(&asset.content.as_ref().unwrap().source)).unwrap();
-    let opened = sdk.open_project(&path, None).unwrap();
-    assert_eq!(opened.diagnostics.len(), 1);
-    assert_eq!(opened.diagnostics[0].asset_id, ASSET);
+    fs::remove_file(
+        sdk.asset_root()
+            .join(&asset.content.as_ref().unwrap().source),
+    )
+    .unwrap();
     assert_eq!(sdk.diagnose_resources().len(), 1);
+    // Reopening reconstructs a fresh private working set from the archive.
+    let opened = sdk.open_project(&path, None).unwrap();
+    assert!(opened.diagnostics.is_empty());
+    assert!(sdk.diagnose_resources().is_empty());
 }
 
 fn external_model() -> PathBuf {
@@ -762,6 +775,13 @@ fn model3_import_edits_saves_and_exports_without_changing_session_on_export() {
     })
     .unwrap();
     sdk.save_project(&temp.path("saved"), None).unwrap();
+    assert_eq!(
+        sdk.validate_export_destination(&external_model().join("model.model3.json"))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "INVALID_DESTINATION"
+    );
     let saved_version = sdk.version();
     let package = temp.path("exported");
     assert_eq!(
@@ -903,21 +923,30 @@ struct PostCommitWarning {
     syncs: AtomicUsize,
 }
 
-impl FileSystem for PostCommitWarning {
-    fn write_new(&self, path: &Path, bytes: &[u8]) -> io::Result<()> {
-        NativeFileSystem.write_new(path, bytes)
+impl ArchiveFileSystem for PostCommitWarning {
+    fn create_staging(&self, parent: &Path) -> io::Result<ArchiveStaging> {
+        NativeArchiveFileSystem.create_staging(parent)
+    }
+    fn acquire_lock(&self, target: &Path) -> io::Result<ArchiveLock> {
+        NativeArchiveFileSystem.acquire_lock(target)
+    }
+    fn sync_file(&self, file: &fs::File) -> io::Result<()> {
+        NativeArchiveFileSystem.sync_file(file)
+    }
+    fn publish_no_replace(&self, from: &Path, to: &Path) -> io::Result<()> {
+        NativeArchiveFileSystem.publish_no_replace(from, to)
     }
 
     fn sync_directory(&self, path: &Path) -> io::Result<()> {
         let count = self.syncs.fetch_add(1, Ordering::SeqCst) + 1;
-        if count == 3 {
+        if count == 1 {
             return Err(io::Error::other("injected post-publication warning"));
         }
-        NativeFileSystem.sync_directory(path)
+        NativeArchiveFileSystem.sync_directory(path)
     }
 
-    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
-        NativeFileSystem.rename(from, to)
+    fn publish_replace(&self, from: &Path, to: &Path) -> io::Result<()> {
+        NativeArchiveFileSystem.publish_replace(from, to)
     }
 }
 
@@ -926,12 +955,14 @@ fn publication_warning_keeps_saved_baseline_and_undo_history() {
     let temp = TempDir::new();
     let texture = temp.png("a.png", 10);
     let filesystem = Arc::new(PostCommitWarning::default());
-    let mut sdk = AuthoringSession::with_filesystem(
+    let mut sdk = AuthoringSession::new(
         DOCUMENT,
         Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0),
-        filesystem,
     )
     .unwrap();
+    sdk.configure_project_io(
+        ProjectArchiveStore::new(std::env::temp_dir()).with_filesystem(filesystem),
+    );
     let asset = prepare_png_asset(ASSET, "texture", &texture).unwrap();
     sdk.edit("create", None, |edit| edit.create_asset(asset))
         .unwrap();
@@ -939,7 +970,7 @@ fn publication_warning_keeps_saved_baseline_and_undo_history() {
     let warning = sdk.save_project(&project, None).unwrap();
     assert!(!warning.durable);
     assert!(!warning.warnings.is_empty());
-    assert!(warning.manifest.exists());
+    assert!(warning.path.exists());
     assert!(!sdk.modified());
     sdk.undo().unwrap();
     assert!(sdk.asset_ids().is_empty());
@@ -981,4 +1012,191 @@ fn unsaved_psd_snapshot_exports_both_formats_after_source_session_is_dropped() {
     let texture = model["FileReferences"]["Textures"][0].as_str().unwrap();
     let decoded = zipzi_project::decode_png(&fs::read(output.join(texture)).unwrap()).unwrap();
     assert_eq!(decoded.rgba, original.rgba.as_ref());
+}
+
+#[test]
+fn archive_snapshot_and_candidate_keep_resources_after_session_replacement() {
+    let temp = TempDir::new();
+    let source = temp.png("original.png", 37);
+    let mut sdk = session(&source, true);
+    let archive = temp.path("角色 copy.zipzi");
+    sdk.save_project(&archive, None).unwrap();
+    let expected = sdk.read_asset(ASSET).unwrap().bytes;
+    let snapshot = sdk.read_snapshot();
+    let candidate = sdk.begin_owned_edit("retained", None).unwrap();
+    let working = sdk.asset_root();
+    fs::remove_file(source).unwrap();
+    fs::remove_file(&archive).unwrap();
+    sdk.new_project(DOCUMENT, Canvas::new(1., 1., Vec2::default(), 1.), None)
+        .unwrap();
+    assert!(working.exists());
+    assert_eq!(
+        zipzi_project::read_project_asset(
+            snapshot.asset_root(),
+            snapshot.document().get_asset(ASSET).unwrap()
+        )
+        .unwrap()
+        .bytes,
+        expected
+    );
+    drop(snapshot);
+    drop(sdk);
+    assert!(working.exists(), "candidate owns its frozen resources");
+    drop(candidate);
+    assert!(
+        !working.exists(),
+        "last resource lease reclaims the working set"
+    );
+}
+
+#[test]
+fn save_as_binds_historical_external_files_before_publication() {
+    let temp = TempDir::new();
+    let first = temp.png("first.png", 14);
+    let second = temp.png("second.png", 98);
+    let mut sdk = session(&first, true);
+    let original = sdk.read_asset(ASSET).unwrap().bytes;
+    let replacement = prepare_png_asset(ASSET, "texture", &second).unwrap();
+    sdk.edit("replace", None, |e| e.replace_asset(replacement))
+        .unwrap();
+    let archive = temp.path("current.zipzi");
+    sdk.save_project(&archive, None).unwrap();
+    fs::remove_file(first).unwrap();
+    fs::remove_file(second).unwrap();
+    sdk.undo().unwrap();
+    assert_eq!(sdk.read_asset(ASSET).unwrap().bytes, original);
+    sdk.redo().unwrap();
+    assert_ne!(sdk.read_asset(ASSET).unwrap().bytes, original);
+    let root = sdk.asset_root();
+    let saved_as = temp.path("new.zipzi");
+    sdk.save_project(&saved_as, None).unwrap();
+    assert_eq!(sdk.asset_root(), root);
+    fs::remove_file(archive).unwrap();
+    sdk.undo().unwrap();
+    assert_eq!(sdk.read_asset(ASSET).unwrap().bytes, original);
+}
+
+#[test]
+fn native_archive_child_process() {
+    let Some(mode) = std::env::var_os("ZIPZI_ARCHIVE_TEST_CHILD") else {
+        return;
+    };
+    let root = PathBuf::from(std::env::var_os("ZIPZI_ARCHIVE_TEST_ROOT").unwrap());
+    let project = root.join("角色 moved.zipzi");
+    let mut sdk = AuthoringSession::new(DOCUMENT, Canvas::default()).unwrap();
+    sdk.configure_project_io(ProjectArchiveStore::new(root.join("child-cache")));
+    sdk.open_project(&project, None).unwrap();
+    if mode == "conflict" {
+        fs::write(root.join("child-ready"), b"ready").unwrap();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        while !root.join("parent-saved").exists() {
+            assert!(std::time::Instant::now() < deadline, "parent never saved");
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        let error = sdk.save_project(&project, None).unwrap_err();
+        assert_eq!(error.code.as_ref(), "PROJECT_CONFLICT");
+    } else {
+        let expected = fs::read_to_string(root.join("expected.json")).unwrap();
+        assert_eq!(
+            zipzi_project::encode_project(sdk.document()).unwrap(),
+            expected
+        );
+        let asset = sdk.asset(ASSET).unwrap();
+        assert!(sdk.document().editor_state().objects[ASSET].locked);
+        let encoded = fs::read(
+            sdk.asset_root()
+                .join(&asset.content.as_ref().unwrap().source),
+        )
+        .unwrap();
+        assert_eq!(encoded, fs::read(root.join("expected.png")).unwrap());
+        let frame = sdk.evaluate(&Default::default()).unwrap();
+        assert_eq!(frame.drawables.len(), 1);
+    }
+}
+
+#[test]
+fn moved_archive_opens_in_new_process_without_sources_and_stale_process_conflicts() {
+    use std::process::{Command, Stdio};
+    let temp = TempDir::new();
+    let texture = temp.png("source.png", 79);
+    let expected_png = fs::read(&texture).unwrap();
+    let mut sdk = session(&texture, true);
+    // Locked assets still need storage rebinding, including already-missing descriptors.
+    sdk.edit("lock resources", None, |edit| {
+        edit.create_asset(zipzi_core::ImageAsset {
+            id: "00000000-0000-4000-8000-000000000004".into(),
+            name: "Missing".into(),
+            content: None,
+            unresolved_source: Some("old.png".into()),
+        })?;
+        let mut state = edit.candidate_document().editor_state().clone();
+        for asset in [ASSET, "00000000-0000-4000-8000-000000000004"] {
+            state.objects.insert(
+                asset.into(),
+                zipzi_core::document::ObjectEditorState {
+                    locked: true,
+                    hidden_in_editor: false,
+                },
+            );
+        }
+        edit.replace_editor_state(state)
+    })
+    .unwrap();
+    sdk.configure_project_io(ProjectArchiveStore::new(temp.path("original-cache")));
+    let old = temp.path("original.zipzi");
+    sdk.save_project(&old, None).unwrap();
+    let expected = zipzi_project::encode_project(sdk.document()).unwrap();
+    fs::write(temp.path("expected.json"), expected).unwrap();
+    fs::write(temp.path("expected.png"), expected_png).unwrap();
+    fs::remove_file(texture).unwrap();
+    drop(sdk); // Last lease deletes the original working set.
+    assert_eq!(
+        fs::read_dir(temp.path("original-cache")).unwrap().count(),
+        0
+    );
+    let moved = temp.path("角色 moved.zipzi");
+    fs::rename(old, &moved).unwrap();
+    let child = |mode: &str| {
+        Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "project_io::native_archive_child_process",
+                "--nocapture",
+            ])
+            .env("ZIPZI_ARCHIVE_TEST_CHILD", mode)
+            .env("ZIPZI_ARCHIVE_TEST_ROOT", &temp.0)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap()
+    };
+    let opened = child("verify").wait_with_output().unwrap();
+    assert!(
+        opened.status.success(),
+        "{}",
+        String::from_utf8_lossy(&opened.stderr)
+    );
+    let stale = child("conflict");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !temp.path("child-ready").exists() {
+        assert!(std::time::Instant::now() < deadline, "child did not open");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    let mut current = AuthoringSession::new(DOCUMENT, Canvas::default()).unwrap();
+    current.open_project(&moved, None).unwrap();
+    current
+        .edit("change model", None, |edit| {
+            edit.replace_model_setup(Canvas::new(200., 100., Vec2::default(), 1.))
+        })
+        .unwrap();
+    current.save_project(&moved, None).unwrap();
+    let saved = fs::read(&moved).unwrap();
+    fs::write(temp.path("parent-saved"), b"saved").unwrap();
+    let stale = stale.wait_with_output().unwrap();
+    assert!(
+        stale.status.success(),
+        "{}",
+        String::from_utf8_lossy(&stale.stderr)
+    );
+    assert_eq!(fs::read(&moved).unwrap(), saved);
 }

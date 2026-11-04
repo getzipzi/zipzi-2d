@@ -48,7 +48,7 @@ with zipzi.local() as runtime:
         edit.meshes.create(meshes.MeshSpec("Face", geometry))
 
     # Use an absolute path that the Runtime can access.
-    session.project.save(Path("/absolute/path/to/project")).wait()
+    session.project.save(Path("/absolute/path/to/project.zipzi")).wait()
 ```
 
 An Edit commits changes to the document and its history; saving the project is a
@@ -74,7 +74,7 @@ Editor and a script or agent can continue from their changes. Saving is separate
 host; see the [usage guide](client/python/zipzi/docs/guide.md).
 
 Connected Python and Editor versions may differ when they share the stable wire
-protocol major (`zipzi-runtime-v2`). Compatible API additions and optional host
+protocol major (`zipzi-runtime-v3`). Compatible API additions and optional host
 services do not require a new handshake version. Earlier `rN` protocols and
 `zipzi-runtime-v1` need a coordinated upgrade to this baseline: contract
 extraction changes Rust type identities and binary signatures. See the

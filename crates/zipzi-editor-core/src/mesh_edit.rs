@@ -1,6 +1,6 @@
 //! Invert the displayed pose without changing unselected authored vertices.
 use crate::{ModelPoint, ModelVector};
-use anyhow::{Result, ensure};
+use anyhow::{ensure, Result};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -312,20 +312,18 @@ mod tests {
         assert_eq!(solved, vec![d(10., 4.); 2]);
         let one = map.solve(&[((id(1), 0), d(10., 4.))])?;
         assert_eq!(one, vec![d(20., 8.)]);
-        assert!(
-            map.solve(&[((id(1), 0), d(10., 4.)), ((id(1), 1), d(-10., 4.))])
-                .is_err()
-        );
+        assert!(map
+            .solve(&[((id(1), 0), d(10., 4.)), ((id(1), 1), d(-10., 4.))])
+            .is_err());
         for amount in [1., 0.99] {
             let map = GlueMap::new(&[op(0, 1, amount, 0.)]);
             assert!(map.solve(&[((id(1), 0), d(1., 0.))]).is_err());
         }
         let map = GlueMap::new(&[op(0, 1, 1., 0.)]);
         assert!(map.check_drag(&[((id(1), 0), 1.)], false).is_err());
-        assert!(
-            map.check_drag(&[((id(1), 0), 1.), ((id(1), 1), 1.)], false)
-                .is_ok()
-        );
+        assert!(map
+            .check_drag(&[((id(1), 0), 1.), ((id(1), 1), 1.)], false)
+            .is_ok());
         assert!(map.check_drag(&[((id(1), 0), 1.)], true).is_ok());
         Ok(())
     }
@@ -521,7 +519,7 @@ mod tests {
             setup(e)
         })?;
         let receipt = s.save_project(&dir.path().join("fixture.zipzi"), None)?;
-        let mut doc = Document::open(&receipt.manifest)?;
+        let mut doc = Document::open(&receipt.path)?;
         doc.select(&id(1))?;
         Ok((doc, dir))
     }
@@ -633,8 +631,8 @@ mod tests {
     }
 
     #[test]
-    fn blend_delta_inverse_composes_glue_constraints_and_interpolated_ordinary_pose()
-    -> anyhow::Result<()> {
+    fn blend_delta_inverse_composes_glue_constraints_and_interpolated_ordinary_pose(
+    ) -> anyhow::Result<()> {
         let (mut doc, _dir) = fixture(0.5, true)?;
         doc.focus_parameter(&id(5))?;
         doc.set_preview_parameters(&[(id(4), 0.35), (id(5), 1.), (id(8), 0.5)])?;

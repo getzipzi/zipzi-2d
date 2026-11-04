@@ -66,6 +66,39 @@ impl Document {
         self.changed(ChangeKind::Metadata, Vec::new(), vec![key])
     }
 
+    /// Rebind verified resource bytes without changing authoring fields or lock state.
+    /// Storage callers must verify the bytes and provide the complete old descriptor.
+    pub fn relocate_asset_storage(
+        &mut self,
+        expected: &ImageAsset,
+        source: String,
+        sha256: String,
+    ) -> EditResult {
+        if self.mutation_blocked() {
+            return self.failed(Status::error("TRANSACTION_ACTIVE", &expected.id));
+        }
+        if self.get_asset(&expected.id) != Some(expected) {
+            return self.failed(Status::error("STALE_ASSET", &expected.id));
+        }
+        let Some(mut content) = expected.content.clone() else {
+            return self.failed(Status::error("MISSING_CONTENT", &expected.id));
+        };
+        content.source = source;
+        content.sha256 = sha256;
+        if !content.is_valid() {
+            return self.failed(Status::error("INVALID_ASSET", &expected.id));
+        }
+        if expected.content.as_ref() == Some(&content) {
+            return self.failed(Status::ok());
+        }
+        self.content.assets.get_mut(&expected.id).unwrap().content = Some(content);
+        self.changed(
+            ChangeKind::Resources,
+            self.content.mesh_order.clone(),
+            vec![expected.id.clone()],
+        )
+    }
+
     pub fn replace_asset(&mut self, asset: ImageAsset) -> EditResult {
         if self.mutation_blocked() {
             return self.failed(Status::error("TRANSACTION_ACTIVE", &asset.id));

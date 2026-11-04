@@ -146,7 +146,7 @@ with s.edit('abandoned client') as e:
                             time.sleep(.25)
                     self.assertEqual(session.info().history, (2, 0))
                     saved = session.project.save(folder / "project").wait()
-                    self.assertTrue(saved.manifest.is_file())
+                    self.assertTrue(saved.path.is_file())
                     self.assertFalse(session.info().modified)
                     old_id = session.id
                     old_cursor = session.subscribe().cursor
@@ -169,7 +169,7 @@ with s.edit('abandoned client') as e:
                     self.assertEqual(stale_events.exception.code, "RESYNC_REQUIRED")
                     with self.assertRaises(zipzi.SdkFailure):
                         fresh.sessions.attach(old_id)
-                    session = fresh.sessions.open(saved.manifest).wait()
+                    session = fresh.sessions.open(saved.path).wait()
                     self.assertEqual(session.meshes.get("79200000-0000-4000-8000-000000000021").value.name, "Second")
                     value = session.parameters.get("79200000-0000-4000-8000-000000000022").value
                     self.assertEqual(session.modeling.sample(({"79200000-0000-4000-8000-000000000022":.5},)).value.frames[0].drawables[0].positions[0][0],7.5)

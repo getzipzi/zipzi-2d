@@ -2,7 +2,7 @@ use super::CanvasScene;
 use crate::{Document, ModelPoint};
 use std::sync::Arc;
 use zipzi_core::{Canvas, Mesh, Vec2};
-use zipzi_sdk::{AuthoringSession, prepare_png_asset};
+use zipzi_sdk::{prepare_png_asset, AuthoringSession};
 
 fn fixture() -> anyhow::Result<(Document, tempfile::TempDir)> {
     let directory = tempfile::tempdir()?;
@@ -34,7 +34,7 @@ fn fixture() -> anyhow::Result<(Document, tempfile::TempDir)> {
         Ok(())
     })?;
     let receipt = session.save_project(&directory.path().join("fixture.zipzi"), None)?;
-    Ok((Document::open(&receipt.manifest)?, directory))
+    Ok((Document::open(&receipt.path)?, directory))
 }
 
 #[test]
@@ -81,8 +81,8 @@ fn parameter_tables_share_unchanged_values_and_retain_each_frames_own_pose() -> 
 }
 
 #[test]
-fn mesh_property_commits_reuse_geometry_and_publish_fresh_labels_and_visibility()
--> anyhow::Result<()> {
+fn mesh_property_commits_reuse_geometry_and_publish_fresh_labels_and_visibility(
+) -> anyhow::Result<()> {
     use crate::{DocumentSession, EditorCommand, ObjectKind, ObjectRef};
     let (document, _directory) = fixture()?;
     let object = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::from_u128(2).to_string());
@@ -112,26 +112,20 @@ fn mesh_property_commits_reuse_geometry_and_publish_fresh_labels_and_visibility(
                 .contains(&object.id),
             visible
         );
-        assert!(
-            original
-                .mesh_hits(ModelPoint { x: 128., y: 128. })
-                .contains(&object.id)
-        );
+        assert!(original
+            .mesh_hits(ModelPoint { x: 128., y: 128. })
+            .contains(&object.id));
     }
     session.execute(EditorCommand::Undo)?;
     let (_, scene) = session.scene()?;
-    assert!(
-        !scene
-            .mesh_hits(ModelPoint { x: 128., y: 128. })
-            .contains(&object.id)
-    );
+    assert!(!scene
+        .mesh_hits(ModelPoint { x: 128., y: 128. })
+        .contains(&object.id));
     session.execute(EditorCommand::Redo)?;
     let (_, scene) = session.scene()?;
-    assert!(
-        scene
-            .mesh_hits(ModelPoint { x: 128., y: 128. })
-            .contains(&object.id)
-    );
+    assert!(scene
+        .mesh_hits(ModelPoint { x: 128., y: 128. })
+        .contains(&object.id));
     Ok(())
 }
 
@@ -150,16 +144,12 @@ fn updated_positions_reuse_other_meshes_and_refresh_bounds_and_boundaries() -> a
     assert_ne!(original.meshes[1].boundary, updated.meshes[1].boundary);
     assert_eq!(original.meshes[1].vertices[0].1.x, 24.);
     assert_eq!(updated.meshes[1].vertices[0].1.x, -26.);
-    assert!(
-        updated
-            .mesh_hits(ModelPoint { x: 0., y: 25. })
-            .contains(&updated.meshes[1].id)
-    );
-    assert!(
-        !original
-            .mesh_hits(ModelPoint { x: 0., y: 25. })
-            .contains(&original.meshes[1].id)
-    );
+    assert!(updated
+        .mesh_hits(ModelPoint { x: 0., y: 25. })
+        .contains(&updated.meshes[1].id));
+    assert!(!original
+        .mesh_hits(ModelPoint { x: 0., y: 25. })
+        .contains(&original.meshes[1].id));
     Ok(())
 }
 
@@ -180,31 +170,25 @@ fn geometry_reuse_respects_canvas_coordinates_drawable_order_and_topology() -> a
     }
     // Metadata edits reuse exactly the same model-space mesh geometry.
     let updated = original.with_positions(&document, source.clone());
-    assert!(
-        original
-            .meshes
-            .iter()
-            .zip(updated.meshes.iter())
-            .all(|(a, b)| Arc::ptr_eq(a, b))
-    );
+    assert!(original
+        .meshes
+        .iter()
+        .zip(updated.meshes.iter())
+        .all(|(a, b)| Arc::ptr_eq(a, b)));
     document.select(&uuid::Uuid::from_u128(2).to_string())?;
     document.preview_name("Renamed mesh")?;
     let renamed = document.snapshot()?;
     let renamed = original.with_positions(&document, renamed);
     assert!(!Arc::ptr_eq(&original.index, &renamed.index));
-    assert!(
-        original
-            .meshes
-            .iter()
-            .zip(renamed.meshes.iter())
-            .all(|(a, b)| !Arc::ptr_eq(a, b))
-    );
-    assert!(
-        renamed
-            .index
-            .objects
-            .iter()
-            .any(|object| object.name == "Renamed mesh")
-    );
+    assert!(original
+        .meshes
+        .iter()
+        .zip(renamed.meshes.iter())
+        .all(|(a, b)| !Arc::ptr_eq(a, b)));
+    assert!(renamed
+        .index
+        .objects
+        .iter()
+        .any(|object| object.name == "Renamed mesh"));
     Ok(())
 }

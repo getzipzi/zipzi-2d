@@ -1,5 +1,6 @@
 """Editor development build, publication and watcher; platform lifecycle is shared."""
 import argparse
+import importlib.util
 from contextlib import contextmanager
 import json
 import os
@@ -66,10 +67,14 @@ class Editor:
             icon = self.root / 'crates/zipzi-editor/assets/app-icons/zipzi-editor-icon-vector.icns'
             if icon.exists():
                 shutil.copy2(icon, resources / 'AppIcon.icns')
+            spec = importlib.util.spec_from_file_location('zipzi_release', ROOT / 'tools/packaging/release.py')
+            release = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(release)
             with (self.bundle / 'Contents/Info.plist').open('wb') as stream:
                 plistlib.dump(dict(CFBundleIdentifier='dev.zipzi.editor.watch', CFBundleName='Zipzi Editor Dev',
                     CFBundleExecutable='zipzi-editor', CFBundlePackageType='APPL', CFBundleVersion='0.1.0',
-                    CFBundleIconFile='AppIcon', NSHighResolutionCapable=True), stream)
+                    CFBundleIconFile='AppIcon', NSHighResolutionCapable=True,
+                    **release.project_document_types(development=True)), stream)
         elif sys.platform == 'win32':
             # The executable embeds UI assets, its icon and the GPUI DPI manifest.
             # Keep the applicable licenses beside the development portable binary.

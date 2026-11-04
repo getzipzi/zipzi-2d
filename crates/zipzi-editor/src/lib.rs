@@ -22,6 +22,7 @@ mod i18n;
 mod input_routing;
 mod ipc;
 mod keybindings;
+mod launch;
 mod menus;
 mod mesh_edges;
 mod mesh_thumbnails;
@@ -51,6 +52,8 @@ use zipzi_editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
 struct EditorView {
     host: Option<host::DesktopHost>,
     _runtime_events: Option<Task<()>>,
+    project_queue: std::sync::Arc<std::sync::Mutex<zipzi_runtime::protocol::ProjectOpenQueue>>,
+    _project_requests: Task<()>,
     input_router: input_routing::InputRouter,
     focus: FocusHandle,
     modal: bool,
@@ -107,7 +110,24 @@ impl EditorView {
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut editor = Self {
-            host,
+            host: host.clone(),
+            project_queue: host
+                .as_ref()
+                .map(|h| h.project_queue.clone())
+                .unwrap_or_default(),
+            _project_requests: cx.spawn_in(window, async move |this, cx| {
+                loop {
+                    cx.background_executor()
+                        .timer(std::time::Duration::from_millis(100))
+                        .await;
+                    if this
+                        .update_in(cx, |this, window, cx| this.drain_project_queue(window, cx))
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            }),
             _runtime_events: None,
             input_router: Default::default(),
             focus,
@@ -371,11 +391,32 @@ impl EditorView {
 }
 
 pub fn run() {
+    let options = match launch::LaunchOptions::parse(std::env::args_os().skip(1)) {
+        Ok(options) => options,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(2);
+        }
+    };
+    let project_queue = std::sync::Arc::new(std::sync::Mutex::new(
+        zipzi_runtime::protocol::ProjectOpenQueue::default(),
+    ));
+    if !options.projects.is_empty() {
+        if let Err(error) = project_queue
+            .lock()
+            .unwrap()
+            .enqueue(options.projects.clone())
+        {
+            eprintln!("{error}");
+            std::process::exit(2);
+        }
+    }
     let endpoint = zipzi_runtime::local::Endpoint::from_env().expect("private Runtime endpoint");
     let owner = match endpoint.inherit_or_claim().expect("Runtime owner lock") {
         Some(owner) => owner,
         None => {
-            let host_pid = ipc::reopen(&endpoint).expect("reopen resident Editor host");
+            let host_pid =
+                ipc::reopen(&endpoint, &options.projects).expect("reopen resident Editor host");
             if let Some(pid_file) = std::env::var_os("ZIPZI_DEV_PID_FILE") {
                 let _ = std::fs::write(pid_file, format!("reused:{host_pid}"));
             }
@@ -390,8 +431,24 @@ pub fn run() {
     benchmark::init().expect("initialize benchmark trace");
     i18n::activate(None);
     let background_launch = std::env::var_os("ZIPZI_DEV_BACKGROUND").is_some();
-    let no_window = std::env::args().any(|arg| arg == "--no-window");
+    let no_window = options.no_window;
     let application = gpui_kit::application().with_assets(gpui_kit::assets::AllAssets);
+    let file_events = project_queue.clone();
+    application.on_open_urls(move |urls| {
+        for url in urls {
+            match url::Url::parse(&url)
+                .ok()
+                .and_then(|url| url.to_file_path().ok())
+            {
+                Some(path) => {
+                    if let Err(error) = file_events.lock().unwrap().enqueue(vec![path]) {
+                        eprintln!("{error}");
+                    }
+                }
+                None => eprintln!("Invalid project file URL: {url}"),
+            }
+        }
+    });
     application.on_reopen(|cx| {
         host::open_window(cx, true);
     });
@@ -408,11 +465,12 @@ pub fn run() {
         cx.set_global(settings);
         actions::init(cx);
         theme::init(cx);
-        let host = host::DesktopHost::new(no_window, cx);
+        let host = host::DesktopHost::with_projects(no_window, project_queue, cx);
         cx.set_global(host);
         #[cfg(windows)]
         dev_control::start(cx);
         ipc::start(owner, cx).expect("start local Runtime listener");
+        host::start_project_requests(cx);
         if !no_window {
             host::open_window(cx, !background_launch);
         }

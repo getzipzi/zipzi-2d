@@ -451,6 +451,20 @@ pub trait Platform: 'static {
         directory: &Path,
         suggested_name: Option<&str>,
     ) -> oneshot::Receiver<Result<Option<PathBuf>>>;
+    /// Native file-type filtering; platforms without support retain the generic picker.
+    fn prompt_for_paths_with_extension(
+        &self, options: PathPromptOptions, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
+        let _ = extension;
+        self.prompt_for_paths(options)
+    }
+    /// Restrict and normalize the extension before the native Replace confirmation.
+    fn prompt_for_new_path_with_extension(
+        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
+        let _ = extension;
+        self.prompt_for_new_path(directory, suggested_name)
+    }
     fn can_select_mixed_files_and_dirs(&self) -> bool;
     fn reveal_path(&self, path: &Path);
     fn open_with_system(&self, path: &Path);

@@ -1,0 +1,18 @@
+[package]
+name = "zipzi-project-preview"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bounded static preview reader for Zipzi project files and desktop extensions"
+
+[lib]
+crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+png.workspace = true
+thiserror.workspace = true
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }

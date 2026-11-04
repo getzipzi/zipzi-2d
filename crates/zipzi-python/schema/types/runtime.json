@@ -554,6 +554,15 @@
       "doc": "R0 defaults for the objects enabled in R1. Estimates conservatively count\nshared document content per holder; these are not RSS or GPU limits.",
       "fields": [
         {
+          "doc": "Aggregate native archive staging and private resource disk budget for this host.",
+          "name": "project_disk_bytes",
+          "rust_name": "project_disk_bytes",
+          "shape": {
+            "kind": "u64"
+          },
+          "skip": false
+        },
+        {
           "doc": "Maximum logical observation base RGBA bytes per referenced asset set.",
           "name": "observation_texture_rgba_bytes",
           "rust_name": "observation_texture_rgba_bytes",

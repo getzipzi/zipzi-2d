@@ -40,10 +40,23 @@ class WindowsPackage(unittest.TestCase):
             (root / 'vendor/library/LICENSE').write_text('license')
             binary = root / 'editor.exe'
             binary.write_bytes(executable())
+            preview = root / 'ZipziProjectPreview.dll'
+            preview.write_bytes(executable())
             output = root / 'out.zip'
-            package_windows.package(binary, output, 'a' * 40, root)
+            package_windows.package(binary, output, 'a' * 40, root, preview_dll=preview)
             with zipfile.ZipFile(output) as archive:
                 self.assertEqual(archive.read('Zipzi Editor/zipzi-editor.exe'), executable())
+                registration = archive.read('Zipzi Editor/Register-FileAssociation.ps1').decode()
+                self.assertIn('Software\\Classes', registration)
+                self.assertIn('-- "%1"', registration)
+                self.assertIn('-eq $openCommand', registration)
+                self.assertIn('Register-ProjectPreview.ps1', registration)
+                self.assertEqual(archive.read('Zipzi Editor/ZipziProjectPreview.dll'), executable())
+                shell = archive.read('Zipzi Editor/Register-ProjectPreview.ps1').decode()
+                self.assertIn('-eq $previewPath', shell)
+                self.assertIn('InprocServer32', shell)
+                self.assertNotIn('UserChoice', registration)
+                self.assertIn(b'-Unregister', archive.read('Zipzi Editor/FILE-ASSOCIATION.txt'))
                 self.assertEqual(archive.read('Zipzi Editor/vendor-notices/library/LICENSE'), b'license')
                 self.assertIn(b'0.1.0-alpha.2', archive.read('Zipzi Editor/BUILD-INFO.txt'))
                 self.assertIn(b'a' * 40, archive.read('Zipzi Editor/BUILD-INFO.txt'))

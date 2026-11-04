@@ -94,7 +94,7 @@ fn texture_assignment_replacement_delete_and_history_preserve_geometry_and_refer
     );
     d.redo()?;
     let saved = d.save(&assets.path().join("texture-flow.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.texture_info(&source)?.users.len(), 2);
     assert!(reopened.texture_info(&replacement).is_err());
     Ok(())
@@ -123,7 +123,7 @@ fn direct_image_import_is_atomic_and_retains_pixels_for_history_and_save() -> an
     );
     assert_eq!(d.history_lengths(), before);
     let saved = d.save(&dir.path().join("imported.zipzi"))?;
-    let mut reopened = Document::open(&saved.manifest)?;
+    let mut reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.snapshot()?.textures[0].rgba, pixels);
     Ok(())
 }
@@ -322,7 +322,7 @@ fn pending_texture_is_inspectable_and_saveable_without_loading_fake_pixels() -> 
     );
     let dir = tempfile::tempdir()?;
     let saved = d.save(&dir.path().join("resources"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert!(
         reopened
             .object_index()

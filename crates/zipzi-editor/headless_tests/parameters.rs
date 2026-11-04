@@ -529,7 +529,7 @@ fn parameter_slider_remains_editable_after_scrolling_cached_rows(cx: &mut TestAp
     let receipt = session
         .save_project(&assets.path().join("parameters.zipzi"), None)
         .unwrap();
-    let harness = setup_with_document(cx, Document::open(&receipt.manifest).unwrap(), assets);
+    let harness = setup_with_document(cx, Document::open(&receipt.path).unwrap(), assets);
     let last = ids.last().unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         assert!(window.try_find(format!("parameter-value-{last}")).is_none());

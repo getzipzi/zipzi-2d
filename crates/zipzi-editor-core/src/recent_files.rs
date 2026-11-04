@@ -35,18 +35,9 @@ pub struct RecentFiles {
     pub paths: Vec<PathBuf>,
 }
 
-/// Store the standard manifest alias as its project directory. Custom manifest
-/// filenames stay intact because opening their parent could select another project.
+/// Recent history always records the user archive path.
 fn recent_path(path: &Path) -> PathBuf {
-    let normalized = normalize_path(path);
-    if normalized
-        .file_name()
-        .is_some_and(|name| name == "project.zipzi.json")
-    {
-        normalized.parent().unwrap_or(&normalized).to_path_buf()
-    } else {
-        normalized
-    }
+    normalize_path(path)
 }
 
 impl RecentFiles {
@@ -175,10 +166,10 @@ mod tests {
         let custom = root.join("custom.json");
         let mut recent = RecentFiles {
             paths: vec![
-                first.join("project.zipzi.json"),
+                first.clone(),
                 second.clone(),
                 first.clone(),
-                second.join("project.zipzi.json"),
+                second.clone(),
                 custom.clone(),
             ],
         };
@@ -187,7 +178,7 @@ mod tests {
             recent.paths,
             vec![first.clone(), second.clone(), custom.clone()]
         );
-        recent.push(second.join("project.zipzi.json"));
+        recent.push(second.clone());
         assert_eq!(
             recent.paths,
             vec![second.clone(), first.clone(), custom.clone()]
@@ -197,7 +188,7 @@ mod tests {
             recent.paths,
             vec![second.clone(), first.clone(), custom.clone()]
         );
-        recent.remove(&second.join("project.zipzi.json"));
+        recent.remove(&second);
         assert_eq!(recent.paths, vec![first, custom]);
     }
 

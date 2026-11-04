@@ -896,9 +896,14 @@ impl Platform for MacPlatform {
     }
 
     fn prompt_for_paths(
-        &self,
-        options: PathPromptOptions,
+        &self, options: PathPromptOptions,
     ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
+        self.prompt_for_paths_with_extension(options, "")
+    }
+    fn prompt_for_paths_with_extension(
+        &self, options: PathPromptOptions, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
+        let extension = extension.to_owned();
         use objc2_foundation::NSString;
 
         let marker = self.1;
@@ -906,6 +911,11 @@ impl Platform for MacPlatform {
         self.foreground_executor()
             .spawn(async move {
                 let panel = NSOpenPanel::openPanel(marker);
+                if !extension.is_empty() {
+                    #[allow(deprecated)]
+                    panel.setAllowedFileTypes(Some(&objc2_foundation::NSArray::from_slice(&[&*NSString::from_str(&extension)])));
+                    panel.setAllowsOtherFileTypes(false);
+                }
                 panel.setCanChooseDirectories(options.directories);
                 panel.setCanChooseFiles(options.files);
                 panel.setAllowsMultipleSelection(options.multiple);
@@ -944,10 +954,14 @@ impl Platform for MacPlatform {
     }
 
     fn prompt_for_new_path(
-        &self,
-        directory: &Path,
-        suggested_name: Option<&str>,
+        &self, directory: &Path, suggested_name: Option<&str>,
     ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
+        self.prompt_for_new_path_with_extension(directory, suggested_name, "")
+    }
+    fn prompt_for_new_path_with_extension(
+        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
+        let extension = extension.to_owned();
         use objc2_foundation::{NSString, NSURL};
 
         let url = NSURL::from_directory_path(directory);
@@ -958,6 +972,21 @@ impl Platform for MacPlatform {
             .spawn(async move {
                 let panel = NSSavePanel::savePanel(marker);
                 panel.setDirectoryURL(url.as_deref());
+                let delegate = (!extension.is_empty()).then(|| {
+                    crate::save_panel::ExtensionSavePanelDelegate::new(marker, extension.clone())
+                });
+                if let Some(delegate) = &delegate {
+                    // SAFETY: the completion block below retains the weak delegate.
+                    unsafe { panel.setDelegate(Some(objc2::runtime::ProtocolObject::from_ref(&**delegate))) };
+                }
+                if !extension.is_empty() {
+                    #[allow(deprecated)]
+                    panel.setAllowedFileTypes(Some(&objc2_foundation::NSArray::from_slice(&[&*NSString::from_str(&extension)])));
+                    // Preserve an explicitly typed other suffix for caller validation.
+                    // Disallowing it silently turns `name.png` into `name.png.zipzi`,
+                    // before the caller can explain the invalid extension.
+                    panel.setAllowsOtherFileTypes(true);
+                }
 
                 if let Some(suggested_name) = suggested_name {
                     panel.setNameFieldStringValue(&suggested_name);
@@ -967,6 +996,7 @@ impl Platform for MacPlatform {
                 let handler = RcBlock::new({
                     let panel = panel.clone();
                     move |response: NSModalResponse| {
+                        let _delegate = &delegate;
                         let Some(done_tx) = done_tx.take() else {
                             return;
                         };
@@ -992,7 +1022,10 @@ impl Platform for MacPlatform {
                                     // This is conditional on OS version because I'd like to get rid of it, so that
                                     // you can manually create a file called `a.sql.s`. That said it seems better
                                     // to break that use-case than breaking `a.sql`.
-                                    if let &[_, second, third] = chunks.as_slice()
+                                    // Filtered saves normalize in the delegate before confirmation;
+                                    // never rewrite their confirmed path (including `a.ext.ext`).
+                                    if extension.is_empty()
+                                        && let &[_, second, third] = chunks.as_slice()
                                         && second.starts_with(third)
                                         && Self::os_version() >= Version::new(15, 0, 0)
                                     {
