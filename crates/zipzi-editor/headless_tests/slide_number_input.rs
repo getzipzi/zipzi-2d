@@ -63,6 +63,81 @@ fn value(harness: &Harness, cx: &mut TestAppContext) -> f32 {
 }
 
 #[gpui_kit::test]
+fn number_slide_preserves_fractional_movement_through_percent_value_feedback(
+    cx: &mut TestAppContext,
+) {
+    use zipzi_editor_core::{ObjectKind, property::deformer::SCALE};
+
+    let (mut document, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let object = document_fixture::object(ObjectKind::Deformer, 501);
+    document.navigate(object.clone()).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    super::properties::show(&harness, "property-input-scale", cx);
+    let original = harness.view.read_with(cx, |view, _| {
+        view.editor
+            .document()
+            .unwrap()
+            .property_values(&object)
+            .unwrap()[&SCALE.key]
+            .clone()
+    });
+
+    // Both paths traverse 113%, whose authoritative 1.13 * 100 feedback
+    // formats differently from the emitted 113. Each frame must retain the
+    // fractional movement even when mouse events cover less than one step.
+    for stride in [1, 8] {
+        let origin = cx
+            .update_window(harness.window, |_, window, cx| {
+                window.render_frame(cx);
+                let origin = window
+                    .within("property-input-scale")
+                    .find("slide-number-input")
+                    .bounds()
+                    .center();
+                press(window, origin, cx);
+                origin
+            })
+            .unwrap();
+        for distances in [
+            (stride..=160).step_by(stride).collect::<Vec<_>>(),
+            (0..160).step_by(stride).rev().collect(),
+        ] {
+            let endpoint = *distances.last().unwrap();
+            for distance in distances {
+                cx.update_window(harness.window, |_, window, cx| {
+                    slide(
+                        window,
+                        origin + point(px(distance as f32), px(0.)),
+                        false,
+                        cx,
+                    );
+                    window.render_frame(cx);
+                })
+                .unwrap();
+            }
+            harness.view.read_with(cx, |view, _| {
+                let doc = view.editor.document().unwrap();
+                let preview = doc.object_index().get(&object).unwrap().properties["rotation"]
+                    ["pose"]["scale"]
+                    .as_f64()
+                    .unwrap();
+                let expected = if endpoint == 160 { 1.2 } else { 1. };
+                assert!(
+                    (preview - expected).abs() < 1e-6,
+                    "stride {stride}, endpoint {endpoint}: {preview} != {expected}",
+                );
+            });
+        }
+        cx.update_window(harness.window, |_, window, cx| release(window, origin, cx))
+            .unwrap();
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert_eq!(doc.property_values(&object).unwrap()[&SCALE.key], original);
+        });
+    }
+}
+
+#[gpui_kit::test]
 fn number_drag_keeps_escape_and_blocks_viewport_commands_outside_its_panel(
     cx: &mut TestAppContext,
 ) {

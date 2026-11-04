@@ -220,15 +220,9 @@ impl SlideNumberInput {
                 || (self.is_sliding()
                     && (self.sliding_value_format)(self.options.value)
                         != (self.sliding_value_format)(options.value));
-            if let Some(drag) = &mut self.drag {
-                if drag.sliding
-                    && (self.sliding_value_format)(self.options.value)
-                        != (self.sliding_value_format)(options.value)
-                {
-                    drag.value = options.value;
-                    drag.anchor = options.value;
-                }
-            }
+            // Caller feedback may be rounded or scaled. The pointer gesture
+            // owns its accumulator and snap anchor: rebasing either here would
+            // discard sub-step movement whenever the formatted feedback differs.
             self.options = options;
             self.label = label;
             if options.disabled {
