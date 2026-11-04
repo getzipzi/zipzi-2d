@@ -33,12 +33,13 @@ def extension_plist(bundle_id, version, build, thumbnail):
         attributes['QLThumbnailMinimumDimension'] = 0
     else:
         attributes['QLSupportsSearchableItems'] = False
+        attributes['QLIsDataBasedPreview'] = True
     return dict(CFBundleIdentifier=bundle_id, CFBundleName='Zipzi Thumbnail' if thumbnail else 'Zipzi Preview',
                 CFBundleExecutable='zipzi-preview', CFBundlePackageType='XPC!',
                 CFBundleShortVersionString=version, CFBundleVersion=build,
-                LSMinimumSystemVersion='11.0', NSExtension=dict(
+                LSMinimumSystemVersion='12.0', NSExtension=dict(
                     NSExtensionPointIdentifier='com.apple.quicklook.thumbnail' if thumbnail else 'com.apple.quicklook.preview',
-                    NSExtensionPrincipalClass='ZipziThumbnailProvider' if thumbnail else 'ZipziPreviewController',
+                    NSExtensionPrincipalClass='ZipziThumbnailProvider' if thumbnail else 'ZipziPreviewProvider',
                     NSExtensionAttributes=attributes))
 
 
@@ -53,11 +54,12 @@ def build_macos(app, library, identity='-'):
                                metadata['CFBundleVersion'], thumbnail)
         (contents / 'Info.plist').write_bytes(plistlib.dumps(info))
         subprocess.run(['xcrun', 'clang', '-fobjc-arc', '-fapplication-extension', '-O2',
-                        '-mmacosx-version-min=11.0', '-DZIPZI_THUMBNAIL=' + str(int(thumbnail)),
+                        '-mmacosx-version-min=12.0', '-DZIPZI_THUMBNAIL=' + str(int(thumbnail)),
                         '-I', str(ROOT / 'crates/zipzi-project-preview/include'),
                         str(ROOT / 'native/project-preview/macos/Preview.m'), str(library),
                         '-framework', 'Cocoa', '-framework', 'Quartz', '-framework', 'QuickLookThumbnailing',
-                        '-framework', 'Security', '-liconv', '-Wl,-e,_NSExtensionMain',
+                        '-framework', 'Security', '-framework', 'UniformTypeIdentifiers',
+                        '-liconv', '-Wl,-e,_NSExtensionMain',
                         '-o', str(contents / 'MacOS/zipzi-preview')], check=True)
         entitlements = contents / 'Resources/entitlements.plist'
         entitlements.parent.mkdir(exist_ok=True)
@@ -123,7 +125,8 @@ def test_macos(library, directory):
                         '-I', str(ROOT / 'crates/zipzi-project-preview/include'),
                         str(ROOT / 'native/project-preview/macos/ProviderTest.m'), str(library),
                         '-framework', 'Cocoa', '-framework', 'Quartz', '-framework', 'QuickLookThumbnailing',
-                        '-framework', 'Security', '-liconv', '-o', str(runner)], check=True)
+                        '-framework', 'Security', '-framework', 'UniformTypeIdentifiers',
+                        '-liconv', '-o', str(runner)], check=True)
         subprocess.run([str(runner), str(directory)], check=True)
 
 

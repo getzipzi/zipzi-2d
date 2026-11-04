@@ -10,7 +10,8 @@ copied from a previous save.
 
 `sh tools/build-editor-app.sh editor debug` builds the Editor plus two sandboxed
 app extensions under `Contents/PlugIns`: a Quick Look Thumbnail provider and a
-Quick Look Preview controller. The latter shows a static image for Space / Finder
+Quick Look data-based Preview provider (macOS 12 or later). The latter returns
+the embedded PNG to the system for Space / Finder
 preview. Both extensions are signed before the enclosing application. Set
 `ZIPZI_CODESIGN_IDENTITY` for a real signing identity; the default is ad hoc.
 Distribution still requires the application's final signature and, for a trusted
@@ -58,4 +59,4 @@ moving a portable installation. A macOS-only validation run does not cover these
 The `--test` switch runs direct native provider checks: decoded thumbnail pixels,
 Preview child-window resize/unload and absent/corrupt input. CI runs it on Windows;
 it does not replace Explorer interaction acceptance. On macOS the same switch
-checks the image reader and preview controller with native AppKit.
+checks the image reader and deferred PNG reply callback with native AppKit.

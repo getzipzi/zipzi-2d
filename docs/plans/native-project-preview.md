@@ -51,3 +51,12 @@
   Developer ID 签名/公证。不得把直接 Provider 测试等同于完整原生交互验收。
 
 构建/注册入口见 [native/project-preview/README.md](../../native/project-preview/README.md)。
+
+### 空格预览修复（2026-11-04）
+
+用户验收发现缩略图正常但 Finder 空格预览空白。将远程 NSViewController 图片视图
+改为 macOS 12+ 的 `QLPreviewProvider` 数据接口，声明 `QLIsDataBasedPreview`，
+使用 `QLPreviewReply` 返回已校验的 PNG，由系统负责显示与缩放。
+新增直接执行延迟数据回调的测试，覆盖正常、缺失和损坏输入。
+本机 native provider 测试、app 校验及深度签名验证通过；Quick Look 实际显示
+`wolfgirl.zipzi` 模型，用户确认 Finder 预览恢复。

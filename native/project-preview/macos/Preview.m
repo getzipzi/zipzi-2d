@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <QuickLookThumbnailing/QuickLookThumbnailing.h>
 #import <Quartz/Quartz.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -15,22 +16,27 @@ static intptr_t ReadAt(void *context, uint64_t offset, uint8_t *bytes, size_t co
 
 // The Rust reader only touches the bounded index, format and embedded PNG.
 // Close the project before giving any pixels to the system UI.
-static NSImage *ReadImage(NSURL *url) {
+static NSData *ReadPNG(NSURL *url) {
     int fd = open(url.fileSystemRepresentation, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
     if (fd < 0) return nil;
     struct stat info;
-    NSImage *image = nil;
+    NSData *png = nil;
     if (fstat(fd, &info) == 0 && S_ISREG(info.st_mode) && info.st_size > 0) {
         NSMutableData *data = [NSMutableData dataWithLength:ZIPZI_PREVIEW_CAPACITY];
         int64_t size = zipzi_preview_read(&fd, ReadAt, (uint64_t)info.st_size,
                                          data.mutableBytes, data.length);
         if (size > 0) {
             data.length = (NSUInteger)size;
-            image = [[NSImage alloc] initWithData:data];
+            png = data;
         }
     }
     close(fd);
-    return image;
+    return png;
+}
+
+static NSImage *ReadImage(NSURL *url) {
+    NSData *png = ReadPNG(url);
+    return png ? [[NSImage alloc] initWithData:png] : nil;
 }
 
 static NSError *NoPreview(void) {
@@ -56,24 +62,21 @@ static NSError *NoPreview(void) {
 }
 @end
 #else
-@interface ZipziPreviewController : NSViewController <QLPreviewingController>
+@interface ZipziPreviewProvider : QLPreviewProvider <QLPreviewingController>
 @end
-@implementation ZipziPreviewController
-- (void)loadView {
-    NSImageView *image = [[NSImageView alloc] initWithFrame:NSMakeRect(0, 0, 800, 800)];
-    image.imageScaling = NSImageScaleProportionallyUpOrDown;
-    self.view = image;
-}
-- (void)preparePreviewOfFileAtURL:(NSURL *)url completionHandler:(void (^)(NSError *))handler {
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        NSImage *image = ReadImage(url);
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if (!image) { handler(NoPreview()); return; }
-            ((NSImageView *)self.view).image = image;
-            self.preferredContentSize = image.size;
-            handler(nil);
-        });
-    });
+@implementation ZipziPreviewProvider
+- (void)providePreviewForFileRequest:(QLFilePreviewRequest *)request
+                  completionHandler:(void (^)(QLPreviewReply *, NSError *))handler {
+    // The system owns image presentation, sizing and remote-view lifecycle.
+    // Defer bounded file access to Quick Look's data creation callback.
+    NSURL *url = request.fileURL;
+    QLPreviewReply *reply = [[QLPreviewReply alloc] initWithDataOfContentType:UTTypePNG
+        contentSize:NSZeroSize dataCreationBlock:^NSData *(QLPreviewReply *reply, NSError **error) {
+            NSData *png = ReadPNG(url);
+            if (!png && error) *error = NoPreview();
+            return png;
+        }];
+    handler(reply, nil);
 }
 @end
 #endif
