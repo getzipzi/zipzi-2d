@@ -55,7 +55,7 @@ pub use display_info::{
     CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterGroup, CdiParameterRef,
     CdiPartEntry, DisplayInfo, DisplayInfoOrigin,
 };
-pub use editor_state::{EditorState, ObjectEditorState};
+pub use editor_state::{EditorState, ObjectEditorState, DEFAULT_ROTATION_BONE_LENGTH};
 pub use expressions::*;
 pub use hierarchy_order::HierarchyOrder;
 pub use model3::{
@@ -586,7 +586,35 @@ impl Document {
             for id in removed {
                 self.content.editor_state.objects.remove(&id);
             }
-
+            let removed_lengths: Vec<_> = self
+                .content
+                .editor_state
+                .rotation_bone_lengths
+                .keys()
+                .chain(
+                    self.content
+                        .editor_state
+                        .rotation_bone_reference_scales
+                        .keys(),
+                )
+                .chain(self.content.editor_state.rotation_bone_angle_offsets.keys())
+                .filter(|id| {
+                    self.get_transform(id)
+                        .is_none_or(|t| t.rotation().is_none())
+                })
+                .cloned()
+                .collect();
+            for id in removed_lengths {
+                self.content.editor_state.rotation_bone_lengths.remove(&id);
+                self.content
+                    .editor_state
+                    .rotation_bone_reference_scales
+                    .remove(&id);
+                self.content
+                    .editor_state
+                    .rotation_bone_angle_offsets
+                    .remove(&id);
+            }
         }
         if kind == ChangeKind::Structure {
             self.organization_index.take();

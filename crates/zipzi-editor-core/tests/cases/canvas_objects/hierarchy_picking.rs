@@ -92,6 +92,8 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
         object: glue.clone(),
         kind: ControlKind::Glue,
         rotation_axis: None,
+        rotation_bone_length: 128.,
+        rotation_bone_reference_scale: 1.,
         points: vec![ModelPoint { x: 10., y: 10. }, ModelPoint { x: 20., y: 10. }],
         edges: vec![(0, 1)].into(),
         enabled: true,
@@ -193,9 +195,9 @@ fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> an
             .map(|c| c.object.id.clone())
             .collect::<Vec<_>>()
     };
-    assert!(visible(&editor).is_empty());
+    assert_eq!(visible(&editor), [rotation.clone()]);
     editor.dispatch(editor.command(CommandId::ToggleAncestorDeformers))?;
-    assert_eq!(visible(&editor), [warp.clone()]);
+    assert_eq!(visible(&editor), [warp.clone(), rotation.clone()]);
     let point = frame.transform.to_viewport(ModelPoint { x: 32., y: 90. });
     assert!(
         editor
@@ -208,9 +210,9 @@ fn deformer_helpers_are_opt_in_per_document_and_share_the_picking_filter() -> an
     assert_eq!(all.len(), 2);
     assert!(all.contains(&warp) && all.contains(&rotation));
     editor.dispatch(editor.command(CommandId::ToggleDeformers))?;
-    assert_eq!(visible(&editor), [warp]);
+    assert_eq!(visible(&editor), [warp, rotation.clone()]);
     editor.dispatch(editor.command(CommandId::ToggleAncestorDeformers))?;
-    assert!(visible(&editor).is_empty());
+    assert_eq!(visible(&editor), [rotation]);
     assert!(
         editor
             .pick_candidates(point, Some(frame.version))
@@ -334,7 +336,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
         .unwrap();
     let points = frame.geometry.control_points(c, frame.transform);
     let center = points[0];
-    let start = points[1];
+    let start = rotation_body_pointer(center, points[1]);
     let end = ViewportPoint {
         x: center.x,
         y: center.y - (start.x - center.x).hypot(start.y - center.y),
@@ -349,14 +351,7 @@ fn rotation_handle_edits_angle_and_escape_restores_pose() -> anyhow::Result<()> 
             alt: false,
         },
     )?;
-    assert!(
-        editor
-            .overlay()
-            .vertices
-            .iter()
-            .any(|v| v.kind == OverlayVertexKind::RotationTip && v.selected),
-        "pressed rotation tip is visually active"
-    );
+    assert_eq!(editor.overlay().active_handle, Some(DeformerHandle::Rotate));
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Move {

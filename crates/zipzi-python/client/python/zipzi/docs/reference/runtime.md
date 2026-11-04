@@ -11,7 +11,7 @@ See [common behavior](common.md) for owned-value conventions and inherited metho
 
 **Module**
 
-Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a7; protocol zipzi-runtime-v2; client source SHA-256 8ad131a204920edf289fc1fe1c637919a8bfd2ce296d0bc692a33e1f21439483.
+Typed authoring API. Start with docs/guide.md and docs/recipes.py. Use local() or connect(), explicitly select sessions, read before editing, verify confirmed results, then save and release. Package 0.1.0a7; protocol zipzi-runtime-v2; client source SHA-256 9bfc4d09626ee0a6dff955de54a1c2fb3f0602cc2d9b2612d7e99adde9305bb4.
 
 
 ## zipzi.ApiDescription

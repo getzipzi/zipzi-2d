@@ -40,6 +40,7 @@ fn fields(rotation: bool) -> FormDefinition {
             (ORIGIN_Y, "properties.rotation_origin_y", Number),
             (ANGLE, "properties.rotation_angle", Number),
             (SCALE, "properties.rotation_scale", Number),
+            (BONE_LENGTH, "properties.rotation_bone_length", Number),
             (REFLECT_X, "properties.rotation_reflect_x", Toggle),
             (REFLECT_Y, "properties.rotation_reflect_y", Toggle),
             (BASE_ANGLE, "properties.rotation_base_angle", Number),
@@ -51,6 +52,18 @@ fn fields(rotation: bool) -> FormDefinition {
                 if field.binding.key == SCALE.key {
                     field = field.percent();
                 }
+                field.display_decimals = if [ORIGIN_X.key, ORIGIN_Y.key]
+                    .contains(&field.binding.key)
+                {
+                    Some(2)
+                } else if [ANGLE.key, BASE_ANGLE.key, BONE_LENGTH.key].contains(&field.binding.key)
+                {
+                    Some(1)
+                } else if field.binding.key == SCALE.key {
+                    Some(3)
+                } else {
+                    None
+                };
                 field
             }));
     } else {
@@ -197,13 +210,70 @@ mod tests {
             assert!(rotation.field(spec.key).is_some());
         }
         for spec in [
-            ORIGIN_X, ORIGIN_Y, ANGLE, SCALE, REFLECT_X, REFLECT_Y, BASE_ANGLE,
+            ORIGIN_X,
+            ORIGIN_Y,
+            ANGLE,
+            SCALE,
+            BONE_LENGTH,
+            REFLECT_X,
+            REFLECT_Y,
+            BASE_ANGLE,
         ] {
             assert!(warp.field(spec.key).is_none());
             assert!(rotation.field(spec.key).is_some());
         }
+        assert!(!rotation.field(BONE_LENGTH.key).unwrap().binding.keyframed);
         assert_eq!(rotation.field(SCALE.key).unwrap().scale, 100.);
         assert!(!rotation.field(BASE_ANGLE.key).unwrap().binding.keyframed);
+    }
+
+    #[test]
+    fn rotation_display_truncates_per_field_without_quantizing_authored_values() {
+        use crate::properties::form::PropertyForm;
+        let cases = [
+            (
+                ORIGIN_X,
+                PropertyValue::Double(10_000_000.23456789),
+                "10000000.23",
+            ),
+            (ORIGIN_Y, PropertyValue::Double(-12.39999), "-12.39"),
+            (ANGLE, PropertyValue::Float(-23.987), "-23.9"),
+            (BASE_ANGLE, PropertyValue::Float(12.999), "12.9"),
+            (BONE_LENGTH, PropertyValue::Float(65.28785), "65.2"),
+            (SCALE, PropertyValue::Float(0.0002667378), "0.026"),
+        ];
+        let mut form = PropertyForm::default();
+        form.sync_definition(
+            fields(true),
+            cases
+                .iter()
+                .map(|(spec, value, _)| (spec.key, value.clone()))
+                .collect(),
+        );
+        for (spec, value, expected) in &cases {
+            assert_eq!(form.fields[&spec.key].raw, *expected);
+            assert_eq!(form.fields[&spec.key].parsed, Ok(value.clone()));
+            form.edit(spec, expected.to_string());
+            assert!(
+                form.patch(ObjectKind::Deformer, spec.key)
+                    .unwrap()
+                    .changes
+                    .is_empty()
+            );
+            form.reload_field(spec.key);
+            assert_eq!(form.fields[&spec.key].raw, *expected);
+        }
+        form.edit(&ORIGIN_X, "10000000.3456789".into());
+        assert_eq!(
+            form.patch(ObjectKind::Deformer, ORIGIN_X.key)
+                .unwrap()
+                .changes[&ORIGIN_X.key],
+            PropertyValue::Double(10_000_000.3456789)
+        );
+        let value = PropertyValue::Float(0.0000001);
+        form.sync_definition(fields(true), [(SCALE.key, value.clone())].into());
+        assert_ne!(form.fields[&SCALE.key].raw, "0");
+        assert_eq!(form.fields[&SCALE.key].parsed, Ok(value));
     }
 
     #[test]

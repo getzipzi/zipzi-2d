@@ -543,6 +543,7 @@ pub(super) fn read(
     }
     super::morph::read(g, root, &mut document, canvas)?;
     super::metadata::read(g, root, &mut document)?;
+    edit(document.initialize_rotation_bone_reference_scales())?;
     if let Some(issue) = document.validate_structure().first() {
         return Err(invalid(format!(
             "{}: {}",

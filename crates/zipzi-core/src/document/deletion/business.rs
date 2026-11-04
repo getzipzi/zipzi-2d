@@ -674,6 +674,21 @@ impl Document {
                 )
             {
                 candidate.content.editor_state.objects.remove(&key.id);
+                candidate
+                    .content
+                    .editor_state
+                    .rotation_bone_lengths
+                    .remove(&key.id);
+                candidate
+                    .content
+                    .editor_state
+                    .rotation_bone_reference_scales
+                    .remove(&key.id);
+                candidate
+                    .content
+                    .editor_state
+                    .rotation_bone_angle_offsets
+                    .remove(&key.id);
             }
         }
         candidate.binding_lookup.take();

@@ -474,6 +474,15 @@ impl Document {
             }
         }
         self.content.editor_state.objects.remove(id);
+        self.content.editor_state.rotation_bone_lengths.remove(id);
+        self.content
+            .editor_state
+            .rotation_bone_reference_scales
+            .remove(id);
+        self.content
+            .editor_state
+            .rotation_bone_angle_offsets
+            .remove(id);
         for child in owned_glue_pairs {
             self.content.editor_state.objects.remove(&child);
         }

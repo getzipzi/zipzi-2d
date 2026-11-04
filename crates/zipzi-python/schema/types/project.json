@@ -754,7 +754,7 @@
       ]
     },
     "zipzi_contract::document::EditorState": {
-      "doc": "Explicit per-object Editor visibility and lock metadata.",
+      "doc": "Persistent Editor preferences, independent of runtime deformation.",
       "fields": [
         {
           "default": {},
@@ -766,6 +766,45 @@
             "value": {
               "kind": "ref",
               "name": "zipzi_contract::document::ObjectEditorState"
+            }
+          },
+          "skip": false
+        },
+        {
+          "default": {},
+          "doc": "Rotation control lengths in model pixels at their display reference scale, keyed by transform ID.",
+          "name": "rotation_bone_lengths",
+          "rust_name": "rotation_bone_lengths",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "f32"
+            }
+          },
+          "skip": false
+        },
+        {
+          "default": {},
+          "doc": "Evaluated Rotation scale at the display baseline, including inherited coordinate conversion.",
+          "name": "rotation_bone_reference_scales",
+          "rust_name": "rotation_bone_reference_scales",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "f32"
+            }
+          },
+          "skip": false
+        },
+        {
+          "default": {},
+          "doc": "Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0.",
+          "name": "rotation_bone_angle_offsets",
+          "rust_name": "rotation_bone_angle_offsets",
+          "shape": {
+            "kind": "string_map",
+            "value": {
+              "kind": "f32"
             }
           },
           "skip": false

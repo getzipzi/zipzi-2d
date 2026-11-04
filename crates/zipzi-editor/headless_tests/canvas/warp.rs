@@ -75,8 +75,8 @@ fn warp_grid_and_bezier_controls_share_one_surface_without_mode_switches(cx: &mu
         window.click_at("canvas-body", point(px(anchor.x), px(anchor.y)), cx);
         window.render_frame(cx);
         let overlay = h.view.read(cx).editor.overlay();
-        assert!(overlay.warp_frame_lines.is_empty());
-        assert!(overlay.handles.iter().all(|h| h.tangent));
+        assert!(!overlay.warp_frame_lines.is_empty());
+        assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 9);
         assert!(
             overlay
                 .vertices
@@ -103,6 +103,13 @@ fn warp_grid_and_bezier_controls_share_one_surface_without_mode_switches(cx: &mu
 fn warp_native_rotation_handle_cancel_commit_and_history(cx: &mut TestAppContext) {
     let (h, object) = setup_warp(cx);
     let before = points(&h, &object, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        let p = h.view.read(cx).editor.overlay().vertices[0].position;
+        window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
+        window.render_frame(cx);
+    })
+    .unwrap();
     for cancel in [true, false] {
         present_canvas(&h, cx);
         cx.update_window(h.window, |_, window, cx| {
@@ -181,6 +188,15 @@ fn warp_native_rotation_handle_cancel_commit_and_history(cx: &mut TestAppContext
         h.view.read_with(cx, |view, _| {
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
             assert!(!view.editor.gesture_active());
+            assert_eq!(
+                view.editor
+                    .overlay()
+                    .vertices
+                    .iter()
+                    .filter(|v| v.selected)
+                    .count(),
+                1
+            );
             assert_eq!(
                 view.editor.document().unwrap().history_lengths(),
                 (usize::from(!cancel), 0)

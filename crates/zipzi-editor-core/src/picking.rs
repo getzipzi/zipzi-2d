@@ -43,6 +43,10 @@ pub struct ControlGeometry {
     pub points: Vec<ModelPoint>,
     /// Scale-independent rotation direction, separate from translated control points.
     pub rotation_axis: Option<crate::ModelVector>,
+    /// Editor-only base length; pose/inherited scale and camera zoom apply at presentation.
+    pub rotation_bone_length: f32,
+    /// Authored baseline scale; separates coordinate conversion from subsequent deformation.
+    pub rotation_bone_reference_scale: f32,
     pub edges: Arc<[(usize, usize)]>,
     pub enabled: bool,
     /// Editor display only. Hidden controls still supply their children's coordinate space.

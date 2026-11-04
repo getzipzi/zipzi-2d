@@ -127,7 +127,26 @@ pub(super) fn prepare(
         if !config.manual_mesh && overlay.unavailable.is_some() {
             continue;
         }
-        let manual_vertices: Vec<_> = if config.manual_mesh {
+        let manual_vertices: Vec<_> = if mode == 8 {
+            scene
+                .controls
+                .iter()
+                .find(|control| control.object == object)
+                .and_then(|control| scene.deformer_gizmo(control, frame.transform))
+                .map(|gizmo| zipzi_editor_core::OverlayVertex {
+                    id: 0,
+                    position: zipzi_editor_core::ViewportPoint {
+                        x: (gizmo.center.x + gizmo.handles[0].1.x) * 0.5,
+                        y: (gizmo.center.y + gizmo.handles[0].1.y) * 0.5,
+                    },
+                    kind: OverlayVertexKind::RotationTip,
+                    selected: false,
+                    hovered: false,
+                    editable: true,
+                })
+                .into_iter()
+                .collect()
+        } else if config.manual_mesh {
             let document = view.editor.document().unwrap();
             let host = document.runtime_host();
             let runtime = host.read();
@@ -160,7 +179,7 @@ pub(super) fn prepare(
         let mut selected = Vec::new();
         let mut rotation_center = None;
         let mut manual_destination = None;
-        for vertex in if config.manual_mesh {
+        for vertex in if config.manual_mesh || mode == 8 {
             &manual_vertices
         } else {
             &overlay.vertices

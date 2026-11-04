@@ -87,6 +87,33 @@ pub fn read_editorstate(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::docume
                 ))
             })
             .collect::<PyResult<_>>()?,
+        rotation_bone_lengths: value
+            .getattr("rotation_bone_lengths")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+            })
+            .collect::<PyResult<_>>()?,
+        rotation_bone_reference_scales: value
+            .getattr("rotation_bone_reference_scales")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+            })
+            .collect::<PyResult<_>>()?,
+        rotation_bone_angle_offsets: value
+            .getattr("rotation_bone_angle_offsets")?
+            .call_method0("items")?
+            .try_iter()?
+            .map(|item| -> PyResult<_> {
+                let item0 = item?;
+                Ok((item0.get_item(0)?.extract()?, item0.get_item(1)?.extract()?))
+            })
+            .collect::<PyResult<_>>()?,
     })
 }
 

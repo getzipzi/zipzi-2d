@@ -15,6 +15,11 @@ pub(super) struct ControlGesture {
     pub target: HitTarget,
     modifiers: TransformConstraints,
     edit: Option<ActiveEdit>,
+    bone_length: Option<BoneLengthDrag>,
+}
+struct BoneLengthDrag {
+    base: f32,
+    last: Option<f32>,
 }
 struct ActiveEdit {
     edits: Vec<ControlEdit>,
@@ -48,11 +53,26 @@ impl RotationDrag {
 impl ControlGesture {
     pub fn new(press: Press, target: HitTarget) -> Self {
         let modifiers = TransformConstraints::new(press.shift, press.alt);
+        // The press fixes the operation. Releasing Alt cannot turn a length drag into scaling.
+        let bone_length = (press.alt
+            && matches!(
+                &target,
+                HitTarget::DeformerHandle(_, crate::DeformerHandle::RotationScale)
+            ))
+        .then(|| BoneLengthDrag {
+            base: press
+                .scene
+                .control(&target.object().id)
+                .unwrap()
+                .rotation_bone_length,
+            last: None,
+        });
         Self {
             press,
             target,
             modifiers,
             edit: None,
+            bone_length,
         }
     }
     pub fn set_modifiers(&mut self, shift: bool, alt: bool) -> bool {
@@ -69,7 +89,27 @@ impl ControlGesture {
         true
     }
     pub fn editing(&self) -> bool {
-        self.edit.is_some() && !self.press.adjust_frame
+        (self.edit.is_some()
+            || self
+                .bone_length
+                .as_ref()
+                .is_some_and(|length| length.last.is_some()))
+            && !self.press.adjust_frame
+    }
+    pub(super) fn adjusting_bone_length(&self) -> bool {
+        self.bone_length.is_some()
+    }
+    pub(super) fn hints(&self) -> &'static [InteractionHint] {
+        if self.bone_length.is_some() {
+            LENGTH_HINTS
+        } else if matches!(
+            self.target,
+            HitTarget::DeformerHandle(_, crate::DeformerHandle::RotationScale)
+        ) {
+            SCALE_HINTS
+        } else {
+            HINTS
+        }
     }
     pub(super) fn original_frame(&self) -> Option<(&crate::ObjectRef, crate::WarpFrameInfo)> {
         let HitTarget::DeformerHandle(object, _) = &self.target else {
@@ -115,6 +155,31 @@ impl ControlGesture {
             point.x.is_finite() && point.y.is_finite(),
             "Invalid pointer position"
         );
+        if let Some(length) = &mut self.bone_length {
+            if length.last.is_none() && crate::picking::distance2(self.press.point, point) < 9. {
+                return Ok(false);
+            }
+            let control = self.press.scene.control(&self.target.object().id).unwrap();
+            let points = self
+                .press
+                .scene
+                .control_points(control, self.press.transform);
+            let (dx, dy) = (points[1].x - points[0].x, points[1].y - points[0].y);
+            let span = dx.hypot(dy);
+            let along =
+                ((point.x - self.press.point.x) * dx + (point.y - self.press.point.y) * dy) / span;
+            let value = (length.base * (1. + along / span)).max(0.001);
+            ensure!(value.is_finite(), "Invalid bone length");
+            if length.last == Some(value) {
+                return Ok(false);
+            }
+            if length.last.is_none() {
+                document.begin_rotation_length_edit(self.target.object())?;
+            }
+            document.preview_rotation_length(self.target.object(), value)?;
+            length.last = Some(value);
+            return Ok(true);
+        }
         let press = &self.press;
         let constraints = self.modifiers;
         let components = &press.components;
@@ -218,14 +283,17 @@ impl ControlGesture {
             x: end.x - start.x,
             y: end.y - start.y,
         };
-        let pointer_angle = |radians| edits[0].rotation_pointer_angle(radians);
+        // Rotation evaluation adds the local pose angle after inheriting its
+        // parent's orientation. The delta already lives in model space, so a
+        // reflected parent must not reverse it a second time.
+        let pointer_angle = |radians: f32| radians.to_degrees();
         let change = match target {
             HitTarget::RotationHandle(_) => ControlChange::Rotation {
                 translation: crate::ModelVector::default(),
                 angle: pointer_angle(edit.rotation.as_mut().unwrap().update(
                     press.scene.control(&target.object().id).unwrap().points[0],
                     end,
-                ))?,
+                )),
                 scale: 1.,
             },
             HitTarget::DeformerHandle(object, handle) => {
@@ -271,7 +339,7 @@ impl ControlGesture {
                                     .as_mut()
                                     .unwrap()
                                     .update(press.transform.to_model(gizmo.center), end),
-                            )?,
+                            ),
                             scale: 1.,
                         }
                     }
@@ -293,18 +361,17 @@ impl ControlGesture {
                         scale: 1.,
                     },
                     H::RotationScale => {
-                        let center = press.transform.to_model(gizmo.center);
-                        let before = (start.x - center.x).hypot(start.y - center.y);
-                        let after = (end.x - center.x).hypot(end.y - center.y);
-                        ensure!(before > 1e-6, "Rotation scale handle is unavailable");
-                        // Freeze the press ring size. Handle padding and the
-                        // precise grab offset do not enter the authored ratio.
-                        let span =
-                            (gizmo.bounds[2] - gizmo.bounds[0]) * 0.5 / press.transform.scale;
+                        let tip = gizmo.handles[0].1;
+                        let (dx, dy) = (tip.x - gizmo.center.x, tip.y - gizmo.center.y);
+                        let span = dx.hypot(dy);
+                        ensure!(span > 1e-6, "Rotation scale handle is unavailable");
+                        let along = ((point.x - press.point.x) * dx
+                            + (point.y - press.point.y) * dy)
+                            / span;
                         ControlChange::Rotation {
                             translation: crate::ModelVector::default(),
                             angle: 0.,
-                            scale: (1. + (after - before) / span).max(0.0001),
+                            scale: (1. + along / span).max(0.0001),
                         }
                     }
                     H::Scale(index) => {
@@ -406,6 +473,12 @@ impl ControlGesture {
         true
     }
     pub fn overlay(&self, out: &mut OverlaySnapshot) {
+        if let Some(length) = &self.bone_length {
+            if let Some(value) = length.last {
+                out.interaction_label = Some(format!("L {:.1}", value));
+            }
+            return;
+        }
         if let Some(reason) = self.edit.as_ref().and_then(|e| e.constrained.as_ref()) {
             out.interaction_label = Some(reason.clone());
             return;
@@ -455,5 +528,17 @@ impl ControlGesture {
 }
 pub(super) const HINTS: &[InteractionHint] = &[
     InteractionHint::Drag(HintAction::Transform),
+    InteractionHint::Command(crate::CommandId::CancelGesture),
+];
+pub(super) const BONE_TIP_HINTS: &[InteractionHint] = &[
+    InteractionHint::Drag(HintAction::Scale),
+    InteractionHint::Alt(HintAction::BoneLength),
+];
+const SCALE_HINTS: &[InteractionHint] = &[
+    InteractionHint::Drag(HintAction::Scale),
+    InteractionHint::Command(crate::CommandId::CancelGesture),
+];
+const LENGTH_HINTS: &[InteractionHint] = &[
+    InteractionHint::Drag(HintAction::BoneLength),
     InteractionHint::Command(crate::CommandId::CancelGesture),
 ];

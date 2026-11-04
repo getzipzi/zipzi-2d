@@ -245,7 +245,7 @@ pub(crate) fn resolve_hint_context(view: &EditorView, _cx: &App) -> HintContext 
     }
     if view.editor.active_id().is_some() {
         match view.editor.editing_context() {
-            Some(EditingContext::Modeling) => return view.editor.active_tool().idle_hints(),
+            Some(EditingContext::Modeling) => return view.editor.canvas_idle_hints(),
             Some(EditingContext::Animation) => {
                 return timeline.map_or(&[], |timeline| timeline.idle());
             }
@@ -299,6 +299,8 @@ fn build_hints(state: &StatusBarState) -> Vec<ShortcutHint> {
         let label = t!(match action {
             HintAction::Pan => "status.hint_pan",
             HintAction::Transform => "status.hint_transform",
+            HintAction::Scale => "status.hint_scale",
+            HintAction::BoneLength => "status.hint_bone_length",
             HintAction::LassoSelect => "status.hint_lasso_select",
             HintAction::AddSelection => "status.hint_add_selection",
             HintAction::RemoveSelection => "status.hint_remove_selection",

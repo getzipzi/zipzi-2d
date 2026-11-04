@@ -79,6 +79,7 @@ pub(crate) struct FieldSpec {
     pub searchable: bool,
     pub choices: Option<fn(&Document) -> Vec<Choice>>,
     pub scale: f64,
+    pub display_decimals: Option<usize>,
     bounds: Option<fn(&PropertyValues, PropertyKey) -> (f64, f64)>,
     pub live_text: bool,
     pub drag_distance: Option<f64>,
@@ -111,6 +112,7 @@ impl FieldSpec {
             section: None,
             reset_color: None,
             scale: 1.,
+            display_decimals: None,
         }
     }
 
@@ -172,6 +174,7 @@ impl FormDefinition {
                     && a.label == b.label
                     && a.searchable == b.searchable
                     && a.scale == b.scale
+                    && a.display_decimals == b.display_decimals
                     && a.live_text == b.live_text
                     && a.drag_distance == b.drag_distance
                     && a.reset_color == b.reset_color

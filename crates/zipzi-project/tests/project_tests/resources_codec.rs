@@ -213,7 +213,8 @@ fn cbor_prototype_preserves_project_content_and_rejects_bad_header() {
                     ..Default::default()
                 }
             )]
-            .into()
+            .into(),
+            ..original.editor_state().clone()
         })
         .status
         .is_ok());

@@ -380,6 +380,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 }],
                 handles: std::iter::once(zipzi_editor_core::OverlayHandle {
                     tangent: true,
+                    rotation: false,
                     editable: true,
                     position: pt(80., 50.),
                     round: true,
@@ -388,6 +389,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 })
                 .chain(std::iter::once(zipzi_editor_core::OverlayHandle {
                     tangent: false,
+                    rotation: false,
                     editable: false,
                     position: pt(70., 20.),
                     round: true,
@@ -399,6 +401,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                         [false, true].into_iter().map(move |hovered| {
                             zipzi_editor_core::OverlayHandle {
                                 tangent: false,
+                                rotation: false,
                                 editable: true,
                                 position: pt(
                                     20. + 30. * (u8::from(round) * 2 + u8::from(hovered)) as f32,

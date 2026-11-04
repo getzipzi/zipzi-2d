@@ -31,9 +31,12 @@ impl ToolController {
                 if !self.set_gesture_modifiers(shift, alt) {
                     return Ok(false);
                 }
-                let gesture = self.gesture.as_mut().unwrap();
-                let point = gesture.press().current;
-                gesture.update(document, &self.components, point)
+                if let Some(gesture) = self.gesture.as_mut() {
+                    let point = gesture.press().current;
+                    gesture.update(document, &self.components, point)
+                } else {
+                    Ok(false)
+                }
             }
             CanvasInput::Leave => {
                 if self.gesture.is_none() && self.hovered_binding == Some(frame.version.binding) {
@@ -53,6 +56,7 @@ impl ToolController {
                     "Invalid pointer position"
                 );
                 self.cancel(document);
+                self.alt = alt;
                 self.begin_selection(document, frame, point, shift, alt, primary);
                 Ok(false)
             }

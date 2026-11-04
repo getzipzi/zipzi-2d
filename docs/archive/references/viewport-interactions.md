@@ -38,11 +38,24 @@ Only a control gesture can own a candidate edit. An idle control press creates n
 transaction; crossing the existing drag threshold prepares it. Selection gestures
 never own model transactions.
 
-Rotation rings start with a 64-model-unit radius, independently of descendant
-geometry. Own and inherited Rotation scale and viewport zoom apply to that radius,
-with a minimum of 24 logical pixels. Axis tips share that radius; scale handles
-sit 24 logical pixels outside the ring. Scaling uses the frozen press ring size;
-handle padding and the grab offset do not enter the authored ratio. Controls use
+Rotation bones initialize by extending their displayed forward axis from the root
+to the combined descendant Mesh bounds, including nested and hidden Meshes. The
+tip stays 15% inside the forward ray/box intersection segment. The result is frozen and persisted
+at the reference scale; missing or degenerate geometry falls back to 128 model
+units. Bone length is editable in Properties and via Alt-tip dragging; subsequent
+child geometry changes do not resize it. Imported coordinate conversion is
+normalized against a persistent scale baseline. Subsequent own and inherited
+Rotation scale changes and viewport zoom apply to the bone body, including its
+width, without a minimum screen length. Root and tip handles retain fixed screen
+sizes and hit radii. Selected bones use a Warp-blue fill; unselected bones use
+translucent gray (45% opacity, 65% on hover) and remain visible and pickable.
+Clicking a child Mesh surface outside the bone selects that Mesh, including when
+its Rotation ancestor is selected. Every overlapping bone participates in canvas
+candidates; visibility,
+locks and viewport isolation apply. Drag the root to translate, the body to rotate
+and the tip to scale. Holding Alt/Option at tip press adjusts display length only;
+the operation stays captured until release. Scaling projects pointer displacement
+along the frozen bone axis. Controls use
 each viewport's presented origin, direction and pose scale, keeping completed
 intermediate frames aligned even when a newer preview has already been requested.
 Controls keep a plain appearance on hover and during
@@ -74,14 +87,20 @@ scaling with Shift. Option point/region subtraction remains unchanged.
 
 Warp frames have a separate rotation handle. Rotation accumulates successive
 angle deltas across the ±180° boundary; returning through full turns leaves no
-history entry. A point selection shares one frame across independent Warps.
+history entry. With zero or one selected point, Mesh and Warp frames operate on
+whole objects; two or more selected points use a local selection frame. Direct
+point dragging and keyboard nudges still edit the selected points, and whole
+frame gestures retain that point selection. A multi-point selection shares one
+frame across independent Warps.
 Selected anchors carry their own Bezier handles; a handle-only selection changes
 only those handles, and lattice selection changes only the selected grid points.
 The Whole Warp toggle retains component selection while using the owning Warp's
 whole frame. Picking and drawing use the same frame geometry. Pointer presses
 freeze the component target and frame for the entire gesture.
 
-Properties' Transform Warp dialog uses this same target and canvas-space math.
+Properties' Transform Warp dialog retains the explicit point target and uses the
+same canvas-space math. A single point uses its own pivot rather than inheriting
+the whole-object frame's adjusted center.
 Translation, angle and percentage scale are relative increments around the frame
 center and reset on reopening. Apply publishes one atomic undo step; changing the
 document, editing context or component target expires the dialog. Ancestor and
@@ -101,7 +120,7 @@ or parameter publications retire prior overrides. Align to Warp direction sums
 the lattice's horizontal canvas vectors and fits the target along that direction;
 an ambiguous direction rejects without changing the frame. Reset fits a fresh
 axis-aligned frame. These commands add no model history. Numeric Warp transforms
-use the owning viewport's adjusted center.
+use the owning viewport's adjusted center when its frame targets the same points.
 
 Switching Bezier/grid display never changes geometry or history. Fine-point
 edits retain any stored controller; absent controllers stay derived until an

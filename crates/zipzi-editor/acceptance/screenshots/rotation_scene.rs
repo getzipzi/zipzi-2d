@@ -24,10 +24,18 @@ fn gizmo(h: &Harness, object: &ObjectRef) -> zipzi_editor_core::DeformerGizmo {
 }
 
 fn pointer(h: &mut Harness, p: ViewportPoint, phase: &str) -> anyhow::Result<()> {
+    pointer_with_modifiers(h, p, phase, Modifiers::default())
+}
+
+fn pointer_with_modifiers(
+    h: &mut Harness,
+    p: ViewportPoint,
+    phase: &str,
+    modifiers: Modifiers,
+) -> anyhow::Result<()> {
     h.cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
         let position = window.find("canvas-body").bounds().origin + point(px(p.x), px(p.y));
-        let modifiers = Modifiers::default();
         let event = match phase {
             "down" => MouseDownEvent {
                 button: MouseButton::Left,
@@ -99,7 +107,44 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         let lines = h
             .view
             .read_with(&h.cx, |view, _| view.editor.overlay().rotation_lines);
-        let start = initial.outline[12].0;
+        let start = ViewportPoint {
+            x: (initial.center.x + initial.handles[0].1.x) * 0.5,
+            y: (initial.center.y + initial.handles[0].1.y) * 0.5,
+        };
+        h.cx.update_window(h.window, |_, _, cx| {
+            h.view.update(cx, |view, cx| {
+                view.editor
+                    .execute(EditorCommand::SelectObjects(Vec::new()))
+                    .unwrap();
+                view.redraw(cx);
+            });
+        })?;
+        save(
+            &h.capture()?,
+            directory,
+            &format!("rotation-unselected-{locale}.png"),
+        )?;
+        h.view.read_with(&h.cx, |view, _| {
+            let overlay = view.editor.overlay();
+            assert_eq!(overlay.rotation_bones.len(), 1);
+            assert!(!overlay.rotation_bones[0].selected);
+            assert!(
+                view.editor
+                    .pick_candidates(start, Some(view.modeling_frame().unwrap().canvas.version))
+                    .iter()
+                    .any(|c| c.object == object)
+            );
+        });
+        pointer(&mut h, start, "down")?;
+        pointer(&mut h, start, "up")?;
+        h.capture()?;
+        h.view.read_with(&h.cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().context().selections,
+                [object.clone()]
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+        });
         pointer(&mut h, start, "hover")?;
         h.capture()?;
         h.view.read_with(&h.cx, |view, _| {
@@ -184,7 +229,7 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         let center = before_scale.center;
         let (dx, dy) = (start.x - center.x, start.y - center.y);
         let distance = dx.hypot(dy);
-        let desired = distance + (distance - 24.) * 0.5;
+        let desired = distance * 1.5;
         let end = ViewportPoint {
             x: center.x + dx / distance * desired,
             y: center.y + dy / distance * desired,
@@ -198,8 +243,10 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             &format!("rotation-scaled-{locale}.png"),
         )?;
         let scaled = gizmo(&h, &object);
-        let radius = |g: &zipzi_editor_core::DeformerGizmo| (g.bounds[2] - g.bounds[0]) / 2.;
-        assert!((radius(&initial) - 64.).abs() < 0.01);
+        let radius = |g: &zipzi_editor_core::DeformerGizmo| {
+            (g.handles[0].1.x - g.center.x).hypot(g.handles[0].1.y - g.center.y)
+        };
+        assert!((radius(&initial) - 128.).abs() < 0.01);
         assert!((radius(&scaled) - radius(&initial) * 1.5).abs() < 0.01);
         h.view.read_with(&h.cx, |view, _| {
             let index = view.editor.document().unwrap().object_index();
@@ -209,6 +256,87 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             assert!((scale - 1.5).abs() < 0.001);
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
             assert_eq!(view.editor.document().unwrap().history_lengths(), (3, 0));
+        });
+        let pose = h.view.read_with(&h.cx, |view, _| {
+            view.editor
+                .document()
+                .unwrap()
+                .object_index()
+                .get(&object)
+                .unwrap()
+                .properties
+                .clone()
+        });
+        let children = h.view.read_with(&h.cx, |view, _| {
+            view.modeling_frame()
+                .unwrap()
+                .canvas
+                .geometry
+                .meshes
+                .iter()
+                .map(|m| m.vertices.clone())
+                .collect::<Vec<_>>()
+        });
+        let start = scaled.handles[0].1;
+        let end = ViewportPoint {
+            x: scaled.center.x + (start.x - scaled.center.x) * 1.25,
+            y: scaled.center.y + (start.y - scaled.center.y) * 1.25,
+        };
+        pointer(&mut h, start, "hover")?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.dispatch_event(
+                ModifiersChangedEvent {
+                    modifiers: Modifiers {
+                        alt: true,
+                        ..Default::default()
+                    },
+                    capslock: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+        })?;
+        h.capture()?;
+        h.view.read_with(&h.cx, |view, _| {
+            let overlay = view.editor.overlay();
+            assert!(overlay.rotation_length_adjusting);
+            assert!(!overlay.handles[0].selected);
+            assert!(view.editor.canvas_idle_hints().contains(
+                &zipzi_editor_core::InteractionHint::Alt(zipzi_editor_core::HintAction::BoneLength)
+            ));
+        });
+        let alt = Modifiers {
+            alt: true,
+            ..Default::default()
+        };
+        pointer_with_modifiers(&mut h, start, "down", alt)?;
+        pointer_with_modifiers(&mut h, end, "drag", alt)?;
+        save(
+            &h.capture()?,
+            directory,
+            &format!("rotation-length-{locale}.png"),
+        )?;
+        // Native mouse-up reports Alt released; the captured operation stays length-only.
+        pointer(&mut h, end, "up")?;
+        h.capture()?;
+        let lengthened = gizmo(&h, &object);
+        assert!((radius(&lengthened) - radius(&scaled) * 1.25).abs() < 0.01);
+        h.view.read_with(&h.cx, |view, _| {
+            let frame = &view.modeling_frame().unwrap().canvas;
+            assert_eq!(
+                frame
+                    .geometry
+                    .meshes
+                    .iter()
+                    .map(|m| m.vertices.clone())
+                    .collect::<Vec<_>>(),
+                children
+            );
+            let index = view.editor.document().unwrap().object_index();
+            assert_eq!(index.get(&object).unwrap().properties, pose);
+            assert_eq!(view.editor.document().unwrap().history_lengths(), (4, 0));
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         });
     }
     Ok(())

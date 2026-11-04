@@ -119,9 +119,10 @@ the toolbar button and Properties checkbox are absent.
 The `deformer-original` scene exercises recording, density changes, restore review,
 Cancel and Apply, checks the restored Warp lattice and captures Warp/Rotation
 record states in all three languages.
-The `rotation` scene checks content-centered creation, plain ring hover and drag
-overlays, live modifier changes, angle readouts and uniform scaling in all three
-languages. Set `ZIPZI_SCREENSHOT_SAVE=1` to save all nine images.
+The `rotation` scene checks content-centered creation, direct picking of unselected bones, bone hover and drag
+overlays, live modifier changes, angle readouts, uniform scaling and Alt/Option
+display-length adjustment in all three languages. Set `ZIPZI_SCREENSHOT_SAVE=1`
+to save all fifteen images.
 
 ## Deformer creation
 
@@ -212,15 +213,33 @@ the stored runtime mode remains available to importers/SDK code. Bezier controls
 and original-shape recovery remain collapsible.
 
 Mesh, Warp, Part and Offscreen selections have canvas transform frames.
-Rotation uses its native origin, axis, ring and scale controls; directly selected
-Rotations are excluded from generic frames, including mixed selections.
-The Rotation ring starts at a 64-model-unit radius, independently of descendant
-size. Its own and inherited Rotation scale and viewport zoom apply to that radius,
-with a 24-logical-pixel minimum. Its direction tip lies on the ring; the scale
-handle sits 24 logical pixels outside it. Controls retain their plain appearance
-on hover and during rotation, with numeric feedback in the status bar. Scaling
-uses the frozen press ring size, excluding handle padding and the grab offset
-from the authored scale ratio.
+Rotation uses a Spine-style bone: drag its circular root to translate, its body
+to rotate, and its square tip to scale uniformly along the bone axis. Hold
+Alt/Option when pressing the tip to adjust the display length without changing
+the pose or its children. The chosen tip operation stays fixed until release.
+Initial display length follows a ray from the evaluated root along the displayed
+bone direction to the combined descendant Mesh bounds, including hidden and nested
+Meshes. The tip stays 15% inside the forward intersection segment. The length is
+captured once and saved at a reference scale; missing/degenerate bounds or a ray
+that misses the forward bounds fall back to 128 model units.
+The Rotation Properties panel exposes Bone length as an Editor-only numeric field,
+independent of pose and keyforms, with preview and undo/redo. Rotation values
+truncate their display to two decimal places for origins, one for angles and bone
+length, and three for scale percentages. Tiny nonzero values retain necessary
+digits; shortened display text never quantizes stored values on focus or submit. Imported
+coordinate conversion scales are normalized against that reference; subsequent
+own/inherited scale changes and viewport zoom apply to the bone body,
+including its width, without a minimum screen length. Root and tip handles keep
+a fixed logical-pixel size and hit radius. Cubism imports
+retain a 90-degree display-axis offset to match their vertical handle convention;
+native bones keep their horizontal reference. This Editor metadata persists across
+save/reopen and affects painting and picking without changing runtime poses. Bones use
+a blue fill from the Warp transform-frame palette when selected, and a translucent
+gray fill when unselected. Unselected bones remain
+visible and directly pickable independently of the optional Warp helpers; every
+overlapping bone appears in the canvas candidates, respecting visibility, locks
+and viewport isolation. Painting and picking share the same bone geometry.
+Selected bones show numeric feedback while dragging.
 Containers transform their drawable contents; selected deformation descendants
 are normalized so a parent and child are not moved twice. A point selection
 restricts the frame to those points. Drag frame edges to translate, square handles
@@ -234,8 +253,8 @@ and scale ratios in one-percentage-point increments relative to the press shape.
 Fine translation retains axis locking; fine corner scaling is uniform and
 centered. Object frames and Rotation controls share the same modifier policy for
 translation axis locking, rotation steps and fine translation/scale increments.
-The Rotation axis and ring share continuous rotation across full turns. Rotation
-scaling is always uniform. Shift and Alt/Option take effect as they are pressed
+The Rotation body supports continuous rotation across full turns. Rotation
+scaling is always uniform; Alt/Option at tip press reserves the gesture for display length. Shift and Alt/Option take effect as they are pressed
 or released during a drag, including with a stationary pointer. Shift locks the
 dominant translation axis until released; pressing it again chooses a new axis.
 Alt/Option changes the scale pivot immediately. Every preview recalculates from

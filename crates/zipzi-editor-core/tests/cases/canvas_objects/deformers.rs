@@ -44,15 +44,16 @@ fn rotation_gizmo_retains_arbitrary_angles_at_small_authored_scales_and_large_or
             let points = frame.geometry.control_points(control, transform);
             let dx = points[1].x - points[0].x;
             let dy = points[0].y - points[1].y;
-            let shown_angle = dy.atan2(dx).to_degrees();
+            let gizmo = frame.geometry.deformer_gizmo(control, transform).unwrap();
+            let shown_angle = -gizmo.frame_angle.to_degrees();
             assert!(
                 (shown_angle - angle).abs() < 0.001,
                 "angle {angle}, shown {shown_angle}, zoom {zoom}"
             );
-            let gizmo = frame.geometry.deformer_gizmo(control, transform).unwrap();
-            let radius = (gizmo.bounds[2] - gizmo.bounds[0]) / 2.;
+            let radius = (gizmo.handles[0].1.x - gizmo.center.x)
+                .hypot(gizmo.handles[0].1.y - gizmo.center.y);
             assert!((dx.hypot(dy) - radius).abs() < 0.001);
-            assert!(radius >= 24.);
+            assert!((radius - 128. * 0.0001 * zoom).abs() < 0.00005);
             assert_eq!(
                 frame.geometry.hit(
                     points[1],
@@ -61,7 +62,12 @@ fn rotation_gizmo_retains_arbitrary_angles_at_small_authored_scales_and_large_or
                     ToolId::Select,
                     DeformerVisibility::default()
                 ),
-                Some(HitTarget::RotationHandle(object.clone()))
+                // At subpixel sizes the root and tip share the same target;
+                // translation keeps precedence over an invisible scale marker.
+                Some(HitTarget::Component(ComponentRef {
+                    object: object.clone(),
+                    id: 0,
+                }))
             );
         }
     }
@@ -1162,10 +1168,10 @@ fn rotation_gizmo_scales_from_a_small_initial_size_with_matching_pick_geometry()
                 let points = scene.control_points(control, transform);
                 let gizmo = scene.deformer_gizmo(control, transform).unwrap();
                 let radius = |p: ViewportPoint| (p.x - gizmo.center.x).hypot(p.y - gizmo.center.y);
-                let expected = (64. * zoom).max(24.);
+                let expected = (128. * zoom).max(32.);
                 assert!((radius(points[1]) - expected).abs() < 0.001);
-                assert!((radius(gizmo.outline[0].0) - expected).abs() < 0.001);
-                assert!((radius(gizmo.handles[0].1) - expected - 24.).abs() < 0.001);
+                assert!((radius(gizmo.outline[2].0) - expected).abs() < 0.001);
+                assert!((radius(gizmo.handles[0].1) - expected).abs() < 0.001);
                 let selection = std::slice::from_ref(&object);
                 let hit = |p| {
                     scene.hit(
@@ -1178,7 +1184,10 @@ fn rotation_gizmo_scales_from_a_small_initial_size_with_matching_pick_geometry()
                 };
                 assert_eq!(
                     hit(points[1]),
-                    Some(HitTarget::RotationHandle(object.clone()))
+                    Some(HitTarget::DeformerHandle(
+                        object.clone(),
+                        DeformerHandle::RotationScale
+                    ))
                 );
                 assert_eq!(
                     hit(gizmo.handles[0].1),
@@ -1187,13 +1196,10 @@ fn rotation_gizmo_scales_from_a_small_initial_size_with_matching_pick_geometry()
                         DeformerHandle::RotationScale
                     ))
                 );
-                // The opposite quadrant of the ring is clear of the axes.
+                // The filled bone body rotates; the tip scales.
                 assert_eq!(
-                    hit(gizmo.outline[30].0),
-                    Some(HitTarget::DeformerHandle(
-                        object.clone(),
-                        DeformerHandle::Rotate
-                    ))
+                    hit(rotation_body_pointer(gizmo.center, gizmo.handles[0].1)),
+                    Some(HitTarget::RotationHandle(object.clone()))
                 );
             }
         }

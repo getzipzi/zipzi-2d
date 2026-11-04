@@ -585,7 +585,24 @@ fn summarize_editor_state_and_notifications(
             .filter(|key| !editor_state_only || touched.contains(key.id.as_str()))
         {
             if before.editor_state().get(&key.id) != after.editor_state().get(&key.id)
-
+                || before.editor_state().rotation_bone_lengths.get(&key.id)
+                    != after.editor_state().rotation_bone_lengths.get(&key.id)
+                || before
+                    .editor_state()
+                    .rotation_bone_reference_scales
+                    .get(&key.id)
+                    != after
+                        .editor_state()
+                        .rotation_bone_reference_scales
+                        .get(&key.id)
+                || before
+                    .editor_state()
+                    .rotation_bone_angle_offsets
+                    .get(&key.id)
+                    != after
+                        .editor_state()
+                        .rotation_bone_angle_offsets
+                        .get(&key.id)
             {
                 out.modified.push(entity(key.kind, &key.id));
                 out.categories.insert(ChangeCategory::EditorState);

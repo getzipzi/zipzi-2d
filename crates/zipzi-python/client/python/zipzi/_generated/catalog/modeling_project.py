@@ -451,12 +451,26 @@ DATA: dict[str, Entry] = {'zipzi.modeling.project': {'children': ('zipzi.modelin
  'zipzi.modeling.project.DocumentValueSourceCanvas.summary': {'alias': 'zipzi.ApiDescription.summary'},
  'zipzi.modeling.project.EditorState': {'children': ('zipzi.modeling.project.EditorState.__repr__',
                                                      'zipzi.modeling.project.EditorState.summary'),
-                                        'documentation': 'Explicit per-object Editor visibility and lock metadata.',
+                                        'documentation': 'Persistent Editor preferences, independent of runtime '
+                                                         'deformation.',
                                         'fields': [('objects',
                                                     'Explicit flags only, keyed by globally unique object ID. Defaults '
-                                                    'are omitted.')],
+                                                    'are omitted.'),
+                                                   ('rotation_bone_lengths',
+                                                    'Rotation control lengths in model pixels at their display '
+                                                    'reference scale, keyed by transform ID.'),
+                                                   ('rotation_bone_reference_scales',
+                                                    'Evaluated Rotation scale at the display baseline, including '
+                                                    'inherited coordinate conversion.'),
+                                                   ('rotation_bone_angle_offsets',
+                                                    'Editor-only counterclockwise bone direction offsets in degrees; '
+                                                    'Cubism uses 90, native bones use 0.')],
                                         'kind': 'type',
-                                        'signature': '(*, objects: _Mapping[str, ObjectEditorState] = <factory>)',
+                                        'signature': '(*, objects: _Mapping[str, ObjectEditorState] = <factory>, '
+                                                     'rotation_bone_lengths: _Mapping[str, float] = <factory>, '
+                                                     'rotation_bone_reference_scales: _Mapping[str, float] = '
+                                                     '<factory>, rotation_bone_angle_offsets: _Mapping[str, float] = '
+                                                     '<factory>)',
                                         'type_refs': ('zipzi.modeling.project.ObjectEditorState',)},
  'zipzi.modeling.project.EditorState.__repr__': {'alias': 'zipzi.ApiDescription.__repr__'},
  'zipzi.modeling.project.EditorState.summary': {'alias': 'zipzi.ApiDescription.summary'},

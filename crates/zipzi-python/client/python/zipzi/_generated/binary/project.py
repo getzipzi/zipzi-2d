@@ -208,9 +208,24 @@ def _write_editorstate(value: object, w: Writer) -> None:
     for key0, value0 in items0.items():
         w.text(key0)
         _write_objecteditorstate(value0, w)
+    items0=_mapping(_field(value, 'rotation_bone_lengths'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.scalar('f', value0)
+    items0=_mapping(_field(value, 'rotation_bone_reference_scales'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.scalar('f', value0)
+    items0=_mapping(_field(value, 'rotation_bone_angle_offsets'))
+    w.u32(len(items0))
+    for key0, value0 in items0.items():
+        w.text(key0)
+        w.scalar('f', value0)
 
 def _read_editorstate(r: Reader) -> m.EditorState:
-    return m.EditorState(objects={r.text(): _read_objecteditorstate(r) for _ in range(r.count())})
+    return m.EditorState(objects={r.text(): _read_objecteditorstate(r) for _ in range(r.count())}, rotation_bone_lengths={r.text(): number(r.scalar('f')) for _ in range(r.count())}, rotation_bone_reference_scales={r.text(): number(r.scalar('f')) for _ in range(r.count())}, rotation_bone_angle_offsets={r.text(): number(r.scalar('f')) for _ in range(r.count())})
 
 def _write_objecteditorstate(value: object, w: Writer) -> None:
     w.boolean(_field(value, 'hidden_in_editor'))

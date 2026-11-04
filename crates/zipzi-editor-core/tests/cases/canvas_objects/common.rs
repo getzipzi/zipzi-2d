@@ -230,12 +230,14 @@ pub(super) fn rotation_scale_pointer(
 ) -> ViewportPoint {
     let dx = start.x - center.x;
     let dy = start.y - center.y;
-    let distance = dx.hypot(dy);
-    let desired = distance + (ratio - 1.) * (distance - 24.);
     ViewportPoint {
-        x: center.x + dx / distance * desired,
-        y: center.y + dy / distance * desired,
+        x: center.x + dx * ratio,
+        y: center.y + dy * ratio,
     }
+}
+
+pub(super) fn rotation_body_pointer(center: ViewportPoint, tip: ViewportPoint) -> ViewportPoint {
+    rotation_scale_pointer(center, tip, 0.5)
 }
 
 pub(super) fn bound_deformer_editor(

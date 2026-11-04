@@ -711,6 +711,10 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
         }
     }
 
+    let result = candidate.initialize_rotation_bone_reference_scales();
+    if !result.status.is_ok() {
+        return Err(result.status);
+    }
     let status = candidate.finish_batch_build();
     if !status.is_ok() {
         return Err(status);

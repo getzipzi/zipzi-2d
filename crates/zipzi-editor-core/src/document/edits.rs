@@ -16,6 +16,66 @@ impl PendingEdit {
 }
 
 impl Document {
+    pub(crate) fn begin_rotation_length_edit(&mut self, object: &crate::ObjectRef) -> Result<()> {
+        self.ensure_editable(std::slice::from_ref(object))?;
+        ensure!(
+            self.model()
+                .get_transform(&object.id)
+                .is_some_and(|t| t.rotation().is_some()),
+            "Select a Rotation"
+        );
+        self.finish_edit()?;
+        let original = self
+            .model()
+            .editor_state()
+            .rotation_bone_lengths
+            .get(&object.id)
+            .copied();
+        self.pending = Some(PendingEdit {
+            kind: Gesture::Controls,
+            original: PendingOriginal::RotationLength(object.id.clone(), original),
+            edit: self
+                .session
+                .begin_owned_edit("Adjust rotation bone length", None)?
+                .interactive()?,
+            preview: PreviewState::default(),
+            changed: OnceLock::new(),
+            topology_changed: false,
+            draw_groups_changed: false,
+            property_write: None,
+        });
+        Ok(())
+    }
+
+    pub(crate) fn preview_rotation_length(
+        &mut self,
+        object: &crate::ObjectRef,
+        length: f32,
+    ) -> Result<()> {
+        ensure!(length.is_finite() && length > 0., "Invalid bone length");
+        let pending = self
+            .pending
+            .as_mut()
+            .ok_or_else(|| anyhow!("No bone length edit"))?;
+        let PendingOriginal::RotationLength(id, original) = &pending.original else {
+            return Err(anyhow!("Another edit is active"));
+        };
+        ensure!(*id == object.id, "Bone length target changed");
+        let mut state = pending.edit.candidate_document().editor_state().clone();
+        // Returning to the original length must also preserve absence of an override.
+        if original.is_none() && (length - crate::deformer::ROTATION_BONE_LENGTH).abs() < 0.0001 {
+            state.rotation_bone_lengths.remove(id);
+        } else {
+            state.rotation_bone_lengths.insert(id.clone(), length);
+        }
+        pending.changed.take();
+        pending
+            .edit
+            .apply(|edit| Ok(edit.replace_editor_state(state)?))?;
+        self.invalidate_projection(false);
+        Ok(())
+    }
+
     fn begin_gesture(&mut self, kind: Gesture) -> Result<()> {
         self.ensure_editable(&self.context.selections)?;
         if self

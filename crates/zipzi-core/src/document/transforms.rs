@@ -142,6 +142,7 @@ impl Document {
         self.prepared.take();
         if capture {
             self.initialize_deformer_original(&id);
+            self.initialize_rotation_bone_display(std::slice::from_ref(&id));
         }
         let meshes = self.content.mesh_order.clone();
         self.changed(ChangeKind::Structure, meshes, vec![id])

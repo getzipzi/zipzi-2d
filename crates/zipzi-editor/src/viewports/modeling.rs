@@ -79,9 +79,12 @@ impl ModelingViewport {
                                 CursorStyle::OpenHand
                             }
                         }
-                        H::RotationScale => CursorStyle::Crosshair,
-                        H::Scale(index) => {
-                            let base = [1., 2., 3., 0.][index as usize % 4];
+                        H::RotationScale | H::Scale(_) => {
+                            let base = if let H::Scale(index) = handle {
+                                [1., 2., 3., 0.][index as usize % 4]
+                            } else {
+                                0.
+                            };
                             let direction = (base
                                 + overlay.active_handle_radians / std::f32::consts::FRAC_PI_4)
                                 .round()
@@ -246,6 +249,10 @@ impl ViewportSurface {
                 CanvasInput::Leave => owner
                     .editor
                     .hover_canvas(binding, None)
+                    .map(|_| Default::default()),
+                CanvasInput::ModifiersChanged { shift, alt } => owner
+                    .editor
+                    .update_canvas_modifiers(binding, shift, alt)
                     .map(|_| Default::default()),
                 _ => return,
             };

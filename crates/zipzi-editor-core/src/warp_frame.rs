@@ -101,6 +101,11 @@ impl crate::tools::ToolController {
         object: &ObjectRef,
     ) -> Option<WarpTransformTarget> {
         let mut target = self.warp_transform_target(document, object)?;
+        // One selected control keeps the owning Warp's whole operation frame;
+        // the component itself remains selected for direct point edits.
+        if target.components.len() == 1 {
+            target.components.clear();
+        }
         // A point selection spanning several Warps has one frame. Use the
         // same representative as the canvas gizmo, regardless of which object's
         // inspector/menu initiated the operation.
@@ -138,7 +143,7 @@ impl crate::tools::ToolController {
         canvas: &CanvasFrame,
         object: &ObjectRef,
     ) -> Option<Vec<ModelPoint>> {
-        let target = self.warp_transform_target(document, object)?;
+        let target = self.warp_frame_target(document, object)?;
         if target.components.is_empty() {
             Some(canvas.geometry.control(&object.id)?.points.clone())
         } else {

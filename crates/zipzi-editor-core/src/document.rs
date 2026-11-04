@@ -100,6 +100,7 @@ enum Gesture {
 }
 
 enum PendingOriginal {
+    RotationLength(String, Option<f32>),
     ExpressionEntry(zipzi_sdk::ExpressionEntryAddress),
     Controls(crate::control_edit::EditOriginal),
     Properties(
@@ -111,6 +112,7 @@ enum PendingOriginal {
 impl PendingOriginal {
     fn id(&self) -> &str {
         match self {
+            Self::RotationLength(id, _) => id,
             Self::ExpressionEntry(address) => address.entry_id(),
             Self::Controls(original) => original.id(),
             Self::Properties(object, _, _) => &object.id,
@@ -118,6 +120,9 @@ impl PendingOriginal {
     }
     fn unchanged(&self, model: &zipzi_core::Document) -> bool {
         match self {
+            Self::RotationLength(id, value) => {
+                model.editor_state().rotation_bone_lengths.get(id).copied() == *value
+            }
             Self::ExpressionEntry(address) => model
                 .get_expression_entry(address.entry_id())
                 .is_some_and(|(_, entry)| {

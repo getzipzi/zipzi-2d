@@ -96,13 +96,16 @@ fn frame_axis_and_ring_update_angle_steps_on_key_changes_without_pointer_motion(
                     .find(|c| c.object == object)
                     .unwrap();
                 if target == 1 {
-                    frame.geometry.control_points(c, frame.transform)[1]
+                    rotation_body_pointer(
+                        center,
+                        frame.geometry.control_points(c, frame.transform)[1],
+                    )
                 } else {
                     frame
                         .geometry
                         .deformer_gizmo(c, frame.transform)
                         .unwrap()
-                        .outline[24]
+                        .outline[1]
                         .0
                 }
             };
@@ -449,13 +452,151 @@ fn mesh_frame_option_shift_scaling_uses_center_and_cancel_restores_points() -> a
     Ok(())
 }
 #[test]
+fn single_point_frame_transforms_whole_mesh_or_warp_and_preserves_point_selection()
+-> anyhow::Result<()> {
+    for warp in [false, true] {
+        for operation in 0..3 {
+            for cancel in [false, true] {
+                let (mut editor, _dir, object) = if warp {
+                    deformer_editor(false)?
+                } else {
+                    mesh_editor()?
+                };
+                let before = if warp {
+                    control_points(&mut editor, &object)?
+                } else {
+                    vertices(&mut editor, &object)?
+                };
+                let initial_handles: Vec<_> = editor
+                    .overlay()
+                    .handles
+                    .into_iter()
+                    .filter(|h| !h.tangent)
+                    .map(|h| h.position)
+                    .collect();
+                let point = editor.overlay().vertices[0].position;
+                click(&mut editor, point, false)?;
+                let selected = |editor: &Editor| {
+                    editor
+                        .overlay()
+                        .vertices
+                        .into_iter()
+                        .filter(|v| v.selected)
+                        .map(|v| (v.kind, v.id))
+                        .collect::<Vec<_>>()
+                };
+                let selection = selected(&editor);
+                assert_eq!(selection.len(), 1);
+                let overlay = editor.overlay();
+                assert!(!overlay.warp_frame_lines.is_empty());
+                let handles: Vec<_> = overlay.handles.iter().filter(|h| !h.tangent).collect();
+                assert_eq!(
+                    handles.iter().map(|h| h.position).collect::<Vec<_>>(),
+                    initial_handles
+                );
+                let frame = shown(&mut editor)?;
+                let x0 = before.iter().map(|p| p.x).fold(f32::INFINITY, f32::min);
+                let x1 = before.iter().map(|p| p.x).fold(f32::NEG_INFINITY, f32::max);
+                let y0 = before.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
+                let y1 = before.iter().map(|p| p.y).fold(f32::NEG_INFINITY, f32::max);
+                let center = ModelPoint {
+                    x: (x0 + x1) / 2.,
+                    y: (y0 + y1) / 2.,
+                };
+                let start = match operation {
+                    0 => ViewportPoint {
+                        x: (handles[0].position.x + handles[1].position.x) / 2.,
+                        y: handles[0].position.y,
+                    },
+                    1 => handles.last().unwrap().position,
+                    _ => handles[3].position,
+                };
+                let end = match operation {
+                    0 => ViewportPoint {
+                        x: start.x + 13. * frame.transform.scale,
+                        y: start.y - 7. * frame.transform.scale,
+                    },
+                    1 => {
+                        let source = frame.transform.to_model(start);
+                        frame.transform.to_viewport(ModelPoint {
+                            x: center.x - (source.y - center.y),
+                            y: center.y + (source.x - center.x),
+                        })
+                    }
+                    _ => ViewportPoint {
+                        x: start.x + (x1 - center.x) * frame.transform.scale,
+                        y: start.y,
+                    },
+                };
+                gesture(&mut editor, start, end, false, operation == 2, cancel)?;
+                let after = if warp {
+                    control_points(&mut editor, &object)?
+                } else {
+                    vertices(&mut editor, &object)?
+                };
+                for (a, b) in before.iter().zip(&after) {
+                    let expected = if cancel {
+                        *a
+                    } else {
+                        match operation {
+                            0 => ModelPoint {
+                                x: a.x + 13.,
+                                y: a.y + 7.,
+                            },
+                            1 => ModelPoint {
+                                x: center.x - (a.y - center.y),
+                                y: center.y + (a.x - center.x),
+                            },
+                            _ => ModelPoint {
+                                x: center.x + 2. * (a.x - center.x),
+                                y: a.y,
+                            },
+                        }
+                    };
+                    assert!(
+                        (b.x - expected.x).abs() < 0.002 && (b.y - expected.y).abs() < 0.002,
+                        "warp={warp}, operation={operation}, cancel={cancel}: {a:?} -> {b:?}, expected {expected:?}"
+                    );
+                }
+                assert_eq!(selected(&editor), selection);
+                assert_eq!(
+                    editor.document().unwrap().context().selections,
+                    [object.clone()]
+                );
+                assert_eq!(
+                    editor.document().unwrap().history_lengths(),
+                    (usize::from(!cancel), 0)
+                );
+                if !cancel {
+                    editor.execute(EditorCommand::Undo)?;
+                    let restored = if warp {
+                        control_points(&mut editor, &object)?
+                    } else {
+                        vertices(&mut editor, &object)?
+                    };
+                    assert_eq!(restored, before);
+                    editor.execute(EditorCommand::Redo)?;
+                    let redone = if warp {
+                        control_points(&mut editor, &object)?
+                    } else {
+                        vertices(&mut editor, &object)?
+                    };
+                    assert_eq!(redone, after);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn point_selection_frame_and_nudges_preserve_unselected_vertices_and_locks() -> anyhow::Result<()> {
     let (mut editor, _dir, object) = mesh_editor()?;
     let before = vertices(&mut editor, &object)?;
     let overlay = editor.overlay();
     click(&mut editor, overlay.vertices[0].position, false)?;
-    assert!(editor.overlay().warp_frame_lines.is_empty());
-    assert!(editor.overlay().handles.is_empty());
+    assert!(!editor.overlay().warp_frame_lines.is_empty());
+    assert_eq!(editor.overlay().handles.len(), 9);
     click(&mut editor, overlay.vertices[1].position, true)?;
     assert!(!editor.overlay().warp_frame_lines.is_empty());
     assert_eq!(editor.overlay().handles.len(), 9);
@@ -732,7 +873,7 @@ fn rotation_has_only_native_controls_and_shift_snaps_fifteen_degrees() -> anyhow
         "removed frame corners must not intercept input"
     );
     let center = gizmo.center;
-    let start = gizmo.outline[0].0;
+    let start = gizmo.outline[1].0;
     let before = control_points(&mut editor, &object)?;
     let a = -23f32.to_radians();
     let (s, c) = a.sin_cos();
@@ -837,13 +978,14 @@ fn object_frame_rotation_axis_and_ring_share_angle_steps() -> anyhow::Result<()>
                         .find(|c| c.object == object)
                         .unwrap();
                     if target == 1 {
-                        canvas.geometry.control_points(control, canvas.transform)[1]
+                        let tip = canvas.geometry.control_points(control, canvas.transform)[1];
+                        rotation_body_pointer(center, tip)
                     } else {
                         let point = canvas
                             .geometry
                             .deformer_gizmo(control, canvas.transform)
                             .unwrap()
-                            .outline[24]
+                            .outline[1]
                             .0;
                         assert_eq!(
                             canvas.geometry.hit(
@@ -853,10 +995,7 @@ fn object_frame_rotation_axis_and_ring_share_angle_steps() -> anyhow::Result<()>
                                 ToolId::Select,
                                 Default::default()
                             ),
-                            Some(HitTarget::DeformerHandle(
-                                object.clone(),
-                                DeformerHandle::Rotate
-                            ))
+                            Some(HitTarget::RotationHandle(object.clone()))
                         );
                         point
                     }
@@ -905,7 +1044,7 @@ fn object_frame_rotation_axis_and_ring_share_angle_steps() -> anyhow::Result<()>
 fn rotation_native_scale_steps_and_cancellation_preserve_the_origin() -> anyhow::Result<()> {
     for (shift, alt, cancel, expected) in [
         (true, false, false, 1.237),
-        (true, true, false, 1.24),
+        (true, true, false, 1.),
         (true, true, true, 1.),
     ] {
         let (mut editor, _dir, object) = deformer_editor(true)?;
@@ -1074,9 +1213,9 @@ fn rotation_axis_and_ring_fine_steps_accumulate_across_full_turns() -> anyhow::R
             .deformer_gizmo(control, canvas.transform)
             .unwrap();
         let start = if axis {
-            canvas.geometry.control_points(control, canvas.transform)[1]
+            rotation_body_pointer(gizmo.center, gizmo.handles[0].1)
         } else {
-            gizmo.outline[0].0
+            gizmo.outline[1].0
         };
         let center = gizmo.center;
         pointer_input(
@@ -1184,8 +1323,8 @@ fn native_rotation_scale_in_a_mixed_selection_never_writes_the_mesh() -> anyhow:
         &mut editor,
         start,
         rotation_scale_pointer(center, start, 1.237),
-        true,
-        true,
+        false,
+        false,
         false,
     )?;
     let index = editor.document().unwrap().object_index();
@@ -1193,7 +1332,7 @@ fn native_rotation_scale_in_a_mixed_selection_never_writes_the_mesh() -> anyhow:
         (index.get(&rotation).unwrap().properties["rotation"]["pose"]["scale"]
             .as_f64()
             .unwrap()
-            - 1.24)
+            - 1.237)
             .abs()
             < 0.0001
     );
@@ -1245,9 +1384,9 @@ fn rotation_steps_follow_canvas_motion_under_a_reflected_parent() -> anyhow::Res
             .deformer_gizmo(control, canvas.transform)
             .unwrap();
         let start = if axis {
-            canvas.geometry.control_points(control, canvas.transform)[1]
+            rotation_body_pointer(gizmo.center, gizmo.handles[0].1)
         } else {
-            gizmo.outline[0].0
+            gizmo.outline[1].0
         };
         let center = gizmo.center;
         let (s, c) = (-23.4f32.to_radians()).sin_cos();
@@ -1272,14 +1411,37 @@ fn rotation_steps_follow_canvas_motion_under_a_reflected_parent() -> anyhow::Res
             .properties["rotation"]["pose"]["angle"]
             .as_f64()
             .unwrap();
-        assert!((angle + 23.).abs() < 0.01, "axis={axis}: {angle}");
+        assert!((angle - 23.).abs() < 0.01, "axis={axis}: {angle}");
+        // Check the visible bone as well as the stored value: mirroring the
+        // parent does not reverse the child's additive evaluated pose angle.
+        let after = shown(&mut editor)?;
+        let control = after
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap();
+        let actual = after
+            .geometry
+            .deformer_gizmo(control, after.transform)
+            .unwrap();
+        let tip = gizmo.handles[0].1;
+        let (sin, cos) = (-23_f32.to_radians()).sin_cos();
+        let (x, y) = (tip.x - center.x, tip.y - center.y);
+        let expected = ViewportPoint {
+            x: center.x + x * cos - y * sin,
+            y: center.y + x * sin + y * cos,
+        };
+        let tip = actual.handles[0].1;
+        assert!((tip.x - expected.x).hypot(tip.y - expected.y) < 0.01);
     }
     Ok(())
 }
 
 #[test]
-fn parent_child_point_selection_keeps_local_nudge_and_frame_targets() -> anyhow::Result<()> {
-    for use_frame in [false, true] {
+fn parent_child_point_selection_keeps_point_edits_local_and_whole_frames_normalized()
+-> anyhow::Result<()> {
+    for operation in 0..3 {
         let (mut editor, _dir, mesh) = mesh_editor()?;
         let warp = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(4).to_string());
         editor.execute(EditorCommand::SelectObjects(vec![
@@ -1296,9 +1458,11 @@ fn parent_child_point_selection_keeps_local_nudge_and_frame_targets() -> anyhow:
             .map(|v| v.position)
             .collect();
         click(&mut editor, points[0], false)?;
-        assert!(editor.overlay().warp_frame_lines.is_empty());
-        if use_frame {
+        assert!(!editor.overlay().warp_frame_lines.is_empty());
+        if operation == 1 {
             click(&mut editor, points[1], true)?;
+        }
+        if operation != 0 {
             let handles: Vec<_> = editor
                 .overlay()
                 .handles
@@ -1327,17 +1491,38 @@ fn parent_child_point_selection_keeps_local_nudge_and_frame_targets() -> anyhow:
             )?;
         }
         let after = vertices(&mut editor, &mesh)?;
-        let count = if use_frame { 2 } else { 1 };
+        let count = match operation {
+            0 => 1,
+            1 => 2,
+            _ => before.len(),
+        };
         for i in 0..count {
             assert!(
                 (after[i].x - before[i].x - 10.).abs() < 0.002,
-                "frame={use_frame}, vertex={i}, before={:?}, after={:?}",
+                "operation={operation}, vertex={i}, before={:?}, after={:?}",
                 before[i],
                 after[i]
             );
         }
         assert_eq!(&after[count..], &before[count..]);
-        assert_eq!(control_points(&mut editor, &warp)?, parent);
+        let parent_after = control_points(&mut editor, &warp)?;
+        if operation == 2 {
+            for (a, b) in parent.iter().zip(&parent_after) {
+                assert!((b.x - a.x - 10.).abs() < 0.002);
+                assert!((b.y - a.y).abs() < 0.002);
+            }
+            assert_eq!(
+                editor
+                    .overlay()
+                    .vertices
+                    .iter()
+                    .filter(|v| v.kind == OverlayVertexKind::Mesh && v.selected)
+                    .count(),
+                1
+            );
+        } else {
+            assert_eq!(parent_after, parent);
+        }
         editor.execute(EditorCommand::Undo)?;
         assert_eq!(vertices(&mut editor, &mesh)?, before);
         editor.execute(EditorCommand::Redo)?;

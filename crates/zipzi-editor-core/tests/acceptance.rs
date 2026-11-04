@@ -10,6 +10,8 @@ mod animation;
 mod mao_canvas;
 #[path = "cases/psd_import.rs"]
 mod psd_import;
+#[path = "cases/rotation_project.rs"]
+mod rotation_project;
 #[path = "cases/transfer.rs"]
 mod transfer;
 #[path = "cases/transfer_roundtrip/mod.rs"]

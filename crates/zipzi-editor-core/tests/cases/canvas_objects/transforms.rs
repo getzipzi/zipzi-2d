@@ -339,7 +339,7 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         let restored = position(&shown(&mut editor)?);
         assert!((restored.x - start.x).hypot(restored.y - start.y) < 0.01);
     }
-    // The visible rotation axis must follow the cursor in the same final space.
+    // The dragged bone body must follow the cursor in the same final space.
     let frame = shown(&mut editor)?;
     let c = frame
         .geometry
@@ -348,15 +348,16 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         .find(|c| c.object.id == rotation)
         .unwrap();
     let points = frame.geometry.control_points(c, frame.transform);
+    let start = rotation_body_pointer(points[0], points[1]);
     let end = ViewportPoint {
         x: points[0].x,
-        y: points[0].y + (points[1].x - points[0].x).hypot(points[1].y - points[0].y),
+        y: points[0].y + (start.x - points[0].x).hypot(start.y - points[0].y),
     };
     crate::support::pointer_input(
         &mut editor,
         CanvasInput::Down {
             primary: false,
-            point: points[1],
+            point: start,
             shift: false,
             alt: false,
         },
@@ -369,7 +370,8 @@ fn reversed_canvas_control_drags_follow_the_displayed_pointer() -> anyhow::Resul
         .iter()
         .find(|c| c.object.id == rotation)
         .unwrap();
-    let after = frame.geometry.control_points(c, frame.transform)[1];
+    let points = frame.geometry.control_points(c, frame.transform);
+    let after = rotation_body_pointer(points[0], points[1]);
     assert!(
         (after.x - end.x).hypot(after.y - end.y) < 0.01,
         "{after:?} != {end:?}"

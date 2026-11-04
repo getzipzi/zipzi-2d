@@ -170,7 +170,7 @@ pub(crate) fn paint_lines(
         let color = if deformer.kind == zipzi_editor_core::ControlKind::Warp {
             p.mesh
         } else {
-            p.deformer
+            p.deformer_frame
         };
         lines(&deformer.lines, width, color.opacity(alpha));
     }
@@ -182,7 +182,6 @@ pub(crate) fn paint_lines(
         1.,
         p.deformer_frame.opacity(0.95),
     );
-    lines(&overlay.rotation_lines, 1., p.deformer.opacity(0.85));
     for glue in &overlay.glues {
         let color = p.glue;
         let dashed: Vec<_> = glue
@@ -201,6 +200,28 @@ pub(crate) fn paint_lines(
             1.,
             color.opacity(if glue.hovered { 1. } else { 0.85 }),
         );
+    }
+    // Subdue unselected bones so the artwork remains visible beneath them.
+    // Selected bones paint last, matching their priority in hit testing.
+    for selected in [false, true] {
+        for bone in overlay
+            .rotation_bones
+            .iter()
+            .filter(|b| b.selected == selected)
+        {
+            let color = if bone.selected {
+                p.deformer_frame
+            } else {
+                p.mesh.opacity(if bone.hovered { 0.65 } else { 0.45 })
+            };
+            if let Some(path) = polygon_fill_path(
+                bone.points
+                    .iter()
+                    .map(|p| bounds.origin + point(px(p.x), px(p.y))),
+            ) {
+                window.paint_path(path, color);
+            }
+        }
     }
 }
 
@@ -401,17 +422,6 @@ fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &m
             p,
             window,
         );
-        if v.kind == OverlayVertexKind::RotationCenter {
-            let q = |x, y| ViewportPoint {
-                x: v.position.x + x,
-                y: v.position.y + y,
-            };
-            mesh_edges::paint_edges(
-                &[(q(-6., 0.), q(6., 0.)), (q(0., -6.), q(0., 6.))],
-                origin,
-                |path| window.paint_path(path, p.restricted_border),
-            );
-        }
         if v.hovered {
             ring(center, radius + 2., window);
         }
@@ -473,21 +483,15 @@ fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &m
                 .border_color(color),
             );
         }
-        OverlayVertexKind::RotationTip => {
-            marker(center, radius, true, v.selected, color, p, window)
-        }
-        OverlayVertexKind::RotationCenter => {
-            marker(center, radius, true, v.selected, color, p, window);
-            let q = |x, y| ViewportPoint {
-                x: v.position.x + x,
-                y: v.position.y + y,
-            };
-            mesh_edges::paint_edges(
-                &[(q(-6., 0.), q(6., 0.)), (q(0., -6.), q(0., 6.))],
-                origin,
-                |path| window.paint_path(path, color),
-            );
-        }
+        OverlayVertexKind::RotationCenter | OverlayVertexKind::RotationTip => marker(
+            center,
+            radius,
+            v.kind == OverlayVertexKind::RotationCenter,
+            v.selected,
+            color,
+            p,
+            window,
+        ),
     }
     if v.hovered {
         ring(center, radius + 2., window);
@@ -682,6 +686,61 @@ mod tests {
                 paint_markers(&overlay, origin, palette, mesh_fallback, true, &mut grouped);
                 assert_eq!(grouped.operations, old.operations);
                 assert!(grouped.layers > 0);
+            }
+        }
+    }
+
+    #[test]
+    fn rotation_markers_keep_screen_size_at_every_bone_scale() {
+        use zipzi_editor_core::{OverlayHandle, OverlayRotationBone};
+        let center = ViewportPoint { x: 40., y: 40. };
+        let tip = ViewportPoint { x: 160., y: 40. };
+        for editable in [false, true] {
+            for hovered in [false, true] {
+                let mut reference = None;
+                for scale in [0.1, 1., 8.] {
+                    let overlay = OverlaySnapshot {
+                        rotation_bones: vec![OverlayRotationBone {
+                            points: [center, center, tip, tip],
+                            scale,
+                            selected: true,
+                            hovered: false,
+                        }],
+                        vertices: vec![OverlayVertex {
+                            id: 0,
+                            kind: OverlayVertexKind::RotationCenter,
+                            position: center,
+                            selected: false,
+                            hovered,
+                            editable,
+                        }],
+                        handles: vec![OverlayHandle {
+                            tangent: false,
+                            rotation: true,
+                            position: tip,
+                            round: false,
+                            hovered,
+                            selected: true,
+                            editable,
+                        }],
+                        ..Default::default()
+                    };
+                    let mut recorder = MarkerRecorder::default();
+                    paint_markers(
+                        &overlay,
+                        point(px(0.), px(0.)),
+                        Palette::new(false),
+                        true,
+                        true,
+                        &mut recorder,
+                    );
+                    if let Some(expected) = &reference {
+                        assert_eq!(&recorder.operations, expected, "bone scale={scale}");
+                    } else {
+                        assert!(!recorder.operations.is_empty());
+                        reference = Some(recorder.operations);
+                    }
+                }
             }
         }
     }

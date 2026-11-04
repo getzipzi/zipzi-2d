@@ -1,11 +1,8 @@
 //! Screen-space manipulators. Painting and picking share the same geometry.
 use crate::{CanvasScene, ControlGeometry, ControlKind, ViewportPoint, ViewportTransform};
 
-// Initial model-space radius; authored/inherited scale and viewport zoom apply.
-const ROTATION_RING_RADIUS: f32 = 64.;
-const ROTATION_MIN_RADIUS: f32 = 24.;
-const ROTATION_SCALE_OFFSET: f32 = 24.;
-pub(crate) const ROTATION_RING_SEGMENTS: usize = 96;
+// Model-space display length, independent of the authored deformation.
+pub(crate) const ROTATION_BONE_LENGTH: f32 = zipzi_core::document::DEFAULT_ROTATION_BONE_LENGTH;
 // Fixed logical-pixel gap between the Warp control grid and its outer frame.
 const WARP_FRAME_PADDING: f32 = 12.;
 const WARP_ROTATE_OFFSET: f32 = 24.;
@@ -43,7 +40,7 @@ pub(crate) struct WarpGizmos {
 }
 
 impl CanvasScene {
-    pub(crate) fn rotation_screen_radius(&self, c: &ControlGeometry, t: ViewportTransform) -> f32 {
+    pub(crate) fn rotation_screen_length(&self, c: &ControlGeometry, t: ViewportTransform) -> f32 {
         let scale = self
             .source
             .viewport_frame
@@ -52,7 +49,7 @@ impl CanvasScene {
             .find(|d| d.id == c.object.id)
             .and_then(|d| d.rotation_basis)
             .map_or(1., |[x, _]| x.x.hypot(x.y));
-        (ROTATION_RING_RADIUS * scale * t.scale).max(ROTATION_MIN_RADIUS)
+        c.rotation_bone_length * (scale / c.rotation_bone_reference_scale) * t.scale
     }
 
     pub(crate) fn object_gizmo(
@@ -82,32 +79,39 @@ impl CanvasScene {
             let [o, axis, ..] = points.as_slice() else {
                 return None;
             };
-            let radius = self.rotation_screen_radius(c, t);
-            let direction = p((axis.x - o.x) / radius, (axis.y - o.y) / radius);
-            let scale_distance = radius + ROTATION_SCALE_OFFSET;
-            let scale = p(
-                o.x - direction.y * scale_distance,
-                o.y + direction.x * scale_distance,
-            );
-            let mut outline = Vec::new();
-            for i in 0..ROTATION_RING_SEGMENTS {
-                let a = i as f32 * std::f32::consts::TAU / ROTATION_RING_SEGMENTS as f32;
-                let b = (i + 1) as f32 * std::f32::consts::TAU / ROTATION_RING_SEGMENTS as f32;
-                outline.push((
-                    p(o.x + radius * a.cos(), o.y + radius * a.sin()),
-                    p(o.x + radius * b.cos(), o.y + radius * b.sin()),
-                ));
+            let length = self.rotation_screen_length(c, t);
+            // Recover direction before adding screen coordinates: a subpixel
+            // bone at a large origin must not lose its authored angle.
+            let axis_vector = c.rotation_axis.unwrap_or(crate::ModelVector {
+                x: c.points[1].x - c.points[0].x,
+                y: c.points[1].y - c.points[0].y,
+            });
+            let magnitude = axis_vector.x.hypot(axis_vector.y);
+            if magnitude <= 1e-6 {
+                return None;
             }
-            outline.push((
-                p(o.x - direction.y * radius, o.y + direction.x * radius),
-                scale,
-            ));
+            let direction = p(axis_vector.x / magnitude, -axis_vector.y / magnitude);
+            let scale = length / c.rotation_bone_length;
+            let shoulder = (c.rotation_bone_length * 0.18).min(24.) * scale;
+            let width = 8. * scale;
+            let a = p(
+                o.x + direction.x * shoulder - direction.y * width,
+                o.y + direction.y * shoulder + direction.x * width,
+            );
+            let b = p(
+                o.x + direction.x * shoulder + direction.y * width,
+                o.y + direction.y * shoulder - direction.x * width,
+            );
+            let outline = vec![(*o, a), (a, *axis), (*axis, b), (b, *o)];
             return Some(DeformerGizmo {
                 center: *o,
-                frame_angle: 0.,
-                bounds: [o.x - radius, o.y - radius, o.x + radius, o.y + radius],
+                frame_angle: direction.y.atan2(direction.x),
+                bounds: crate::picking::bounds(
+                    [*o, a, *axis, b].map(|p| crate::ModelPoint { x: p.x, y: p.y }),
+                )
+                .unwrap(),
                 outline,
-                handles: vec![(DeformerHandle::RotationScale, scale)],
+                handles: vec![(DeformerHandle::RotationScale, *axis)],
             });
         }
         Some(DeformerGizmo::warp(b))
@@ -142,6 +146,9 @@ impl CanvasScene {
         t: ViewportTransform,
     ) -> Option<WarpSelectionGizmo> {
         let points = self.warp_selected_points(components);
+        if points.len() < 2 {
+            return None;
+        }
         let object = points.first()?.0.object.clone();
         let bounds = crate::picking::bounds(points.iter().map(|(_, p)| {
             let p = t.to_viewport(*p);
@@ -173,6 +180,21 @@ impl CanvasScene {
 }
 
 impl DeformerGizmo {
+    /// Bone polygons are convex. Include the same small edge tolerance used for picking.
+    pub(crate) fn bone_hit(&self, point: ViewportPoint) -> bool {
+        let mut positive = false;
+        let mut negative = false;
+        for &(a, b) in &self.outline {
+            if crate::picking::segment_distance2(point, a, b) <= 25. {
+                return true;
+            }
+            let cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
+            positive |= cross > 0.;
+            negative |= cross < 0.;
+        }
+        (positive || negative) && !(positive && negative)
+    }
+
     pub(crate) fn warp(b: [f32; 4]) -> Self {
         Self::warp_oriented(b, 0.)
     }
@@ -386,6 +408,9 @@ impl crate::tools::ToolController {
         target.viewport = viewport;
         target.frame = viewport
             .and_then(|viewport| self.warp_frame_state(document, viewport, object))
+            // Numeric point edits retain their explicit target. A single point
+            // must not inherit the whole-object frame's adjusted pivot.
+            .filter(|state| state.target.components == target.components)
             .map(|state| state.info.frame);
         Some(target)
     }

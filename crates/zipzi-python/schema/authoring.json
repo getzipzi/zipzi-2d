@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python/tools/generate.py",
-  "contract_sha256": "44ba40eb6b7c2f26f8d8dfaf382492b5a1a4bb053fff2386bae183d321225bae",
+  "contract_sha256": "46d57a042a6a92882e05aa89d088fbcfafb2202e3e9e9807304262747581f178",
   "format_version": 2,
   "root": {
     "binary": {
@@ -18,7 +18,7 @@
         "name": "zipzi_contract::runtime::ImageSnapshot"
       },
       "image_signature": "ad87c1c5f654d24b33239bad6607e861",
-      "input_signature": "47dbe9859095cb84bb676251e98980e7",
+      "input_signature": "721e69736e69d8475d12ccebe728b9e5",
       "inputs": [
         {
           "kind": "ref",
@@ -59,7 +59,7 @@
         "kind": "ref",
         "name": "zipzi_contract::authoring::OwnedModelingRecords"
       },
-      "output_signature": "f06d940f192c4a820cc9a75f50efe089",
+      "output_signature": "ceefabd9bcab4f132d131ec4d4bba18b",
       "preview": {
         "kind": "ref",
         "name": "zipzi_contract::runtime::PreviewBatch"
@@ -793,7 +793,7 @@
     },
     {
       "path": "types/project.json",
-      "sha256": "61afe82902d3b2c1a128191d77dd9b55bf02bfb7ea24a4a1cb4b7c1bc2c75255"
+      "sha256": "214962442c71f223db3a4d2b44c207ba09dda30de1a0b11da8034e3e9334db34"
     },
     {
       "path": "types/queries.json",

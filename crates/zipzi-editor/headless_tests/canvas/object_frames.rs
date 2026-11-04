@@ -68,7 +68,10 @@ fn command_rotation_drag_keeps_child_artwork_fixed_through_native_events(cx: &mu
                 .deformer_gizmo(control, frame.transform)
                 .unwrap()
         });
-        let start = gizmo.outline[12].0;
+        let start = zipzi_editor_core::ViewportPoint {
+            x: (gizmo.center.x + gizmo.handles[0].1.x) * 0.5,
+            y: (gizmo.center.y + gizmo.handles[0].1.y) * 0.5,
+        };
         let origin = window.find("canvas-body").bounds().origin;
         let from = origin + point(px(start.x), px(start.y));
         let (sin, cos) = 23.4f32.to_radians().sin_cos();
@@ -172,8 +175,8 @@ fn arrows_nudge_canvas_objects_and_points_but_leave_text_carets_alone(cx: &mut T
         let p = h.view.read(cx).editor.overlay().vertices[0].position;
         window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
         let overlay = h.view.read(cx).editor.overlay();
-        assert!(overlay.warp_frame_lines.is_empty());
-        assert!(overlay.handles.is_empty());
+        assert!(!overlay.warp_frame_lines.is_empty());
+        assert_eq!(overlay.handles.len(), 9);
         window.press("shift-right", cx);
         window.render_frame(cx);
     })
@@ -217,6 +220,8 @@ fn frame_scale_modifiers_update_on_key_changes_and_pointer_events(cx: &mut TestA
     let end = cx
         .update_window(h.window, |_, window, cx| {
             window.activate_window();
+            let p = h.view.read(cx).editor.overlay().vertices[0].position;
+            window.click_at("canvas-body", point(px(p.x), px(p.y)), cx);
             let (start, scale) = h.view.read_with(cx, |view, _| {
                 (
                     view.editor.overlay().handles[4].position,

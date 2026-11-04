@@ -83,8 +83,10 @@ impl ToolController {
         let mut component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
                     !locks.is_locked(selected) && ((selected.kind == ObjectKind::Mesh && selected == r)
                     || (selected.kind == ObjectKind::Deformer
-                        && (selected == r || (r.kind == ObjectKind::Mesh && scene.ancestors(r).contains(selected)))))));
-        // A selected surface permits component marquee selection without
+                        && (selected == r || (r.kind == ObjectKind::Mesh
+                            && scene.control(&selected.id).is_some_and(|c| c.kind == crate::ControlKind::Warp)
+                            && scene.ancestors(r).contains(selected)))))));
+        // A selected Warp surface permits component marquee selection without
         // replacing the shared object selection.
         let mut hit = match hit {
             Some(HitTarget::Object(_)) if component_surface && !alt => None,

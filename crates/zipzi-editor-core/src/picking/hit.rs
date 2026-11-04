@@ -63,8 +63,7 @@ impl CanvasScene {
                 return Some(HitTarget::Component(ComponentRef { object, id }));
             }
         }
-        // Native Rotation handles remain reachable when a compact ring's
-        // scale handle overlaps a mixed selection's generic transform frame.
+        // Native bone roots, tips and bodies win over mixed-selection frames.
         for object in selection {
             let Some(control) = self.control(&object.id).filter(|c| {
                 c.kind == ControlKind::Rotation
@@ -74,17 +73,14 @@ impl CanvasScene {
                 continue;
             };
             let points = self.control_points(control, t);
-            for (id, p) in points.iter().enumerate() {
-                if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
-                    return Some(if id == 1 {
-                        HitTarget::RotationHandle(object.clone())
-                    } else {
-                        HitTarget::Component(ComponentRef {
-                            object: object.clone(),
-                            id: id as u32,
-                        })
-                    });
-                }
+            if points
+                .first()
+                .is_some_and(|p| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
+            {
+                return Some(HitTarget::Component(ComponentRef {
+                    object: object.clone(),
+                    id: 0,
+                }));
             }
             if let Some(gizmo) = self.deformer_gizmo(control, t)
                 && let Some((handle, _)) = gizmo
@@ -93,6 +89,11 @@ impl CanvasScene {
                     .find(|(_, p)| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
             {
                 return Some(HitTarget::DeformerHandle(object.clone(), *handle));
+            }
+            if let Some(gizmo) = self.deformer_gizmo(control, t)
+                && gizmo.bone_hit(point)
+            {
+                return Some(HitTarget::RotationHandle(object.clone()));
             }
         }
         if let Some(frames) = warp_selection.filter(|s| !s.objects.is_empty()) {
@@ -132,6 +133,11 @@ impl CanvasScene {
         for c in controls {
             let points = self.control_points(c, t);
             let editing = c.kind != ControlKind::Glue && selection.contains(&c.object);
+            if c.kind == ControlKind::Rotation
+                && self.deformer_gizmo(c, t).is_some_and(|g| g.bone_hit(point))
+            {
+                object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
+            }
             // Disabled controls must not steal a hit from an independently
             // positioned frame, including when a frame handle overlaps a point.
             if warp_selection.is_some_and(|g| g.adjusting.contains(&c.object)) {
@@ -181,7 +187,10 @@ impl CanvasScene {
                 if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
                     if editing {
                         return Some(if c.kind == ControlKind::Rotation && i == 1 {
-                            HitTarget::RotationHandle(c.object.clone())
+                            HitTarget::DeformerHandle(
+                                c.object.clone(),
+                                crate::DeformerHandle::RotationScale,
+                            )
                         } else {
                             HitTarget::Component(ComponentRef {
                                 object: c.object.clone(),
@@ -220,23 +229,14 @@ impl CanvasScene {
                         return Some(HitTarget::DeformerHandle(c.object.clone(), *handle));
                     }
                 }
-                if gizmo
-                    .outline
-                    .iter()
-                    .take(if c.kind == ControlKind::Rotation {
-                        crate::deformer::ROTATION_RING_SEGMENTS
-                    } else {
-                        usize::MAX
-                    })
-                    .any(|&(a, b)| {
-                        segment_distance2(point, a, b)
-                            <= if c.kind == ControlKind::Rotation {
-                                36.
-                            } else {
-                                16.
-                            }
-                    })
-                {
+                if gizmo.outline.iter().any(|&(a, b)| {
+                    segment_distance2(point, a, b)
+                        <= if c.kind == ControlKind::Rotation {
+                            36.
+                        } else {
+                            16.
+                        }
+                }) {
                     return Some(HitTarget::DeformerHandle(
                         c.object.clone(),
                         if c.kind == ControlKind::Rotation {
@@ -285,6 +285,20 @@ impl CanvasScene {
         let mut objects = Vec::new();
         if let Some(hit) = self.hit_with_state(point, t, selection, tool, visibility, locks, None) {
             objects.push(hit.object().clone());
+        }
+        // Include every overlapping bone, even with no drawable beneath it.
+        if tool != ToolId::Hand {
+            for control in &self.controls {
+                if control.kind == ControlKind::Rotation
+                    && !locks.is_locked(&control.object)
+                    && self.control_visible(control, selection, tool, visibility)
+                    && self
+                        .deformer_gizmo(control, t)
+                        .is_some_and(|g| g.bone_hit(point))
+                {
+                    objects.push(control.object.clone());
+                }
+            }
         }
         for id in self.mesh_hits(t.to_model(point)) {
             let mesh = ObjectRef::new(K::Mesh, id);

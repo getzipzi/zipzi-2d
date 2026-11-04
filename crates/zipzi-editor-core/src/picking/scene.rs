@@ -173,10 +173,34 @@ impl CanvasScene {
                 object: ObjectRef::new(K::Deformer, &evaluated.id),
                 kind: t.kind,
                 points: evaluated.points.iter().copied().map(to_model).collect(),
-                rotation_axis: evaluated.rotation_axis.map(|axis| crate::ModelVector {
-                    x: axis.x,
-                    y: axis.y,
+                rotation_axis: evaluated.rotation_axis.map(|axis| {
+                    // Rotate the scale-independent axis before any translation.
+                    // Imported Cubism handles use a vertical zero-angle reference.
+                    let angle = document
+                        .model()
+                        .editor_state()
+                        .rotation_bone_angle_offsets
+                        .get(&evaluated.id)
+                        .copied()
+                        .unwrap_or(0.)
+                        .to_radians();
+                    let (sin, cos) = angle.sin_cos();
+                    crate::ModelVector {
+                        x: cos * axis.x - sin * axis.y,
+                        y: sin * axis.x + cos * axis.y,
+                    }
                 }),
+                rotation_bone_length: document
+                    .model()
+                    .editor_state()
+                    .rotation_bone_lengths
+                    .get(&evaluated.id)
+                    .copied()
+                    .unwrap_or(crate::deformer::ROTATION_BONE_LENGTH),
+                rotation_bone_reference_scale: document
+                    .model()
+                    .rotation_bone_reference_scale(&evaluated.id)
+                    .unwrap_or(1.),
                 edges: t.edges.clone(),
                 enabled: evaluated.enabled,
                 visible: document.deformer_controls_visible(&evaluated.id),
@@ -222,6 +246,8 @@ impl CanvasScene {
                 object: g.object.clone(),
                 kind: ControlKind::Glue,
                 rotation_axis: None,
+                rotation_bone_length: crate::deformer::ROTATION_BONE_LENGTH,
+                rotation_bone_reference_scale: 1.,
                 points,
                 edges: edges.into(),
                 enabled: visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b),

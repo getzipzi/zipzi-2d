@@ -188,6 +188,36 @@ pub(crate) fn write_editorstate_in(
         }
         out.into_any().unbind()
     })?;
+    out.set_item("rotation_bone_lengths", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.rotation_bone_lengths) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("rotation_bone_reference_scales", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.rotation_bone_reference_scales) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
+    out.set_item("rotation_bone_angle_offsets", {
+        let out = PyDict::new(py);
+        for (key, item0) in (&value.rotation_bone_angle_offsets) {
+            out.set_item(
+                key.to_string(),
+                (item0).into_pyobject(py)?.into_bound().into_any().unbind(),
+            )?;
+        }
+        out.into_any().unbind()
+    })?;
     Ok(classes
         .getattr("EditorState")?
         .call((), Some(&out))?

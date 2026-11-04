@@ -897,6 +897,14 @@ impl PropertiesPanel {
                 if spec.scale == 100. {
                     control = control.suffix("%");
                 }
+                if let Some(digits) = spec.display_decimals {
+                    let format: fn(f64) -> String = match digits {
+                        1 => |value| properties::form::truncate_decimal_text(&value.to_string(), 1),
+                        2 => |value| properties::form::truncate_decimal_text(&value.to_string(), 2),
+                        _ => |value| properties::form::truncate_decimal_text(&value.to_string(), 3),
+                    };
+                    control = control.format_sliding_value(format);
+                }
                 if spec.binding.value_type == zipzi_editor_core::PropertyType::Integer {
                     control.truncate_to_integer()
                 } else {

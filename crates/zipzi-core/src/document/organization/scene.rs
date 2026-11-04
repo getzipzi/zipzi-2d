@@ -115,6 +115,7 @@ impl Delta {
             parents,
             meshes,
             transforms,
+            rotation_bone_copies,
             offscreens,
             bindings,
             scene_bindings,
@@ -131,6 +132,7 @@ impl Delta {
             && parents.is_empty()
             && meshes.is_empty()
             && transforms.is_empty()
+            && rotation_bone_copies.is_empty()
             && offscreens.is_empty()
             && bindings.is_empty()
             && scene_bindings.is_empty()
@@ -159,6 +161,7 @@ impl Delta {
     }
     pub(in crate::document) fn changed(&self, d: &Document) -> bool {
         self.runtime_changed(d)
+            || !self.rotation_bone_copies.is_empty()
             || self
                 .model3
                 .as_ref()
@@ -238,6 +241,15 @@ impl Delta {
             remove!(glues, glue_order);
             for id in &self.removed {
                 d.content.editor_state.objects.remove(id);
+                d.content.editor_state.rotation_bone_lengths.remove(id);
+                d.content
+                    .editor_state
+                    .rotation_bone_reference_scales
+                    .remove(id);
+                d.content
+                    .editor_state
+                    .rotation_bone_angle_offsets
+                    .remove(id);
                 d.vertex_slots.remove(id);
             }
             d.mesh_runtime_ids
@@ -307,9 +319,22 @@ impl Delta {
         if !created_transforms.is_empty() {
             d.lookup.take();
             d.prepared.take();
-            for id in created_transforms {
-                d.initialize_deformer_original(&id);
+            for (source, target) in &self.rotation_bone_copies {
+                let state = &mut d.content.editor_state;
+                for values in [
+                    &mut state.rotation_bone_lengths,
+                    &mut state.rotation_bone_reference_scales,
+                    &mut state.rotation_bone_angle_offsets,
+                ] {
+                    if let Some(value) = values.get(source).copied() {
+                        values.insert(target.clone(), value);
+                    }
+                }
             }
+            for id in &created_transforms {
+                d.initialize_deformer_original(id);
+            }
+            d.initialize_rotation_bone_display(&created_transforms);
         }
     }
 }

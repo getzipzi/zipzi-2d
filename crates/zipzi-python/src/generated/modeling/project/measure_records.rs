@@ -98,25 +98,83 @@ pub fn measure_packageattachment(value: &Bound<'_, PyAny>) -> PyResult<usize> {
 }
 
 pub fn measure_editorstate(value: &Bound<'_, PyAny>) -> PyResult<usize> {
-    Ok(256usize.saturating_add({
-        let mut bytes = 64usize;
-        for value in (value.getattr("objects")?)
-            .call_method0("items")?
-            .try_iter()?
-        {
-            let v0 = value?;
-            bytes = bytes
-                .saturating_add(128)
-                .saturating_add(
-                    (v0.get_item(0)?)
-                        .len()?
-                        .saturating_mul(4)
-                        .saturating_add(32),
-                )
-                .saturating_add(measure_objecteditorstate(&(v0.get_item(1)?))?);
-        }
-        bytes
-    }))
+    Ok(256usize
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("objects")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(measure_objecteditorstate(&(v0.get_item(1)?))?);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("rotation_bone_lengths")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(16usize);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("rotation_bone_reference_scales")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(16usize);
+            }
+            bytes
+        })
+        .saturating_add({
+            let mut bytes = 64usize;
+            for value in (value.getattr("rotation_bone_angle_offsets")?)
+                .call_method0("items")?
+                .try_iter()?
+            {
+                let v0 = value?;
+                bytes = bytes
+                    .saturating_add(128)
+                    .saturating_add(
+                        (v0.get_item(0)?)
+                            .len()?
+                            .saturating_mul(4)
+                            .saturating_add(32),
+                    )
+                    .saturating_add(16usize);
+            }
+            bytes
+        }))
 }
 
 pub fn measure_objecteditorstate(value: &Bound<'_, PyAny>) -> PyResult<usize> {

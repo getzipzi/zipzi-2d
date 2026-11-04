@@ -21,6 +21,10 @@ pub struct ViewportInputUpdate {
 }
 
 impl Editor {
+    pub fn canvas_idle_hints(&self) -> &'static [InteractionHint] {
+        self.active_session()
+            .map_or(&[], |s| s.modeling.tools.idle_hints())
+    }
     fn acquire_viewport_interaction(
         &mut self,
         binding: ViewportBinding,
@@ -174,6 +178,21 @@ impl Editor {
             left_down: false,
         });
         self.modeling_input(binding, input).map(|_| ())
+    }
+
+    /// Refresh idle modifier feedback without acquiring pointer ownership.
+    pub fn update_canvas_modifiers(
+        &mut self,
+        binding: ViewportBinding,
+        shift: bool,
+        alt: bool,
+    ) -> Result<()> {
+        self.validate_modeling_binding(binding)?;
+        if self.viewport_interaction_active() {
+            return Ok(());
+        }
+        self.modeling_input(binding, CanvasInput::ModifiersChanged { shift, alt })
+            .map(|_| ())
     }
 
     fn process_canvas_gesture(

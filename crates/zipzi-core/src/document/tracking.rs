@@ -180,8 +180,25 @@ impl Document {
         let mut tracking = std::mem::take(&mut self.tracking);
         let matches_snapshot = Arc::ptr_eq(&write.snapshot, &self.snapshot_identity);
         let flags = self.content.editor_state.objects.len();
+        let lengths = self.content.editor_state.rotation_bone_lengths.len();
+        let scales = self
+            .content
+            .editor_state
+            .rotation_bone_reference_scales
+            .len();
+        let angles = self.content.editor_state.rotation_bone_angle_offsets.len();
         let result = self.changed(kind, mesh_ids, object_ids);
-        if matches_snapshot && flags == self.content.editor_state.objects.len() {
+        if matches_snapshot
+            && angles == self.content.editor_state.rotation_bone_angle_offsets.len()
+            && flags == self.content.editor_state.objects.len()
+            && lengths == self.content.editor_state.rotation_bone_lengths.len()
+            && scales
+                == self
+                    .content
+                    .editor_state
+                    .rotation_bone_reference_scales
+                    .len()
+        {
             if let Some(complete) = &mut tracking.0 {
                 if Arc::ptr_eq(&complete.current, &write.snapshot) {
                     complete.current = self.snapshot_identity.clone();

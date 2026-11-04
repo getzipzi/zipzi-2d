@@ -60,6 +60,83 @@ fn native_drag(
 }
 
 #[test]
+fn single_point_frame_commands_use_whole_warp_without_changing_numeric_point_edits()
+-> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    let before = control_points(&mut editor, &object)?;
+    let whole = frame(&editor, &object).frame;
+    let point = editor.overlay().vertices[0].position;
+    click(&mut editor, point, false)?;
+    assert_eq!(frame(&editor, &object).frame, whole);
+    assert_eq!(frame_handles(&editor).len(), 9);
+    for command in [WarpFrameAction::Align, WarpFrameAction::Reset] {
+        action(&mut editor, &object, command)?;
+        assert_eq!(frame(&editor, &object).frame, whole);
+        assert_eq!(frame_handles(&editor).len(), 9);
+    }
+    action(&mut editor, &object, WarpFrameAction::ToggleVisible)?;
+    assert!(frame_handles(&editor).is_empty());
+    assert!(editor.overlay().warp_frame_lines.is_empty());
+    action(&mut editor, &object, WarpFrameAction::ToggleAdjust)?;
+    let handles = frame_handles(&editor);
+    let start = ViewportPoint {
+        x: (handles[0].position.x + handles[1].position.x) / 2.,
+        y: handles[0].position.y,
+    };
+    native_drag(
+        &mut editor,
+        start,
+        ViewportPoint {
+            x: start.x + 20.,
+            y: start.y + 10.,
+        },
+        false,
+    )?;
+    let adjusted = frame(&editor, &object).frame;
+    assert_eq!(adjusted.half_size, whole.half_size);
+    assert!((adjusted.center.x - whole.center.x - 20.).abs() < 0.001);
+    assert!((adjusted.center.y - whole.center.y + 10.).abs() < 0.001);
+    assert_eq!(control_points(&mut editor, &object)?, before);
+    action(&mut editor, &object, WarpFrameAction::ToggleAdjust)?;
+
+    // The numeric dialog still targets the explicit point selection. Its own
+    // pivot must not become the unrelated, adjusted whole-object frame center.
+    let target = editor.warp_transform_target(&object).unwrap();
+    assert_eq!(target.components.len(), 1);
+    editor.execute(EditorCommand::AdjustWarp {
+        target,
+        adjustment: DeformerAdjustment {
+            translation: ModelVector { x: 3., y: -2. },
+            angle: 90.,
+            scale: 2.,
+        },
+    })?;
+    let numeric = control_points(&mut editor, &object)?;
+    assert!((numeric[0].x - before[0].x - 3.).abs() < 0.001);
+    assert!((numeric[0].y - before[0].y + 2.).abs() < 0.001);
+    assert_eq!(&numeric[1..], &before[1..]);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.nudge_selection(
+        editor.primary_viewport_binding().unwrap(),
+        ModelVector { x: 3., y: -2. },
+    )?;
+    let after = control_points(&mut editor, &object)?;
+    assert!((after[0].x - numeric[0].x - 3.).abs() < 0.001);
+    assert!((after[0].y - numeric[0].y + 2.).abs() < 0.001);
+    assert_eq!(&after[1..], &before[1..]);
+    action(&mut editor, &object, WarpFrameAction::Reset)?;
+    assert!(
+        frame(&editor, &object)
+            .frame
+            .half_size
+            .iter()
+            .all(|size| *size > 0.)
+    );
+    assert_eq!(frame_handles(&editor).len(), 9);
+    Ok(())
+}
+
+#[test]
 fn frame_adjustment_handles_remain_draggable_when_overlapping_disabled_controls()
 -> anyhow::Result<()> {
     let (mut editor, _dir, object) = deformer_editor(false)?;

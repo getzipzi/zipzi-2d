@@ -5,6 +5,8 @@ use crate::CommandId;
 pub enum HintAction {
     Pan,
     Transform,
+    Scale,
+    BoneLength,
     LassoSelect,
     AddSelection,
     RemoveSelection,

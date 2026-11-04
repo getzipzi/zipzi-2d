@@ -1065,31 +1065,6 @@ impl ControlEdit {
             scale: sx,
         })
     }
-    /// Keep native angle increments continuous and follow reflected parent handedness.
-    pub fn rotation_pointer_angle(&self, radians: f32) -> Result<f32> {
-        if self.space.parent.is_none() {
-            return Ok(radians.to_degrees());
-        }
-        if let Some([u, v]) = self.space.rotation_basis {
-            let determinant = u.x * v.y - u.y * v.x;
-            ensure!(
-                determinant.is_finite() && determinant.abs() > 1e-8,
-                "The parent rotation direction is singular"
-            );
-            return Ok(radians.to_degrees() * determinant.signum());
-        }
-        let origin = self.positions[0];
-        let pivot = self.to_model(origin);
-        let u = self.to_model(Vec2::new(origin.x + 1., origin.y));
-        let v = self.to_model(Vec2::new(origin.x, origin.y + 1.));
-        let determinant = (u.x - pivot.x) * (v.y - pivot.y) - (u.y - pivot.y) * (v.x - pivot.x);
-        ensure!(
-            determinant.is_finite() && determinant.abs() > 1e-8,
-            "The parent rotation direction is singular"
-        );
-        Ok(radians.to_degrees() * determinant.signum())
-    }
-
     pub fn rotation_delta(&self, start: ModelPoint, end: ModelPoint) -> Result<f32> {
         let origin = self.to_model(self.positions[0]);
         let a = (start.y - origin.y).atan2(start.x - origin.x);

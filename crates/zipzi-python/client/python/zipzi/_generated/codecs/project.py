@@ -307,14 +307,23 @@ def validate_EditorState(value: EditorState) -> None:
     for key0, v0 in value.objects.items():
         _check_string(key0)
         validate_ObjectEditorState(v0)
+    for key0, v0 in value.rotation_bone_lengths.items():
+        _check_string(key0)
+        _check_f32(v0)
+    for key0, v0 in value.rotation_bone_reference_scales.items():
+        _check_string(key0)
+        _check_f32(v0)
+    for key0, v0 in value.rotation_bone_angle_offsets.items():
+        _check_string(key0)
+        _check_f32(v0)
 
 def encode_EditorState(value: EditorState) -> object:
-    return {'objects': {str(key0): encode_ObjectEditorState(v0) for key0, v0 in value.objects.items()}}
+    return {'objects': {str(key0): encode_ObjectEditorState(v0) for key0, v0 in value.objects.items()}, 'rotation_bone_lengths': {str(key0): v0 for key0, v0 in value.rotation_bone_lengths.items()}, 'rotation_bone_reference_scales': {str(key0): v0 for key0, v0 in value.rotation_bone_reference_scales.items()}, 'rotation_bone_angle_offsets': {str(key0): v0 for key0, v0 in value.rotation_bone_angle_offsets.items()}}
 
 def read_EditorState(value: object) -> EditorState:
     if isinstance(value, EditorState): return value
     r = record(value)
-    return EditorState(objects={key0: read_ObjectEditorState(v0) for key0, v0 in record(r.get('objects', {})).items()})
+    return EditorState(objects={key0: read_ObjectEditorState(v0) for key0, v0 in record(r.get('objects', {})).items()}, rotation_bone_lengths={key0: number(v0) for key0, v0 in record(r.get('rotation_bone_lengths', {})).items()}, rotation_bone_reference_scales={key0: number(v0) for key0, v0 in record(r.get('rotation_bone_reference_scales', {})).items()}, rotation_bone_angle_offsets={key0: number(v0) for key0, v0 in record(r.get('rotation_bone_angle_offsets', {})).items()})
 
 def validate_ObjectEditorState(value: ObjectEditorState) -> None:
     if not isinstance(value, ObjectEditorState):

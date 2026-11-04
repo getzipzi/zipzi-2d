@@ -79,7 +79,7 @@ fn check(sdk: &mut AuthoringSession, edit: EditSession<'_>, local: bool) {
 }
 
 #[test]
-fn sparse_flags_match_full_reports_and_exact_memory_estimates() {
+fn sparse_flags_and_bone_preferences_match_full_reports_and_exact_memory_estimates() {
     let mut sdk = session();
     for n in [2, 3, 4, 5] {
         let mut edit = sdk.begin_owned_edit("Flags", None).unwrap();
@@ -91,6 +91,7 @@ fn sparse_flags_match_full_reports_and_exact_memory_estimates() {
                 hidden_in_editor: true,
             },
         );
+        state.rotation_bone_lengths.insert(id(4), 150.);
         edit.replace_editor_state(state).unwrap();
         check(&mut sdk, edit, true);
     }
@@ -107,7 +108,10 @@ fn sparse_flags_match_full_reports_and_exact_memory_estimates() {
     assert_eq!(sdk.history_lengths(), history);
     sdk.undo().unwrap();
     sdk.redo().unwrap();
-    assert!(sdk.document().editor_state().get(&id(5)).locked);
+    assert_eq!(
+        sdk.document().editor_state().rotation_bone_lengths[&id(4)],
+        150.
+    );
 }
 
 #[test]

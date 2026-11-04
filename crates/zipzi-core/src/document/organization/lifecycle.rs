@@ -282,6 +282,11 @@ impl Document {
             } else if let Some(t) = self.get_transform(id) {
                 let mut t = t.clone();
                 t.id = map[id].clone();
+                if t.rotation().is_some() {
+                    plan.delta
+                        .rotation_bone_copies
+                        .push((id.clone(), t.id.clone()));
+                }
                 t.runtime_id = unique(&t.runtime_id, &mut transform_runtime);
                 t.part_id = if roots.contains(id) && parent.is_some() {
                     parent

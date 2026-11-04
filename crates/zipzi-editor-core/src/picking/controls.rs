@@ -14,6 +14,8 @@ impl CanvasScene {
             && c.visible
             && (selection.contains(&c.object)
                 || match c.kind {
+                    // Bones are scene objects, not opt-in Warp editing helpers.
+                    ControlKind::Rotation => true,
                     ControlKind::Glue => {
                         self.topology
                             .glues
@@ -35,7 +37,7 @@ impl CanvasScene {
                     }
                 })
     }
-    /// Rotation tips share the pose-scaled ring used for painting and picking.
+    /// Rotation tips share the pose-scaled bone used for painting and picking.
     pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<ViewportPoint> {
         let mut points: Vec<_> = c.points.iter().map(|p| t.to_viewport(*p)).collect();
         if c.kind == ControlKind::Rotation && points.len() >= 2 {
@@ -51,7 +53,7 @@ impl CanvasScene {
             };
             let length = d.x.hypot(d.y);
             if length > 1e-6 {
-                let axis_length = self.rotation_screen_radius(c, t);
+                let axis_length = self.rotation_screen_length(c, t);
                 points[1] = ViewportPoint {
                     x: points[0].x + d.x / length * axis_length,
                     y: points[0].y + d.y / length * axis_length,

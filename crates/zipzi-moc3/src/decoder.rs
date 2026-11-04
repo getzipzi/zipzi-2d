@@ -102,6 +102,7 @@ pub fn decode_moc3(
     ctx.decode_offscreens()?;
     ctx.decode_blend_bindings(&warp_by_local_idx, &rotation_by_local_idx)?;
     ctx.decode_drawing_groups()?;
+    check_status!(ctx.doc.initialize_rotation_bone_reference_scales().status);
 
     let ver = ctx.inspection.version_number;
     let counts = ctx.inspection.counts.clone();

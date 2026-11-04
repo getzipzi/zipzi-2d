@@ -5,6 +5,7 @@ from ..._extensions import freeze as _freeze_extension
 from ..._extensions import read as _read_extension
 from ..._presentation import CompactValue
 from ..._values import Version as _Version
+from ..._values import number
 from ..._values import record
 from .._modeling_support import _boolean
 from builtins import bytes as _Bytes
@@ -243,11 +244,17 @@ PackageAttachment.__module__ = "zipzi.modeling.project"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class EditorState(CompactValue):
-    'Explicit per-object Editor visibility and lock metadata.\n\nFields:\nobjects: Explicit flags only, keyed by globally unique object ID. Defaults are omitted.'
+    'Persistent Editor preferences, independent of runtime deformation.\n\nFields:\nobjects: Explicit flags only, keyed by globally unique object ID. Defaults are omitted.\nrotation_bone_lengths: Rotation control lengths in model pixels at their display reference scale, keyed by transform ID.\nrotation_bone_reference_scales: Evaluated Rotation scale at the display baseline, including inherited coordinate conversion.\nrotation_bone_angle_offsets: Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0.'
     objects: _Mapping[str, ObjectEditorState] = field(default_factory=lambda: {key0: read_ObjectEditorState(v0) for key0, v0 in record({}).items()})
+    rotation_bone_lengths: _Mapping[str, float] = field(default_factory=lambda: {key0: number(v0) for key0, v0 in record({}).items()})
+    rotation_bone_reference_scales: _Mapping[str, float] = field(default_factory=lambda: {key0: number(v0) for key0, v0 in record({}).items()})
+    rotation_bone_angle_offsets: _Mapping[str, float] = field(default_factory=lambda: {key0: number(v0) for key0, v0 in record({}).items()})
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'objects', MappingProxyType({key0: v0 for key0, v0 in self.objects.items()}))
+        object.__setattr__(self, 'rotation_bone_lengths', MappingProxyType({key0: v0 for key0, v0 in self.rotation_bone_lengths.items()}))
+        object.__setattr__(self, 'rotation_bone_reference_scales', MappingProxyType({key0: v0 for key0, v0 in self.rotation_bone_reference_scales.items()}))
+        object.__setattr__(self, 'rotation_bone_angle_offsets', MappingProxyType({key0: v0 for key0, v0 in self.rotation_bone_angle_offsets.items()}))
 
 EditorState.__module__ = "zipzi.modeling.project"
 

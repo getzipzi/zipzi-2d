@@ -71,8 +71,8 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
             assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
             let overlay = view.editor.overlay();
-            assert!(overlay.warp_frame_lines.is_empty());
-            assert!(overlay.handles.iter().all(|h| h.tangent));
+            assert!(!overlay.warp_frame_lines.is_empty());
+            assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 9);
         });
         save(
             &h.capture()?,
@@ -95,8 +95,8 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         })?;
         h.view.read_with(&h.cx, |view, _| {
             let overlay = view.editor.overlay();
-            assert!(overlay.warp_frame_lines.is_empty());
-            assert!(overlay.handles.iter().all(|h| h.tangent));
+            assert!(!overlay.warp_frame_lines.is_empty());
+            assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 9);
             let selected: Vec<_> = overlay.vertices.iter().filter(|v| v.selected).collect();
             assert_eq!(selected.len(), 1);
             assert_eq!(

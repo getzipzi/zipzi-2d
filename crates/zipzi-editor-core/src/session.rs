@@ -521,7 +521,11 @@ impl DocumentSession {
         let lock_history = history_state.is_some_and(|before| {
             let model_read_guard_56 = self.document.model();
             let after = model_read_guard_56.editor_state();
-            before != *after && before.hidden_objects().eq(after.hidden_objects())
+            before != *after
+                && before.hidden_objects().eq(after.hidden_objects())
+                && before.rotation_bone_lengths == after.rotation_bone_lengths
+                && before.rotation_bone_reference_scales == after.rotation_bone_reference_scales
+                && before.rotation_bone_angle_offsets == after.rotation_bone_angle_offsets
         });
         if invalidate
             && (!(is_lock || lock_history)

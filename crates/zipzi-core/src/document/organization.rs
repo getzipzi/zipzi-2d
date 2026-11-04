@@ -56,6 +56,8 @@ pub(in crate::document) struct Delta {
     pub(in crate::document) parents: Vec<(String, String)>,
     pub(in crate::document) meshes: Vec<Mesh>,
     pub(in crate::document) transforms: Vec<Transform>,
+    // Snapshot-bound source/target IDs; copy preferences before initializing defaults.
+    pub(in crate::document) rotation_bone_copies: Vec<(String, String)>,
     pub(in crate::document) offscreens: Vec<Offscreen>,
     pub(in crate::document) bindings: Vec<MeshBinding>,
     pub(in crate::document) scene_bindings: Vec<SceneBinding>,

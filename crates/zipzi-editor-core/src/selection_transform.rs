@@ -121,19 +121,14 @@ impl crate::tools::ToolController {
             .filter(|c| objects.contains(&c.object))
             .filter_map(|c| point(scene, c))
             .collect();
-        let local = !components.is_empty();
+        // A single point keeps the whole-object frame as a separate operation
+        // entrypoint. Direct point dragging and keyboard nudges retain their
+        // component selection independently of this frame's scope.
+        let local = components.len() > 1;
         if local {
             objects.retain(|o| self.components.iter().any(|c| c.object == *o));
         } else {
             objects = roots(scene, objects);
-        }
-        if components.len() == 1 {
-            // Keep the point-editing scope without falling back to an object frame.
-            return Some(crate::deformer::WarpGizmos {
-                local,
-                objects,
-                ..Default::default()
-            });
         }
         let points = if local {
             components

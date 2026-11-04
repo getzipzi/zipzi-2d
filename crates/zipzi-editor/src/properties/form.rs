@@ -11,6 +11,7 @@ use super::PropertyTarget;
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FieldDraft {
     scale: f64,
+    display_decimals: Option<usize>,
     pub revision: u64,
     pub baseline: PropertyValue,
     pub raw: String,
@@ -19,11 +20,12 @@ pub(crate) struct FieldDraft {
     pub conflict: bool,
 }
 impl FieldDraft {
-    fn new(value: PropertyValue, scale: f64) -> Self {
+    fn new(value: PropertyValue, scale: f64, display_decimals: Option<usize>) -> Self {
         Self {
             scale,
+            display_decimals,
             revision: 0,
-            raw: display_value(&value, scale),
+            raw: display_value(&value, scale, display_decimals),
             parsed: Ok(value.clone()),
             baseline: value,
             touched: false,
@@ -40,14 +42,40 @@ impl FieldDraft {
     }
 }
 
-fn display_value(value: &PropertyValue, scale: f64) -> String {
-    if scale != 1. {
+fn display_value(value: &PropertyValue, scale: f64, decimals: Option<usize>) -> String {
+    let text = if scale != 1. {
         value.number().map_or_else(
             || value.text(),
             |n| ((value.text().parse::<f64>().unwrap_or(n) * scale) as f32).to_string(),
         )
     } else {
         value.text()
+    };
+    decimals.map_or_else(
+        || text.clone(),
+        |digits| truncate_decimal_text(&text, digits),
+    )
+}
+
+/// Presentation only. Never turn a small nonzero value into an apparent zero.
+pub(crate) fn truncate_decimal_text(text: &str, digits: usize) -> String {
+    if text.contains(['e', 'E']) {
+        return text.to_owned();
+    }
+    let Some(dot) = text.find('.') else {
+        return text.to_owned();
+    };
+    let end = text.len().min(dot + 1 + digits);
+    let shortened = &text[..end];
+    if shortened.parse::<f64>().is_ok_and(|v| v == 0.) && text.parse::<f64>().is_ok_and(|v| v != 0.)
+    {
+        return text.to_owned();
+    }
+    let shortened = shortened.trim_end_matches('0').trim_end_matches('.');
+    if shortened == "-0" {
+        "0".into()
+    } else {
+        shortened.into()
     }
 }
 
@@ -87,15 +115,21 @@ impl PropertyForm {
                 continue;
             };
             let scale = definition.field(spec.key).map_or(1., |field| field.scale);
+            let display_decimals = definition
+                .field(spec.key)
+                .and_then(|field| field.display_decimals);
             let field = self
                 .fields
                 .entry(spec.key)
-                .or_insert_with(|| FieldDraft::new(value.clone(), scale));
+                .or_insert_with(|| FieldDraft::new(value.clone(), scale, display_decimals));
             if field.touched {
                 field.conflict = field.baseline != *value;
-            } else if field.baseline != *value || field.scale != scale {
+            } else if field.baseline != *value
+                || field.scale != scale
+                || field.display_decimals != display_decimals
+            {
                 let revision = field.revision + 1;
-                *field = FieldDraft::new(value.clone(), scale);
+                *field = FieldDraft::new(value.clone(), scale, display_decimals);
                 field.revision = revision;
             }
         }
@@ -103,7 +137,13 @@ impl PropertyForm {
     }
     pub fn edit(&mut self, spec: &PropertySpec, raw: String) {
         if let Some(field) = self.fields.get_mut(&spec.key) {
-            field.parsed = if spec.value_type == zipzi_editor_core::PropertyType::Color
+            field.parsed = if field.display_decimals.is_some()
+                && raw.trim() == display_value(&field.baseline, field.scale, field.display_decimals)
+            {
+                // Focusing/submitting shortened display text must not round-trip
+                // it into the full-precision authored value or create history.
+                Ok(field.baseline.clone())
+            } else if spec.value_type == zipzi_editor_core::PropertyType::Color
                 && raw.trim().eq_ignore_ascii_case(&field.baseline.text())
             {
                 Ok(field.baseline.clone())
@@ -124,7 +164,7 @@ impl PropertyForm {
     }
     pub fn set_value(&mut self, spec: &PropertySpec, value: PropertyValue) {
         if let Some(field) = self.fields.get_mut(&spec.key) {
-            field.raw = display_value(&value, field.scale);
+            field.raw = display_value(&value, field.scale, field.display_decimals);
             field.parsed = spec
                 .validate(&value)
                 .map(|_| value)
@@ -182,7 +222,11 @@ impl PropertyForm {
     pub fn reload_field(&mut self, id: PropertyKey) {
         if let Some(value) = self.current.get(&id) {
             let revision = self.fields.get(&id).map_or(0, |field| field.revision + 1);
-            let mut field = FieldDraft::new(value.clone(), self.fields[&id].scale);
+            let mut field = FieldDraft::new(
+                value.clone(),
+                self.fields[&id].scale,
+                self.fields[&id].display_decimals,
+            );
             field.revision = revision;
             self.fields.insert(id, field);
         }

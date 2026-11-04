@@ -31,6 +31,13 @@ pub struct OverlayDeformer {
     pub selected: bool,
     pub hovered: bool,
 }
+#[derive(Clone, Debug)]
+pub struct OverlayRotationBone {
+    pub points: [ViewportPoint; 4],
+    pub scale: f32,
+    pub selected: bool,
+    pub hovered: bool,
+}
 /// Glue endpoints describe a relationship, not draggable components.
 #[derive(Clone, Debug)]
 pub struct OverlayGlue {
@@ -88,8 +95,10 @@ pub struct OverlaySnapshot {
     pub bezier_tangents: Vec<(ViewportPoint, ViewportPoint)>,
     /// Outer Warp transform frame, distinct from its lattice and Bezier tangents.
     pub warp_frame_lines: Vec<(ViewportPoint, ViewportPoint)>,
-    /// Rotation rings and their scale-handle spokes use a stronger stroke.
+    /// Selected bone outlines use a stronger stroke.
     pub rotation_lines: Vec<(ViewportPoint, ViewportPoint)>,
+    pub rotation_bones: Vec<OverlayRotationBone>,
+    pub rotation_length_adjusting: bool,
     pub guide_lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub handles: Vec<OverlayHandle>,
     pub interaction_label: Option<String>,
@@ -102,6 +111,7 @@ pub struct OverlaySnapshot {
 pub struct OverlayHandle {
     /// A Bezier tangent endpoint, distinct from transform-frame handles.
     pub tangent: bool,
+    pub rotation: bool,
     pub position: ViewportPoint,
     pub round: bool,
     pub hovered: bool,
@@ -139,6 +149,9 @@ impl ToolController {
         if let Err(error) = document.ensure_editable(&selection) {
             return Some(error.to_string());
         }
+        if self.rotation_length_target().is_some() {
+            return None;
+        }
         let access = self.edit_access(document, scene, &selection);
         let meshes = selection
             .iter()
@@ -171,6 +184,12 @@ impl ToolController {
             return None;
         }
         let target = self.hovered.as_ref()?;
+        if self.rotation_length_target() == Some(target.object()) {
+            return document
+                .ensure_editable(std::slice::from_ref(target.object()))
+                .err()
+                .map(|e| e.to_string());
+        }
         let selection = self.overlay_selection(document, &frame.geometry);
         let access = self.edit_access(document, &frame.geometry, &selection);
         match target {
@@ -285,6 +304,11 @@ impl ToolController {
             HitTarget::RotationHandle(_) => Some(crate::DeformerHandle::Rotate),
             _ => None,
         });
+        out.rotation_length_adjusting = match self.gesture.as_ref() {
+            Some(super::gesture::Gesture::Controls(g)) => g.adjusting_bone_length(),
+            Some(_) => false,
+            None => self.alt && out.active_handle == Some(crate::DeformerHandle::RotationScale),
+        };
         out.active_handle_radians = active_target
             .and_then(|hit| scene.control(&hit.object().id))
             .and_then(|control| scene.gizmo_for_selection(control, t, warp_selection.as_ref()))
@@ -299,9 +323,16 @@ impl ToolController {
                 target,
                 HitTarget::DeformerHandle(..) | HitTarget::RotationHandle(..)
             ) {
-                out.point_unavailable = access
-                    .object_restriction(target.object())
-                    .map(str::to_owned);
+                out.point_unavailable = if out.rotation_length_adjusting {
+                    document
+                        .ensure_editable(std::slice::from_ref(target.object()))
+                        .err()
+                        .map(|e| e.to_string())
+                } else {
+                    access
+                        .object_restriction(target.object())
+                        .map(str::to_owned)
+                };
             }
         }
         for r in selection {
@@ -501,6 +532,7 @@ impl ToolController {
                         .push((t.to_viewport(*a), t.to_viewport(*b)));
                     out.handles.push(OverlayHandle {
                         tangent: true,
+                        rotation: false,
                         position: t.to_viewport(*b),
                         round: true,
                         editable: !adjusting_frame && matches!(access.probe(&c), Some(Ok(()))),
@@ -510,14 +542,33 @@ impl ToolController {
                 }
             }
             {
-                deformer.lines.extend(
-                    control
-                        .edges
-                        .iter()
-                        .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
-                );
+                if control.kind != ControlKind::Rotation {
+                    deformer.lines.extend(
+                        control
+                            .edges
+                            .iter()
+                            .filter_map(|&(a, b)| Some((*points.get(a)?, *points.get(b)?))),
+                    );
+                }
+                if control.kind == ControlKind::Rotation && !selected {
+                    if let Some(gizmo) = scene.deformer_gizmo(control, t) {
+                        out.rotation_bones.push(OverlayRotationBone {
+                            points: std::array::from_fn(|i| gizmo.outline[i].0),
+                            scale: scene.rotation_screen_length(control, t)
+                                / control.rotation_bone_length,
+                            selected: false,
+                            hovered: hovered_target
+                                .as_ref()
+                                .is_some_and(|hit| hit.object() == &control.object),
+                        });
+                    }
+                }
                 if selected {
                     for (i, p) in points.iter().enumerate() {
+                        // The bone tip is the scale handle, not a second rotation component.
+                        if control.kind == ControlKind::Rotation && i == 1 {
+                            continue;
+                        }
                         let c = ComponentRef {
                             object: control.object.clone(),
                             id: i as u32,
@@ -540,13 +591,10 @@ impl ToolController {
                                                 control.object.clone(),
                                             ))
                                     })),
-                            hovered: control.kind != ControlKind::Rotation
-                                && (hovered_target == Some(HitTarget::Component(c.clone()))
-                                    || (i == 1
-                                        && hovered_target
-                                            == Some(HitTarget::RotationHandle(
-                                                control.object.clone(),
-                                            )))),
+                            hovered: hovered_target == Some(HitTarget::Component(c.clone()))
+                                || (i == 1
+                                    && hovered_target
+                                        == Some(HitTarget::RotationHandle(control.object.clone()))),
                         });
                     }
                 }
@@ -575,6 +623,13 @@ impl ToolController {
                 .flatten()
                 {
                     if control.kind == ControlKind::Rotation {
+                        out.rotation_bones.push(OverlayRotationBone {
+                            points: std::array::from_fn(|i| gizmo.outline[i].0),
+                            scale: scene.rotation_screen_length(control, t)
+                                / control.rotation_bone_length,
+                            selected: true,
+                            hovered: false,
+                        });
                         out.rotation_lines.extend(gizmo.outline);
                     } else {
                         out.warp_frame_lines.extend(gizmo.outline);
@@ -586,22 +641,31 @@ impl ToolController {
                                 .into_iter()
                                 .map(|(kind, position)| OverlayHandle {
                                     tangent: false,
+                                    rotation: control.kind == ControlKind::Rotation,
                                     position,
-                                    editable: access.object_editable(&control.object),
+                                    editable: if out.rotation_length_adjusting
+                                        && control.kind == ControlKind::Rotation
+                                    {
+                                        document
+                                            .ensure_editable(std::slice::from_ref(&control.object))
+                                            .is_ok()
+                                    } else {
+                                        access.object_editable(&control.object)
+                                    },
                                     round: matches!(kind, crate::DeformerHandle::Rotate),
-                                    selected: self.gesture.as_ref().is_some_and(|p| {
-                                        p.target()
-                                            == Some(&HitTarget::DeformerHandle(
-                                                control.object.clone(),
-                                                kind,
-                                            ))
-                                    }),
-                                    hovered: control.kind != ControlKind::Rotation
-                                        && hovered_target
-                                            == Some(HitTarget::DeformerHandle(
-                                                control.object.clone(),
-                                                kind,
-                                            )),
+                                    selected: !out.rotation_length_adjusting
+                                        && self.gesture.as_ref().is_some_and(|p| {
+                                            p.target()
+                                                == Some(&HitTarget::DeformerHandle(
+                                                    control.object.clone(),
+                                                    kind,
+                                                ))
+                                        }),
+                                    hovered: hovered_target
+                                        == Some(HitTarget::DeformerHandle(
+                                            control.object.clone(),
+                                            kind,
+                                        )),
                                 }),
                         );
                 }
@@ -614,6 +678,7 @@ impl ToolController {
                 out.handles
                     .extend(gizmo.handles.iter().map(|(kind, position)| OverlayHandle {
                         tangent: false,
+                        rotation: false,
                         position: *position,
                         editable,
                         round: matches!(kind, crate::DeformerHandle::Rotate),

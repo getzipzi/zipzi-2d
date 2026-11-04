@@ -231,7 +231,9 @@ impl ViewportSurface {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.interaction.is_some() && self.navigation.pan.is_none() {
+        if (self.interaction.is_some() || self.kind == zipzi_editor_core::ViewportKind::Modeling)
+            && self.navigation.pan.is_none()
+        {
             self.input(
                 CanvasInput::ModifiersChanged {
                     shift: event.modifiers.shift,

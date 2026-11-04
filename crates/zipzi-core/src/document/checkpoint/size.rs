@@ -268,6 +268,8 @@ extra_fields! {
         offscreen_order,
         display_info,
         editor_state.objects,
+        editor_state.rotation_bone_lengths,
+        editor_state.rotation_bone_reference_scales, editor_state.rotation_bone_angle_offsets,
         hierarchy_order.organization,
         hierarchy_order.deformation,
         hierarchy_order.glues,
@@ -527,8 +529,16 @@ pub(super) fn estimated_snapshot_bytes(document: &Document) -> usize {
 }
 
 pub(super) fn estimated_editor_state_bytes(state: &super::super::EditorState) -> usize {
-    let super::super::EditorState { objects } = state;
+    let super::super::EditorState {
+        objects,
+        rotation_bone_lengths,
+        rotation_bone_reference_scales,
+        rotation_bone_angle_offsets,
+    } = state;
     objects.extra_bytes()
+        + rotation_bone_lengths.extra_bytes()
+        + rotation_bone_reference_scales.extra_bytes()
+        + rotation_bone_angle_offsets.extra_bytes()
 }
 
 pub(super) fn estimated_content_metadata_bytes(content: &DocumentContent) -> usize {
@@ -548,7 +558,8 @@ pub(super) fn estimated_content_metadata_bytes(content: &DocumentContent) -> usi
             draw_order_groups, blend_key_tables, blend_key_table_order,
             blend_constraints, blend_constraint_order, blend_binding_order,
             glues, glue_order, offscreens, offscreen_order, display_info,
-            editor_state.objects, hierarchy_order.organization,
+            editor_state.objects, editor_state.rotation_bone_lengths,
+            editor_state.rotation_bone_reference_scales, editor_state.rotation_bone_angle_offsets, hierarchy_order.organization,
             hierarchy_order.deformation, hierarchy_order.glues,
             expressions, expression_order, motion_order, motion_groups,
             motion_roots, missing_attachments, model3_settings, package_attachments,

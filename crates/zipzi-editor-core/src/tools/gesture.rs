@@ -108,7 +108,7 @@ impl Gesture {
         match self {
             Self::Lasso(_) => lasso::CAPTURE_HINTS,
             Self::Select(_) => select::CAPTURE_HINTS,
-            Self::Controls(_) => controls::HINTS,
+            Self::Controls(g) => g.hints(),
         }
     }
 }

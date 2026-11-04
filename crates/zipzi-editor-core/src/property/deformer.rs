@@ -165,6 +165,15 @@ pub const SCALE: PropertySpec = PropertySpec::new(
 .range(0., f32::MAX as f64, 0.01)
 .keyframed()
 .preview();
+/// Persistent Editor display length, independent of deformation keyforms.
+pub const BONE_LENGTH: PropertySpec = PropertySpec::new(
+    ObjectKind::Deformer,
+    "bone_length",
+    "rotation.bone_length",
+    PropertyType::Float,
+)
+.range(0.001, f32::MAX as f64, 1.)
+.preview();
 pub const REFLECT_X: PropertySpec = PropertySpec::new(
     ObjectKind::Deformer,
     "reflect_x",
@@ -199,6 +208,7 @@ pub const FIELDS: &[PropertySpec] = &[
     ORIGIN_Y,
     ANGLE,
     SCALE,
+    BONE_LENGTH,
     REFLECT_X,
     REFLECT_Y,
     BASE_ANGLE,
@@ -273,6 +283,14 @@ pub(crate) fn inspector_payload(
     }
     if let Some(rotation) = transform.rotation() {
         payload["rotation"] = json!(rotation);
+        payload["rotation"]["bone_length"] = json!(
+            model
+                .editor_state()
+                .rotation_bone_lengths
+                .get(id)
+                .copied()
+                .unwrap_or(crate::deformer::ROTATION_BONE_LENGTH)
+        );
     }
     if let Some((binding, slot)) = keyform(model, id, scope)? {
         let sample = binding.track.sample(slot);
@@ -309,6 +327,27 @@ pub(crate) fn apply(
     patch: &super::PropertyPatch,
     payload: &Value,
 ) -> Result<()> {
+    if patch.changes.contains_key(&BONE_LENGTH.key) {
+        ensure!(
+            patch.changes.len() == 1,
+            "Bone display length must be edited independently"
+        );
+        ensure!(
+            edit.candidate_document()
+                .get_transform(id)
+                .is_some_and(|t| t.rotation().is_some()),
+            "Select a Rotation"
+        );
+        let length: f32 = serde_json::from_value(payload["rotation"]["bone_length"].clone())?;
+        ensure!(
+            length.is_finite() && length > 0.,
+            "Bone length must be finite and positive"
+        );
+        let mut state = edit.candidate_document().editor_state().clone();
+        state.rotation_bone_lengths.insert(id.to_owned(), length);
+        edit.replace_editor_state(state)?;
+        return Ok(());
+    }
     if patch.changes.contains_key(&ORIGINAL_AUTO.key) {
         ensure!(
             patch.changes.len() == 1,

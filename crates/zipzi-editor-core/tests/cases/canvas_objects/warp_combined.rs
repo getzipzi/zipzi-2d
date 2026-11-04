@@ -119,7 +119,7 @@ fn combined_controls_hit_bezier_at_overlaps_and_edit_grid_without_changing_the_c
 }
 
 #[test]
-fn single_grid_anchor_or_tangent_has_no_frame_and_remains_draggable_until_multi_selected()
+fn single_grid_anchor_or_tangent_keeps_whole_frame_and_remains_directly_draggable()
 -> anyhow::Result<()> {
     for kind in 0..3 {
         let (mut editor, object) = fixture()?;
@@ -127,6 +127,12 @@ fn single_grid_anchor_or_tangent_has_no_frame_and_remains_draggable_until_multi_
         let history = editor.document().unwrap().history_lengths();
         let overlay = editor.overlay();
         assert!(!overlay.warp_frame_lines.is_empty());
+        let whole_handles: Vec<_> = overlay
+            .handles
+            .iter()
+            .filter(|h| !h.tangent)
+            .map(|h| h.position)
+            .collect();
         let point = match kind {
             0 => {
                 overlay
@@ -148,20 +154,27 @@ fn single_grid_anchor_or_tangent_has_no_frame_and_remains_draggable_until_multi_
         };
         click(&mut editor, point, false)?;
         assert!(
-            editor.overlay().warp_frame_lines.is_empty(),
+            !editor.overlay().warp_frame_lines.is_empty(),
             "single control kind {kind}"
         );
-        assert!(editor.overlay().handles.iter().all(|h| h.tangent));
+        assert_eq!(
+            editor
+                .overlay()
+                .handles
+                .iter()
+                .filter(|h| !h.tangent)
+                .map(|h| h.position)
+                .collect::<Vec<_>>(),
+            whole_handles
+        );
         editor.hover_canvas(
             editor.primary_viewport_binding().unwrap(),
-            Some(ViewportPoint {
-                x: point.x + 12.,
-                y: point.y + 12.,
-            }),
+            whole_handles.last().copied(),
         )?;
-        assert!(
-            editor.overlay().active_handle.is_none(),
-            "removed frame corners must not intercept input"
+        assert_eq!(
+            editor.overlay().active_handle,
+            Some(DeformerHandle::Rotate),
+            "single control kind {kind} keeps whole-frame hit targets"
         );
         let end = ViewportPoint {
             x: point.x + 10.,
@@ -170,8 +183,8 @@ fn single_grid_anchor_or_tangent_has_no_frame_and_remains_draggable_until_multi_
         drag(&mut editor, point, end, false)?;
         shown(&mut editor)?;
         let overlay = editor.overlay();
-        assert!(overlay.warp_frame_lines.is_empty());
-        assert!(overlay.handles.iter().all(|h| h.tangent));
+        assert!(!overlay.warp_frame_lines.is_empty());
+        assert_eq!(overlay.handles.iter().filter(|h| !h.tangent).count(), 9);
         let selected = if kind == 2 {
             overlay
                 .handles

@@ -688,3 +688,52 @@ fn affine_warp_grid_sampling_stays_close_and_invalid_dimensions_are_atomic() -> 
     );
     Ok(())
 }
+
+#[test]
+fn bone_length_is_global_editor_metadata_with_history_and_no_runtime_changes() -> Result<()> {
+    let (mut doc, object, parameter) = fixture(true, true)?;
+    let transform = doc.model().get_transform(&object.id).unwrap().clone();
+    let binding = doc.model().binding_for_scene(&object.id).unwrap().clone();
+    doc.set_preview_parameter(&parameter, 0.5)?;
+    let frame = doc.snapshot()?.viewport_frame;
+    let patch = doc.object_property_patch(&object, fields::BONE_LENGTH.path, &json!(240.))?;
+    assert_eq!(patch.scope, PropertyScope::Object);
+    doc.set_object_property(&object, fields::BONE_LENGTH.path, json!(240.))?;
+    assert_eq!(
+        doc.property_values(&object)?[&fields::BONE_LENGTH.key],
+        PropertyValue::Float(240.)
+    );
+    assert!(std::sync::Arc::ptr_eq(
+        &frame,
+        &doc.snapshot()?.viewport_frame
+    ));
+    assert_eq!(doc.model().get_transform(&object.id), Some(&transform));
+    assert_eq!(doc.model().binding_for_scene(&object.id), Some(&binding));
+    doc.undo()?;
+    assert_eq!(
+        doc.property_values(&object)?[&fields::BONE_LENGTH.key],
+        PropertyValue::Float(128.)
+    );
+    doc.redo()?;
+    assert_eq!(
+        doc.property_values(&object)?[&fields::BONE_LENGTH.key],
+        PropertyValue::Float(240.)
+    );
+    for invalid in [0., -1.] {
+        assert!(
+            doc.set_object_property(&object, fields::BONE_LENGTH.path, json!(invalid))
+                .is_err()
+        );
+    }
+    let (mut warp, object, _) = fixture(false, false)?;
+    assert!(
+        !warp
+            .property_values(&object)?
+            .contains_key(&fields::BONE_LENGTH.key)
+    );
+    assert!(
+        warp.set_object_property(&object, fields::BONE_LENGTH.path, json!(240.))
+            .is_err()
+    );
+    Ok(())
+}

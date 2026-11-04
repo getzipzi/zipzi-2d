@@ -117,7 +117,7 @@ class Reader:
     def finish(self) -> None:
         if self.offset!=len(self.data): raise ValueError("Trailing binary fields")
 
-INPUT_SIGNATURE = '47dbe9859095cb84bb676251e98980e7'
+INPUT_SIGNATURE = '721e69736e69d8475d12ccebe728b9e5'
 
 MESH_SIGNATURE = 'f38a4fcb442823db2a155a06e4994cf2'
 
@@ -125,7 +125,7 @@ BINDING_SIGNATURE = '6e1a318eb5a16ff93ca800ec381f81ea'
 
 SAMPLE_SIGNATURE = 'ef5b4e5a2e2a2c42e9845480d6815742'
 
-OUTPUT_SIGNATURE = 'f06d940f192c4a820cc9a75f50efe089'
+OUTPUT_SIGNATURE = 'ceefabd9bcab4f132d131ec4d4bba18b'
 
 def _point(value: object) -> tuple[object, object]:
     if isinstance(value, tuple):

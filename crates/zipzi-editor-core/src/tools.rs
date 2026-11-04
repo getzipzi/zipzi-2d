@@ -24,8 +24,8 @@ use gesture::Gesture;
 use std::sync::Arc;
 
 pub use overlay::{
-    GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint, OverlayHandle, OverlaySnapshot,
-    OverlayVertex, OverlayVertexKind,
+    GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint, OverlayHandle,
+    OverlayRotationBone, OverlaySnapshot, OverlayVertex, OverlayVertexKind,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -68,6 +68,7 @@ pub struct ToolController {
     >,
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
+    alt: bool,
     gesture: Option<Gesture>,
     manual: Option<manual_mesh::ManualMeshSession>,
     access_cache: std::sync::Mutex<Option<access::AccessCache>>,
@@ -77,10 +78,26 @@ pub struct ToolController {
     overlay_builds: std::sync::atomic::AtomicUsize,
 }
 impl ToolController {
+    fn rotation_length_target(&self) -> Option<&crate::ObjectRef> {
+        match &self.gesture {
+            Some(Gesture::Controls(g)) if g.adjusting_bone_length() => Some(g.target.object()),
+            Some(_) => None,
+            None if self.alt => self.hovered.as_ref().and_then(|hit| match hit {
+                HitTarget::DeformerHandle(object, crate::DeformerHandle::RotationScale) => {
+                    Some(object)
+                }
+                _ => None,
+            }),
+            None => None,
+        }
+    }
     pub(crate) fn set_gesture_modifiers(&mut self, shift: bool, alt: bool) -> bool {
+        let changed = self.alt != alt;
+        self.alt = alt;
         self.gesture
             .as_mut()
             .is_some_and(|g| g.set_modifiers(shift, alt))
+            | changed
     }
     pub(crate) fn warp_selection_gizmo(
         &self,
@@ -119,14 +136,6 @@ impl ToolController {
             })
             .cloned()
             .collect();
-        if !self.warp_whole && frame.geometry.warp_selected_points(&components).len() == 1 {
-            // A single anchor, tangent or grid point is dragged directly. An
-            // explicit empty frame also removes its transform-handle hit targets.
-            return Some(crate::deformer::WarpGizmos {
-                local: true,
-                ..Default::default()
-            });
-        }
         let selection = (!self.warp_whole)
             .then(|| {
                 frame
@@ -202,9 +211,33 @@ impl ToolController {
             .map(|press| press.press().version.binding.viewport)
     }
     pub(crate) fn interaction_hints(&self) -> &'static [InteractionHint] {
+        if self.gesture.is_none()
+            && matches!(
+                self.hovered,
+                Some(HitTarget::DeformerHandle(
+                    _,
+                    crate::DeformerHandle::RotationScale
+                ))
+            )
+        {
+            return controls::BONE_TIP_HINTS;
+        }
         self.gesture
             .as_ref()
             .map_or(controls::HINTS, Gesture::hints)
+    }
+    pub(crate) fn idle_hints(&self) -> &'static [InteractionHint] {
+        if matches!(
+            self.hovered,
+            Some(HitTarget::DeformerHandle(
+                _,
+                crate::DeformerHandle::RotationScale
+            ))
+        ) {
+            controls::BONE_TIP_HINTS
+        } else {
+            self.active.idle_hints()
+        }
     }
     pub fn dragging(&self) -> bool {
         self.gesture.is_some() || self.manual.as_ref().is_some_and(|mode| mode.dragging())

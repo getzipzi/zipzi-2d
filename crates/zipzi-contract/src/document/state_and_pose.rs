@@ -14,14 +14,23 @@ fn is_false(value: &bool) -> bool {
     !value
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
-/// Explicit per-object Editor visibility and lock metadata.
+/// Persistent Editor preferences, independent of runtime deformation.
 pub struct EditorState {
     /// Explicit flags only, keyed by globally unique object ID. Defaults are omitted.
     #[serde(default)]
     pub objects: BTreeMap<String, ObjectEditorState>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    /// Rotation control lengths in model pixels at their display reference scale, keyed by transform ID.
+    pub rotation_bone_lengths: BTreeMap<String, f32>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    /// Evaluated Rotation scale at the display baseline, including inherited coordinate conversion.
+    pub rotation_bone_reference_scales: BTreeMap<String, f32>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    /// Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0.
+    pub rotation_bone_angle_offsets: BTreeMap<String, f32>,
 }
 impl EditorState {
     pub fn hidden_objects(&self) -> impl Iterator<Item = &str> {
@@ -32,6 +41,9 @@ impl EditorState {
     }
     pub fn is_empty(&self) -> bool {
         self.objects.is_empty()
+            && self.rotation_bone_lengths.is_empty()
+            && self.rotation_bone_reference_scales.is_empty()
+            && self.rotation_bone_angle_offsets.is_empty()
     }
     pub fn get(&self, id: &str) -> ObjectEditorState {
         self.objects.get(id).copied().unwrap_or_default()

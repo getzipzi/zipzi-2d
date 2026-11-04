@@ -378,15 +378,18 @@ Types: [Canvas].
 
 **Type**
 
-`(*, objects: _Mapping[str, ObjectEditorState] = <factory>)`
+`(*, objects: _Mapping[str, ObjectEditorState] = <factory>, rotation_bone_lengths: _Mapping[str, float] = <factory>, rotation_bone_reference_scales: _Mapping[str, float] = <factory>, rotation_bone_angle_offsets: _Mapping[str, float] = <factory>)`
 
-Explicit per-object Editor visibility and lock metadata.
+Persistent Editor preferences, independent of runtime deformation.
 
 Types: [ObjectEditorState](#zipzimodelingprojectobjecteditorstate).
 
 **Fields**
 
 - `objects`: Explicit flags only, keyed by globally unique object ID. Defaults are omitted.
+- `rotation_bone_lengths`: Rotation control lengths in model pixels at their display reference scale, keyed by transform ID.
+- `rotation_bone_reference_scales`: Evaluated Rotation scale at the display baseline, including inherited coordinate conversion.
+- `rotation_bone_angle_offsets`: Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0.
 
 ## zipzi.modeling.project.ExportFormat
 
