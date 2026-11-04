@@ -954,6 +954,7 @@ impl Runtime {
             Task::Save {
                 path: path.clone(),
                 target_fingerprint,
+                progress: Default::default(),
             },
             Some(path),
             0,
@@ -1016,12 +1017,10 @@ impl Runtime {
     ) -> Result<JobId> {
         let transfer = match &task {
             Task::Project { _lease, .. } => Some(_lease.clone()),
-            Task::Open(path) => {
-                let length = std::fs::metadata(path).map_or(0, |m| m.len() as usize);
+            Task::Open(_) => {
                 self.refresh_memory_budget();
-                Some(Arc::new(self.reserve_transfer(
-                    length.saturating_mul(128).saturating_add(4096),
-                )?))
+                // The worker grows this using the validated index and expanded JSON.
+                Some(Arc::new(self.reserve_transfer(4096)?))
             }
             Task::Import(_) => {
                 self.refresh_memory_budget();

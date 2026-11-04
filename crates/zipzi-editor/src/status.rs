@@ -150,6 +150,19 @@ impl EditorView {
         self.resume_feedback(cx);
     }
 
+    pub(crate) fn begin_save_status(
+        &mut self,
+        source: PathBuf,
+        progress: zipzi_editor_core::ProjectSaveProgress,
+        cx: &mut Context<Self>,
+    ) -> Uuid {
+        let id = self
+            .status_bar
+            .update(cx, |bar, cx| bar.begin_save(source, progress, cx));
+        self.pause_feedback();
+        id
+    }
+
     pub(crate) fn begin_operation_status(
         &mut self,
         label: String,

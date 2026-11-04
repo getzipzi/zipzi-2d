@@ -1,10 +1,7 @@
-//! Measure the real authoring open/save path, including resource validation and durable writes.
-//! Usage: cargo run --release -p zipzi-project --example project_io_stress -- INPUT OUTPUT_DIR [REPEATS]
+//! Measure native authoring open/save, with validation and durable publication.
+//! Usage: cargo run --release -p zipzi-project --example project_io_stress -- INPUT.zipzi OUTPUT_DIR [REPEATS]
 
-use std::fs;
-use std::hint::black_box;
-use std::path::Path;
-use std::time::Instant;
+use std::{fs, hint::black_box, path::Path, time::Instant};
 use zipzi_project::{decode_project, encode_project, DocumentSession};
 
 fn measure(mut run: impl FnMut()) -> f64 {
@@ -16,34 +13,22 @@ fn measure(mut run: impl FnMut()) -> f64 {
 fn main() {
     let args: Vec<_> = std::env::args_os().collect();
     if !(3..=4).contains(&args.len()) {
-        eprintln!("Usage: project_io_stress INPUT_PROJECT OUTPUT_DIR [REPEATS]");
+        eprintln!("Usage: project_io_stress INPUT.zipzi OUTPUT_DIR [REPEATS]");
         std::process::exit(2);
     }
     let input = Path::new(&args[1]);
     let output = Path::new(&args[2]);
     let repeats: usize = args
         .get(3)
-        .map(|arg| arg.to_string_lossy().parse().expect("invalid repeat count"))
+        .map(|a| a.to_string_lossy().parse().unwrap())
         .unwrap_or(5);
     assert!(repeats > 0);
-    fs::create_dir_all(output).unwrap();
     assert!(
-        !output.join("project.zipzi.json").exists(),
-        "OUTPUT_DIR already contains a project; choose a fresh directory"
+        input.is_absolute() && output.is_absolute(),
+        "use absolute input/output paths"
     );
-
-    let bytes = fs::read(input.join("project.zipzi.json")).unwrap();
-    let text = std::str::from_utf8(&bytes).unwrap();
+    fs::create_dir(output).expect("choose a fresh output directory");
     let mut times = serde_json::Map::new();
-
-    let mut decode = Vec::with_capacity(repeats);
-    for _ in 0..repeats {
-        decode.push(measure(|| {
-            black_box(decode_project(black_box(text)).expect("decode project"));
-        }));
-    }
-    times.insert("decode_ms".into(), serde_json::json!(decode));
-
     let mut session = DocumentSession::new();
     let mut open = Vec::with_capacity(repeats);
     for _ in 0..repeats {
@@ -56,48 +41,70 @@ fn main() {
         }));
     }
     times.insert("open_ms".into(), serde_json::json!(open));
-
+    let original = encode_project(session.document()).unwrap();
+    // Codec-only timings deliberately remain separate from archive admission,
+    // copying, PNG validation, hashing and publication costs above/below.
+    let mut decode = Vec::with_capacity(repeats);
     let mut encode = Vec::with_capacity(repeats);
     for _ in 0..repeats {
+        decode.push(measure(|| {
+            black_box(decode_project(black_box(&original)).unwrap());
+        }));
         encode.push(measure(|| {
-            black_box(encode_project(black_box(session.document())).expect("encode project"));
+            black_box(encode_project(black_box(session.document())).unwrap());
         }));
     }
+    times.insert("decode_ms".into(), serde_json::json!(decode));
     times.insert("encode_ms".into(), serde_json::json!(encode));
 
+    // Establish a private copy, then time overwrites and fresh Save As paths.
+    // Never write the supplied input project.
+    let saved_path = output.join("saved.zipzi");
+    assert!(session.save(&saved_path).status.is_ok());
     let mut save = Vec::with_capacity(repeats);
-    for _ in 0..repeats {
+    let mut save_as = Vec::with_capacity(repeats);
+    for index in 0..repeats {
         save.push(measure(|| {
-            let result = session.save(output);
+            let result = session.save(&saved_path);
             assert!(
                 result.status.is_ok() && result.resources_complete(),
                 "{result:?}"
             );
         }));
+        let mut reopened = DocumentSession::new();
+        assert!(reopened.open_authoring(&saved_path).status.is_ok());
+        let destination = output.join(format!("save-as-{index}.zipzi"));
+        save_as.push(measure(|| {
+            let result = reopened.save(&destination);
+            assert!(
+                result.status.is_ok() && result.resources_complete(),
+                "{result:?}"
+            );
+        }));
+        let mut verified = DocumentSession::new();
+        assert!(verified.open_authoring(&destination).resources_complete());
+        assert!(session.document().same_content(verified.document()));
+        for id in session.document().asset_order() {
+            let Some(content) = &session.document().get_asset(id).unwrap().content else {
+                continue;
+            };
+            assert_eq!(
+                fs::read(session.asset_root().join(&content.source)).unwrap(),
+                fs::read(verified.asset_root().join(&content.source)).unwrap()
+            );
+        }
     }
     times.insert("save_ms".into(), serde_json::json!(save));
-
-    let mut reopened = DocumentSession::new();
-    let result = reopened.open_authoring(output);
-    assert!(
-        result.status.is_ok() && result.resources_complete(),
-        "{result:?}"
-    );
-    assert!(session.document().same_content(reopened.document()));
-
-    let saved_bytes = fs::metadata(output.join("project.zipzi.json"))
-        .unwrap()
-        .len();
+    times.insert("save_as_ms".into(), serde_json::json!(save_as));
     let doc = session.document();
     let report = serde_json::json!({
-        "input_manifest_bytes": bytes.len(),
-        "saved_manifest_bytes": saved_bytes,
-        "meshes": doc.mesh_order().len(),
-        "bindings": doc.binding_order().len(),
-        "assets": doc.asset_order().len(),
-        "repeats": repeats,
-        "times": times,
-        "roundtrip_equal": true
+        "input_archive_bytes": fs::metadata(input).unwrap().len(),
+        "saved_archive_bytes": fs::metadata(&saved_path).unwrap().len(),
+        "document_bytes": original.len(),
+        "meshes": doc.mesh_order().len(), "bindings": doc.binding_order().len(),
+        "assets": doc.asset_order().len(), "motions": doc.motion_order().len(),
+        "repeats": repeats, "times": times, "roundtrip_equal": true,
+        "resource_bytes_equal": true
     });
     println!("{}", serde_json::to_string_pretty(&report).unwrap());
 }

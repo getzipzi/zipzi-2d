@@ -140,10 +140,19 @@ fn r2_save_completes_after_all_views_drop_then_same_session_history_reopens() ->
     resize(&host, host.client_id(), session, 200.);
     editor.sync_runtime()?;
     let directory = tempfile::tempdir()?;
-    let task = editor.prepare_save(id, directory.path(), false)?;
+    let task = editor.prepare_save(id, &directory.path().join("project.zipzi"), false)?;
+    let progress = task.progress();
+    assert_eq!(
+        progress.state().stage,
+        zipzi_editor_core::ProjectSaveStage::Queued
+    );
     editor.suspend_window()?;
     drop(editor);
     let mut completion = task.run();
+    let state = progress.state();
+    assert_eq!(state.stage, zipzi_editor_core::ProjectSaveStage::Published);
+    assert_eq!(state.completed_bytes, state.total_bytes);
+    assert!(state.total_bytes > 0);
     completion.publish(&host); // no Editor, Entity, WeakEntity or Window exists
     assert_eq!(
         host.read().session_info(session)?.state,
@@ -169,27 +178,36 @@ fn r2_save_completes_after_all_views_drop_then_same_session_history_reopens() ->
 struct BrokenFilesystem {
     panic: bool,
 }
-impl zipzi_sdk::FileSystem for BrokenFilesystem {
-    fn write_new(&self, _: &Path, _: &[u8]) -> std::io::Result<()> {
+impl zipzi_project::archive::ArchiveFileSystem for BrokenFilesystem {
+    fn create_staging(&self, _: &Path) -> std::io::Result<zipzi_project::archive::ArchiveStaging> {
         if self.panic {
             panic!("R2 injected save panic");
         }
         Err(std::io::Error::other("R2 injected save failure"))
     }
-    fn sync_directory(&self, _: &Path) -> std::io::Result<()> {
-        Ok(())
+    fn sync_file(&self, _: &std::fs::File) -> std::io::Result<()> {
+        unreachable!()
     }
-    fn rename(&self, _: &Path, _: &Path) -> std::io::Result<()> {
-        Ok(())
+    fn publish_no_replace(&self, _: &Path, _: &Path) -> std::io::Result<()> {
+        unreachable!()
+    }
+    fn publish_replace(&self, _: &Path, _: &Path) -> std::io::Result<()> {
+        unreachable!()
+    }
+    fn sync_directory(&self, _: &Path) -> std::io::Result<()> {
+        unreachable!()
+    }
+    fn acquire_lock(&self, path: &Path) -> std::io::Result<zipzi_project::archive::ArchiveLock> {
+        zipzi_project::archive::NativeArchiveFileSystem.acquire_lock(path)
     }
 }
 fn broken_editor(panic: bool) -> anyhow::Result<(Editor, RuntimeHost, SessionId)> {
     let host = RuntimeHost::new();
-    let mut sdk = AuthoringSession::with_filesystem(
-        "62000000-0000-4000-8000-000000000001",
-        canvas(100.),
-        Arc::new(BrokenFilesystem { panic }),
+    host.write().configure_project_io(
+        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
+            .with_filesystem(Arc::new(BrokenFilesystem { panic })),
     )?;
+    let mut sdk = AuthoringSession::new("62000000-0000-4000-8000-000000000001", canvas(100.))?;
     sdk.edit("unsaved", None, |e| e.replace_model_setup(canvas(200.)))?;
     let session = host.write().adopt_session(host.client_id(), sdk)?;
     let mut editor = Editor::with_runtime(host.clone());
@@ -202,7 +220,11 @@ fn r2_failed_save_without_window_preserves_dirty_history_and_queryable_failure()
 -> anyhow::Result<()> {
     let (mut editor, host, session) = broken_editor(false)?;
     let directory = tempfile::tempdir()?;
-    let task = editor.prepare_save(editor.active_id().unwrap(), directory.path(), false)?;
+    let task = editor.prepare_save(
+        editor.active_id().unwrap(),
+        &directory.path().join("project.zipzi"),
+        false,
+    )?;
     editor.suspend_window()?;
     drop(editor);
     let mut completion = task.run();
@@ -241,7 +263,7 @@ fn r2_worker_panic_keeps_frozen_view_and_never_leaves_editor_busy() -> anyhow::R
     let (mut editor, host, session) = broken_editor(true)?;
     let id = editor.active_id().unwrap();
     let directory = tempfile::tempdir()?;
-    let task = editor.prepare_save(id, directory.path(), false)?;
+    let task = editor.prepare_save(id, &directory.path().join("project.zipzi"), false)?;
     editor.suspend_window()?;
     let mut completion = task.run();
     completion.publish(&host);
@@ -431,12 +453,12 @@ fn r2_load_without_window_registers_resident_and_does_not_require_the_initiating
 -> anyhow::Result<()> {
     let directory = tempfile::tempdir()?;
     let mut source = zipzi_editor_core::Document::new_blank()?;
-    source.save(directory.path())?;
+    source.save(&directory.path().join("project.zipzi"))?;
     let mut editor = Editor::empty();
     let host = editor.runtime_host();
     let task = editor
         .prepare_load(zipzi_editor_core::LoadRequest::Open(
-            directory.path().into(),
+            directory.path().join("project.zipzi"),
         ))?
         .unwrap();
     drop(editor);
@@ -507,7 +529,7 @@ fn inspection_context_survives_local_save_and_runtime_notifications() -> anyhow:
     let id = editor.active_id().unwrap();
     let inspection = editor.inspection_context_token().unwrap();
     let directory = tempfile::tempdir()?;
-    let task = editor.prepare_save(id, directory.path(), false)?;
+    let task = editor.prepare_save(id, &directory.path().join("project.zipzi"), false)?;
     assert!(editor.document().is_none());
     assert_eq!(editor.inspection_context_token(), Some(inspection));
     editor.sync_runtime()?;
@@ -533,9 +555,9 @@ fn r2_fast_external_save_still_requests_a_redraw_after_metadata_changes() -> any
     resize(&host, client, session, 150.);
     editor.sync_runtime()?;
     let directory = tempfile::tempdir()?;
-    let job = host
-        .write()
-        .request_save(client, session, directory.path())?;
+    let job =
+        host.write()
+            .request_save(client, session, &directory.path().join("project.zipzi"))?;
     let work = host.write().take_work(job)?;
     host.write().complete(work.run()); // Busy starts and ends between UI polls.
     assert!(editor.sync_runtime()?);
@@ -547,18 +569,6 @@ fn r2_fast_external_save_still_requests_a_redraw_after_metadata_changes() -> any
 }
 
 use zipzi_editor_core::{EditingContext, TimelineCommand};
-struct PanicFs;
-impl zipzi_sdk::FileSystem for PanicFs {
-    fn write_new(&self, _: &Path, _: &[u8]) -> std::io::Result<()> {
-        panic!("review injected worker panic")
-    }
-    fn sync_directory(&self, _: &Path) -> std::io::Result<()> {
-        Ok(())
-    }
-    fn rename(&self, _: &Path, _: &Path) -> std::io::Result<()> {
-        Ok(())
-    }
-}
 #[test]
 fn r2_timeline_interaction_blocks_foreign_commit() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
@@ -599,18 +609,20 @@ fn r2_timeline_interaction_blocks_foreign_commit() -> anyhow::Result<()> {
 #[test]
 fn r2_external_fault_before_first_poll_is_safe() -> anyhow::Result<()> {
     let host = RuntimeHost::new();
-    let sdk = AuthoringSession::with_filesystem(
-        "65000000-0000-4000-8000-000000000001",
-        canvas(100.),
-        Arc::new(PanicFs),
+    host.write().configure_project_io(
+        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
+            .with_filesystem(Arc::new(BrokenFilesystem { panic: true })),
     )?;
+    let sdk = AuthoringSession::new("65000000-0000-4000-8000-000000000001", canvas(100.))?;
     let session = host.write().adopt_session(host.client_id(), sdk)?;
     let mut editor = Editor::with_runtime(host.clone());
     editor.attach_resident_sessions()?;
     let inspection = editor.inspection_context_token().unwrap();
     let agent = host.write().register_client()?;
     let dir = tempfile::tempdir()?;
-    let job = host.write().request_save(agent, session, dir.path())?;
+    let job = host
+        .write()
+        .request_save(agent, session, &dir.path().join("project.zipzi"))?;
     let work = host.write().take_work(job)?;
     host.write().complete(work.run());
     assert!(matches!(
@@ -632,7 +644,7 @@ fn r2_quit_cannot_finish_with_detached_save_running() -> anyhow::Result<()> {
     let id = editor.active_id().unwrap();
     let session = editor.document().unwrap().runtime_session_id();
     let dir = tempfile::tempdir()?;
-    let _work = editor.prepare_save(id, dir.path(), false)?;
+    let _work = editor.prepare_save(id, &dir.path().join("project.zipzi"), false)?;
     editor.detach_document(id)?;
     let exit = editor.request_exit();
     eprintln!(

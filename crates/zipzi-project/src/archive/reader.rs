@@ -28,9 +28,13 @@ pub(super) fn open(
     limits: ArchiveIoLimits,
     disk_budget: ProjectDiskBudget,
     allow_prototype: bool,
+    memory: Option<&crate::TransferReservation>,
     mut keep_going: impl FnMut() -> bool,
 ) -> Result<OpenedArchive> {
     check(&mut keep_going)?;
+    if let Some(memory) = memory {
+        memory.ensure_at_least(2 << 20)?;
+    }
     crate::filesystem::reject_symlink(path)?;
     let path = crate::filesystem::local_path(path)?;
     if !fs::symlink_metadata(&path)?.is_file() {
@@ -60,7 +64,14 @@ pub(super) fn open(
     if before.len() != after.len() || before.modified()? != after.modified()? {
         return Err(invalid("Source changed during copy; retry opening"));
     }
-    let names = structure::validate(&mut copy, fingerprint.length, limits, &mut keep_going)?;
+    let names = structure::validate_budgeted(
+        &mut copy,
+        fingerprint.length,
+        limits,
+        &mut keep_going,
+        memory,
+    )?;
+    let decode_workspace = memory.map_or(0, crate::TransferReservation::reserved_bytes);
     let mut zip = ZipArchive::new(copy)?;
     // Verify the library indexed exactly the admitted raw paths; no name override
     // extra field can redirect a lookup after preflight.
@@ -214,6 +225,22 @@ pub(super) fn open(
         }
         let mut valid = false;
         for asset in references {
+            if let Some(memory) = memory {
+                let content = asset.content.as_ref().unwrap();
+                if let Ok(required) = zipzi_core::image::png_decode_workspace_bytes(
+                    content.width,
+                    content.height,
+                    size as usize,
+                ) {
+                    if required <= png_limits.max_workspace_bytes {
+                        memory.ensure_at_least(
+                            decode_workspace
+                                .checked_add(required)
+                                .ok_or(ArchiveError::Limit("PNG workspace overflow"))?,
+                        )?;
+                    }
+                }
+            }
             let mut temporary = (*asset).clone();
             temporary.content.as_mut().unwrap().source =
                 candidate.path().to_string_lossy().into_owned();

@@ -25,6 +25,7 @@ pub(crate) enum Task {
     Save {
         path: PathBuf,
         target_fingerprint: Option<zipzi_contract::authoring::ProjectFingerprint>,
+        progress: zipzi_project::archive::ProjectSaveProgress,
     },
     Commit(Box<EditSession<'static>>),
     Undo,
@@ -78,6 +79,12 @@ impl Work {
                     ))),
                 }
             }
+        }
+    }
+    pub fn save_progress(&self) -> Option<zipzi_project::archive::ProjectSaveProgress> {
+        match &self.task {
+            Task::Save { progress, .. } => Some(progress.clone()),
+            _ => None,
         }
     }
     pub fn job_id(&self) -> JobId {
@@ -197,6 +204,7 @@ impl Work {
             transfer,
         } = self;
         let mut session = session.expect("ownership job has its session");
+        let old_open_memory = session.set_project_open_memory(transfer.clone());
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             if cancel.load(Ordering::Acquire) {
                 return Err(RuntimeError::Cancelled);
@@ -269,11 +277,13 @@ impl Work {
                 Task::Save {
                     path,
                     target_fingerprint,
+                    progress,
                 } => session
-                    .save_project_controlled(
+                    .save_project_with_progress(
                         &path,
                         Some(base),
                         target_fingerprint.as_ref(),
+                        &progress,
                         &mut || !cancel.load(Ordering::Acquire),
                     )
                     .map(JobValue::Saved),
@@ -289,6 +299,7 @@ impl Work {
             }
             .map_err(RuntimeError::from)
         }));
+        session.set_project_open_memory(old_open_memory);
         match outcome {
             Ok(result) => Completion {
                 job,

@@ -184,6 +184,14 @@ impl AuthoringSession {
         self.project.set_archive_store(archive);
     }
 
+    /// Bind the host worker's memory admission through completion publication.
+    pub fn set_project_open_memory(
+        &mut self,
+        memory: Option<std::sync::Arc<zipzi_project::TransferReservation>>,
+    ) -> Option<std::sync::Arc<zipzi_project::TransferReservation>> {
+        self.project.set_open_memory(memory)
+    }
+
     pub fn diagnose_resources(&self) -> Vec<ResourceDiagnostic> {
         self.project.diagnose()
     }
@@ -245,6 +253,22 @@ impl AuthoringSession {
         target_fingerprint: &zipzi_project::archive::ProjectFingerprint,
     ) -> Result<SaveReceipt, SdkError> {
         self.save_project_controlled(path, expected, Some(target_fingerprint), &mut || true)
+    }
+
+    /// Per-operation worker feedback, independent of cancellation/publication results.
+    pub fn save_project_with_progress(
+        &mut self,
+        path: &Path,
+        expected: Option<Version>,
+        target_fingerprint: Option<&zipzi_project::archive::ProjectFingerprint>,
+        progress: &zipzi_project::archive::ProjectSaveProgress,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<SaveReceipt, SdkError> {
+        progress.set_stage(zipzi_project::archive::ProjectSaveStage::PreparingResources);
+        let old = self.project.set_save_progress(Some(progress.clone()));
+        let result = self.save_project_controlled(path, expected, target_fingerprint, keep_going);
+        self.project.set_save_progress(old);
+        result
     }
 
     pub fn save_project_controlled(

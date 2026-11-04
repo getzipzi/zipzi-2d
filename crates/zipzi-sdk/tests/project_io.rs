@@ -1059,3 +1059,128 @@ fn save_as_binds_historical_external_files_before_publication() {
     sdk.undo().unwrap();
     assert_eq!(sdk.read_asset(ASSET).unwrap().bytes, original);
 }
+
+#[test]
+fn native_archive_child_process() {
+    let Some(mode) = std::env::var_os("ZIPZI_ARCHIVE_TEST_CHILD") else {
+        return;
+    };
+    let root = PathBuf::from(std::env::var_os("ZIPZI_ARCHIVE_TEST_ROOT").unwrap());
+    let project = root.join("角色 moved.zipzi");
+    let mut sdk = AuthoringSession::new(DOCUMENT, Canvas::default()).unwrap();
+    sdk.configure_project_io(ProjectArchiveStore::new(root.join("child-cache")));
+    sdk.open_project(&project, None).unwrap();
+    if mode == "conflict" {
+        fs::write(root.join("child-ready"), b"ready").unwrap();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        while !root.join("parent-saved").exists() {
+            assert!(std::time::Instant::now() < deadline, "parent never saved");
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        let error = sdk.save_project(&project, None).unwrap_err();
+        assert_eq!(error.code.as_ref(), "PROJECT_CONFLICT");
+    } else {
+        let expected = fs::read_to_string(root.join("expected.json")).unwrap();
+        assert_eq!(
+            zipzi_project::encode_project(sdk.document()).unwrap(),
+            expected
+        );
+        let asset = sdk.asset(ASSET).unwrap();
+        assert!(sdk.document().editor_state().objects[ASSET].locked);
+        let encoded = fs::read(
+            sdk.asset_root()
+                .join(&asset.content.as_ref().unwrap().source),
+        )
+        .unwrap();
+        assert_eq!(encoded, fs::read(root.join("expected.png")).unwrap());
+        let frame = sdk.evaluate(&Default::default()).unwrap();
+        assert_eq!(frame.drawables.len(), 1);
+    }
+}
+
+#[test]
+fn moved_archive_opens_in_new_process_without_sources_and_stale_process_conflicts() {
+    use std::process::{Command, Stdio};
+    let temp = TempDir::new();
+    let texture = temp.png("source.png", 79);
+    let expected_png = fs::read(&texture).unwrap();
+    let mut sdk = session(&texture, true);
+    // Locked assets still need storage rebinding, including already-missing descriptors.
+    sdk.edit("lock resources", None, |edit| {
+        edit.create_asset(zipzi_core::ImageAsset {
+            id: "00000000-0000-4000-8000-000000000004".into(),
+            name: "Missing".into(),
+            content: None,
+            unresolved_source: Some("old.png".into()),
+        })?;
+        let mut state = edit.candidate_document().editor_state().clone();
+        for asset in [ASSET, "00000000-0000-4000-8000-000000000004"] {
+            state.objects.insert(
+                asset.into(),
+                zipzi_core::document::ObjectEditorState {
+                    locked: true,
+                    hidden_in_editor: false,
+                },
+            );
+        }
+        edit.replace_editor_state(state)
+    })
+    .unwrap();
+    sdk.configure_project_io(ProjectArchiveStore::new(temp.path("original-cache")));
+    let old = temp.path("original.zipzi");
+    sdk.save_project(&old, None).unwrap();
+    let expected = zipzi_project::encode_project(sdk.document()).unwrap();
+    fs::write(temp.path("expected.json"), expected).unwrap();
+    fs::write(temp.path("expected.png"), expected_png).unwrap();
+    fs::remove_file(texture).unwrap();
+    drop(sdk); // Last lease deletes the original working set.
+    assert_eq!(
+        fs::read_dir(temp.path("original-cache")).unwrap().count(),
+        0
+    );
+    let moved = temp.path("角色 moved.zipzi");
+    fs::rename(old, &moved).unwrap();
+    let child = |mode: &str| {
+        Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "project_io::native_archive_child_process",
+                "--nocapture",
+            ])
+            .env("ZIPZI_ARCHIVE_TEST_CHILD", mode)
+            .env("ZIPZI_ARCHIVE_TEST_ROOT", &temp.0)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap()
+    };
+    let opened = child("verify").wait_with_output().unwrap();
+    assert!(
+        opened.status.success(),
+        "{}",
+        String::from_utf8_lossy(&opened.stderr)
+    );
+    let stale = child("conflict");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !temp.path("child-ready").exists() {
+        assert!(std::time::Instant::now() < deadline, "child did not open");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    let mut current = AuthoringSession::new(DOCUMENT, Canvas::default()).unwrap();
+    current.open_project(&moved, None).unwrap();
+    current
+        .edit("change model", None, |edit| {
+            edit.replace_model_setup(Canvas::new(200., 100., Vec2::default(), 1.))
+        })
+        .unwrap();
+    current.save_project(&moved, None).unwrap();
+    let saved = fs::read(&moved).unwrap();
+    fs::write(temp.path("parent-saved"), b"saved").unwrap();
+    let stale = stale.wait_with_output().unwrap();
+    assert!(
+        stale.status.success(),
+        "{}",
+        String::from_utf8_lossy(&stale.stderr)
+    );
+    assert_eq!(fs::read(&moved).unwrap(), saved);
+}

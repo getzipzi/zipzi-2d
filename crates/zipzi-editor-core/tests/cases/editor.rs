@@ -179,7 +179,7 @@ fn failed_and_duplicate_opens_preserve_the_existing_session() -> anyhow::Result<
         0.4
     );
     editor.new_document()?;
-    load(&mut editor, path.parent().unwrap())?;
+    load(&mut editor, &path)?;
     assert_eq!(editor.documents().len(), 2);
     assert_eq!(editor.active_id(), id);
     load(&mut editor, &path)?;

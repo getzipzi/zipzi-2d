@@ -73,7 +73,13 @@ pub(super) fn prepare(
         }
         content.source = format!("assets/{hash}.png");
         content.sha256 = hash;
-        let result = candidate.replace_asset(asset);
+        let expected = candidate.get_asset(&asset.id).unwrap().clone();
+        let content = asset.content.as_ref().unwrap();
+        let result = candidate.relocate_asset_storage(
+            &expected,
+            content.source.clone(),
+            content.sha256.clone(),
+        );
         if !result.status.is_ok() {
             return Err(result.status.into());
         }
@@ -139,6 +145,7 @@ pub(super) fn write<W: Write + Seek>(
     prepared: PreparedArchive,
     output: &mut W,
     mut keep_going: impl FnMut() -> bool,
+    progress: Option<&ProjectSaveProgress>,
 ) -> Result<WrittenArchive> {
     if output.stream_position()? != 0 {
         return Err(invalid("Writer must start at offset zero"));
@@ -150,12 +157,23 @@ pub(super) fn write<W: Write + Seek>(
         format,
         extent,
     } = prepared;
+    if let Some(progress) = progress {
+        progress.writing(result.asset_bytes + json.len() as u64 + format.len() as u64);
+    }
     let mut bounded = stream::BoundedWriter::new(output, extent);
     let mut zip = ZipWriter::new(&mut bounded);
     zip.start_file("format.json", options(CompressionMethod::Deflated))?;
-    zip.write_all(&format)?;
+    progress::ProgressWriter {
+        writer: &mut zip,
+        progress,
+    }
+    .write_all(&format)?;
     zip.start_file("project.json", options(CompressionMethod::Deflated))?;
-    zip.write_all(&json)?;
+    progress::ProgressWriter {
+        writer: &mut zip,
+        progress,
+    }
+    .write_all(&json)?;
     for (hash, resource) in &resources {
         check(&mut keep_going)?;
         zip.start_file(
@@ -164,7 +182,10 @@ pub(super) fn write<W: Write + Seek>(
         )?;
         let actual = stream::copy_exact(
             &mut File::open(&resource.path)?,
-            &mut zip,
+            &mut progress::ProgressWriter {
+                writer: &mut zip,
+                progress,
+            },
             resource.fingerprint.length,
             &mut keep_going,
         )?;
@@ -174,6 +195,9 @@ pub(super) fn write<W: Write + Seek>(
         }
     }
     check(&mut keep_going)?;
+    if let Some(progress) = progress {
+        progress.set_stage(ProjectSaveStage::Finishing);
+    }
     zip.finish()?;
     drop(bounded);
     if output.stream_position()? > extent {

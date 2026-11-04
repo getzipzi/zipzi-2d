@@ -276,8 +276,7 @@ impl EditorView {
             self.frozen_frames.insert(id, self.viewport_frames.clone());
         }
         cx.notify();
-        let activity =
-            self.begin_operation_status(t!("status.saving").into_owned(), path.clone(), cx);
+        let activity = self.begin_save_status(path.clone(), task.progress(), cx);
         let runtime = self.editor.runtime_host();
         let host = self.host.clone();
         cx.spawn_in(window, async move |this, cx| {

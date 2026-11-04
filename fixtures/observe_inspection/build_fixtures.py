@@ -1,6 +1,6 @@
 """Build tiny, self-authored Observe inspection projects with the public SDK.
 
-Run from the repository root with `uv run --locked python
+Run from the repository root with `./tools/dev-python
 fixtures/observe_inspection/build_fixtures.py`. The script creates PNGs
 with the Python standard library and writes three authoring projects. It
 refuses to overwrite existing projects; pass --replace to regenerate them.
@@ -9,6 +9,8 @@ refuses to overwrite existing projects; pass --replace to regenerate them.
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
+from contextlib import ExitStack
 import hashlib
 import json
 from pathlib import Path
@@ -17,6 +19,7 @@ import struct
 import zlib
 
 import zipzi
+from zipzi import bindings, meshes, parameters, scene, modeling as m
 
 ROOT = Path(__file__).resolve().parent
 TEXTURES = ROOT / "textures"
@@ -72,90 +75,108 @@ def make_textures() -> dict[str, Path]:
     return {"padding": padding, "line": line, "mask": mask}
 
 
-def new_session(number: int) -> zipzi.Session:
-    return zipzi.Session(ident(number), 100, 100, (37, 62), 7.5)
+def new_session(runtime: zipzi.Runtime, number: int) -> zipzi.Session:
+    model = runtime.sessions.create(ident(number))
+    setup = model.modeling.records(m.ModelingQuery()).value.setup
+    with model.edit("source canvas") as edit:
+        edit.apply(m.commands.ModelingCommandReplaceModelSetup(setup=replace(
+            setup, source_canvas=m.scene.Canvas(width=100., height=100.,
+                origin=m.common.Vec2(37., 62.), pixels_per_unit=7.5))))
+    return model
 
 
 def save(model: zipzi.Session, name: str) -> Path:
     PROJECTS.mkdir(parents=True, exist_ok=True)
-    destination = PROJECTS / f"{name}.zipzi.json"
-    receipt = model.save(destination)
-    assert receipt.manifest == destination
-    assert model.validate_structure() == []
+    destination = PROJECTS / f"{name}.zipzi"
+    receipt = model.project.save(destination).wait()
+    assert receipt.path == destination
+    assert not model.project.diagnose().wait().diagnostics
+    model.close()
     return destination
 
 
-def pixel_project(textures: dict[str, Path]) -> Path:
-    model = new_session(1)
-    with model.edit("pixel and binding controls") as edit:
-        edit.add_png_asset(ident(11), "padding", textures["padding"])
-        edit.add_png_asset(ident(12), "one pixel line", textures["line"])
-        edit.create_rectangle(ident(21), "same name", ident(11), (20, 20), (60, 60))
-        edit.create_rectangle(ident(22), "same name", ident(12), (62, 24), (82, 44))
-        edit.create_parameter(ident(31), "Shift", 0, 1, 0)
-        edit.create_mesh_binding(
-            ident(41), ident(21), [zipzi.Axis(ident(31), [0, 1])], [
-                zipzi.MeshKeyform([0], [(20, 20), (60, 20), (60, 60), (20, 60)]),
-                zipzi.MeshKeyform([1], [(24, 20), (64, 20), (64, 60), (24, 60)]),
-            ],
-        )
+def rectangle(edit: zipzi.Edit, number: int, name: str, asset: int,
+              low: tuple[float, float], high: tuple[float, float]) -> None:
+    x0, y0 = low
+    x1, y1 = high
+    geometry = meshes.Geometry((0, 1, 2, 3),
+        ((x0, y0), (x1, y0), (x1, y1), (x0, y1)),
+        ((0., 0.), (1., 0.), (1., 1.), (0., 1.)), ((0, 1, 2), (0, 2, 3)))
+    edit.meshes.create(meshes.MeshSpec(name, geometry, id=ident(number),
+                                      texture_asset_id=ident(asset)))
+
+
+def images(runtime: zipzi.Runtime, stack: ExitStack, textures: dict[str, Path]):
+    return {name: stack.enter_context(runtime.resources.load_png(path).wait())
+            for name, path in textures.items()}
+
+
+def pixel_project(runtime: zipzi.Runtime, textures: dict[str, Path]) -> Path:
+    model = new_session(runtime, 1)
+    with ExitStack() as stack:
+        image = images(runtime, stack, textures)
+        with model.edit("pixel and binding controls") as edit:
+            edit.resources.create_image("padding", image["padding"], id=ident(11))
+            edit.resources.create_image("one pixel line", image["line"], id=ident(12))
+            rectangle(edit, 21, "same name", 11, (20., 20.), (60., 60.))
+            rectangle(edit, 22, "same name", 12, (62., 24.), (82., 44.))
+            edit.parameters.create(parameters.ParameterSpec("Shift", 0., 1., 0., id=ident(31)))
+            edit.bindings.create(bindings.MeshBindingSpec(ident(21),
+                (bindings.Axis(ident(31), (0., 1.)),), (
+                    bindings.Keyform((0.,), ((20., 20.), (60., 20.), (60., 60.), (20., 60.))),
+                    bindings.Keyform((1.,), ((24., 20.), (64., 20.), (64., 60.), (24., 60.))),
+                ), id=ident(41)))
     return save(model, "pixel-binding")
 
 
-def hierarchy_project(textures: dict[str, Path]) -> Path:
-    model = new_session(2)
-    # Deformers use runtime units, while create_rectangle uses canvas pixels.
+def hierarchy_project(runtime: zipzi.Runtime, textures: dict[str, Path]) -> Path:
+    model = new_session(runtime, 2)
     left, right = (20 - 37) / 7.5, (60 - 37) / 7.5
     bottom, top = (62 - 60) / 7.5, (62 - 20) / 7.5
-    quad = [(left, top), (right, top), (left, bottom), (right, bottom)]
-    with model.edit("rotation and compressed warp") as edit:
-        edit.add_png_asset(ident(13), "line", textures["line"])
-        edit.create_rectangle(ident(23), "warped mesh", ident(13), (20, 20), (60, 60))
-        edit.create_part(ident(51), "head")
-        edit.create_rotation_transform(
-            ident(61), "rotate", zipzi.RotationData(
-                0, zipzi.RotationPose((37, 62), angle=25)
-            ), ident(51),
-        )
-        edit.create_warp_transform(
-            ident(62), "compressed warp",
-            zipzi.WarpData(1, 1, True, quad), ident(51), ident(61),
-        )
-        edit.set_deform_parent(ident(23), ident(62))
-        edit.set_mesh_part(ident(23), ident(51))
-        edit.update_positions(
-            ident(23), [0, 1, 2, 3],
-            [(0, 0), (1, 0), (1, 1), (0, 1)],
-        )
-        edit.update_warp_points(
-            ident(62), [(left, top), (right, top),
-                        (left + 0.2, top * 0.45), (right - 0.2, top * 0.45)]
-        )
+    with runtime.resources.load_png(textures["line"]).wait() as image:
+        with model.edit("rotation and compressed warp") as edit:
+            edit.resources.create_image("line", image, id=ident(13))
+            rectangle(edit, 23, "warped mesh", 13, (0., 0.), (1., 1.))
+            edit.apply(scene.CreatePart(scene.PartSpec("head", id=ident(51))))
+            edit.apply(scene.CreateRotation("rotate", scene.Placement(part_id=ident(51)), id=ident(61)))
+            transform = edit.modeling.records(m.ModelingQuery(transforms=(ident(61),))).value.transforms[0]
+            rotation = replace(transform.data.value,
+                               pose=replace(transform.data.value.pose, origin=m.common.PreciseVec2(37., 62.), angle=25.))
+            edit.apply(m.commands.ModelingCommandReplaceTransform(
+                transform=replace(transform, data=m.scene.TransformDataRotation(value=rotation))))
+            edit.apply(scene.CreateWarp("compressed warp", scene.Placement(
+                part_id=ident(51), parent_id=ident(61)), (left, bottom, right, top), id=ident(62)))
+            transform = edit.modeling.records(m.ModelingQuery(transforms=(ident(62),))).value.transforms[0]
+            warp = m.scene.WarpTransform(rows=1, columns=1, quad=True,
+                points=tuple(m.common.Vec2(x, y) for x, y in ((left, top), (right, top), (left + .2, top * .45), (right - .2, top * .45))))
+            edit.apply(m.commands.ModelingCommandReplaceTransform(
+                transform=replace(transform, data=m.scene.TransformDataWarp(value=warp))))
+            edit.apply(scene.ReparentLocal((ident(23),), parent_id=ident(62)))
+            edit.apply(scene.MoveToPart((ident(23),), part_id=ident(51)))
     return save(model, "rotated-warp")
 
 
-def composition_project(textures: dict[str, Path]) -> Path:
-    model = new_session(3)
-    with model.edit("overlap, mask, and offscreen") as edit:
-        edit.add_png_asset(ident(14), "padding", textures["padding"])
-        edit.add_png_asset(ident(15), "mask", textures["mask"])
-        edit.create_part(ident(52), "offscreen group")
-        edit.create_rectangle(ident(24), "rear", ident(14), (20, 20), (80, 80))
-        edit.create_rectangle(ident(25), "mask source", ident(15), (25, 25), (75, 75))
-        edit.create_rectangle(ident(26), "masked target", ident(14), (30, 30), (70, 70))
-        edit.create_rectangle(ident(27), "front cover", ident(14), (40, 40), (65, 65))
-        edit.set_mesh_part(ident(26), ident(52))
-        edit.create_offscreen(zipzi.OffscreenSpec(
-            ident(71), "half-opacity layer", ident(52),
-            keyforms=[zipzi.OffscreenKeyform(0.5)],
-        ))
-    properties = model.mesh_properties(ident(26))
-    with model.edit("attach mask") as edit:
-        edit.update_mesh_properties(ident(26), zipzi.MeshProperties(
-            properties.texture_asset_id, properties.appearance,
-            properties.draw_order, properties.blend_mode, properties.enabled,
-            properties.double_sided, properties.inverted_mask, [ident(25)],
-        ))
+def composition_project(runtime: zipzi.Runtime, textures: dict[str, Path]) -> Path:
+    model = new_session(runtime, 3)
+    with ExitStack() as stack:
+        image = images(runtime, stack, textures)
+        with model.edit("overlap, mask, and offscreen") as edit:
+            edit.resources.create_image("padding", image["padding"], id=ident(14))
+            edit.resources.create_image("mask", image["mask"], id=ident(15))
+            edit.apply(scene.CreatePart(scene.PartSpec("offscreen group", id=ident(52))))
+            for number, name, asset, low, high in (
+                (24, "rear", 14, (20., 20.), (80., 80.)),
+                (25, "mask source", 15, (25., 25.), (75., 75.)),
+                (26, "masked target", 14, (30., 30.), (70., 70.)),
+                (27, "front cover", 14, (40., 40.), (65., 65.)),
+            ):
+                rectangle(edit, number, name, asset, low, high)
+            edit.apply(scene.MoveToPart((ident(26),), part_id=ident(52)))
+            edit.apply(scene.CreateOffscreen("half-opacity layer", ident(52), id=ident(71)))
+            edit.apply(scene.InsertOffscreenKeyform(ident(71), scene.OffscreenForm(.5)))
+            edit.apply(m.commands.ModelingCommandScene(intent=m.scene.SceneEditPatch(
+                id=ident(26), expected=m.scene.SceneFieldValueMasks(value=()),
+                value=m.scene.SceneFieldValueMasks(value=(ident(25),)))))
     return save(model, "masked-offscreen")
 
 
@@ -173,9 +194,10 @@ def main() -> None:
             if not path.is_relative_to(ROOT) or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
                 raise RuntimeError(f"Fixture checksum mismatch: {relative}")
         for relative in manifest["projects"]:
-            model = zipzi.open_project((ROOT / relative).resolve())
-            if model.validate_structure():
-                raise RuntimeError(f"Fixture structure invalid: {relative}")
+            with zipzi.local() as runtime:
+                model = runtime.sessions.open((ROOT / relative).resolve()).wait()
+                if model.project.diagnose().wait().diagnostics:
+                    raise RuntimeError(f"Fixture structure invalid: {relative}")
         print(f"Verified {len(manifest['files'])} files and {len(manifest['projects'])} projects")
         return
     if PROJECTS.exists():
@@ -183,17 +205,18 @@ def main() -> None:
             parser.error("projects already exist; pass --replace to regenerate")
         shutil.rmtree(PROJECTS)
     textures = make_textures()
-    projects = [pixel_project(textures), hierarchy_project(textures),
-                composition_project(textures)]
-    (PROJECTS / ".zipzi.lock").unlink(missing_ok=True)
-    files = sorted([*textures.values(), *PROJECTS.rglob("*")])
+    with zipzi.local() as runtime:
+        projects = [pixel_project(runtime, textures), hierarchy_project(runtime, textures),
+                    composition_project(runtime, textures)]
+    (PROJECTS / ".gitignore").write_text(".*.zipzi.lock\n")
+    files = sorted([*textures.values(), *projects])
     manifest = {
         "schema_version": 1,
         "license": "CC0-1.0; generated locally by build_fixtures.py",
         "projects": [str(path.relative_to(ROOT)) for path in projects],
         "files": {
             str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in files if path.is_file() and path.name != ".zipzi.lock"
+            for path in files if path.is_file()
         },
     }
     (ROOT / "manifest.json").write_text(

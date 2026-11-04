@@ -30,8 +30,8 @@ def prepare(task_path:Path,controller_path:Path)->None:
                 with session.edit('fixture ownership') as edit:
                     edit.apply(scene.CreatePart(scene.PartSpec(data['part_name'],id=uid('target-part'))))
                     edit.apply(scene.MoveToPart((data['mesh_id'],),uid('target-part')))
-            saved=session.project.save(folder/f'fixture-{index}').wait()
-            manifests.append(str(saved.manifest));identities.append({'runtime':session.id.runtime,'serial':session.id.serial})
+            saved=session.project.save(folder/f'fixture-{index}.zipzi').wait()
+            manifests.append(str(saved.path));identities.append({'runtime':session.id.runtime,'serial':session.id.serial})
             if endpoint is None:session.close()
         data['fixture_projects']=manifests
         if endpoint is not None:data['fixture_sessions']=identities

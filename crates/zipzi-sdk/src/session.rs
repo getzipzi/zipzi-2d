@@ -1547,7 +1547,7 @@ mod history_estimates {
             session.session_id
         ));
         let before = session.version();
-        let path = directory.join("saved/project.zipzi.json");
+        let path = directory.join("saved/project.zipzi");
         session.save_project(&path, None).unwrap();
         assert_eq!(session.version().session_id, before.session_id);
         verify_recount(&mut session);
@@ -1590,7 +1590,7 @@ mod history_estimates {
             session.session_id
         ));
         session
-            .save_project(&directory.join("history/project.zipzi.json"), None)
+            .save_project(&directory.join("history/project.zipzi"), None)
             .unwrap();
         verify_recount(&mut session);
         session.redo().unwrap();

@@ -317,3 +317,69 @@ fn archive_lock_has_stable_identity_across_processes() {
     run(true);
     assert!(root.path().join(".中文 with spaces.zipzi.lock").is_file());
 }
+
+#[test]
+fn save_progress_counts_payload_and_only_reports_published_after_commit() {
+    let root = tempfile::tempdir().unwrap();
+    let doc = fixture(root.path());
+    let input = root.path().join("input.zipzi");
+    fs::write(&input, native_bytes(&doc, root.path())).unwrap();
+    let opened = ProjectArchiveStore::new(root.path())
+        .open(&input, || true)
+        .unwrap();
+    for fault in [
+        Fault::None,
+        Fault::Finalize,
+        Fault::Publish,
+        Fault::Directory,
+    ] {
+        let progress = ProjectSaveProgress::default();
+        let mut store = ProjectArchiveStore::new(root.path()).with_filesystem(Arc::new(Injected {
+            fault,
+            target: root.path().join("unused"),
+            cancelled: Arc::new(AtomicBool::new(false)),
+        }));
+        store.set_save_progress(Some(progress.clone()));
+        let target = root
+            .path()
+            .join(format!("progress-{}.zipzi", uuid::Uuid::new_v4()));
+        let mut saw_writing = false;
+        let result = store.save(
+            &opened.document,
+            &opened.resource_lease(),
+            &target,
+            None,
+            || {
+                let state = progress.state();
+                assert!(state.completed_bytes <= state.total_bytes);
+                if state.stage == ProjectSaveStage::Writing {
+                    saw_writing = true;
+                }
+                true
+            },
+        );
+        assert!(saw_writing);
+        let state = progress.state();
+        assert_eq!(state.completed_bytes, state.total_bytes);
+        assert!(state.total_bytes > 0);
+        if matches!(fault, Fault::None | Fault::Directory) {
+            let receipt = result.unwrap();
+            assert_eq!(state.stage, ProjectSaveStage::Published);
+            assert_eq!(
+                state.total_bytes,
+                receipt.asset_bytes
+                    + receipt.document_bytes
+                    + ZipArchive::new(File::open(target).unwrap())
+                        .unwrap()
+                        .by_name("format.json")
+                        .unwrap()
+                        .size()
+            );
+            assert_eq!(receipt.durable, fault != Fault::Directory && cfg!(unix));
+        } else {
+            assert!(result.is_err());
+            assert_ne!(state.stage, ProjectSaveStage::Published);
+            assert!(!target.exists());
+        }
+    }
+}

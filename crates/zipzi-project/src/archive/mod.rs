@@ -1,7 +1,9 @@
 //! Native single-file project container, resource leases and atomic publication.
 
+mod progress;
 mod publication;
 mod reader;
+pub use progress::{ProjectSaveProgress, ProjectSaveStage, ProjectSaveState};
 mod stream;
 mod structure;
 mod working_set;
@@ -99,7 +101,7 @@ pub struct WrittenArchive {
 }
 
 /// A snapshot holds the private directory independently of its originating open.
-/// This models the lease boundary; History/Job integration is deliberately pending.
+/// Consumers retain its resource lease when capturing history or background jobs.
 #[derive(Clone)]
 pub struct OpenedArchive {
     pub document: Document,
@@ -170,6 +172,8 @@ pub struct ProjectArchiveStore {
     limits: ArchiveIoLimits,
     filesystem: Arc<dyn ArchiveFileSystem>,
     disk_budget: ProjectDiskBudget,
+    save_progress: Option<ProjectSaveProgress>,
+    open_memory: Option<Arc<crate::TransferReservation>>,
 }
 
 impl ProjectArchiveStore {
@@ -179,6 +183,8 @@ impl ProjectArchiveStore {
             limits: ArchiveIoLimits::default(),
             filesystem: Arc::new(NativeArchiveFileSystem),
             disk_budget: ProjectDiskBudget::default(),
+            save_progress: None,
+            open_memory: None,
         }
     }
 
@@ -190,6 +196,25 @@ impl ProjectArchiveStore {
     pub fn with_disk_budget(mut self, budget: ProjectDiskBudget) -> Self {
         self.disk_budget = budget;
         self
+    }
+
+    pub fn set_save_progress(
+        &mut self,
+        progress: Option<ProjectSaveProgress>,
+    ) -> Option<ProjectSaveProgress> {
+        std::mem::replace(&mut self.save_progress, progress)
+    }
+
+    /// Attach a host's per-operation reservation, retained through job completion.
+    pub fn set_open_memory(
+        &mut self,
+        memory: Option<Arc<crate::TransferReservation>>,
+    ) -> Option<Arc<crate::TransferReservation>> {
+        std::mem::replace(&mut self.open_memory, memory)
+    }
+
+    pub(crate) fn has_open_memory(&self) -> bool {
+        self.open_memory.is_some()
     }
 
     pub fn with_limits(mut self, limits: ArchiveIoLimits) -> Self {
@@ -238,6 +263,7 @@ impl ProjectArchiveStore {
             self.limits,
             self.disk_budget.clone(),
             false,
+            self.open_memory.as_deref(),
             keep_going,
         )
     }
@@ -273,7 +299,12 @@ impl ProjectArchiveStore {
         let _reservation = self.disk_budget.reserve(prepared.extent)?;
         let mut stage = self.filesystem.create_staging(parent)?;
         let mut writer = self.filesystem.staging_stream(&mut stage.file);
-        let written = writer::write(prepared, &mut writer, &mut keep_going)?;
+        let written = writer::write(
+            prepared,
+            &mut writer,
+            &mut keep_going,
+            self.save_progress.as_ref(),
+        )?;
         drop(writer);
         self.filesystem.sync_file(&stage.file)?;
         let length = stage.file.metadata()?.len();
@@ -296,6 +327,9 @@ impl ProjectArchiveStore {
             warnings.push(format!(
                 "Published, but directory synchronization failed: {error}"
             ));
+        }
+        if let Some(progress) = &self.save_progress {
+            progress.set_stage(ProjectSaveStage::Published);
         }
         Ok(ArchiveSaveReceipt {
             document: written.document,
@@ -438,7 +472,7 @@ fn write_archive_inner<W: Write + Seek>(
 ) -> Result<WrittenArchive> {
     let mut keep_going = keep_going;
     let prepared = writer::prepare(document, asset_root, limits, &mut keep_going, format_kind)?;
-    writer::write(prepared, output, keep_going)
+    writer::write(prepared, output, keep_going, None)
 }
 
 fn asset_hash(name: &str) -> Option<&str> {
@@ -464,6 +498,7 @@ pub fn open_archive(
         limits,
         ProjectDiskBudget::default(),
         true,
+        None,
         keep_going,
     )
 }

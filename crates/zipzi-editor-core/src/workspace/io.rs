@@ -113,6 +113,9 @@ pub struct SaveCompletion {
     returned: Option<Completion>,
 }
 impl SaveTask {
+    pub fn progress(&self) -> zipzi_project::archive::ProjectSaveProgress {
+        self.work.save_progress().expect("save task progress")
+    }
     pub fn run(self) -> SaveCompletion {
         SaveCompletion {
             id: self.id,

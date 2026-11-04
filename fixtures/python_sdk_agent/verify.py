@@ -132,7 +132,7 @@ def verify(task_path:Path,private_path:Path,output:Path):
     data=json.loads(task_path.read_text());manifest=json.loads((private_path/'manifest.json').read_text())
     task=manifest['task'];hidden=manifest['hidden'];checks={};hard_stop=[];evidence={};coverage_gaps=[]
     folder=Path(data['host_folder'])/'result'
-    projects=list(folder.glob('*.zipzi.json')) if folder.is_dir() else []
+    projects=[path for path in folder.glob('*.zipzi') if path.is_file()] if folder.is_dir() else []
     checks['saved_project']=len(projects)==1
     if projects:
         with zipzi.local() as runtime:

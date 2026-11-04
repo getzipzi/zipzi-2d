@@ -36,6 +36,12 @@ streamed, finalized, synchronized and revalidated before publication. Replacemen
 requires a captured full-file fingerprint. A successful publish followed by a
 directory-sync failure returns a published receipt with a durability warning.
 
+Session readers admit ZIP indexes, expanded JSON/codec workspace and one PNG
+decode against the shared host memory budget. Runtime retains the growing
+reservation through completion; compressed archive length is not a decode-memory
+estimate. `ProjectSaveProgress` reports preparation, actual uncompressed payload
+bytes, finalization and publication independently of cancellation results.
+
 Session and SDK entrypoints use this single-file backend. `project_path()` names
 the archive; `asset_root()` names the private resource set. Save As retains that
 set and history bindings. Snapshots, candidates and observation inputs retain

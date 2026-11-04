@@ -33,7 +33,18 @@ impl DocumentStore {
         path: &Path,
         keep_going: &mut impl FnMut() -> bool,
     ) -> (ProjectResult, Option<DocumentSnapshot>) {
-        match self.archive.open(path, keep_going) {
+        // Local SDK callers share the image/host pool as well. Runtime injects
+        // its existing Work reservation so decoded results remain charged until
+        // the owner thread consumes Completion.
+        let mut archive = self.archive.clone();
+        if !archive.has_open_memory() {
+            let memory = match self.image_budget.reserve_transfer(0) {
+                Ok(memory) => std::sync::Arc::new(memory),
+                Err(status) => return (ProjectResult::from_status(status), None),
+            };
+            archive.set_open_memory(Some(memory));
+        }
+        match archive.open(path, keep_going) {
             Ok(opened) => {
                 let resources = opened.resource_lease();
                 let path = match project_identity(path) {
@@ -107,7 +118,15 @@ impl DocumentStore {
             }
             let bound =
                 self.bind_asset(root, document.get_asset(id).unwrap(), resources, keep_going)?;
-            let edit = candidate.replace_asset(bound);
+            if document.get_asset(id) == Some(&bound) {
+                continue;
+            }
+            let content = bound.content.as_ref().expect("bound content");
+            let edit = candidate.relocate_asset_storage(
+                document.get_asset(id).unwrap(),
+                content.source.clone(),
+                content.sha256.clone(),
+            );
             if !edit.status.is_ok() {
                 return Err(edit.status);
             }

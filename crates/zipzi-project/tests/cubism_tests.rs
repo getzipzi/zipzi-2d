@@ -133,7 +133,7 @@ fn saved_projects_publish_a_consistent_animation_model_pair() {
     };
     let artifact = session.encode_cubism(&options).unwrap();
     assert!(!artifact.report.has_loss());
-    let source = temp.join("source");
+    let source = temp.join("source.zipzi");
     assert!(session.save(&source).status.is_ok());
     let saved = encode_project_cubism(&source, &options).unwrap();
     assert_eq!(artifact.cmo3.bytes, saved.cmo3.bytes);
@@ -159,7 +159,7 @@ fn saved_projects_publish_a_consistent_animation_model_pair() {
     std::fs::write(output.join("notes.txt"), b"keep").unwrap();
     assert!(publish_cubism(&artifact, &output).is_err());
     assert_eq!(std::fs::read(output.join("notes.txt")).unwrap(), b"keep");
-    let manifest = zipzi_project::project_manifest(&source);
+    let manifest = source.clone();
     let saved_source = std::fs::read(&manifest).unwrap();
     assert!(publish_cubism(&artifact, &source).is_err());
     assert_eq!(std::fs::read(manifest).unwrap(), saved_source);

@@ -532,6 +532,54 @@ fn repack(bytes: &[u8], change: impl Fn(&str, Vec<u8>) -> Option<Vec<u8>>) -> Ve
 }
 
 #[test]
+fn expanded_json_is_admitted_before_decoding_and_failed_candidates_are_reclaimed() {
+    let root = tempfile::tempdir().unwrap();
+    let document = fixture(root.path());
+    let original = native_bytes(&document, root.path());
+    let mut input = ZipArchive::new(Cursor::new(&original)).unwrap();
+    let mut padded = vec![b' '; 1 << 20];
+    input
+        .by_name("project.json")
+        .unwrap()
+        .read_to_end(&mut padded)
+        .unwrap();
+    let hash = content_sha256(&padded);
+    let bytes = repack(&original, |name, data| {
+        Some(match name {
+            "project.json" => padded.clone(),
+            "format.json" => {
+                let mut format: Format = serde_json::from_slice(&data).unwrap();
+                format.document_sha256 = hash.clone();
+                serde_json::to_vec(&format).unwrap()
+            }
+            _ => data,
+        })
+    });
+    assert!(bytes.len() < 10 << 10);
+    let path = root.path().join("compressed.zipzi");
+    fs::write(&path, &bytes).unwrap();
+    let budget = crate::ImageMemoryBudget::default();
+    budget.bind_host_budget(0, 8 << 20);
+    let lease = Arc::new(budget.reserve_transfer(4096).unwrap());
+    let cache = root.path().join("private");
+    let mut store = ProjectArchiveStore::new(&cache);
+    store.set_open_memory(Some(lease.clone()));
+    let error = store.open(&path, || true).err().unwrap();
+    assert!(matches!(error, ArchiveError::Document { ref code, .. } if code == "BUDGET_EXCEEDED"));
+    assert_eq!(fs::read_dir(&cache).unwrap().count(), 0);
+    assert_eq!(fs::read(&path).unwrap(), bytes);
+    budget.bind_host_budget(0, 128 << 20);
+    let opened = store.open(&path, || true).unwrap();
+    let expected = decode_project(std::str::from_utf8(&padded).unwrap()).unwrap();
+    assert!(expected.same_content(&opened.document));
+    assert!(budget.usage().transfer_bytes >= padded.len() * 64);
+    drop(opened);
+    drop(store);
+    drop(lease);
+    assert_eq!(budget.usage().transfer_bytes, 0);
+}
+
+#[test]
 fn versions_features_and_duplicate_json_keys_have_distinct_failures() {
     let root = tempfile::tempdir().unwrap();
     let document = fixture(root.path());

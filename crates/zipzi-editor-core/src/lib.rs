@@ -109,3 +109,5 @@ pub use runtime_host::RuntimeHost;
 pub use zipzi_runtime::SessionState as RuntimeSessionState;
 
 pub use zipzi_runtime::JobInfo as RuntimeJobInfo;
+
+pub use zipzi_project::archive::{ProjectSaveProgress, ProjectSaveStage, ProjectSaveState};

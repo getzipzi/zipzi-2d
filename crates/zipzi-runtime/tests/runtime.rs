@@ -435,6 +435,64 @@ fn a02_inflight_open_blocks_save_as_and_failure_allows_retry() {
 }
 
 #[test]
+fn native_open_accounts_expanded_document_through_completion_and_rejects_without_state_loss() {
+    let root = tempfile::tempdir().unwrap();
+    let large = root.path().join("compressed.zipzi");
+    let small = root.path().join("small.zipzi");
+    let mut source = AuthoringSession::new(&id(50), canvas(100.)).unwrap();
+    source
+        .edit("compressed metadata", None, |edit| {
+            edit.create_asset(zipzi_core::ImageAsset {
+                id: id(51),
+                name: "a".repeat(1 << 20),
+                content: None,
+                unresolved_source: None,
+            })
+        })
+        .unwrap();
+    source.save_project(&large, None).unwrap();
+    assert!(std::fs::metadata(&large).unwrap().len() < 10 << 10);
+    AuthoringSession::new(&id(52), canvas(100.))
+        .unwrap()
+        .save_project(&small, None)
+        .unwrap();
+    let mut host = Runtime::new(RuntimeLimits {
+        accounted_bytes: 64 << 20,
+        ..Default::default()
+    });
+    let client = host.register_client().unwrap();
+    let session = host.create_session(client, &id(1), canvas(100.)).unwrap();
+    let before = host.session(session).unwrap().version();
+    let OpenRequest::Pending(job) = host.request_open(client, &large).unwrap() else {
+        panic!()
+    };
+    let completion = host.take_work(job).unwrap().run();
+    assert!(host.image_memory_usage().transfer_bytes >= 2 << 20);
+    host.complete(completion);
+    assert_eq!(host.job_info(client, job).unwrap().state, JobState::Failed);
+    assert_eq!(host.list_sessions().len(), 1);
+    assert_eq!(host.image_memory_usage().transfer_bytes, 0);
+    let job = host
+        .request_project(client, session, ProjectRequest::Open { path: large })
+        .unwrap();
+    finish(&mut host);
+    assert_eq!(host.job_info(client, job).unwrap().state, JobState::Failed);
+    assert_eq!(host.session(session).unwrap().version(), before);
+    assert_eq!(host.image_memory_usage().transfer_bytes, 0);
+    let OpenRequest::Pending(job) = host.request_open(client, &small).unwrap() else {
+        panic!()
+    };
+    let completion = host.take_work(job).unwrap().run();
+    assert!(host.image_memory_usage().transfer_bytes >= 2 << 20);
+    host.complete(completion);
+    assert_eq!(
+        host.job_info(client, job).unwrap().state,
+        JobState::Succeeded
+    );
+    assert_eq!(host.image_memory_usage().transfer_bytes, 0);
+}
+
+#[test]
 fn a08_background_commit_busy_preserves_other_candidate_and_freezes_reads() {
     let (mut host, a, b, s) = setup();
     let first = host.begin_edit(a, s, "first", None).unwrap();

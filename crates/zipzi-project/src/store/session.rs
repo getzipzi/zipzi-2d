@@ -134,8 +134,21 @@ impl DocumentSession {
     pub fn resource_lease(&self) -> Option<ProjectResourceLease> {
         self.resources.clone()
     }
+    pub fn set_save_progress(
+        &mut self,
+        progress: Option<crate::archive::ProjectSaveProgress>,
+    ) -> Option<crate::archive::ProjectSaveProgress> {
+        self.store.archive.set_save_progress(progress)
+    }
     pub fn set_archive_store(&mut self, archive: crate::archive::ProjectArchiveStore) {
         self.store.archive = archive;
+    }
+
+    pub fn set_open_memory(
+        &mut self,
+        memory: Option<std::sync::Arc<crate::TransferReservation>>,
+    ) -> Option<std::sync::Arc<crate::TransferReservation>> {
+        self.store.archive.set_open_memory(memory)
     }
 
     fn install_snapshot(&mut self, snapshot: super::DocumentSnapshot) {

@@ -39,7 +39,7 @@ fn zero_axis_creation_projects_and_preserves_base_property_editing() -> anyhow::
             .is_some()
     );
     let target = tempfile::tempdir()?;
-    d.save(target.path())?;
+    d.save(&target.path().join("project.zipzi"))?;
     Ok(())
 }
 #[test]

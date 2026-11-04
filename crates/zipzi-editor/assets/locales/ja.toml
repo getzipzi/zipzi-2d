@@ -254,6 +254,10 @@ load_queued = "開始待ち"
 load_reading = "プロジェクトとリソースを読み込み中"
 load_importing = "モデルとリソースをインポート中"
 load_preparing_view = "エディタ画面を準備中"
+save_preparing = "リソースを準備中"
+save_writing = "プロジェクトを書き込み中"
+save_finishing = "保存を完了中"
+save_published = "保存済み"
 load_others = "他 %{count} 件"
 
 [dock]

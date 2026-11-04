@@ -77,6 +77,16 @@ pub(super) fn validate(
     limits: ArchiveIoLimits,
     keep_going: &mut impl FnMut() -> bool,
 ) -> Result<BTreeSet<String>> {
+    validate_budgeted(input, length, limits, keep_going, None)
+}
+
+pub(super) fn validate_budgeted(
+    input: &mut (impl Read + Seek),
+    length: u64,
+    limits: ArchiveIoLimits,
+    keep_going: &mut impl FnMut() -> bool,
+    memory: Option<&crate::TransferReservation>,
+) -> Result<BTreeSet<String>> {
     if length > limits.archive_bytes {
         return Err(ArchiveError::Limit("archive bytes"));
     }
@@ -143,6 +153,17 @@ pub(super) fn validate(
     }
     if end(directory, directory_size, end_records)? != end_records || count > directory_size / 46 {
         return Err(invalid("Invalid central directory region"));
+    }
+    // Both indexes, path sets and streaming buffers are admitted before allocation.
+    let mut workspace = directory_size
+        .checked_mul(8)
+        .and_then(|n| count.checked_mul(2048)?.checked_add(n))
+        .and_then(|n| n.checked_add(2 << 20))
+        .ok_or(ArchiveError::Limit("index workspace overflow"))?;
+    if let Some(memory) = memory {
+        memory.ensure_at_least(
+            usize::try_from(workspace).map_err(|_| ArchiveError::Limit("index workspace"))?,
+        )?;
     }
     let mut entries = Vec::with_capacity(count as usize);
     let mut names = BTreeSet::new();
@@ -223,6 +244,19 @@ pub(super) fn validate(
         };
         if expanded > json_limit {
             return Err(ArchiveError::Limit("JSON bytes"));
+        }
+        if matches!(name_text, "format.json" | "project.json") {
+            // Input, syntax/Value/wire decoding, Document and retained candidate.
+            workspace = expanded
+                .checked_mul(64)
+                .and_then(|n| workspace.checked_add(n))
+                .ok_or(ArchiveError::Limit("document workspace overflow"))?;
+            if let Some(memory) = memory {
+                memory.ensure_at_least(
+                    usize::try_from(workspace)
+                        .map_err(|_| ArchiveError::Limit("document workspace"))?,
+                )?;
+            }
         }
         entries.push(Entry {
             name,

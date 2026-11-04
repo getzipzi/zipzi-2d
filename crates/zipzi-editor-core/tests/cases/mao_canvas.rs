@@ -33,10 +33,10 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
         project.retain_prepared_image(&image);
     }
     let fixture = tempfile::tempdir()?;
-    let manifest = fixture.path().join("mao.zipzi.json");
-    let saved = project.save(&manifest);
+    let path = fixture.path().join("mao.zipzi");
+    let saved = project.save(&path);
     anyhow::ensure!(saved.status.is_ok(), "{}", saved.status.message);
-    let mut doc = Document::open(&manifest)?;
+    let mut doc = Document::open(&path)?;
     let initial = doc.snapshot()?;
     let mesh = initial
         .viewport_frame
