@@ -1,5 +1,10 @@
 //! Read-only projections of the model's two independent parent relationships.
 
+pub(crate) struct TreeProjection {
+    pub index: std::sync::Arc<crate::ObjectIndex>,
+    pub nodes: Vec<TreeNode>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TreeNodeKind {
     Group,

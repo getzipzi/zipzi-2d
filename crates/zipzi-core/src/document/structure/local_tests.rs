@@ -54,6 +54,114 @@ fn fixture() -> Document {
     d
 }
 
+#[test]
+fn editor_state_validation_reuses_only_an_unchanged_valid_content_baseline() {
+    let before = fixture();
+    for invalid in [false, true] {
+        let mut after = before.fork_candidate();
+        after.content.editor_state.objects.insert(
+            id(if invalid { 99 } else { 2 }),
+            ObjectEditorState {
+                locked: true,
+                ..Default::default()
+            },
+        );
+        let expected = after.clone().validate_structure();
+        #[cfg(feature = "bench-instrumentation")]
+        let capture = crate::benchmark::Capture::start();
+        assert_eq!(after.validate_structure_since(&before), expected);
+        assert_eq!(expected.is_empty(), !invalid);
+        #[cfg(feature = "bench-instrumentation")]
+        {
+            let work = capture.finish();
+            assert!(work.contains_key("core.validate_structure.editor_state"));
+            assert!(!work.contains_key("core.validate_structure.full"));
+        }
+    }
+    // A simultaneous geometry error must still take full validation.
+    let mut after = before.fork_candidate();
+    after.content.editor_state.objects.insert(
+        id(2),
+        ObjectEditorState {
+            locked: true,
+            ..Default::default()
+        },
+    );
+    after
+        .content
+        .meshes
+        .get_mut(&id(3))
+        .unwrap()
+        .base_positions
+        .pop();
+    assert!(!differential(&before, &after, false).is_empty());
+    // An invalid source cannot provide a reusable structure proof.
+    let mut invalid = before.fork_candidate();
+    invalid
+        .content
+        .meshes
+        .get_mut(&id(3))
+        .unwrap()
+        .base_positions
+        .pop();
+    let mut after = invalid.fork_candidate();
+    after.content.editor_state.objects.insert(
+        id(2),
+        ObjectEditorState {
+            locked: true,
+            ..Default::default()
+        },
+    );
+    assert!(!differential(&invalid, &after, false).is_empty());
+}
+
+#[test]
+fn editor_state_publication_preserves_saved_content_proof_until_other_content_changes() {
+    let mut document = fixture();
+    document.mark_saved();
+    for locked in [true, false, true, false] {
+        let mut candidate = document.fork_tracked_candidate();
+        let mut state = candidate.editor_state().clone();
+        state.objects.insert(
+            id(2),
+            ObjectEditorState {
+                locked,
+                ..Default::default()
+            },
+        );
+        assert!(candidate.replace_editor_state(state).status.is_ok());
+        assert!(candidate.validate_structure_since(&document).is_empty());
+        document
+            .publish_candidate(candidate, ChangeKind::Metadata, false)
+            .unwrap();
+        assert_eq!(document.modified(), locked);
+        assert_eq!(document.saved_non_editor_state_matches.get(), Some(&true));
+    }
+    assert!(document
+        .rename_mesh(&id(3), "Different".into())
+        .status
+        .is_ok());
+    assert!(document.saved_non_editor_state_matches.get().is_none());
+    assert!(document.modified());
+    assert_eq!(document.saved_non_editor_state_matches.get(), Some(&false));
+    // Flags cannot hide a dirty geometry/label state when restored to saved defaults.
+    let mut state = document.editor_state().clone();
+    state.objects.insert(
+        id(2),
+        ObjectEditorState {
+            locked: true,
+            ..Default::default()
+        },
+    );
+    assert!(document.replace_editor_state(state).status.is_ok());
+    assert!(document.modified());
+    assert!(document
+        .replace_editor_state(EditorState::default())
+        .status
+        .is_ok());
+    assert!(document.modified());
+}
+
 /// Exercise the final validator even for values that public setters reject.
 /// This writes only the audited Appearance field and uses the real pre-write
 /// token/changed boundary; it never injects a tracker or validity certificate.

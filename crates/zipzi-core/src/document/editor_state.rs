@@ -9,6 +9,8 @@ impl Document {
     }
 
     pub fn replace_editor_state(&mut self, mut state: EditorState) -> EditResult {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = crate::benchmark::span("core.replace_editor_state");
         if self.mutation_blocked() {
             return self.failed(Status::error(
                 "TRANSACTION_ACTIVE",
@@ -37,8 +39,11 @@ impl Document {
             .collect();
         changed.sort();
         changed.dedup();
+        // Report only flags whose final value changed.
+        let before = &self.content.editor_state;
+        changed.retain(|id| before.get(id) != state.get(id));
         self.content.editor_state = state;
-        self.changed(ChangeKind::Metadata, Vec::new(), changed)
+        self.changed_editor_state(changed)
     }
 
     pub(super) fn editor_state_issues(&self, state: &EditorState) -> Vec<StructureIssue> {
@@ -46,10 +51,9 @@ impl Document {
             .objects
             .keys()
             .filter_map(|id| {
-                let valid = self.reference_identity(id).is_some()
-                    || self.binding_identity(id).is_some()
-                    || self.get_glue_pair(id).is_some()
-                    || self.content.assets.contains_key(id)
+                // Resolve top-level identities before building the global
+                // reference/binding indexes for owned metadata identities.
+                let valid = self.content.assets.contains_key(id)
                     || self.content.meshes.contains_key(id)
                     || self.content.transforms.contains_key(id)
                     || self.content.parts.contains_key(id)
@@ -68,7 +72,10 @@ impl Document {
                     || self.get_attachment(id).is_some()
                     || self.physics_owner(id).is_some()
                     || self.physics().is_some_and(|a| a.id == *id)
-                    || self.pose().is_some_and(|a| a.entity_ids().any(|v| v == id));
+                    || self.pose().is_some_and(|a| a.entity_ids().any(|v| v == id))
+                    || self.reference_identity(id).is_some()
+                    || self.binding_identity(id).is_some()
+                    || self.get_glue_pair(id).is_some();
                 (!valid).then(|| StructureIssue {
                     object_id: id.clone(),
                     status: Status::error(

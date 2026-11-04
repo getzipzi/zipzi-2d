@@ -519,13 +519,23 @@ fn shared_map_descriptor_bytes<T>(records: &HashMap<String, std::sync::Arc<T>>) 
 pub(super) fn estimated_snapshot_bytes(document: &Document) -> usize {
     // Map buckets, keys and document metadata are copied; Arc-owned records
     // stay shared until written. Avoid traversing their channel arrays here.
-    let content = &document.content;
-    macro_rules! owned_fields {
-        ($($($field:ident).+),+ $(,)?) => { 0 $(+ content.$($field).+.extra_bytes())+ };
-    }
     size_of::<Document>()
         + document.mesh_runtime_ids.extra_bytes()
         + shared_map_descriptor_bytes(&document.vertex_slots)
+        + estimated_content_metadata_bytes(&document.content)
+        - size_of::<DocumentContent>()
+}
+
+pub(super) fn estimated_editor_state_bytes(state: &super::super::EditorState) -> usize {
+    let super::super::EditorState { objects } = state;
+    objects.extra_bytes()
+}
+
+pub(super) fn estimated_content_metadata_bytes(content: &DocumentContent) -> usize {
+    macro_rules! owned_fields {
+        ($($($field:ident).+),+ $(,)?) => { 0 $(+ content.$($field).+.extra_bytes())+ };
+    }
+    size_of::<DocumentContent>()
         + shared_map_descriptor_bytes(&content.meshes)
         + shared_map_descriptor_bytes(&content.transforms)
         + shared_map_descriptor_bytes(&content.bindings)
@@ -654,6 +664,43 @@ impl ExtraBytes for super::super::PhysicsTarget {
 mod tests {
     use super::*;
     use std::sync::Arc;
+
+    #[test]
+    fn fork_and_checkpoint_sizes_reuse_shared_payloads_but_recount_copied_capacities() {
+        let mut document = Document::new();
+        assert!(document
+            .initialize(
+                "90000000-0000-4000-8000-000000000001",
+                crate::ModelSetup::default()
+            )
+            .is_ok());
+        assert!(document
+            .create_mesh(Mesh {
+                id: "90000000-0000-4000-8000-000000000002".into(),
+                name: "Large shared record".repeat(1024),
+                ..Default::default()
+            })
+            .status
+            .is_ok());
+        document.content.id.reserve_exact(4096);
+        document.content.mesh_order.reserve_exact(4096);
+        let source_bytes = document.estimated_content_bytes();
+        let shared_bytes = source_bytes - document.estimated_content_metadata_bytes();
+        let fork = document.fork_tracked_candidate();
+        let checkpoint = document.checkpoint();
+        assert_eq!(
+            shared_bytes + fork.estimated_content_metadata_bytes(),
+            fork.estimated_content_bytes()
+        );
+        assert_eq!(
+            shared_bytes + checkpoint.estimated_content_metadata_bytes(),
+            checkpoint.estimated_bytes()
+        );
+        assert!(
+            fork.estimated_content_bytes() < source_bytes,
+            "clones release source spare capacity"
+        );
+    }
 
     #[test]
     fn manual_mesh_history_charges_boundary_and_constraint_spare_capacity() {

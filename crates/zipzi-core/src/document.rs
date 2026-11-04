@@ -116,6 +116,9 @@ pub struct Document {
     // Valid until persistent content or its saved baseline changes. OnceLock
     // keeps read-only queries thread-safe without repeating deep comparisons.
     modified_cache: OnceLock<bool>,
+    // State-only publication preserves this proof against the saved baseline;
+    // every other content write or checkpoint exchange clears it.
+    saved_non_editor_state_matches: OnceLock<bool>,
     lookup: OnceLock<DocumentLookup>,
     binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
     reference_projection: OnceLock<Arc<ReferenceProjection>>,
@@ -224,6 +227,7 @@ impl Document {
         self.content.export_settings = setup.export;
         self.content.source_canvas = setup.source_canvas;
         self.modified_cache.take();
+        self.saved_non_editor_state_matches.take();
         Status::ok()
     }
 
@@ -315,21 +319,34 @@ impl Document {
     pub fn same_content(&self, other: &Document) -> bool {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.same_content");
+        if self.has_only_editor_state_changes_since(other)
+            || other.has_only_editor_state_changes_since(self)
+        {
+            return self.editor_state() == other.editor_state();
+        }
         self.content == other.content
     }
 
     pub fn modified(&self) -> bool {
-        *self
-            .modified_cache
-            .get_or_init(|| match &self.saved_content {
-                Some(saved) => &self.content != saved.as_ref(),
+        *self.modified_cache.get_or_init(|| {
+            #[cfg(feature = "bench-instrumentation")]
+            let _span = crate::benchmark::span("core.modified");
+            match &self.saved_content {
+                Some(saved) => {
+                    self.content.editor_state != saved.editor_state
+                        || !*self
+                            .saved_non_editor_state_matches
+                            .get_or_init(|| self.content.same_except_editor_state(saved))
+                }
                 None => self.initialized(),
-            })
+            }
+        })
     }
 
     pub fn mark_saved(&mut self) {
         self.saved_content = Some(Arc::new(self.content.clone()));
         self.modified_cache = OnceLock::from(false);
+        self.saved_non_editor_state_matches = OnceLock::from(true);
     }
 
     pub fn restore_from(&mut self, source: &Document) {
@@ -339,6 +356,7 @@ impl Document {
         self.saved_content = saved;
         // The source's cached result refers to its own saved baseline.
         self.modified_cache.take();
+        self.saved_non_editor_state_matches.take();
         self.snapshot_identity = Arc::new(());
         self.revision = next_rev;
         self.evaluation_revision = next_rev;
@@ -568,6 +586,7 @@ impl Document {
             for id in removed {
                 self.content.editor_state.objects.remove(&id);
             }
+
         }
         if kind == ChangeKind::Structure {
             self.organization_index.take();
@@ -576,6 +595,7 @@ impl Document {
         self.snapshot_identity = Arc::new(());
         // Batch construction mutates content without advancing revision too.
         self.modified_cache.take();
+        self.saved_non_editor_state_matches.take();
         if self.batch_build_active {
             if object_ids.is_empty() {
                 object_ids = mesh_ids.clone();

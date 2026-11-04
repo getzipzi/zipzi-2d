@@ -3,6 +3,62 @@
 use super::*;
 use crate::BindingAxis;
 
+impl DocumentContent {
+    pub(super) fn same_except_editor_state(&self, other: &Self) -> bool {
+        // Borrow every field. Exhaustive destructuring forces new persistent
+        // fields to participate before editor-only validation can reuse a proof.
+        macro_rules! compare {
+            ($($field:ident),+ $(,)?) => {{
+                let Self { $($field,)+ editor_state: _ } = self;
+                true $(&& $field == &other.$field)+
+            }};
+        }
+        compare!(
+            id,
+            export_settings,
+            source_canvas,
+            assets,
+            asset_order,
+            parts,
+            part_order,
+            transforms,
+            transform_order,
+            meshes,
+            mesh_order,
+            parameters,
+            parameter_order,
+            bindings,
+            binding_order,
+            scene_bindings,
+            scene_binding_order,
+            draw_order_groups,
+            blend_key_tables,
+            blend_key_table_order,
+            blend_constraints,
+            blend_constraint_order,
+            blend_bindings,
+            blend_binding_order,
+            glues,
+            glue_order,
+            offscreens,
+            offscreen_order,
+            display_info,
+            hierarchy_order,
+            expressions,
+            expression_order,
+            motions,
+            motion_order,
+            motion_groups,
+            motion_roots,
+            pose,
+            physics,
+            missing_attachments,
+            model3_settings,
+            package_attachments,
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DocumentDomain {
     Document,

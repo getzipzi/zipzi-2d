@@ -37,9 +37,18 @@ impl Document {
     pub fn validate_structure_since(&self, baseline: &Document) -> Vec<StructureIssue> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.validate_structure");
-        // Coverage is not a validity proof. Only an already validated exact
-        // baseline and an entirely covered Mesh-only transaction qualify.
+        // Reuse a proof only from a validated exact baseline. Editor preferences
+        // may change independently; Mesh edits require audited write coverage.
         if baseline.structure_is_validated() {
+            if self.has_only_editor_state_changes_since(baseline)
+                || (self.editor_state() != baseline.editor_state()
+                    && self.content.same_except_editor_state(&baseline.content))
+            {
+                #[cfg(feature = "bench-instrumentation")]
+                let _local_span = crate::benchmark::span("core.validate_structure.editor_state");
+                return self
+                    .finish_structure_validation(self.editor_state_issues(self.editor_state()));
+            }
             if let Some(records) = self.tracked_mesh_validation_records_since(baseline) {
                 #[cfg(feature = "bench-instrumentation")]
                 let _local_span = crate::benchmark::span("core.validate_structure.local");

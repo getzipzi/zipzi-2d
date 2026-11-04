@@ -56,6 +56,15 @@ impl Document {
             self.after_history(true);
             return;
         }
+        if changes.categories.len() == 1
+            && changes.categories.contains(&ChangeCategory::EditorState)
+            && changes.created.is_empty()
+            && changes.deleted.is_empty()
+        {
+            self.invalidate_editor_state_projection();
+            self.session.acknowledge_receipts();
+            return;
+        }
         // Canvas structure and labels can change alongside document metadata or
         // another domain. Handle them before choosing a projection fast path.
         let scene_kind = |kind| {

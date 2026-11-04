@@ -3,6 +3,65 @@ use gpui_kit::test::TestWindowExt;
 use gpui_kit::{AppContext as _, TestAppContext};
 
 #[gpui_kit::test]
+fn local_project_tree_buttons_timing(cx: &mut TestAppContext) {
+    let Some(path) = std::env::var_os("ZIPZI_TREE_STATE_PROJECT") else {
+        eprintln!("SKIP: set ZIPZI_TREE_STATE_PROJECT to inspect a local project");
+        return;
+    };
+    let document = zipzi_editor_core::Document::open(std::path::Path::new(&path)).unwrap();
+    let selection = document.context().selections.clone();
+    let objects: Vec<_> = document
+        .part_tree()
+        .iter()
+        .filter_map(|node| node.reference())
+        .collect();
+    let harness = super::setup_with_document(cx, document, tempfile::tempdir().unwrap());
+    cx.update_window(harness.window, |_, window, cx| {
+        let target = objects
+            .iter()
+            .find(|object| {
+                window
+                    .try_find(format!("parts-vis-{}", object.id))
+                    .is_some()
+            })
+            .expect("visible root row");
+        let original = harness.view.read_with(cx, |view, _| {
+            view.editor
+                .document()
+                .unwrap()
+                .object_state(target)
+                .explicit
+        });
+        for lock in [false, true] {
+            for active in [true, false] {
+                let start = std::time::Instant::now();
+                window.click(
+                    format!("parts-{}-{}", if lock { "lock" } else { "vis" }, target.id),
+                    cx,
+                );
+                window.render_frame(cx);
+                eprintln!(
+                    "tree button lock={lock} active={active}: {:?}",
+                    start.elapsed()
+                );
+                harness.view.read_with(cx, |view, _| {
+                    assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+                    let doc = view.editor.document().unwrap();
+                    let state = doc.object_state(target).explicit;
+                    assert_eq!(state.locked, original.locked ^ (lock && active));
+                    assert_eq!(
+                        state.hidden_in_editor,
+                        original.hidden_in_editor ^ (!lock && active)
+                    );
+                    assert_eq!(doc.context().selections, selection);
+                });
+            }
+        }
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn titlebar_fold_and_unfold_all_preserve_document_and_independent_tree_states(
     cx: &mut TestAppContext,
 ) {

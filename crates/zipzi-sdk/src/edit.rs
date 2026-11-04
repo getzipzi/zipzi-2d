@@ -359,11 +359,25 @@ impl EditSession<'_> {
         &mut self,
         state: zipzi_core::document::EditorState,
     ) -> Result<(), SdkError> {
-        let id = self.document().id().to_owned();
-        self.apply_authoring_change("replace_editor_state", &id, true, |document| {
-            document.replace_editor_state(state)
-        })
+        self.ensure_active("replace_editor_state")?;
+        let id = self.candidate_document().id().to_owned();
+        let cached = self.candidate_content_bytes.get().copied();
+        let before = self.candidate_document().estimated_editor_state_bytes();
+        let result = self
+            .candidate
+            .as_mut()
+            .expect("edit candidate exists")
+            .replace_editor_state(state);
+        self.record(result, "replace_editor_state", &id)?;
+        if let Some(bytes) = cached {
+            self.candidate_content_bytes.take();
+            let _ = self
+                .candidate_content_bytes
+                .set(bytes - before + self.candidate_document().estimated_editor_state_bytes());
+        }
+        Ok(())
     }
+
     pub fn replace_hierarchy_order(
         &mut self,
         order: zipzi_core::document::HierarchyOrder,
@@ -924,12 +938,18 @@ impl EditSession<'_> {
             .cloned()
             .collect();
         let identity_changed = !identity_keys.is_empty();
-        let mesh_publication = crate::changes::MeshPublication::new(
-            session.document(),
-            &candidate,
-            &self.object_ids,
-            &self.erased_keys,
-        );
+        let editor_state_only =
+            !identity_changed && candidate.has_only_editor_state_changes_since(session.document());
+        let mesh_publication = if editor_state_only {
+            None
+        } else {
+            crate::changes::MeshPublication::new(
+                session.document(),
+                &candidate,
+                &self.object_ids,
+                &self.erased_keys,
+            )
+        };
         let changed = identity_changed || !session.project.document().same_content(&candidate);
         let before_keys = changed.then(|| session.object_keys());
         let after_keys = changed.then(|| {
@@ -983,7 +1003,11 @@ impl EditSession<'_> {
             let candidate_bytes =
                 cached_candidate_bytes.unwrap_or_else(|| candidate.estimated_content_bytes());
             published_bytes = Some(candidate_bytes);
-            checkpoint_bytes = checkpoint.estimated_bytes();
+            // A fresh checkpoint shares all record payloads with the source;
+            // only copied metadata capacities may differ.
+            checkpoint_bytes = session.estimated_content_bytes()
+                - session.document().estimated_content_metadata_bytes()
+                + checkpoint.estimated_content_metadata_bytes();
             let entry_bytes = checkpoint_bytes
                 + changes.estimated_bytes()
                 + self
@@ -1048,15 +1072,17 @@ impl EditSession<'_> {
             .project
             .publish_authoring_candidate(candidate, self.kind, identity_changed)
             .map_err(|s| SdkError::from_status(s, "commit", self.object_ids.clone()))?;
-        for image in &self.prepared_images {
-            session.project.retain_prepared_image(image);
+        if !editor_state_only {
+            for image in &self.prepared_images {
+                session.project.retain_prepared_image(image);
+            }
         }
         // A successfully accepted load consumes its request even for a no-op.
         // Rejected/dropped candidates leave requests available for retry.
         for control in &self.resource_load_controls {
             control.store(true, std::sync::atomic::Ordering::Release);
         }
-        if changed {
+        if changed && !editor_state_only {
             session
                 .preview
                 .retain_parameters(session.project.document());
@@ -1074,6 +1100,7 @@ impl EditSession<'_> {
         if let Some(bytes) = published_bytes {
             *session.content_bytes_cache.lock().unwrap() = Some((session.version(), bytes));
         }
+        let collect_resources = !editor_state_only || evict_count > 0 || !session.redo.is_empty();
         if let Some(checkpoint) = previous {
             for _ in 0..evict_count {
                 session.done.pop_front();
@@ -1111,7 +1138,9 @@ impl EditSession<'_> {
             session.publish_receipt(receipt.clone());
         }
         self.prepared_images.clear();
-        session.collect_image_resources();
+        if collect_resources {
+            session.collect_image_resources();
+        }
         Ok(receipt)
     }
 }

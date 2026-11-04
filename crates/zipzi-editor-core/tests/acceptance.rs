@@ -14,3 +14,5 @@ mod psd_import;
 mod transfer;
 #[path = "cases/transfer_roundtrip/mod.rs"]
 mod transfer_roundtrip;
+#[path = "cases/tree_state_project.rs"]
+mod tree_state_project;

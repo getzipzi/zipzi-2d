@@ -742,7 +742,9 @@ impl AuthoringSession {
         let version = self.version();
         let mut candidate = self.project.document().fork_tracked_candidate();
         candidate.set_original_capture_context(self.preview_values().clone());
-        let candidate_bytes = candidate.estimated_content_bytes();
+        let candidate_bytes = self.estimated_content_bytes()
+            - self.document().estimated_content_metadata_bytes()
+            + candidate.estimated_content_metadata_bytes();
         if candidate_bytes > self.history_limits.max_bytes {
             return Err(SdkError::new(
                 "HISTORY_LIMIT_EXCEEDED",

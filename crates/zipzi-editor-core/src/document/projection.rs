@@ -333,8 +333,37 @@ impl Document {
         self.structure_tree(true)
     }
     fn structure_tree(&self, deformer: bool) -> Vec<TreeNode> {
-        use crate::{ObjectKind as K, RelationKind as R};
         let index = self.object_index();
+        let mut cache = self.tree_cache.lock().unwrap();
+        let cached = &mut cache[usize::from(deformer)];
+        if cached
+            .as_ref()
+            .is_none_or(|old| !Arc::ptr_eq(&old.index, &index))
+        {
+            *cached = Some(crate::tree::TreeProjection {
+                nodes: self.build_structure_tree(deformer, &index),
+                index,
+            });
+        }
+        let mut nodes = cached.as_ref().unwrap().nodes.clone();
+        drop(cache);
+        let model = self.model();
+        fn refresh(nodes: &mut [TreeNode], state: &zipzi_core::document::EditorState) {
+            for node in nodes {
+                if node.visible.is_some() {
+                    node.visible = Some(!state.get(&node.id).hidden_in_editor);
+                }
+                refresh(&mut node.children, state);
+            }
+        }
+        refresh(&mut nodes, model.editor_state());
+        nodes
+    }
+
+    fn build_structure_tree(&self, deformer: bool, index: &crate::ObjectIndex) -> Vec<TreeNode> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("editor.build_structure_tree");
+        use crate::{ObjectKind as K, RelationKind as R};
         let mut nodes = Vec::new();
         let mut references = Vec::new();
         for x in &index.objects {

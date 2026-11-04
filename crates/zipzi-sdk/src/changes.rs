@@ -11,6 +11,8 @@ mod references;
 mod resources;
 use references::ReferenceFieldChangeSize;
 pub use references::{ReferenceFieldChange, ReferenceSelectionChange};
+#[cfg(test)]
+mod editor_state_tests;
 mod mesh;
 mod motion;
 pub(crate) use mesh::MeshPublication;
@@ -342,6 +344,21 @@ fn summarize_impl(
 ) -> ChangeSet {
     #[cfg(feature = "bench-instrumentation")]
     let _span = zipzi_core::benchmark::span("sdk.summarize");
+    if prune_domains && after.has_only_editor_state_changes_since(before) {
+        #[cfg(feature = "bench-instrumentation")]
+        let _local = zipzi_core::benchmark::span("sdk.summarize.editor_state");
+        let mut out = ChangeSet::default();
+        out.categories.extend(kinds.iter().copied());
+        // Scene identities have only their primary role and an optional drawing
+        // group role. Resolve those directly rather than scan all binding samples.
+        let local_keys = scene_editor_state_keys(before_keys, object_ids);
+        let keys = local_keys.as_ref().unwrap_or(before_keys);
+        summarize_editor_state_and_notifications(
+            before, after, keys, keys, object_ids, true, &mut out,
+        );
+        finish_summary(&mut out);
+        return out;
+    }
     #[cfg(feature = "bench-instrumentation")]
     let _full_span = zipzi_core::benchmark::span("sdk.summarize.fallback");
     use zipzi_core::document::DocumentDomain as D;
@@ -494,11 +511,82 @@ fn summarize_impl(
     if references_changed || !unchanged(D::Document) {
         document::summarize_document(before, after, &mut out);
     }
+    summarize_editor_state_and_notifications(
+        before,
+        after,
+        before_keys,
+        after_keys,
+        object_ids,
+        false,
+        &mut out,
+    );
+    // Meshing is authoring intent, independent of the persisted triangles used by evaluation.
+    // Keep this refinement in the full summary so receipt and shadow comparisons agree; the
+    // MeshPublication fast path already requires meshing to be unchanged.
+    let meshing_changed = out.content_changes.iter().any(|c| {
+        c.domain == zipzi_core::document::SceneContentDomain::MeshTopology
+            && before.get_mesh(&c.entity.id).map(|m| &m.meshing)
+                != after.get_mesh(&c.entity.id).map(|m| &m.meshing)
+    });
+    if meshing_changed && before.same_evaluation_inputs(after) {
+        out.categories.remove(&ChangeCategory::EvaluationInputs);
+    }
+    finish_summary(&mut out);
+    out
+}
+
+fn scene_editor_state_keys(
+    keys: &HashSet<ObjectKey>,
+    object_ids: &[String],
+) -> Option<HashSet<ObjectKey>> {
+    let mut local = HashSet::new();
+    for id in object_ids {
+        let mut scene = false;
+        for kind in [
+            ObjectKind::Mesh,
+            ObjectKind::Part,
+            ObjectKind::Transform,
+            ObjectKind::Offscreen,
+            ObjectKind::Glue,
+            ObjectKind::DrawOrderGroup,
+        ] {
+            let key = ObjectKey {
+                kind,
+                id: id.clone(),
+            };
+            if keys.contains(&key) {
+                scene |= kind != ObjectKind::DrawOrderGroup;
+                local.insert(key);
+            }
+        }
+        if !scene {
+            return None;
+        }
+    }
+    Some(local)
+}
+
+fn summarize_editor_state_and_notifications(
+    before: &Document,
+    after: &Document,
+    before_keys: &HashSet<ObjectKey>,
+    after_keys: &HashSet<ObjectKey>,
+    object_ids: &[String],
+    editor_state_only: bool,
+    out: &mut ChangeSet,
+) {
+    let entity = |kind, id: &str| EntityRef::new(after.id(), kind, id);
     // Persistent authoring flags affect capabilities even when domain content
     // is unchanged. Derive them from both states so undo uses the same summary.
+    let touched: HashSet<_> = object_ids.iter().map(String::as_str).collect();
     if before.editor_state() != after.editor_state() {
-        for key in after_keys.intersection(before_keys) {
-            if before.editor_state().get(&key.id) != after.editor_state().get(&key.id) {
+        for key in after_keys
+            .intersection(before_keys)
+            .filter(|key| !editor_state_only || touched.contains(key.id.as_str()))
+        {
+            if before.editor_state().get(&key.id) != after.editor_state().get(&key.id)
+
+            {
                 out.modified.push(entity(key.kind, &key.id));
                 out.categories.insert(ChangeCategory::EditorState);
                 // Entry availability depends on its owner, and an owner's subtree
@@ -520,49 +608,34 @@ fn summarize_impl(
             }
         }
     }
-    for id in object_ids {
-        for key in after_keys.intersection(before_keys).filter(|key| {
-            key.id == *id
-                && !matches!(
-                    key.kind,
-                    ObjectKind::Parameter
-                        | ObjectKind::Part
-                        | ObjectKind::ModelParameterGroup
-                        | ObjectKind::ModelParameterMember
-                        | ObjectKind::ModelHitArea
-                        | ObjectKind::CdiCombinedSet
-                        | ObjectKind::CdiCombinedMember
-                        | ObjectKind::CdiParameterGroup
-                        | ObjectKind::DrawOrderGroup
-                        | ObjectKind::Expression
-                        | ObjectKind::ExpressionEntry
-                        | ObjectKind::Pose
-                        | ObjectKind::PoseGroup
-                        | ObjectKind::PoseEntry
-                        | ObjectKind::PoseLink
-                        | ObjectKind::Physics
-                        | ObjectKind::PhysicsGroup
-                        | ObjectKind::PhysicsInput
-                        | ObjectKind::PhysicsOutput
-                        | ObjectKind::PhysicsNode
-                )
-        }) {
-            out.modified.push(entity(key.kind, id));
-        }
+    for key in after_keys.intersection(before_keys).filter(|key| {
+        touched.contains(key.id.as_str())
+            && !matches!(
+                key.kind,
+                ObjectKind::Parameter
+                    | ObjectKind::Part
+                    | ObjectKind::ModelParameterGroup
+                    | ObjectKind::ModelParameterMember
+                    | ObjectKind::ModelHitArea
+                    | ObjectKind::CdiCombinedSet
+                    | ObjectKind::CdiCombinedMember
+                    | ObjectKind::CdiParameterGroup
+                    | ObjectKind::DrawOrderGroup
+                    | ObjectKind::Expression
+                    | ObjectKind::ExpressionEntry
+                    | ObjectKind::Pose
+                    | ObjectKind::PoseGroup
+                    | ObjectKind::PoseEntry
+                    | ObjectKind::PoseLink
+                    | ObjectKind::Physics
+                    | ObjectKind::PhysicsGroup
+                    | ObjectKind::PhysicsInput
+                    | ObjectKind::PhysicsOutput
+                    | ObjectKind::PhysicsNode
+            )
+    }) {
+        out.modified.push(entity(key.kind, &key.id));
     }
-    // Meshing is authoring intent, independent of the persisted triangles used by evaluation.
-    // Keep this refinement in the full summary so receipt and shadow comparisons agree; the
-    // MeshPublication fast path already requires meshing to be unchanged.
-    let meshing_changed = out.content_changes.iter().any(|c| {
-        c.domain == zipzi_core::document::SceneContentDomain::MeshTopology
-            && before.get_mesh(&c.entity.id).map(|m| &m.meshing)
-                != after.get_mesh(&c.entity.id).map(|m| &m.meshing)
-    });
-    if meshing_changed && before.same_evaluation_inputs(after) {
-        out.categories.remove(&ChangeCategory::EvaluationInputs);
-    }
-    finish_summary(&mut out);
-    out
 }
 
 fn finish_summary(out: &mut ChangeSet) {

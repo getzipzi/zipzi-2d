@@ -232,11 +232,13 @@ impl DocumentSession {
         }
         let presentation_only = match &command {
             EditorCommand::PreviewOpacity(_) | EditorCommand::PreviewName(_) => true,
+            EditorCommand::SetObjectVisible { .. } => !self.document.has_pending_edit(),
             EditorCommand::SetObjectProperties { object, patch } => {
                 patch.mesh_presentation_only(object.kind)
             }
             _ => false,
         };
+        let visibility_only = matches!(&command, EditorCommand::SetObjectVisible { .. });
         let reusable = if presentation_only {
             self.geometry
                 .clone()
@@ -538,7 +540,9 @@ impl DocumentSession {
                 // this same preview run. Other scene invalidations end the run.
                 self.parameter_preview_floor = Some(parameter_floor.unwrap_or(self.scene_revision));
             }
-            if result.is_ok() {
+            if result.is_ok()
+                && (!visibility_only || self.document.evaluation_revision() == evaluation_before)
+            {
                 self.appearance_geometry = reusable;
             }
         }

@@ -28,6 +28,41 @@ fn session() -> AuthoringSession {
 }
 
 #[test]
+fn flag_receipts_exclude_unchanged_peer_flags() {
+    let mut s = session();
+    let mut state = s.document().editor_state().clone();
+    state.objects.insert(id(3), ObjectEditorState { locked: true, ..Default::default() });
+    s.edit("Lock peer", None, |e| e.replace_editor_state(state.clone())).unwrap();
+    state.objects.insert(
+        id(2),
+        ObjectEditorState {
+            locked: true,
+            ..Default::default()
+        },
+    );
+    let (_, receipt) = s
+        .edit("Lock Part", None, |e| e.replace_editor_state(state))
+        .unwrap();
+    assert_eq!(receipt.object_ids, vec![id(2)]);
+    // A Part and its DrawOrderGroup share an ID and may both be reported.
+    assert!(receipt
+        .changes
+        .modified
+        .iter()
+        .all(|entity| entity.id == id(2)));
+    assert!(receipt
+        .changes
+        .modified
+        .iter()
+        .any(|entity| entity.kind == zipzi_sdk::ObjectKind::Part));
+    s.undo().unwrap();
+    assert!(!s.document().editor_state().get(&id(2)).locked);
+    assert!(s.document().editor_state().get(&id(3)).locked);
+    s.redo().unwrap();
+    assert!(s.document().editor_state().get(&id(2)).locked);
+}
+
+#[test]
 fn unified_flags_are_atomic_sparse_metadata_with_history_and_cleanup() {
     let mut s = session();
     let frame = s.preview_frame().unwrap();

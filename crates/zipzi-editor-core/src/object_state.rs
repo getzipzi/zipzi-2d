@@ -233,10 +233,22 @@ impl Document {
             .edit(label, None, |edit| edit.replace_editor_state(state))?;
         self.session.acknowledge_receipts();
         if receipt.changed {
-            self.invalidate_projection(false);
+            self.invalidate_editor_state_projection();
             self.pristine_blank = None;
         }
         Ok(())
+    }
+
+    pub(crate) fn invalidate_editor_state_projection(&mut self) {
+        let previous = self.projection_revision;
+        self.invalidate_projection(false);
+        // ObjectIndex contains authoring data and relationships, not editor
+        // visibility or locks. Keep it shared while the state/tree revisions advance.
+        if let Some((revision, _)) = self.object_index.get_mut().unwrap().as_mut() {
+            if *revision == previous {
+                *revision = self.projection_revision;
+            }
+        }
     }
     pub fn select_canvas_objects(&mut self, objects: Vec<ObjectRef>) -> Result<()> {
         self.ensure_editable(&objects)?;

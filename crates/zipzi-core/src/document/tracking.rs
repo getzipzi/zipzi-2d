@@ -17,6 +17,7 @@ struct Complete {
     baseline: Arc<()>,
     current: Arc<()>,
     touched: BTreeSet<TrackedRecord>,
+    editor_state_only: bool,
 }
 
 #[derive(Debug, Default)]
@@ -51,6 +52,7 @@ impl Document {
             baseline: self.snapshot_identity.clone(),
             current: candidate.snapshot_identity.clone(),
             touched: BTreeSet::new(),
+            editor_state_only: false,
         }));
         candidate
     }
@@ -60,7 +62,8 @@ impl Document {
     /// neither validity nor net change; callers must compare final records.
     pub fn tracked_records_since(&self, baseline: &Document) -> Option<&BTreeSet<TrackedRecord>> {
         let complete = self.tracking.0.as_ref()?;
-        if !Arc::ptr_eq(&complete.baseline, &baseline.snapshot_identity)
+        if complete.editor_state_only
+            || !Arc::ptr_eq(&complete.baseline, &baseline.snapshot_identity)
             || !Arc::ptr_eq(&complete.current, &self.snapshot_identity)
         {
             return None;
@@ -97,14 +100,42 @@ impl Document {
         Some(&complete.touched)
     }
 
-    pub(super) fn tracked_authoring_identities_since(&self, baseline: &Document) -> bool {
-        self.tracked_records_since(baseline).is_some_and(|records| {
-            // Coverage alone is not a lifecycle proof. Only these audited
-            // record kinds and field boundaries preserve every authoring key.
-            records.iter().all(|record| match record {
-                TrackedRecord::Mesh(_) | TrackedRecord::MeshBinding(_) => true,
-            })
+    /// Exact transaction coverage established only by replace_editor_state.
+    /// Mixed writes, ordinary clones and checkpoint restoration lose this proof.
+    pub fn has_only_editor_state_changes_since(&self, baseline: &Document) -> bool {
+        self.tracking.0.as_ref().is_some_and(|complete| {
+            complete.editor_state_only
+                && complete.touched.is_empty()
+                && Arc::ptr_eq(&complete.baseline, &baseline.snapshot_identity)
+                && Arc::ptr_eq(&complete.current, &self.snapshot_identity)
         })
+    }
+
+    pub(super) fn changed_editor_state(&mut self, object_ids: Vec<String>) -> EditResult {
+        let mut tracking = std::mem::take(&mut self.tracking);
+        let saved_match = std::mem::take(&mut self.saved_non_editor_state_matches);
+        let before = self.snapshot_identity.clone();
+        let result = self.changed(ChangeKind::Metadata, Vec::new(), object_ids);
+        self.saved_non_editor_state_matches = saved_match;
+        if let Some(complete) = &mut tracking.0 {
+            if complete.touched.is_empty() && Arc::ptr_eq(&complete.current, &before) {
+                complete.current = self.snapshot_identity.clone();
+                complete.editor_state_only = true;
+                self.tracking = tracking;
+            }
+        }
+        result
+    }
+
+    pub(super) fn tracked_authoring_identities_since(&self, baseline: &Document) -> bool {
+        self.has_only_editor_state_changes_since(baseline)
+            || self.tracked_records_since(baseline).is_some_and(|records| {
+                // Coverage alone is not a lifecycle proof. Only these audited
+                // record kinds and field boundaries preserve every authoring key.
+                records.iter().all(|record| match record {
+                    TrackedRecord::Mesh(_) | TrackedRecord::MeshBinding(_) => true,
+                })
+            })
     }
 
     /// Validation has a narrower allowlist than publication. Reject Binding

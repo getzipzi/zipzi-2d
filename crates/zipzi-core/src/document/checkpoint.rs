@@ -12,6 +12,10 @@ mod size;
 pub struct DocumentCheckpoint(DocumentContent, bool);
 
 impl DocumentCheckpoint {
+    /// Inline content and copied allocations, excluding shared record payloads.
+    pub fn estimated_content_metadata_bytes(&self) -> usize {
+        size::estimated_content_metadata_bytes(&self.0)
+    }
     /// Estimated heap and inline bytes owned by persistent content. This is a
     /// capacity-aware budget estimate, not a process RSS measurement.
     pub fn estimated_bytes(&self) -> usize {
@@ -52,6 +56,17 @@ impl DocumentCheckpoint {
 }
 
 impl Document {
+    /// Inline content and copied allocations, excluding shared record payloads.
+    /// Forks/checkpoints share those payloads, so their exact size differs only
+    /// by this metadata and can reuse the source's full content estimate.
+    pub fn estimated_content_metadata_bytes(&self) -> usize {
+        size::estimated_content_metadata_bytes(&self.content)
+    }
+
+    /// Allocations owned by editor preferences, for exact metadata size deltas.
+    pub fn estimated_editor_state_bytes(&self) -> usize {
+        size::estimated_editor_state_bytes(self.editor_state())
+    }
     pub fn estimated_content_bytes(&self) -> usize {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.document_size");
@@ -123,13 +138,21 @@ impl Document {
         let metadata_only = if !identity_changed
             && matches!(declared_kind, ChangeKind::Metadata | ChangeKind::Structure)
         {
-            self.same_content_except_visual_metadata(&candidate.content)
+            candidate.has_only_editor_state_changes_since(self)
+                || self.same_content_except_visual_metadata(&candidate.content)
         } else {
             false
         };
+        let saved_match = candidate
+            .has_only_editor_state_changes_since(self)
+            .then(|| self.saved_non_editor_state_matches.get().copied())
+            .flatten();
         let validated = candidate.structure_is_validated();
         let mut content = DocumentCheckpoint(candidate.content, validated);
         let validated = self.swap_checkpoint_content(&mut content, !metadata_only);
+        if let Some(matches) = saved_match {
+            let _ = self.saved_non_editor_state_matches.set(matches);
+        }
         // Candidate authoring maintains these indexes together with its content.
         // Move them on publication instead of rebuilding every mesh's vertex map.
         self.mesh_runtime_ids = candidate.mesh_runtime_ids;
@@ -379,6 +402,7 @@ impl Document {
     ) -> bool {
         self.tracking = Default::default();
         self.modified_cache.take();
+        self.saved_non_editor_state_matches.take();
         self.expression_entries.take();
         self.motion_lookup.take();
         if invalidate

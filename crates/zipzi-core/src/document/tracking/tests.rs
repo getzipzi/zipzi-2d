@@ -2,6 +2,44 @@ use super::*;
 use crate::{preview::PreviewState, Appearance, ModelSetup, Parameter, Vec2};
 use zipzi_core::BindingAxisEditing;
 
+#[test]
+fn editor_state_coverage_requires_only_audited_writes_from_the_exact_baseline() {
+    let before = bound_baseline();
+    let mut state = before.editor_state().clone();
+    state.objects.insert(
+        id(2),
+        ObjectEditorState {
+            locked: true,
+            ..Default::default()
+        },
+    );
+    let mut candidate = before.fork_tracked_candidate();
+    assert!(candidate.replace_editor_state(state.clone()).status.is_ok());
+    assert!(candidate.has_only_editor_state_changes_since(&before));
+    assert!(candidate.tracked_records_since(&before).is_none());
+    assert!(!candidate
+        .clone()
+        .has_only_editor_state_changes_since(&before));
+    assert!(!candidate.has_only_editor_state_changes_since(&candidate));
+    assert!(candidate.same_authoring_identities(&before));
+    assert!(!candidate.same_content(&before));
+    assert!(candidate
+        .replace_editor_state(before.editor_state().clone())
+        .status
+        .is_ok());
+    assert!(candidate.has_only_editor_state_changes_since(&before));
+    assert!(candidate.same_content(&before));
+    assert!(candidate.rename_mesh(&id(3), "Mixed".into()).status.is_ok());
+    assert!(!candidate.has_only_editor_state_changes_since(&before));
+    assert!(candidate.tracked_records_since(&before).is_none());
+
+    let mut candidate = before.fork_tracked_candidate();
+    assert!(candidate.rename_mesh(&id(3), "Mixed".into()).status.is_ok());
+    assert!(candidate.replace_editor_state(state).status.is_ok());
+    assert!(!candidate.has_only_editor_state_changes_since(&before));
+    assert!(candidate.tracked_records_since(&before).is_none());
+}
+
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
 }

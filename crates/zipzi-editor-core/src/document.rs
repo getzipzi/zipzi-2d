@@ -168,6 +168,7 @@ pub struct Document {
     preview_revision: u64,
     object_state_index: std::sync::Mutex<Option<(u64, Arc<ObjectStateIndex>)>>,
     object_index: std::sync::Mutex<Option<(u64, Arc<crate::ObjectIndex>)>>,
+    tree_cache: std::sync::Mutex<[Option<crate::tree::TreeProjection>; 2]>,
     authoring_capability_cache: std::sync::Mutex<authoring::AuthoringCapabilityCache>,
     #[cfg(test)]
     object_index_builds: std::sync::atomic::AtomicUsize,
@@ -409,6 +410,7 @@ impl Document {
             preview_revision: 0,
             object_state_index: std::sync::Mutex::new(None),
             object_index: std::sync::Mutex::new(Some((1, projection))),
+            tree_cache: Default::default(),
             authoring_capability_cache: Default::default(),
             #[cfg(test)]
             object_index_builds: std::sync::atomic::AtomicUsize::new(1),

@@ -1,6 +1,43 @@
 use super::support::{self, object};
 use zipzi_editor_core::*;
 
+#[test]
+fn editor_flags_and_history_reuse_authoring_index_while_refreshing_tree_state() -> anyhow::Result<()>
+{
+    let (doc, _dir) = support::sample_document_with_scene_objects()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    let target = object(ObjectKind::Part, 101);
+    let original = editor.document().unwrap().object_index();
+    for command in [
+        EditorCommand::SetObjectVisible {
+            object: target.clone(),
+            visible: false,
+        },
+        EditorCommand::SetObjectsLocked {
+            objects: vec![target.clone()],
+            locked: true,
+        },
+        EditorCommand::Undo,
+        EditorCommand::Undo,
+        EditorCommand::Redo,
+        EditorCommand::Redo,
+    ] {
+        let revision = editor.tree_revision();
+        editor.execute(command)?;
+        assert_ne!(revision, editor.tree_revision());
+        let doc = editor.document().unwrap();
+        assert!(std::sync::Arc::ptr_eq(&original, &doc.object_index()));
+        assert_eq!(
+            visible(&editor.part_tree(), &target.id),
+            Some(doc.object_state(&target).visible())
+        );
+    }
+    let state = editor.document().unwrap().object_state(&target);
+    assert!(state.locked());
+    assert!(!state.visible());
+    Ok(())
+}
+
 fn visible(nodes: &[TreeNode], id: &str) -> Option<bool> {
     nodes.iter().find_map(|node| {
         if node.id == id {
@@ -9,6 +46,56 @@ fn visible(nodes: &[TreeNode], id: &str) -> Option<bool> {
             visible(&node.children, id)
         }
     })
+}
+
+#[test]
+fn visibility_reuses_mesh_geometry_and_preserves_old_frame_visibility() -> anyhow::Result<()> {
+    let (doc, _dir) = support::sample_document_with_scene_objects()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let original = support::present_canvas(&mut editor)?;
+    let mesh = ObjectRef::new(ObjectKind::Mesh, editor.layers()[0].id.clone());
+    for target in [
+        mesh.clone(),
+        object(ObjectKind::Part, 101),
+        object(ObjectKind::Deformer, 501),
+    ] {
+        for visible in [false, true] {
+            editor.execute(EditorCommand::SetObjectVisible {
+                object: target.clone(),
+                visible,
+            })?;
+            let frame = support::present_canvas(&mut editor)?;
+            assert!(std::sync::Arc::ptr_eq(
+                &frame.geometry.meshes,
+                &original.geometry.meshes
+            ));
+            assert!(std::sync::Arc::ptr_eq(
+                &frame.geometry.source.runtime_frame,
+                &original.geometry.source.runtime_frame
+            ));
+            assert!(original.geometry.mesh_visible(&mesh.id));
+            if target.kind != ObjectKind::Deformer {
+                assert_eq!(frame.geometry.mesh_visible(&mesh.id), visible);
+            } else {
+                assert_eq!(
+                    frame
+                        .geometry
+                        .controls
+                        .iter()
+                        .find(|c| c.object == target)
+                        .unwrap()
+                        .visible,
+                    visible
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 #[test]
