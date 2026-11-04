@@ -14,6 +14,7 @@ archive-prototype = []
 
 [dependencies]
 zipzi-contract.workspace = true
+zipzi-project-preview.workspace = true
 zipzi-api-derive = { version = "=0.1.0-alpha.7", path = "../zipzi-api-derive" }
 zipzi-core = { version = "=0.1.0-alpha.7", path = "../zipzi-core" }
 zipzi-live2d = { version = "=0.1.0-alpha.7", path = "../zipzi-live2d" }

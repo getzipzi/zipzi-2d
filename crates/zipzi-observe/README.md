@@ -29,6 +29,13 @@ asset paths. Authoring records remain internal inputs to content digests and
 batch validation. There is no scene save/open API or automatic fitted-view path.
 Python inspection exports images and metadata, not a reloadable scene.
 
+`render_project_preview` is the automatic fit path used by GPU Runtime saves. It
+uses a frozen snapshot at default parameter values, visible drawable bounds and
+4% padding, fits textures to 32 MiB, and renders a transparent 1024 × 1024 static
+image with no editing overlays. Failures are advisory to project saving. CPU-only
+hosts omit previews. This does not alter the live pose, history or document dirty
+state. Runtime admits an extra conservative 256 MiB before attempting the render.
+
 `planning::texture_sources` collects the frozen document's mesh texture references,
 including hidden meshes and mesh/Offscreen mask sources, deduplicated by asset ID.
 Unused assets do not enter the base RGBA budget. `planning::plan_textures` accepts

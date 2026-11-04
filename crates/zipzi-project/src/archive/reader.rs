@@ -104,6 +104,11 @@ pub(super) fn open(
             "Unsupported required project feature",
         ));
     }
+    // Preview pixels are advisory. A bad PNG must not prevent editing the
+    // document, but malformed ZIP regions still fail the structural preflight.
+    if names.contains(zipzi_project_preview::PREVIEW_PATH) && format.preview.is_none() {
+        return Err(invalid("Undeclared project preview"));
+    }
     let bytes = json(
         &mut zip,
         "project.json",

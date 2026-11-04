@@ -6,6 +6,55 @@ pub(super) struct PreparedArchive {
     json: Vec<u8>,
     format: Vec<u8>,
     pub extent: u64,
+    preview: Option<ProjectPreview>,
+}
+
+impl PreparedArchive {
+    pub fn preview_format(&self) -> Vec<u8> {
+        self.format.clone()
+    }
+
+    pub fn omit_preview(&mut self, format: Vec<u8>, extent: u64) {
+        self.format = format;
+        self.extent = extent;
+        self.preview = None;
+    }
+
+    pub fn set_preview(
+        &mut self,
+        preview: Option<ProjectPreview>,
+        limits: ArchiveIoLimits,
+    ) -> Result<()> {
+        if let Some(preview) = preview {
+            if self.resources.len() + 3 > limits.entries {
+                return Ok(());
+            }
+            let mut format: Format = serde_json::from_slice(&self.format)?;
+            format.preview = Some(serde_json::to_value(preview.descriptor())?);
+            let format = serde_json::to_vec(&format)?;
+            if format.len() as u64 > limits.format_bytes {
+                return Ok(());
+            }
+            let expanded = self.result.asset_bytes
+                + self.json.len() as u64
+                + format.len() as u64
+                + preview.png().len() as u64;
+            if expanded > limits.expanded_bytes {
+                return Ok(());
+            }
+            let extent = self
+                .extent
+                .checked_add(preview.png().len() as u64 + 2048)
+                .ok_or(ArchiveError::Limit("archive extent"))?;
+            if extent > limits.archive_bytes {
+                return Ok(());
+            }
+            self.extent = extent;
+            self.format = format;
+            self.preview = Some(preview);
+        }
+        Ok(())
+    }
 }
 
 pub(super) fn prepare(
@@ -109,6 +158,7 @@ pub(super) fn prepare(
             ArchiveDocumentFormat::Prototype => vec![EXPERIMENT.into()],
             ArchiveDocumentFormat::NativeV22 => Vec::new(),
         },
+        preview: None,
     })?;
     if format.len() as u64 > limits.format_bytes {
         return Err(ArchiveError::Limit("format bytes"));
@@ -138,6 +188,7 @@ pub(super) fn prepare(
         json,
         format,
         extent,
+        preview: None,
     })
 }
 
@@ -156,9 +207,15 @@ pub(super) fn write<W: Write + Seek>(
         json,
         format,
         extent,
+        preview,
     } = prepared;
     if let Some(progress) = progress {
-        progress.writing(result.asset_bytes + json.len() as u64 + format.len() as u64);
+        progress.writing(
+            result.asset_bytes
+                + json.len() as u64
+                + format.len() as u64
+                + preview.as_ref().map_or(0, |p| p.png().len() as u64),
+        );
     }
     let mut bounded = stream::BoundedWriter::new(output, extent);
     let mut zip = ZipWriter::new(&mut bounded);
@@ -168,6 +225,18 @@ pub(super) fn write<W: Write + Seek>(
         progress,
     }
     .write_all(&format)?;
+    if let Some(preview) = &preview {
+        check(&mut keep_going)?;
+        zip.start_file(
+            zipzi_project_preview::PREVIEW_PATH,
+            options(CompressionMethod::Stored),
+        )?;
+        progress::ProgressWriter {
+            writer: &mut zip,
+            progress,
+        }
+        .write_all(preview.png())?;
+    }
     zip.start_file("project.json", options(CompressionMethod::Deflated))?;
     progress::ProgressWriter {
         writer: &mut zip,

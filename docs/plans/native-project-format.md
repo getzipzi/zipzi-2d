@@ -59,6 +59,7 @@
 角色.zipzi                 # 普通文件，标准 ZIP；无自定义前导字节
 ├── format.json
 ├── project.json
+├── preview.png（可选静态预览）
 └── assets/
     ├── <64 位小写 SHA-256>.png
     └── ...
@@ -77,6 +78,9 @@
 ```
 
 - `format.json` 和 `project.json` 各有且仅有一个，路径固定；不能通过字段指定任意入口。
+- 容器保持 v1。可选 `preview.png` 使用 `format.json.preview` 声明其 SHA-256、width、height；
+  最大 1024×1024 静态 RGBA8，保存时重新生成或省略。它不属于 authoring 内容，
+  不增加 required feature；缺失或损坏时系统预览回退，Editor 不解码该图片。
 - JSON 使用 UTF-8。容器版本描述打包规则，文档版本描述 authoring 数据结构，分别检查。
 - `project.json` 复用现有文档结构，将标识改为 `zipzi-project`，文档版本拟递增至 22。
   实施时若主线已增加版本，使用当时的下一个版本；不重编号已存在的文档版本。

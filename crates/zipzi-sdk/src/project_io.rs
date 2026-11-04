@@ -264,9 +264,32 @@ impl AuthoringSession {
         progress: &zipzi_project::archive::ProjectSaveProgress,
         keep_going: &mut impl FnMut() -> bool,
     ) -> Result<SaveReceipt, SdkError> {
+        self.save_project_with_preview(
+            path,
+            expected,
+            target_fingerprint,
+            progress,
+            None,
+            keep_going,
+        )
+    }
+
+    /// A fresh advisory image of this same frozen document. Omitting it removes
+    /// any previously saved preview; it is never copied from the old archive.
+    pub fn save_project_with_preview(
+        &mut self,
+        path: &Path,
+        expected: Option<Version>,
+        target_fingerprint: Option<&zipzi_project::archive::ProjectFingerprint>,
+        progress: &zipzi_project::archive::ProjectSaveProgress,
+        preview: Option<zipzi_project::archive::ProjectPreview>,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<SaveReceipt, SdkError> {
         progress.set_stage(zipzi_project::archive::ProjectSaveStage::PreparingResources);
         let old = self.project.set_save_progress(Some(progress.clone()));
+        let old_preview = self.project.set_save_preview(preview);
         let result = self.save_project_controlled(path, expected, target_fingerprint, keep_going);
+        self.project.set_save_preview(old_preview);
         self.project.set_save_progress(old);
         result
     }

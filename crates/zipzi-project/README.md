@@ -22,6 +22,11 @@ case-alias, lock and replacement tests always execute.
 
 `archive::ProjectArchiveStore` reads and atomically publishes native ZIP files:
 container version 1, document identifier `zipzi-project`, document version 22.
+An optional `preview.png` and `format.json.preview` descriptor carry a static
+RGBA8 image (maximum 1024 × 1024) and SHA-256. This does not change the container
+version or add a required feature. The image is advisory; the Editor ignores its
+pixels and malformed preview metadata when opening authoring content. Shell
+readers validate it independently through `zipzi-project-preview`.
 Stored PNG entries use complete SHA-256 names; JSON uses Deflate. ZIP admission
 checks central-directory limits before indexing, validates ZIP64, local headers,
 data descriptors and non-overlapping regions. Unsupported entries and required

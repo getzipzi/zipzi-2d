@@ -14,6 +14,7 @@ members = [
     "crates/zipzi-moc3-psd",
     "crates/zipzi-psd",
     "crates/zipzi-project",
+    "crates/zipzi-project-preview",
     "crates/zipzi-sdk",
     "crates/zipzi-runtime",
     "crates/zipzi-observe",
@@ -56,6 +57,7 @@ zipzi-core = { version = "=0.1.0-alpha.7", path = "crates/zipzi-core" }
 zipzi-sdk = { version = "=0.1.0-alpha.7", path = "crates/zipzi-sdk" }
 zipzi-runtime = { version = "=0.1.0-alpha.7", path = "crates/zipzi-runtime" }
 zipzi-project = { version = "=0.1.0-alpha.7", path = "crates/zipzi-project" }
+zipzi-project-preview = { version = "=0.1.0-alpha.7", path = "crates/zipzi-project-preview" }
 zipzi-render = { version = "=0.1.0-alpha.7", path = "crates/zipzi-render" }
 zipzi-editor-core = { version = "=0.1.0-alpha.7", path = "crates/zipzi-editor-core" }
 zipzi-editor-render = { version = "=0.1.0-alpha.7", path = "crates/zipzi-editor-render" }

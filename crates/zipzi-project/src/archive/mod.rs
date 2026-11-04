@@ -12,6 +12,7 @@ pub use publication::{
     ArchiveFileSystem, ArchiveLock, ArchiveStaging, ArchiveStream, NativeArchiveFileSystem,
 };
 pub use working_set::{ProjectDiskBudget, ProjectResourceLease};
+pub use zipzi_project_preview::{PreviewDescriptor, ProjectPreview};
 
 use std::collections::BTreeMap;
 use std::fs::{self, File};
@@ -88,6 +89,8 @@ struct Format {
     document: String,
     document_sha256: String,
     required_features: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    preview: Option<serde_json::Value>,
 }
 
 pub struct WrittenArchive {
@@ -174,6 +177,7 @@ pub struct ProjectArchiveStore {
     disk_budget: ProjectDiskBudget,
     save_progress: Option<ProjectSaveProgress>,
     open_memory: Option<Arc<crate::TransferReservation>>,
+    save_preview: Option<ProjectPreview>,
 }
 
 impl ProjectArchiveStore {
@@ -185,12 +189,18 @@ impl ProjectArchiveStore {
             disk_budget: ProjectDiskBudget::default(),
             save_progress: None,
             open_memory: None,
+            save_preview: None,
         }
     }
 
     pub fn with_filesystem(mut self, filesystem: Arc<dyn ArchiveFileSystem>) -> Self {
         self.filesystem = filesystem;
         self
+    }
+
+    /// Scoped save input; hosts must supply a fresh image of the saved snapshot.
+    pub fn set_save_preview(&mut self, preview: Option<ProjectPreview>) -> Option<ProjectPreview> {
+        std::mem::replace(&mut self.save_preview, preview)
     }
 
     pub fn with_disk_budget(mut self, budget: ProjectDiskBudget) -> Self {
@@ -289,14 +299,24 @@ impl ProjectArchiveStore {
             .acquire_lock(&target)
             .map_err(|e| Status::error("PROJECT_BUSY", e.to_string()))?;
         check_archive_target(&target, expected, &mut keep_going)?;
-        let prepared = writer::prepare(
+        let mut prepared = writer::prepare(
             document,
             resources.path(),
             self.limits,
             &mut keep_going,
             ArchiveDocumentFormat::NativeV22,
         )?;
-        let _reservation = self.disk_budget.reserve(prepared.extent)?;
+        let base_extent = prepared.extent;
+        let base_format = prepared.preview_format();
+        prepared.set_preview(self.save_preview.clone(), self.limits)?;
+        let _reservation = match self.disk_budget.reserve(prepared.extent) {
+            Ok(reservation) => reservation,
+            Err(_) if prepared.extent != base_extent => {
+                prepared.omit_preview(base_format, base_extent);
+                self.disk_budget.reserve(prepared.extent)?
+            }
+            Err(error) => return Err(error),
+        };
         let mut stage = self.filesystem.create_staging(parent)?;
         let mut writer = self.filesystem.staging_stream(&mut stage.file);
         let written = writer::write(

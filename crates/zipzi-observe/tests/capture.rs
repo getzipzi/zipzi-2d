@@ -457,3 +457,36 @@ fn archive_observation_input_retains_working_set_until_bytes_are_captured() {
     drop(scene);
     assert!(!working.exists());
 }
+
+#[test]
+fn static_project_preview_has_pixels_preserves_pose_and_observes_cancellation() {
+    let mut session = fixture(&texture_path());
+    session.set_preview_parameter(PARAMETER, 0.75).unwrap();
+    let snapshot = session.read_snapshot();
+    let version = session.version();
+    let image = zipzi_observe::render_project_preview(&snapshot, &ConversionControl::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (image.descriptor().width, image.descriptor().height),
+        (1024, 1024)
+    );
+    let mut png = png::Decoder::new(std::io::Cursor::new(image.png()))
+        .read_info()
+        .unwrap();
+    let mut pixels = vec![0; png.output_buffer_size()];
+    png.next_frame(&mut pixels).unwrap();
+    assert!(pixels.chunks_exact(4).any(|p| p[3] > 0));
+    assert_eq!(session.version(), version);
+    assert_eq!(session.preview_values().get(PARAMETER), Some(&0.75));
+    let flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    assert_eq!(
+        zipzi_observe::render_project_preview(
+            &snapshot,
+            &ConversionControl::from_cancel_flag(flag)
+        )
+        .unwrap_err()
+        .code,
+        "CANCELLED"
+    );
+}

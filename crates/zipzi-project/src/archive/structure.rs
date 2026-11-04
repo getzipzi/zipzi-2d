@@ -196,8 +196,10 @@ pub(super) fn validate_budgeted(
         input.read_exact(&mut name)?;
         let name_text =
             std::str::from_utf8(&name).map_err(|_| invalid("Invalid ZIP path encoding"))?;
-        if !matches!(name_text, "format.json" | "project.json" | "assets/")
-            && asset_hash(name_text).is_none()
+        if !matches!(
+            name_text,
+            "format.json" | "project.json" | "assets/" | "preview.png"
+        ) && asset_hash(name_text).is_none()
         {
             return Err(ArchiveError::Document {
                 code: "UNSUPPORTED_PROJECT_ENTRY".into(),
@@ -240,6 +242,7 @@ pub(super) fn validate_budgeted(
         let json_limit = match name_text {
             "format.json" => limits.format_bytes,
             "project.json" => limits.document_bytes,
+            "preview.png" => zipzi_project_preview::MAX_PREVIEW_BYTES as u64,
             _ => u64::MAX,
         };
         if expanded > json_limit {

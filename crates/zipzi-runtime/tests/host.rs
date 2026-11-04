@@ -133,6 +133,9 @@ fn local_host_composes_candidate_pixels_plan_history_and_save_reopen() {
         panic!("save failed: {saved:?}")
     };
     assert!(saved.path.is_file());
+    let preview =
+        zipzi_project_preview::read_preview(std::fs::File::open(&saved.path).unwrap()).unwrap();
+    assert_eq!(preview.is_some(), cfg!(feature = "gpu-observation"));
     host.close().unwrap();
     assert_eq!(budget.usage().total_bytes(), 0);
     assert_eq!(host.call(|rt| Ok(rt.live_counts())), Err(HostError::Closed));
@@ -163,6 +166,65 @@ fn local_host_composes_candidate_pixels_plan_history_and_save_reopen() {
             Ok(())
         })
         .unwrap();
+}
+
+#[test]
+fn static_preview_budget_failure_does_not_block_project_save() {
+    let host = LocalHost::new(
+        RuntimeLimits {
+            accounted_bytes: 128 << 20,
+            ..Default::default()
+        },
+        16,
+    )
+    .unwrap();
+    let (client, session) = session(&host);
+    let edit = host
+        .call(move |rt| rt.begin_edit(client, session, "pixels", None))
+        .unwrap();
+    host.call(move |rt| {
+        rt.apply_rgba_image(
+            client,
+            edit,
+            id(2),
+            "texture".into(),
+            1,
+            1,
+            vec![12, 34, 56, 255],
+            false,
+        )?;
+        let mesh = zipzi_sdk::rectangle_mesh(
+            &id(3),
+            "Face",
+            &id(2),
+            Vec2::new(0., 0.),
+            Vec2::new(1., 1.),
+        )?;
+        rt.apply_modeling(client, edit, vec![ModelingCommand::CreateMesh { mesh }])?;
+        Ok(())
+    })
+    .unwrap();
+    let job = host
+        .call(move |rt| rt.request_commit(client, edit))
+        .unwrap();
+    assert_eq!(
+        host.wait_job(client, job).unwrap().state,
+        JobState::Succeeded
+    );
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("limited.zipzi");
+    let job = host
+        .call(move |rt| rt.request_save(client, session, &path))
+        .unwrap();
+    let Some(Ok(JobValue::Saved(saved))) = host.wait_job(client, job).unwrap().result else {
+        panic!("Optional preview admission must not block save")
+    };
+    assert!(
+        zipzi_project_preview::read_preview(std::fs::File::open(saved.path).unwrap())
+            .unwrap()
+            .is_none()
+    );
+    host.close().unwrap();
 }
 
 #[test]

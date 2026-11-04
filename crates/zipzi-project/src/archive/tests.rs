@@ -1,6 +1,134 @@
 use super::*;
 use std::io::Cursor;
 
+#[test]
+fn native_preview_is_optional_not_authoring_and_not_reused_after_save() {
+    let source = tempfile::tempdir().unwrap();
+    let mut store = ProjectArchiveStore::new(source.path());
+    let resources = store.new_resources().unwrap();
+    let mut png = Vec::new();
+    {
+        let mut e = png::Encoder::new(&mut png, 2, 2);
+        e.set_color(png::ColorType::Rgba);
+        e.write_header()
+            .unwrap()
+            .write_image_data(&[200; 16])
+            .unwrap();
+    }
+    let preview = ProjectPreview::from_png(png).unwrap();
+    // Direct archive test with no resource-bearing document.
+    let mut document = Document::new();
+    assert!(document
+        .initialize(
+            uuid::Uuid::new_v4().to_string(),
+            zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(50., 50.), 10.)
+        )
+        .is_ok());
+    store.set_save_preview(Some(preview.clone()));
+    let path = source.path().join("preview.zipzi");
+    let saved = store
+        .save(&document, &resources, &path, None, || true)
+        .unwrap();
+    let actual = zipzi_project_preview::read_preview(File::open(&path).unwrap())
+        .unwrap()
+        .unwrap();
+    assert_eq!(preview.png(), actual.png());
+    // Advisory damage must not make an otherwise valid document uneditable.
+    let bytes = fs::read(&path).unwrap();
+    for variant in 0..3 {
+        let damaged = repack(&bytes, |name, data| {
+            if name == "preview.png" && variant == 0 {
+                return Some(b"bad pixels".to_vec());
+            }
+            if name == "preview.png" && variant == 1 {
+                return None;
+            }
+            if name == "format.json" && variant == 2 {
+                let mut format: serde_json::Value = serde_json::from_slice(&data).unwrap();
+                format["preview"] = serde_json::json!({"width": "broken"});
+                return Some(serde_json::to_vec(&format).unwrap());
+            }
+            Some(data)
+        });
+        let damaged_path = source.path().join(format!("damaged-{variant}.zipzi"));
+        fs::write(&damaged_path, damaged).unwrap();
+        assert!(store.open(&damaged_path, || true).is_ok());
+        assert!(zipzi_project_preview::read_preview(File::open(damaged_path).unwrap()).is_err());
+    }
+    assert!(store
+        .open(&path, || true)
+        .unwrap()
+        .document
+        .same_content(&saved.document));
+    store.set_save_preview(None);
+    store
+        .save(
+            &saved.document,
+            &resources,
+            &path,
+            Some(&saved.fingerprint),
+            || true,
+        )
+        .unwrap();
+    assert!(
+        zipzi_project_preview::read_preview(File::open(path).unwrap())
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn optional_preview_is_omitted_when_entry_size_or_disk_admission_is_full() {
+    let root = tempfile::tempdir().unwrap();
+    let mut store = ProjectArchiveStore::new(root.path());
+    let resources = store.new_resources().unwrap();
+    let mut document = Document::new();
+    assert!(document
+        .initialize(
+            uuid::Uuid::new_v4().to_string(),
+            zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(50., 50.), 10.)
+        )
+        .is_ok());
+    let mut png = Vec::new();
+    {
+        let mut e = png::Encoder::new(&mut png, 2, 2);
+        e.set_color(png::ColorType::Rgba);
+        e.write_header()
+            .unwrap()
+            .write_image_data(&[255; 16])
+            .unwrap();
+    }
+    store.set_save_preview(Some(ProjectPreview::from_png(png).unwrap()));
+    let prepared = writer::prepare(
+        &document,
+        resources.path(),
+        store.limits,
+        || true,
+        ArchiveDocumentFormat::NativeV22,
+    )
+    .unwrap();
+    let base = prepared.extent;
+    for variant in 0..4 {
+        store.limits = ArchiveIoLimits::default();
+        store.disk_budget = ProjectDiskBudget::default();
+        match variant {
+            0 => store.limits.entries = 2,
+            1 => store.limits.format_bytes = prepared.preview_format().len() as u64,
+            2 => store.limits.archive_bytes = base,
+            _ => store.disk_budget = ProjectDiskBudget::new(base),
+        }
+        let path = root.path().join(format!("limited-{variant}.zipzi"));
+        store
+            .save(&document, &resources, &path, None, || true)
+            .unwrap();
+        assert!(
+            zipzi_project_preview::read_preview(File::open(path).unwrap())
+                .unwrap()
+                .is_none()
+        );
+    }
+}
+
 pub(super) fn fixture(root: &Path) -> Document {
     let mut document = Document::new();
     assert!(document

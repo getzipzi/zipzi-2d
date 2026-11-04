@@ -21,6 +21,10 @@ mod alpha;
 mod digest;
 #[cfg(feature = "gpu")]
 mod gpu;
+#[cfg(feature = "gpu")]
+mod project_preview;
+#[cfg(feature = "gpu")]
+pub use project_preview::{render_project_preview, PROJECT_PREVIEW_WORKSPACE};
 pub mod planning;
 mod preparation;
 #[cfg(feature = "gpu")]

@@ -278,15 +278,19 @@ impl Work {
                     path,
                     target_fingerprint,
                     progress,
-                } => session
-                    .save_project_with_progress(
-                        &path,
-                        Some(base),
-                        target_fingerprint.as_ref(),
-                        &progress,
-                        &mut || !cancel.load(Ordering::Acquire),
-                    )
-                    .map(JobValue::Saved),
+                } => {
+                    let preview = project_preview(&session, transfer.as_deref(), &cancel);
+                    session
+                        .save_project_with_preview(
+                            &path,
+                            Some(base),
+                            target_fingerprint.as_ref(),
+                            &progress,
+                            preview,
+                            &mut || !cancel.load(Ordering::Acquire),
+                        )
+                        .map(JobValue::Saved)
+                }
                 Task::Commit(edit) => (*edit)
                     .commit_to(&mut session)
                     .map(|receipt| JobValue::Published(Arc::new(receipt))),
@@ -494,5 +498,31 @@ impl Work {
             transfer: None,
             outcome: WorkOutcome::Complete(result),
         }
+    }
+}
+
+// Preview failures are best effort. Cancellation is still observed by the save
+// transaction, and no old preview is copied when a new image cannot be generated.
+fn project_preview(
+    session: &AuthoringSession,
+    reservation: Option<&zipzi_project::TransferReservation>,
+    cancel: &Arc<AtomicBool>,
+) -> Option<zipzi_project::archive::ProjectPreview> {
+    #[cfg(feature = "gpu-observation")]
+    {
+        let reservation = reservation?;
+        let required = reservation
+            .reserved_bytes()
+            .checked_add(zipzi_observe::PROJECT_PREVIEW_WORKSPACE)?;
+        reservation.ensure_at_least(required).ok()?;
+        let control = zipzi_sdk::ConversionControl::from_cancel_flag(cancel.clone());
+        zipzi_observe::render_project_preview(&session.read_snapshot(), &control)
+            .ok()
+            .flatten()
+    }
+    #[cfg(not(feature = "gpu-observation"))]
+    {
+        let _ = (session, reservation, cancel);
+        None
     }
 }

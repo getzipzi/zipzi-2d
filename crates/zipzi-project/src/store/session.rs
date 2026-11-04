@@ -140,6 +140,12 @@ impl DocumentSession {
     ) -> Option<crate::archive::ProjectSaveProgress> {
         self.store.archive.set_save_progress(progress)
     }
+    pub fn set_save_preview(
+        &mut self,
+        preview: Option<crate::archive::ProjectPreview>,
+    ) -> Option<crate::archive::ProjectPreview> {
+        self.store.archive.set_save_preview(preview)
+    }
     pub fn set_archive_store(&mut self, archive: crate::archive::ProjectArchiveStore) {
         self.store.archive = archive;
     }
