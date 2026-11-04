@@ -92,14 +92,14 @@ impl Document {
     /// It is built once per accepted export, never in the frame loop.
     pub fn available_binding_export(&self) -> Document {
         let mut out = self.fork_candidate();
-        out.content.bindings.retain(|_, b| {
+        out.content.bindings.retain_mut(|_, b| {
             b.axes.retain(|a| !a.parameter_id.is_empty());
             !b.axes.is_empty()
         });
         out.content
             .binding_order
             .retain(|id| out.content.bindings.contains_key(id));
-        out.content.scene_bindings.retain(|_, b| {
+        out.content.scene_bindings.retain_mut(|_, b| {
             b.axes.retain(|a| !a.parameter_id.is_empty());
             !b.axes.is_empty()
         });

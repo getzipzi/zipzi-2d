@@ -22,22 +22,132 @@ pub(super) struct DeletionIndex {
     pub incoming: BTreeMap<DeletionObject, Vec<DeletionRelation>>,
 }
 impl DeletionIndex {
+    fn build(d: &Document, control: &ConversionControl) -> Result<Self, Status> {
+        let mut builder = IndexBuilder {
+            index: Self::default(),
+            count_only: false,
+            limit: usize::MAX,
+            bytes: 0,
+        };
+        builder.visit(d, control)?;
+        Ok(builder.index)
+    }
+    pub(super) fn admission_bytes(
+        d: &Document,
+        control: &ConversionControl,
+        limit: usize,
+    ) -> Result<usize, Status> {
+        // One root allowance for each of the six trees. Other nodes have at
+        // least five keys, so charge() can amortize their eleven slots.
+        let roots = 6
+            * (11 * std::mem::size_of::<(DeletionObject, Vec<DeletionRelation>)>()
+                + 12 * std::mem::size_of::<usize>()
+                + 64);
+        let mut builder = IndexBuilder {
+            index: Self::default(),
+            count_only: true,
+            limit,
+            bytes: roots,
+        };
+        builder.visit(d, control)?;
+        builder.checkpoint(control)?;
+        Ok(builder.bytes)
+    }
+}
+
+// Count and build with the same traversal. Admission keeps unique map keys,
+// without relationship vectors or geometry, so shared owners count only once.
+struct IndexBuilder {
+    index: DeletionIndex,
+    count_only: bool,
+    limit: usize,
+    bytes: usize,
+}
+impl IndexBuilder {
+    fn checkpoint(&self, control: &ConversionControl) -> Result<(), Status> {
+        control.checkpoint()?;
+        if self.bytes > self.limit {
+            return Err(Status::error(
+                "AUTHORING_MEMORY_LIMIT",
+                format!("{} deletion index bytes exceed {}", self.bytes, self.limit),
+            ));
+        }
+        Ok(())
+    }
+    fn charge<K, V>(&mut self, strings: usize) {
+        // Non-root B-tree nodes have at least five occupied keys. Three slots
+        // and three pointers per insertion cover their eleven slots and twelve
+        // edges. Root spare slots are charged separately by admission_bytes().
+        self.bytes = self.bytes.saturating_add(
+            3 * std::mem::size_of::<(K, V)>() + 3 * std::mem::size_of::<usize>() + 8 + strings,
+        );
+    }
+    fn strings(key: &DeletionObject) -> usize {
+        key.id.capacity() + key.owner_id.as_ref().map_or(0, String::capacity)
+    }
+    fn record(&mut self, key: DeletionObject) {
+        let strings = Self::strings(&key);
+        if self.index.objects.insert(key) {
+            self.charge::<DeletionObject, ()>(strings);
+        }
+    }
+    fn group(
+        &mut self,
+        select: fn(&mut DeletionIndex) -> &mut BTreeMap<String, Vec<DeletionObject>>,
+        owner: String,
+        child: DeletionObject,
+    ) {
+        if !select(&mut self.index).contains_key(&owner) {
+            self.charge::<String, Vec<DeletionObject>>(
+                owner.capacity() + 4 * std::mem::size_of::<DeletionObject>(),
+            );
+        }
+        self.bytes = self
+            .bytes
+            .saturating_add(Self::strings(&child) + 2 * std::mem::size_of::<DeletionObject>());
+        let children = select(&mut self.index).entry(owner).or_default();
+        if !self.count_only {
+            children.push(child);
+        }
+    }
+
     fn own(&mut self, owner: DeletionObject, child: DeletionObject) {
-        self.objects.insert(owner.clone());
-        self.objects.insert(child.clone());
-        self.owned.entry(owner).or_default().push(child);
+        self.record(owner.clone());
+        self.record(child.clone());
+        if !self.index.owned.contains_key(&owner) {
+            self.charge::<DeletionObject, Vec<DeletionObject>>(
+                Self::strings(&owner) + 4 * std::mem::size_of::<DeletionObject>(),
+            );
+        }
+        self.bytes = self
+            .bytes
+            .saturating_add(Self::strings(&child) + 2 * std::mem::size_of::<DeletionObject>());
+        let children = self.index.owned.entry(owner).or_default();
+        if !self.count_only {
+            children.push(child);
+        }
     }
     fn edge(&mut self, owner: DeletionObject, field: DeletionField, target: DeletionObject) {
-        self.objects.insert(owner.clone());
-        self.objects.insert(target.clone());
-        self.incoming
-            .entry(target.clone())
-            .or_default()
-            .push(DeletionRelation {
+        self.record(owner.clone());
+        self.record(target.clone());
+        if !self.index.incoming.contains_key(&target) {
+            self.charge::<DeletionObject, Vec<DeletionRelation>>(
+                Self::strings(&target) + 4 * std::mem::size_of::<DeletionRelation>(),
+            );
+        }
+        self.bytes = self.bytes.saturating_add(
+            Self::strings(&owner)
+                + Self::strings(&target)
+                + 2 * std::mem::size_of::<DeletionRelation>(),
+        );
+        let incoming = self.index.incoming.entry(target.clone()).or_default();
+        if !self.count_only {
+            incoming.push(DeletionRelation {
                 owner,
                 field,
                 target,
             });
+        }
     }
     fn axes(
         &mut self,
@@ -46,7 +156,7 @@ impl DeletionIndex {
         control: &ConversionControl,
     ) -> Result<(), Status> {
         for axis in axes {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let key = object(DeletionKind::Axis, &axis.id);
             self.own(owner.clone(), key.clone());
             if !axis.parameter_id.is_empty() {
@@ -57,7 +167,7 @@ impl DeletionIndex {
                 );
             }
             for sample in &axis.samples {
-                control.checkpoint()?;
+                self.checkpoint(control)?;
                 self.own(key.clone(), object(DeletionKind::Sample, &sample.id));
             }
         }
@@ -105,7 +215,7 @@ impl DeletionIndex {
             );
         }
         for key in track.keys() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             self.own(
                 owner.clone(),
                 identity(
@@ -120,38 +230,30 @@ impl DeletionIndex {
         }
         Ok(())
     }
-    fn build(d: &Document, control: &ConversionControl) -> Result<Self, Status> {
-        let mut index = Self::default();
+    fn visit(&mut self, d: &Document, control: &ConversionControl) -> Result<(), Status> {
+        let index = self;
         for id in d.scene_organization_order() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             let Some(key) = d.deletion_scene_object(&id) else {
                 continue;
             };
-            index.objects.insert(key.clone());
+            index.record(key.clone());
             if let Some(parent) = d.scene_organization_owner(&id) {
-                index
-                    .organization
-                    .entry(parent.into())
-                    .or_default()
-                    .push(key.clone());
+                index.group(|i| &mut i.organization, parent.into(), key.clone());
             }
             if let Some(parent) = d.scene_deformer_parent(&id) {
-                index
-                    .deformation
-                    .entry(parent.into())
-                    .or_default()
-                    .push(key);
+                index.group(|i| &mut i.deformation, parent.into(), key);
             }
         }
         for id in d.binding_order() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             let b = d.get_binding(id).unwrap();
             let owner = object(DeletionKind::MeshBinding, id);
             index.own(object(DeletionKind::Mesh, &b.mesh_id), owner.clone());
             index.axes(owner, &b.axes, control)?;
         }
         for id in d.scene_binding_order() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             let b = d.get_scene_binding(id).unwrap();
             let owner = object(DeletionKind::SceneBinding, id);
             index.own(
@@ -161,7 +263,7 @@ impl DeletionIndex {
             index.axes(owner, &b.axes, control)?;
         }
         for id in d.blend_binding_order() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             let b = d.get_blend_binding(id).unwrap();
             index.own(
                 d.deletion_scene_object(&b.target_id).unwrap(),
@@ -169,7 +271,7 @@ impl DeletionIndex {
             );
         }
         for id in d.glue_order() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             let g = d.get_glue(id).unwrap();
             let owner = object(DeletionKind::Glue, id);
             for (endpoint, field) in [
@@ -190,7 +292,7 @@ impl DeletionIndex {
             }
         }
         for id in d.mesh_order() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             let m = d.get_mesh(id).unwrap();
             for (slot, mask) in m.masks.iter().enumerate() {
                 index.edge(
@@ -201,7 +303,7 @@ impl DeletionIndex {
             }
         }
         for id in d.offscreen_order() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             for (slot, mask) in d.get_offscreen(id).unwrap().masks.iter().enumerate() {
                 index.edge(
                     object(DeletionKind::Offscreen, id),
@@ -211,10 +313,8 @@ impl DeletionIndex {
             }
         }
         for area in d.model3_settings().hit_areas.iter().flatten() {
-            control.checkpoint()?;
-            index
-                .objects
-                .insert(object(DeletionKind::HitArea, &area.id));
+            index.checkpoint(control)?;
+            index.record(object(DeletionKind::HitArea, &area.id));
             if let Some(mesh) = area.mesh.object_id() {
                 index.edge(
                     object(DeletionKind::HitArea, &area.id),
@@ -224,7 +324,7 @@ impl DeletionIndex {
             }
         }
         for g in d.draw_order_groups().into_iter().flatten() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             let owner = object(
                 DeletionKind::DrawingGroup,
                 if g.owner.is_empty() { d.id() } else { &g.owner },
@@ -239,7 +339,7 @@ impl DeletionIndex {
             }
         }
         if let Some(pose) = d.pose() {
-            index.objects.insert(object(DeletionKind::Pose, &pose.id));
+            index.record(object(DeletionKind::Pose, &pose.id));
             for group in &pose.groups {
                 let key = object(DeletionKind::PoseGroup, &group.id);
                 index.own(object(DeletionKind::Pose, &pose.id), key.clone());
@@ -248,7 +348,7 @@ impl DeletionIndex {
                 }
             }
             for entry in pose.groups.iter().flat_map(|g| &g.entries) {
-                control.checkpoint()?;
+                index.checkpoint(control)?;
                 let owner = object(DeletionKind::PoseEntry, &entry.id);
                 if let PosePartRef::Resolved { part_id } = &entry.part {
                     index.edge(
@@ -272,7 +372,7 @@ impl DeletionIndex {
         }
         index.business(d, control)?;
         for (slot, entry) in d.display_info().parts.iter().flatten().enumerate() {
-            control.checkpoint()?;
+            index.checkpoint(control)?;
             if let CdiPartEntry::Resolved { part_id, .. } = entry {
                 index.edge(
                     object(DeletionKind::DisplayInfo, d.id()),
@@ -281,7 +381,7 @@ impl DeletionIndex {
                 );
             }
         }
-        Ok(index)
+        Ok(())
     }
 }
 impl Document {

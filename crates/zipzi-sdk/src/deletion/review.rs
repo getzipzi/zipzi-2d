@@ -311,8 +311,6 @@ impl AuthoringSnapshot {
         control: &ConversionControl,
     ) -> Result<DeletionReviewPlan, SdkError> {
         control.check().map_err(error)?;
-        let bytes = self.document().estimated_content_bytes();
-        limits.check_conversion(0, 0, bytes).map_err(error)?;
         let prepared = self
             .document()
             .prepare_deletion(&intent.request, limits, control)
@@ -347,8 +345,8 @@ impl AuthoringSnapshot {
         let cost = if let Some(plan) = &prepared.plan {
             plan.cost()
         } else {
-            limits
-                .check_conversion(0, prepared.report.estimated_bytes(), bytes)
+            self.document()
+                .deletion_report_cost(&prepared.report, limits, control)
                 .map_err(error)?
         };
         let analysis = std::sync::Arc::new(DeletionAnalysis {
@@ -357,18 +355,26 @@ impl AuthoringSnapshot {
             existing_export_failures,
             new_export_failures,
         });
-        let payload = cost
-            .payload_bytes
-            .checked_add(DeletionPageIndex::admission_bytes(&analysis))
-            .ok_or_else(|| {
-                SdkError::new(
-                    "AUTHORING_CAPACITY_OVERFLOW",
-                    "Deletion report index",
-                    "prepare_deletion_review",
-                )
-            })?;
+        let index_bytes = DeletionPageIndex::admission_bytes(&analysis);
+        let overflow = || {
+            SdkError::new(
+                "AUTHORING_CAPACITY_OVERFLOW",
+                "Deletion report index",
+                "prepare_deletion_review",
+            )
+        };
         let cost = limits
-            .check_conversion(cost.sample_combinations, payload, bytes)
+            .check_cost(ConversionCost {
+                payload_bytes: cost
+                    .payload_bytes
+                    .checked_add(index_bytes)
+                    .ok_or_else(overflow)?,
+                temporary_bytes: cost
+                    .temporary_bytes
+                    .checked_add(index_bytes)
+                    .ok_or_else(overflow)?,
+                ..cost
+            })
             .map_err(error)?;
         let index = std::sync::Arc::new(DeletionPageIndex::build(&analysis));
         let executable = if matches!(

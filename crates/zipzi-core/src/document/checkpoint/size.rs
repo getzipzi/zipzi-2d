@@ -576,6 +576,78 @@ pub(super) fn estimated_mesh_dependency_bytes(document: &Document, mesh_id: &str
             .sum::<usize>()
 }
 
+pub(super) fn estimated_deletion_write_bytes(
+    document: &Document,
+    report: &super::super::DeletionReport,
+) -> usize {
+    use super::super::DeletionKind as K;
+    let mut writes: std::collections::BTreeSet<_> = report
+        .rewritten
+        .iter()
+        .map(|r| (r.owner.kind, r.owner.id.as_str()))
+        .chain(
+            report
+                .migrations
+                .iter()
+                .map(|m| (m.object.kind, m.object.id.as_str())),
+        )
+        .chain(
+            report
+                .organization_migrations
+                .iter()
+                .map(|m| (m.object.kind, m.object.id.as_str())),
+        )
+        .collect();
+    let removed: std::collections::BTreeSet<_> = report
+        .removed
+        .iter()
+        .filter(|r| r.object.owner_id.is_none())
+        .map(|r| r.object.id.as_str())
+        .collect();
+    for clip in document.content.motions.values() {
+        if !removed.contains(clip.id.as_str())
+            && (clip.tracks.iter().any(|t| {
+                removed.contains(t.id.as_str()) || t.keys().any(|k| removed.contains(k.id.as_str()))
+            }) || clip.events.iter().any(|e| removed.contains(e.id.as_str())))
+        {
+            writes.insert((K::Motion, clip.id.as_str()));
+        }
+    }
+    let mut bytes = 0usize;
+    for (kind, id) in writes {
+        macro_rules! record {
+            ($getter:ident, $ty:ty) => {
+                document
+                    .$getter(id)
+                    .map_or(0, |v| size_of::<$ty>() + v.extra_bytes())
+            };
+        }
+        let written = match kind {
+            K::Mesh => record!(get_mesh, Mesh),
+            K::Deformer => record!(get_transform, Transform),
+            K::MeshBinding => record!(get_binding, MeshBinding),
+            K::SceneBinding => record!(get_scene_binding, SceneBinding),
+            K::BlendBinding => record!(get_blend_binding, BlendShapeBinding),
+            K::Motion => record!(get_motion, MotionClip),
+            _ => 0, // Other records already belong to copied snapshot metadata.
+        };
+        bytes = bytes.saturating_add(written);
+    }
+    if let Some(pose) = document.pose() {
+        if !removed.contains(pose.id.as_str()) && pose.entity_ids().any(|id| removed.contains(id)) {
+            bytes = bytes.saturating_add(size_of::<PoseAsset>() + pose.extra_bytes());
+        }
+    }
+    if let Some(physics) = document.physics() {
+        if !removed.contains(physics.id.as_str())
+            && physics.entity_ids().any(|id| removed.contains(id))
+        {
+            bytes = bytes.saturating_add(size_of::<PhysicsAsset>() + physics.extra_bytes());
+        }
+    }
+    bytes
+}
+
 pub(super) fn estimated_authoring_index_bytes(document: &Document) -> usize {
     // Dependency validation may rebuild BindingLookup after a topology change.
     // Count its identity vector, owned strings and hash slots without creating

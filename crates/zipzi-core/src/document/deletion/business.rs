@@ -392,8 +392,20 @@ impl Document {
             .content
             .asset_order
             .retain(|id| !deleted(DeletionKind::Texture, id));
-        for mesh in candidate.content.meshes.values_mut() {
+        let texture_users: Vec<_> = candidate
+            .content
+            .meshes
+            .values()
+            .filter(|mesh| {
+                mesh.texture_asset_id
+                    .resolved_id()
+                    .is_some_and(|id| deleted(DeletionKind::Texture, id))
+            })
+            .map(|mesh| mesh.id.clone())
+            .collect();
+        for id in texture_users {
             control.checkpoint()?;
+            let mesh = candidate.content.meshes.get_mut(&id).unwrap();
             if let Some(source) = mesh
                 .texture_asset_id
                 .resolved_id()
@@ -424,7 +436,19 @@ impl Document {
             .content
             .blend_constraint_order
             .retain(|id| !deleted(DeletionKind::BlendConstraint, id));
-        for b in candidate.content.blend_bindings.values_mut() {
+        let constraint_users: Vec<_> = candidate
+            .content
+            .blend_bindings
+            .values()
+            .filter(|b| {
+                b.constraint_ids
+                    .iter()
+                    .any(|id| deleted(DeletionKind::BlendConstraint, id))
+            })
+            .map(|b| b.id.clone())
+            .collect();
+        for id in constraint_users {
+            let b = candidate.content.blend_bindings.get_mut(&id).unwrap();
             b.constraint_ids
                 .retain(|id| !deleted(DeletionKind::BlendConstraint, id));
         }

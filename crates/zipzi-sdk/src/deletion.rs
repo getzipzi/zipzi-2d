@@ -89,10 +89,6 @@ fn plan(
     control: &ConversionControl,
 ) -> Result<DeletionPlan, SdkError> {
     control.check().map_err(error)?;
-    // Admit the source and metadata analysis copies before constructing them.
-    limits
-        .check_conversion(0, 0, document.estimated_content_bytes())
-        .map_err(error)?;
     let domain = document
         .plan_deletion(request, limits, control)
         .map_err(error)?;
@@ -311,9 +307,6 @@ impl AuthoringSession {
         &self,
         request: &DeletionRequest,
     ) -> Result<DeletionAnalysis, SdkError> {
-        self.authoring_limits()
-            .check_conversion(0, 0, self.document().estimated_content_bytes())
-            .map_err(error)?;
         analyze(
             self.document(),
             request,
@@ -370,9 +363,6 @@ impl EditSession<'_> {
         request: &DeletionRequest,
     ) -> Result<DeletionAnalysis, SdkError> {
         self.ensure_active("analyze_deletion")?;
-        self.authoring_limits
-            .check_conversion(0, 0, self.candidate_document().estimated_content_bytes())
-            .map_err(error)?;
         analyze(
             self.candidate_document(),
             request,

@@ -42,6 +42,9 @@ impl<T> RecordMap<T> {
     pub fn clear(&mut self) {
         self.0.clear();
     }
+    pub fn retain(&mut self, mut keep: impl FnMut(&String, &T) -> bool) {
+        self.0.retain(|id, value| keep(id, value.as_ref()));
+    }
     pub fn iter(&self) -> impl Iterator<Item = (&String, &T)> {
         self.0.iter().map(|(id, value)| (id, value.as_ref()))
     }
@@ -57,10 +60,7 @@ impl<T: Clone> RecordMap<T> {
     pub fn remove(&mut self, id: &str) -> Option<T> {
         self.0.remove(id).map(Arc::unwrap_or_clone)
     }
-    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        self.0.values_mut().map(Arc::make_mut)
-    }
-    pub fn retain(&mut self, mut keep: impl FnMut(&String, &mut T) -> bool) {
+    pub fn retain_mut(&mut self, mut keep: impl FnMut(&String, &mut T) -> bool) {
         self.0.retain(|id, value| keep(id, Arc::make_mut(value)));
     }
 }
@@ -99,6 +99,11 @@ mod tests {
         snapshot.get_mut("a").unwrap().push(5);
         assert_eq!(original.get("a").unwrap(), &[1, 2]);
         assert_eq!(snapshot.get("a").unwrap(), &[1, 2, 5]);
+        assert!(std::ptr::eq(
+            original.get("b").unwrap(),
+            snapshot.get("b").unwrap()
+        ));
+        snapshot.retain(|id, _| id == "b");
         assert!(std::ptr::eq(
             original.get("b").unwrap(),
             snapshot.get("b").unwrap()

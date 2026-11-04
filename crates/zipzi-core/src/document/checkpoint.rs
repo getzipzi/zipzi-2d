@@ -86,6 +86,9 @@ impl Document {
     pub fn estimated_authoring_index_bytes(&self) -> usize {
         size::estimated_authoring_index_bytes(self)
     }
+    pub(super) fn estimated_deletion_write_bytes(&self, report: &super::DeletionReport) -> usize {
+        size::estimated_deletion_write_bytes(self, report)
+    }
     pub fn checkpoint(&self) -> DocumentCheckpoint {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.checkpoint_clone");

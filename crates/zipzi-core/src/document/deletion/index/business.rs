@@ -1,29 +1,29 @@
 //! Business ownership and typed uses share the same frozen scene relation index.
 use super::*;
-impl DeletionIndex {
+impl IndexBuilder {
     pub(super) fn business(
         &mut self,
         d: &Document,
         control: &ConversionControl,
     ) -> Result<(), Status> {
         for id in d.parameter_order() {
-            self.objects.insert(object(DeletionKind::Parameter, id));
+            self.checkpoint(control)?;
+            self.record(object(DeletionKind::Parameter, id));
         }
         for id in d.asset_order() {
-            self.objects.insert(object(DeletionKind::Texture, id));
+            self.checkpoint(control)?;
+            self.record(object(DeletionKind::Texture, id));
         }
         for a in d.package_attachments() {
-            self.objects.insert(object(DeletionKind::Attachment, &a.id));
+            self.checkpoint(control)?;
+            self.record(object(DeletionKind::Attachment, &a.id));
         }
         for g in d.display_info().parameter_groups.iter().flatten() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let key = object(DeletionKind::ParameterFolder, &g.id);
-            self.objects.insert(key.clone());
+            self.record(key.clone());
             if let Some(parent) = &g.parent_id {
-                self.folders
-                    .entry(parent.clone())
-                    .or_default()
-                    .push(key.clone());
+                self.group(|i| &mut i.folders, parent.clone(), key.clone());
                 self.edge(
                     key,
                     DeletionField::ParameterFolder,
@@ -32,7 +32,7 @@ impl DeletionIndex {
             }
         }
         for (slot, e) in d.display_info().parameters.iter().flatten().enumerate() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             if let CdiParameterEntry::Resolved {
                 parameter_id,
                 group_id,
@@ -46,10 +46,7 @@ impl DeletionIndex {
                     key.clone(),
                 );
                 if let Some(group) = group_id {
-                    self.folders
-                        .entry(group.clone())
-                        .or_default()
-                        .push(key.clone());
+                    self.group(|i| &mut i.folders, group.clone(), key.clone());
                     self.edge(
                         key,
                         DeletionField::ParameterFolder,
@@ -65,7 +62,7 @@ impl DeletionIndex {
             }
         }
         for id in d.mesh_order() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             if let Some(asset) = d.get_mesh(id).unwrap().texture_asset_id.resolved_id() {
                 self.edge(
                     object(DeletionKind::Mesh, id),
@@ -75,7 +72,7 @@ impl DeletionIndex {
             }
         }
         for id in d.blend_key_table_order() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let table = d.get_blend_key_table(id).unwrap();
             let key = object(DeletionKind::BlendKeyTable, id);
             self.edge(
@@ -88,7 +85,7 @@ impl DeletionIndex {
             }
         }
         for id in d.blend_constraint_order() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let c = d.get_blend_constraint(id).unwrap();
             let key = object(DeletionKind::BlendConstraint, id);
             self.edge(
@@ -101,7 +98,7 @@ impl DeletionIndex {
             }
         }
         for id in d.blend_binding_order() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let b = d.get_blend_binding(id).unwrap();
             let key = object(DeletionKind::BlendBinding, id);
             // An unconfigured binding has no table relationship. Registering
@@ -123,10 +120,10 @@ impl DeletionIndex {
             }
         }
         for id in d.motion_order() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let clip = d.get_motion(id).unwrap();
             let key = object(DeletionKind::Motion, id);
-            self.objects.insert(key.clone());
+            self.record(key.clone());
             for track in &clip.tracks {
                 self.own(key.clone(), object(DeletionKind::MotionTrack, &track.id));
                 self.track(track, None, control)?;
@@ -137,7 +134,7 @@ impl DeletionIndex {
         }
         for group in d.motion_groups() {
             let key = object(DeletionKind::MotionGroup, &group.id);
-            self.objects.insert(key.clone());
+            self.record(key.clone());
             for entry in &group.entries {
                 self.own(
                     key.clone(),
@@ -146,7 +143,7 @@ impl DeletionIndex {
             }
         }
         for entry in d.motion_registrations() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let key = object(DeletionKind::MotionRegistration, &entry.id);
             self.edge(
                 key.clone(),
@@ -169,10 +166,10 @@ impl DeletionIndex {
             );
         }
         for id in d.expression_order() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let expression = d.get_expression(id).unwrap();
             let key = object(DeletionKind::Expression, id);
-            self.objects.insert(key.clone());
+            self.record(key.clone());
             for entry in &expression.entries {
                 let child = object(DeletionKind::ExpressionEntry, &entry.id);
                 self.own(key.clone(), child.clone());
@@ -210,9 +207,9 @@ impl DeletionIndex {
         }
         if let Some(asset) = d.physics() {
             let key = object(DeletionKind::Physics, &asset.id);
-            self.objects.insert(key.clone());
+            self.record(key.clone());
             for group in &asset.data.settings {
-                control.checkpoint()?;
+                self.checkpoint(control)?;
                 let owner = object(DeletionKind::PhysicsGroup, &group.id);
                 self.own(key.clone(), owner.clone());
                 for input in &group.inputs {
@@ -248,9 +245,9 @@ impl DeletionIndex {
             }
         }
         for group in d.model3_settings().groups.iter().flatten() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let owner = object(DeletionKind::ModelParameterGroup, &group.id);
-            self.objects.insert(owner.clone());
+            self.record(owner.clone());
             for member in &group.parameters {
                 let child = object(DeletionKind::ModelParameterMember, &member.id);
                 self.own(owner.clone(), child.clone());
@@ -264,9 +261,9 @@ impl DeletionIndex {
             }
         }
         for set in d.display_info().combined_parameters.iter().flatten() {
-            control.checkpoint()?;
+            self.checkpoint(control)?;
             let owner = object(DeletionKind::CdiCombinedSet, &set.id);
-            self.objects.insert(owner.clone());
+            self.record(owner.clone());
             for member in &set.members {
                 let child = object(DeletionKind::CdiCombinedMember, &member.id);
                 self.own(owner.clone(), child.clone());

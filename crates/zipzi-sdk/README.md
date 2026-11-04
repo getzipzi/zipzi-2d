@@ -219,6 +219,14 @@ conversions and must not be used for per-frame command-state queries. Core's
 `analyze_deletion` remains a structural scan, while `prepare_deletion` returns
 either the validated plan or a typed report of required choices and blockers.
 
+Deletion budgets count copied snapshot metadata, source/result relation indexes,
+rewritten records and review reports. Filtering removals and inspecting texture
+or constraint users preserve unrelated shared records. History retains its
+logical content charge; the default temporary ceiling remains 64 MiB.
+`cargo run --locked -p zipzi-sdk --example deletion_project_profile -- PROJECT`
+checks default-budget deletion, allocation peaks and undo/redo on a local native
+project without saving it.
+
 Deletion removes owned bindings and internal identities, unlinks surviving Mask
 consumers and removes affected Glue/Hit Area, Pose, Motion, Expression source-scene
 and resolved CDI records. Surviving cross-part deformation children migrate to

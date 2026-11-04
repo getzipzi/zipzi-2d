@@ -3,7 +3,9 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
+mod budget;
 mod business;
+use budget::DeletionBudget;
 mod dependents;
 pub(super) mod index;
 mod leaves;
@@ -255,21 +257,20 @@ impl Document {
             ));
         }
         control.checkpoint()?;
-        let bytes = self.estimated_content_bytes();
-        // Bound analysis inventories as well as the later candidate copy.
-        limits.check_conversion(0, 0, bytes)?;
+        let budget = DeletionBudget::new(self, limits, control)?;
+        budget.check(
+            self,
+            &DeletionReport::default(),
+            ConversionCost::default(),
+            limits,
+        )?;
         let report = self.analyze_deletion(request, control)?;
         if !report.blockers.is_empty() || !report.decisions.is_empty() {
             return Ok(DeletionPreparation { report, plan: None });
         }
-        // Admit source/candidate/report/history before cloning the candidate.
-        let report_bytes = serde_json::to_vec(&report)
-            .expect("typed deletion report")
-            .len();
-        let payload = bytes
-            .checked_add(report_bytes)
-            .ok_or_else(|| Status::error("AUTHORING_CAPACITY_OVERFLOW", "Deletion plan size"))?;
-        let mut cost = limits.check_conversion(0, payload, bytes)?;
+        // Admit copied metadata, rewritten records and reports before forking.
+        budget.check(self, &report, ConversionCost::default(), limits)?;
+        let mut cost = ConversionCost::default();
         control.checkpoint()?;
         let mut candidate = self.fork_candidate();
         let mut report = report;
@@ -431,11 +432,7 @@ impl Document {
             return Ok(DeletionPreparation { report, plan: None });
         }
         control.checkpoint()?;
-        cost = limits.check_conversion(
-            cost.sample_combinations,
-            cost.payload_bytes.saturating_add(report.estimated_bytes()),
-            bytes,
-        )?;
+        cost = budget.check(self, &report, cost, limits)?;
         let plan = DeletionPlan {
             source: self.snapshot_identity.clone(),
             candidate: Arc::new(candidate),
