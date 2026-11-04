@@ -38,6 +38,17 @@ pub struct NativeArchiveFileSystem;
 
 impl ArchiveFileSystem for NativeArchiveFileSystem {
     fn create_staging(&self, parent: &Path) -> std::io::Result<ArchiveStaging> {
+        // The selected save directory is known only when I/O starts. Reclaim
+        // confirmed leftovers here, off the UI thread, before allocating a stage.
+        // Maintenance cannot turn a valid save into a failure or durability warning.
+        match Self::clean_abandoned_staging(parent) {
+            Ok(warnings) => {
+                for warning in warnings {
+                    eprintln!("Project staging cleanup: {warning}");
+                }
+            }
+            Err(error) => eprintln!("Project staging cleanup: {error}"),
+        }
         let stage = tempfile::Builder::new()
             .prefix(".zipzi-stage-")
             .suffix(".zipzi")

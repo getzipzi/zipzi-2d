@@ -41,6 +41,12 @@ streamed, finalized, synchronized and revalidated before publication. Replacemen
 requires a captured full-file fingerprint. A successful publish followed by a
 directory-sync failure returns a published receipt with a durability warning.
 
+The first resource allocation or open through a store reclaims abandoned working
+sets on the I/O worker; Runtime store clones share that maintenance pass. Native
+saves reclaim abandoned staging files in the selected destination directory before
+creating a new stage. Cleanup skips live owners and unrecognized files; failures
+are logged without changing publication or durability results.
+
 Session readers admit ZIP indexes, expanded JSON/codec workspace and one PNG
 decode against the shared host memory budget. Runtime retains the growing
 reservation through completion; compressed archive length is not a decode-memory
@@ -80,6 +86,11 @@ outputs retain overwrite protection for the original input paths. Low-level
 format decoders retain source UVs and pages for inspection.
 Opening an existing Zipzi project does not repeat import normalization. Extraction
 recovers the pixels available to the imported mesh, not missing original PSD art.
+
+Session exports and Runtime exports of every format validate their destination
+before encoding. They protect the original archive, tracked import sources and
+disk images, including immutable working-set images retained only by history.
+Path aliases are resolved through the same filesystem rules as publication.
 
 Native projects use ordinary `.zipzi` ZIP files. Directory projects and bare JSON
 are not user entrypoints. Bare JSON and experimental CBOR remain codec and

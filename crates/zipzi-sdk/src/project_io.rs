@@ -9,6 +9,15 @@ use zipzi_core::Document;
 use zipzi_project::{ProjectResult, ResourceDiagnostic};
 
 impl AuthoringSession {
+    /// Validate a host export before encoding or publishing any representation.
+    pub fn validate_export_destination(&self, path: &Path) -> Result<(), SdkError> {
+        self.project
+            .validate_export_destination(path)
+            .map_err(|status| {
+                SdkError::from_status(status, "project.export", vec![path.display().to_string()])
+            })
+    }
+
     pub fn transfer_snapshot(&self) -> Result<zipzi_project::TransferSnapshot, SdkError> {
         self.project
             .transfer_snapshot()

@@ -109,6 +109,118 @@ fn stage_count(root: &Path) -> usize {
 }
 
 #[test]
+fn abandoned_archive_child() {
+    let Some(root) = std::env::var_os("ZIPZI_ARCHIVE_MAINTENANCE_FIXTURE") else {
+        return;
+    };
+    let root = PathBuf::from(root);
+    let resources = ProjectArchiveStore::new(root.join("private"))
+        .new_resources()
+        .unwrap();
+    fs::write(resources.path().join("input.zip"), b"abandoned input copy").unwrap();
+    let stage = NativeArchiveFileSystem.create_staging(&root).unwrap();
+    fs::write(
+        root.join("abandoned.json"),
+        serde_json::to_vec(&serde_json::json!({
+            "working_set": resources.path(), "stage": stage.path,
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    // Abrupt process exit releases OS locks but never runs TempDir/TempPath drops.
+    std::process::exit(0);
+}
+
+#[test]
+fn normal_open_and_save_reclaim_crashed_owner_but_preserve_live_and_foreign_files() {
+    let root = tempfile::tempdir().unwrap();
+    let cache = root.path().join("private");
+    let store = ProjectArchiveStore::new(&cache);
+    let live = ProjectResourceLease::create(&cache, ProjectDiskBudget::default()).unwrap();
+    let live_stage = NativeArchiveFileSystem.create_staging(root.path()).unwrap();
+    let foreign = cache.join("zipzi-working-foreign");
+    fs::create_dir(&foreign).unwrap();
+    let foreign_stage = root.path().join(".zipzi-stage-foreign.zipzi");
+    fs::write(&foreign_stage, b"foreign").unwrap();
+    let lock = root.path().join(".source.zipzi.lock");
+    fs::write(&lock, b"persistent lock").unwrap();
+    let child = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "archive::publication_tests::abandoned_archive_child",
+            "--nocapture",
+        ])
+        .env("ZIPZI_ARCHIVE_MAINTENANCE_FIXTURE", root.path())
+        .output()
+        .unwrap();
+    assert!(
+        child.status.success(),
+        "{}",
+        String::from_utf8_lossy(&child.stderr)
+    );
+    let abandoned: serde_json::Value =
+        serde_json::from_slice(&fs::read(root.path().join("abandoned.json")).unwrap()).unwrap();
+    let old_resources = Path::new(abandoned["working_set"].as_str().unwrap());
+    let old_stage = Path::new(abandoned["stage"].as_str().unwrap());
+    let old_owner = PathBuf::from(format!("{}.owner.json", old_stage.display()));
+    assert!(old_resources.exists() && old_stage.exists() && old_owner.exists());
+    let doc = fixture(root.path());
+    let input = root.path().join("source.zipzi");
+    fs::write(&input, native_bytes(&doc, root.path())).unwrap();
+    let original = fs::read(&input).unwrap();
+    // No explicit maintenance call: the same production path serves Editor and SDK.
+    let opened = store.clone().open(&input, || true).unwrap();
+    assert!(!old_resources.exists());
+    assert!(live.path().exists() && foreign.exists());
+    assert!(
+        old_stage.exists(),
+        "source directories are only scanned when saving there"
+    );
+    let receipt = store
+        .save(
+            &opened.document,
+            &opened.resource_lease(),
+            &root.path().join("saved.zipzi"),
+            None,
+            || true,
+        )
+        .unwrap();
+    assert!(receipt.published);
+    assert_eq!(receipt.durable, cfg!(unix));
+    assert!(!old_stage.exists() && !old_owner.exists());
+    assert!(live_stage.path.exists() && foreign_stage.exists());
+    assert!(live.path().exists() && foreign.exists() && opened.asset_root().exists());
+    assert_eq!(fs::read(&lock).unwrap(), b"persistent lock");
+    assert_eq!(fs::read(&input).unwrap(), original);
+}
+
+#[test]
+fn first_draft_save_reclaims_working_sets_before_creating_resources() {
+    let root = tempfile::tempdir().unwrap();
+    let cache = root.path().join("private");
+    let child = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "archive::publication_tests::abandoned_archive_child",
+            "--nocapture",
+        ])
+        .env("ZIPZI_ARCHIVE_MAINTENANCE_FIXTURE", root.path())
+        .output()
+        .unwrap();
+    assert!(child.status.success());
+    let abandoned: serde_json::Value =
+        serde_json::from_slice(&fs::read(root.path().join("abandoned.json")).unwrap()).unwrap();
+    let path = Path::new(abandoned["working_set"].as_str().unwrap());
+    assert!(path.exists());
+    let doc = fixture(root.path());
+    let store = crate::DocumentStore::new().with_archive_store(ProjectArchiveStore::new(&cache));
+    let (result, snapshot) = store.save(&doc, root.path(), &root.path().join("draft.zipzi"), None);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert!(!path.exists());
+    assert!(snapshot.unwrap().asset_root().exists());
+}
+
+#[test]
 fn failures_before_publication_preserve_old_target_and_remove_staging() {
     let root = tempfile::tempdir().unwrap();
     let doc = fixture(root.path());

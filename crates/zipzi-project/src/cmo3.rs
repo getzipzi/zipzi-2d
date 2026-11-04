@@ -84,6 +84,8 @@ impl DocumentSession {
         destination: &Path,
         options: &Cmo3Options,
     ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
+        self.validate_export_destination(destination)
+            .map_err(|s| Cmo3Error::InvalidDocument(format!("{}: {}", s.code, s.message)))?;
         let artifact = self.encode_cmo3(options)?;
         let publication = publish_cmo3(&artifact, destination)?;
         Ok((artifact.report, publication))

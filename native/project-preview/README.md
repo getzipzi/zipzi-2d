@@ -58,5 +58,8 @@ transparency, no-preview / corrupt-file fallback and register/unregister after
 moving a portable installation. A macOS-only validation run does not cover these.
 The `--test` switch runs direct native provider checks: decoded thumbnail pixels,
 Preview child-window resize/unload and absent/corrupt input. CI runs it on Windows;
-it does not replace Explorer interaction acceptance. On macOS the same switch
-checks the image reader and deferred PNG reply callback with native AppKit.
+it also covers overlapping previews and repeated DLL load/unload cycles. The provider
+only permits DLL unloading after its window class has been unregistered; a surviving
+window vetoes unloading. These checks do not replace Explorer interaction acceptance.
+On macOS the same switch checks the image reader and deferred PNG reply callback
+with native AppKit.

@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Once};
 
 use serde::{Deserialize, Serialize};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
@@ -172,6 +172,7 @@ impl Default for ArchiveIoLimits {
 #[derive(Clone)]
 pub struct ProjectArchiveStore {
     workspace_parent: PathBuf,
+    workspace_maintenance: Arc<Once>,
     limits: ArchiveIoLimits,
     filesystem: Arc<dyn ArchiveFileSystem>,
     disk_budget: ProjectDiskBudget,
@@ -184,6 +185,7 @@ impl ProjectArchiveStore {
     pub fn new(workspace_parent: impl Into<PathBuf>) -> Self {
         Self {
             workspace_parent: workspace_parent.into(),
+            workspace_maintenance: Arc::new(Once::new()),
             limits: ArchiveIoLimits::default(),
             filesystem: Arc::new(NativeArchiveFileSystem),
             disk_budget: ProjectDiskBudget::default(),
@@ -263,10 +265,14 @@ impl ProjectArchiveStore {
     }
 
     pub fn new_resources(&self) -> Result<ProjectResourceLease> {
+        self.prepare_workspace()?;
         ProjectResourceLease::create(&self.workspace_parent, self.disk_budget.clone())
     }
 
     pub fn open(&self, path: &Path, keep_going: impl FnMut() -> bool) -> Result<OpenedArchive> {
+        let mut keep_going = keep_going;
+        check(&mut keep_going)?;
+        self.prepare_workspace()?;
         reader::open(
             path,
             &self.workspace_parent,
@@ -276,6 +282,27 @@ impl ProjectArchiveStore {
             self.open_memory.as_deref(),
             keep_going,
         )
+    }
+
+    // Run on the I/O worker before its first allocation, shared by all store
+    // clones in a Runtime. A new process reclaims the previous owner's leftovers;
+    // live sessions/snapshots remain protected by their working-set owner locks.
+    fn prepare_workspace(&self) -> Result<()> {
+        if !self.workspace_parent.is_absolute() {
+            return Err(invalid("Working set parent must be absolute"));
+        }
+        fs::create_dir_all(&self.workspace_parent)?;
+        self.workspace_maintenance.call_once(|| {
+            match ProjectResourceLease::clean_abandoned(&self.workspace_parent) {
+                Ok(warnings) => {
+                    for warning in warnings {
+                        eprintln!("Project cache cleanup: {warning}");
+                    }
+                }
+                Err(error) => eprintln!("Project cache cleanup: {error}"),
+            }
+        });
+        Ok(())
     }
 
     pub fn save(

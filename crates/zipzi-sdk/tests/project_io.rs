@@ -655,6 +655,15 @@ fn deleted_historical_asset_is_rebased_to_its_original_project() {
         .unwrap();
     sdk.save_project(&temp.path("second"), None).unwrap();
     assert!(sdk.asset_ids().is_empty());
+    let historical_png = sdk.asset_root().join(&old.content.as_ref().unwrap().source);
+    assert!(historical_png.is_file());
+    assert_eq!(
+        sdk.validate_export_destination(&historical_png)
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "INVALID_DESTINATION"
+    );
     sdk.undo().unwrap();
     assert_eq!(
         sdk.asset(ASSET).unwrap().content.as_ref().unwrap().sha256,
@@ -766,6 +775,13 @@ fn model3_import_edits_saves_and_exports_without_changing_session_on_export() {
     })
     .unwrap();
     sdk.save_project(&temp.path("saved"), None).unwrap();
+    assert_eq!(
+        sdk.validate_export_destination(&external_model().join("model.model3.json"))
+            .unwrap_err()
+            .code
+            .as_ref(),
+        "INVALID_DESTINATION"
+    );
     let saved_version = sdk.version();
     let package = temp.path("exported");
     assert_eq!(

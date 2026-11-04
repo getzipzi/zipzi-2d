@@ -20,6 +20,68 @@ fn export_refuses_source_project_ancestor_and_source_asset_directories() {
         .is_ok());
 }
 
+#[test]
+fn standalone_exports_protect_archive_current_and_historical_resources() {
+    let tmp = TestDirectory::new();
+    let session = tmp.saved_session();
+    let path = session.project_path().unwrap();
+    let original = fs::read(path).unwrap();
+    for result in [
+        session.export_cmo3(path, &Default::default()),
+        session.export_can3(path, &Default::default()),
+        session.export_cubism(path, &Default::default()),
+    ] {
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("INVALID_DESTINATION"));
+        assert_eq!(fs::read(path).unwrap(), original);
+    }
+    let asset = session.document().get_asset(&id(2)).unwrap();
+    let source = session
+        .asset_root()
+        .join(&asset.content.as_ref().unwrap().source);
+    let png = fs::read(&source).unwrap();
+    assert_eq!(
+        session
+            .validate_export_destination(&source)
+            .unwrap_err()
+            .code,
+        "INVALID_DESTINATION"
+    );
+    // Even resources retained only for history must remain immutable.
+    assert_eq!(
+        session
+            .validate_export_destination(&session.asset_root().join("assets/history.png"))
+            .unwrap_err()
+            .code,
+        "INVALID_DESTINATION"
+    );
+    assert_eq!(fs::read(source).unwrap(), png);
+    assert!(session
+        .validate_export_destination(&tmp.0.join("display.cdi3.json"))
+        .is_ok());
+}
+
+#[test]
+fn export_destination_guard_protects_external_images() {
+    let tmp = TestDirectory::new();
+    let path = tmp.0.join("external.png");
+    let (bytes, hash) = create_test_png(&path);
+    let mut document = fixture_doc(&hash, &hash);
+    for id in document.asset_order().to_vec() {
+        let mut asset = document.get_asset(&id).unwrap().clone();
+        asset.content.as_mut().unwrap().source = path.to_str().unwrap().into();
+        assert!(document.replace_asset(asset).status.is_ok());
+    }
+    let session = DocumentSession::from_authoring_document(document);
+    assert_eq!(
+        session.validate_export_destination(&path).unwrap_err().code,
+        "INVALID_DESTINATION"
+    );
+    assert_eq!(fs::read(&path).unwrap(), bytes);
+}
+
 #[cfg(unix)]
 #[test]
 fn path_aliases_do_not_bypass_export_guard_or_save_baseline() {

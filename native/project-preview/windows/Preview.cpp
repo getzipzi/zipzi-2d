@@ -14,6 +14,22 @@ using Microsoft::WRL::ComPtr;
 static const CLSID CLSID_ZipziPreview = {0xb7666151, 0x0ad8, 0x4b22, {0x82, 0x9e, 0x46, 0x40, 0xcb, 0x90, 0xd3, 0xbe}};
 static std::atomic<long> objects{0}, locks{0};
 static HINSTANCE instance;
+static constexpr wchar_t WindowClassName[] = L"ZipziStaticProjectPreview";
+static SRWLOCK windowClassLock = SRWLOCK_INIT;
+static bool windowClassRegistered = false; // guarded by windowClassLock
+
+static HRESULT EnsureWindowClass(WNDPROC procedure) {
+    AcquireSRWLockExclusive(&windowClassLock);
+    HRESULT result = S_OK;
+    if (!windowClassRegistered) {
+        WNDCLASSW cls{}; cls.lpfnWndProc = procedure; cls.hInstance = instance;
+        cls.lpszClassName = WindowClassName; cls.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        if (RegisterClassW(&cls)) windowClassRegistered = true;
+        else result = HRESULT_FROM_WIN32(GetLastError());
+    }
+    ReleaseSRWLockExclusive(&windowClassLock);
+    return result;
+}
 
 static intptr_t ReadAt(void *context, uint64_t offset, uint8_t *bytes, size_t count) {
     auto stream = static_cast<IStream *>(context);
@@ -182,11 +198,8 @@ public:
         if (!parent || window) return E_UNEXPECTED;
         try {
             HRESULT hr = Bitmap(1024, &bitmap); if (FAILED(hr)) return hr;
-            WNDCLASSW cls{}; cls.lpfnWndProc = WindowProc; cls.hInstance = instance;
-            cls.lpszClassName = L"ZipziStaticProjectPreview"; cls.hCursor = LoadCursor(nullptr, IDC_ARROW);
-            if (!RegisterClassW(&cls) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
-                return HRESULT_FROM_WIN32(GetLastError());
-            window = CreateWindowExW(0, cls.lpszClassName, L"", WS_CHILD | WS_VISIBLE,
+            hr = EnsureWindowClass(WindowProc); if (FAILED(hr)) return hr;
+            window = CreateWindowExW(0, WindowClassName, L"", WS_CHILD | WS_VISIBLE,
                 rect.left, rect.top, (std::max)(0L, rect.right - rect.left),
                 (std::max)(0L, rect.bottom - rect.top), parent, nullptr, instance, this);
             return window ? S_OK : HRESULT_FROM_WIN32(GetLastError());
@@ -246,7 +259,20 @@ extern "C" HRESULT __stdcall DllGetClassObject(REFCLSID clsid, REFIID iid, void 
     if (!factory) return E_OUTOFMEMORY;
     HRESULT hr = factory->QueryInterface(iid, out); factory->Release(); return hr;
 }
-extern "C" HRESULT __stdcall DllCanUnloadNow() { return objects == 0 && locks == 0 ? S_OK : S_FALSE; }
+extern "C" HRESULT __stdcall DllCanUnloadNow() {
+    // A class keeps a WindowProc pointer into this DLL even after every window
+    // closes. Retire it before COM unloads us, outside DllMain's loader lock.
+    AcquireSRWLockExclusive(&windowClassLock);
+    HRESULT result = S_FALSE;
+    if (objects == 0 && locks == 0) {
+        if (windowClassRegistered && UnregisterClassW(WindowClassName, instance))
+            windowClassRegistered = false;
+        // Refuse unloading if any window still prevents class retirement.
+        if (!windowClassRegistered) result = S_OK;
+    }
+    ReleaseSRWLockExclusive(&windowClassLock);
+    return result;
+}
 BOOL WINAPI DllMain(HINSTANCE value, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) { instance = value; DisableThreadLibraryCalls(value); }
     return TRUE;

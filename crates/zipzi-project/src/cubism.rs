@@ -246,6 +246,8 @@ impl DocumentSession {
         destination: &Path,
         options: &Can3Options,
     ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
+        self.validate_export_destination(destination)
+            .map_err(status)?;
         let artifact = self.encode_can3(options)?;
         let publication = publish_can3(&artifact, destination)?;
         Ok((artifact.report, publication))
@@ -269,6 +271,8 @@ impl DocumentSession {
         destination: &Path,
         options: &CubismOptions,
     ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
+        self.validate_export_destination(destination)
+            .map_err(status)?;
         let artifact = self.encode_cubism(options)?;
         let publication = publish_cubism(&artifact, destination)?;
         Ok((artifact.report, publication))

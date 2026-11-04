@@ -378,6 +378,94 @@ fn a02_path_aliases_reuse_session_and_copies_have_distinct_identity() {
 }
 
 #[test]
+fn every_export_format_preserves_its_source_archive_and_path_aliases() {
+    use zipzi_runtime::project_io::{ExportFormat, ProjectRequest};
+    let (mut host, client, _, session) = setup();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("source.zipzi");
+    let save = host.request_save(client, session, &path).unwrap();
+    finish(&mut host);
+    assert!(host.job_info(client, save).unwrap().result.unwrap().is_ok());
+    host.release_job(client, save).unwrap();
+    let before = std::fs::read(&path).unwrap();
+    let version = host.session(session).unwrap().version();
+    let mut paths = vec![path.clone()];
+    let case_alias = dir.path().join("SOURCE.ZIPZI");
+    if case_alias.exists() {
+        paths.push(case_alias);
+    }
+    #[cfg(unix)]
+    {
+        let alias = dir.path().join("alias");
+        std::os::unix::fs::symlink(dir.path(), &alias).unwrap();
+        paths.push(alias.join("source.zipzi"));
+    }
+    for path in paths {
+        for format in [
+            ExportFormat::Package,
+            ExportFormat::Cmo3,
+            ExportFormat::Can3,
+            ExportFormat::Cubism,
+            ExportFormat::Motion3,
+            ExportFormat::Expression3,
+            ExportFormat::Physics3,
+            ExportFormat::Pose3,
+            ExportFormat::Cdi3,
+        ] {
+            let job = host
+                .request_project(
+                    client,
+                    session,
+                    ProjectRequest::Export {
+                        path: path.clone(),
+                        format,
+                        name: "export".into(),
+                        object_id: None,
+                        allow_loss: false,
+                        bake_animation: false,
+                        auto_frame_rate: false,
+                    },
+                )
+                .unwrap();
+            finish(&mut host);
+            let result = host.job_info(client, job).unwrap().result.unwrap();
+            assert!(
+                matches!(result, Err(RuntimeError::Sdk(ref e)) if e.code.as_ref() == "INVALID_DESTINATION"),
+                "{format:?}: {result:?}"
+            );
+            host.release_job(client, job).unwrap();
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            assert_eq!(host.session(session).unwrap().version(), version);
+            assert!(!host.session(session).unwrap().modified());
+        }
+    }
+    // Rejection must release the destination reservation and leave exports usable.
+    let output = dir.path().join("display.cdi3.json");
+    let job = host
+        .request_project(
+            client,
+            session,
+            ProjectRequest::Export {
+                path: output.clone(),
+                format: ExportFormat::Cdi3,
+                name: "export".into(),
+                object_id: None,
+                allow_loss: false,
+                bake_animation: false,
+                auto_frame_rate: false,
+            },
+        )
+        .unwrap();
+    finish(&mut host);
+    assert!(host.job_info(client, job).unwrap().result.unwrap().is_ok());
+    assert!(output.is_file());
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    let job = host.request_save(client, session, &path).unwrap();
+    finish(&mut host);
+    assert!(host.job_info(client, job).unwrap().result.unwrap().is_ok());
+}
+
+#[test]
 fn a02_cross_session_save_as_and_open_reservations_release_only_on_terminal() {
     let (mut host, a, b, s) = setup();
     let dir = tempfile::tempdir().unwrap();

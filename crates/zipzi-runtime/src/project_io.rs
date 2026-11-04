@@ -113,6 +113,7 @@ pub(crate) fn execute(
             bake_animation,
             auto_frame_rate,
         } => {
+            session.validate_export_destination(&path)?;
             let loss_policy = if allow_loss {
                 LossPolicy::Allow
             } else {

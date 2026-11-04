@@ -707,9 +707,51 @@ impl DocumentSession {
         paths
     }
 
+    /// Guard every export representation, including standalone sidecars. Resolve
+    /// aliases without reading resource bytes or requiring missing sources to exist.
+    pub fn validate_export_destination(&self, destination: &Path) -> Result<(), Status> {
+        io::reject_symlink(destination)?;
+        let destination = io::local_path(destination)?;
+        let protected = |source: &Path| -> Result<(), Status> {
+            if io::local_path(source)?.starts_with(&destination) {
+                return Err(Status::error(
+                    "INVALID_DESTINATION",
+                    "Export would replace source project or resources",
+                ));
+            }
+            Ok(())
+        };
+        for source in self.protected_sources() {
+            protected(&source)?;
+        }
+        let root = self.asset_root();
+        if !root.as_os_str().is_empty() {
+            protected(&root)?;
+            // The immutable set also contains historical images absent from the
+            // current document. Exports may use other subdirectories of the root.
+            let assets = io::local_path(&root.join("assets"))?;
+            if destination.starts_with(&assets) {
+                return Err(Status::error(
+                    "INVALID_DESTINATION",
+                    "Export would replace immutable project resources",
+                ));
+            }
+        }
+        for id in self.document.asset_order() {
+            let asset = self.document.get_asset(id).unwrap();
+            if asset.content.is_some() && !self.has_memory_asset(asset) {
+                protected(&super::assets::asset_path(&root, asset)?)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn export_package(&self, destination: &Path) -> ProjectResult {
         if self.document.transaction_active() {
             return ProjectResult::failed("TRANSACTION_ACTIVE", "Commit or cancel first");
+        }
+        if let Err(status) = self.validate_export_destination(destination) {
+            return ProjectResult::from_status(status);
         }
         let options = PackageOptions {
             asset_root: self.root(),
