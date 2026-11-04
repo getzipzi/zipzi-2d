@@ -63,8 +63,16 @@ pub struct EditReceipt {
 pub struct SaveReceipt {
     pub before: Version,
     pub after: Version,
-    pub manifest: PathBuf,
+    pub path: PathBuf,
+    pub fingerprint: ProjectFingerprint,
     pub warnings: Vec<String>,
     pub history_warnings: Vec<String>,
     pub durable: bool,
+}
+
+/// Identity of the complete finalized native project archive.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectFingerprint {
+    pub sha256: String,
+    pub length: u64,
 }

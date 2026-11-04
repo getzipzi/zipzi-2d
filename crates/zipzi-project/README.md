@@ -36,8 +36,10 @@ streamed, finalized, synchronized and revalidated before publication. Replacemen
 requires a captured full-file fingerprint. A successful publish followed by a
 directory-sync failure returns a published receipt with a durability warning.
 
-Session/SDK integration is the next stage; their existing entrypoints still use
-the directory backend at this intermediate commit. The optional
+Session and SDK entrypoints use this single-file backend. `project_path()` names
+the archive; `asset_root()` names the private resource set. Save As retains that
+set and history bindings. Snapshots, candidates and observation inputs retain
+resource leases independently of their originating Session. The optional
 `archive-prototype` example retains the explicitly marked v21 experiment solely
 for reproducing the P0 measurements, which production readers reject.
 
@@ -68,10 +70,9 @@ format decoders retain source UVs and pages for inspection.
 Opening an existing Zipzi project does not repeat import normalization. Extraction
 recovers the pixels available to the imported mesh, not missing original PSD art.
 
-Native projects use `project.zipzi.json` with the `zipzi-directory-project`
-format identifier and format version 21. Older names and experimental schemas
-are unsupported; reimport the original source assets. The experimental CBOR
-codec shares these wire rules and uses `project.zipzi.cbor`.
+Native projects use ordinary `.zipzi` ZIP files. Directory projects and bare JSON
+are not user entrypoints. Bare JSON and experimental CBOR remain codec and
+benchmark tools only; they do not add another production format.
 
 Both native codecs retain optional Warp/Rotation original-shape snapshots,
 their canvas coordinates, capture source, automatic-update policy and first-key

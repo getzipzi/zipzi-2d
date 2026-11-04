@@ -42,6 +42,7 @@ pub struct ObservationInput {
     frame: DrawableFrame,
     assets: Vec<ImageAsset>,
     root: PathBuf,
+    _resource_lease: Option<zipzi_project::archive::ProjectResourceLease>,
     memory_images: BTreeMap<String, zipzi_project::PreparedImageContent>,
     source: ObservationSource,
     authoring: CapturedAuthoring,
@@ -416,10 +417,7 @@ impl ObservationInput {
         let evaluation_revision = document.evaluation_revision();
         let assets = planning::referenced_assets(document)?;
         planning::validate_frame_references(&frame, &assets)?;
-        let root = snapshot
-            .project_path()
-            .and_then(|path| path.parent())
-            .map_or_else(PathBuf::new, std::path::Path::to_path_buf);
+        let root = snapshot.asset_root().to_path_buf();
         let authoring = CapturedAuthoring {
             meshes: document
                 .mesh_order()
@@ -559,6 +557,7 @@ impl ObservationInput {
             frame,
             assets,
             root,
+            _resource_lease: snapshot.resource_lease(),
             source,
             authoring,
         })

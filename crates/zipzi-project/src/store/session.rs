@@ -1,11 +1,12 @@
 //! A document, its persistence baseline, and authoring resource drafts.
 use super::assets::MemoryAsset;
 use super::import::read_psd_bytes;
-use super::manifest::{publication_result, resolved_manifest};
+use super::manifest::{project_identity, publication_result};
 use super::{
     read_project_asset, read_project_asset_if_changed, DocumentStore, ProjectResult,
     ResourceDiagnostic,
 };
+use crate::archive::{ProjectFingerprint, ProjectResourceLease};
 use crate::filesystem::{self as io, FileSystem, NativeFileSystem};
 use crate::package::{
     publish_with_resources, PackageOptions, PackageValidation, RuntimeValidation,
@@ -25,8 +26,9 @@ use zipzi_psd::ImportReport as PsdImportReport;
 pub struct DocumentSession {
     pub(super) store: DocumentStore,
     document: Document,
-    manifest: PathBuf,
-    manifest_sha256: String,
+    path: PathBuf,
+    fingerprint: Option<ProjectFingerprint>,
+    resources: Option<ProjectResourceLease>,
     pub(crate) import_sources: Vec<PathBuf>,
 }
 
@@ -55,8 +57,9 @@ impl DocumentSession {
     pub fn reset_authoring_document(&mut self, document: Document) {
         self.store.clear_memory_assets();
         self.document = document;
-        self.manifest = PathBuf::new();
-        self.manifest_sha256.clear();
+        self.path = PathBuf::new();
+        self.fingerprint = None;
+        self.resources = None;
         self.import_sources.clear();
     }
 
@@ -83,8 +86,9 @@ impl DocumentSession {
         Self {
             store: DocumentStore::with_filesystem(filesystem),
             document: Document::new(),
-            manifest: PathBuf::new(),
-            manifest_sha256: String::new(),
+            path: PathBuf::new(),
+            fingerprint: None,
+            resources: None,
             import_sources: Vec::new(),
         }
     }
@@ -114,39 +118,47 @@ impl DocumentSession {
     }
 
     pub fn root(&self) -> PathBuf {
-        self.manifest
-            .parent()
-            .unwrap_or_else(|| Path::new(""))
-            .to_path_buf()
+        self.resources
+            .as_ref()
+            .map_or_else(PathBuf::new, |r| r.path().to_path_buf())
+    }
+    pub fn asset_root(&self) -> PathBuf {
+        self.root()
+    }
+    pub fn project_path(&self) -> Option<&Path> {
+        (!self.path.as_os_str().is_empty()).then_some(self.path.as_path())
+    }
+    pub fn fingerprint(&self) -> Option<&ProjectFingerprint> {
+        self.fingerprint.as_ref()
+    }
+    pub fn resource_lease(&self) -> Option<ProjectResourceLease> {
+        self.resources.clone()
+    }
+    pub fn set_archive_store(&mut self, archive: crate::archive::ProjectArchiveStore) {
+        self.store.archive = archive;
     }
 
-    pub fn manifest(&self) -> &Path {
-        &self.manifest
+    fn install_snapshot(&mut self, snapshot: super::DocumentSnapshot) {
+        self.document = snapshot.document;
+        self.path = snapshot.path.unwrap_or_default();
+        self.fingerprint = snapshot.fingerprint;
+        self.resources = snapshot.resources;
     }
-
     pub fn open(&mut self, path: &Path) -> ProjectResult {
-        if self.document.transaction_active() {
-            return ProjectResult::failed("TRANSACTION_ACTIVE", "Commit or cancel first");
-        }
-        let (result, snapshot) = self.store.open(path);
-        if result.status.is_ok() {
-            let s = snapshot.unwrap();
-            self.store.clear_memory_assets();
-            self.import_sources.clear();
-            self.document = s.document;
-            self.manifest = s.manifest;
-            self.manifest_sha256 = s.manifest_sha256;
-        }
-        result
+        self.open_authoring(path)
     }
-
-    /// Atomically open a document for the SDK, including final graph validation.
-    /// Resource diagnostics are returned separately and do not reject an editable project.
     pub fn open_authoring(&mut self, path: &Path) -> ProjectResult {
+        self.open_controlled(path, &mut || true)
+    }
+    pub fn open_controlled(
+        &mut self,
+        path: &Path,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> ProjectResult {
         if self.document.transaction_active() {
             return ProjectResult::failed("EDIT_ACTIVE", "Finish the active edit first");
         }
-        let (result, snapshot) = self.store.open(path);
+        let (result, snapshot) = self.store.open_controlled(path, keep_going);
         if !result.status.is_ok() {
             return result;
         }
@@ -156,46 +168,87 @@ impl DocumentSession {
         }
         self.store.clear_memory_assets();
         self.import_sources.clear();
-        self.document = snapshot.document;
-        self.manifest = snapshot.manifest;
-        self.manifest_sha256 = snapshot.manifest_sha256;
+        self.install_snapshot(snapshot);
         result
     }
-
+    /// Prepare current resources before publication without changing active state.
+    pub fn prepare_save_resources(&self) -> Result<super::PreparedProjectSave, Status> {
+        self.prepare_save_resources_controlled(&mut || true)
+    }
+    pub fn prepare_save_resources_controlled(
+        &self,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<super::PreparedProjectSave, Status> {
+        let resources = match &self.resources {
+            Some(r) => r.clone(),
+            None => self.store.new_resources()?,
+        };
+        let document =
+            self.store
+                .prepare_document(&self.document, &self.root(), &resources, keep_going)?;
+        Ok(super::PreparedProjectSave {
+            document,
+            resources,
+        })
+    }
+    pub fn bind_history_asset(
+        &self,
+        root: &Path,
+        asset: &ImageAsset,
+        resources: &ProjectResourceLease,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<ImageAsset, Status> {
+        self.store.bind_asset(root, asset, resources, keep_going)
+    }
     pub fn save(&mut self, path: &Path) -> ProjectResult {
         self.save_inner(path, None)
     }
-
-    /// Replace a destination explicitly selected by the caller. Publication still
-    /// checks that its manifest matches the bytes the caller approved.
-    pub fn save_replacing(&mut self, path: &Path, target_sha256: &str) -> ProjectResult {
-        self.save_inner(path, Some(target_sha256))
+    pub fn save_replacing(&mut self, path: &Path, target: &ProjectFingerprint) -> ProjectResult {
+        self.save_inner(path, Some(target))
     }
-
-    fn save_inner(&mut self, path: &Path, target_sha256: Option<&str>) -> ProjectResult {
-        if self.document.transaction_active() {
-            return ProjectResult::failed("TRANSACTION_ACTIVE", "Commit or cancel first");
-        }
-        let target = match resolved_manifest(path) {
-            Ok(path) => path,
+    fn save_inner(&mut self, path: &Path, target: Option<&ProjectFingerprint>) -> ProjectResult {
+        let prepared = match self.prepare_save_resources() {
+            Ok(p) => p,
             Err(s) => return ProjectResult::from_status(s),
         };
-        let expected = if let Some(hash) = target_sha256 {
-            Some(hash)
-        } else if self.manifest == target {
-            Some(self.manifest_sha256.as_str())
-        } else {
-            None
+        self.save_prepared(path, target, prepared)
+    }
+    pub fn save_prepared(
+        &mut self,
+        path: &Path,
+        target: Option<&ProjectFingerprint>,
+        prepared: super::PreparedProjectSave,
+    ) -> ProjectResult {
+        self.save_prepared_controlled(path, target, prepared, &mut || true)
+    }
+    pub fn save_prepared_controlled(
+        &mut self,
+        path: &Path,
+        target: Option<&ProjectFingerprint>,
+        prepared: super::PreparedProjectSave,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> ProjectResult {
+        if self.document.transaction_active() {
+            return ProjectResult::failed("TRANSACTION_ACTIVE", "Commit or cancel edits first");
+        }
+        let path = match project_identity(path) {
+            Ok(p) => p,
+            Err(s) => return ProjectResult::from_status(s),
         };
-        let source_root = self.root();
-        let (result, snapshot) = self
-            .store
-            .save(&self.document, &source_root, path, expected);
-        if result.status.is_ok() {
-            let s = snapshot.unwrap();
-            self.document = s.document;
-            self.manifest = s.manifest;
-            self.manifest_sha256 = s.manifest_sha256;
+        let expected = target.or_else(|| {
+            (self.path == path)
+                .then_some(self.fingerprint.as_ref())
+                .flatten()
+        });
+        let (result, snapshot) = self.store.save_prepared(
+            &prepared.document,
+            prepared.resources,
+            &path,
+            expected,
+            keep_going,
+        );
+        if let Some(snapshot) = snapshot {
+            self.install_snapshot(snapshot);
         }
         result
     }
@@ -336,9 +389,7 @@ impl DocumentSession {
         let snapshot = snapshot.expect("successful PSD import has a snapshot");
         self.store.clear_memory_assets();
         self.import_sources.clear();
-        self.document = snapshot.document;
-        self.manifest = snapshot.manifest;
-        self.manifest_sha256 = snapshot.manifest_sha256;
+        self.install_snapshot(snapshot);
         (result, report)
     }
 
@@ -438,8 +489,9 @@ impl DocumentSession {
             .unwrap_or_else(|p| p.into_inner()) = assets;
         self.import_sources.clear();
         self.document = document;
-        self.manifest = PathBuf::new();
-        self.manifest_sha256.clear();
+        self.path = PathBuf::new();
+        self.fingerprint = None;
+        self.resources = None;
         let result = ProjectResult {
             status: Status::ok(),
             warnings: bundle.report.warnings.clone(),
@@ -628,6 +680,14 @@ impl DocumentSession {
         self.document.replace_asset(asset)
     }
 
+    pub(crate) fn protected_sources(&self) -> Vec<PathBuf> {
+        let mut paths = self.import_sources.clone();
+        if let Some(path) = self.project_path() {
+            paths.push(path.to_path_buf());
+        }
+        paths
+    }
+
     pub fn export_package(&self, destination: &Path) -> ProjectResult {
         if self.document.transaction_active() {
             return ProjectResult::failed("TRANSACTION_ACTIVE", "Commit or cancel first");
@@ -650,7 +710,7 @@ impl DocumentSession {
             &options,
             self.store.filesystem.as_ref(),
             &|asset| self.read_asset(&asset.id),
-            &self.import_sources,
+            &self.protected_sources(),
         ) {
             Ok(publication) => publication_result(publication),
             Err(status) => ProjectResult::from_status(status),

@@ -144,14 +144,9 @@ impl EditorView {
                     return;
                 }
                 match result {
-                    Ok(Some((path, hash))) => this.save_to_with_baseline(
-                        id,
-                        path,
-                        close_after,
-                        hash.as_deref(),
-                        window,
-                        cx,
-                    ),
+                    Ok(Some((path, hash))) => {
+                        this.save_to_with_baseline(id, path, close_after, hash.as_ref(), window, cx)
+                    }
                     Ok(None) => {
                         this.editor.cancel_exit();
                         cx.notify();
@@ -181,11 +176,11 @@ impl EditorView {
         id: DocumentId,
         path: PathBuf,
         close_after: bool,
-        target_sha256: Option<&str>,
+        target_fingerprint: Option<&zipzi_sdk::ProjectFingerprint>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let prepared = match target_sha256 {
+        let prepared = match target_fingerprint {
             Some(hash) => self
                 .editor
                 .prepare_save_replacing(id, &path, close_after, hash),
@@ -251,11 +246,11 @@ impl EditorView {
                             );
                         }
                         let msg = if notices.is_empty() {
-                            t!("project.saved", path = receipt.manifest.display()).into_owned()
+                            t!("project.saved", path = receipt.path.display()).into_owned()
                         } else {
                             format!(
                                 "{} · {}",
-                                t!("project.saved", path = receipt.manifest.display()),
+                                t!("project.saved", path = receipt.path.display()),
                                 t!("status.warning_summary", count = notices.len())
                             )
                         };

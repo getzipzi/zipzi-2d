@@ -1,6 +1,6 @@
 # Zipzi 原生工程 `.zipzi` 设计方案
 
-状态：实施中，P0 原型及 P1 Project 层已落地；P2–P4 继续实施。日期：2026-11-04。调研基线：`f59db0f0`。
+状态：实施中，P0 原型、P1 Project 层与 P2 生命周期已落地；P3–P4 继续实施。日期：2026-11-04。调研基线：`f59db0f0`。
 
 ## 1. 建议决策
 
@@ -443,3 +443,15 @@ authoring 数据，不能只验证“能解开 ZIP”或“显示了成功提示
 `uv run --locked python tools/workspace/cargo_domain.py --check`。
 故障测试包含 write/finalize/sync/publish、no-replace 竞争、基线重检和发布后取消。
 Windows 原生文件占用、系统关联和真实交互尚待对应平台验收。
+
+### P2 SDK / Runtime / Python（2026-11-04）
+
+- Session 正式入口统一使用归档；工程路径、完整 fingerprint、私有资源根分离。
+- 保存前流式绑定当前及全部历史磁盘资源，保持同一工作集；历史缺少旧 hash 时保留警告。
+- History、AuthoringSnapshot、Edit 候选与 ObservationInput 持有工作集租约；导出保护显式包含原归档。
+- Runtime 共享磁盘预算并允许宿主配置归档存储；取消贯穿资源复制与归档读写，发布后结果保持成功。
+- SaveReceipt/PsdImportReceipt 使用 `path`；明确替换使用完整 fingerprint。协议升级为 v3，Python 从契约生成。
+- 目录/裸 JSON 用户入口已移除；P0/CBOR 目录能力仅保留在显式实验 feature。
+
+验证：Project lib 48 项、project_tests 51 项；SDK integration 的 project_io 21 项（含候选/快照最后租约清理、删除外部素材与旧归档后的历史）；Runtime host 5 项及 runtime 30 项；Contract；Python 111 项行为、16 项 recovery、8 项 mesh 与正反静态类型；安装后 Connected 21 项；Python codegen 64 项；实验 examples 编译。
+Windows 原生交互仍需对应平台最终验收。

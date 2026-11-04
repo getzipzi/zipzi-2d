@@ -83,7 +83,7 @@ fn main() {
             "meshes": meshes,
             "bindings": bindings,
             "assets": assets,
-            "manifest_bytes": fs::metadata(output.join("project.zipzi.json")).unwrap().len(),
+            "archive_bytes": fs::metadata(output).unwrap().len(),
             "asset_bytes": asset_bytes,
             "import_ms": import_ms,
             "initial_save_ms": initial_save_ms,

@@ -37,11 +37,7 @@ pub fn encode_project_cubism(
     let snapshot = snapshot.ok_or_else(|| {
         Cmo3Error::InvalidDocument(format!("{}: {}", result.status.code, result.status.message))
     })?;
-    encode_document_cubism(
-        &snapshot.document,
-        snapshot.manifest.parent().unwrap(),
-        options,
-    )
+    encode_document_cubism(&snapshot.document, snapshot.asset_root(), options)
 }
 /// Stage and atomically rename a standalone animation file.
 pub fn publish_can3(artifact: &Can3Artifact, destination: &Path) -> Result<Publication, Cmo3Error> {

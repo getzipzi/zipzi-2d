@@ -7,20 +7,14 @@ use super::{check, ArchiveError, Result};
 const BUFFER_BYTES: usize = 1 << 20;
 
 /// Hash the finalized file, including headers, resources and central directory.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct ProjectFingerprint {
-    pub sha256: String,
-    pub length: u64,
-}
+pub use zipzi_contract::authoring::ProjectFingerprint;
 
-impl ProjectFingerprint {
-    pub fn read(
-        reader: &mut impl Read,
-        limit: u64,
-        mut keep_going: impl FnMut() -> bool,
-    ) -> Result<Self> {
-        copy(reader, &mut std::io::sink(), limit, &mut keep_going)
-    }
+pub fn read_fingerprint(
+    reader: &mut impl Read,
+    limit: u64,
+    mut keep_going: impl FnMut() -> bool,
+) -> Result<ProjectFingerprint> {
+    copy(reader, &mut std::io::sink(), limit, &mut keep_going)
 }
 
 /// Copy/hash without buffering an entry or archive. Reading limit+1 detects a

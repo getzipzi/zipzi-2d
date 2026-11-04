@@ -188,7 +188,7 @@ fn nonempty_cdi_survives_store_save_and_session_open() {
     let target = root.join("project");
     let (result, snapshot) = DocumentStore::new().save(&candidate, &root, &target, None);
     assert!(result.status.is_ok(), "{result:?}");
-    let manifest = snapshot.unwrap().manifest;
+    let manifest = snapshot.unwrap().path;
     let saved: Value = serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
     assert_eq!(saved["format_version"], 21);
     assert!(saved["document"]["display_info"]["extensions"]["Future"].is_object());

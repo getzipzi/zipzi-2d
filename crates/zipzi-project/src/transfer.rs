@@ -83,7 +83,7 @@ fn codec(e: zipzi_cmo3::Cmo3Error) -> Status {
 impl DocumentSession {
     pub fn transfer_snapshot(&self) -> Result<TransferSnapshot, Status> {
         let mut resources = HashMap::new();
-        let mut protected_paths = self.import_sources.clone();
+        let mut protected_paths = self.protected_sources();
         let root = self.root();
         if !root.as_os_str().is_empty() {
             protected_paths.push(

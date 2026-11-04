@@ -24,7 +24,7 @@ pub(crate) enum Task {
     Import(crate::ImportSource),
     Save {
         path: PathBuf,
-        target_sha256: Option<String>,
+        target_fingerprint: Option<zipzi_contract::authoring::ProjectFingerprint>,
     },
     Commit(Box<EditSession<'static>>),
     Undo,
@@ -262,16 +262,21 @@ impl Work {
                     })
                 }
                 Task::Open(path) => session
-                    .open_project(&path, Some(base))
+                    .open_project_controlled(&path, Some(base), &mut || {
+                        !cancel.load(Ordering::Acquire)
+                    })
                     .map(|_| JobValue::Opened(session_id)),
                 Task::Save {
                     path,
-                    target_sha256,
-                } => match target_sha256 {
-                    Some(hash) => session.save_project_replacing(&path, Some(base), &hash),
-                    None => session.save_project(&path, Some(base)),
-                }
-                .map(JobValue::Saved),
+                    target_fingerprint,
+                } => session
+                    .save_project_controlled(
+                        &path,
+                        Some(base),
+                        target_fingerprint.as_ref(),
+                        &mut || !cancel.load(Ordering::Acquire),
+                    )
+                    .map(JobValue::Saved),
                 Task::Commit(edit) => (*edit)
                     .commit_to(&mut session)
                     .map(|receipt| JobValue::Published(Arc::new(receipt))),

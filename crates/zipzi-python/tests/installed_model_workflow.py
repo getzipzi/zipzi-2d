@@ -53,7 +53,7 @@ def main():
                 before = session.modeling.records(m.ModelingQuery(motions=(clip.id,))).value.motions[0]
                 saved = session.project.save(output / 'project').wait()
                 assert saved.durable
-                reopened = session.project.open(saved.manifest).wait()
+                reopened = session.project.open(saved.path).wait()
                 assert reopened.after.generation > reopened.before.generation
                 assert session.meshes.get(mesh).value.name == 'R7 installed Mao mesh'
                 assert session.modeling.records(m.ModelingQuery(motions=(clip.id,))).value.motions[0] == before

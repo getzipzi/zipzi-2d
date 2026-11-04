@@ -2,7 +2,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use crate::assets::{relocate_history_assets, validate_asset_root};
+use crate::assets::validate_asset_root;
 use crate::session::AuthoringSession;
 use crate::types::{ImportReceipt, PsdImportReceipt, SaveReceipt, SdkError, Version};
 use zipzi_core::Document;
@@ -125,6 +125,15 @@ impl AuthoringSession {
         path: &Path,
         expected: Option<Version>,
     ) -> Result<ProjectResult, SdkError> {
+        self.open_project_controlled(path, expected, &mut || true)
+    }
+
+    pub fn open_project_controlled(
+        &mut self,
+        path: &Path,
+        expected: Option<Version>,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<ProjectResult, SdkError> {
         if !path.is_absolute() {
             return Err(SdkError::new(
                 "INVALID_PATH",
@@ -147,7 +156,7 @@ impl AuthoringSession {
                 "open_project",
             )
         })?;
-        let result = self.project.open_authoring(path);
+        let result = self.project.open_controlled(path, keep_going);
         if !result.status.is_ok() {
             return Err(SdkError::from_status(
                 result.status,
@@ -163,9 +172,18 @@ impl AuthoringSession {
         self.project.document().id()
     }
     pub fn project_path(&self) -> Option<&Path> {
-        let path = self.project.manifest();
-        (!path.as_os_str().is_empty()).then_some(path)
+        self.project.project_path()
     }
+    pub fn asset_root(&self) -> PathBuf {
+        self.project.asset_root()
+    }
+    pub fn resource_lease(&self) -> Option<zipzi_project::archive::ProjectResourceLease> {
+        self.project.resource_lease()
+    }
+    pub fn configure_project_io(&mut self, archive: zipzi_project::archive::ProjectArchiveStore) {
+        self.project.set_archive_store(archive);
+    }
+
     pub fn diagnose_resources(&self) -> Vec<ResourceDiagnostic> {
         self.project.diagnose()
     }
@@ -215,25 +233,26 @@ impl AuthoringSession {
         path: &Path,
         expected: Option<Version>,
     ) -> Result<SaveReceipt, SdkError> {
-        self.save_project_inner(path, expected, None)
+        self.save_project_controlled(path, expected, None, &mut || true)
     }
 
-    /// Explicitly replace the destination whose manifest has the approved hash.
+    /// Explicitly replace the destination matching the approved archive fingerprint.
     /// Retains history and rejects changes to the destination before publication.
     pub fn save_project_replacing(
         &mut self,
         path: &Path,
         expected: Option<Version>,
-        target_sha256: &str,
+        target_fingerprint: &zipzi_project::archive::ProjectFingerprint,
     ) -> Result<SaveReceipt, SdkError> {
-        self.save_project_inner(path, expected, Some(target_sha256))
+        self.save_project_controlled(path, expected, Some(target_fingerprint), &mut || true)
     }
 
-    fn save_project_inner(
+    pub fn save_project_controlled(
         &mut self,
         path: &Path,
         expected: Option<Version>,
-        target_sha256: Option<&str>,
+        target_fingerprint: Option<&zipzi_project::archive::ProjectFingerprint>,
+        keep_going: &mut impl FnMut() -> bool,
     ) -> Result<SaveReceipt, SdkError> {
         if !path.is_absolute() {
             return Err(SdkError::new(
@@ -250,39 +269,39 @@ impl AuthoringSession {
             error.actual_version = Some(Box::new(before));
             return Err(error);
         }
-        let old_root = self.project.root();
-        let old_assets: HashMap<_, _> = self
-            .asset_ids()
-            .iter()
-            .filter_map(|id| self.asset(id).map(|asset| (id.clone(), asset)))
-            .collect();
-        for asset in old_assets.values() {
-            if !self.project.has_memory_asset(asset) {
-                validate_asset_root(&old_root, asset, "save_project")?;
-            }
-        }
-        let mut unverified_history_ids = HashSet::new();
+        let prepared = self
+            .project
+            .prepare_save_resources_controlled(keep_going)
+            .map_err(|s| SdkError::from_status(s, "save_project", vec![]))?;
+        let mut bindings = Vec::new();
+        let mut history_warnings = Vec::new();
+        // Prepare every historical resource before the file is published. Keep
+        // checkpoints unchanged until publication succeeds.
         for entry in self.done.iter().chain(&self.redo) {
+            let mut bound = Vec::new();
             for asset in entry.checkpoint.assets() {
-                if asset.content.is_none() {
+                if asset.content.is_none() || self.project.has_memory_asset(&asset) {
                     continue;
                 }
-                if !self.project.has_memory_asset(&asset) {
-                    validate_asset_root(&entry.root, &asset, "save_project")?;
+                if asset.content.as_ref().unwrap().sha256.is_empty() {
+                    history_warnings.push(format!("Historical resource {} has no prior SHA-256; its old bytes were not verified", asset.id));
                 }
-                if asset.content.as_ref().unwrap().sha256.is_empty()
-                    && !self.project.has_memory_asset(&asset)
-                {
-                    unverified_history_ids.insert(asset.id);
-                }
+                let replacement = self
+                    .project
+                    .bind_history_asset(&entry.root, &asset, &prepared.resources, keep_going)
+                    .map_err(|s| {
+                        SdkError::from_status(s, "save_project", vec![asset.id.clone()])
+                    })?;
+                bound.push((asset, replacement));
             }
+            bindings.push(bound);
         }
-        // Recompute after any storage relocation or saved-baseline update.
-        *self.content_bytes_cache.lock().unwrap() = None;
-        let result = match target_sha256 {
-            Some(hash) => self.project.save_replacing(path, hash),
-            None => self.project.save(path),
-        };
+        history_warnings.sort();
+        history_warnings.dedup();
+        let resources = prepared.resources.clone();
+        let result =
+            self.project
+                .save_prepared_controlled(path, target_fingerprint, prepared, keep_going);
         if !result.status.is_ok() {
             return Err(SdkError::from_status(
                 result.status,
@@ -290,38 +309,28 @@ impl AuthoringSession {
                 vec![path.display().to_string()],
             ));
         }
-        let new_root = self.project.root();
-        let new_assets: HashMap<_, _> = self
-            .asset_ids()
-            .iter()
-            .filter_map(|id| self.asset(id).map(|asset| (id.clone(), asset)))
-            .collect();
-        for entry in self.done.iter_mut().chain(&mut self.redo) {
-            relocate_history_assets(
-                entry,
-                &old_root,
-                &old_assets,
-                &new_root,
-                &new_assets,
-                |asset| self.project.has_memory_asset(asset),
-            );
+        for (entry, bindings) in self.done.iter_mut().chain(&mut self.redo).zip(bindings) {
+            entry.estimated_bytes_cache.take();
+            for (asset, replacement) in bindings {
+                let content = replacement.content.unwrap();
+                let relocated =
+                    entry
+                        .checkpoint
+                        .relocate_asset_storage(&asset, content.source, content.sha256);
+                debug_assert!(relocated);
+            }
+            entry.root = resources.path().to_path_buf();
+            entry.resource_lease = Some(resources.clone());
         }
-        let mut history_warnings: Vec<_> = unverified_history_ids
-            .into_iter()
-            .map(|id| {
-                format!(
-                    "Historical resource {id} has no prior SHA-256; its old bytes were not verified"
-                )
-            })
-            .collect();
-        history_warnings.sort();
+        *self.content_bytes_cache.lock().unwrap() = None;
         Ok(SaveReceipt {
             before,
             after: self.version(),
-            manifest: self.project.manifest().to_path_buf(),
+            path: self.project.project_path().unwrap().to_path_buf(),
             warnings: result.warnings,
             history_warnings,
             durable: result.durable,
+            fingerprint: self.project.fingerprint().unwrap().clone(),
         })
     }
 
@@ -508,7 +517,7 @@ impl AuthoringSession {
             after: self.version(),
             project,
             report: report.expect("successful PSD import has a report"),
-            manifest: PathBuf::new(),
+            path: PathBuf::new(),
         })
     }
 
@@ -556,7 +565,7 @@ impl AuthoringSession {
             after: self.version(),
             project,
             report: report.expect("successful PSD import has a report"),
-            manifest: self.project.manifest().to_path_buf(),
+            path: self.project.project_path().unwrap().to_path_buf(),
         })
     }
 
@@ -666,13 +675,7 @@ impl crate::AuthoringSnapshot {
                 "capture_image_content",
             )
         })?;
-        let root = self.project_path().and_then(Path::parent).ok_or_else(|| {
-            SdkError::new(
-                "INVALID_PATH",
-                "Snapshot has no resource root",
-                "capture_image_content",
-            )
-        })?;
+        let root = self.asset_root();
         zipzi_project::prepare_project_image(root, asset, budget)
             .map_err(|s| SdkError::from_status(s, "capture_image_content", vec![id.into()]))
     }

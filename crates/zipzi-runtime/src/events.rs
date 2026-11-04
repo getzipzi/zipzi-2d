@@ -16,7 +16,7 @@ impl RuntimeEventBytes for RuntimeEvent {
             + match &self.kind {
                 EventKind::Published(receipt) => receipt.estimated_bytes(),
                 EventKind::Saved(receipt) => {
-                    receipt.manifest.as_os_str().len()
+                    receipt.path.as_os_str().len()
                         + receipt
                             .warnings
                             .iter()

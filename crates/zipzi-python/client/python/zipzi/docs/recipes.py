@@ -36,7 +36,7 @@ def author_and_save(runtime:zipzi.Runtime,folder:Path)->zipzi.SaveReceipt:
     # receipts describe the host, so keep their durability check intact.
     assert saved.durable or (os.name == "nt" and runtime.connection is None)
     session.close()
-    reopened=runtime.sessions.open(saved.manifest).wait()
+    reopened=runtime.sessions.open(saved.path).wait()
     assert reopened.resources.get(asset).value.pixels.rgba==bytes((255,7,9,255))
     reopened.close()
     return saved

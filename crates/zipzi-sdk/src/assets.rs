@@ -1,9 +1,8 @@
 //! PNG descriptors, resource relocation and the rectangle mesh helper.
-use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::types::{HistoryEntry, SdkError};
+use crate::types::SdkError;
 use zipzi_core::{ImageAsset, Mesh, Vec2};
 use zipzi_project::{decode_png, is_valid_asset_path};
 
@@ -35,62 +34,6 @@ pub(crate) fn validate_asset_root(
         return Err(error);
     }
     Ok(())
-}
-
-fn resolved_source(root: &Path, asset: &ImageAsset) -> PathBuf {
-    let source = Path::new(&asset.content.as_ref().unwrap().source);
-    if source.is_absolute() {
-        source.to_path_buf()
-    } else {
-        root.join(source)
-    }
-}
-
-pub(crate) fn relocate_history_assets(
-    entry: &mut HistoryEntry,
-    old_root: &Path,
-    old_assets: &HashMap<String, ImageAsset>,
-    new_root: &Path,
-    new_assets: &HashMap<String, ImageAsset>,
-    is_memory_asset: impl Fn(&ImageAsset) -> bool,
-) {
-    entry.estimated_bytes_cache.take();
-    for asset in entry.checkpoint.assets() {
-        if asset.content.is_none() {
-            continue;
-        }
-        if let (Some(old), Some(new)) = (old_assets.get(&asset.id), new_assets.get(&asset.id)) {
-            if let (Some(old_content), Some(new_content)) = (&old.content, &new.content) {
-                let content = asset.content.as_ref().unwrap();
-                let same_content = content.width == old_content.width
-                    && content.height == old_content.height
-                    && content.sha256 == old_content.sha256
-                    && resolved_source(&entry.root, &asset) == resolved_source(old_root, old);
-                if same_content {
-                    let relocated = entry.checkpoint.relocate_asset_storage(
-                        &asset,
-                        new_content.source.clone(),
-                        new_content.sha256.clone(),
-                    );
-                    debug_assert!(relocated);
-                    continue;
-                }
-            }
-        }
-        if !Path::new(&asset.content.as_ref().unwrap().source).is_absolute()
-            && !is_memory_asset(&asset)
-        {
-            let absolute = entry.root.join(&asset.content.as_ref().unwrap().source);
-            let absolute = absolute.to_str().expect("preflight checked path");
-            let relocated = entry.checkpoint.relocate_asset_storage(
-                &asset,
-                absolute.to_owned(),
-                asset.content.as_ref().unwrap().sha256.clone(),
-            );
-            debug_assert!(relocated);
-        }
-    }
-    entry.root = new_root.to_path_buf();
 }
 
 /// Read a PNG once and return a validated, absolute-path resource description.

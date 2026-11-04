@@ -143,7 +143,7 @@ fn independent_creation_anchors_publish_one_history_and_survive_save_and_undo() 
     std::fs::create_dir_all(&dir).unwrap();
     let saved = s.save_project(&dir.join("positions.zipzi"), None).unwrap();
     let mut reopened = session();
-    reopened.open_project(&saved.manifest, None).unwrap();
+    reopened.open_project(&saved.path, None).unwrap();
     assert_eq!(members(&reopened, deform.clone()), members(&s, deform));
     assert_eq!(members(&reopened, org.clone()), members(&s, org));
     std::fs::remove_dir_all(dir).unwrap();

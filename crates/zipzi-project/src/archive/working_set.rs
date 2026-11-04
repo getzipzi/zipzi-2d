@@ -224,3 +224,115 @@ mod tests {
         }
     }
 }
+
+impl std::fmt::Debug for ProjectResourceLease {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("ProjectResourceLease")
+            .field(&self.path())
+            .finish()
+    }
+}
+impl ProjectResourceLease {
+    /// Add validated encoded content once. Existing content is never overwritten.
+    pub fn insert_png(&self, bytes: &[u8], hash: &str) -> Result<()> {
+        if hash.len() != 64 || crate::content_sha256(bytes) != hash {
+            return Err(invalid("Invalid resource hash"));
+        }
+        let target = self.path().join("assets").join(format!("{hash}.png"));
+        if target.exists() {
+            let actual = crate::archive::read_fingerprint(
+                &mut File::open(&target)?,
+                bytes.len() as u64,
+                || true,
+            )?;
+            if actual.sha256 != hash {
+                return Err(invalid("Owned immutable resource changed"));
+            }
+            return Ok(());
+        }
+        let reservation = self.reserve(bytes.len() as u64)?;
+        let mut stage = tempfile::NamedTempFile::new_in(self.path())?;
+        std::io::Write::write_all(&mut stage, bytes)?;
+        match stage.persist_noclobber(&target) {
+            Ok(_) => self.retain(reservation),
+            Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                let actual = crate::archive::read_fingerprint(
+                    &mut File::open(&target)?,
+                    bytes.len() as u64,
+                    || true,
+                )?;
+                if actual.sha256 != hash {
+                    return Err(invalid("Owned immutable resource changed"));
+                }
+            }
+            Err(e) => return Err(e.error.into()),
+        }
+        Ok(())
+    }
+}
+
+impl ProjectResourceLease {
+    /// Stream an external or historical PNG into the immutable resource set.
+    /// Owned resources are verified in place and never rewritten.
+    pub fn bind_png(
+        &self,
+        source: &Path,
+        content: &zipzi_core::ImageContent,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<String> {
+        use std::io::{Read, Seek};
+        let mut input = File::open(source)?;
+        let length = input.metadata()?.len();
+        let mut header = [0; 33];
+        input.read_exact(&mut header)?;
+        if zipzi_core::image::png_dimensions(&header)? != (content.width, content.height) {
+            return Err(zipzi_core::Status::error(
+                "RESOURCE_DIMENSIONS",
+                "PNG dimensions differ from metadata",
+            )
+            .into());
+        }
+        input.rewind()?;
+        let owned = source.parent() == Some(self.path().join("assets").as_path());
+        let (fingerprint, stage) = if owned {
+            (
+                super::read_fingerprint(&mut input, length, &mut *keep_going)?,
+                None,
+            )
+        } else {
+            let reservation = self.reserve(length)?;
+            let mut stage = tempfile::NamedTempFile::new_in(self.path())?;
+            let fingerprint =
+                super::stream::copy_exact(&mut input, &mut stage, length, &mut *keep_going)?;
+            (fingerprint, Some((stage, reservation)))
+        };
+        if fingerprint.length != length
+            || (!content.sha256.is_empty() && content.sha256 != fingerprint.sha256)
+        {
+            return Err(zipzi_core::Status::error(
+                "RESOURCE_HASH",
+                "PNG differs from saved SHA-256",
+            )
+            .into());
+        }
+        let hash = fingerprint.sha256;
+        if let Some((stage, reservation)) = stage {
+            let target = self.path().join("assets").join(format!("{hash}.png"));
+            match stage.persist_noclobber(&target) {
+                Ok(_) => self.retain(reservation),
+                Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    let actual = super::read_fingerprint(
+                        &mut File::open(target)?,
+                        length,
+                        &mut *keep_going,
+                    )?;
+                    if actual.sha256 != hash {
+                        return Err(invalid("Owned immutable resource changed"));
+                    }
+                }
+                Err(e) => return Err(e.error.into()),
+            }
+        }
+        Ok(hash)
+    }
+}

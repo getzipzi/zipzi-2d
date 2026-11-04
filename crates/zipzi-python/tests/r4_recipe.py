@@ -56,7 +56,7 @@ def run(runtime: zipzi.Runtime, root: Path, folder: Path) -> dict[str, object]:
         for n,runtime_id in ((23,"R4Pose0"),(24,"R4Pose1")):
             edit.apply(m.commands.ModelingCommandCreatePart(part=m.scene.Part(id=uid(n),runtime_id=runtime_id,name=runtime_id,parent_id="",enabled=True,draw_order=0.)))
     saved=imported.project.save(folder/"project").wait()
-    reopened=imported.project.open(saved.manifest).wait()
+    reopened=imported.project.open(saved.path).wait()
     assert reopened.after.generation>reopened.before.generation
     assert imported.resources.get(asset).value.pixels.rgba==pixels
     assert imported.project.diagnose().wait().diagnostics==()

@@ -543,7 +543,7 @@ fn warp_authoring_density_refits_all_stored_controllers_and_roundtrips_without_c
         .save_project(&directory.join("warp-authoring"), None)
         .unwrap();
     let mut reopened = session();
-    reopened.open_project(&saved.manifest, None).unwrap();
+    reopened.open_project(&saved.path, None).unwrap();
     assert_eq!(reopened.transform(&id(2)), Some(changed));
     assert_eq!(reopened.scene_binding(&id(4)), Some(changed_binding));
     let copy = reopened

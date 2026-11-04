@@ -44,7 +44,7 @@ pub(super) fn prepare(
             read_bytes += header.len() as u64;
             let dimensions = zipzi_core::image::png_dimensions(&header)?;
             file.rewind()?;
-            let fingerprint = ProjectFingerprint::read(&mut file, size, &mut keep_going)?;
+            let fingerprint = crate::archive::read_fingerprint(&mut file, size, &mut keep_going)?;
             read_bytes += fingerprint.length;
             if fingerprint.length != size {
                 return Err(invalid("Resource changed during preparation"));
@@ -119,6 +119,7 @@ pub(super) fn prepare(
         .and_then(|n| n.checked_add(65536))
         .ok_or(ArchiveError::Limit("archive extent"))?
         .min(limits.archive_bytes);
+    candidate.mark_saved();
     Ok(PreparedArchive {
         result: WrittenArchive {
             document: candidate,

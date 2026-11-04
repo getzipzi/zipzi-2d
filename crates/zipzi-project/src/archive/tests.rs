@@ -135,7 +135,7 @@ fn fingerprints_cover_resource_bytes_and_finalized_headers() {
     let document = fixture(root.path());
     let (bytes, _) = write(&document, root.path());
     let fingerprint =
-        ProjectFingerprint::read(&mut &bytes[..], bytes.len() as u64, || true).unwrap();
+        crate::archive::read_fingerprint(&mut &bytes[..], bytes.len() as u64, || true).unwrap();
     assert_eq!(fingerprint.sha256, content_sha256(&bytes));
     let mut changed = bytes.clone();
     let data_start = {
@@ -146,7 +146,7 @@ fn fingerprints_cover_resource_bytes_and_finalized_headers() {
     changed[data_start + 40] ^= 1;
     assert_ne!(
         fingerprint,
-        ProjectFingerprint::read(&mut &changed[..], changed.len() as u64, || true).unwrap()
+        crate::archive::read_fingerprint(&mut &changed[..], changed.len() as u64, || true).unwrap()
     );
     let path = root.path().join("changed.zipzi");
     fs::write(&path, changed).unwrap();
@@ -190,12 +190,12 @@ fn copying_is_bounded_handles_short_io_and_checks_cancellation() {
     )
     .is_err());
     assert!(matches!(
-        ProjectFingerprint::read(&mut &bytes[..], 16, || true),
+        crate::archive::read_fingerprint(&mut &bytes[..], 16, || true),
         Err(ArchiveError::Limit(_))
     ));
     let mut checks = 0;
     assert!(matches!(
-        ProjectFingerprint::read(&mut &bytes[..], bytes.len() as u64, || {
+        crate::archive::read_fingerprint(&mut &bytes[..], bytes.len() as u64, || {
             checks += 1;
             checks < 2
         }),
@@ -289,7 +289,8 @@ fn native_archive_store_publishes_with_fingerprint_conflict_and_lease() {
     assert!(receipt.published && receipt.durable);
     assert_eq!(
         receipt.fingerprint,
-        ProjectFingerprint::read(&mut File::open(&target).unwrap(), 1 << 30, || true).unwrap()
+        crate::archive::read_fingerprint(&mut File::open(&target).unwrap(), 1 << 30, || true)
+            .unwrap()
     );
     let reopened = store.open(&target, || true).unwrap();
     assert!(opened.document.same_content(&reopened.document));

@@ -314,3 +314,51 @@ impl Drop for TestDirectory {
         let _ = fs::remove_dir_all(&self.0);
     }
 }
+
+pub(crate) fn archive_session(filesystem: std::sync::Arc<FailingFileSystem>) -> DocumentSession {
+    let mut session = DocumentSession::new();
+    session.set_archive_store(
+        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
+            .with_filesystem(filesystem),
+    );
+    session
+}
+impl zipzi_project::archive::ArchiveFileSystem for FailingFileSystem {
+    fn create_staging(
+        &self,
+        parent: &Path,
+    ) -> std::io::Result<zipzi_project::archive::ArchiveStaging> {
+        if matches!(self.failure, Failure::ShortWrite) {
+            return Err(std::io::Error::other("injected staging failure"));
+        }
+        zipzi_project::archive::NativeArchiveFileSystem.create_staging(parent)
+    }
+    fn acquire_lock(&self, target: &Path) -> std::io::Result<zipzi_project::archive::ArchiveLock> {
+        zipzi_project::archive::NativeArchiveFileSystem.acquire_lock(target)
+    }
+    fn sync_file(&self, file: &fs::File) -> std::io::Result<()> {
+        if matches!(self.failure, Failure::FileSync) {
+            return Err(std::io::Error::other("injected sync failure"));
+        }
+        if let Failure::ExternalChange(path) = &self.failure {
+            fs::write(path, b"external change")?;
+        }
+        zipzi_project::archive::NativeArchiveFileSystem.sync_file(file)
+    }
+    fn publish_replace(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+        let n = self
+            .renames
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            + 1;
+        if matches!(&self.failure, Failure::Rename(at) if at.contains(&n)) {
+            return Err(std::io::Error::other("injected publish failure"));
+        }
+        zipzi_project::archive::NativeArchiveFileSystem.publish_replace(from, to)
+    }
+    fn publish_no_replace(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+        zipzi_project::archive::NativeArchiveFileSystem.publish_no_replace(from, to)
+    }
+    fn sync_directory(&self, path: &Path) -> std::io::Result<()> {
+        zipzi_project::FileSystem::sync_directory(self, path)
+    }
+}

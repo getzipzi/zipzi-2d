@@ -181,7 +181,7 @@ fn handshake_extensions_do_not_block_existing_operations() {
         json!({"protocol": CONTRACT, "client_version": "99.0", "extensions": ["future"]}),
         now,
     );
-    assert_eq!(hello["ok"]["protocol"], "zipzi-runtime-v2");
+    assert_eq!(hello["ok"]["protocol"], "zipzi-runtime-v3");
     let client: ClientId = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
     let connection = hello["ok"]["connection"].as_u64().unwrap();
     let envelope = json!({"protocol": CONTRACT, "runtime": rt.instance_id(),

@@ -1,2 +1,2 @@
 //! Shared protocol identity.
-pub const CONTRACT: &str = "zipzi-runtime-v2";
+pub const CONTRACT: &str = "zipzi-runtime-v3";

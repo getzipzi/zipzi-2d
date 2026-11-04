@@ -338,7 +338,7 @@ mod tests {
             Ok(())
         })?;
         let saved = sdk.save_project(&dir.path().join("dense.zipzi"), None)?;
-        let mut document = Document::open(&saved.manifest)?;
+        let mut document = Document::open(&saved.path)?;
         document.select(&id(3))?;
         let mut editor = Editor::from_document(document);
         editor.register_primary_viewport(ViewportId::new(), ViewportKind::Modeling)?;
@@ -448,8 +448,8 @@ mod tests {
     }
 
     #[test]
-    fn dense_mesh_hover_reuses_capabilities_and_updates_on_edit_context_changes()
-    -> anyhow::Result<()> {
+    fn dense_mesh_hover_reuses_capabilities_and_updates_on_edit_context_changes(
+    ) -> anyhow::Result<()> {
         let (mut editor, _dir) = fixture()?;
         let frame = show(&mut editor)?;
         let before = builds(&editor);

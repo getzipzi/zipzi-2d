@@ -151,7 +151,7 @@ def conversions(runtime: zipzi.Runtime, destination: Path) -> dict[str, object]:
                 m.addressing.AddressPatchBinding(patch=m.bindings.BindingFieldPatchSampleValue(value=16.))))
             session.redo().wait()
         saved = session.project.save(destination).wait()
-        session.project.open(saved.manifest).wait()
+        session.project.open(saved.path).wait()
         restored = points(session.modeling.sample(({},)), mesh)
         close_points(restored, (expected[2],))
         assert session.scene.get(mesh).value.parent_id == parent

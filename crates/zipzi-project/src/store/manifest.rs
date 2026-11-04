@@ -1,328 +1,168 @@
-//! Project encoding, conflict checks, and atomic manifest publication.
+//! The single production project backend. Bare JSON stays in codec tooling.
 use super::{DocumentSnapshot, DocumentStore, ProjectResult};
-use crate::codec::{decode_project, encode_project};
-#[cfg(feature = "binary-prototype")]
-use crate::codec::{decode_project_cbor, encode_project_cbor};
+use crate::archive::{ProjectFingerprint, ProjectResourceLease};
 use crate::filesystem::{self as io, Publication};
-use crate::resources::content_sha256;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
-use zipzi_core::{Document, Status};
+use std::path::{Path, PathBuf};
+use zipzi_core::{Document, ImageAsset, Status};
 
-pub fn project_manifest(path: &Path) -> PathBuf {
-    if path.extension().is_some_and(|ext| ext == "json") {
+/// One host's identity for an existing archive or a not-yet-created file.
+/// The extension is a UI convention; explicit SDK paths are preserved.
+pub fn project_identity(path: &Path) -> Result<PathBuf, Status> {
+    let absolute = if path.is_absolute() {
         path.to_path_buf()
     } else {
-        path.join("project.zipzi.json")
-    }
-}
-
-/// Canonical runtime identity for directory/manifest aliases and not-yet-created
-/// save targets. Existing ancestors are resolved before lexical parent traversal.
-/// This coordinates one host's registry; it is not an external writer lock.
-pub fn project_identity(path: &Path) -> Result<PathBuf, Status> {
-    let manifest = project_manifest(path);
-    let absolute = if manifest.is_absolute() {
-        manifest
-    } else {
-        std::env::current_dir()
-            .map_err(io::io_error)?
-            .join(manifest)
+        std::env::current_dir().map_err(io::io_error)?.join(path)
     };
-    io::local_path(&absolute)
-}
-
-#[derive(Clone, Copy)]
-enum ProjectEncoding {
-    Json,
-    #[cfg(feature = "binary-prototype")]
-    Cbor,
-}
-
-impl ProjectEncoding {
-    fn manifest(self, path: &Path) -> PathBuf {
-        match self {
-            Self::Json => project_manifest(path),
-            #[cfg(feature = "binary-prototype")]
-            Self::Cbor => {
-                if path.extension().is_some_and(|ext| ext == "cbor") {
-                    path.to_path_buf()
-                } else {
-                    path.join("project.zipzi.cbor")
-                }
-            }
-        }
+    io::reject_symlink(&absolute)?;
+    let resolved = io::local_path(&absolute)?;
+    if std::fs::metadata(&resolved).is_ok_and(|m| !m.is_file()) {
+        return Err(Status::error(
+            "UNSUPPORTED_PROJECT_PATH",
+            "Expected a project file; directory projects are unsupported",
+        ));
     }
-
-    fn decode(self, bytes: &[u8]) -> Result<Document, Status> {
-        match self {
-            Self::Json => {
-                let text = std::str::from_utf8(bytes)
-                    .map_err(|_| Status::error("INVALID_PROJECT", "Manifest is not valid UTF-8"))?;
-                decode_project(text)
-            }
-            #[cfg(feature = "binary-prototype")]
-            Self::Cbor => decode_project_cbor(bytes),
-        }
-    }
-
-    fn encode(self, document: &Document) -> Result<Vec<u8>, Status> {
-        match self {
-            Self::Json => encode_project(document).map(String::into_bytes),
-            #[cfg(feature = "binary-prototype")]
-            Self::Cbor => encode_project_cbor(document),
-        }
-    }
+    Ok(resolved)
 }
 
 impl DocumentStore {
     pub fn open(&self, path: &Path) -> (ProjectResult, Option<DocumentSnapshot>) {
-        self.open_inner(path, ProjectEncoding::Json)
+        self.open_controlled(path, &mut || true)
     }
-
-    #[cfg(feature = "binary-prototype")]
-    pub fn open_cbor(&self, path: &Path) -> (ProjectResult, Option<DocumentSnapshot>) {
-        self.open_inner(path, ProjectEncoding::Cbor)
-    }
-
-    fn open_inner(
+    pub fn open_controlled(
         &self,
         path: &Path,
-        encoding: ProjectEncoding,
+        keep_going: &mut impl FnMut() -> bool,
     ) -> (ProjectResult, Option<DocumentSnapshot>) {
-        let manifest = match resolved_manifest_for(path, encoding) {
-            Ok(path) => path,
-            Err(s) => return (ProjectResult::from_status(s), None),
-        };
-
-        let bytes = match fs::read(&manifest) {
-            Ok(b) => b,
-            Err(e) => {
-                return (
-                    ProjectResult::failed("PROJECT_IO", &format!("{}: {}", manifest.display(), e)),
-                    None,
-                );
+        match self.archive.open(path, keep_going) {
+            Ok(opened) => {
+                let resources = opened.resource_lease();
+                let path = match project_identity(path) {
+                    Ok(p) => p,
+                    Err(s) => return (ProjectResult::from_status(s), None),
+                };
+                let result = ProjectResult {
+                    diagnostics: opened.diagnostics,
+                    ..ProjectResult::ok()
+                };
+                (
+                    result,
+                    Some(DocumentSnapshot {
+                        document: opened.document,
+                        path: Some(path),
+                        fingerprint: Some(opened.fingerprint),
+                        resources: Some(resources),
+                    }),
+                )
             }
-        };
-
-        let sha256 = content_sha256(&bytes);
-        let document = match encoding.decode(&bytes) {
-            Ok(d) => d,
-            Err(s) => {
-                return (ProjectResult::from_status(s), None);
-            }
-        };
-
-        let root = manifest.parent().unwrap_or_else(|| Path::new("."));
-        let diagnostics = self.diagnose(&document, root);
-
-        let snapshot = DocumentSnapshot {
-            document,
-            manifest,
-            manifest_sha256: sha256,
-        };
-
-        let mut res = ProjectResult::ok();
-        res.diagnostics = diagnostics;
-        (res, Some(snapshot))
+            Err(error) => (ProjectResult::from_status(error.into()), None),
+        }
+    }
+    pub fn new_resources(&self) -> Result<ProjectResourceLease, Status> {
+        self.archive.new_resources().map_err(Into::into)
     }
 
+    /// Bind resources before publication without decoding PNG pixels.
+    pub fn bind_asset(
+        &self,
+        root: &Path,
+        asset: &ImageAsset,
+        resources: &ProjectResourceLease,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<ImageAsset, Status> {
+        let Some(content) = &asset.content else {
+            return Ok(asset.clone());
+        };
+        let mut bound = asset.clone();
+        let hash = if self.has_memory_asset(asset) {
+            let data = self.read_verified_asset(root, asset)?;
+            resources
+                .insert_png(&data.bytes, &data.sha256)
+                .map_err(Status::from)?;
+            data.sha256
+        } else {
+            let source = super::assets::asset_path(root, asset)?;
+            resources
+                .bind_png(&source, content, keep_going)
+                .map_err(Status::from)?
+        };
+        let target = bound.content.as_mut().unwrap();
+        target.source = format!("assets/{hash}.png");
+        target.sha256 = hash;
+        Ok(bound)
+    }
+    pub fn prepare_document(
+        &self,
+        document: &Document,
+        root: &Path,
+        resources: &ProjectResourceLease,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> Result<Document, Status> {
+        let mut candidate = document.fork_candidate();
+        for id in document.asset_order() {
+            if !keep_going() {
+                return Err(Status::error(
+                    "CANCELLED",
+                    "Project resource preparation cancelled",
+                ));
+            }
+            let bound =
+                self.bind_asset(root, document.get_asset(id).unwrap(), resources, keep_going)?;
+            let edit = candidate.replace_asset(bound);
+            if !edit.status.is_ok() {
+                return Err(edit.status);
+            }
+        }
+        Ok(candidate)
+    }
     pub fn save(
         &self,
         document: &Document,
         source_root: &Path,
         path: &Path,
-        expected_manifest_sha256: Option<&str>,
+        expected: Option<&ProjectFingerprint>,
     ) -> (ProjectResult, Option<DocumentSnapshot>) {
-        self.save_with_encoding(
-            document,
-            source_root,
-            path,
-            expected_manifest_sha256,
-            ProjectEncoding::Json,
-        )
-    }
-
-    #[cfg(feature = "binary-prototype")]
-    pub fn save_cbor(
-        &self,
-        document: &Document,
-        source_root: &Path,
-        path: &Path,
-        expected_manifest_sha256: Option<&str>,
-    ) -> (ProjectResult, Option<DocumentSnapshot>) {
-        self.save_with_encoding(
-            document,
-            source_root,
-            path,
-            expected_manifest_sha256,
-            ProjectEncoding::Cbor,
-        )
-    }
-
-    fn save_with_encoding(
-        &self,
-        document: &Document,
-        source_root: &Path,
-        path: &Path,
-        expected_manifest_sha256: Option<&str>,
-        encoding: ProjectEncoding,
-    ) -> (ProjectResult, Option<DocumentSnapshot>) {
-        match self.save_inner(
-            document,
-            source_root,
-            path,
-            expected_manifest_sha256,
-            encoding,
-        ) {
-            Ok((result, snapshot)) => (result, Some(snapshot)),
-            Err(status) => (ProjectResult::from_status(status), None),
-        }
-    }
-
-    fn save_inner(
-        &self,
-        document: &Document,
-        source_root: &Path,
-        path: &Path,
-        expected: Option<&str>,
-        encoding: ProjectEncoding,
-    ) -> Result<(ProjectResult, DocumentSnapshot), Status> {
-        if document.transaction_active() {
-            return Err(Status::error(
-                "TRANSACTION_ACTIVE",
-                "Commit or cancel edits first",
-            ));
-        }
-        if !document.initialized() {
-            return Err(Status::error(
-                "NOT_INITIALIZED",
-                "Initialize Document first",
-            ));
-        }
-        let manifest = resolved_manifest_for(path, encoding)?;
-        let root = manifest
-            .parent()
-            .ok_or_else(|| Status::error("INVALID_PATH", "Missing project directory"))?;
-        fs::create_dir_all(root).map_err(io::io_error)?;
-        let _lock = io::lock(root)?;
-        check_target(&manifest, expected)?;
-        let assets_dir = root.join("assets");
-        io::reject_symlink(&assets_dir)?;
-        fs::create_dir_all(&assets_dir).map_err(io::io_error)?;
-        let stage = io::Stage::new(root)?;
-        let files = self.filesystem.as_ref();
-        let mut candidate = document.fork_candidate();
-        for id in document.asset_order() {
-            let mut asset = document.get_asset(id).unwrap().clone();
-            if asset.content.is_none() {
-                continue;
-            }
-            let data = self.read_verified_asset(source_root, &asset)?;
-            // Start with 16 hex characters. Extend the hash prefix when an
-            // occupied name belongs to different bytes; keep the full hash in
-            // the manifest for integrity checks.
-            let mut prefix_len = 16;
-            let (name, target, reuse) = loop {
-                let name = format!("{}.png", &data.sha256[..prefix_len]);
-                let target = assets_dir.join(&name);
-                match fs::symlink_metadata(&target) {
-                    Ok(info) => {
-                        let reuse = info.is_file()
-                            && !info.file_type().is_symlink()
-                            && content_sha256(&fs::read(&target).map_err(io::io_error)?)
-                                == data.sha256;
-                        if reuse {
-                            break (name, target, true);
-                        }
-                        if prefix_len < 64 {
-                            prefix_len += 8;
-                            continue;
-                        }
-                        let name = format!("{}-{}.png", &data.sha256[..16], io::unique_name());
-                        break (name.clone(), assets_dir.join(name), false);
-                    }
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                        break (name, target, false);
-                    }
-                    Err(e) => return Err(io::io_error(e)),
-                }
-            };
-            if !reuse {
-                files
-                    .write_new(&target, &data.bytes)
-                    .map_err(io::io_error)?;
-            }
-            asset.content.as_mut().unwrap().source = format!("assets/{name}");
-            asset.content.as_mut().unwrap().sha256 = data.sha256;
-            let edit = candidate.replace_asset(asset);
-            if !edit.status.is_ok() {
-                return Err(edit.status);
-            }
-        }
-        files.sync_directory(&assets_dir).map_err(io::io_error)?;
-        files.sync_directory(root).map_err(io::io_error)?;
-        let manifest_bytes = encoding.encode(&candidate)?;
-        let temporary = stage.0.join("manifest.json");
-        files
-            .write_new(&temporary, &manifest_bytes)
-            .map_err(io::io_error)?;
-        check_target(&manifest, expected)?;
-        let manifest_sha256 = content_sha256(&manifest_bytes);
-        drop(manifest_bytes);
-        // Prepare committed state before publishing. A post-commit sync failure is a warning.
-        candidate.mark_saved();
-        let snapshot = DocumentSnapshot {
-            document: candidate,
-            manifest: manifest.clone(),
-            manifest_sha256,
+        let resources = match self.new_resources() {
+            Ok(r) => r,
+            Err(s) => return (ProjectResult::from_status(s), None),
         };
-        files.rename(&temporary, &manifest).map_err(io::io_error)?;
-        let result = publication_result(Publication::finish(files, root));
-        Ok((result, snapshot))
+        let candidate = match self.prepare_document(document, source_root, &resources, &mut || true)
+        {
+            Ok(d) => d,
+            Err(s) => return (ProjectResult::from_status(s), None),
+        };
+        self.save_prepared(&candidate, resources, path, expected, &mut || true)
     }
-}
-
-pub(super) fn resolved_manifest(path: &Path) -> Result<PathBuf, Status> {
-    resolved_manifest_for(path, ProjectEncoding::Json)
-}
-
-fn resolved_manifest_for(path: &Path, encoding: ProjectEncoding) -> Result<PathBuf, Status> {
-    let requested = encoding.manifest(path);
-    io::reject_symlink(&requested)?;
-    io::local_path(&requested)
-}
-
-fn check_target(manifest: &Path, expected: Option<&str>) -> Result<(), Status> {
-    io::reject_symlink(manifest)?;
-    match (fs::symlink_metadata(manifest), expected) {
-        (Ok(_), None) => Err(Status::error(
-            "DESTINATION_EXISTS",
-            "Reopen the existing project before saving",
-        )),
-        (Ok(_), Some(hash)) => {
-            let bytes = fs::read(manifest).map_err(io::io_error)?;
-            if content_sha256(&bytes) != hash {
-                return Err(Status::error(
-                    "PROJECT_CONFLICT",
-                    "On-disk manifest changed; reopen or save to a new path",
-                ));
+    pub(super) fn save_prepared(
+        &self,
+        document: &Document,
+        resources: ProjectResourceLease,
+        path: &Path,
+        expected: Option<&ProjectFingerprint>,
+        keep_going: &mut impl FnMut() -> bool,
+    ) -> (ProjectResult, Option<DocumentSnapshot>) {
+        match self
+            .archive
+            .save(document, &resources, path, expected, keep_going)
+        {
+            Ok(receipt) => {
+                let result = ProjectResult {
+                    warnings: receipt.warnings,
+                    durable: receipt.durable,
+                    published: receipt.published,
+                    ..Default::default()
+                };
+                (
+                    result,
+                    Some(DocumentSnapshot {
+                        document: receipt.document,
+                        path: Some(receipt.path),
+                        fingerprint: Some(receipt.fingerprint),
+                        resources: Some(resources),
+                    }),
+                )
             }
-            Ok(())
+            Err(error) => (ProjectResult::from_status(error.into()), None),
         }
-        (Err(e), baseline) if e.kind() == std::io::ErrorKind::NotFound => {
-            if baseline.is_some() {
-                Err(Status::error(
-                    "PROJECT_CONFLICT",
-                    "Expected on-disk manifest not found",
-                ))
-            } else {
-                Ok(())
-            }
-        }
-        (Err(e), _) => Err(io::io_error(e)),
     }
 }
 

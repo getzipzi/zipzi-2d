@@ -1,8 +1,8 @@
 //! Runtime-owned IO; the view keeps frozen presentation state only.
 use super::*;
 use std::sync::{
-    Arc,
     atomic::{AtomicU8, Ordering},
+    Arc,
 };
 use zipzi_runtime::{Completion, JobId, JobValue, Work};
 
@@ -228,15 +228,18 @@ impl Editor {
         self.insert_with_id(id, document)?;
         Ok(notices)
     }
-    /// Capture the existing destination after a save dialog confirmed replacement.
-    /// Run on a worker: the manifest read may block on filesystem IO.
-    pub fn save_replacement_baseline(path: &Path) -> Result<Option<String>> {
-        let manifest = zipzi_project::project_manifest(path);
-        match std::fs::read(manifest) {
-            Ok(bytes) => Ok(Some(zipzi_project::content_sha256(&bytes))),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(error) => Err(error.into()),
+    /// Capture the approved destination through the project layer's bounded
+    /// whole-archive fingerprint rules. Run on a worker.
+    pub fn save_replacement_baseline(
+        path: &Path,
+    ) -> Result<Option<zipzi_project::archive::ProjectFingerprint>> {
+        if !path.try_exists()? {
+            return Ok(None);
         }
+        Ok(Some(
+            zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
+                .fingerprint(path, || true)?,
+        ))
     }
 
     pub fn prepare_save(
@@ -254,9 +257,9 @@ impl Editor {
         id: DocumentId,
         path: &Path,
         close_after: bool,
-        target_sha256: &str,
+        target_fingerprint: &zipzi_project::archive::ProjectFingerprint,
     ) -> Result<SaveTask> {
-        self.prepare_save_inner(id, path, close_after, Some(target_sha256))
+        self.prepare_save_inner(id, path, close_after, Some(target_fingerprint))
     }
 
     fn prepare_save_inner(
@@ -264,7 +267,7 @@ impl Editor {
         id: DocumentId,
         path: &Path,
         close_after: bool,
-        target_sha256: Option<&str>,
+        target_fingerprint: Option<&zipzi_project::archive::ProjectFingerprint>,
     ) -> Result<SaveTask> {
         self.end_editing(id, EditingLifecycle::Save)?;
         let operation = OperationId(Uuid::new_v4());
@@ -278,7 +281,7 @@ impl Editor {
             .begin_save(operation, close_after.then_some(close_reason))?;
         let host = self.runtime.clone();
         let prepared = (|| -> Result<(JobId, Work)> {
-            let job = match target_sha256 {
+            let job = match target_fingerprint {
                 Some(hash) => {
                     host.write()
                         .request_save_replacing(host.client_id(), session, path, hash)?

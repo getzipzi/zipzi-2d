@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python/tools/generate.py",
-  "contract_sha256": "44ba40eb6b7c2f26f8d8dfaf382492b5a1a4bb053fff2386bae183d321225bae",
+  "contract_sha256": "f401ebabb818d377b5a9cecc44de1cf814c03949e990a722b8d6ed46d1856fab",
   "format_version": 2,
   "root": {
     "binary": {
@@ -403,7 +403,7 @@
         }
       }
     ],
-    "protocol": "zipzi-runtime-v2",
+    "protocol": "zipzi-runtime-v3",
     "resources": {
       "binary": null,
       "bindings": [
@@ -597,7 +597,7 @@
           }
         }
       ],
-      "protocol": "zipzi-runtime-v2",
+      "protocol": "zipzi-runtime-v3",
       "roots": [
         {
           "kind": "ref",
@@ -805,7 +805,7 @@
     },
     {
       "path": "types/runtime.json",
-      "sha256": "f33580373b0ee2b17bbb311a9f840de5b8ff1fa30af980600e1d917a33180f5f"
+      "sha256": "b5b2003ae75fe9b8dfa16136536bb59f01cc220b4bfe1d1fbe18495ec21ef5f5"
     },
     {
       "path": "types/sampling.json",

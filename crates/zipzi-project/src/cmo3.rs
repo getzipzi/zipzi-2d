@@ -35,11 +35,7 @@ pub fn encode_project_cmo3(
     let snapshot = snapshot.ok_or_else(|| {
         Cmo3Error::InvalidDocument(format!("{}: {}", result.status.code, result.status.message))
     })?;
-    encode_document_cmo3(
-        &snapshot.document,
-        snapshot.manifest.parent().unwrap(),
-        options,
-    )
+    encode_document_cmo3(&snapshot.document, snapshot.asset_root(), options)
 }
 
 /// Publish captured CMO3 bytes by staging and atomic rename. Encoding failures

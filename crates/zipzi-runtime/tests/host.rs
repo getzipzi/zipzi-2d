@@ -132,7 +132,7 @@ fn local_host_composes_candidate_pixels_plan_history_and_save_reopen() {
     let Some(Ok(JobValue::Saved(saved))) = saved.result else {
         panic!("save failed: {saved:?}")
     };
-    assert!(saved.manifest.is_file());
+    assert!(saved.path.is_file());
     host.close().unwrap();
     assert_eq!(budget.usage().total_bytes(), 0);
     assert_eq!(host.call(|rt| Ok(rt.live_counts())), Err(HostError::Closed));
@@ -141,7 +141,7 @@ fn local_host_composes_candidate_pixels_plan_history_and_save_reopen() {
     let reopened = self::host();
     let client = reopened.call(|rt| rt.register_client()).unwrap();
     let OpenRequest::Pending(job) = reopened
-        .call(move |rt| rt.request_open(client, &saved.manifest))
+        .call(move |rt| rt.request_open(client, &saved.path))
         .unwrap()
     else {
         panic!("new host must open from disk")

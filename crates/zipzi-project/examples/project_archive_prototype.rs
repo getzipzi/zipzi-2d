@@ -29,7 +29,7 @@ fn status(status: zipzi_core::Status) -> Result<()> {
 }
 
 fn fingerprint(path: &Path) -> Result<ProjectFingerprint> {
-    Ok(ProjectFingerprint::read(
+    Ok(zipzi_project::archive::read_fingerprint(
         &mut File::open(path)?,
         PrototypeLimits::default().archive_bytes,
         || true,
@@ -59,7 +59,7 @@ fn pack(
     };
     output.inner().sync_all()?;
     output.rewind()?;
-    let hash = ProjectFingerprint::read(
+    let hash = zipzi_project::archive::read_fingerprint(
         &mut output,
         PrototypeLimits::default().archive_bytes,
         || true,
@@ -146,8 +146,11 @@ fn verify(document: &Document, root: &Path, reopened: &OpenedArchive) -> Result<
     Ok(())
 }
 
-fn directory_open(store: &DocumentStore, input: &Path) -> Result<zipzi_project::DocumentSnapshot> {
-    let (result, snapshot) = store.open(input);
+fn directory_open(
+    store: &DocumentStore,
+    input: &Path,
+) -> Result<zipzi_project::store::DirectorySnapshot> {
+    let (result, snapshot) = store.open_directory_prototype(input);
     status(result.status)?;
     // content: None is intentionally representable. A declared but broken
     // content reference is a fixture error and must not be silently dropped.
@@ -249,7 +252,8 @@ fn bench(format: &str, operation: &str, input: &Path, output: &Path, repeats: us
         let target = output.join("saved-directory");
         let mut expected = None;
         if operation == "save" {
-            let (result, snapshot) = store.save(&opened.document, &source, &target, None);
+            let (result, snapshot) =
+                store.save_directory_prototype(&opened.document, &source, &target, None);
             status(result.status)?;
             opened = snapshot.ok_or("No save snapshot")?;
             source = target.clone();
@@ -262,8 +266,12 @@ fn bench(format: &str, operation: &str, input: &Path, output: &Path, repeats: us
                 output.join(format!("copy-{index}"))
             };
             let start = Instant::now();
-            let (result, snapshot) =
-                store.save(&opened.document, &source, &destination, expected.as_deref());
+            let (result, snapshot) = store.save_directory_prototype(
+                &opened.document,
+                &source,
+                &destination,
+                expected.as_deref(),
+            );
             status(result.status)?;
             times.push(start.elapsed().as_secs_f64() * 1000.);
             let saved = snapshot.ok_or("No save snapshot")?;

@@ -2,6 +2,8 @@
 /// shared document content per holder; these are not RSS or GPU limits.
 #[derive(Debug, Clone, serde::Serialize, zipzi_api_derive::ApiShape)]
 pub struct RuntimeLimits {
+    /// Aggregate native archive staging and private resource disk budget for this host.
+    pub project_disk_bytes: u64,
     /// Maximum logical observation base RGBA bytes per referenced asset set.
     pub observation_texture_rgba_bytes: u64,
     /// Maximum aggregate RGBA plus conservative PNG output bytes per batch.
@@ -80,6 +82,7 @@ pub struct RuntimeLimits {
 impl Default for RuntimeLimits {
     fn default() -> Self {
         Self {
+            project_disk_bytes: 32 << 30,
             observation_texture_rgba_bytes: DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,
             observation_output_bytes: 128 << 20,
             observation_frames: 64,

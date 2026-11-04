@@ -40,7 +40,7 @@ pub(super) fn receipt(r: &zipzi_sdk::EditReceipt) -> Value {
         "label": r.label, "object_ids": r.object_ids, "changes": r.changes})
 }
 pub(super) fn saved(r: &zipzi_sdk::SaveReceipt) -> Value {
-    json!({"before": r.before, "after": r.after, "manifest": r.manifest, "durable": r.durable,
+    json!({"before": r.before, "after": r.after, "path": r.path, "durable": r.durable,
         "warnings": r.warnings, "history_warnings": r.history_warnings})
 }
 pub(super) fn job_info(j: &JobInfo) -> Value {

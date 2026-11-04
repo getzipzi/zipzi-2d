@@ -1,8 +1,12 @@
 //! Project storage entry points. Asset handling, persistence, import assembly,
 //! and document session state live in separate implementation modules.
 mod assets;
+#[cfg(any(feature = "archive-prototype", feature = "binary-prototype"))]
+mod directory_prototype;
 mod import;
 mod manifest;
+#[cfg(any(feature = "archive-prototype", feature = "binary-prototype"))]
+pub use directory_prototype::DirectorySnapshot;
 mod session;
 
 use crate::filesystem::{FileSystem, NativeFileSystem};
@@ -20,7 +24,7 @@ pub use assets::{
     prepare_project_image, read_project_asset, read_project_asset_if_changed,
     read_project_texture_bounded, ImageResourceStore, PreparedImageContent, VerifiedTexture,
 };
-pub use manifest::{project_identity, project_manifest};
+pub use manifest::project_identity;
 pub use session::DocumentSession;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,12 +79,14 @@ impl ProjectResult {
 #[derive(Debug, Clone)]
 pub struct DocumentSnapshot {
     pub document: Document,
-    pub manifest: PathBuf,
-    pub manifest_sha256: String,
+    pub path: Option<PathBuf>,
+    pub fingerprint: Option<crate::archive::ProjectFingerprint>,
+    pub resources: Option<crate::archive::ProjectResourceLease>,
 }
 
 pub struct DocumentStore {
     filesystem: Arc<dyn FileSystem>,
+    archive: crate::archive::ProjectArchiveStore,
     verified_pngs: Mutex<HashMap<String, (u32, u32)>>,
     memory_assets: Arc<Mutex<HashMap<String, Arc<MemoryAsset>>>>,
     image_budget: crate::ImageMemoryBudget,
@@ -100,9 +106,38 @@ impl DocumentStore {
     pub fn with_filesystem(filesystem: Arc<dyn FileSystem>) -> Self {
         Self {
             filesystem,
+            archive: crate::archive::ProjectArchiveStore::new(std::env::temp_dir()),
             verified_pngs: Mutex::new(HashMap::new()),
             memory_assets: Arc::new(Mutex::new(HashMap::new())),
             image_budget: Default::default(),
         }
     }
+}
+
+impl DocumentSnapshot {
+    pub fn asset_root(&self) -> &std::path::Path {
+        self.resources
+            .as_ref()
+            .map_or(std::path::Path::new(""), |r| r.path())
+    }
+    pub fn imported(document: Document) -> Self {
+        Self {
+            document,
+            path: None,
+            fingerprint: None,
+            resources: None,
+        }
+    }
+}
+impl DocumentStore {
+    pub fn with_archive_store(mut self, archive: crate::archive::ProjectArchiveStore) -> Self {
+        self.archive = archive;
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PreparedProjectSave {
+    pub document: Document,
+    pub resources: crate::archive::ProjectResourceLease,
 }

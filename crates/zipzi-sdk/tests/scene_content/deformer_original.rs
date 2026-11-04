@@ -575,7 +575,7 @@ fn native_save_reopen_duplicate_and_history_retain_independent_canvas_originals(
     std::fs::create_dir(&directory).unwrap();
     let saved = s.save_project(&directory, None).unwrap();
     let mut reopened = session();
-    reopened.open_project(&saved.manifest, None).unwrap();
+    reopened.open_project(&saved.path, None).unwrap();
     assert_eq!(original(&reopened, 2), record);
     let plan = reopened
         .plan_scene_edit(SceneEdit::Duplicate {

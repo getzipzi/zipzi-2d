@@ -8,11 +8,11 @@ use zipzi_project::{content_sha256, decode_png, DocumentSession, DocumentStore};
 fn export_refuses_source_project_ancestor_and_source_asset_directories() {
     let tmp = TestDirectory::new();
     let session = tmp.saved_session();
-    let manifest = fs::read(session.manifest()).unwrap();
+    let manifest = fs::read(session.project_path().unwrap()).unwrap();
     for target in [session.root(), tmp.0.clone(), session.root().join("assets")] {
         let result = session.export_package(&target);
         assert_eq!(result.status.code, "INVALID_DESTINATION", "{result:?}");
-        assert_eq!(fs::read(session.manifest()).unwrap(), manifest);
+        assert_eq!(fs::read(session.project_path().unwrap()).unwrap(), manifest);
     }
     assert!(session
         .export_package(&session.root().join("exports/model"))
@@ -27,10 +27,7 @@ fn path_aliases_do_not_bypass_export_guard_or_save_baseline() {
     let mut session = tmp.saved_session();
     let alias = tmp.0.join("alias");
     std::os::unix::fs::symlink(session.root(), &alias).unwrap();
-    assert!(session
-        .save(&alias.join("project.zipzi.json"))
-        .status
-        .is_ok());
+    assert_eq!(session.save(&alias).status.code, "INVALID_PATH");
     assert_eq!(session.export_package(&alias).status.code, "INVALID_PATH");
     assert_eq!(
         session.export_package(&alias.join("assets/..")).status.code,
@@ -43,7 +40,7 @@ fn path_aliases_do_not_bypass_export_guard_or_save_baseline() {
     std::os::unix::fs::symlink(external.join("assets"), &assets).unwrap();
     assert_eq!(
         session
-            .save(session.manifest().to_path_buf().as_path())
+            .save(session.project_path().unwrap().to_path_buf().as_path())
             .status
             .code,
         "INVALID_PATH"
@@ -99,7 +96,7 @@ fn package_failures_rollback_and_report_recovery_copy_when_rollback_fails() {
         assert!(initial.export_package(&destination).status.is_ok());
         fs::write(destination.join("old-marker"), b"original").unwrap();
         let mut session = DocumentSession::with_filesystem(FailingFileSystem::new(fault));
-        assert!(session.open(initial.manifest()).status.is_ok());
+        assert!(session.open(initial.project_path().unwrap()).status.is_ok());
         let result = session.export_package(&destination);
         assert!(!result.status.is_ok());
         assert!(!result.published);
@@ -116,7 +113,7 @@ fn package_failures_rollback_and_report_recovery_copy_when_rollback_fails() {
                 b"original"
             );
         }
-        assert!(initial.manifest().exists());
+        assert!(initial.project_path().unwrap().exists());
     }
 }
 
@@ -126,7 +123,7 @@ fn package_postcommit_sync_error_is_a_warning_not_a_failed_export() {
     let initial = tmp.saved_session();
     let mut session =
         DocumentSession::with_filesystem(FailingFileSystem::new(Failure::DirectorySync(3)));
-    assert!(session.open(initial.manifest()).status.is_ok());
+    assert!(session.open(initial.project_path().unwrap()).status.is_ok());
     let destination = tmp.0.join("package");
     let result = session.export_package(&destination);
     assert!(result.status.is_ok() && result.published);
@@ -189,10 +186,13 @@ fn a_failed_new_asset_write_can_be_retried_without_reusing_partial_bytes() {
     let tmp = TestDirectory::new();
     let (doc, input) = tmp.fixture();
     let destination = tmp.0.join("new-project");
-    let failed = DocumentStore::with_filesystem(FailingFileSystem::new(Failure::ShortWrite));
+    let failed = DocumentStore::new().with_archive_store(
+        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
+            .with_filesystem(FailingFileSystem::new(Failure::ShortWrite)),
+    );
     let result = failed.save(&doc, &input, &destination, None).0;
     assert_eq!(result.status.code, "PROJECT_IO");
-    assert!(!destination.join("project.zipzi.json").exists());
+    assert!(!destination.exists());
     let result = DocumentStore::new()
         .save(&doc, &input, &destination, None)
         .0;

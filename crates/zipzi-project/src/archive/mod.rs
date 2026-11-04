@@ -25,7 +25,7 @@ use zipzi_core::{Document, Status};
 use crate::encode_project;
 use crate::{content_sha256, decode_project, read_project_texture_bounded};
 
-pub use stream::{IoCounts, MeteredIo, ProjectFingerprint};
+pub use stream::{read_fingerprint, IoCounts, MeteredIo, ProjectFingerprint};
 
 const EXPERIMENT: &str = "prototype-directory-document-v21";
 const NATIVE_FORMAT: &str = "zipzi-project";
@@ -164,6 +164,7 @@ impl Default for ArchiveIoLimits {
     }
 }
 
+#[derive(Clone)]
 pub struct ProjectArchiveStore {
     workspace_parent: PathBuf,
     limits: ArchiveIoLimits,
@@ -219,11 +220,15 @@ impl ProjectArchiveStore {
             )
             .into());
         }
-        ProjectFingerprint::read(
+        crate::archive::read_fingerprint(
             &mut File::open(path)?,
             self.limits.archive_bytes,
             &mut keep_going,
         )
+    }
+
+    pub fn new_resources(&self) -> Result<ProjectResourceLease> {
+        ProjectResourceLease::create(&self.workspace_parent, self.disk_budget.clone())
     }
 
     pub fn open(&self, path: &Path, keep_going: impl FnMut() -> bool) -> Result<OpenedArchive> {
@@ -274,8 +279,11 @@ impl ProjectArchiveStore {
         let length = stage.file.metadata()?.len();
         structure::validate(&mut stage.file, length, self.limits, &mut keep_going)?;
         stage.file.rewind()?;
-        let fingerprint =
-            ProjectFingerprint::read(&mut stage.file, self.limits.archive_bytes, &mut keep_going)?;
+        let fingerprint = crate::archive::read_fingerprint(
+            &mut stage.file,
+            self.limits.archive_bytes,
+            &mut keep_going,
+        )?;
         check_archive_target(&target, expected, &mut keep_going)?;
         check(&mut keep_going)?;
         if expected.is_some() {
@@ -336,8 +344,11 @@ fn check_archive_target(
                     Status::error("PROJECT_CONFLICT", "On-disk archive length changed").into(),
                 );
             }
-            let actual =
-                ProjectFingerprint::read(&mut File::open(target)?, baseline.length, keep_going)?;
+            let actual = crate::archive::read_fingerprint(
+                &mut File::open(target)?,
+                baseline.length,
+                keep_going,
+            )?;
             if expected.is_some_and(|baseline| baseline != &actual) {
                 return Err(ArchiveError::Document {
                     code: "PROJECT_CONFLICT".into(),

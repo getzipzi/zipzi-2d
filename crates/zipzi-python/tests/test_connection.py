@@ -189,7 +189,7 @@ with connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
 
                 with patch.object(connected, "_exchange", side_effect=extended_host):
                     with self.connect() as runtime:
-                        self.assertEqual(runtime.connection.protocol, "zipzi-runtime-v2")
+                        self.assertEqual(runtime.connection.protocol, "zipzi-runtime-v3")
                         self.assertEqual(runtime.connection.sdk_build, "99.0+different-sources")
                         self.assertEqual(runtime.connection.capabilities, tuple(capabilities))
                         session = runtime.sessions.create()
@@ -207,7 +207,7 @@ with connect(endpoint=Path(sys.argv[1]),start=True,host=Path(sys.argv[2])) as r:
         exchange = connected._exchange
         def incompatible_host(stream, body):
             response = exchange(stream, body)
-            response["ok"]["protocol"] = "zipzi-runtime-v3"
+            response["ok"]["protocol"] = "zipzi-runtime-v2"
             return response
 
         with patch.object(connected, "_exchange", side_effect=incompatible_host):

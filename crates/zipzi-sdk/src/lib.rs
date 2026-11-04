@@ -147,3 +147,5 @@ pub use modeling::{
     modeling_records, ModelingIntent, ModelingPlan, ModelingPlanReport, ModelingQuery,
     ModelingRecords, ModelingSampler, ModelingSamples, OwnedModelingRecords,
 };
+
+pub use zipzi_project::archive::ProjectFingerprint;
