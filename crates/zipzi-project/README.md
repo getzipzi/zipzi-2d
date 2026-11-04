@@ -18,6 +18,24 @@ Focused native controls: `cargo test --locked -p zipzi-project --lib filesystem:
 privilege and report missing coverage explicitly when unavailable. Ordinary file,
 case-alias, lock and replacement tests always execute.
 
+## Native archive P0 prototype
+
+The `archive-prototype` feature contains the storage experiment for the native
+single-file project proposal. It is intentionally separate from the current
+directory project API and writes archives with an explicit experimental
+`required_features` marker. Run the focused checks with:
+
+```sh
+cargo test --locked -p zipzi-project --lib archive:: --features archive-prototype
+cargo run --locked --release -p zipzi-project --features archive-prototype \
+  --example project_archive_prototype -- fixtures target/archive-p0/fixtures
+```
+
+The prototype uses the existing v21 JSON codec, stores content-addressed PNG
+bytes, and keeps the private extraction directory alive through a cloneable
+lease. P1 still needs to move ZIP admission before allocation and connect this
+path to the Project/SDK publication transaction.
+
 ## Import artwork
 
 `DocumentSession` imports of model3/MOC3 and CMO3/CAN3 normalize packed texture

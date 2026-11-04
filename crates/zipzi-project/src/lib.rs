@@ -1,3 +1,5 @@
+#[cfg(feature = "archive-prototype")]
+pub mod archive;
 mod atlas;
 mod export_preflight;
 pub use export_preflight::*;

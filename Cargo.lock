@@ -9344,6 +9344,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "uuid",
+ "zip",
  "zipzi-api-derive",
  "zipzi-cmo3",
  "zipzi-contract",
