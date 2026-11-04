@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 310" role="img" aria-label="zipzi wordmark">
+  <title>zipzi — balanced rounded geometric wordmark</title>
+  <g fill="none" stroke="#000" stroke-width="38" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M49 118 H163 L49 237 H163"/>
+    <path d="M222 118 V237"/>
+    <path d="M296 118 V277"/>
+    <circle cx="354" cy="177" r="58"/>
+    <path d="M467 118 H581 L467 237 H581"/>
+    <path d="M640 118 V237"/>
+  </g>
+  <g fill="#000">
+    <circle cx="222" cy="65" r="20"/>
+    <circle cx="640" cy="65" r="20"/>
+  </g>
+</svg>

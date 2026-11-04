@@ -7,14 +7,15 @@ hide_others = "ほかを隠す"
 show_all = "すべてを表示"
 quit = "Zipzi Editorを終了"
 title = "Zipzi Editor"
-description = "Zipzi 2Dモデル向けのmacOSネイティブエディタ。"
+description = "2Dキャラクターのモデリングとアニメーション制作のためのネイティブデスクトップエディタ。"
 
 [about]
 version = "バージョン %{version} · 開発中"
 report_issue = "問題の報告・機能のリクエスト"
 license = "ライセンス: %{license}"
 copyright = "© 2026 Pakho Leung および貢献者。"
-credits = "Zipzi SDK、Rust、GPUI Kit、Metalを使用しています。"
+credits = "Zipzi SDK、Rust、GPUI Kit、Metal、wgpuを使用しています。"
+third_party_notices = "サードパーティに関する表示"
 third_party = "サードパーティのコンポーネントには、それぞれの著作権とライセンスが適用されます。"
 warranty = "フリーソフトウェアです。GNU GPLバージョン3に基づいてのみ再配布・変更できます。無保証で提供されます。"
 
@@ -1300,3 +1301,8 @@ hint_add_selection = "選択に追加"
 hint_remove_selection = "選択から除外"
 hint_lasso_select = "投げなわ選択"
 hint_box_select = "矩形選択"
+
+[welcome]
+show = "ようこそ"
+open_project = "プロジェクトを開く…"
+recent_projects = "最近のプロジェクト"

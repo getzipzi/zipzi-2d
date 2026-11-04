@@ -4,73 +4,78 @@ use gpui_kit::base::Link;
 use gpui_kit::component::{ActiveTheme, WindowExt};
 use gpui_kit::{prelude::*, *};
 
-const REPOSITORY: &str = "https://github.com/getzipzi/zipzi-2d";
+pub(crate) const REPOSITORY: &str = "https://github.com/getzipzi/zipzi-2d";
 
 pub(crate) fn show(window: &mut Window, cx: &mut App) {
-    window.open_dialog(cx, |dialog, _, cx| {
-        dialog.title(t!("app.about")).width(px(480.)).child(
-            div()
-                .flex()
-                .flex_col()
-                .gap_4()
-                .text_size(super::compact::rem(super::compact::BODY))
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap_1()
-                        .child(
-                            div()
-                                .text_lg()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .child("Zipzi Editor"),
-                        )
-                        .child(
-                            div()
-                                .text_color(cx.theme().muted_foreground)
-                                .child(t!("about.version", version = env!("CARGO_PKG_VERSION"))),
-                        )
-                        .child(t!("app.description")),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .items_start()
-                        .gap_2()
-                        .child(link("about-repository", REPOSITORY, REPOSITORY, cx))
-                        .child(link(
-                            "about-issues",
-                            t!("about.report_issue"),
-                            format!("{REPOSITORY}/issues"),
-                            cx,
-                        ))
-                        .child(link(
-                            "about-license",
-                            t!("about.license", license = env!("CARGO_PKG_LICENSE")),
-                            format!("{REPOSITORY}/blob/HEAD/LICENSE"),
-                            cx,
-                        )),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap_2()
-                        .pt_3()
-                        .border_t_1()
-                        .border_color(cx.theme().border)
-                        .text_color(cx.theme().muted_foreground)
-                        .child(t!("about.copyright"))
-                        .child(t!("about.credits"))
-                        .child(t!("about.third_party"))
-                        .child(t!("about.warranty")),
-                ),
-        )
+    window.open_dialog(cx, |dialog, window, cx| {
+        dialog
+            .title(t!("app.about"))
+            .width(super::compact::scaled(480., cx))
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_4()
+                    .text_size(super::compact::rem(super::compact::BODY))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            .child(super::branding::lockup(window, cx).py_2())
+                            .child(
+                                div().text_color(cx.theme().muted_foreground).child(t!(
+                                    "about.version",
+                                    version = env!("CARGO_PKG_VERSION")
+                                )),
+                            )
+                            .child(t!("app.description")),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .items_start()
+                            .gap_2()
+                            .child(link("about-repository", "GitHub", REPOSITORY, cx))
+                            .child(link(
+                                "about-issues",
+                                t!("about.report_issue"),
+                                format!("{REPOSITORY}/issues"),
+                                cx,
+                            ))
+                            .child(link(
+                                "about-license",
+                                t!("about.license", license = env!("CARGO_PKG_LICENSE")),
+                                format!("{REPOSITORY}/blob/HEAD/LICENSE-GPL-3.0"),
+                                cx,
+                            ))
+                            .child(link(
+                                "about-third-party",
+                                t!("about.third_party_notices"),
+                                format!("{REPOSITORY}/blob/HEAD/THIRD_PARTY_NOTICES.md"),
+                                cx,
+                            )),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_2()
+                            .pt_3()
+                            .border_t_1()
+                            .border_color(cx.theme().border)
+                            .text_color(cx.theme().muted_foreground)
+                            .child(t!("about.copyright"))
+                            .child(t!("about.credits"))
+                            .child(t!("about.third_party"))
+                            .child(t!("about.warranty")),
+                    ),
+            )
     });
 }
 
-fn link(
+pub(super) fn link(
     id: &'static str,
     label: impl Into<SharedString>,
     href: impl Into<SharedString>,

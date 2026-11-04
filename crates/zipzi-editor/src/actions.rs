@@ -57,6 +57,7 @@ actions!(
     [
         CloseWindow,
         About,
+        ShowWelcome,
         Hide,
         HideOthers,
         ShowAll,
@@ -98,6 +99,20 @@ impl EditorView {
                 "ZipziEditor"
             })
             .track_focus(&self.focus)
+            .when(self.welcome.is_some(), |e| {
+                e.on_action(cx.listener(|this, action: &RunCommand, window, cx| {
+                    if matches!(
+                        action.id,
+                        CommandId::New | CommandId::Open | CommandId::Quit
+                    ) {
+                        this.dismiss_welcome(window, cx);
+                        this.run_command(action.id, window, cx);
+                    }
+                }))
+                .on_action(cx.listener(|this, _: &CloseWindow, window, cx| {
+                    this.close_window(window, cx);
+                }))
+            })
             .when(!modal, |e| {
                 e.on_action(cx.listener(|this, action: &RunCommand, window, cx| {
                     if let Some(viewport) = this.focused_viewport_id(window, cx) {
@@ -152,6 +167,9 @@ impl EditorView {
                             this.set_edit_error(error.to_string(), cx);
                         }
                     }
+                }))
+                .on_action(cx.listener(|this, _: &ShowWelcome, window, cx| {
+                    this.show_welcome(window, cx);
                 }))
                 .on_action(|_: &About, window, cx| ui::about::show(window, cx))
             })

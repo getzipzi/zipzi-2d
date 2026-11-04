@@ -456,6 +456,9 @@ impl EditorView {
         self.drain_project_queue(window, cx);
     }
     pub(super) fn drain_project_queue(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.project_queue.lock().unwrap().is_empty() {
+            self.dismiss_welcome(window, cx);
+        }
         if self.modal
             || self.editor.exiting()
             || window.has_active_dialog(cx)
@@ -696,6 +699,7 @@ impl EditorView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
+        self.dismiss_welcome(window, cx);
         if self.modal || window.has_active_dialog(cx) {
             return false;
         }

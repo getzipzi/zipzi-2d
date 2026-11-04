@@ -49,6 +49,7 @@ mod tooltips;
 mod transfer;
 mod tree_selection;
 mod ui_performance;
+mod welcome;
 mod workspaces;
 
 use crate::{EditorView, actions, i18n, settings};

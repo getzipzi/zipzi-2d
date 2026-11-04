@@ -1,4 +1,5 @@
 pub(crate) mod about;
+mod branding;
 pub(crate) mod color_picker;
 pub(crate) mod compact;
 pub(crate) mod export;
@@ -8,6 +9,7 @@ pub(crate) mod mesh_generation;
 pub(crate) mod object_identity;
 pub(crate) mod property_details;
 pub(crate) mod slide_number_input;
+pub(crate) mod welcome;
 
 use super::*;
 use gpui_kit::component::{ActiveTheme, WindowExt};
@@ -34,6 +36,7 @@ impl Render for EditorView {
                 }
             }
         }
+        self.sync_welcome(window, cx);
         self.sync_viewports();
         let open: std::collections::HashSet<_> = self
             .editor

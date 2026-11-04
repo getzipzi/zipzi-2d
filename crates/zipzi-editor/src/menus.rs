@@ -57,6 +57,7 @@ pub struct MenuState {
     pub targets: Vec<zipzi_editor_core::CommandTarget>,
     pub text: bool,
     pub modal: bool,
+    pub welcome: bool,
     pub recent_files: Vec<PathBuf>,
     pub language: Option<String>,
     pub deformer_visibility: zipzi_editor_core::DeformerVisibility,
@@ -260,6 +261,7 @@ impl EditorView {
                 .collect(),
             text,
             modal,
+            welcome: self.welcome.is_some(),
             recent_files: settings.recent_files.paths.clone(),
             language: settings.language.clone(),
         };
@@ -308,7 +310,13 @@ impl EditorView {
                 }
             }
             MenuItem::action(label, RunCommand::targeted(command))
-                .disabled(modal || !state.enabled || (text && id == CommandId::DeleteObject))
+                .disabled(
+                    (modal
+                        && !(self.welcome.is_some()
+                            && matches!(id, CommandId::New | CommandId::Open | CommandId::Quit)))
+                        || !state.enabled
+                        || (text && id == CommandId::DeleteObject),
+                )
                 .checked(state.checked)
         };
         let edit = if text {
@@ -322,6 +330,7 @@ impl EditorView {
         cx.set_menus([
             Menu::new(t!("app.title")).items([
                 MenuItem::action(t!("app.about"), About),
+                MenuItem::action(t!("welcome.show"), ShowWelcome).disabled(modal),
                 MenuItem::submenu(
                     Menu::new(t!("menu.language")).items([
                         MenuItem::action(t!("menu.follow_system"), SetLanguage { language: None })
@@ -374,7 +383,8 @@ impl EditorView {
                     item(CommandId::ExportCubism),
                 ])),
                 item(CommandId::Close),
-                MenuItem::action(t!("menu.close_window"), CloseWindow).disabled(modal),
+                MenuItem::action(t!("menu.close_window"), CloseWindow)
+                    .disabled(modal && self.welcome.is_none()),
             ]),
             Menu::new(t!("menu.edit")).items(
                 edit.into_iter().chain([

@@ -2,7 +2,7 @@
 [app]
 title = "Zipzi Editor"
 about = "About Zipzi Editor"
-description = "A native macOS editor for Zipzi 2D models."
+description = "A native desktop editor for 2D character modeling and animation."
 hide = "Hide Zipzi Editor"
 hide_others = "Hide Others"
 show_all = "Show All"
@@ -13,7 +13,8 @@ version = "Version %{version} · In development"
 report_issue = "Report an issue or request a feature"
 license = "License: %{license}"
 copyright = "© 2026 Pakho Leung and contributors."
-credits = "Built with Zipzi SDK, Rust, GPUI Kit, and Metal."
+credits = "Built with Zipzi SDK, Rust, GPUI Kit, Metal, and wgpu."
+third_party_notices = "Third-party notices"
 third_party = "Third-party components retain their respective copyrights and licenses."
 warranty = "Free software: you may redistribute and modify it under the GNU GPL version 3 only. Provided without any warranty."
 
@@ -1353,3 +1354,8 @@ use_node = "Use selected node"
 use_base = "Use selected base sample"
 
 summary_named = "Delete “%{name}”?"
+
+[welcome]
+show = "Welcome"
+open_project = "Open Project…"
+recent_projects = "Recent Projects"

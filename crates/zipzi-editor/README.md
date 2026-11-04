@@ -92,6 +92,14 @@ registering or unregistering the current application location for the current
 user. Choose the default application through Windows settings; register again
 after moving the portable application.
 
+## Welcome panel
+
+Starting without a project shows a dismissible panel inside the main window, with
+New/Open actions, recent projects and the GitHub repository link. Opening a file
+from the system skips the panel. Closing the last project leaves the empty
+workspace visible. Escape or clicking outside dismisses the panel. Reopen it
+from **Zipzi Editor > Welcome**.
+
 ## Resident application host
 
 Start the editor without a window using:
