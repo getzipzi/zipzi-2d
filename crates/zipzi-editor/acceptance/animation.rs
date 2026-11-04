@@ -428,7 +428,7 @@ fn model(
         view.editor.finish_save(&mut completion)
     })??;
     update(&mut h, |view, _, _| view.editor.close_document(id, false))??;
-    let project = saved.path().join("accepted.zipzi/project.zipzi.json");
+    let project = saved.path().join("accepted.zipzi");
     let task = update(&mut h, |view, _, _| {
         view.editor.prepare_load(LoadRequest::Open(project))
     })??

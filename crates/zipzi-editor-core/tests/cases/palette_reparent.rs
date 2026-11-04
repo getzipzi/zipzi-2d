@@ -294,7 +294,7 @@ fn whole_rotation_and_mixed_parent_moves_preserve_child_meshes_and_roundtrip() -
     d.redo()?;
     let directory = tempfile::tempdir()?;
     let saved = d.save(&directory.path().join("rotation-parent.zipzi"))?;
-    let mut reopened = Document::open(&saved.manifest)?;
+    let mut reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.deformer_tree(), d.deformer_tree());
     assert_eq!(
         reopened.snapshot()?.runtime_frame.drawables,
@@ -435,7 +435,7 @@ fn default_mesh_tree_moves_into_and_out_of_warp_keep_visible_geometry_and_undo()
     d.redo()?;
     let directory = tempfile::tempdir()?;
     let saved = d.save(&directory.path().join("warp-parent.zipzi"))?;
-    let mut reopened = Document::open(&saved.manifest)?;
+    let mut reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.deformer_tree(), d.deformer_tree());
     assert_eq!(
         reopened.snapshot()?.runtime_frame.drawables,

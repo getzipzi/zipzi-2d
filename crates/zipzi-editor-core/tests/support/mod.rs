@@ -112,7 +112,7 @@ pub fn sample_document_with_parts() -> anyhow::Result<(Document, TempDir)> {
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let id = |value| Uuid::from_u128(value).to_string();
     session.edit("Parts fixture", None, |edit| {
         for (value, name, parent) in [
@@ -130,8 +130,8 @@ pub fn sample_document_with_parts() -> anyhow::Result<(Document, TempDir)> {
         edit.set_mesh_part(&meshes[0], &id(101))?;
         edit.set_mesh_part(&meshes[1], &id(103))
     })?;
-    let saved = session.save_project(&saved.manifest, None)?;
-    Ok((Document::open(&saved.manifest)?, assets))
+    let saved = session.save_project(&saved.path, None)?;
+    Ok((Document::open(&saved.path)?, assets))
 }
 
 #[allow(dead_code)]
@@ -143,7 +143,7 @@ pub fn sample_document_with_scene_objects() -> anyhow::Result<(Document, TempDir
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let meshes = session.mesh_ids().to_vec();
     let id = |n| Uuid::from_u128(n).to_string();
     session.edit("Scene objects fixture", None, |edit| {
@@ -181,8 +181,8 @@ pub fn sample_document_with_scene_objects() -> anyhow::Result<(Document, TempDir
             ..Default::default()
         })
     })?;
-    session.save_project(&saved.manifest, None)?;
-    Ok((Document::open(&saved.manifest)?, assets))
+    session.save_project(&saved.path, None)?;
+    Ok((Document::open(&saved.path)?, assets))
 }
 
 #[allow(dead_code)]
@@ -208,7 +208,7 @@ pub fn sample_document_with_parameters(count: usize) -> anyhow::Result<(Document
         Ok(())
     })?;
     let receipt = session.save_project(&directory.path().join("fixture.zipzi"), None)?;
-    Ok((Document::open(&receipt.manifest)?, directory))
+    Ok((Document::open(&receipt.path)?, directory))
 }
 
 #[allow(dead_code)]
@@ -259,7 +259,7 @@ pub fn sample_document_with_parameter_groups() -> anyhow::Result<(Document, Temp
         Ok(())
     })?;
     let saved = session.save_project(&directory.path().join("grouped.zipzi"), None)?;
-    Ok((Document::open(&saved.manifest)?, directory))
+    Ok((Document::open(&saved.path)?, directory))
 }
 
 #[allow(dead_code)]
@@ -344,7 +344,7 @@ fn sample_document_with_options(
         Ok(())
     })?;
     let receipt = session.save_project(&directory.path().join("fixture.zipzi"), None)?;
-    let mut document = Document::open(&receipt.manifest)?;
+    let mut document = Document::open(&receipt.path)?;
     document.select(&mesh.id)?;
     Ok((document, directory))
 }
@@ -403,7 +403,7 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
         Ok(())
     })?;
     let receipt = session.save_project(&assets.path().join("nonuniform.zipzi"), None)?;
-    Ok((Document::open(&receipt.manifest)?, assets))
+    Ok((Document::open(&receipt.path)?, assets))
 }
 
 /// A parameter-bound rectangle with repeated registrations (distinct fades),
@@ -421,7 +421,7 @@ pub fn animation_document_with_sound_bytes(
         MotionGroup, MotionKey, MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
     };
     let (mut doc, assets) = rectangle_document(true)?;
-    let path = doc.save(&assets.path().join("animation.zipzi"))?.manifest;
+    let path = doc.save(&assets.path().join("animation.zipzi"))?.path;
     let mut session = AuthoringSession::new(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
@@ -537,9 +537,7 @@ pub fn animation_document_with_sound_bytes(
 #[allow(dead_code)]
 pub fn combined_animation_document() -> anyhow::Result<(Document, TempDir)> {
     let (mut document, assets) = animation_document()?;
-    let path = document
-        .save(&assets.path().join("combined.zipzi"))?
-        .manifest;
+    let path = document.save(&assets.path().join("combined.zipzi"))?.path;
     let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.model_setup())?;
     session.open_project(&path, None)?;
     let mut input = session.parameter(&session.parameter_ids()[0]).unwrap();
@@ -600,7 +598,7 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
     let (mut document, assets) = animation_document()?;
     let path = document
         .save(&assets.path().join("diagnostics.zipzi"))?
-        .manifest;
+        .path;
     let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.model_setup())?;
     session.open_project(&path, None)?;
     let mut clip = session
@@ -680,7 +678,7 @@ pub fn sample_document_for_reparent(driven: bool) -> anyhow::Result<(Document, T
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let meshes = session.mesh_ids().to_vec();
     let id = |n| Uuid::from_u128(n).to_string();
     session.edit("Affine parents", None, |e| {
@@ -736,8 +734,8 @@ pub fn sample_document_for_reparent(driven: bool) -> anyhow::Result<(Document, T
         }
         Ok(())
     })?;
-    session.save_project(&saved.manifest, None)?;
-    let mut d = Document::open(&saved.manifest)?;
+    session.save_project(&saved.path, None)?;
+    let mut d = Document::open(&saved.path)?;
     d.select(&meshes[0])?;
     Ok((d, assets))
 }

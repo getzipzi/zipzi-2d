@@ -9223,6 +9223,7 @@ dependencies = [
  "sys-locale",
  "tempfile",
  "toml 0.8.23",
+ "url",
  "uuid",
  "wgpu",
  "windows 0.62.2",

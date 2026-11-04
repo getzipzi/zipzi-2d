@@ -1,5 +1,8 @@
 //! Versioned local wire contract. The host calls this on its application thread;
 //! decoding, sockets and workers never borrow a formal session.
+mod project_queue;
+pub use project_queue::ProjectOpenQueue;
+
 use crate::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -425,6 +428,9 @@ enum Operation {
     RequestStatus {
         request_id: u64,
     },
+    OpenProjects {
+        paths: Vec<std::path::PathBuf>,
+    },
     ShowWindow {
         session: Option<SessionId>,
     },
@@ -485,6 +491,7 @@ pub struct Protocol {
     next_connection: u64,
     show_window: Option<Option<SessionId>>,
     windows: bool,
+    project_queue: Option<std::sync::Arc<std::sync::Mutex<ProjectOpenQueue>>>,
     mesh_generator: Option<fn(Value) -> Value>,
     binary_input: Option<Vec<u8>>,
     binary_output: Option<BinarySlice>,
@@ -514,6 +521,13 @@ impl Protocol {
         self.mesh_generator = Some(generate);
         self
     }
+    pub fn with_project_open_support(
+        mut self,
+        queue: std::sync::Arc<std::sync::Mutex<ProjectOpenQueue>>,
+    ) -> Self {
+        self.project_queue = Some(queue);
+        self
+    }
     pub fn with_window_support(mut self) -> Self {
         self.windows = true;
         self
@@ -526,6 +540,7 @@ impl Protocol {
             next_connection: 0,
             show_window: None,
             windows: false,
+            project_queue: None,
             mesh_generator: None,
             binary_input: None,
             binary_output: None,
@@ -640,6 +655,9 @@ impl Protocol {
         }
         if self.windows {
             capabilities.push("show_window");
+            if self.project_queue.is_some() {
+                capabilities.push("open_projects");
+            }
         }
         let response = success(
             json!({"runtime": runtime.instance_id(), "client": client, "secret": remote.secret,
@@ -898,7 +916,7 @@ impl Protocol {
                         "UNSUPPORTED_OPERATION",
                         "Mesh generation requires an Editor host",
                     ),
-                })
+                });
             }
             Operation::RuntimeCapabilities => {
                 let mut c = rt.runtime_capabilities();
@@ -1117,9 +1135,10 @@ impl Protocol {
                 let end = offset
                     .checked_add(length)
                     .ok_or(RuntimeError::InvalidReference)?;
-                json!(data
-                    .get(offset..end)
-                    .ok_or(RuntimeError::InvalidReference)?)
+                json!(
+                    data.get(offset..end)
+                        .ok_or(RuntimeError::InvalidReference)?
+                )
             }
             Operation::SealBlob { blob } => json!(rt.seal_blob(client, blob)?),
             Operation::ReleaseBlob { blob } => {
@@ -1591,11 +1610,25 @@ impl Protocol {
                     json!({"sessions": sub.sessions.iter().map(info).collect::<Vec<_>>(), "cursor": sub.cursor})
                 }
             }
-            Operation::Events { cursor, limit } => json!(rt
-                .events_page(cursor, limit.unwrap_or(128))?
-                .iter()
-                .map(|e| event(e))
-                .collect::<Vec<_>>()),
+            Operation::Events { cursor, limit } => json!(
+                rt.events_page(cursor, limit.unwrap_or(128))?
+                    .iter()
+                    .map(|e| event(e))
+                    .collect::<Vec<_>>()
+            ),
+            Operation::OpenProjects { paths } => {
+                let Some(queue) = &self.project_queue else {
+                    return Ok(failure(
+                        "UNSUPPORTED_OPERATION",
+                        "Host has no project open queue",
+                    ));
+                };
+                if let Err(message) = queue.lock().unwrap().enqueue(paths) {
+                    return Ok(failure("OPEN_QUEUE_LIMIT", message));
+                }
+                // This acknowledges admission, never successful file decoding.
+                Value::Null
+            }
             Operation::ShowWindow { session } => {
                 if !self.windows {
                     return Ok(failure(

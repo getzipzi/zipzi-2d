@@ -4,6 +4,18 @@ use gpui_kit::component::WindowExt;
 use std::path::{Path, PathBuf};
 use zipzi_editor_core::DocumentId;
 
+/// SDK paths stay explicit; only the Editor normalizes a missing extension.
+fn native_save_path(mut path: PathBuf) -> Result<PathBuf, ()> {
+    match path.extension() {
+        None => {
+            path.set_extension("zipzi");
+            Ok(path)
+        }
+        Some(extension) if extension.eq_ignore_ascii_case("zipzi") => Ok(path),
+        _ => Err(()),
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum ImportKind {
     Model3,
@@ -116,7 +128,7 @@ impl EditorView {
                 .title
                 .unwrap_or_else(|| t!("project.untitled").into_owned())
         );
-        let picker = cx.prompt_for_new_path(&directory, Some(&suggested));
+        let picker = cx.prompt_for_new_path_with_extension(&directory, Some(&suggested), "zipzi");
         self.editor.pause_animation();
         self.animation_anchor = None;
         self.modal = true;
@@ -129,8 +141,11 @@ impl EditorView {
                             // The native save panel has already confirmed Replace.
                             // Capture its target baseline without blocking the UI;
                             // the worker checks it again before publishing.
-                            let hash = Editor::save_replacement_baseline(&path)?;
-                            Ok::<_, anyhow::Error>(Some((path, hash)))
+                            let normalized = native_save_path(path.clone())
+                                .map_err(|_| anyhow::anyhow!(t!("project.extension_error")))?;
+                            let changed = normalized != path;
+                            let hash = Editor::save_replacement_baseline(&normalized)?;
+                            Ok::<_, anyhow::Error>(Some((normalized, hash, changed)))
                         })
                         .await
                 }
@@ -144,8 +159,37 @@ impl EditorView {
                     return;
                 }
                 match result {
-                    Ok(Some((path, hash))) => {
-                        this.save_to_with_baseline(id, path, close_after, hash.as_ref(), window, cx)
+                    Ok(Some((path, hash, changed))) => {
+                        let same_project = this
+                            .editor
+                            .documents()
+                            .iter()
+                            .find(|d| d.id == id)
+                            .and_then(|d| d.path.as_ref())
+                            .is_some_and(|current| {
+                                std::fs::canonicalize(&path).as_ref().ok() == Some(current)
+                            });
+                        if same_project {
+                            this.save_to(id, path, close_after, window, cx);
+                        } else if changed && hash.is_some() {
+                            this.confirm_normalized_save(
+                                id,
+                                path,
+                                close_after,
+                                hash.unwrap(),
+                                window,
+                                cx,
+                            );
+                        } else {
+                            this.save_to_with_baseline(
+                                id,
+                                path,
+                                close_after,
+                                hash.as_ref(),
+                                window,
+                                cx,
+                            );
+                        }
                     }
                     Ok(None) => {
                         this.editor.cancel_exit();
@@ -155,6 +199,40 @@ impl EditorView {
                         this.editor.cancel_exit();
                         this.set_edit_error(error.to_string(), cx);
                     }
+                }
+            });
+        })
+        .detach();
+    }
+    fn confirm_normalized_save(
+        &mut self,
+        id: DocumentId,
+        path: PathBuf,
+        close_after: bool,
+        baseline: zipzi_sdk::ProjectFingerprint,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let confirmation = window.prompt(
+            PromptLevel::Warning,
+            &t!("project.replace", path = path.display()),
+            None,
+            &[
+                PromptButton::Cancel(t!("project.cancel").into()),
+                PromptButton::Ok(t!("project.replace_action").into()),
+            ],
+            cx,
+        );
+        self.modal = true;
+        cx.spawn_in(window, async move |this, cx| {
+            let choice = confirmation.await.ok();
+            let _ = this.update_in(cx, |this, window, cx| {
+                this.modal = false;
+                if choice == Some(1) {
+                    this.save_to_with_baseline(id, path, close_after, Some(&baseline), window, cx);
+                } else {
+                    this.editor.cancel_exit();
+                    cx.notify();
                 }
             });
         })
@@ -257,7 +335,11 @@ impl EditorView {
                         this.set_status_message(msg, cx);
                         this.record_recent_file(path.clone(), cx);
                     }
-                    Err(error) => this.set_operation_error(Some(id), error.to_string(), cx),
+                    Err(error) => {
+                        let conflict = matches!(error.downcast_ref::<zipzi_runtime::RuntimeError>(), Some(zipzi_runtime::RuntimeError::Sdk(error)) if error.code.as_ref() == "PROJECT_CONFLICT");
+                        this.set_operation_error(Some(id), error.to_string(), cx);
+                        if conflict { this.resolve_save_conflict(id, path.clone(), window, cx); }
+                    }
                 }
                 // A background save must not blur or rewrite another document's input.
                 if active_before == Some(id) || active_before != this.editor.active_id() {
@@ -269,6 +351,90 @@ impl EditorView {
         })
         .detach();
     }
+    fn resolve_save_conflict(
+        &mut self,
+        id: DocumentId,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let confirmation = window.prompt(
+            PromptLevel::Warning,
+            &t!("project.conflict"),
+            Some(&t!("project.conflict_help")),
+            &[
+                PromptButton::Cancel(t!("project.cancel").into()),
+                PromptButton::Ok(t!("editor.save_as").into()),
+                PromptButton::Ok(t!("project.reopen").into()),
+            ],
+            cx,
+        );
+        self.modal = true;
+        cx.spawn_in(window, async move |this, cx| {
+            let choice = confirmation.await.ok();
+            let _ = this.update_in(cx, |this, window, cx| {
+                this.modal = false;
+                match choice {
+                    Some(1) => this.save_document(id, true, false, window, cx),
+                    Some(2) => this.confirm_reopen(id, path, window, cx),
+                    _ => cx.notify(),
+                }
+            });
+        })
+        .detach();
+    }
+    fn confirm_reopen(
+        &mut self,
+        id: DocumentId,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.editor.close_disposition(id).ok() == Some(CloseDisposition::NeedsConfirmation) {
+            let confirmation = window.prompt(
+                PromptLevel::Warning,
+                &t!("project.discard_open"),
+                Some(&t!("project.discard_help")),
+                &[
+                    PromptButton::Cancel(t!("project.cancel").into()),
+                    PromptButton::Ok(t!("project.discard_and_open").into()),
+                ],
+                cx,
+            );
+            self.modal = true;
+            cx.spawn_in(window, async move |this, cx| {
+                let choice = confirmation.await.ok();
+                let _ = this.update_in(cx, |this, window, cx| {
+                    this.modal = false;
+                    if choice == Some(1) {
+                        this.reopen_project(id, path, window, cx);
+                    } else {
+                        cx.notify();
+                    }
+                });
+            })
+            .detach();
+        } else {
+            self.reopen_project(id, path, window, cx);
+        }
+    }
+    fn reopen_project(
+        &mut self,
+        id: DocumentId,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        match self.editor.prepare_reopen(id, &path) {
+            Ok(task) => {
+                self.property_forms
+                    .entries
+                    .retain(|target, _| target.document != id);
+                self.run_load(task, path, false, None, window, cx);
+            }
+            Err(error) => self.set_operation_error(Some(id), error.to_string(), cx),
+        }
+    }
     pub(super) fn open(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.pick_load(None, window, cx);
     }
@@ -276,7 +442,29 @@ impl EditorView {
         self.pick_load(Some(kind), window, cx);
     }
     pub(super) fn open_recent(&mut self, path: &Path, window: &mut Window, cx: &mut Context<Self>) {
-        if self.modal || self.editor.exiting() {
+        self.enqueue_projects(vec![path.to_path_buf()], window, cx);
+    }
+    pub(super) fn enqueue_projects(
+        &mut self,
+        paths: Vec<PathBuf>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let result = self.project_queue.lock().unwrap().enqueue(paths);
+        if let Err(error) = result {
+            self.set_edit_error(error, cx);
+        }
+        self.drain_project_queue(window, cx);
+    }
+    pub(super) fn drain_project_queue(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.modal
+            || self.editor.exiting()
+            || window.has_active_dialog(cx)
+            || self.editor.pending_io_count() != 0
+        {
+            return;
+        }
+        if self.project_queue.lock().unwrap().is_empty() {
             return;
         }
         if let Some(id) = self.editor.active_id().filter(|_| !self.editor.is_busy()) {
@@ -284,14 +472,19 @@ impl EditorView {
                 return;
             }
         }
-        window.focus(&self.focus, cx);
-        if !path.exists() {
-            let error = t!("project.file_not_found", path = path.display()).into_owned();
-            self.remove_recent_file(path, cx);
-            self.set_load_error(path, error, cx);
-            return;
+        let path = self.project_queue.lock().unwrap().pop();
+        if let Some(path) = path {
+            if !path.exists() {
+                self.remove_recent_file(&path, cx);
+                self.set_load_error(
+                    &path,
+                    t!("project.file_not_found", path = path.display()).into_owned(),
+                    cx,
+                );
+                return;
+            }
+            self.execute_load(LoadRequest::Open(path), None, window, cx);
         }
-        self.execute_load(LoadRequest::Open(path.to_path_buf()), None, window, cx);
     }
     pub(super) fn record_recent_file(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         let mut settings = cx.global::<settings::Settings>().clone();
@@ -342,16 +535,21 @@ impl EditorView {
             }
         }
         window.focus(&self.focus, cx);
-        let picker = cx.prompt_for_paths(PathPromptOptions {
+        let options = PathPromptOptions {
             files: true,
-            directories: kind.is_none(),
-            multiple: false,
+            directories: false,
+            multiple: kind.is_none(),
             prompt: Some(if kind.is_some() {
                 t!("project.import").into()
             } else {
                 t!("project.open").into()
             }),
-        });
+        };
+        let picker = if kind.is_none() {
+            cx.prompt_for_paths_with_extension(options, "zipzi")
+        } else {
+            cx.prompt_for_paths(options)
+        };
         self.editor.pause_animation();
         self.animation_anchor = None;
         self.modal = true;
@@ -359,7 +557,16 @@ impl EditorView {
         cx.spawn_in(window, async move |this, cx| {
             let result = picker.await;
             let source = match result {
-                Ok(Ok(Some(paths))) => paths.into_iter().next(),
+                Ok(Ok(Some(paths))) => {
+                    if kind.is_none() {
+                        let _ = this.update_in(cx, |this, window, cx| {
+                            this.modal = false;
+                            this.enqueue_projects(paths, window, cx);
+                        });
+                        return;
+                    }
+                    paths.into_iter().next()
+                }
                 other => {
                     let _ = this.update(cx, |this, cx| {
                         this.modal = false;
@@ -430,6 +637,17 @@ impl EditorView {
                 return;
             }
         };
+        self.run_load(task, source, importing, kind, window, cx);
+    }
+    fn run_load(
+        &mut self,
+        task: zipzi_editor_core::LoadTask,
+        source: PathBuf,
+        importing: bool,
+        kind: Option<ImportKind>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let activity = self.begin_load_status(source.clone(), importing, task.progress(), cx);
         let runtime = self.editor.runtime_host();
         let host = self.host.clone();
@@ -669,5 +887,23 @@ impl EditorView {
                 self.editor.cancel_exit();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::native_save_path;
+    #[test]
+    fn save_names_normalize_once_and_reject_other_extensions() {
+        assert_eq!(native_save_path("角色".into()), Ok("角色.zipzi".into()));
+        assert_eq!(
+            native_save_path("角色.ZIPZI".into()),
+            Ok("角色.ZIPZI".into())
+        );
+        assert_eq!(
+            native_save_path("one.zipzi.zipzi".into()),
+            Ok("one.zipzi.zipzi".into())
+        );
+        assert!(native_save_path("one.png".into()).is_err());
     }
 }

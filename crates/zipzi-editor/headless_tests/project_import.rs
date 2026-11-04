@@ -52,7 +52,7 @@ fn psd_picker_opens_an_unsaved_document_and_save_asks_for_a_path(cx: &mut TestAp
             vec![destination.clone()]
         );
     });
-    assert!(destination.join("project.zipzi.json").exists());
+    assert!(destination.exists());
 }
 
 #[gpui_kit::test]
@@ -219,7 +219,7 @@ fn save_as_replaces_existing_project_after_a_failed_save(cx: &mut TestAppContext
     )
     .unwrap();
     existing.save_project(&destination, None).unwrap();
-    let manifest = destination.join("project.zipzi.json");
+    let manifest = destination.clone();
     let before = std::fs::read(&manifest).unwrap();
     let document = harness
         .view
@@ -266,4 +266,105 @@ fn save_as_replaces_existing_project_after_a_failed_save(cx: &mut TestAppContext
             .resources_complete()
     );
     assert_eq!(existing.mesh_ids().len(), 2);
+}
+
+#[gpui_kit::test]
+fn open_picker_queues_multiple_files_and_keeps_valid_projects_after_failure(
+    cx: &mut TestAppContext,
+) {
+    let harness = setup(cx);
+    let first = harness._config_dir.path().join("角色 one.zipzi");
+    let second = harness._config_dir.path().join("角色 two.ZIPZI");
+    let bad = harness._config_dir.path().join("broken.zipzi");
+    std::fs::write(&bad, b"not a project").unwrap();
+    for path in [&first, &second] {
+        let mut session = zipzi_sdk::AuthoringSession::new(
+            &uuid::Uuid::new_v4().to_string(),
+            zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
+        )
+        .unwrap();
+        session.save_project(path, None).unwrap();
+    }
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| view.open(window, cx))
+    })
+    .unwrap();
+    cx.simulate_path_prompt_response(|options| {
+        assert!(options.files && !options.directories && options.multiple);
+        Some(vec![first.clone(), bad, second.clone(), first.clone()])
+    });
+    for _ in 0..5 {
+        cx.run_until_parked();
+        cx.update_window(harness.window, |_, window, cx| {
+            harness
+                .view
+                .update(cx, |view, cx| view.drain_project_queue(window, cx))
+        })
+        .unwrap();
+    }
+    harness.view.read_with(cx, |view, cx| {
+        assert_eq!(view.editor.documents().len(), 3);
+        assert_eq!(
+            view.editor.document().unwrap().path(),
+            Some(first.canonicalize().unwrap().as_path())
+        );
+        let titles: Vec<_> = view
+            .editor
+            .documents()
+            .into_iter()
+            .filter_map(|d| d.title)
+            .collect();
+        assert!(titles.iter().any(|name| name == "角色 one"));
+        assert!(titles.iter().any(|name| name == "角色 two"));
+        assert_eq!(cx.global::<Settings>().recent_files.paths.len(), 2);
+        assert!(view.project_queue.lock().unwrap().is_empty());
+    });
+}
+
+#[gpui_kit::test]
+fn normalized_save_confirms_the_final_target_and_cancel_preserves_both_files(
+    cx: &mut TestAppContext,
+) {
+    let harness = setup(cx);
+    let before = harness.view.read_with(cx, |view, _| {
+        (
+            view.editor.active_id(),
+            view.editor.document().unwrap().modified(),
+            view.editor
+                .document()
+                .unwrap()
+                .path()
+                .map(std::path::Path::to_path_buf),
+        )
+    });
+    let selected = harness._config_dir.path().join("角色");
+    let actual = selected.with_extension("zipzi");
+    std::fs::write(&actual, b"existing target").unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.save(true, window, cx))
+    })
+    .unwrap();
+    cx.simulate_new_path_selection(|_| Some(selected.clone()));
+    cx.run_until_parked();
+    assert!(cx.has_pending_prompt());
+    cx.simulate_prompt_answer("Cancel");
+    cx.run_until_parked();
+    assert!(!selected.exists());
+    assert_eq!(std::fs::read(&actual).unwrap(), b"existing target");
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(
+            (
+                view.editor.active_id(),
+                view.editor.document().unwrap().modified(),
+                view.editor
+                    .document()
+                    .unwrap()
+                    .path()
+                    .map(std::path::Path::to_path_buf)
+            ),
+            before
+        )
+    });
 }

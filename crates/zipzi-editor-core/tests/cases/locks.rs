@@ -22,7 +22,7 @@ fn explicit_and_inherited_locks_survive_save_and_do_not_cross_hierarchies() -> a
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let mesh = ObjectRef::new(ObjectKind::Mesh, sdk.mesh_ids()[1].clone());
     let part = object(ObjectKind::Part, 101);
     let other = object(ObjectKind::Part, 102);
@@ -37,8 +37,8 @@ fn explicit_and_inherited_locks_survive_save_and_do_not_cross_hierarchies() -> a
         e.set_mesh_part(&mesh.id, &other.id)?;
         e.set_deform_parent(&mesh.id, &deformer.id)
     })?;
-    sdk.save_project(&saved.manifest, None)?;
-    let mut doc = Document::open(&saved.manifest)?;
+    sdk.save_project(&saved.path, None)?;
+    let mut doc = Document::open(&saved.path)?;
     doc.set_objects_locked(&[part.clone()], true)?;
     assert!(doc.object_state_index().is_locked(&deformer));
     assert!(
@@ -55,7 +55,7 @@ fn explicit_and_inherited_locks_survive_save_and_do_not_cross_hierarchies() -> a
     doc.set_objects_locked(&[part.clone()], false)?;
     assert!(doc.object_state_index().is_locked(&deformer));
     let saved = doc.save(&dir.path().join("locked.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(
         reopened.object_state_index().state(&mesh),
         doc.object_state_index().state(&mesh)
@@ -92,7 +92,7 @@ fn deformer_lock_only_protects_itself_but_part_locks_still_protect_members() -> 
     doc.redo()?;
     assert!(doc.object_state_index().state(&child).explicit.locked);
     let saved = doc.save(&dir.path().join("local-locks.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert!(reopened.object_state_index().is_locked(&parent));
     assert!(reopened.object_state_index().is_locked(&child));
     assert!(!reopened.object_state_index().is_locked(&mesh));

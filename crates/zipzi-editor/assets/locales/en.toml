@@ -224,6 +224,12 @@ aggregate_key_marks = "Key marks summarize stored keys across targets."
 binding_key_marks = "Active binding axes use their own keys; other axes show aggregate marks."
 
 [project]
+extension_error = "Use the .zipzi extension for a Zipzi project."
+replace = "Replace %{path}?"
+replace_action = "Replace"
+conflict = "The project has changed on disk."
+conflict_help = "Reopen the disk version or save your changes to another file."
+reopen = "Reopen"
 save_close = "Save changes to %{title} before closing?"
 untitled = "Untitled"
 durability_warning = "The project was published, but durability was not confirmed"

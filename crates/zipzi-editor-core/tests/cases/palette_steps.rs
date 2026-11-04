@@ -55,10 +55,7 @@ fn disjoint_blocks_move_one_neighbor_without_compacting_and_share_one_history_en
         );
         let directory = tempfile::tempdir()?;
         let saved = d.save(&directory.path().join("step.zipzi"))?;
-        assert_eq!(
-            parameters(&Document::open(&saved.manifest)?),
-            parameters(&d)
-        );
+        assert_eq!(parameters(&Document::open(&saved.path)?), parameters(&d));
     }
     Ok(())
 }

@@ -44,6 +44,12 @@ class WindowsPackage(unittest.TestCase):
             package_windows.package(binary, output, 'a' * 40, root)
             with zipfile.ZipFile(output) as archive:
                 self.assertEqual(archive.read('Zipzi Editor/zipzi-editor.exe'), executable())
+                registration = archive.read('Zipzi Editor/Register-FileAssociation.ps1').decode()
+                self.assertIn('Software\\Classes', registration)
+                self.assertIn('-- "%1"', registration)
+                self.assertIn('-eq $openCommand', registration)
+                self.assertNotIn('UserChoice', registration)
+                self.assertIn(b'-Unregister', archive.read('Zipzi Editor/FILE-ASSOCIATION.txt'))
                 self.assertEqual(archive.read('Zipzi Editor/vendor-notices/library/LICENSE'), b'license')
                 self.assertIn(b'0.1.0-alpha.2', archive.read('Zipzi Editor/BUILD-INFO.txt'))
                 self.assertIn(b'a' * 40, archive.read('Zipzi Editor/BUILD-INFO.txt'))

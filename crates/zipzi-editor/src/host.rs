@@ -12,6 +12,8 @@ use zipzi_editor_core::RuntimeHost;
 pub(super) struct DesktopHost {
     pub(super) runtime: RuntimeHost,
     pub(super) protocol: Rc<RefCell<zipzi_runtime::protocol::Protocol>>,
+    pub(super) project_queue:
+        std::sync::Arc<std::sync::Mutex<zipzi_runtime::protocol::ProjectOpenQueue>>,
     resident: bool,
     parked: Rc<RefCell<Option<Editor>>>,
     pub(super) pending_quit: Rc<Cell<bool>>,
@@ -20,16 +22,32 @@ pub(super) struct DesktopHost {
 }
 impl Global for DesktopHost {}
 impl DesktopHost {
-    pub(super) fn new(resident: bool, _cx: &mut App) -> Self {
+    #[cfg(test)]
+    pub(super) fn new(resident: bool, cx: &mut App) -> Self {
+        Self::with_projects(resident, Default::default(), cx)
+    }
+    pub(super) fn with_projects(
+        resident: bool,
+        project_queue: std::sync::Arc<std::sync::Mutex<zipzi_runtime::protocol::ProjectOpenQueue>>,
+        _cx: &mut App,
+    ) -> Self {
         let runtime = RuntimeHost::new();
+        match zipzi_editor_core::platform_paths::cache_directory()
+            .and_then(|root| runtime.configure_project_cache(root.join("projects")))
+        {
+            Ok(()) => {}
+            Err(error) => eprintln!("Project cache configuration failed: {error}"),
+        }
         let editor = Editor::with_runtime(runtime.clone());
         Self {
             runtime,
             protocol: Rc::new(RefCell::new(
                 zipzi_runtime::protocol::Protocol::default()
                     .with_window_support()
+                    .with_project_open_support(project_queue.clone())
                     .with_mesh_generator(zipzi_editor_core::adaptive_mesh::remote::generate),
             )),
+            project_queue,
             resident,
             parked: Rc::new(RefCell::new(Some(editor))),
             pending_quit: Default::default(),
@@ -149,4 +167,29 @@ pub(super) fn open_window(
         let _ = opened.0.update(cx, |_, window, _| window.activate_window());
     }
     Some(opened)
+}
+
+/// Platform events may arrive during launch or while no window exists.
+pub(super) fn start_project_requests(cx: &mut App) {
+    cx.spawn(async move |cx| {
+        let mut announced = false;
+        loop {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(100))
+                .await;
+            cx.update(|cx| {
+                let queued = !cx
+                    .global::<DesktopHost>()
+                    .project_queue
+                    .lock()
+                    .unwrap()
+                    .is_empty();
+                if queued && (!announced || cx.windows().is_empty()) {
+                    open_window(cx, true);
+                }
+                announced = queued;
+            });
+        }
+    })
+    .detach();
 }

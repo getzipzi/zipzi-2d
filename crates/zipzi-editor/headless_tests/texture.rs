@@ -405,7 +405,7 @@ fn dependency_review_virtualizes_large_lists_and_keeps_the_last_user_reachable(
     let saved = session
         .save_project(&assets.path().join("many-users.zipzi"), None)
         .unwrap();
-    let document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    let document = zipzi_editor_core::Document::open(&saved.path).unwrap();
     let h = setup_with_document(cx, document, assets);
     run(&h, Some(asset_id), Control::Delete, cx);
     click(&h, "deletion-details", cx);
@@ -505,15 +505,15 @@ fn missing_source_can_be_repaired_without_replacing_the_resource_or_meshes(
         zipzi_core::ModelSetup::default(),
     )
     .unwrap();
-    session.open_project(&saved.manifest, None).unwrap();
+    session.open_project(&saved.path, None).unwrap();
     let mut missing = session.asset(&asset.id).unwrap();
     missing.content = None;
     missing.unresolved_source = Some("lost-image.png".into());
     session
         .edit("Missing source fixture", None, |e| e.replace_asset(missing))
         .unwrap();
-    let saved = session.save_project(&saved.manifest, None).unwrap();
-    let mut doc = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    let saved = session.save_project(&saved.path, None).unwrap();
+    let mut doc = zipzi_editor_core::Document::open(&saved.path).unwrap();
     doc.navigate(asset.clone()).unwrap();
     let h = setup_with_document(cx, doc, assets);
     show(&h, "texture-status", cx);

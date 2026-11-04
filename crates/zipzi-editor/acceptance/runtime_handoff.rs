@@ -366,7 +366,7 @@ with zipzi.connect() as runtime:
  before=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
  saved=s.project.save(folder/'project').wait()
  assert saved.durable and not s.info().modified
- reopened=s.project.open(saved.manifest).wait()
+ reopened=s.project.open(saved.path).wait()
  assert reopened.after.generation>reopened.before.generation and s.id==identity
  assert s.meshes.get(sys.argv[3]).value.name=='Recipe continued'
  assert s.resources.get(sys.argv[4]).value.pixels.rgba==bytes((240,40,50,255))

@@ -35,7 +35,7 @@ pub(super) fn toolbar_document() -> anyhow::Result<(Document, tempfile::TempDir)
         })
     })?;
     let saved = session.save_project(&assets.path().join("toolbar"), None)?;
-    Ok((Document::open(&saved.manifest)?, assets))
+    Ok((Document::open(&saved.path)?, assets))
 }
 
 pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {

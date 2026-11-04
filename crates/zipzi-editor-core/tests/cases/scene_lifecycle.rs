@@ -66,7 +66,7 @@ fn pending_scene_objects_remain_visible_inspectable_and_persistent() -> anyhow::
     assert!(canvas.mesh(&mesh).is_some());
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("pending.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert!(
         reopened
             .object_index()
@@ -520,7 +520,7 @@ fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() 
         e.replace_editor_state(state)
     })?;
     let saved = sdk.save_project(&assets.path().join("locked.zipzi"), None)?;
-    let mut d = Document::open(&saved.manifest)?;
+    let mut d = Document::open(&saved.path)?;
     let target = ObjectRef::new(ObjectKind::Texture, &asset);
     let plan = d.plan_tree_deletion(
         zipzi_editor_core::PaletteProjection::Organization,

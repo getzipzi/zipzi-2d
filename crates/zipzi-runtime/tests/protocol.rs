@@ -1,4 +1,4 @@
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 use zipzi_core::ModelSetup;
 use zipzi_runtime::{protocol::*, *};
@@ -163,11 +163,12 @@ fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
             "EDIT_ABORTED"
         );
         assert_eq!(rt.session_info(session).unwrap().version, version);
-        assert!(rt
-            .document(session)
-            .unwrap()
-            .get_parameter(&parameter)
-            .is_none());
+        assert!(
+            rt.document(session)
+                .unwrap()
+                .get_parameter(&parameter)
+                .is_none()
+        );
         assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
     }
 }
@@ -708,17 +709,19 @@ fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
         )["ok"],
         "queued"
     );
-    assert!(request(
-        &mut rt,
-        &mut protocol,
-        client,
-        connection,
-        2,
-        json!({"op":"cancel_job","job":job}),
-        now
-    )
-    .get("ok")
-    .is_some());
+    assert!(
+        request(
+            &mut rt,
+            &mut protocol,
+            client,
+            connection,
+            2,
+            json!({"op":"cancel_job","job":job}),
+            now
+        )
+        .get("ok")
+        .is_some()
+    );
     struct Manual(Vec<Work>);
     impl Executor for Manual {
         fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
@@ -779,4 +782,60 @@ fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
             .as_ref(),
         &[12, 34, 56, 255]
     );
+}
+
+#[test]
+fn desktop_open_projects_admits_bounded_batches_and_retries_idempotently() {
+    let (mut rt, mut protocol, client, connection, now) = setup(ProtocolLimits::default());
+    let queue = std::sync::Arc::new(std::sync::Mutex::new(ProjectOpenQueue::default()));
+    protocol = protocol
+        .with_window_support()
+        .with_project_open_support(queue.clone());
+    let path = std::env::temp_dir().join("中文 project.zipzi");
+    let op = json!({"op": "open_projects", "paths": [path]});
+    assert!(
+        request(
+            &mut rt,
+            &mut protocol,
+            client,
+            connection,
+            1,
+            op.clone(),
+            now
+        )
+        .get("ok")
+        .is_some()
+    );
+    assert!(
+        request(&mut rt, &mut protocol, client, connection, 1, op, now)
+            .get("ok")
+            .is_some()
+    );
+    assert_eq!(queue.lock().unwrap().pop(), Some(path.clone()));
+    assert!(queue.lock().unwrap().is_empty());
+    for paths in [
+        json!([]),
+        json!(["relative.zipzi"]),
+        json!(vec![path.clone(); 129]),
+    ] {
+        let result = request(
+            &mut rt,
+            &mut protocol,
+            client,
+            connection,
+            2 + paths.as_array().unwrap().len() as u64,
+            json!({"op":"open_projects", "paths":paths}),
+            now,
+        );
+        assert_eq!(result["error"]["code"], "OPEN_QUEUE_LIMIT");
+        assert!(queue.lock().unwrap().is_empty());
+    }
+    queue
+        .lock()
+        .unwrap()
+        .enqueue(vec![path.clone(); 128])
+        .unwrap();
+    assert!(queue.lock().unwrap().enqueue(vec![path.clone()]).is_err());
+    assert_eq!(queue.lock().unwrap().pop(), Some(path.clone()));
+    queue.lock().unwrap().enqueue(vec![path]).unwrap();
 }

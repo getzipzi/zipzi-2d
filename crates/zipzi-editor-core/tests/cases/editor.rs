@@ -193,7 +193,7 @@ fn same_model_uuid_in_two_files_has_distinct_document_identity() -> anyhow::Resu
     let (mut document, _source) = sample_document()?;
     let original = document.path().unwrap().to_owned();
     let output = tempfile::tempdir()?;
-    let copy = document.save(&output.path().join("copy"))?.manifest;
+    let copy = document.save(&output.path().join("copy"))?.path;
     let mut editor = crate::support::empty_editor();
     load(&mut editor, &original)?;
     let first = editor.active_id().unwrap();
@@ -267,7 +267,7 @@ fn save_moves_the_same_session_to_a_thread_and_freezes_only_its_document() -> an
     editor.activate(first)?;
     assert_eq!(
         editor.document().unwrap().path(),
-        Some(receipt.manifest.as_path())
+        Some(receipt.path.as_path())
     );
     assert!(!editor.document().unwrap().modified());
     assert!(editor.can_undo());
@@ -375,11 +375,7 @@ fn in_flight_save_reserves_its_destination_against_other_tabs() -> anyhow::Resul
     let path = output.path().join("saved");
     let task = editor.prepare_save(first, &path, false)?;
     let second = editor.new_document()?;
-    assert!(
-        editor
-            .prepare_save(second, &path.join("project.zipzi.json"), false)
-            .is_err()
-    );
+    assert!(editor.prepare_save(second, &path, false).is_err());
     assert!(
         editor
             .prepare_save(first, &output.path().join("another"), false)
@@ -432,7 +428,7 @@ fn symlinked_project_directory_and_pending_save_aliases_share_identity() -> anyh
     let second = editor.adjacent(true).unwrap();
     assert!(
         editor
-            .prepare_save(second, &alias.join("pending/project.zipzi.json"), false)
+            .prepare_save(second, &alias.join("pending"), false)
             .is_err()
     );
     editor.finish_save(&mut task.run())?;

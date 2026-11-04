@@ -122,7 +122,7 @@ fn manual_mesh_stages_preview_apply_and_reject_stale_options() -> anyhow::Result
     doc.apply_mesh_generation(&full)?;
     assert_eq!(doc.history_lengths(), (expected_history + 1, 0));
     let saved = doc.save(&dir.path().join("manual-stages.zipzi"))?;
-    assert!(saved_mesh_has_meshing(&saved.manifest)?);
+    assert!(saved_mesh_has_meshing(&saved.path)?);
     Ok(())
 }
 
@@ -180,7 +180,7 @@ fn manual_mesh_mode_keeps_model_display_and_one_history_step_per_point() -> anyh
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     let task = editor.prepare_save(id, &dir.path().join("manual-editor.zipzi"), false)?;
     let saved = editor.finish_save(&mut task.run())?;
-    assert!(saved_mesh_has_meshing(&saved.manifest)?);
+    assert!(saved_mesh_has_meshing(&saved.path)?);
     Ok(())
 }
 
@@ -425,7 +425,7 @@ fn manual_mesh_saving_drag_commits_the_last_valid_candidate() -> anyhow::Result<
         &id(920),
         zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let saved_mesh = session.mesh(&mesh().id).unwrap();
     let slot = saved_mesh
         .vertex_ids
@@ -471,7 +471,7 @@ fn generation_rebuilds_canvas_and_survives_history_and_save() -> anyhow::Result<
         false,
     )?;
     let saved = editor.finish_save(&mut task.run())?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.layers()[0].vertices, 20);
     Ok(())
 }
@@ -505,7 +505,7 @@ fn bound_generation_migrates_keyforms_blends_and_glue_atomically() -> anyhow::Re
         &id(920),
         zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let binding = session.binding_for_mesh(&id(902)).unwrap();
     assert!(binding.keyforms.iter().all(|f| f.positions.len() == 25));
     assert_eq!(binding.keyforms[1].positions[12], Vec2::new(138., 133.));
@@ -599,7 +599,7 @@ fn previews_are_isolated_repeatable_and_match_application() -> anyhow::Result<()
         &id(920),
         zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let applied = session.mesh(&mesh().id).unwrap();
     assert_eq!(applied.base_positions, candidate.geometry().positions);
     assert_eq!(applied.uvs, candidate.geometry().uvs);
@@ -718,12 +718,12 @@ fn alpha_preview_maps_source_pixels_and_survives_regeneration_history_and_save()
         false,
     )?;
     let saved = editor.finish_save(&mut save.run())?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     let mut session = zipzi_sdk::AuthoringSession::new(
         &id(920),
         zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let applied = session.mesh(&mesh().id).unwrap();
     assert_eq!(applied.base_positions, geometry.positions);
     assert_eq!(applied.uvs, geometry.uvs);
@@ -837,7 +837,7 @@ fn alpha_edge_band_pads_texture_atomically_and_regenerates_after_save() -> anyho
         padded.rgba
     );
     let saved = doc.save(&dir.path().join("outside.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     let source = reopened.mesh_generation_source(&mesh())?;
     assert_eq!(source.texture.as_ref().unwrap().rgba, padded.rgba);
     let regenerated = source.generate(settings)?;
@@ -1417,7 +1417,7 @@ fn manual_mesh_source_padding_preserves_texels_and_allows_outline_outside_origin
         false,
     )?;
     let saved = editor.finish_save(&mut task.run())?;
-    let mut reopened = Document::open(&saved.manifest)?;
+    let mut reopened = Document::open(&saved.path)?;
     reopened.select(&mesh().id)?;
     let reopened_target = reopened.manual_mesh_target()?;
     assert_eq!(reopened_target.texture.rgba, image.rgba);

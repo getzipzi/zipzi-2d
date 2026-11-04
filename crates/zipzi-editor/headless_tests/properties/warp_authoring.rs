@@ -206,7 +206,7 @@ fn deformer_properties_reset_reform_auto_and_mode_controls_write_through_the_sha
         .set_object_property(&object, "warp.columns", serde_json::json!(4))
         .unwrap();
     let saved = document.save(&assets.path().join("dense")).unwrap();
-    let mut document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    let mut document = zipzi_editor_core::Document::open(&saved.path).unwrap();
     document.navigate(object.clone()).unwrap();
     let h = setup_with_document(cx, document, assets);
     show(&h, "property-warp-reset", cx);

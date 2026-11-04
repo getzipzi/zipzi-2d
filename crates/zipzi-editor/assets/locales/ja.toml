@@ -221,6 +221,12 @@ aggregate_key_marks = "キーマークは各対象の保存済みキーをまと
 binding_key_marks = "アクティブなバインドの軸は自身のキーを表示し、他の軸は集約したマークを表示します。"
 
 [project]
+extension_error = "Zipzi プロジェクトには .zipzi 拡張子を使用してください。"
+replace = "%{path} を置き換えますか？"
+replace_action = "置き換える"
+conflict = "プロジェクトが外部で変更されています。"
+conflict_help = "ディスクの内容を開き直すか、変更を別のファイルに保存してください。"
+reopen = "開き直す"
 untitled = "名称未設定"
 saved = "%{path} を保存しました"
 cancel = "キャンセル"

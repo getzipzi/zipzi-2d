@@ -293,7 +293,9 @@ fn external_save_scene_creation_queries_before_workspace_sync_return_busy() -> a
     let session = document.runtime_session_id();
     let agent = host.write().register_client()?;
     let target = tempfile::tempdir()?;
-    let job = host.write().request_save(agent, session, target.path())?;
+    let job = host
+        .write()
+        .request_save(agent, session, &target.path().join("project.zipzi"))?;
 
     // Retain the UI's Document after external admission, without syncing it.
     // A selection reaches handle(); an empty selection reaches collection capabilities.
@@ -328,7 +330,7 @@ fn external_save_scene_creation_queries_before_workspace_sync_return_busy() -> a
     for selection in &selections {
         document.validate_scene_object_creation_context(SceneObjectType::Part, selection)?;
     }
-    assert!(target.path().join("project.zipzi.json").is_file());
+    assert!(target.path().join("project.zipzi").is_file());
     Ok(())
 }
 
@@ -343,7 +345,9 @@ fn external_busy_command_queries_do_not_require_a_workspace_sync() -> anyhow::Re
     let command = editor.command(CommandId::CreateParameter);
     assert!(editor.command_state(command).enabled);
     let target = tempfile::tempdir()?;
-    let job = host.write().request_save(agent, session, target.path())?;
+    let job = host
+        .write()
+        .request_save(agent, session, &target.path().join("project.zipzi"))?;
 
     // Keep the Job queued and skip sync_runtime: this is the interval between
     // socket admission and the workspace's asynchronous change notification.
@@ -383,7 +387,9 @@ fn r2_external_busy_operation_freezes_then_restores_the_editor_projection() -> a
     resize(&host, agent, session, 200.);
     editor.sync_runtime()?;
     let target = tempfile::tempdir()?;
-    let job = host.write().request_save(agent, session, target.path())?;
+    let job = host
+        .write()
+        .request_save(agent, session, &target.path().join("project.zipzi"))?;
     let work = host.write().take_work(job)?;
     assert!(editor.sync_runtime()?);
     assert!(editor.is_busy());

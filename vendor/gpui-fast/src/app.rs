@@ -1896,6 +1896,19 @@ impl App {
         self.platform.prompt_for_new_path(directory, suggested_name)
     }
 
+    /// Open a native picker restricted to one file extension.
+    pub fn prompt_for_paths_with_extension(
+        &self, options: PathPromptOptions, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
+        self.platform.prompt_for_paths_with_extension(options, extension)
+    }
+    /// Choose a filename with extension normalization before Replace.
+    pub fn prompt_for_new_path_with_extension(
+        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
+        self.platform.prompt_for_new_path_with_extension(directory, suggested_name, extension)
+    }
+
     /// Reveals the specified path at the platform level, such as in Finder on macOS.
     pub fn reveal_path(&self, path: &Path) {
         self.platform.reveal_path(path)

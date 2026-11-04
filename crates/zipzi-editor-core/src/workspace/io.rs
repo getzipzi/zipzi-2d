@@ -1,8 +1,8 @@
 //! Runtime-owned IO; the view keeps frozen presentation state only.
 use super::*;
 use std::sync::{
-    atomic::{AtomicU8, Ordering},
     Arc,
+    atomic::{AtomicU8, Ordering},
 };
 use zipzi_runtime::{Completion, JobId, JobValue, Work};
 
@@ -184,6 +184,42 @@ impl Editor {
             progress: LoadProgress(Arc::new(AtomicU8::new(LoadStage::Queued as u8))),
         }))
     }
+    /// Reload through the same SDK transaction; failed decoding preserves the old Session.
+    pub fn prepare_reopen(&mut self, id: DocumentId, path: &Path) -> Result<LoadTask> {
+        ensure!(!self.exiting, "Workspace is closing");
+        self.end_editing(id, EditingLifecycle::ContextChange)?;
+        let operation = OperationId(Uuid::new_v4());
+        let session = self.entry(id)?.hosted_session_id();
+        self.entry_mut(id)?.begin_save(operation, None)?;
+        let host = self.runtime.clone();
+        let prepared = (|| -> Result<_> {
+            let job = host.write().request_project(
+                host.client_id(),
+                session,
+                zipzi_runtime::project_io::ProjectRequest::Open {
+                    path: path.to_path_buf(),
+                },
+            )?;
+            Ok((job, host.dispatch_job(job)?))
+        })();
+        let (job, work) = match prepared {
+            Ok(value) => value,
+            Err(error) => {
+                self.entry_mut(id)?.restore_session();
+                return Err(error);
+            }
+        };
+        self.loads.insert(operation, (id, job));
+        self.advance_editing_context();
+        self.refresh_viewport_bindings();
+        Ok(LoadTask {
+            id,
+            operation,
+            job,
+            work,
+            progress: LoadProgress(Arc::new(AtomicU8::new(LoadStage::Queued as u8))),
+        })
+    }
     pub fn finish_load(&mut self, mut completion: LoadCompletion) -> Result<Vec<String>> {
         ensure!(
             self.loads
@@ -211,7 +247,15 @@ impl Editor {
         self.runtime
             .write()
             .release_job(self.runtime.client_id(), job)?;
+        let reopening = self.documents.iter().any(|entry| entry.id == id);
+        if reopening {
+            self.entry_mut(id)?.restore_session();
+            self.refresh_viewport_bindings();
+        }
         let (session, notices, name) = match result? {
+            JobValue::Project { session, report } if reopening => {
+                (session, report.warnings.clone(), None)
+            }
             JobValue::Opened(session) => (session, vec![], None),
             JobValue::Imported {
                 session,
@@ -225,7 +269,19 @@ impl Editor {
         if let Some(previous) = self.active.filter(|_| !self.is_busy()) {
             self.end_editing(previous, EditingLifecycle::ContextChange)?;
         }
-        self.insert_with_id(id, document)?;
+        if reopening {
+            let mut session = DocumentSession::from_document(document);
+            for viewport in self.viewport_ids() {
+                session.views.entry(viewport).or_default();
+            }
+            let workspace = self.entry(id)?.workspace;
+            *self.entry_mut(id)? = Entry::new(id, workspace, session);
+            self.advance_editing_context();
+            self.inspection_generation += 1;
+            self.refresh_viewport_bindings();
+        } else {
+            self.insert_with_id(id, document)?;
+        }
         Ok(notices)
     }
     /// Capture the approved destination through the project layer's bounded

@@ -73,7 +73,7 @@ fn locked_folder_toolbar_command_and_row_share_domain_reason_but_inspection_stay
     let saved = s
         .save_project(&assets.path().join("locked.zipzi"), None)
         .unwrap();
-    let mut d = Document::open(&saved.manifest).unwrap();
+    let mut d = Document::open(&saved.path).unwrap();
     d.navigate(group.clone()).unwrap();
     let h = setup_with_document(cx, d, assets);
     cx.update_window(h.window, |_, window, cx| {

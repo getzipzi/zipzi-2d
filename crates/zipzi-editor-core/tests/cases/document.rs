@@ -107,7 +107,7 @@ fn parameter_visuals_include_scene_binding_keyforms() -> anyhow::Result<()> {
         Ok(())
     })?;
     let receipt = session.save_project(&directory.path().join("scene.zipzi"), None)?;
-    let document = Document::open(&receipt.manifest)?;
+    let document = Document::open(&receipt.path)?;
     let visual = &document.parameter_visuals()[&parameter_id];
     assert_eq!(
         visual.keys.iter().map(|key| key.value).collect::<Vec<_>>(),
@@ -157,7 +157,7 @@ fn blank_document_starts_clean_and_can_be_saved() -> anyhow::Result<()> {
     let output = tempfile::tempdir()?;
     let receipt = document.save(&output.path().join("blank.zipzi"))?;
     assert!(!document.modified());
-    let mut reopened = Document::open(&receipt.manifest)?;
+    let mut reopened = Document::open(&receipt.path)?;
     assert!(reopened.layers().is_empty());
     assert!(reopened.snapshot()?.viewport_frame.drawables.is_empty());
     Ok(())
@@ -210,7 +210,7 @@ fn sdk_imports_create_editable_documents_with_textures() -> anyhow::Result<()> {
     psd_document.undo()?;
     assert_eq!(psd_document.selected_layer().unwrap().name, "face");
     psd_document.redo()?;
-    let mut reopened = Document::open(&receipt.manifest)?;
+    let mut reopened = Document::open(&receipt.path)?;
     assert_no_selection(&reopened);
     reopened.select(&layer)?;
     assert_eq!(reopened.selected_layer().unwrap().name, "Edited PSD layer");
@@ -308,10 +308,10 @@ fn project_round_trip_preserves_edits_and_copies_source_texture() -> anyhow::Res
     assert!(document.modified());
     assert_eq!(document.selected_layer().unwrap().opacity, 1.);
     document.redo()?;
-    document.save(&receipt.manifest)?;
+    document.save(&receipt.path)?;
     drop(document);
     drop(source_fixture); // Reopening must use the copied asset, not the test fixture.
-    let mut reopened = Document::open(&receipt.manifest)?;
+    let mut reopened = Document::open(&receipt.path)?;
     assert_no_selection(&reopened);
     reopened.select(&id)?;
     assert_eq!(reopened.selected_layer().unwrap().name, "Saved face");
@@ -337,7 +337,7 @@ fn failed_save_keeps_live_document_and_bad_open_does_not_require_replacing_it() 
     other.preview_name("Unsaved")?;
     other.finish_edit()?;
     let original_path = other.path().unwrap().to_path_buf();
-    assert!(other.save(&receipt.manifest).is_err());
+    assert!(other.save(&receipt.path).is_err());
     assert!(other.modified());
     assert_eq!(other.path(), Some(original_path.as_path()));
     assert_eq!(other.selected_layer().unwrap().name, "Unsaved");
@@ -362,7 +362,7 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
         &Uuid::new_v4().to_string(),
         Canvas::new(512., 256., Vec2::new(128., 128.), 2.),
     )?;
-    session.open_project(&receipt.manifest, None)?;
+    session.open_project(&receipt.path, None)?;
     let first = session.mesh_ids()[0].clone();
     let second = Uuid::new_v4().to_string();
     let mesh = rectangle_mesh(
@@ -373,9 +373,9 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
         Vec2::new(80., 80.),
     )?;
     session.edit("second layer", None, |edit| edit.create_mesh(mesh))?;
-    session.save_project(&receipt.manifest, None)?;
+    session.save_project(&receipt.path, None)?;
 
-    let mut document = Document::open(&receipt.manifest)?;
+    let mut document = Document::open(&receipt.path)?;
     assert_eq!(document.layers().len(), 2);
     assert_no_selection(&document);
     document.select(&second)?;
@@ -396,8 +396,8 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
             .opacity,
         0.2
     );
-    document.save(&receipt.manifest)?;
-    let mut reopened = Document::open(&receipt.manifest)?;
+    document.save(&receipt.path)?;
+    let mut reopened = Document::open(&receipt.path)?;
     reopened.select(&second)?;
     assert_eq!(reopened.selected_layer().unwrap().name, "Edited second");
     assert_eq!(reopened.selected_layer().unwrap().opacity, 0.2);
@@ -427,7 +427,7 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )?;
-    session.open_project(&receipt.manifest, None)?;
+    session.open_project(&receipt.path, None)?;
     let mesh = session.mesh_ids()[0].clone();
     let unassigned_mesh = session.mesh_ids()[1].clone();
     let root_part = Uuid::new_v4().to_string();
@@ -476,9 +476,9 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
         edit.set_deform_parent(&mesh, &warp)?;
         Ok(())
     })?;
-    session.save_project(&receipt.manifest, None)?;
+    session.save_project(&receipt.path, None)?;
 
-    let document = Document::open(&receipt.manifest)?;
+    let document = Document::open(&receipt.path)?;
     let parts = document.part_tree();
     assert_eq!(parts.len(), 2);
     assert_eq!(parts[0].id, root_part);
@@ -567,7 +567,7 @@ fn unused_blend_key_table_does_not_claim_bound_keyforms() -> anyhow::Result<()> 
         Ok(())
     })?;
     let saved = session.save_project(&assets.path().join("unused.zipzi"), None)?;
-    let doc = Document::open(&saved.manifest)?;
+    let doc = Document::open(&saved.path)?;
     assert!(doc.parameter_visuals()[&parameter_id].keys.is_empty());
     Ok(())
 }

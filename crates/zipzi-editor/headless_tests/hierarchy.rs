@@ -597,7 +597,7 @@ fn mesh_thumbnails_only_generate_for_virtualized_rows(cx: &mut TestAppContext) {
         .unwrap();
     let harness = super::setup_with_document(
         cx,
-        zipzi_editor_core::Document::open(&saved.manifest).unwrap(),
+        zipzi_editor_core::Document::open(&saved.path).unwrap(),
         assets,
     );
     cx.run_until_parked();

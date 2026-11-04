@@ -49,8 +49,7 @@ impl ExternalChanges {
             target
                 .path
                 .as_ref()
-                .and_then(|path| path.parent())
-                .and_then(|path| path.file_name())
+                .and_then(|path| path.file_stem())
                 .map(|name| name.to_string_lossy().into_owned())
                 .or_else(|| {
                     editor

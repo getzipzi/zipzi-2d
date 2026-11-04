@@ -455,3 +455,16 @@ Windows 原生文件占用、系统关联和真实交互尚待对应平台验收
 
 验证：Project lib 48 项、project_tests 51 项；SDK integration 的 project_io 21 项（含候选/快照最后租约清理、删除外部素材与旧归档后的历史）；Runtime host 5 项及 runtime 30 项；Contract；Python 111 项行为、16 项 recovery、8 项 mesh 与正反静态类型；安装后 Connected 21 项；Python codegen 64 项；实验 examples 编译。
 Windows 原生交互仍需对应平台最终验收。
+
+### P3 Editor 文件入口与平台关联（2026-11-04）
+
+- 文件对话框限制为 `.zipzi` 普通文件，打开支持多选；补充 GPUI macOS/Windows 原生扩展名过滤接口。
+- 保存名称先规范后缀，补写后缀导致目标变化时再次确认最终目标；同路径另存为沿用原基线，不能绕过外部修改冲突。
+- 标题、状态栏和最近工程统一使用归档路径；冲突提供重新打开、另存为和取消。重新打开通过 SDK 事务执行，失败保留原 Session。
+- 在 endpoint claim 前用 `args_os()` 解析多路径和 `--`；启动、系统文件事件、菜单与 IPC 共用有界队列（128 路径 / 1 MiB）。队列按顺序打开，失败继续，同工程激活已有文档。
+- Editor 工作集使用平台缓存目录及共享 Runtime 磁盘预算；无窗口 host 仍能接收请求并创建窗口。
+- 发布与开发 plist 复用工程类型声明，开发关联优先级为 None；Windows 便携包携带当前用户注册/卸载脚本，保留系统默认应用选择。
+- 更新 Editor/acceptance 测试与样本的原生 receipt 字段及归档路径断言。
+
+验证：Editor `--lib project` 21 项、`headless_tests::runtime_host` 24 项、`headless_tests::recent_files` 2 项、启动参数 2 项；Editor core workspace 10 项（含重新打开失败/成功）；Runtime IPC 队列限额和请求重放 1 项；release 6 项、Windows 包 2 项、workspace entrypoints 5 项。`cargo check --locked -p zipzi-editor` 通过。
+macOS 原生构建通过；系统双击与 Windows 文件关联交互仍列入 P4 实机验收，未以逻辑测试替代。

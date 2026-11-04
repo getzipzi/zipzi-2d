@@ -21,7 +21,7 @@ fn fixture(
         ..Default::default()
     })?;
     let saved = d.save(&assets.path().join("with-parameter.zipzi"))?;
-    let mut reopened = Document::open(&saved.manifest)?;
+    let mut reopened = Document::open(&saved.path)?;
     reopened.navigate(R::new(K::Mesh, &reopened.layers()[0].id))?;
     Ok((reopened, assets))
 }
@@ -74,7 +74,7 @@ fn mesh_binding_workflow_edits_stored_shape_interpolates_and_roundtrips() -> any
     d.redo()?;
     assert_eq!(after, d.snapshot()?.viewport_frame.drawables);
     let saved = d.save(&assets.path().join("ordinary.zipzi"))?;
-    let mut reopened = Document::open(&saved.manifest)?;
+    let mut reopened = Document::open(&saved.path)?;
     reopened.set_preview_parameter(&parameter, last.value)?;
     assert_eq!(
         reopened.ordinary_binding(&mesh).unwrap().axes[0].id,

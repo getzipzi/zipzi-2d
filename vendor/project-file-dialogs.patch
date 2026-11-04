@@ -1,0 +1,206 @@
+diff --git a/vendor/gpui-fast-macos/src/platform.rs b/vendor/gpui-fast-macos/src/platform.rs
+index f0538566..da18325b 100644
+--- a/vendor/gpui-fast-macos/src/platform.rs
++++ b/vendor/gpui-fast-macos/src/platform.rs
+@@ -896,9 +896,14 @@ impl Platform for MacPlatform {
+     }
+ 
+     fn prompt_for_paths(
+-        &self,
+-        options: PathPromptOptions,
++        &self, options: PathPromptOptions,
++    ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
++        self.prompt_for_paths_with_extension(options, "")
++    }
++    fn prompt_for_paths_with_extension(
++        &self, options: PathPromptOptions, extension: &str,
+     ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
++        let extension = extension.to_owned();
+         use objc2_foundation::NSString;
+ 
+         let marker = self.1;
+@@ -906,6 +911,11 @@ impl Platform for MacPlatform {
+         self.foreground_executor()
+             .spawn(async move {
+                 let panel = NSOpenPanel::openPanel(marker);
++                if !extension.is_empty() {
++                    #[allow(deprecated)]
++                    panel.setAllowedFileTypes(Some(&objc2_foundation::NSArray::from_slice(&[&*NSString::from_str(&extension)])));
++                    panel.setAllowsOtherFileTypes(false);
++                }
+                 panel.setCanChooseDirectories(options.directories);
+                 panel.setCanChooseFiles(options.files);
+                 panel.setAllowsMultipleSelection(options.multiple);
+@@ -944,10 +954,14 @@ impl Platform for MacPlatform {
+     }
+ 
+     fn prompt_for_new_path(
+-        &self,
+-        directory: &Path,
+-        suggested_name: Option<&str>,
++        &self, directory: &Path, suggested_name: Option<&str>,
++    ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
++        self.prompt_for_new_path_with_extension(directory, suggested_name, "")
++    }
++    fn prompt_for_new_path_with_extension(
++        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
+     ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
++        let extension = extension.to_owned();
+         use objc2_foundation::{NSString, NSURL};
+ 
+         let url = NSURL::from_directory_path(directory);
+@@ -958,6 +972,11 @@ impl Platform for MacPlatform {
+             .spawn(async move {
+                 let panel = NSSavePanel::savePanel(marker);
+                 panel.setDirectoryURL(url.as_deref());
++                if !extension.is_empty() {
++                    #[allow(deprecated)]
++                    panel.setAllowedFileTypes(Some(&objc2_foundation::NSArray::from_slice(&[&*NSString::from_str(&extension)])));
++                    panel.setAllowsOtherFileTypes(false);
++                }
+ 
+                 if let Some(suggested_name) = suggested_name {
+                     panel.setNameFieldStringValue(&suggested_name);
+diff --git a/vendor/gpui-fast-windows/src/platform.rs b/vendor/gpui-fast-windows/src/platform.rs
+index 901be708..d852cd8b 100644
+--- a/vendor/gpui-fast-windows/src/platform.rs
++++ b/vendor/gpui-fast-windows/src/platform.rs
+@@ -812,7 +812,7 @@ impl Platform for WindowsPlatform {
+             .and_then(|hwnd| self.window_from_hwnd(hwnd))
+             .map(|window| window.dialog_owner.clone());
+         crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
+-            file_open_dialog(options, Some(window))
++            file_open_dialog(options, Some(window), None)
+         })
+     }
+ 
+@@ -828,10 +828,30 @@ impl Platform for WindowsPlatform {
+             .and_then(|hwnd| self.window_from_hwnd(hwnd))
+             .map(|window| window.dialog_owner.clone());
+         crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
+-            file_save_dialog(directory, suggested_name, Some(window))
++            file_save_dialog(directory, suggested_name, Some(window), None)
+         })
+     }
+ 
++    fn prompt_for_paths_with_extension(
++        &self, options: PathPromptOptions, extension: &str,
++    ) -> Receiver<Result<Option<Vec<PathBuf>>>> {
++        let extension = extension.to_owned();
++        let owner = self.find_current_active_window().and_then(|hwnd| self.window_from_hwnd(hwnd)).map(|window| window.dialog_owner.clone());
++        crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
++            file_open_dialog(options, Some(window), Some(extension))
++        })
++    }
++    fn prompt_for_new_path_with_extension(
++        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
++    ) -> Receiver<Result<Option<PathBuf>>> {
++        let directory = directory.to_owned();
++        let suggested_name = suggested_name.map(str::to_owned);
++        let extension = extension.to_owned();
++        let owner = self.find_current_active_window().and_then(|hwnd| self.window_from_hwnd(hwnd)).map(|window| window.dialog_owner.clone());
++        crate::dialog::show_dialog(owner, &self.foreground_executor, move |window| {
++            file_save_dialog(directory, suggested_name, Some(window), Some(extension))
++        })
++    }
+     fn can_select_mixed_files_and_dirs(&self) -> bool {
+         // The FOS_PICKFOLDERS flag toggles between "only files" and "only folders".
+         false
+@@ -1533,6 +1553,7 @@ fn open_target_in_explorer(target: &Path) -> Result<()> {
+ fn file_open_dialog(
+     options: PathPromptOptions,
+     window: Option<HWND>,
++    extension: Option<String>,
+ ) -> Result<Option<Vec<PathBuf>>> {
+     let folder_dialog: IFileOpenDialog =
+         unsafe { CoCreateInstance(&FileOpenDialog, None, CLSCTX_ALL)? };
+@@ -1547,6 +1568,11 @@ fn file_open_dialog(
+ 
+     unsafe {
+         folder_dialog.SetOptions(dialog_options)?;
++        if let Some(extension) = extension {
++            let label = HSTRING::from(format!("Zipzi project (*.{extension})"));
++            let pattern = HSTRING::from(format!("*.{extension}"));
++            folder_dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC { pszName: windows::core::PCWSTR(label.as_ptr()), pszSpec: windows::core::PCWSTR(pattern.as_ptr()) }])?;
++        }
+ 
+         if let Some(prompt) = options.prompt {
+             let prompt: &str = &prompt;
+@@ -1581,6 +1607,7 @@ fn file_save_dialog(
+     directory: PathBuf,
+     suggested_name: Option<String>,
+     window: Option<HWND>,
++    extension: Option<String>,
+ ) -> Result<Option<PathBuf>> {
+     let dialog: IFileSaveDialog = unsafe { CoCreateInstance(&FileSaveDialog, None, CLSCTX_ALL)? };
+     if !directory.to_string_lossy().is_empty()
+@@ -1611,10 +1638,16 @@ fn file_save_dialog(
+     }
+ 
+     unsafe {
+-        dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC {
+-            pszName: windows::core::w!("All files"),
+-            pszSpec: windows::core::w!("*.*"),
+-        }])?;
++        if let Some(extension) = extension {
++            let label = HSTRING::from(format!("Zipzi project (*.{extension})"));
++            let pattern = HSTRING::from(format!("*.{extension}"));
++            dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC { pszName: windows::core::PCWSTR(label.as_ptr()), pszSpec: windows::core::PCWSTR(pattern.as_ptr()) }])?;
++            dialog.SetDefaultExtension(&HSTRING::from(extension))?;
++        } else {
++            dialog.SetFileTypes(&[Common::COMDLG_FILTERSPEC {
++                pszName: windows::core::w!("All files"), pszSpec: windows::core::w!("*.*"),
++            }])?;
++        }
+         if let Err(error) = dialog.Show(window) {
+             if error.code() == HRESULT::from_win32(ERROR_CANCELLED.0) {
+                 return Ok(None);
+diff --git a/vendor/gpui-fast/src/app.rs b/vendor/gpui-fast/src/app.rs
+index ce580bd8..260b27cb 100644
+--- a/vendor/gpui-fast/src/app.rs
++++ b/vendor/gpui-fast/src/app.rs
+@@ -1896,6 +1896,19 @@ impl App {
+         self.platform.prompt_for_new_path(directory, suggested_name)
+     }
+ 
++    /// Open a native picker restricted to one file extension.
++    pub fn prompt_for_paths_with_extension(
++        &self, options: PathPromptOptions, extension: &str,
++    ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
++        self.platform.prompt_for_paths_with_extension(options, extension)
++    }
++    /// Choose a filename with extension normalization before Replace.
++    pub fn prompt_for_new_path_with_extension(
++        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
++    ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
++        self.platform.prompt_for_new_path_with_extension(directory, suggested_name, extension)
++    }
++
+     /// Reveals the specified path at the platform level, such as in Finder on macOS.
+     pub fn reveal_path(&self, path: &Path) {
+         self.platform.reveal_path(path)
+diff --git a/vendor/gpui-fast/src/platform.rs b/vendor/gpui-fast/src/platform.rs
+index e11daecb..4ed688d6 100644
+--- a/vendor/gpui-fast/src/platform.rs
++++ b/vendor/gpui-fast/src/platform.rs
+@@ -451,6 +451,20 @@ pub trait Platform: 'static {
+         directory: &Path,
+         suggested_name: Option<&str>,
+     ) -> oneshot::Receiver<Result<Option<PathBuf>>>;
++    /// Native file-type filtering; platforms without support retain the generic picker.
++    fn prompt_for_paths_with_extension(
++        &self, options: PathPromptOptions, extension: &str,
++    ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
++        let _ = extension;
++        self.prompt_for_paths(options)
++    }
++    /// Restrict and normalize the extension before the native Replace confirmation.
++    fn prompt_for_new_path_with_extension(
++        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
++    ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
++        let _ = extension;
++        self.prompt_for_new_path(directory, suggested_name)
++    }
+     fn can_select_mixed_files_and_dirs(&self) -> bool;
+     fn reveal_path(&self, path: &Path);
+     fn open_with_system(&self, path: &Path);

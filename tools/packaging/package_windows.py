@@ -28,7 +28,15 @@ def package(binary, output, revision, root=ROOT):
     check_executable(data)
     if not revision or any(c not in '0123456789abcdef' for c in revision.lower()) or len(revision) != 40:
         raise ValueError('Expected a full 40-character source commit SHA')
-    files = {'zipzi-editor.exe': data}
+    files = {'zipzi-editor.exe': data,
+             'Register-FileAssociation.ps1': (Path(__file__).parent / 'Register-FileAssociation.ps1').read_bytes(),
+             'FILE-ASSOCIATION.txt': (
+                 'Run PowerShell from this directory:\r\n'
+                 '  powershell -ExecutionPolicy Bypass -File .\\Register-FileAssociation.ps1\r\n'
+                 'Unregister this location:\r\n'
+                 '  powershell -ExecutionPolicy Bypass -File .\\Register-FileAssociation.ps1 -Unregister\r\n'
+                 'Select Zipzi Editor in Windows Open With / Default apps. Moving the portable app requires registering again.\r\n'
+             ).encode()}
     for name in NOTICES:
         files[name] = (root / name).read_bytes()
     vendor = root / 'vendor'

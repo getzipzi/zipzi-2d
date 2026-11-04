@@ -1016,7 +1016,7 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
         .save_project(&assets.path().join("model"), None)
         .unwrap();
     let harness =
-        super::super::setup_with_document(cx, Document::open(&saved.manifest).unwrap(), assets);
+        super::super::setup_with_document(cx, Document::open(&saved.path).unwrap(), assets);
     harness.view.update(cx, |view, cx| {
         view.editor
             .execute(EditorCommand::SelectObject(ObjectRef::new(

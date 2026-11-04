@@ -115,7 +115,7 @@ pub(crate) fn persistence(h: &mut Harness) -> anyhow::Result<()> {
     })??;
     let mut completion = save.run();
     update(h, |v, _, _| v.editor.finish_save(&mut completion))??;
-    let reopened = Document::open(&path.join("project.zipzi.json"))?;
+    let reopened = Document::open(&path)?;
     for c in original {
         ensure!(
             reopened.motion_definition(&c.id).as_deref() == Some(&c),

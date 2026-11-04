@@ -83,7 +83,7 @@ fn pending_business_objects_are_independently_inspectable_and_persistent() -> an
     );
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("references.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     for (kind, id) in objects {
         assert!(
             reopened

@@ -40,7 +40,7 @@ fn fixture_with_source(
         )?)
     })?;
     let saved = session.save_project(&dir.path().join("boundless.zipzi"), None)?;
-    let document = Document::open(&saved.manifest)?;
+    let document = Document::open(&saved.path)?;
     assert_eq!(document.source_canvas(), source_canvas);
     Ok((support::editor_from_document(document), dir))
 }

@@ -168,7 +168,7 @@ pub(super) fn fixture(
         })
     })?;
     let receipt = s.save_project(&temp.path().join("fixture.zipzi"), None)?;
-    let mut editor = crate::support::editor_from_document(Document::open(&receipt.manifest)?);
+    let mut editor = crate::support::editor_from_document(Document::open(&receipt.path)?);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_canvas_metrics(ViewportMetrics {
         width: 256.,

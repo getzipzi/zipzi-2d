@@ -1210,7 +1210,7 @@ fn rotation_steps_follow_canvas_motion_under_a_reflected_parent() -> anyhow::Res
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::ModelSetup::default(),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let mut parent = sdk.transform(&warp).unwrap();
     for p in &mut parent.warp_mut().unwrap().points {
         p.x = 256. - p.x;
@@ -1223,9 +1223,9 @@ fn rotation_steps_follow_canvas_motion_under_a_reflected_parent() -> anyhow::Res
         e.replace_transform(child)?;
         Ok(())
     })?;
-    sdk.save_project(&saved.manifest, None)?;
+    sdk.save_project(&saved.path, None)?;
     for axis in [false, true] {
-        let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+        let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
         editor.set_canvas_metrics(ViewportMetrics {
             width: 512.,
             height: 512.,

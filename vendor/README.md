@@ -27,6 +27,7 @@ upstream README and files needed by relative test paths are also retained.
 
 | Patch | Purpose |
 | --- | --- |
+| [project-file-dialogs.patch](project-file-dialogs.patch) | Adds native extension filters and normalizes save names before Replace on macOS and Windows. |
 | [gpui-diagnostics.patch](gpui-diagnostics.patch) | Adds opt-in cross-platform CPU frame timing. |
 | [path-buffer-reuse.patch](path-buffer-reuse.patch) | Reuses path vertex buffers when scaling. |
 | [windows-shared-texture.patch](windows-shared-texture.patch) | Adds Windows shared GPU surface composition. |

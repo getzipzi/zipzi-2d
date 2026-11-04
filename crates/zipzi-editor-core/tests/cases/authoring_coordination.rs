@@ -188,7 +188,7 @@ fn parameter_capability_and_deletion_match_toolbar_menu_and_native_command_seman
     let saved = session
         .save_project(&assets.path().join("locked.zipzi"), None)
         .map_err(|e| anyhow::anyhow!("save stage: {e}"))?;
-    let mut d = Document::open(&saved.manifest).map_err(|e| anyhow::anyhow!("open stage: {e}"))?;
+    let mut d = Document::open(&saved.path).map_err(|e| anyhow::anyhow!("open stage: {e}"))?;
     d.navigate(group.clone())?;
     let editor = Editor::from_document(d);
     assert_eq!(

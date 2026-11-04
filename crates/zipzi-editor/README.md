@@ -65,6 +65,33 @@ See [test coverage and prerequisites](../../tools/README.md#test-coverage) and
 `./tools/test-editor.sh --help` for the available gates. Full and acceptance
 runs are more expensive than focused tests.
 
+## Native project files
+
+Open and save `.zipzi` files from the File menu. A project is one ZIP archive
+containing the document and every valid image resource; copying the file carries
+those resources with it. The Editor manages private resources under the platform
+cache directory (`ZIPZI_CACHE_DIR` overrides it). Directory projects and bare JSON
+are no longer supported as user project inputs.
+
+Launch with one or more files; use `--` before filenames beginning with `-`:
+
+```sh
+cargo run --locked -p zipzi-editor -- -- "角色 one.zipzi" "角色 two.zipzi"
+```
+
+Startup, system file events and the Open dialog share a bounded queue (128 files,
+1 MiB of paths). An existing Editor receives requests through its private Runtime
+endpoint, including when it has no window. Opening the same file activates its
+existing document; another path is a separate project even if its document UUID
+matches. One failed file does not prevent the next file from opening.
+
+Release macOS bundles register `.zipzi` as a regular ZIP document. Development
+bundles offer support without claiming the default association. The Windows
+portable archive includes `Register-FileAssociation.ps1` and instructions for
+registering or unregistering the current application location for the current
+user. Choose the default application through Windows settings; register again
+after moving the portable application.
+
 ## Resident application host
 
 Start the editor without a window using:

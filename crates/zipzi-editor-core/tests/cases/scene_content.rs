@@ -113,7 +113,7 @@ fn pair_child_projection_and_history_share_the_native_lifecycle() -> anyhow::Res
     );
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("pairs.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert!(reopened.object_index().get(&object).is_some());
     Ok(())
 }

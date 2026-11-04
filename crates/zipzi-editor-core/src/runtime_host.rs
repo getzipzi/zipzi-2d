@@ -73,6 +73,15 @@ impl RuntimeHost {
             prepared_views: Default::default(),
         }
     }
+    /// Desktop resources use the platform cache, with one shared Runtime disk budget.
+    pub fn configure_project_cache(&self, root: std::path::PathBuf) -> anyhow::Result<()> {
+        let budget = self.read().limits().project_disk_bytes;
+        self.write().configure_project_io(
+            zipzi_project::archive::ProjectArchiveStore::new(root)
+                .with_disk_budget(zipzi_project::archive::ProjectDiskBudget::new(budget)),
+        )?;
+        Ok(())
+    }
     pub fn read(&self) -> RwLockReadGuard<'_, Runtime> {
         self.runtime.read().unwrap_or_else(|p| p.into_inner())
     }

@@ -18,7 +18,7 @@ fn enter(cx: &mut TestAppContext) -> Harness {
     let saved = session
         .save_project(&assets.path().join("multi.zipzi"), None)
         .unwrap();
-    let mut document = Document::open(&saved.manifest).unwrap();
+    let mut document = Document::open(&saved.path).unwrap();
     document
         .select_objects(
             [2, 4]

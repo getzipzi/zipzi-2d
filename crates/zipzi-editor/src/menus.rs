@@ -65,22 +65,13 @@ pub struct MenuState {
 }
 
 pub fn path_title(path: &Path) -> String {
-    if path.file_name().and_then(|s| s.to_str()) == Some("project.zipzi.json") {
-        if let Some(parent) = path.parent().and_then(|p| p.file_name()) {
-            return parent.to_string_lossy().into_owned();
-        }
-    }
     path.file_name()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.display().to_string())
 }
 
 pub fn format_parent_path(path: &Path) -> String {
-    let parent = if path.file_name().and_then(|s| s.to_str()) == Some("project.zipzi.json") {
-        path.parent().and_then(|p| p.parent())
-    } else {
-        path.parent()
-    };
+    let parent = path.parent();
     let Some(parent) = parent else {
         return String::new();
     };
@@ -457,22 +448,22 @@ mod tests {
         use super::{path_title, recent_file_label};
         use std::path::PathBuf;
 
-        let p1 = PathBuf::from("/models/mao/project.zipzi.json");
+        let p1 = PathBuf::from("/models/mao.zipzi");
         let p2 = PathBuf::from("/models/shirousagi.zipzi");
         let all = vec![p1.clone(), p2.clone()];
 
-        assert_eq!(path_title(&p1), "mao");
+        assert_eq!(path_title(&p1), "mao.zipzi");
         assert_eq!(path_title(&p2), "shirousagi.zipzi");
 
-        assert_eq!(recent_file_label(&p1, &all), "mao");
+        assert_eq!(recent_file_label(&p1, &all), "mao.zipzi");
         assert_eq!(recent_file_label(&p2, &all), "shirousagi.zipzi");
 
         // Disambiguate duplicates with parent path
-        let dup1 = PathBuf::from("/work/mao/project.zipzi.json");
-        let dup2 = PathBuf::from("/backup/mao/project.zipzi.json");
+        let dup1 = PathBuf::from("/work/mao.zipzi");
+        let dup2 = PathBuf::from("/backup/mao.zipzi");
         let dups = vec![dup1.clone(), dup2.clone()];
 
-        assert_eq!(recent_file_label(&dup1, &dups), "mao — /work");
-        assert_eq!(recent_file_label(&dup2, &dups), "mao — /backup");
+        assert_eq!(recent_file_label(&dup1, &dups), "mao.zipzi — /work");
+        assert_eq!(recent_file_label(&dup2, &dups), "mao.zipzi — /backup");
     }
 }

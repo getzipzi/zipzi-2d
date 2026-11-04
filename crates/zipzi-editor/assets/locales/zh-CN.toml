@@ -223,6 +223,12 @@ aggregate_key_marks = "关键值标记为跨目标汇总；不构成可编辑网
 binding_key_marks = "活动绑定的轴使用独立关键值；其他轴显示汇总。"
 
 [project]
+extension_error = "Zipzi 工程请使用 .zipzi 后缀。"
+replace = "替换 %{path}？"
+replace_action = "替换"
+conflict = "工程文件已被外部修改。"
+conflict_help = "重新打开磁盘版本，或将当前修改另存为其他文件。"
+reopen = "重新打开"
 save_close = "关闭前保存 %{title} 的更改？"
 untitled = "未命名"
 durability_warning = "项目已发布，但无法确认写入是否持久保存"

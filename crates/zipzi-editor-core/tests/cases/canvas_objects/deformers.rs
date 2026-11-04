@@ -896,7 +896,7 @@ fn warp_numeric_selection_spans_independent_objects_and_whole_mode_keeps_selecti
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::ModelSetup::default(),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let mut copy = sdk.transform(&warp).unwrap();
     copy.id = uuid::Uuid::new_v4().to_string();
     copy.runtime_id = "SecondWarp".into();
@@ -905,9 +905,9 @@ fn warp_numeric_selection_spans_independent_objects_and_whole_mode_keeps_selecti
     }
     let second = ObjectRef::new(ObjectKind::Deformer, &copy.id);
     sdk.edit("Second Warp", None, |edit| edit.create_transform(copy))?;
-    sdk.save_project(&saved.manifest, None)?;
+    sdk.save_project(&saved.path, None)?;
     let first = ObjectRef::new(ObjectKind::Deformer, &warp);
-    let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {
         width: 1024.,
         height: 768.,

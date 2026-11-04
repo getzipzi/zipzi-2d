@@ -46,12 +46,12 @@ fn main() -> anyhow::Result<()> {
     let receipt = document.save(&temporary.path().join("model"))?;
     eprintln!(
         "saved_manifest_bytes={}",
-        std::fs::metadata(&receipt.manifest)?.len()
+        std::fs::metadata(&receipt.path)?.len()
     );
     measure("saved_clean", samples, false, || {
         black_box(&document).modified()
     });
-    let mut document = Document::open(&receipt.manifest)?;
+    let mut document = Document::open(&receipt.path)?;
     measure("reopened_clean", samples, false, || {
         black_box(&document).modified()
     });

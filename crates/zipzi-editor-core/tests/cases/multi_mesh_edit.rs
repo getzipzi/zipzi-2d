@@ -35,7 +35,7 @@ fn setup_with_glue(glue: bool) -> anyhow::Result<(Editor, tempfile::TempDir)> {
         })?;
     }
     let saved = session.save_project(&dir.path().join("multi.zipzi"), None)?;
-    let mut document = Document::open(&saved.manifest)?;
+    let mut document = Document::open(&saved.path)?;
     document.select_objects(objects())?;
     let mut editor = crate::support::editor_from_document(document);
     support::attach_viewports(&mut editor);
@@ -405,7 +405,7 @@ fn multi_mesh_save_settles_a_shared_drag_and_roundtrips_both_meshes() -> anyhow:
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     assert!(!editor.document().unwrap().has_pending_edit());
     assert!(editor.current_viewport_interaction().is_none());
-    let reopened = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    let reopened = crate::support::editor_from_document(Document::open(&saved.path)?);
     assert_eq!(meshes(&reopened), moved);
     for (before, after) in original.iter().zip(moved) {
         assert_ne!(before.base_positions, after.base_positions);

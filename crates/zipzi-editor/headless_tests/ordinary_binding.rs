@@ -14,7 +14,7 @@ fn setup(cx: &mut TestAppContext) -> Harness {
     })
     .unwrap();
     let saved = d.save(&assets.path().join("binding-ui.zipzi")).unwrap();
-    let mut d = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    let mut d = zipzi_editor_core::Document::open(&saved.path).unwrap();
     d.navigate(R::new(K::Mesh, &d.layers()[0].id)).unwrap();
     let h = setup_with_document(cx, d, assets);
     cx.update(|cx| cx.set_reduce_motion(true));

@@ -896,9 +896,14 @@ impl Platform for MacPlatform {
     }
 
     fn prompt_for_paths(
-        &self,
-        options: PathPromptOptions,
+        &self, options: PathPromptOptions,
     ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
+        self.prompt_for_paths_with_extension(options, "")
+    }
+    fn prompt_for_paths_with_extension(
+        &self, options: PathPromptOptions, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<Vec<PathBuf>>>> {
+        let extension = extension.to_owned();
         use objc2_foundation::NSString;
 
         let marker = self.1;
@@ -906,6 +911,11 @@ impl Platform for MacPlatform {
         self.foreground_executor()
             .spawn(async move {
                 let panel = NSOpenPanel::openPanel(marker);
+                if !extension.is_empty() {
+                    #[allow(deprecated)]
+                    panel.setAllowedFileTypes(Some(&objc2_foundation::NSArray::from_slice(&[&*NSString::from_str(&extension)])));
+                    panel.setAllowsOtherFileTypes(false);
+                }
                 panel.setCanChooseDirectories(options.directories);
                 panel.setCanChooseFiles(options.files);
                 panel.setAllowsMultipleSelection(options.multiple);
@@ -944,10 +954,14 @@ impl Platform for MacPlatform {
     }
 
     fn prompt_for_new_path(
-        &self,
-        directory: &Path,
-        suggested_name: Option<&str>,
+        &self, directory: &Path, suggested_name: Option<&str>,
     ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
+        self.prompt_for_new_path_with_extension(directory, suggested_name, "")
+    }
+    fn prompt_for_new_path_with_extension(
+        &self, directory: &Path, suggested_name: Option<&str>, extension: &str,
+    ) -> oneshot::Receiver<Result<Option<PathBuf>>> {
+        let extension = extension.to_owned();
         use objc2_foundation::{NSString, NSURL};
 
         let url = NSURL::from_directory_path(directory);
@@ -958,6 +972,11 @@ impl Platform for MacPlatform {
             .spawn(async move {
                 let panel = NSSavePanel::savePanel(marker);
                 panel.setDirectoryURL(url.as_deref());
+                if !extension.is_empty() {
+                    #[allow(deprecated)]
+                    panel.setAllowedFileTypes(Some(&objc2_foundation::NSArray::from_slice(&[&*NSString::from_str(&extension)])));
+                    panel.setAllowsOtherFileTypes(false);
+                }
 
                 if let Some(suggested_name) = suggested_name {
                     panel.setNameFieldStringValue(&suggested_name);

@@ -133,7 +133,7 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             &uuid::Uuid::new_v4().to_string(),
             zipzi_core::Canvas::new(256., 256., Default::default(), 1.),
         )?;
-        sdk.open_project(&saved.manifest, None)?;
+        sdk.open_project(&saved.path, None)?;
         let rotation = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(503).to_string());
         sdk.edit("Rotation original", None, |edit| {
             edit.create_transform(zipzi_core::Transform {
@@ -151,8 +151,8 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
                 ..Default::default()
             })
         })?;
-        sdk.save_project(&saved.manifest, None)?;
-        let document = Document::open(&saved.manifest)?;
+        sdk.save_project(&saved.path, None)?;
+        let document = Document::open(&saved.path)?;
         let mut h = Harness::new()?;
         crate::i18n::activate(Some(locale));
         h.cx.update_window(h.window, |_, window, cx| {

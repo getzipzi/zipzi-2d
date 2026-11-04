@@ -40,8 +40,7 @@ impl DocumentSummary {
             path: document.path().map(Path::to_path_buf),
             title: document
                 .path()
-                .and_then(Path::parent)
-                .and_then(Path::file_name)
+                .and_then(Path::file_stem)
                 .map(|s| s.to_string_lossy().into_owned())
                 .or_else(|| document.import_name().map(str::to_owned)),
             modified: document.modified(),

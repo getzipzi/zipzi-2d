@@ -93,7 +93,7 @@ fn hiding_a_part_does_not_follow_deformation_links_into_another_part() -> anyhow
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let mesh = ObjectRef::new(ObjectKind::Mesh, sdk.mesh_ids()[1].clone());
     let parent = object(ObjectKind::Part, 101);
     let child = object(ObjectKind::Deformer, 502);
@@ -103,8 +103,8 @@ fn hiding_a_part_does_not_follow_deformation_links_into_another_part() -> anyhow
         e.set_mesh_part(&mesh.id, &object(ObjectKind::Part, 102).id)?;
         e.replace_transform(transform)
     })?;
-    sdk.save_project(&saved.manifest, None)?;
-    let mut doc = Document::open(&saved.manifest)?;
+    sdk.save_project(&saved.path, None)?;
+    let mut doc = Document::open(&saved.path)?;
     let before = doc.snapshot()?;
     doc.set_object_visible(&parent, false)?;
     let after = doc.snapshot()?;
@@ -135,13 +135,13 @@ fn hidden_mesh_remains_a_mask_source_for_picking_and_output() -> anyhow::Result<
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let ids = sdk.mesh_ids().to_vec();
     let mut masked = sdk.mesh(&ids[1]).unwrap();
     masked.masks = vec![ids[0].clone()];
     sdk.edit("Mask fixture", None, |e| e.replace_mesh(masked))?;
-    sdk.save_project(&saved.manifest, None)?;
-    let mut doc = Document::open(&saved.manifest)?;
+    sdk.save_project(&saved.path, None)?;
+    let mut doc = Document::open(&saved.path)?;
     let before = doc.snapshot()?;
     doc.set_object_visible(
         &zipzi_editor_core::ObjectRef::new(zipzi_editor_core::ObjectKind::Mesh, &ids[0]),

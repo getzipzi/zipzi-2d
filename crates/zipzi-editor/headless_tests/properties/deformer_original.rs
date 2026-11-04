@@ -67,7 +67,7 @@ fn deformer_properties_original_restore_reviews_shared_density_and_cancel_is_unc
     let saved = document
         .save(&assets.path().join("original-density"))
         .unwrap();
-    let mut document = zipzi_editor_core::Document::open(&saved.manifest).unwrap();
+    let mut document = zipzi_editor_core::Document::open(&saved.path).unwrap();
     document.navigate(object.clone()).unwrap();
     let h = setup_with_document(cx, document, assets);
     for cancel in [true, false] {

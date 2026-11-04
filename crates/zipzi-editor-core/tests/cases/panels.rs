@@ -123,7 +123,7 @@ fn independent_parameter_bindings_stay_separate_and_target_counts_are_deduplicat
         Ok(())
     })?;
     let saved = sdk.save_project(&out.path().join("model"), None)?;
-    let mut doc = Document::open(&saved.manifest)?;
+    let mut doc = Document::open(&saved.path)?;
     let index = doc.object_index();
     assert_eq!(index.bindings.len(), 2);
     for (i, p) in params.iter().enumerate() {
@@ -148,7 +148,7 @@ fn inherited_influences_are_paths_not_direct_mesh_bindings() -> anyhow::Result<(
         &id(),
         Canvas::new(256., 256., zipzi_core::Vec2::new(0., 0.), 1.),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let parent = id();
     let child = id();
     let p = id();
@@ -195,8 +195,8 @@ fn inherited_influences_are_paths_not_direct_mesh_bindings() -> anyhow::Result<(
             },
         })
     })?;
-    sdk.save_project(&saved.manifest, None)?;
-    let doc = Document::open(&saved.manifest)?;
+    sdk.save_project(&saved.path, None)?;
+    let doc = Document::open(&saved.path)?;
     let index = doc.object_index();
     let summary = index.parameter(&p);
     let deformer = index.get(&ObjectRef::new(K::Deformer, &parent)).unwrap();
@@ -335,7 +335,7 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
         &id(),
         Canvas::new(256., 256., zipzi_core::Vec2::new(0., 0.), 1.),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let meshes = sdk.mesh_ids().to_vec();
     let parameters = [id(), id(), id()];
     let parts = [id(), id()];
@@ -370,8 +370,8 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
         edit.set_package_attachments(vec![zipzi_core::document::PackageAttachment{id:uuid::Uuid::new_v4().to_string(),path:"notes.txt".into(),bytes:Some(std::sync::Arc::new(b"Unused attachment".to_vec()))}])?;
         Ok(())
     })?;
-    sdk.save_project(&saved.manifest, None)?;
-    let mut doc = Document::open(&saved.manifest)?;
+    sdk.save_project(&saved.path, None)?;
+    let mut doc = Document::open(&saved.path)?;
     let index = doc.object_index();
     let contains_edge = |source: ObjectRef, kind: R, target: ObjectRef| {
         index

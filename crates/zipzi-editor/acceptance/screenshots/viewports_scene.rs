@@ -390,15 +390,15 @@ fn isolation_screenshots(directory: &Path) -> anyhow::Result<()> {
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     let first = sdk.mesh_ids()[0].clone();
     let mut other = sdk.mesh(&sdk.mesh_ids()[1]).unwrap();
     for position in &mut other.base_positions {
         position.x += 100.;
     }
     sdk.edit("Offset second mesh", None, |edit| edit.replace_mesh(other))?;
-    sdk.save_project(&saved.manifest, None)?;
-    let document = zipzi_editor_core::Document::open(&saved.manifest)?;
+    sdk.save_project(&saved.path, None)?;
+    let document = zipzi_editor_core::Document::open(&saved.path)?;
     h._assets = assets;
     h.cx.update_window(h.window, |_, window, cx| {
         h.view.update(cx, |view, cx| {

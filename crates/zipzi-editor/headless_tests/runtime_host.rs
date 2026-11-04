@@ -348,7 +348,7 @@ fn parts_header_renders_external_save_without_workspace_sync(cx: &mut TestAppCon
         assert_ne!(window.find("parts-tree-new-part").disabled(), Some(true));
     })
     .unwrap();
-    assert!(target.join("project.zipzi.json").is_file());
+    assert!(target.is_file());
 }
 
 #[gpui_kit::test]
@@ -403,7 +403,7 @@ fn rendering_external_busy_job_before_notification_freezes_and_restores_the_view
         });
     })
     .unwrap();
-    assert!(target.join("project.zipzi.json").is_file());
+    assert!(target.is_file());
 }
 
 #[gpui_kit::test]
@@ -473,7 +473,7 @@ fn closing_last_window_saves_before_quitting(cx: &mut TestAppContext) {
     let target = harness._config_dir.path().join("saved-on-close.zipzi");
     cx.simulate_new_path_selection(|_| Some(target.clone()));
     cx.run_until_parked();
-    assert!(target.join("project.zipzi.json").is_file());
+    assert!(target.is_file());
     harness.view.read_with(cx, |view, _| {
         assert!(view.editor.exiting());
         assert_eq!(view.editor.document_count(), 0);
@@ -503,7 +503,7 @@ fn cancelling_close_save_picker_or_failing_save_preserves_unsaved_document(
         cx.run_until_parked();
         let target = harness._config_dir.path().join("invalid-save.zipzi");
         if fail {
-            std::fs::create_dir_all(target.join("project.zipzi.json")).unwrap();
+            std::fs::create_dir_all(&target).unwrap();
         }
         cx.simulate_new_path_selection(|_| fail.then_some(target));
         cx.run_until_parked();
@@ -629,7 +629,7 @@ fn foreign_background_job_keeps_host_alive_without_sdk_connection(cx: &mut TestA
         .read_with(cx, |view, _| assert!(!view.editor.exiting()));
     let work = host.runtime.write().take_work(job).unwrap();
     host.runtime.write().complete(work.run());
-    assert!(target.join("project.zipzi.json").is_file());
+    assert!(target.is_file());
 }
 
 #[gpui_kit::test]
@@ -720,13 +720,13 @@ fn save_and_close(cx: &mut TestAppContext, fail: bool, reopen_before_completion:
             .map(std::path::PathBuf::from)
     });
     let target = harness._config_dir.path().join("host-save");
-    if fail {
-        std::fs::create_dir_all(target.join("project.zipzi.json")).unwrap();
-    }
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.save_to(id, target.clone(), false, window, cx);
             assert!(view.editor.is_busy());
+            if fail {
+                std::fs::create_dir_all(&target).unwrap();
+            }
             view.close_window(window, cx);
         });
     })
@@ -769,14 +769,7 @@ fn save_and_close(cx: &mut TestAppContext, fail: bool, reopen_before_completion:
                 assert_eq!(document.path(), old_path.as_deref());
                 assert!(view.edit_error.is_some());
             } else {
-                assert_eq!(
-                    document.path(),
-                    target
-                        .join("project.zipzi.json")
-                        .canonicalize()
-                        .ok()
-                        .as_deref()
-                );
+                assert_eq!(document.path(), target.canonicalize().ok().as_deref());
             }
         });
     })
@@ -927,11 +920,11 @@ fn r2_detached_tab_save_failure_is_visible(cx: &mut TestAppContext) {
         .view
         .read_with(cx, |view, _| view.editor.active_id().unwrap());
     let target = harness._config_dir.path().join("failed-save");
-    std::fs::create_dir_all(target.join("project.zipzi.json")).unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.save_to(id, target.clone(), false, window, cx);
             assert!(view.editor.is_busy());
+            std::fs::create_dir_all(&target).unwrap();
             view.close_active(window, cx);
             assert_eq!(view.editor.document_count(), 0);
         });

@@ -167,7 +167,7 @@ pub(super) fn rich_document_with_canvas(
         Ok(())
     })?;
     let receipt = s.save_project(&dir.path().join("fixture"), None)?;
-    let mut document = Document::open(&receipt.manifest)?;
+    let mut document = Document::open(&receipt.path)?;
     document.select(&id(6))?;
     Ok((document, dir, id(4), id(5), id(3)))
 }
@@ -346,7 +346,7 @@ pub(super) fn bound_deformer_editor(
         Ok(())
     })?;
     let saved = session.save_project(&dir.path().join("bound"), None)?;
-    let mut editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     let object = ObjectRef::new(ObjectKind::Deformer, id(23));
     editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
@@ -373,7 +373,7 @@ pub(super) fn explicit_warp_grid(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::ModelSetup::default(),
     )?;
-    sdk.open_project(&saved.manifest, None)?;
+    sdk.open_project(&saved.path, None)?;
     sdk.edit("Explicit conversion density", None, |edit| {
         edit.edit_scene_content(zipzi_sdk::SceneContentEdit::ResizeWarp {
             transform_id: object.id.clone(),
@@ -396,8 +396,8 @@ pub(super) fn explicit_warp_grid(
         })
         .map(|_| ())
     })?;
-    sdk.save_project(&saved.manifest, None)?;
-    *editor = crate::support::editor_from_document(Document::open(&saved.manifest)?);
+    sdk.save_project(&saved.path, None)?;
+    *editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
         height: 512.,

@@ -63,7 +63,7 @@ fn hierarchy_order_is_independent_of_other_tree_and_rendering_and_survives_histo
     document.redo()?;
     let output = tempfile::tempdir()?;
     let saved = document.save(&output.path().join("sorted.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.part_tree(), document.part_tree());
     assert_eq!(reopened.deformer_tree(), deformation);
     Ok(())
@@ -110,7 +110,7 @@ fn parameter_moves_and_group_order_preserve_values_identity_and_nested_membershi
     assert_eq!(document.history_lengths(), (3, 0));
     let output = tempfile::tempdir()?;
     let saved = document.save(&output.path().join("sorted.zipzi"))?;
-    let reopened = Document::open(&saved.manifest)?;
+    let reopened = Document::open(&saved.path)?;
     assert_eq!(members(&reopened, Some(104)), vec![id(3)]);
     assert_eq!(reopened.parameter_groups(), document.parameter_groups());
     document.undo()?;
@@ -235,7 +235,7 @@ fn sorting_imported_cdi_keeps_unresolved_entries_extensions_and_omitted_paramete
     })?;
     let output = tempfile::tempdir()?;
     let saved = session.save_project(&output.path().join("imported.zipzi"), None)?;
-    let mut document = Document::open(&saved.manifest)?;
+    let mut document = Document::open(&saved.path)?;
     assert_eq!(members(&document, None), vec![id(2), id(1), id(3)]);
     document.move_parameter(
         &id(3),
@@ -245,14 +245,14 @@ fn sorting_imported_cdi_keeps_unresolved_entries_extensions_and_omitted_paramete
         },
     )?;
     assert_eq!(members(&document, None), vec![id(3), id(2), id(1)]);
-    let saved = document.save(&saved.manifest)?;
-    session.open_project(&saved.manifest, None)?;
+    let saved = document.save(&saved.path)?;
+    session.open_project(&saved.path, None)?;
     let info = session.document().display_info();
     assert_eq!(info.origin, DisplayInfoOrigin::Imported);
     assert_eq!(info.parameters.as_ref().unwrap()[1], unresolved);
     assert!(info.parameters.as_ref().unwrap().iter().any(|entry| matches!(entry, CdiParameterEntry::Resolved { parameter_id, extensions, .. } if parameter_id == &id(2) && extensions["entryNote"] == "kept")));
     assert_eq!(
-        members(&Document::open(&saved.manifest)?, None),
+        members(&Document::open(&saved.path)?, None),
         vec![id(3), id(2), id(1)]
     );
     Ok(())
@@ -305,7 +305,7 @@ fn part_moves_keep_subtrees_deformation_and_history_atomic() -> anyhow::Result<(
     assert_eq!(document.history_lengths(), (3, 0));
     let saved = document.save(&assets.path().join("moved.zipzi"))?;
     assert_eq!(
-        Document::open(&saved.manifest)?.part_tree(),
+        Document::open(&saved.path)?.part_tree(),
         document.part_tree()
     );
     document.undo()?;
@@ -368,7 +368,7 @@ fn drawing_fixture(explicit: bool) -> anyhow::Result<(Document, tempfile::TempDi
     let saved = document.save(&assets.path().join("drawing.zipzi"))?;
     let mut session =
         AuthoringSession::new(&id(900), Canvas::new(256., 256., Vec2::default(), 1.))?;
-    session.open_project(&saved.manifest, None)?;
+    session.open_project(&saved.path, None)?;
     let mut meshes: Vec<_> = session
         .document()
         .mesh_order()
@@ -429,8 +429,8 @@ fn drawing_fixture(explicit: bool) -> anyhow::Result<(Document, tempfile::TempDi
         }
         Ok(())
     })?;
-    let saved = session.save_project(&saved.manifest, None)?;
-    Ok((Document::open(&saved.manifest)?, assets, ids))
+    let saved = session.save_project(&saved.path, None)?;
+    Ok((Document::open(&saved.path)?, assets, ids))
 }
 
 fn stored_drawing_groups(document: &Document) -> serde_json::Value {
@@ -510,7 +510,7 @@ fn organization_moves_preserve_drawing_across_parameters_history_and_save() -> a
             document.redo()?;
             assert_eq!(stored_drawing_groups(&document), persisted_groups);
             let saved = document.save(&assets.path().join("moved.zipzi"))?;
-            let mut reopened = Document::open(&saved.manifest)?;
+            let mut reopened = Document::open(&saved.path)?;
             assert_eq!(reopened.part_tree(), document.part_tree());
             assert_eq!(stored_drawing_groups(&reopened), persisted_groups);
             assert_eq!(parameterized_render_orders(&mut reopened)?, baseline);
