@@ -1,6 +1,6 @@
 # Zipzi 原生工程 `.zipzi` 设计方案
 
-状态：P0–P3 实现已落地，P4 本地工程与故障验证已补齐；跨平台原生交互待验收。日期：2026-11-04。调研基线：`f59db0f0`。
+状态：P0–P3 实现已落地，P4 本地工程、故障及 macOS 指定应用文件事件/原生对话框已验证；Finder 默认关联与 Windows 原生交互待验收。日期：2026-11-04。调研基线：`f59db0f0`。
 
 ## 1. 建议决策
 
@@ -413,7 +413,8 @@ authoring 数据，不能只验证“能解开 ZIP”或“显示了成功提示
 
 原生归档、生命周期、契约及 Editor 平台入口已按 P0 → P3 实现。
 P4 已加入真实中大型工程、跨进程移动/冲突、快照观察、故障及预算验证，详见下方记录。
-下一步在 Windows 和系统文件入口完成原生交互验收；此前不宣称跨平台退出条件全部满足。
+macOS 指定应用的 LaunchServices 和原生保存对话框已追加实机验证。
+下一步完成 Finder 默认关联与 Windows 原生交互验收；此前不宣称跨平台退出条件全部满足。
 
 
 ## 14. 实施记录
@@ -485,3 +486,15 @@ macOS 原生构建通过；系统双击与 Windows 文件关联交互仍列入 P
 Editor project UI 21 项、Observe GPU 租约测试及样本校验。阶段内 Editor core 完整 integration
 617 项通过；Python Local/Connected 行为、recovery、mesh、静态类型与安装后 Connected 门禁
 按验收记录命令执行；独立 Python 代码生成工具检查 64 项通过。原生 Windows 和系统双击状态矩阵仍待实机验收。
+
+### P4 macOS 原生事件与保存对话框（2026-11-04）
+
+- 新增隔离的实际 Editor/LaunchServices 验收脚本，覆盖冷启动、ready 前追加、多文件、
+  无窗口、运行中重复打开及第二进程 IPC，核对 Session 身份与归档资源。
+- 真实面板暴露并修复静默追加其他后缀、规范化后漏掉覆盖确认的问题；
+  在原生 replacement 检查前补齐缺失后缀，保留显式大小写/双后缀及其他后缀纠正提示。
+- Save As 三种名称均比较完整 authoring 和 PNG 字节；覆盖取消保持原文件和 Session。
+- 原生构建、脚本全部场景及 release/dev bundle 工具各 6 项通过。
+
+详见[macOS 实机记录](../archive/benchmarks/2026-11-04-native-project-format-macos.md)。
+指定应用打开不证明默认文件关联，Finder 双击与 Windows 原生验收仍待完成。

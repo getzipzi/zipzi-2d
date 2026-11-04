@@ -972,10 +972,20 @@ impl Platform for MacPlatform {
             .spawn(async move {
                 let panel = NSSavePanel::savePanel(marker);
                 panel.setDirectoryURL(url.as_deref());
+                let delegate = (!extension.is_empty()).then(|| {
+                    crate::save_panel::ExtensionSavePanelDelegate::new(marker, extension.clone())
+                });
+                if let Some(delegate) = &delegate {
+                    // SAFETY: the completion block below retains the weak delegate.
+                    unsafe { panel.setDelegate(Some(objc2::runtime::ProtocolObject::from_ref(&**delegate))) };
+                }
                 if !extension.is_empty() {
                     #[allow(deprecated)]
                     panel.setAllowedFileTypes(Some(&objc2_foundation::NSArray::from_slice(&[&*NSString::from_str(&extension)])));
-                    panel.setAllowsOtherFileTypes(false);
+                    // Preserve an explicitly typed other suffix for caller validation.
+                    // Disallowing it silently turns `name.png` into `name.png.zipzi`,
+                    // before the caller can explain the invalid extension.
+                    panel.setAllowsOtherFileTypes(true);
                 }
 
                 if let Some(suggested_name) = suggested_name {
@@ -986,6 +996,7 @@ impl Platform for MacPlatform {
                 let handler = RcBlock::new({
                     let panel = panel.clone();
                     move |response: NSModalResponse| {
+                        let _delegate = &delegate;
                         let Some(done_tx) = done_tx.take() else {
                             return;
                         };
@@ -1011,7 +1022,10 @@ impl Platform for MacPlatform {
                                     // This is conditional on OS version because I'd like to get rid of it, so that
                                     // you can manually create a file called `a.sql.s`. That said it seems better
                                     // to break that use-case than breaking `a.sql`.
-                                    if let &[_, second, third] = chunks.as_slice()
+                                    // Filtered saves normalize in the delegate before confirmation;
+                                    // never rewrite their confirmed path (including `a.ext.ext`).
+                                    if extension.is_empty()
+                                        && let &[_, second, third] = chunks.as_slice()
                                         && second.starts_with(third)
                                         && Self::os_version() >= Version::new(15, 0, 0)
                                     {
