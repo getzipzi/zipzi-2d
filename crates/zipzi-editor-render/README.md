@@ -107,8 +107,10 @@ The Metal tests execute on a real GPU and cover themes, 1x/1.5x/2x DPI,
 fractional origins, control states, translucent bones, even-odd fills, cache reuse
 and retained surfaces. The native Editor tests compare complete surfaces with
 the shared GPUI fallback and the pre-migration deformer painter. D3D11 has the
-matching entry point, packed instances and Windows hardware tests; its execution
-and pixel parity must be verified on Windows, independently of macOS results.
+matching entry point, packed instances and Windows hardware tests. The
+[Windows validation record](../../docs/archive/benchmarks/2026-11-05-windows-native-canvas-validation.md)
+covers RTX 5060 hardware execution, pixel assertions and native-window workloads;
+complete Editor-surface parity with the GPUI fallback remains a separate gate.
 The explicit CPU benchmark writes `target/canvas-overlay-cpu.json`, with separate
 P50/P95 preparation, legacy/shared GPUI emission and native encode/submission
 times. It drains the queue outside timing to bound in-flight resources. This

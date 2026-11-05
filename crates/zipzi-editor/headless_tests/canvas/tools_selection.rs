@@ -834,7 +834,7 @@ fn vertex_drag_commits_once_and_shortcut_undo_redo_restores_geometry(cx: &mut Te
             assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
             assert!(!view.editor.gesture_active());
         });
-        window.press("cmd-z", cx);
+        window.press("secondary-z", cx);
         harness.view.read_with(cx, |view, _| {
             assert_eq!(
                 view.editor.document().unwrap().selected_vertex_positions(),
@@ -842,7 +842,7 @@ fn vertex_drag_commits_once_and_shortcut_undo_redo_restores_geometry(cx: &mut Te
             );
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 1));
         });
-        window.press("cmd-shift-z", cx);
+        window.press("secondary-shift-z", cx);
         harness.view.read_with(cx, |view, _| {
             assert_ne!(
                 view.editor.document().unwrap().selected_vertex_positions(),
@@ -1359,8 +1359,8 @@ fn escape_under_canvas_select_clears_all_selection(cx: &mut TestAppContext) {
             zipzi_editor_core::ToolId::Select
         );
 
-        // Shortcut cmd-d triggers Deselect and clears selection.
-        window.press("cmd-d", cx);
+        // The platform shortcut triggers Deselect and clears selection.
+        window.press("secondary-d", cx);
         window.render_frame(cx);
         harness.view.read_with(cx, |view, _| {
             assert!(
