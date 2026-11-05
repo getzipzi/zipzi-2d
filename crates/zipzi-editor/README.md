@@ -117,8 +117,9 @@ cargo run --locked -p zipzi-editor -- --no-window
 The Python SDK can connect to the resident host and share its Runtime sessions,
 documents and history. When connected clients, pending jobs or an explicit
 `--no-window` launch keep the host resident, closing a window detaches its view;
-reopening a window attaches the resident sessions. Closing a document tab also
-detaches its view. Otherwise, closing the last window exits after any unsaved
+reopening a window attaches the resident sessions. **Close Project** resolves
+unsaved changes and releases the project's Runtime session and history.
+Otherwise, closing the last window exits after any unsaved
 documents are resolved. Use Quit to explicitly exit. See the
 [Python SDK guide](../zipzi-python/client/python/zipzi/docs/guide.md) for
 connection and session usage.

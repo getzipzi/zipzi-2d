@@ -82,6 +82,9 @@ fn project_menu_switches_closes_and_does_not_trigger_window_drag(cx: &mut TestAp
     cx.update_window(harness.window, |_, _, cx| {
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
         assert_eq!(harness.view.read(cx).editor.active_id(), Some(first));
+        let runtime = harness.view.read(cx).editor.runtime_host();
+        assert_eq!(runtime.read().list_sessions().len(), 1);
+        assert!(!harness.view.read(cx).editor.exiting());
     })
     .unwrap();
     for id in [
@@ -263,9 +266,7 @@ fn project_select_opens_and_clears_recent_projects(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn detached_modified_project_retains_state_and_quit_still_requires_confirmation(
-    cx: &mut TestAppContext,
-) {
+fn close_modified_project_prompts_and_cancel_preserves_it(cx: &mut TestAppContext) {
     let harness = setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
@@ -293,13 +294,11 @@ fn detached_modified_project_retains_state_and_quit_still_requires_confirmation(
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        assert!(!harness.view.read(cx).modal);
-        assert_eq!(harness.view.read(cx).editor.document_count(), 0);
+        assert!(harness.view.read(cx).modal);
+        assert_eq!(harness.view.read(cx).editor.document_count(), 1);
         let runtime = harness.view.read(cx).editor.runtime_host();
         assert_eq!(runtime.read().list_sessions().len(), 1);
         assert!(runtime.read().list_sessions()[0].modified);
-        harness.view.update(cx, |view, cx| view.close(window, cx));
-        assert!(harness.view.read(cx).modal);
         window.click("project-select", cx);
         assert!(window.try_find("popup-menu").is_none());
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
@@ -312,6 +311,20 @@ fn detached_modified_project_retains_state_and_quit_still_requires_confirmation(
         assert!(!harness.view.read(cx).modal);
         assert!(window.find("project-select-modified").visible());
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
+        assert!(harness.view.read(cx).editor.document().unwrap().modified());
+        assert!(!harness.view.read(cx).editor.exiting());
+        window.click("project-select", cx);
+        window.click("project-close", cx);
     })
     .unwrap();
+    cx.simulate_prompt_answer("Discard and Close");
+    cx.run_until_parked();
+    harness.view.update(cx, |view, _| {
+        assert!(!view.modal);
+        assert_eq!(view.editor.document_count(), 0);
+        assert!(view.editor.runtime_host().read().list_sessions().is_empty());
+        view.editor.attach_resident_sessions().unwrap();
+        assert_eq!(view.editor.document_count(), 0);
+        assert!(!view.editor.exiting());
+    });
 }

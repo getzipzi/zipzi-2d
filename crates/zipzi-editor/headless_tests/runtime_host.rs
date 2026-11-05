@@ -484,6 +484,80 @@ fn closing_last_window_saves_before_quitting(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
+fn close_project_saves_before_releasing_its_session(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    let first = harness
+        .view
+        .read_with(cx, |view, _| view.editor.active_id().unwrap());
+    harness
+        .view
+        .update(cx, |view, _| view.editor.new_document().unwrap());
+    modify(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.run_command(zipzi_editor_core::CommandId::Close, window, cx);
+            assert!(view.modal);
+            assert!(!view.editor.exiting());
+        });
+    })
+    .unwrap();
+    cx.simulate_prompt_answer("Save");
+    cx.run_until_parked();
+    assert!(cx.did_prompt_for_new_path());
+    assert_eq!(host.runtime.read().list_sessions().len(), 2);
+    let target = harness._config_dir.path().join("closed-project.zipzi");
+    cx.simulate_new_path_selection(|_| Some(target.clone()));
+    cx.run_until_parked();
+    assert!(target.is_file());
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.active_id(), Some(first));
+        assert_eq!(view.editor.document_count(), 1);
+        assert!(!view.modal);
+        assert!(!view.editor.exiting());
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+    });
+    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(cx.update(|cx| cx.windows().len()), 1);
+}
+
+#[gpui_kit::test]
+fn close_project_cancelled_picker_or_failed_save_preserves_document(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    harness
+        .view
+        .update(cx, |view, _| view.editor.new_document().unwrap());
+    modify(&harness, cx);
+    let id = harness
+        .view
+        .read_with(cx, |view, _| view.editor.active_id().unwrap());
+    for fail in [false, true] {
+        cx.update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, cx| {
+                view.run_command(zipzi_editor_core::CommandId::Close, window, cx);
+                assert!(view.modal);
+            });
+        })
+        .unwrap();
+        cx.simulate_prompt_answer("Save");
+        cx.run_until_parked();
+        let target = harness._config_dir.path().join("invalid-project.zipzi");
+        if fail {
+            std::fs::create_dir_all(&target).unwrap();
+        }
+        cx.simulate_new_path_selection(|_| fail.then_some(target));
+        cx.run_until_parked();
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(view.editor.active_id(), Some(id));
+            assert!(view.editor.document().unwrap().modified());
+            assert!(!view.editor.exiting());
+            assert!(!view.modal);
+            assert_eq!(view.edit_error.is_some(), fail);
+        });
+        assert_eq!(host.runtime.read().list_sessions().len(), 2);
+    }
+}
+
+#[gpui_kit::test]
 fn cancelling_close_save_picker_or_failing_save_preserves_unsaved_document(
     cx: &mut TestAppContext,
 ) {
@@ -659,7 +733,10 @@ fn closing_last_window_also_prompts_for_a_detached_dirty_tab(cx: &mut TestAppCon
     modify(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
-            view.close_active(window, cx);
+            view.editor
+                .detach_document(view.editor.active_id().unwrap())
+                .unwrap();
+            view.refresh_document(window, cx);
             assert_eq!(view.editor.document_count(), 0);
             view.close_window(window, cx);
             assert!(view.modal);
@@ -925,7 +1002,8 @@ fn r2_detached_tab_save_failure_is_visible(cx: &mut TestAppContext) {
             view.save_to(id, target.clone(), false, window, cx);
             assert!(view.editor.is_busy());
             std::fs::create_dir_all(&target).unwrap();
-            view.close_active(window, cx);
+            view.editor.detach_document(id).unwrap();
+            view.refresh_document(window, cx);
             assert_eq!(view.editor.document_count(), 0);
         });
     })

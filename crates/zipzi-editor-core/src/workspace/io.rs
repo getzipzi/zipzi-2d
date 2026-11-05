@@ -506,7 +506,7 @@ impl Editor {
         }
         notices
     }
-    /// Closing a tab detaches its view. Formal session/history remain discoverable.
+    /// Detach a document view while keeping its formal session/history discoverable.
     pub fn detach_document(&mut self, id: DocumentId) -> Result<()> {
         self.end_editing(id, EditingLifecycle::Close)?;
         let session = self.entry(id)?.hosted_session_id();

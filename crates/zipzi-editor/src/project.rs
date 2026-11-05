@@ -739,14 +739,7 @@ impl EditorView {
             return;
         }
         if let Some(id) = self.editor.active_id() {
-            if !self.prepare_property_inputs(id, window, cx) {
-                return;
-            }
-            if let Err(error) = self.editor.detach_document(id) {
-                self.set_edit_error(error.to_string(), cx);
-                return;
-            }
-            self.refresh_document(window, cx);
+            self.close_document(id, window, cx);
         }
     }
     pub(super) fn close(&mut self, window: &mut Window, cx: &mut Context<Self>) {
