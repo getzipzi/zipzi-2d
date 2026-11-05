@@ -69,6 +69,25 @@ class ReusableBuilds(unittest.TestCase):
                 reuse.main()
             self.assertEqual(output.read_text(), 'run_id=\n')
 
+    def test_changed_update_configuration_falls_back_to_a_new_build(self):
+        def api(path):
+            if '/artifacts?' in path:
+                return self.artifacts()
+            return {'workflow_runs': [self.run_record()]}
+        self.assertEqual(reuse.find_build('getzipzi/zipzi-2d', 'abc', 'main', api,
+                                         configuration='new-trust-key'), '')
+
+        def configured_api(path):
+            if '/artifacts?' in path:
+                artifacts = self.artifacts()
+                for artifact in artifacts['artifacts']:
+                    if artifact['name'] == 'alpha-release-manifest':
+                        artifact['name'] = reuse.manifest_artifact('new-trust-key')
+                return artifacts
+            return {'workflow_runs': [self.run_record()]}
+        self.assertEqual(reuse.find_build('getzipzi/zipzi-2d', 'abc', 'main', configured_api,
+                                         configuration='new-trust-key'), '123')
+
 
 class BuildManifest(unittest.TestCase):
     def fixture(self, root):
@@ -88,6 +107,15 @@ class BuildManifest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             manifest, assets, dist = self.fixture(Path(folder))
             reuse.verify_manifest(manifest, assets, dist, 'abc', 'v0.1.0-alpha.2')
+
+    def test_manifest_binds_update_configuration_to_tested_assets(self):
+        with tempfile.TemporaryDirectory() as folder:
+            manifest, assets, dist = self.fixture(Path(folder))
+            reuse.write_manifest(manifest, assets, 'abc', 'v0.1.0-alpha.2', 'enabled-key-a')
+            reuse.verify_manifest(manifest, assets, dist, 'abc', 'v0.1.0-alpha.2', 'enabled-key-a')
+            for changed in ('', 'disabled', 'enabled-key-b'):
+                with self.subTest(configuration=changed), self.assertRaises(ValueError):
+                    reuse.verify_manifest(manifest, assets, dist, 'abc', 'v0.1.0-alpha.2', changed)
 
     def test_changed_missing_extra_or_wrong_identity_payloads_are_rejected(self):
         cases = ('revision', 'tag', 'app', 'checksum', 'extra', 'missing', 'python', 'python-extra')

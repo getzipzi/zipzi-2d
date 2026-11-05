@@ -27,8 +27,8 @@ def private_key(value):
         raise ValueError('Expected a 32-byte Ed25519 signing seed encoded as 64 hex characters') from None
 
 
-def sign_feed(feed, key):
-    """Check the actual local payloads before signing the exact feed bytes."""
+def verify_feed_packages(feed):
+    """Check actual local payloads before signing or publishing a feed."""
     data = feed.read_bytes()
     entries = json.loads(data)['Assets']
     if not entries:
@@ -46,6 +46,12 @@ def sign_feed(feed, key):
             digest = hashlib.file_digest(stream, 'sha256').hexdigest()
         if package.stat().st_size != asset['Size'] or digest.lower() != asset['SHA256'].lower():
             raise ValueError(f'Update package failed verification: {name}')
+    return data, entries
+
+
+def sign_feed(feed, key):
+    """Check the actual local payloads before signing the exact feed bytes."""
+    data, _ = verify_feed_packages(feed)
     signature = key.sign(data)
     key.public_key().verify(signature, data)
     feed.with_suffix(feed.suffix + '.sig').write_text(signature.hex() + '\n', encoding='ascii')
@@ -104,7 +110,7 @@ def package(args):
         command = [*vpk, 'pack', '--packId', PACKAGE_ID,
                    '--packVersion', info['version'], '--packTitle', 'Zipzi Editor',
                    '--packDir', str(content), '--outputDir', str(output),
-                   '--channel', channel, *extra]
+                   '--channel', channel, '--yes', '--skip-updates', *extra]
         subprocess.run(command, cwd=ROOT, check=True, env=child_env)
         feed = output / f'releases.{channel}.json'
         sign_feed(feed, key)

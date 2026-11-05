@@ -46,6 +46,8 @@ class UpdatePackages(unittest.TestCase):
                         raise FileNotFoundError(f'Main executable not found: {name}')
                     self.assertIn('--noInst', command)  # The installer is our DMG.
                     self.assertIn('--signDisableDeep', command)
+                    self.assertIn('--yes', command)
+                    self.assertIn('--skip-updates', command)
                     target = Path(command[command.index('--outputDir') + 1])
                     channel = command[command.index('--channel') + 1]
                     target.mkdir()

@@ -17,7 +17,11 @@ def github_api(path):
     return json.loads(result.stdout)
 
 
-def find_build(repository, revision, branch, api=github_api):
+def manifest_artifact(configuration=''):
+    return 'alpha-release-manifest' + (f'-{configuration}' if configuration else '')
+
+
+def find_build(repository, revision, branch, api=github_api, configuration=''):
     query = urlencode(dict(head_sha=revision, status='success', per_page=20))
     runs = api(f'repos/{repository}/actions/workflows/release-alpha.yml/runs?{query}')
     for run in runs['workflow_runs']:
@@ -30,7 +34,8 @@ def find_build(repository, revision, branch, api=github_api):
         artifacts = api(f'repos/{repository}/actions/runs/{run["id"]}/artifacts?per_page=100')
         available = {item['name'] for item in artifacts['artifacts']
                      if item.get('expired') is False}
-        if ARTIFACTS <= available:
+        required = (ARTIFACTS - {'alpha-release-manifest'}) | {manifest_artifact(configuration)}
+        if required <= available:
             return str(run['id'])
     return ''
 
@@ -40,19 +45,20 @@ def file_hashes(directory):
             for path in sorted(directory.iterdir()) if path.is_file()}
 
 
-def write_manifest(path, assets, revision, tag):
+def write_manifest(path, assets, revision, tag, configuration=''):
     files = file_hashes(assets)
     if 'SHA256SUMS' not in files:
         raise ValueError('Release checksum file is missing')
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(dict(schema=1, revision=revision, tag=tag, files=files),
+    path.write_text(json.dumps(dict(schema=1, revision=revision, tag=tag, files=files,
+                                   configuration=configuration),
                                indent=2) + '\n', encoding='utf-8')
 
 
-def verify_manifest(path, assets, distributions, revision, tag):
+def verify_manifest(path, assets, distributions, revision, tag, configuration=''):
     manifest = json.loads(path.read_text(encoding='utf-8'))
     if (manifest.get('schema') != 1 or manifest.get('revision') != revision
-            or manifest.get('tag') != tag):
+            or manifest.get('tag') != tag or manifest.get('configuration', '') != configuration):
         raise ValueError('Reusable build does not match the release commit and version')
     hashes = file_hashes(assets)
     if 'SHA256SUMS' not in hashes or hashes != manifest.get('files'):
@@ -72,18 +78,21 @@ def main():
     find.add_argument('--branch', required=True)
     find.add_argument('--revision', required=True)
     find.add_argument('--github-output', type=Path, required=True)
+    find.add_argument('--configuration', default='')
     for name in ('write', 'verify'):
         command = commands.add_parser(name)
         command.add_argument('--manifest', type=Path, required=True)
         command.add_argument('--assets', type=Path, required=True)
         command.add_argument('--revision', required=True)
         command.add_argument('--tag', required=True)
+        command.add_argument('--configuration', default='')
         if name == 'verify':
             command.add_argument('--distributions', type=Path, required=True)
     args = parser.parse_args()
     if args.command == 'find':
         try:
-            run_id = find_build(args.repository, args.revision, args.branch)
+            run_id = find_build(args.repository, args.revision, args.branch,
+                                configuration=args.configuration)
         except (subprocess.CalledProcessError, KeyError, ValueError) as error:
             # A lookup failure must fall back to a complete build, never to
             # publishing artifacts from an unverified candidate.
@@ -93,9 +102,10 @@ def main():
             output.write(f'run_id={run_id}\n')
         print(f'Reusing validated build {run_id}' if run_id else 'No reusable build; building normally.')
     elif args.command == 'write':
-        write_manifest(args.manifest, args.assets, args.revision, args.tag)
+        write_manifest(args.manifest, args.assets, args.revision, args.tag, args.configuration)
     else:
-        verify_manifest(args.manifest, args.assets, args.distributions, args.revision, args.tag)
+        verify_manifest(args.manifest, args.assets, args.distributions, args.revision, args.tag,
+                        args.configuration)
         print('PASS release manifest, commit, version and all publication file hashes')
 
 

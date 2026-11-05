@@ -30,6 +30,11 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       reuse-run-id: ${{ steps.reuse.outputs.run_id }}
+      updates-enabled: ${{ steps.updates.outputs.updates_enabled }}
+      update-url: ${{ steps.updates.outputs.update_url }}
+      update-public-key: ${{ steps.updates.outputs.update_public_key }}
+      build-configuration: ${{ steps.updates.outputs.build_configuration }}
+      manifest-artifact: ${{ steps.updates.outputs.manifest_artifact }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,6 +42,32 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: '0.10.7'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked
+      - name: Validate release and update tooling
+        run: |
+          uv run --locked python tools/test_tools.py -p 'test_*updates.py'
+          uv run --locked python tools/test_tools.py -p test_release_downloads.py
+          uv run --locked python tools/test_tools.py -p test_reuse_release.py
+      - name: Validate desktop update configuration and signing inputs
+        id: updates
+        env:
+          ZIPZI_DESKTOP_UPDATES: ${{ vars.ZIPZI_DESKTOP_UPDATES || 'false' }}
+          ZIPZI_UPDATE_PUBLIC_KEY: ${{ vars.ZIPZI_UPDATE_PUBLIC_KEY }}
+          ZIPZI_UPDATE_SIGNING_KEY: ${{ secrets.ZIPZI_UPDATE_SIGNING_KEY }}
+          ZIPZI_MACOS_CERTIFICATE_P12: ${{ secrets.ZIPZI_MACOS_CERTIFICATE_P12 }}
+          ZIPZI_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.ZIPZI_MACOS_CERTIFICATE_PASSWORD }}
+          ZIPZI_MACOS_CODESIGN_IDENTITY: ${{ vars.ZIPZI_MACOS_CODESIGN_IDENTITY }}
+          ZIPZI_APPLE_ID: ${{ secrets.ZIPZI_APPLE_ID }}
+          ZIPZI_APPLE_TEAM_ID: ${{ vars.ZIPZI_APPLE_TEAM_ID }}
+          ZIPZI_APPLE_APP_PASSWORD: ${{ secrets.ZIPZI_APPLE_APP_PASSWORD }}
+          ZIPZI_WINDOWS_CERTIFICATE_PFX: ${{ secrets.ZIPZI_WINDOWS_CERTIFICATE_PFX }}
+          ZIPZI_WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.ZIPZI_WINDOWS_CERTIFICATE_PASSWORD }}
+        run: uv run --locked python tools/packaging/ci_updates.py --github-output "$GITHUB_OUTPUT"
       - name: Validate version before native builds
         id: version
         env:
@@ -52,7 +83,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: python tools/packaging/reuse_release.py find --repository "$GITHUB_REPOSITORY" --branch "$DEFAULT_BRANCH" --revision "$GITHUB_SHA" --github-output "$GITHUB_OUTPUT"
+          BUILD_CONFIGURATION: ${{ steps.updates.outputs.build_configuration }}
+        run: python tools/packaging/reuse_release.py find --repository "$GITHUB_REPOSITORY" --branch "$DEFAULT_BRANCH" --revision "$GITHUB_SHA" --configuration "$BUILD_CONFIGURATION" --github-output "$GITHUB_OUTPUT"
 
   app:
     name: Build ${{ matrix.platform }} app
@@ -72,6 +104,10 @@ jobs:
       PYTHONUTF8: '1'
       CARGO_INCREMENTAL: '0'
       CARGO_TARGET_DIR: ${{ github.workspace }}/target/alpha-app-cargo
+      DESKTOP_UPDATES: ${{ needs.prepare.outputs.updates-enabled }}
+      ZIPZI_UPDATE_URL: ${{ needs.prepare.outputs.update-url }}
+      ZIPZI_UPDATE_PUBLIC_KEY: ${{ needs.prepare.outputs.update-public-key }}
+      ZIPZI_CODESIGN_IDENTITY: ${{ needs.prepare.outputs.updates-enabled == 'true' && vars.ZIPZI_MACOS_CODESIGN_IDENTITY || '-' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -90,6 +126,63 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: '0.10.7'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        if: env.DESKTOP_UPDATES == 'true'
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install pinned desktop packager
+        if: env.DESKTOP_UPDATES == 'true'
+        run: dotnet tool install vpk --version 1.2.161 --tool-path target/tools/vpk
+      - name: Prepare macOS signing and notarization
+        if: matrix.platform == 'macos' && env.DESKTOP_UPDATES == 'true'
+        env:
+          ZIPZI_MACOS_CERTIFICATE_P12: ${{ secrets.ZIPZI_MACOS_CERTIFICATE_P12 }}
+          ZIPZI_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.ZIPZI_MACOS_CERTIFICATE_PASSWORD }}
+          ZIPZI_APPLE_ID: ${{ secrets.ZIPZI_APPLE_ID }}
+          ZIPZI_APPLE_TEAM_ID: ${{ vars.ZIPZI_APPLE_TEAM_ID }}
+          ZIPZI_APPLE_APP_PASSWORD: ${{ secrets.ZIPZI_APPLE_APP_PASSWORD }}
+        run: |
+          certificate="$RUNNER_TEMP/zipzi-signing.p12"
+          keychain="$RUNNER_TEMP/zipzi-signing.keychain-db"
+          trap 'rm -f "$certificate"' EXIT
+          uv run --locked python -c 'import base64, os; from pathlib import Path; Path(os.environ["RUNNER_TEMP"], "zipzi-signing.p12").write_bytes(base64.b64decode(os.environ["ZIPZI_MACOS_CERTIFICATE_P12"], validate=True))'
+          keychain_password="$(openssl rand -hex 32)"
+          echo "::add-mask::$keychain_password"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" -P "$ZIPZI_MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          xcrun notarytool store-credentials zipzi-alpha --keychain "$keychain" --apple-id "$ZIPZI_APPLE_ID" --team-id "$ZIPZI_APPLE_TEAM_ID" --password "$ZIPZI_APPLE_APP_PASSWORD"
+          echo "VPK_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+          echo "VPK_NOTARY_PROFILE=zipzi-alpha" >> "$GITHUB_ENV"
+          echo "VPK_SIGN_APP_IDENTITY=$ZIPZI_CODESIGN_IDENTITY" >> "$GITHUB_ENV"
+      - name: Prepare Windows signing
+        if: matrix.platform == 'windows' && env.DESKTOP_UPDATES == 'true'
+        env:
+          ZIPZI_WINDOWS_CERTIFICATE_PFX: ${{ secrets.ZIPZI_WINDOWS_CERTIFICATE_PFX }}
+          ZIPZI_WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.ZIPZI_WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $certificate = Join-Path $env:RUNNER_TEMP 'zipzi-signing.pfx'
+          try {
+            [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:ZIPZI_WINDOWS_CERTIFICATE_PFX))
+            $password = ConvertTo-SecureString $env:ZIPZI_WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+            $imported = Import-PfxCertificate -FilePath $certificate -CertStoreLocation Cert:\CurrentUser\My -Password $password
+            $signers = @($imported | Where-Object HasPrivateKey)
+            "ZIPZI_WINDOWS_CERTIFICATE_THUMBPRINTS=$($signers.Thumbprint -join ',')" >> $env:GITHUB_ENV
+            if ($signers.Count -ne 1) { throw 'Expected one Windows code-signing private key' }
+            $thumbprint = $signers[0].Thumbprint
+            "VPK_SIGN_PARAMS=/sha1 $thumbprint /s My /fd SHA256 /tr http://timestamp.digicert.com /td SHA256" >> $env:GITHUB_ENV
+          } finally {
+            Remove-Item -LiteralPath $certificate -Force -ErrorAction SilentlyContinue
+          }
       # App and Python builders use separate runners and all available CPU cores.
       - name: Build and verify macOS app
         if: matrix.platform == 'macos'
@@ -99,7 +192,11 @@ jobs:
           sh tools/build-editor-app.sh editor release
           python3 tools/packaging/build_project_preview.py --app 'target/Zipzi Editor.app' --test
           python3 tools/packaging/verify_artifacts.py --app 'target/Zipzi Editor.app'
-          codesign --force --sign - 'target/Zipzi Editor.app'
+          if [[ "$DESKTOP_UPDATES" == 'true' ]]; then
+            codesign --force --options runtime --timestamp --sign "$ZIPZI_CODESIGN_IDENTITY" 'target/Zipzi Editor.app'
+          else
+            codesign --force --sign - 'target/Zipzi Editor.app'
+          fi
           codesign --verify --deep --strict 'target/Zipzi Editor.app'
       - name: Package macOS app and source
         if: matrix.platform == 'macos'
@@ -107,7 +204,9 @@ jobs:
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           mkdir -p target/releases
-          python3 tools/packaging/package_macos.py --app 'target/Zipzi Editor.app' --output "target/releases/Zipzi-Editor-${RELEASE_TAG}-macos-arm64.dmg"
+          if [[ "$DESKTOP_UPDATES" != 'true' ]]; then
+            uv run --locked python tools/packaging/package_macos.py --app 'target/Zipzi Editor.app' --output "target/releases/Zipzi-Editor-${RELEASE_TAG}-macos-arm64.dmg"
+          fi
           python3 tools/packaging/package_source.py "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
           python3 tools/packaging/verify_artifacts.py --source "target/releases/Zipzi-2D-${RELEASE_TAG}-source.tar.gz"
       - name: Build Windows Editor
@@ -116,10 +215,28 @@ jobs:
           cargo build --locked --release -p zipzi-editor
           python tools/packaging/build_project_preview.py --dll "${env:CARGO_TARGET_DIR}/release/ZipziProjectPreview.dll" --test
       - name: Package and verify Windows Editor
-        if: matrix.platform == 'windows'
+        if: matrix.platform == 'windows' && env.DESKTOP_UPDATES != 'true'
         env:
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: python tools/packaging/package_windows.py --binary "${env:CARGO_TARGET_DIR}/release/zipzi-editor.exe" --preview-dll "${env:CARGO_TARGET_DIR}/release/ZipziProjectPreview.dll" --output "target/releases/Zipzi-Editor-${env:RELEASE_TAG}-windows-x86_64.zip" --revision "${env:GITHUB_SHA}"
+      - name: Test desktop update behavior
+        if: env.DESKTOP_UPDATES == 'true'
+        shell: bash
+        run: |
+          unset ZIPZI_DEV_SESSION_DIR
+          cargo test --locked --release -p zipzi-editor --lib updates::
+      - name: Package authenticated desktop updates
+        if: env.DESKTOP_UPDATES == 'true'
+        shell: bash
+        env:
+          ZIPZI_UPDATE_SIGNING_KEY: ${{ secrets.ZIPZI_UPDATE_SIGNING_KEY }}
+        run: |
+          if [[ "$RUNNER_OS" == 'macOS' ]]; then
+            args=(--app 'target/Zipzi Editor.app' --vpk target/tools/vpk/vpk)
+          else
+            args=(--binary "$CARGO_TARGET_DIR/release/zipzi-editor.exe" --preview-dll "$CARGO_TARGET_DIR/release/ZipziProjectPreview.dll" --vpk target/tools/vpk/vpk.exe)
+          fi
+          uv run --locked python tools/packaging/package_updates.py "${args[@]}" --revision "$GITHUB_SHA" --output target/releases
       - uses: actions/upload-artifact@v7
         with:
           name: alpha-${{ matrix.platform }}-app
@@ -127,6 +244,21 @@ jobs:
           if-no-files-found: error
           retention-days: ${{ github.ref_type == 'tag' && 7 || 1 }}
           compression-level: 0
+      - name: Remove macOS signing keychain
+        if: always() && matrix.platform == 'macos' && env.DESKTOP_UPDATES == 'true'
+        run: |
+          keychain="$RUNNER_TEMP/zipzi-signing.keychain-db"
+          if [[ -f "$keychain" ]]; then security delete-keychain "$keychain"; fi
+          rm -f "$RUNNER_TEMP/zipzi-signing.p12"
+      - name: Remove Windows signing key
+        if: always() && matrix.platform == 'windows' && env.DESKTOP_UPDATES == 'true'
+        run: |
+          if ($env:ZIPZI_WINDOWS_CERTIFICATE_THUMBPRINTS) {
+            foreach ($thumbprint in $env:ZIPZI_WINDOWS_CERTIFICATE_THUMBPRINTS.Split(',')) {
+              Remove-Item -LiteralPath "Cert:\CurrentUser\My\$thumbprint" -DeleteKey -Force
+            }
+          }
+          Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'zipzi-signing.pfx') -Force -ErrorAction SilentlyContinue
 
   python:
     name: Build and test Python on ${{ matrix.platform }}
@@ -236,7 +368,7 @@ jobs:
         if: needs.prepare.outputs.reuse-run-id != ''
         uses: actions/download-artifact@v8
         with:
-          name: alpha-release-manifest
+          name: ${{ needs.prepare.outputs.manifest-artifact }}
           path: metadata
           run-id: ${{ needs.prepare.outputs.reuse-run-id }}
           github-token: ${{ github.token }}
@@ -244,10 +376,11 @@ jobs:
         if: needs.prepare.outputs.reuse-run-id != ''
         env:
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          BUILD_CONFIGURATION: ${{ needs.prepare.outputs.build-configuration }}
         run: |
           mkdir dist
           cp release/zipzi-* release/zipzi_native-* dist/
-          python tools/packaging/reuse_release.py verify --manifest metadata/build.json --assets release --distributions dist --revision "$GITHUB_SHA" --tag "$RELEASE_TAG"
+          python tools/packaging/reuse_release.py verify --manifest metadata/build.json --assets release --distributions dist --revision "$GITHUB_SHA" --tag "$RELEASE_TAG" --configuration "$BUILD_CONFIGURATION"
           (cd release && sha256sum --check SHA256SUMS)
       - uses: astral-sh/setup-uv@v10.3.3
         with:
@@ -265,7 +398,8 @@ jobs:
         if: needs.prepare.outputs.reuse-run-id == ''
         env:
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-        run: python tools/packaging/reuse_release.py write --manifest metadata/build.json --assets release --revision "$GITHUB_SHA" --tag "$RELEASE_TAG"
+          BUILD_CONFIGURATION: ${{ needs.prepare.outputs.build-configuration }}
+        run: python tools/packaging/reuse_release.py write --manifest metadata/build.json --assets release --revision "$GITHUB_SHA" --tag "$RELEASE_TAG" --configuration "$BUILD_CONFIGURATION"
       - uses: actions/upload-artifact@v7
         with:
           name: alpha-release-assets
@@ -289,7 +423,7 @@ jobs:
           compression-level: 0
       - uses: actions/upload-artifact@v7
         with:
-          name: alpha-release-manifest
+          name: ${{ needs.prepare.outputs.manifest-artifact }}
           path: metadata/build.json
           if-no-files-found: error
           retention-days: ${{ github.ref_type == 'tag' && 7 || 1 }}
@@ -320,6 +454,37 @@ jobs:
           python tools/packaging/release_downloads.py --input release --output public-release --notes target/download-notes.md --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG"
           (cd public-release && sha256sum --check SHA256SUMS)
           gh release create "$RELEASE_TAG" public-release/* --verify-tag --title "Zipzi $RELEASE_TAG" --notes-file target/download-notes.md --generate-notes --prerelease --latest=false
+
+  desktop-update-feed:
+    needs: [prepare, github-release]
+    if: >-
+      always() && needs.github-release.result == 'success' &&
+      needs.prepare.outputs.updates-enabled == 'true' &&
+      github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: desktop-alpha-updates
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: alpha-release-assets
+          path: release
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: '0.10.7'
+      - run: uv sync --locked
+      - name: Publish packages before advancing the authenticated Alpha feeds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          ZIPZI_UPDATE_PUBLIC_KEY: ${{ needs.prepare.outputs.update-public-key }}
+        run: uv run --locked python tools/packaging/publish_updates.py --input release --repository "$GITHUB_REPOSITORY" --revision "$GITHUB_SHA" --tag "$RELEASE_TAG" --public-key "$ZIPZI_UPDATE_PUBLIC_KEY"
 
   pypi-client:
     if: always() && needs.collect.result == 'success' && needs.github-release.result == 'success' && github.event_name == 'push' && github.ref_type == 'tag'
