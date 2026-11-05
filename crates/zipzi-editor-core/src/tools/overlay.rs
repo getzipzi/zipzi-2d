@@ -6,7 +6,7 @@ use crate::{
 };
 use std::collections::HashSet;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayVertex {
     pub id: u32,
     pub position: ViewportPoint,
@@ -24,7 +24,7 @@ pub enum OverlayVertexKind {
     RotationCenter,
     RotationTip,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayDeformer {
     pub outline_only: bool,
     pub kind: ControlKind,
@@ -32,7 +32,7 @@ pub struct OverlayDeformer {
     pub selected: bool,
     pub hovered: bool,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayRotationBone {
     pub points: [ViewportPoint; 4],
     pub scale: f32,
@@ -40,7 +40,7 @@ pub struct OverlayRotationBone {
     pub hovered: bool,
 }
 /// Glue endpoints describe a relationship, not draggable components.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayGlue {
     pub pairs: Vec<(ViewportPoint, ViewportPoint)>,
     pub points: Vec<OverlayGluePoint>,
@@ -53,14 +53,14 @@ pub enum GluePointState {
     Restricted,
     Editable,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayGluePoint {
     pub position: ViewportPoint,
     pub state: GluePointState,
     pub selected: bool,
     pub hovered: bool,
 }
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct OverlaySnapshot {
     pub hovered_deformer_label: Option<String>,
     pub manual_mesh_feedback: Option<super::ManualMeshFeedback>,
@@ -109,7 +109,7 @@ pub struct OverlaySnapshot {
     pub active_component: Option<ComponentRef>,
     pub origin_crosshair: Option<ViewportPoint>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayHandle {
     /// A Bezier tangent endpoint, distinct from transform-frame handles.
     pub tangent: bool,

@@ -59,3 +59,52 @@ float4 marker_fragment(MarkerOut input) : SV_Target {
     return color;
 }
 float4 solid_fragment(Out input) : SV_Target { return input.color; }
+
+struct CanvasInstance { float4 geometry; float4 parameters; float4 color; float4 border; };
+StructuredBuffer<CanvasInstance> canvas_instances : register(t1);
+struct CanvasOut {
+    float4 position : SV_Position;
+    nointerpolation float4 color : COLOR0; nointerpolation float4 border : COLOR1;
+    float2 local : TEXCOORD0; nointerpolation float2 half_size : TEXCOORD1;
+    nointerpolation float radius : TEXCOORD2; nointerpolation float width : TEXCOORD3;
+    nointerpolation uint kind : TEXCOORD4;
+};
+CanvasOut canvas_vertex(uint v : SV_VertexID, uint id : SV_InstanceID) {
+    CanvasInstance i = canvas_instances[id];
+    uint kind = uint(i.parameters.x);
+    float2 a = (i.geometry.xy+origin)*scale-texture_origin;
+    float2 b = (i.geometry.zw+origin)*scale-texture_origin;
+    float2 local = float2(0,0), half_size = i.geometry.zw*scale;
+    float2 position;
+    if (kind == 0) {
+        float2 d = b-a;
+        float2 n = float2(-d.y,d.x)/max(length(d),1e-20)*(i.parameters.y*scale*0.5);
+        const uint endpoint[6] = {0,0,1,1,0,1};
+        const float side[6] = {1,-1,1,1,-1,-1};
+        position = (endpoint[v] ? b : a)+side[v]*n;
+    } else if (kind == 1) {
+        const float2 corner[6] = {float2(-1,-1),float2(1,-1),float2(-1,1),float2(-1,1),float2(1,-1),float2(1,1)};
+        local = corner[v]*(half_size+1.0);
+        position = a+local;
+    } else {
+        float2 c = (i.parameters.yz+origin)*scale-texture_origin;
+        position = v == 0 ? a : v == 1 ? b : c;
+    }
+    Out base = output(position,i.color);
+    CanvasOut o;
+    o.position=base.position; o.color=base.color;
+    o.border=float4(i.border.rgb*i.border.a,i.border.a);
+    o.local=local; o.half_size=half_size; o.radius=i.parameters.y*scale;
+    o.width=i.parameters.z*scale; o.kind=kind;
+    return o;
+}
+float4 canvas_fragment(CanvasOut i) : SV_Target {
+    if (i.kind != 1) return i.color;
+    float radius=min(i.radius,min(i.half_size.x,i.half_size.y));
+    float2 q=abs(i.local)-(i.half_size-radius);
+    float d=length(max(q,float2(0,0)))+min(max(q.x,q.y),0.0)-radius;
+    float coverage=saturate(0.5-d), inner=saturate(0.5-d-i.width);
+    // GPUI composites a translucent border over the marker's background fill.
+    float4 blended_border = i.border+i.color*(1.0-i.border.a);
+    return i.color*inner+blended_border*(coverage-inner);
+}

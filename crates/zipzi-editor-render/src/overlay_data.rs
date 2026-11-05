@@ -2,6 +2,21 @@
 use crate::{OVERLAY_MARKER_RADIUS, OverlayPass, OverlayStyle, OverlayViewport};
 use anyhow::{Result, ensure};
 use zipzi_editor_core::{OverlaySnapshot, OverlayVertexKind};
+
+pub(super) fn canvas_uniforms(viewport: OverlayViewport) -> Result<Uniforms> {
+    Ok(Key::new(
+        viewport,
+        &OverlaySnapshot::default(),
+        OverlayStyle {
+            edge: [0.; 4],
+            vertex: [0.; 4],
+            selected: [0.; 4],
+            restricted: [0.; 4],
+        },
+        OverlayPass::All,
+    )?
+    .uniforms())
+}
 #[repr(C)]
 pub(super) struct Uniforms {
     pub viewport: [f32; 2],

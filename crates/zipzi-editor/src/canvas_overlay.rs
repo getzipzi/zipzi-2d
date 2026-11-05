@@ -1,14 +1,15 @@
 //! Canvas-specific visual language, independent of the application accent.
 use crate::mesh_edges;
-use gpui_kit::{
-    Bounds, FillOptions, FillRule, Hsla, PathBuilder, PathStyle, Pixels, Point, Window, fill,
-    point, px, rgb, rgba, size,
-};
-use zipzi_editor_core::{
-    GluePointState, OverlaySnapshot, OverlayVertex, OverlayVertexKind, ViewportPoint,
-};
+use gpui_kit::{Bounds, Hsla, Pixels, Point, Window, fill, point, px, size};
+#[cfg(test)]
+use gpui_kit::{FillOptions, FillRule, PathBuilder, PathStyle, rgb, rgba};
+use zipzi_editor_core::ViewportPoint;
+#[cfg(test)]
+use zipzi_editor_core::{GluePointState, OverlaySnapshot, OverlayVertex, OverlayVertexKind};
 
+#[cfg(test)]
 use zipzi_editor_core::canvas_style as style;
+#[cfg(test)]
 const GLUE_MARKER_RADIUS: f32 = style::POINT_RADIUS;
 
 /// The native regression tests paint these same primitives into a headless scene.
@@ -51,20 +52,48 @@ pub(crate) struct Palette {
 }
 impl Palette {
     pub fn new(dark: bool) -> Self {
+        let p = zipzi_editor_render::canvas_overlay::CanvasPalette::new(dark);
+        let color = |c: [f32; 4]| {
+            gpui_kit::Rgba {
+                r: c[0],
+                g: c[1],
+                b: c[2],
+                a: c[3],
+            }
+            .into()
+        };
         Self {
-            mesh: rgb(0x909090).into(),
-            image_bounds: rgb(if dark { 0x6b91b5 } else { 0x476b8e }).into(),
-            deformer: rgb(0x62c878).into(),
-            deformer_frame: rgb(if dark { 0x669eff } else { 0x2864dc }).into(),
-            glue: rgb(0xffd000).into(),
-            mesh_selected: rgb(0xff0000).into(),
-            selection_region: rgb(if dark { 0xb0b0b0 } else { 0x606060 }).into(),
-            hollow: rgb(0xffffff).into(),
-            restricted: rgb(0xb0b0b0).into(),
-            restricted_border: rgb(0x505050).into(),
+            mesh: color(p.mesh),
+            image_bounds: color(p.image_bounds),
+            deformer: color(p.deformer),
+            deformer_frame: color(p.deformer_frame),
+            glue: color(p.glue),
+            mesh_selected: color(p.mesh_selected),
+            selection_region: color(p.selection_region),
+            hollow: color(p.hollow),
+            restricted: color(p.restricted),
+            restricted_border: color(p.restricted_border),
         }
     }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    pub fn canvas(self) -> zipzi_editor_render::canvas_overlay::CanvasPalette {
+        let color = |c: Hsla| {
+            let c: gpui_kit::Rgba = c.into();
+            [c.r, c.g, c.b, c.a]
+        };
+        zipzi_editor_render::canvas_overlay::CanvasPalette {
+            mesh: color(self.mesh),
+            image_bounds: color(self.image_bounds),
+            deformer: color(self.deformer),
+            deformer_frame: color(self.deformer_frame),
+            glue: color(self.glue),
+            mesh_selected: color(self.mesh_selected),
+            hollow: color(self.hollow),
+            restricted: color(self.restricted),
+            restricted_border: color(self.restricted_border),
+            selection_region: color(self.selection_region),
+        }
+    }
+    #[cfg(test)]
     pub fn native(self) -> zipzi_editor_render::OverlayStyle {
         let color = |c: Hsla| {
             let c: gpui_kit::Rgba = c.into();
@@ -79,6 +108,145 @@ impl Palette {
     }
 }
 
+/// The fallback consumes exactly the same ordered geometry as both native backends.
+#[cfg(test)]
+pub(crate) fn paint_prepared<P: Painter>(
+    list: &zipzi_editor_render::canvas_overlay::CanvasDrawList,
+    origin: Point<Pixels>,
+    layer_quads: bool,
+    window: &mut P,
+) {
+    paint_prepared_with_options(
+        list,
+        origin,
+        FallbackOptions {
+            layer_quads,
+            ..Default::default()
+        },
+        window,
+    );
+}
+
+pub(crate) struct FallbackOptions {
+    pub layer_quads: bool,
+    pub batch_lines: bool,
+    pub tessellated_edges: bool,
+}
+impl Default for FallbackOptions {
+    fn default() -> Self {
+        Self {
+            layer_quads: true,
+            batch_lines: true,
+            tessellated_edges: false,
+        }
+    }
+}
+pub(crate) fn paint_prepared_with_options<P: Painter>(
+    list: &zipzi_editor_render::canvas_overlay::CanvasDrawList,
+    origin: Point<Pixels>,
+    options: FallbackOptions,
+    window: &mut P,
+) {
+    use zipzi_editor_render::canvas_overlay::PrimitiveKind as K;
+    let color = |c: [f32; 4]| -> Hsla {
+        gpui_kit::Rgba {
+            r: c[0],
+            g: c[1],
+            b: c[2],
+            a: c[3],
+        }
+        .into()
+    };
+    let point_at = |x, y| origin + point(px(x), px(y));
+    for run in list.primitives.chunk_by(|a, b| {
+        a.kind() == b.kind()
+            && (a.kind() == K::Marker || (a.color == b.color && a.parameters[1] == b.parameters[1]))
+    }) {
+        match run[0].kind() {
+            K::Marker => {
+                let draw = |window: &mut P| {
+                    for primitive in run {
+                        let [x, y, w, h] = primitive.geometry;
+                        window.paint_quad(
+                            fill(
+                                Bounds::new(point_at(x - w, y - h), size(px(w * 2.), px(h * 2.))),
+                                color(primitive.color),
+                            )
+                            .corner_radii(px(primitive.parameters[1]))
+                            .border_widths(px(primitive.parameters[2]))
+                            .border_color(color(primitive.border)),
+                        );
+                    }
+                };
+                let bounds = run
+                    .iter()
+                    .map(|p| {
+                        let [a, b, c, d] = p.bounds();
+                        Bounds::from_corners(point_at(a, b), point_at(c, d))
+                    })
+                    .reduce(|a, b| a.union(&b))
+                    .unwrap();
+                if options.layer_quads {
+                    window.quad_layer(bounds, draw);
+                } else {
+                    draw(window);
+                }
+            }
+            K::Line => {
+                let edges: Vec<_> = run
+                    .iter()
+                    .map(|p| {
+                        let [x, y, a, b] = p.geometry;
+                        (ViewportPoint { x, y }, ViewportPoint { x: a, y: b })
+                    })
+                    .collect();
+                let width = run[0].parameters[1];
+                let mut paint = |path| window.paint_path(path, color(run[0].color));
+                if !options.batch_lines {
+                    for edge in &edges {
+                        mesh_edges::paint_edges_with_width(
+                            std::slice::from_ref(edge),
+                            origin,
+                            width,
+                            &mut paint,
+                        );
+                    }
+                } else if options.tessellated_edges {
+                    if width == 1. {
+                        mesh_edges::paint_edges_tessellated(&edges, origin, paint);
+                    } else {
+                        mesh_edges::paint_edges_with_width_tessellated(
+                            &edges, origin, width, paint,
+                        );
+                    }
+                } else if width == 1. {
+                    mesh_edges::paint_edges(&edges, origin, paint);
+                } else {
+                    mesh_edges::paint_edges_with_width(&edges, origin, width, paint);
+                }
+            }
+            K::Triangle => {
+                let first = run[0].geometry;
+                let mut path = gpui_kit::Path::new(point_at(first[0], first[1]));
+                for p in run {
+                    let [x, y, a, b] = p.geometry;
+                    path.push_triangle(
+                        (
+                            point_at(x, y),
+                            point_at(a, b),
+                            point_at(p.parameters[1], p.parameters[2]),
+                        ),
+                        (point(0., 1.), point(0., 1.), point(0., 1.)),
+                    );
+                }
+                path.bounds = path.bounds.dilate(px(1.));
+                window.paint_path(path, color(run[0].color));
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 pub(crate) fn paint_lines(
     overlay: &OverlaySnapshot,
     bounds: Bounds<Pixels>,
@@ -243,6 +411,7 @@ pub(crate) fn paint_lines(
 }
 
 /// Clip before subdivision: extreme zoom or offscreen pairs cannot allocate unbounded dashes.
+#[cfg(test)]
 fn dashed_segments(
     a: ViewportPoint,
     b: ViewportPoint,
@@ -297,6 +466,7 @@ fn dashed_segments(
 }
 
 /// Shapes identify controls; selection and hover never change their extent.
+#[cfg(test)]
 fn marker(
     center: Point<Pixels>,
     r: f32,
@@ -324,6 +494,7 @@ fn marker(
         }),
     );
 }
+#[cfg(test)]
 fn restricted_marker(
     center: Point<Pixels>,
     radius: f32,
@@ -348,6 +519,7 @@ fn restricted_marker(
     );
 }
 /// A closed, even-odd polygon with bounds that retain antialiased edge coverage.
+#[cfg(test)]
 pub(crate) fn polygon_fill_path(
     mut points: impl ExactSizeIterator<Item = Point<Pixels>>,
 ) -> Option<gpui_kit::Path<Pixels>> {
@@ -368,6 +540,7 @@ pub(crate) fn polygon_fill_path(
     })
 }
 
+#[cfg(test)]
 pub(crate) fn paint_markers(
     overlay: &OverlaySnapshot,
     origin: Point<Pixels>,
@@ -420,6 +593,7 @@ pub(crate) fn paint_markers(
     paint_other_markers(overlay, origin, p, window);
 }
 
+#[cfg(test)]
 fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &mut impl Painter) {
     let center = origin + point(px(v.position.x), px(v.position.y));
     let radius = if v.kind == OverlayVertexKind::WarpGrid {
@@ -484,6 +658,7 @@ fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &m
     }
 }
 
+#[cfg(test)]
 fn paint_other_markers(
     overlay: &OverlaySnapshot,
     origin: Point<Pixels>,

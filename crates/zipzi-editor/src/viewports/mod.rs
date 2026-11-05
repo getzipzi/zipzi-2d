@@ -109,6 +109,8 @@ pub struct ViewportSurface {
     pub(super) show_origin_crosshair: bool,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
+    overlay_cache:
+        std::rc::Rc<std::cell::RefCell<zipzi_editor_render::canvas_overlay::CanvasOverlayCache>>,
     bounds: Bounds<Pixels>,
     #[cfg(test)]
     pub(crate) layout_syncs: usize,
@@ -226,6 +228,7 @@ impl ViewportSurface {
                 show_origin_crosshair: true,
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
                 overlay_renderer: Default::default(),
+                overlay_cache: Default::default(),
                 bounds: Bounds::default(),
                 #[cfg(test)]
                 layout_syncs: 0,

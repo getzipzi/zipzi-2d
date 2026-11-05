@@ -661,3 +661,316 @@ fn mesh_passes_cache_independently_and_exclude_control_points() -> anyhow::Resul
         Ok(())
     })
 }
+
+#[test]
+fn full_canvas_native_matches_shared_fallback_and_legacy_deformer_styles() -> anyhow::Result<()> {
+    use std::sync::Arc;
+    use zipzi_editor_core::{
+        ControlKind, GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint, OverlayHandle,
+        OverlayRotationBone,
+    };
+    use zipzi_editor_render::canvas_overlay::*;
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        let mut gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let mut renderer = MetalOverlayRenderer::new(gpu.device.clone())?;
+        let mut overlay = geometry();
+        overlay.vertices.extend(
+            [
+                zipzi_editor_core::OverlayVertexKind::WarpGrid,
+                zipzi_editor_core::OverlayVertexKind::Warp,
+                zipzi_editor_core::OverlayVertexKind::RotationCenter,
+                zipzi_editor_core::OverlayVertexKind::RotationTip,
+            ]
+            .into_iter()
+            .enumerate()
+            .flat_map(|(row, kind)| {
+                (0..8).map(move |state| OverlayVertex {
+                    id: (row * 8 + state) as u32,
+                    kind,
+                    position: pt(20. + state as f32 * 24., 70. + row as f32 * 18.),
+                    editable: state & 4 == 0,
+                    selected: state & 1 != 0,
+                    hovered: state & 2 != 0,
+                })
+            }),
+        );
+        overlay.deformers = vec![OverlayDeformer {
+            outline_only: true,
+            kind: ControlKind::Warp,
+            lines: vec![
+                (pt(10., 10.), pt(220., 10.)),
+                (pt(220., 10.), pt(220., 140.)),
+            ],
+            selected: false,
+            hovered: false,
+        }];
+        overlay.bezier_lines = vec![
+            (pt(10., 40.), pt(100., 52.)),
+            (pt(100., 52.), pt(210., 35.)),
+        ];
+        overlay.bezier_tangents = vec![(pt(100., 52.), pt(140., 20.))];
+        overlay.warp_frame_lines = vec![(pt(6., 6.), pt(225., 6.)), (pt(6., 6.), pt(6., 145.))];
+        overlay.rotation_bones = vec![OverlayRotationBone {
+            points: [pt(20., 45.), pt(45., 38.), pt(180., 45.), pt(45., 52.)],
+            scale: 1.,
+            selected: false,
+            hovered: false,
+        }];
+        overlay.handles = vec![OverlayHandle {
+            position: pt(140., 20.),
+            tangent: true,
+            rotation: false,
+            round: true,
+            selected: true,
+            hovered: false,
+            editable: true,
+        }];
+        overlay.glues = vec![OverlayGlue {
+            pairs: vec![(pt(20., 155.), pt(180., 155.))],
+            points: vec![
+                OverlayGluePoint {
+                    position: pt(20., 155.),
+                    state: GluePointState::Editable,
+                    selected: false,
+                    hovered: true,
+                },
+                OverlayGluePoint {
+                    position: pt(180., 155.),
+                    state: GluePointState::Reference,
+                    selected: false,
+                    hovered: false,
+                },
+            ],
+            selected: true,
+            hovered: false,
+        }];
+        for dark in [false, true] {
+            for scale in [1., 1.5, 2.] {
+                let palette = canvas_overlay::Palette::new(dark);
+                let origin = point(px(2.25), px(1.375));
+                let bounds = Bounds::new(origin, size(px(236.), px(174.)));
+                let extent = [
+                    ((bounds.right().as_f32() * scale).ceil() - (origin.x.as_f32() * scale).floor())
+                        as u32,
+                    ((bounds.bottom().as_f32() * scale).ceil()
+                        - (origin.y.as_f32() * scale).floor()) as u32,
+                ];
+                let viewport = OverlayViewport {
+                    extent,
+                    scale,
+                    origin: [origin.x.as_f32(), origin.y.as_f32()],
+                };
+                let list = Arc::new(CanvasDrawList::new(
+                    &overlay,
+                    [236., 174.],
+                    palette.canvas(),
+                    CanvasOptions::default(),
+                )?);
+                let image = renderer
+                    .draw_prepared(&gpu.queue, viewport, list.clone())?
+                    .unwrap();
+                let painter = || {
+                    let mut p = ScenePainter {
+                        scene: Scene::default(),
+                        scale,
+                        mask: ContentMask { bounds },
+                    };
+                    canvas_overlay::Painter::paint_quad(
+                        &mut p,
+                        gpui_kit::fill(bounds, rgba(0x18202cff)),
+                    );
+                    p
+                };
+                let mut shared = painter();
+                canvas_overlay::paint_prepared(&list, origin, true, &mut shared);
+                shared.scene.finish();
+                let mut legacy = painter();
+                mesh_edges::paint_edges(&overlay.lines, origin, |path| {
+                    canvas_overlay::Painter::paint_path(
+                        &mut legacy,
+                        path,
+                        palette.mesh.opacity(0.45),
+                    )
+                });
+                canvas_overlay::paint_lines(&overlay, bounds, palette, false, &mut legacy);
+                canvas_overlay::paint_markers(&overlay, origin, palette, true, true, &mut legacy);
+                legacy.scene.finish();
+                let mut native = painter();
+                native.scene.insert_primitive(PaintSurface {
+                    order: 0,
+                    bounds: Bounds::new(
+                        point(
+                            px((viewport.origin[0] * scale).floor()),
+                            px((viewport.origin[1] * scale).floor()),
+                        ),
+                        size(px(extent[0] as f32), px(extent[1] as f32)),
+                    )
+                    .scale(1.),
+                    content_mask: ContentMask {
+                        bounds: bounds.scale(scale),
+                    },
+                    source: SurfaceSource::MetalTexture(image),
+                    opacity: 1.,
+                });
+                native.scene.finish();
+                let target = size(
+                    DevicePixels((240. * scale) as i32),
+                    DevicePixels((180. * scale) as i32),
+                );
+                let reference = gpui.render_scene_to_image(&shared.scene, target)?;
+                for (name, scene) in [("native", &native.scene), ("legacy", &legacy.scene)] {
+                    let actual = gpui.render_scene_to_image(scene, target)?;
+                    let sum: u64 = actual
+                        .pixels()
+                        .zip(reference.pixels())
+                        .flat_map(|(a, b)| {
+                            a.0.into_iter()
+                                .zip(b.0)
+                                .map(|(a, b)| u64::from(a.abs_diff(b)))
+                        })
+                        .sum();
+                    let mean = sum as f64 / (actual.width() * actual.height() * 4) as f64;
+                    println!(
+                        "full canvas {name} dark={dark} dpi={scale} mean_channel_error={mean:.4}"
+                    );
+                    assert!(mean < 1.5, "{name} image differs: {mean}");
+                    if name == "native" && scale == 2. {
+                        // A whole-image average hides a translucent border regression
+                        // on a six-pixel control. Sample the idle Warp's border itself.
+                        let x = ((20. + origin.x.as_f32() - 3.) * scale + 1.) as u32;
+                        let y = ((88. + origin.y.as_f32()) * scale) as u32;
+                        let a = actual.get_pixel(x, y).0;
+                        let b = reference.get_pixel(x, y).0;
+                        assert!(
+                            a.iter().zip(b).all(|(a, b)| a.abs_diff(b) <= 2),
+                            "idle Warp border differs: native={a:?}, GPUI={b:?}"
+                        );
+                    }
+                }
+            }
+        }
+        Ok(())
+    })
+}
+
+/// CPU paint-boundary comparison, excluding OS input, display and readback.
+/// Run explicitly in Release for performance acceptance; debug runs are diagnostic.
+#[test]
+#[ignore = "explicit canvas CPU benchmark"]
+fn native_canvas_cpu_submission_benchmark() -> anyhow::Result<()> {
+    use std::time::Instant;
+    use zipzi_editor_core::{ControlKind, OverlayDeformer};
+    use zipzi_editor_render::canvas_overlay::*;
+    objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
+        let gpui = MetalRenderer::new_headless(Default::default());
+        let gpu = gpui.shared_metal_context();
+        let mut renderer = MetalOverlayRenderer::new(gpu.device.clone())?;
+        let viewport = OverlayViewport {
+            extent: [1024, 1024],
+            scale: 2.,
+            origin: [0.; 2],
+        };
+        let palette = canvas_overlay::Palette::new(true);
+        let mut rows = Vec::new();
+        for count in [256, 2048] {
+            let mut overlay = OverlaySnapshot::default();
+            let mut cache = CanvasOverlayCache::default();
+            for i in 0..count {
+                let (x, y) = ((i % 32) as f32 * 15. + 6., (i / 32 % 32) as f32 * 15. + 6.);
+                overlay.deformers.push(OverlayDeformer {
+                    kind: ControlKind::Warp,
+                    outline_only: false,
+                    selected: true,
+                    hovered: false,
+                    lines: vec![
+                        (pt(x, y), pt(x + 10., y)),
+                        (pt(x + 10., y), pt(x + 10., y + 10.)),
+                        (pt(x + 10., y + 10.), pt(x, y + 10.)),
+                        (pt(x, y + 10.), pt(x, y)),
+                    ],
+                });
+                overlay.vertices.extend(
+                    [(x, y), (x + 10., y), (x, y + 10.), (x + 10., y + 10.)]
+                        .into_iter()
+                        .enumerate()
+                        .map(|(n, (x, y))| OverlayVertex {
+                            id: (i * 4 + n) as u32,
+                            kind: zipzi_editor_core::OverlayVertexKind::WarpGrid,
+                            position: pt(x, y),
+                            selected: n == 0,
+                            hovered: false,
+                            editable: true,
+                        }),
+                );
+            }
+            let (mut prepare, mut fallback, mut native, mut legacy) =
+                (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+            for frame in 0..44 {
+                overlay.vertices[0].position.x = 6. + frame as f32 * 0.01;
+                let start = Instant::now();
+                let list = cache.prepare(
+                    &overlay,
+                    [512.; 2],
+                    palette.canvas(),
+                    CanvasOptions::default(),
+                )?;
+                let a = start.elapsed().as_secs_f64() * 1e6;
+                let painter = || ScenePainter {
+                    scene: Scene::default(),
+                    scale: 2.,
+                    mask: ContentMask {
+                        bounds: Bounds::new(point(px(0.), px(0.)), size(px(512.), px(512.))),
+                    },
+                };
+                let start = Instant::now();
+                let mut old = painter();
+                canvas_overlay::paint_lines(&overlay, old.mask.bounds, palette, false, &mut old);
+                canvas_overlay::paint_markers(
+                    &overlay,
+                    point(px(0.), px(0.)),
+                    palette,
+                    true,
+                    true,
+                    &mut old,
+                );
+                old.scene.finish();
+                let d = start.elapsed().as_secs_f64() * 1e6;
+                std::hint::black_box(&old.scene);
+                let start = Instant::now();
+                let mut shared = painter();
+                canvas_overlay::paint_prepared(&list, point(px(0.), px(0.)), true, &mut shared);
+                shared.scene.finish();
+                let b = start.elapsed().as_secs_f64() * 1e6;
+                std::hint::black_box(&shared.scene);
+                let start = Instant::now();
+                let texture = renderer.draw_prepared(&gpu.queue, viewport, list)?.unwrap();
+                let c = start.elapsed().as_secs_f64() * 1e6;
+                assert_eq!(renderer.canvas_stats().draw_calls, 1);
+                // Drain outside the CPU submission measurement and bound in-flight resources.
+                let completed = gpu.queue.new_command_buffer();
+                completed.commit();
+                completed.wait_until_completed();
+                std::hint::black_box(texture);
+                if frame >= 4 {
+                    prepare.push(a);
+                    fallback.push(b);
+                    native.push(c);
+                    legacy.push(d);
+                }
+            }
+            let quantiles = |mut v: Vec<f64>| {
+                v.sort_by(f64::total_cmp);
+                serde_json::json!({"p50_us":v[v.len()/2],"p95_us":v[v.len()*95/100]})
+            };
+            let row = serde_json::json!({"deformers":count,"debug":cfg!(debug_assertions),"shared_prepare":quantiles(prepare),
+                "legacy_gpui_emit":quantiles(legacy),"shared_gpui_emit":quantiles(fallback),"native_encode_submit":quantiles(native)});
+            println!("{row}");
+            rows.push(row);
+        }
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/canvas-overlay-cpu.json");
+        std::fs::write(path, serde_json::to_vec_pretty(&rows)?)?;
+        Ok(())
+    })
+}

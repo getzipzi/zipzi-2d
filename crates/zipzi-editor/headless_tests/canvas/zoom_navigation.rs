@@ -11,15 +11,13 @@ fn wheel_zoom_interpolates_proportionally_and_keeps_anchor_on_every_frame(cx: &m
     use std::{cell::Cell, rc::Rc};
 
     let harness = setup(cx);
-    // Popup triggers measure their anchor during the first render and request
-    // a follow-up frame, even while closed. Deliver that initialization before
-    // observing navigation so it cannot be mistaken for a wheel-zoom update.
-    cx.update_window(harness.window, |_, window, cx| {
-        window.simulate_next_frame(cx);
-        window.render_frame(cx);
-    })
-    .unwrap();
-    cx.run_until_parked();
+    // Deliver initial layout, popup anchors and deferred preview/visibility
+    // updates before observing navigation. A single render does not run the
+    // timed callbacks that the first wheel-animation frame would otherwise drain.
+    for _ in 0..3 {
+        advance_zoom(&harness, cx, 20);
+        cx.run_until_parked();
+    }
     let notifications = Rc::new(Cell::new(0));
     let count = notifications.clone();
     let _observe =

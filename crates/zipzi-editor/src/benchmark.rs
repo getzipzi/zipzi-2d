@@ -48,6 +48,8 @@ struct Config {
     warmup: usize,
     hz: u32,
     parameters_only: bool,
+    navigation_only: bool,
+    regular_deformers: Option<bool>,
     deformations: bool,
     manual_mesh: bool,
     animation: bool,
@@ -136,6 +138,15 @@ pub fn init() -> anyhow::Result<()> {
         )
         .canonicalize()?;
         let parameters_only = std::env::var("ZIPZI_BENCH_PARAMETERS").is_ok_and(|s| s == "1");
+        let navigation_only = std::env::var("ZIPZI_BENCH_NAVIGATION_ONLY").is_ok_and(|s| s == "1");
+        let regular_deformers = std::env::var("ZIPZI_BENCH_REGULAR_DEFORMERS")
+            .ok()
+            .map(|value| match value.as_str() {
+                "on" => Ok(true),
+                "off" => Ok(false),
+                _ => anyhow::bail!("ZIPZI_BENCH_REGULAR_DEFORMERS must be on or off"),
+            })
+            .transpose()?;
         let deformations = std::env::var("ZIPZI_BENCH_DEFORMATIONS").is_ok_and(|s| s == "1");
         let manual_mesh = std::env::var("ZIPZI_BENCH_MANUAL_MESH").is_ok_and(|s| s == "1");
         let animation = std::env::var("ZIPZI_BENCH_ANIMATION").is_ok_and(|s| s == "1");
@@ -179,6 +190,17 @@ pub fn init() -> anyhow::Result<()> {
                 <= 1,
             "choose one benchmark workload"
         );
+        ensure!(
+            !navigation_only
+                || !(parameters_only
+                    || deformations
+                    || manual_mesh
+                    || animation
+                    || properties
+                    || deformer_selection
+                    || ui_only),
+            "navigation-only requires the default viewport workload"
+        );
         #[cfg(feature = "test-support")]
         if properties {
             properties::selected_cases()?;
@@ -197,6 +219,8 @@ pub fn init() -> anyhow::Result<()> {
                 warmup,
                 hz: hz as u32,
                 parameters_only,
+                navigation_only,
+                regular_deformers,
                 deformations,
                 manual_mesh,
                 animation,
@@ -259,6 +283,7 @@ pub fn init() -> anyhow::Result<()> {
                 "model": config.map(|c| c.model.display().to_string()),
                 "samples": config.map(|c| c.samples), "warmup": config.map(|c| c.warmup),
                 "parameters_only": config.map(|c| c.parameters_only),
+                "regular_deformers": config.and_then(|c| c.regular_deformers),
                 "ui_only": config.map(|c| c.ui_only),
                 "parameter_overlay": parameter_overlay::metadata(),
                 "manual_mesh": config.is_some_and(|c| c.manual_mesh),
@@ -269,7 +294,7 @@ pub fn init() -> anyhow::Result<()> {
                 "property_cases": property_cases,
                 "property_case": std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok(),
                 "workloads": config.map(|c| if c.deformer_selection { vec![310] } else if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.deformations { vec![5, 6, 7, 8] }
-                    else if c.parameters_only { vec![4] } else { vec![1, 2, 3] }),
+                    else if c.parameters_only { vec![4] } else if c.navigation_only { vec![1, 2] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
                 "diagnostics": {
@@ -281,6 +306,7 @@ pub fn init() -> anyhow::Result<()> {
                     "batch_mesh_edges": BATCH_MESH_EDGES.load(Ordering::Relaxed),
                     "metal_mesh_overlay": METAL_MESH_OVERLAY.load(Ordering::Relaxed),
                     "native_mesh_overlay": METAL_MESH_OVERLAY.load(Ordering::Relaxed),
+                    "native_canvas_overlay": METAL_MESH_OVERLAY.load(Ordering::Relaxed),
                 },
             })
         )?;
@@ -339,7 +365,7 @@ pub fn init() -> anyhow::Result<()> {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn native_mesh_overlay() -> bool {
+pub fn native_canvas_overlay() -> bool {
     METAL_MESH_OVERLAY.load(Ordering::Relaxed)
 }
 
@@ -477,6 +503,34 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 })??;
                 executor.timer(Duration::from_millis(500)).await;
             }
+            if let Some(visible) = config.regular_deformers {
+                view.update_in(cx, |view, _, cx| -> anyhow::Result<()> {
+                    let binding = view.modeling_frame().context("no displayed canvas")?.canvas.version.binding;
+                    let history = view.editor.document().context("no document")?.history_lengths();
+                    let evaluations = view.editor.evaluation_count();
+                    view.editor.set_regular_deformers_visible(binding, visible);
+                    ensure!(view.editor.regular_deformers_visible(binding) == visible,
+                        "deformer visibility did not change");
+                    ensure!(view.editor.evaluation_count() == evaluations
+                        && view.editor.document().unwrap().history_lengths() == history,
+                        "deformer display toggle changed model evaluation or history");
+                    let overlay = view.editor.overlay();
+                    let audit = serde_json::json!({
+                        "visible": visible, "history": history, "evaluations": evaluations,
+                        "selected_objects": view.editor.document().unwrap().context().selections,
+                        "mesh_vertices": overlay.vertices.len(), "mesh_edges": overlay.lines.len(),
+                        "mesh_boundary_edges": overlay.accent_lines.len(),
+                        "unselected_warp_outlines": overlay.deformers.iter().filter(|d|
+                            d.kind == zipzi_editor_core::ControlKind::Warp && !d.selected).count(),
+                        "unselected_rotation_bones": overlay.rotation_bones.iter().filter(|b| !b.selected).count(),
+                    });
+                    let trace = PathBuf::from(std::env::var_os("ZIPZI_FRAME_TRACE").unwrap());
+                    std::fs::write(trace.with_file_name("deformer-audit.json"), serde_json::to_vec_pretty(&audit)?)?;
+                    view.redraw(cx);
+                    Ok(())
+                })??;
+                executor.timer(Duration::from_millis(250)).await;
+            }
             #[cfg(feature = "test-support")]
             if config.properties {
                 properties::run(&view, cx, config).await?;
@@ -495,7 +549,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
             } else if config.parameters_only {
                 4..=4u64
             } else {
-                1..=3u64
+                1..=if config.navigation_only { 2u64 } else { 3u64 }
             };
             for mode in modes {
                 let center = view

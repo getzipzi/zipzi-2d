@@ -1,4 +1,5 @@
 //! Platform adapters for immutable Editor scene snapshots.
+pub mod canvas_overlay;
 #[cfg(target_os = "macos")]
 mod metal;
 #[cfg(target_os = "macos")]
