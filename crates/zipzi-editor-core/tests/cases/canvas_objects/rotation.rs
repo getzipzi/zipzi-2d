@@ -2,6 +2,156 @@ use super::common::*;
 use crate::support::{pointer_input, present_canvas as shown};
 use zipzi_editor_core::*;
 
+#[test]
+fn normalized_rotation_edits_use_converted_limits_for_base_and_keyforms() -> anyhow::Result<()> {
+    use zipzi_core::{
+        BindingAxis, BindingAxisEditing, Canvas, Parameter, RotationKeyform, RotationPose,
+        RotationTransform, SceneBinding, SceneTrack, Transform, TransformData,
+    };
+    for unit in [5800., 0.25] {
+        for keyed in [false, true] {
+            let dir = tempfile::tempdir()?;
+            let id = |n| uuid::Uuid::from_u128(n).to_string();
+            let mut model = zipzi_core::Document::new();
+            assert!(
+                model
+                    .initialize(id(1), Canvas::new(400., 400., Default::default(), 5800.))
+                    .is_ok()
+            );
+            assert!(
+                model
+                    .create_imported_transform(Transform {
+                        id: id(2),
+                        rotation_scale_unit: Some(unit),
+                        data: TransformData::Rotation(RotationTransform {
+                            pose: RotationPose {
+                                scale: unit,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    })
+                    .status
+                    .is_ok()
+            );
+            if keyed {
+                assert!(
+                    model
+                        .create_parameter(Parameter {
+                            id: id(3),
+                            runtime_id: "Scale".into(),
+                            ..Default::default()
+                        })
+                        .status
+                        .is_ok()
+                );
+                assert!(
+                    model
+                        .create_scene_binding(SceneBinding {
+                            id: id(4),
+                            axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
+                            track: SceneTrack::Rotation {
+                                target_id: id(2).into(),
+                                keyforms: [0., 1.]
+                                    .into_iter()
+                                    .map(|key| RotationKeyform {
+                                        keys: vec![key],
+                                        rotation: RotationPose {
+                                            scale: unit * (1. + key),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    })
+                                    .collect()
+                            }
+                        })
+                        .status
+                        .is_ok()
+                );
+            }
+            let mut project = zipzi_project::DocumentSession::from_authoring_document(model);
+            let path = dir.path().join("normalized.zipzi.json");
+            assert!(project.save(&path).status.is_ok());
+            let mut editor = crate::support::editor_from_document(Document::open(&path)?);
+            let object = ObjectRef::new(ObjectKind::Deformer, id(2));
+            editor.execute(EditorCommand::SelectObject(object.clone()))?;
+            let adjust = |angle, scale| EditorCommand::AdjustDeformer {
+                object: object.clone(),
+                adjustment: DeformerAdjustment {
+                    angle,
+                    scale,
+                    translation: Default::default(),
+                },
+            };
+            let pose = |editor: &Editor| {
+                let document = editor.document().unwrap();
+                let host = document.runtime_host();
+                let runtime = host.read();
+                let doc = runtime.document(document.runtime_session_id()).unwrap();
+                if keyed {
+                    let SceneTrack::Rotation { keyforms, .. } =
+                        &doc.binding_for_scene(&object.id).unwrap().track
+                    else {
+                        panic!("expected rotation binding");
+                    };
+                    keyforms[0].rotation
+                } else {
+                    doc.get_transform(&object.id)
+                        .unwrap()
+                        .rotation()
+                        .unwrap()
+                        .pose
+                }
+            };
+            editor.execute(adjust(10., 1.))?;
+            assert_eq!((pose(&editor).angle, pose(&editor).scale), (10., unit));
+            editor.execute(adjust(0., 2.))?;
+            assert_eq!(pose(&editor).scale, unit * 2.);
+            let history = editor.document().unwrap().history_lengths();
+            // Both converted bounds apply, even when the raw value would fit 0.0001..=100.
+            for scale in [0.00001, 100.] {
+                assert!(editor.execute(adjust(0., scale)).is_err());
+                assert_eq!(pose(&editor).scale, unit * 2.);
+                assert_eq!(editor.document().unwrap().history_lengths(), history);
+            }
+            editor.execute(EditorCommand::Undo)?;
+            assert_eq!((pose(&editor).angle, pose(&editor).scale), (10., unit));
+            editor.execute(EditorCommand::Redo)?;
+            assert_eq!(pose(&editor).scale, unit * 2.);
+            let document = editor.document().unwrap();
+            let host = document.runtime_host();
+            let runtime = host.read();
+            let doc = runtime.document(document.runtime_session_id()).unwrap();
+            assert_eq!(
+                doc.get_transform(&object.id).unwrap().rotation_scale_unit,
+                Some(unit)
+            );
+            if keyed {
+                assert_eq!(
+                    doc.get_transform(&object.id)
+                        .unwrap()
+                        .rotation()
+                        .unwrap()
+                        .pose
+                        .scale,
+                    unit
+                );
+                let SceneTrack::Rotation { keyforms, .. } =
+                    &doc.binding_for_scene(&object.id).unwrap().track
+                else {
+                    unreachable!()
+                };
+                assert_eq!(
+                    (keyforms[1].rotation.angle, keyforms[1].rotation.scale),
+                    (0., unit * 2.)
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 fn grouped_rotation() -> anyhow::Result<(Editor, tempfile::TempDir, ObjectRef)> {
     let (mut doc, dir, warp, _, _) = rich_document()?;
     let plan = doc.plan_scene_object_creation(

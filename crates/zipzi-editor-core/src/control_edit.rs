@@ -954,9 +954,14 @@ impl ControlEdit {
                 EditOriginal::SceneBinding(b) => b.track.sample(self.slot.unwrap()).rotation,
                 _ => bail!("Not a rotation deformer"),
             };
+            let (minimum, maximum) = edit
+                .candidate_document()
+                .get_transform(&self.object.id)
+                .ok_or_else(|| anyhow::anyhow!("Deformer no longer exists"))?
+                .rotation_scale_bounds();
             ensure!(
-                (0.0001..=100.).contains(&(pose.scale * scale)),
-                "Rotation scale must be between 0.0001 and 100"
+                (minimum..=maximum).contains(&(pose.scale * scale)),
+                "Rotation scale must be between {minimum} and {maximum}"
             );
             ensure!(
                 (-3600. ..=3600.).contains(&(pose.angle + angle)),

@@ -226,7 +226,7 @@ impl Exporter<'_> {
                         .attr("originX", self.source_origin_x(t.parent(), r.origin.x))
                         .attr("originY", self.source_origin_y(t.parent(), r.origin.y))
                         .attr("angle", self.rotation_sign() * r.angle)
-                        .attr("scale", r.scale)
+                        .attr("scale", r.scale / t.rotation_scale_unit())
                         .attr("isReflectX", r.reflect_x)
                         .attr("isReflectY", !r.reflect_y)
                         .field("super", base)
