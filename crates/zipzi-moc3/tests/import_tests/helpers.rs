@@ -43,7 +43,8 @@ pub(crate) fn workspace_root() -> PathBuf {
 }
 
 pub(crate) fn local_mao_moc3() -> PathBuf {
-    workspace_root().join("models/local/mao/runtime/mao_pro.moc3")
+    let path = workspace_root().join("models/local/mao/runtime/mao_pro.moc3");
+    path.canonicalize().unwrap_or(path)
 }
 
 // Geometry roundtrips need configured resources under the strict export
@@ -368,10 +369,20 @@ pub(crate) fn exported_drawable(doc: &Document) -> PurismDrawableData {
 }
 
 pub(crate) fn assert_runtime_matches(doc: &Document, bytes: &[u8], samples: &[Vec<f32>]) {
+    assert_runtime_matches_with_position_tolerance(doc, bytes, samples, 0.05);
+}
+
+pub(crate) fn assert_runtime_matches_with_position_tolerance(
+    doc: &Document,
+    bytes: &[u8],
+    samples: &[Vec<f32>],
+    pixel_tolerance: f64,
+) -> f64 {
+    let mut max_error = 0.0f64;
     let re_export = encode_moc3(doc).unwrap();
     let mut original = PurismModelInstance::new(bytes);
     let mut exported = PurismModelInstance::new(&re_export.bytes);
-    for sample in samples {
+    for (sample_index, sample) in samples.iter().enumerate() {
         let mut values = HashMap::new();
         for (id, value) in doc.parameter_order().iter().zip(sample) {
             let parameter = doc.get_parameter(id).unwrap();
@@ -384,9 +395,15 @@ pub(crate) fn assert_runtime_matches(doc: &Document, bytes: &[u8], samples: &[Ve
         let mut frame = DrawableFrame::default();
         assert!(evaluate_frame(doc, &values, &mut frame).is_ok());
         for d in frame.drawables {
-            for actual in [
-                original.get_drawable(&d.runtime_id).unwrap(),
-                exported.get_drawable(&d.runtime_id).unwrap(),
+            for (actual, ppu) in [
+                (
+                    original.get_drawable(&d.runtime_id).unwrap(),
+                    doc.source_canvas().unwrap().pixels_per_unit,
+                ),
+                (
+                    exported.get_drawable(&d.runtime_id).unwrap(),
+                    doc.export_settings().pixels_per_unit,
+                ),
             ] {
                 assert_eq!(d.indices.as_ref(), actual.indices.as_slice());
                 assert_eq!(d.uvs.len(), actual.uvs.len());
@@ -396,16 +413,12 @@ pub(crate) fn assert_runtime_matches(doc: &Document, bytes: &[u8], samples: &[Ve
                 }
                 assert_eq!(d.positions.len(), actual.positions.len());
                 for (a, b) in d.positions.iter().zip(&actual.positions) {
-                    near(
-                        a.x / doc.source_canvas().unwrap().pixels_per_unit,
-                        b.x,
-                        doc.source_canvas().unwrap().pixels_per_unit,
-                    );
-                    near(
-                        a.y / doc.source_canvas().unwrap().pixels_per_unit,
-                        b.y,
-                        doc.source_canvas().unwrap().pixels_per_unit,
-                    );
+                    for (a, b) in [(a.x / ppu, b.x), (a.y / ppu, b.y)] {
+                        let error = (f64::from(a) - f64::from(b)).abs() * f64::from(ppu);
+                        max_error = max_error.max(error);
+                        assert!(a.is_finite() && b.is_finite() && error <= pixel_tolerance,
+                            "{}: position error {error}px exceeds {pixel_tolerance}px; sample {sample_index}, actual={a}, expected={b}", d.runtime_id);
+                    }
                 }
                 near(d.opacity, actual.opacity, 1.0);
                 assert_eq!(d.draw_order, actual.draw_order);
@@ -417,4 +430,5 @@ pub(crate) fn assert_runtime_matches(doc: &Document, bytes: &[u8], samples: &[Ve
             }
         }
     }
+    max_error
 }

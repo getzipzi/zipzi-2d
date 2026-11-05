@@ -1,6 +1,6 @@
 {
   "_generated_by": "zipzi-python/tools/generate.py",
-  "contract_sha256": "30e61d085de94909138e4c520455d8b2d060f31519b819808f8729078d834a43",
+  "contract_sha256": "e75896954f916c52ce89b582eb95b45485ca76ffa6490a23f77a21ec81a31165",
   "format_version": 2,
   "root": {
     "binary": {
@@ -18,7 +18,7 @@
         "name": "zipzi_contract::runtime::ImageSnapshot"
       },
       "image_signature": "ad87c1c5f654d24b33239bad6607e861",
-      "input_signature": "721e69736e69d8475d12ccebe728b9e5",
+      "input_signature": "787db8cf0139d6fa20d04231b03d43ce",
       "inputs": [
         {
           "kind": "ref",
@@ -59,7 +59,7 @@
         "kind": "ref",
         "name": "zipzi_contract::authoring::OwnedModelingRecords"
       },
-      "output_signature": "ceefabd9bcab4f132d131ec4d4bba18b",
+      "output_signature": "925214a66834c742ca4869fb723b4e00",
       "preview": {
         "kind": "ref",
         "name": "zipzi_contract::runtime::PreviewBatch"
@@ -813,7 +813,7 @@
     },
     {
       "path": "types/scene.json",
-      "sha256": "9265bc1e3a9959466eb890346723b5ef4e45dbcbc80eb8364c49b141fe26ed22"
+      "sha256": "fc3cc63825a6bb9a4511855032ad33c509fe66ed43cef0d2ce652672c0f6b93e"
     },
     {
       "path": "types/spatial.json",

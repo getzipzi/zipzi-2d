@@ -130,6 +130,49 @@ for before/after measurements.
 
 ## Whole-model parameter overlays
 
+For a same-binary native canvas / unified GPUI fallback comparison, use the
+viewport runner. It covers pan, zoom, direct opacity preview, parameter dragging
+with no selection or all visible Meshes selected, and Mesh/Warp/Rotation drags.
+Each process uses an isolated Runtime/config; four rounds counterbalance the
+native/fallback order. The output preserves the copied binary, source diff/new
+source files, model hashes, traces, audits and background compiler samples.
+
+```sh
+cargo build --locked --release -p zipzi-editor --features test-support,bench-instrumentation
+uv run --locked python tools/benchmarks/viewport-ui-benchmark.py \
+  --binary target/release/zipzi-editor \
+  --model models/local/mao/runtime/mao_pro.model3.json \
+  --warp 84128150-2a83-4895-9771-4a7676d9b71b \
+  --output target/viewport-ui-comparison
+```
+
+Use a fresh output directory. `--warp` must identify an editable control in the
+supplied model. The command uses Mao's Warp9; historical Warp57 fixtures may
+fail the complete path through a nonlinear parent. Compiler-interfered pairs are
+retained in `attempts.json` and retried together; `results.json` contains only
+completed pairs without observed compiler activity. For a separate instrumented attribution run, add
+`--scenes parameter_selected --detail`; do not mix its timings with primary
+results. The boundary is GPUI dispatch through compositor presentation, excluding
+OS input delivery and physical display response. The comparison isolates the
+current rendering backends; it does not substitute for an older-source baseline.
+
+To measure the viewport's regular deformer display button with the native backend
+held fixed, compare `on`/`off` in a few representative scenes:
+
+```sh
+uv run --locked python tools/benchmarks/viewport-ui-benchmark.py \
+  --binary target/release/zipzi-editor \
+  --model models/local/mao/runtime/mao_pro.model3.json \
+  --comparison deformers --scenes navigation parameter_unselected parameter_selected \
+  --output target/deformer-display-comparison
+```
+
+This hides unselected Warp outlines and Rotation bones through the same viewport
+API as the button. Model deformation evaluation, Mesh overlays and selected
+deformer controls keep their usual behavior. Navigation measures pan/zoom only.
+`deformer-audit.json` verifies visibility and geometry counts, unchanged selection
+and authoring history, and that applying the display setting caused no evaluation.
+
 Build once, then benchmark the saved Release executable without concurrent builds.
 The default workload uses Mao, 30 warmup inputs and 360 measured inputs at 120 Hz,
 with three rounds in alternating order. Keep the benchmark window in front.
@@ -157,8 +200,10 @@ consecutive marker quads into paint layers. To compare the previous path in the
 same binary, pass `--unlayered-markers --tessellated-edges` to the runner (each can
 also be measured separately). Their automatic-driver equivalents are
 `ZIPZI_BENCH_UNLAYERED_MARKERS=1` and `ZIPZI_BENCH_TESSELLATED_EDGES=1`; the trace
-records both settings. Detailed runs split `overlay.gpui_mesh_edges`,
-`overlay.gpui_lines` (semantic/control lines), and `overlay.gpui_markers`.
+records both settings. Detailed canvas-overlay runs split `overlay.canvas_prepare`,
+`overlay.metal_canvas` / `overlay.d3d11_canvas`, and
+`overlay.gpui_canvas_fallback`. Historical traces split `overlay.gpui_mesh_edges`,
+`overlay.gpui_lines` and `overlay.gpui_markers`.
 `ZIPZI_BENCH_LEGACY_EDGE_BOUNDS=1` keeps the direct triangles but restores their
 old per-triangle bounding-box accumulation, isolating the batched-bounds change
 in the same binary. It requires the automatic parameter workload and is recorded
@@ -591,16 +636,16 @@ low-latency pass. Choose an audited editable target when using a different model
 
 ### Windows shared texture presentation
 
-Windows mesh overlays now mirror the Metal edge/vertex shader passes using
+Windows canvas overlays use the same ordered instance stream as Metal with
 D3D11-native immutable surfaces. For a same-binary GPUI comparison set
 `ZIPZI_TRACE_BATCH_MESH_EDGES=1`; leave it unset for the native shader path.
 The switch retains full overlays and is recorded as
-`diagnostics.native_mesh_overlay` (and the historical `metal_mesh_overlay`).
-`overlay_shader_surface.fields.pass=1|2` identifies the edge/mesh-marker surfaces;
+`diagnostics.native_canvas_overlay` (and the historical mesh keys).
+`overlay_shader_surface.fields.pass=0` identifies the complete canvas surface;
 it is independent of `paint_shared_surface`, which identifies the model preview.
-Detailed traces should have no `overlay.gpui_mesh_edges` on the native path;
-`overlay.gpui_markers` still includes non-mesh controls, so its presence alone is
-not a shader fallback. Compare platform CPU submission as well as UI paint and
+Detailed traces should have no `overlay.gpui_canvas_fallback` on the native path.
+`canvas_overlay_draw` reports instance counts, upload bytes, draw calls and cache
+hits. Compare platform CPU submission as well as UI paint and
 new-image intervals; lower primitive counts do not establish screen latency.
 
 Windows previews now publish `shared_texture_submitted` and paint through

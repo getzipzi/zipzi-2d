@@ -5925,6 +5925,19 @@
         },
         {
           "default": null,
+          "doc": "Unit multiplier already applied to an imported Rotation's scale channel.\nRetains its BlendShape clamp limits and export units without multiplying\nthe pose again. None uses native authoring units (1).",
+          "name": "rotation_scale_unit",
+          "rust_name": "rotation_scale_unit",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
           "doc": "Independent original shape and its first-key update policy, retained only by native projects.",
           "name": "original_shape",
           "rust_name": "original_shape",

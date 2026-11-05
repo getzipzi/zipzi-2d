@@ -2,6 +2,10 @@
 
 Core data model for Zipzi 2D, including documents, geometry, deformers, parameter bindings, and scene evaluation.
 
+Rotation bone display baselines capture the evaluated inherited scale at parameter
+defaults, including ordinary/BlendShape bindings and hidden ancestors. Existing
+display preferences stay frozen through later shape edits and project reopening.
+
 Document clones and checkpoints share Mesh, Transform, ordinary/BlendShape binding
 records and per-mesh vertex indexes. Writes detach the affected record. Public
 record types and project serialization remain owned values. Logical content/history

@@ -14,8 +14,7 @@ impl CanvasScene {
             && c.visible
             && (selection.contains(&c.object)
                 || match c.kind {
-                    // Bones are scene objects, not opt-in Warp editing helpers.
-                    ControlKind::Rotation => true,
+                    ControlKind::Warp | ControlKind::Rotation => !visibility.hide_unselected,
                     ControlKind::Glue => {
                         self.topology
                             .glues
@@ -28,14 +27,39 @@ impl CanvasScene {
                             })
                             || (tool == ToolId::Glue && selection.is_empty())
                     }
-                    _ => {
-                        visibility.all
-                            || visibility.ancestors
-                                && selection
-                                    .iter()
-                                    .any(|r| self.ancestors(r).contains(&c.object))
-                    }
                 })
+    }
+    /// Evaluated outer lattice edges shared by painting and picking. No Bezier evaluation.
+    pub fn warp_outline(
+        &self,
+        c: &ControlGeometry,
+        t: ViewportTransform,
+    ) -> Vec<(ViewportPoint, ViewportPoint)> {
+        let Some((rows, columns, _)) = self
+            .topology
+            .controls
+            .get(&c.object.id)
+            .and_then(|c| c.warp_shape)
+        else {
+            return Vec::new();
+        };
+        let (rows, columns) = (rows as usize, columns as usize);
+        let width = columns + 1;
+        (0..columns)
+            .flat_map(|col| [(col, col + 1), (rows * width + col, rows * width + col + 1)])
+            .chain((0..rows).flat_map(|row| {
+                [
+                    (row * width, (row + 1) * width),
+                    (row * width + columns, (row + 1) * width + columns),
+                ]
+            }))
+            .filter_map(|(a, b)| {
+                Some((
+                    t.to_viewport(*c.points.get(a)?),
+                    t.to_viewport(*c.points.get(b)?),
+                ))
+            })
+            .collect()
     }
     /// Rotation tips share the pose-scaled bone used for painting and picking.
     pub fn control_points(&self, c: &ControlGeometry, t: ViewportTransform) -> Vec<ViewportPoint> {

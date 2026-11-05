@@ -3,13 +3,18 @@ use anyhow::{Result, ensure};
 use zipzi_editor_core::OverlaySnapshot;
 use zipzi_render_metal::metal::*;
 
+use crate::canvas_overlay::{CanvasDrawList, CanvasRenderStats};
 use crate::overlay_data::Key;
 use crate::{OverlayPass, OverlayStyle, OverlayViewport};
+use std::sync::Arc;
 pub struct MetalOverlayRenderer {
     device: Device,
     queue: Option<CommandQueue>,
     edges: RenderPipelineState,
     markers: RenderPipelineState,
+    canvas: RenderPipelineState,
+    canvas_stats: CanvasRenderStats,
+    canvas_cached: Option<(OverlayViewport, Arc<CanvasDrawList>, Texture)>,
     cached: [Option<(Key, Texture)>; 3],
     #[cfg(feature = "bench-instrumentation")]
     pub command_observer: Option<fn(OverlayPass, &CommandBufferRef)>,
@@ -45,11 +50,15 @@ impl MetalOverlayRenderer {
         };
         let edges = pipeline("edge_vertex", "solid_fragment", 4)?;
         let markers = pipeline("marker_vertex", "marker_fragment", 1)?;
+        let canvas = pipeline("canvas_vertex", "canvas_fragment", 4)?;
         Ok(Self {
             device,
             queue: None,
             edges,
             markers,
+            canvas,
+            canvas_stats: CanvasRenderStats::default(),
+            canvas_cached: None,
             cached: [None, None, None],
             #[cfg(feature = "bench-instrumentation")]
             command_observer: None,
@@ -57,6 +66,104 @@ impl MetalOverlayRenderer {
     }
     pub fn uses_device(&self, device: &DeviceRef) -> bool {
         std::ptr::eq(self.device.as_ref(), device)
+    }
+    pub fn canvas_stats(&self) -> CanvasRenderStats {
+        self.canvas_stats
+    }
+    /// One ordered instance stream and one surface for every canvas geometry layer.
+    pub fn draw_prepared(
+        &mut self,
+        queue: &CommandQueueRef,
+        viewport: OverlayViewport,
+        list: Arc<CanvasDrawList>,
+    ) -> Result<Option<Texture>> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("overlay.metal_canvas");
+        ensure!(
+            self.uses_device(queue.device()),
+            "Overlay queue/device mismatch"
+        );
+        let uniforms = crate::overlay_data::canvas_uniforms(viewport)?;
+        self.canvas_stats = CanvasRenderStats {
+            instances: list.primitives.len(),
+            ..Default::default()
+        };
+        if self
+            .queue
+            .as_ref()
+            .is_none_or(|old| !std::ptr::eq(old.as_ref(), queue))
+        {
+            self.queue = Some(queue.to_owned());
+            self.cached = [None, None, None];
+            self.canvas_cached = None;
+        }
+        if list.primitives.is_empty() {
+            self.canvas_cached = None;
+            return Ok(None);
+        }
+        if let Some((v, old, image)) = &self.canvas_cached {
+            if *v == viewport && (Arc::ptr_eq(old, &list) || **old == *list) {
+                self.canvas_stats.cached = true;
+                return Ok(Some(image.clone()));
+            }
+        }
+        ensure!(
+            std::mem::size_of_val(list.primitives.as_slice()) <= 128 * 1024 * 1024,
+            "Canvas buffer exceeds budget"
+        );
+        let td = TextureDescriptor::new();
+        td.set_width(viewport.extent[0] as u64);
+        td.set_height(viewport.extent[1] as u64);
+        td.set_pixel_format(MTLPixelFormat::BGRA8Unorm);
+        td.set_storage_mode(MTLStorageMode::Private);
+        td.set_usage(MTLTextureUsage::RenderTarget | MTLTextureUsage::ShaderRead);
+        let image = self.device.new_texture(&td);
+        td.set_texture_type(MTLTextureType::D2Multisample);
+        td.set_sample_count(4);
+        td.set_storage_mode(if self.device.supports_family(MTLGPUFamily::Apple1) {
+            MTLStorageMode::Memoryless
+        } else {
+            MTLStorageMode::Private
+        });
+        td.set_usage(MTLTextureUsage::RenderTarget);
+        let msaa = self.device.new_texture(&td);
+        let buffer = self.device.new_buffer_with_data(
+            list.primitives.as_ptr().cast(),
+            std::mem::size_of_val(list.primitives.as_slice()) as u64,
+            MTLResourceOptions::StorageModeShared,
+        );
+        let command = queue.new_command_buffer();
+        let pass = RenderPassDescriptor::new();
+        let color = pass.color_attachments().object_at(0).unwrap();
+        color.set_texture(Some(&msaa));
+        color.set_resolve_texture(Some(&image));
+        color.set_load_action(MTLLoadAction::Clear);
+        color.set_clear_color(MTLClearColor::new(0., 0., 0., 0.));
+        color.set_store_action(MTLStoreAction::MultisampleResolve);
+        let encoder = command.new_render_command_encoder(pass);
+        encoder.set_render_pipeline_state(&self.canvas);
+        encoder.set_vertex_bytes(
+            1,
+            std::mem::size_of_val(&uniforms) as u64,
+            std::ptr::from_ref(&uniforms).cast(),
+        );
+        encoder.set_vertex_buffer(0, Some(&buffer), 0);
+        encoder.draw_primitives_instanced(
+            MTLPrimitiveType::Triangle,
+            0,
+            6,
+            list.primitives.len() as u64,
+        );
+        encoder.end_encoding();
+        #[cfg(feature = "bench-instrumentation")]
+        if let Some(observer) = self.command_observer {
+            observer(OverlayPass::All, command);
+        }
+        command.commit();
+        self.canvas_stats.upload_bytes = std::mem::size_of_val(list.primitives.as_slice());
+        self.canvas_stats.draw_calls = 1;
+        self.canvas_cached = Some((viewport, list, image.clone()));
+        Ok(Some(image))
     }
     /// Canvas-local logical coordinates. Never modifies a published texture or
     /// in-flight buffer and never waits on the UI thread. Commands retain inputs.
@@ -104,6 +211,7 @@ impl MetalOverlayRenderer {
             .is_none_or(|old| !std::ptr::eq(old.as_ref(), queue))
         {
             self.cached = [None, None, None];
+            self.canvas_cached = None;
             self.queue = Some(queue.to_owned());
         }
         let slot = match pass {

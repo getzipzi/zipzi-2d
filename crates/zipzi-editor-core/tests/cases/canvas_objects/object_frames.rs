@@ -1530,3 +1530,105 @@ fn parent_child_point_selection_keeps_point_edits_local_and_whole_frames_normali
     }
     Ok(())
 }
+
+#[test]
+fn object_and_warp_frames_share_compact_padding() -> anyhow::Result<()> {
+    for warp in [false, true] {
+        let (mut editor, _dir, object) = if warp {
+            deformer_editor(false)?
+        } else {
+            mesh_editor()?
+        };
+        for zoom in [0.5, 1., 2.] {
+            editor.set_zoom_at(zoom, None);
+            let frame = shown(&mut editor)?;
+            let points: Vec<_> = if warp {
+                frame
+                    .geometry
+                    .controls
+                    .iter()
+                    .find(|c| c.object == object)
+                    .unwrap()
+                    .points
+                    .clone()
+            } else {
+                frame
+                    .geometry
+                    .mesh(&object.id)
+                    .unwrap()
+                    .vertices
+                    .iter()
+                    .map(|(_, p)| *p)
+                    .collect()
+            };
+            let bounds = bounds(points.into_iter().map(|p| {
+                let p = frame.transform.to_viewport(p);
+                ModelPoint { x: p.x, y: p.y }
+            }))
+            .unwrap();
+            let padding = 6.;
+            let overlay = editor.overlay();
+            let corner = overlay
+                .handles
+                .iter()
+                .find(|h| !h.tangent)
+                .unwrap()
+                .position;
+            assert!((corner.x - (bounds[0] - padding)).abs() < 0.001);
+            assert!((corner.y - (bounds[1] - padding)).abs() < 0.001);
+            if !warp {
+                editor.hover_canvas(
+                    frame.version.binding,
+                    Some(ViewportPoint {
+                        x: bounds[0],
+                        y: bounds[1],
+                    }),
+                )?;
+                assert!(editor.overlay().active_component.is_some());
+                editor.hover_canvas(frame.version.binding, Some(corner))?;
+                assert_eq!(
+                    editor.overlay().active_handle,
+                    Some(DeformerHandle::Scale(0))
+                );
+                let part = ObjectRef::new(ObjectKind::Part, uuid::Uuid::from_u128(3).to_string());
+                editor.execute(EditorCommand::SelectObject(part))?;
+                let group_corner = editor.overlay().handles[0].position;
+                assert_eq!(group_corner, corner);
+                editor.execute(EditorCommand::SelectObject(object.clone()))?;
+                let edge = ViewportPoint {
+                    x: (bounds[0] + bounds[2]) / 2.,
+                    y: bounds[1] - padding,
+                };
+                let start = ViewportPoint {
+                    x: (edge.x + bounds[0]) / 2.,
+                    y: edge.y,
+                };
+                pointer_input(
+                    &mut editor,
+                    CanvasInput::Down {
+                        point: start,
+                        shift: false,
+                        alt: false,
+                        primary: false,
+                    },
+                )?;
+                pointer_input(
+                    &mut editor,
+                    CanvasInput::Move {
+                        point: ViewportPoint {
+                            x: start.x + 10.,
+                            y: start.y + 8.,
+                        },
+                        left_down: true,
+                    },
+                )?;
+                shown(&mut editor)?;
+                let moved = editor.overlay().handles[0].position;
+                assert!((moved.x - corner.x - 10.).abs() < 0.001);
+                assert!((moved.y - corner.y - 8.).abs() < 0.001);
+                pointer_input(&mut editor, CanvasInput::Cancel)?;
+            }
+        }
+    }
+    Ok(())
+}

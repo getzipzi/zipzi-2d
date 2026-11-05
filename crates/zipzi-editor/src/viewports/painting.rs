@@ -1,4 +1,4 @@
-//! Native mesh overlay rendering, GPUI fallback and measured canvas capture.
+//! Native canvas overlay rendering, unified GPUI fallback and measured capture.
 use super::*;
 
 #[cfg(target_os = "macos")]
@@ -13,19 +13,13 @@ impl CanvasOverlay {
     fn paint(
         &mut self,
         bounds: Bounds<Pixels>,
-        overlay: &zipzi_editor_core::OverlaySnapshot,
-        style: zipzi_editor_render::OverlayStyle,
-        pass: zipzi_editor_render::OverlayPass,
+        list: std::sync::Arc<zipzi_editor_render::canvas_overlay::CanvasDrawList>,
         window: &mut Window,
     ) -> anyhow::Result<()> {
-        if (pass == zipzi_editor_render::OverlayPass::Edges
-            && !benchmark::parameter_overlay::paint_edges())
-            || (pass == zipzi_editor_render::OverlayPass::Vertices
-                && !benchmark::parameter_overlay::paint_vertices())
-        {
-            return Ok(());
-        }
-        anyhow::ensure!(benchmark::native_mesh_overlay(), "GPUI diagnostic override");
+        anyhow::ensure!(
+            benchmark::native_canvas_overlay(),
+            "GPUI diagnostic override"
+        );
         let gpu = window
             .metal_context()
             .ok_or_else(|| anyhow::anyhow!("Metal context unavailable"))?;
@@ -44,10 +38,10 @@ impl CanvasOverlay {
             scale,
             origin,
         };
-        if let Some(image) = self
-            .renderer(&gpu.device)?
-            .draw_pass(&gpu.queue, viewport, overlay, style, pass)?
-        {
+        let renderer = self.renderer(&gpu.device)?;
+        let image = renderer.draw_prepared(&gpu.queue, viewport, list)?;
+        trace_canvas(renderer.canvas_stats());
+        if let Some(image) = image {
             // Preserve physical pixel size when logical bounds are fractional.
             window.paint_surface(
                 Bounds::new(
@@ -83,7 +77,7 @@ impl CanvasOverlay {
                     self.renderer = Some(renderer);
                 }
                 Err(error) => {
-                    eprintln!("Mesh overlay initialization failed; using GPUI: {error}");
+                    eprintln!("Canvas overlay initialization failed; using GPUI: {error}");
                     self.error = Some(error.to_string());
                 }
             }
@@ -105,19 +99,13 @@ impl CanvasOverlay {
     fn paint(
         &mut self,
         bounds: Bounds<Pixels>,
-        overlay: &zipzi_editor_core::OverlaySnapshot,
-        style: zipzi_editor_render::OverlayStyle,
-        pass: zipzi_editor_render::OverlayPass,
+        list: std::sync::Arc<zipzi_editor_render::canvas_overlay::CanvasDrawList>,
         window: &mut Window,
     ) -> anyhow::Result<()> {
-        anyhow::ensure!(benchmark::native_mesh_overlay(), "GPUI diagnostic override");
-        if (pass == zipzi_editor_render::OverlayPass::Edges
-            && !benchmark::parameter_overlay::paint_edges())
-            || (pass == zipzi_editor_render::OverlayPass::Vertices
-                && !benchmark::parameter_overlay::paint_vertices())
-        {
-            return Ok(());
-        }
+        anyhow::ensure!(
+            benchmark::native_canvas_overlay(),
+            "GPUI diagnostic override"
+        );
         let device = window
             .directx_device()
             .ok_or_else(|| anyhow::anyhow!("D3D11 context unavailable"))?;
@@ -138,7 +126,7 @@ impl CanvasOverlay {
                 }
                 Err(e) => {
                     self.failed_device = Some(device);
-                    eprintln!("Mesh overlay initialization failed; using GPUI: {e}");
+                    eprintln!("Canvas overlay initialization failed; using GPUI: {e}");
                     return Err(e);
                 }
             }
@@ -158,23 +146,14 @@ impl CanvasOverlay {
             scale,
             origin,
         };
-        if let Some(image) = self
-            .renderer
-            .as_mut()
-            .unwrap()
-            .draw_pass(viewport, overlay, style, pass)?
-        {
+        let renderer = self.renderer.as_mut().unwrap();
+        let image = renderer.draw_prepared(viewport, list)?;
+        trace_canvas(renderer.canvas_stats());
+        if let Some(image) = image {
             gpui_kit::frame_trace::emit(
                 gpui_kit::frame_trace::next_id(),
                 "overlay_shader_surface",
-                &[(
-                    "pass",
-                    match pass {
-                        zipzi_editor_render::OverlayPass::Edges => 1,
-                        zipzi_editor_render::OverlayPass::Vertices => 2,
-                        _ => 0,
-                    },
-                )],
+                &[("pass", 0)],
             );
             window.paint_surface(
                 Bounds::new(
@@ -186,6 +165,20 @@ impl CanvasOverlay {
         }
         Ok(())
     }
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn trace_canvas(stats: zipzi_editor_render::canvas_overlay::CanvasRenderStats) {
+    gpui_kit::frame_trace::emit(
+        gpui_kit::frame_trace::next_id(),
+        "canvas_overlay_draw",
+        &[
+            ("instances", stats.instances as u64),
+            ("upload_bytes", stats.upload_bytes as u64),
+            ("draw_calls", stats.draw_calls as u64),
+            ("cached", u64::from(stats.cached)),
+        ],
+    );
 }
 
 impl ViewportSurface {
@@ -201,8 +194,7 @@ impl ViewportSurface {
         let mouse = view.clone();
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         let overlay_renderer = self.overlay_renderer.clone();
-        let selection_outline = palette.selection_region;
-        let selection_fill = selection_outline.opacity(0.12);
+        let overlay_cache = self.overlay_cache.clone();
         canvas(
             move |bounds, window, cx| {
                 let metrics = ViewportMetrics {
@@ -258,134 +250,51 @@ impl ViewportSurface {
             move |bounds, _, window, _cx| {
                 benchmark::parameter_overlay::capture(4, || {
                     if benchmark::parameter_overlay::paint_any() {
-                        #[cfg(any(target_os = "macos", target_os = "windows"))]
-                        let result = overlay_renderer.borrow_mut().paint(
-                            bounds,
+                        if bounds.is_empty() {
+                            return;
+                        }
+                        let options = zipzi_editor_render::canvas_overlay::CanvasOptions {
+                            lines: benchmark::parameter_overlay::paint_edges(),
+                            markers: benchmark::parameter_overlay::paint_vertices(),
+                        };
+                        #[cfg(feature = "bench-instrumentation")]
+                        let _prepare_span = zipzi_core::benchmark::span("overlay.canvas_prepare");
+                        let prepared = overlay_cache.borrow_mut().prepare(
                             &overlay,
-                            palette.native(),
-                            zipzi_editor_render::OverlayPass::Edges,
-                            window,
+                            [bounds.size.width.as_f32(), bounds.size.height.as_f32()],
+                            palette.canvas(),
+                            options,
                         );
-                        // Preserve editing visibility if shader/device setup is unavailable.
-                        #[cfg(any(target_os = "macos", target_os = "windows"))]
-                        let gpui_edges = result.is_err();
-                        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-                        let gpui_edges = true;
-                        if gpui_edges && benchmark::parameter_overlay::paint_edges() {
-                            #[cfg(feature = "bench-instrumentation")]
-                            let _span = zipzi_core::benchmark::span("overlay.gpui_mesh_edges");
-                            let to_window =
-                                |p: ViewportPoint| bounds.origin + point(px(p.x), px(p.y));
-                            if benchmark::batch_mesh_edges() {
-                                let paint =
-                                    |path| window.paint_path(path, palette.mesh.opacity(0.45));
-                                if benchmark::parameter_overlay::tessellated_edges() {
-                                    mesh_edges::paint_edges_tessellated(
-                                        &overlay.lines,
+                        #[cfg(feature = "bench-instrumentation")]
+                        drop(_prepare_span);
+                        match prepared {
+                            Ok(list) => {
+                                #[cfg(any(target_os = "macos", target_os = "windows"))]
+                                let native = overlay_renderer
+                                    .borrow_mut()
+                                    .paint(bounds, list.clone(), window)
+                                    .is_ok();
+                                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+                                let native = false;
+                                if !native {
+                                    #[cfg(feature = "bench-instrumentation")]
+                                    let _span =
+                                        zipzi_core::benchmark::span("overlay.gpui_canvas_fallback");
+                                    crate::canvas_overlay::paint_prepared_with_options(
+                                        &list,
                                         bounds.origin,
-                                        paint,
+                                        crate::canvas_overlay::FallbackOptions {
+                                            layer_quads:
+                                                benchmark::parameter_overlay::layer_markers(),
+                                            batch_lines: benchmark::batch_mesh_edges(),
+                                            tessellated_edges:
+                                                benchmark::parameter_overlay::tessellated_edges(),
+                                        },
+                                        window,
                                     );
-                                } else {
-                                    mesh_edges::paint_edges(&overlay.lines, bounds.origin, paint);
-                                }
-                            } else {
-                                for (a, b) in &overlay.lines {
-                                    let mut path = PathBuilder::stroke(px(1.));
-                                    path.move_to(to_window(*a));
-                                    path.line_to(to_window(*b));
-                                    if let Ok(path) = path.build() {
-                                        window.paint_path(path, palette.mesh.opacity(0.45));
-                                    }
                                 }
                             }
-                        }
-                        if benchmark::parameter_overlay::paint_edges() {
-                            #[cfg(feature = "bench-instrumentation")]
-                            let _span = zipzi_core::benchmark::span("overlay.gpui_lines");
-                            crate::canvas_overlay::paint_lines(
-                                &overlay,
-                                bounds,
-                                palette,
-                                benchmark::parameter_overlay::tessellated_edges(),
-                                window,
-                            );
-                        }
-                        #[cfg(any(target_os = "macos", target_os = "windows"))]
-                        let marker_result = overlay_renderer.borrow_mut().paint(
-                            bounds,
-                            &overlay,
-                            palette.native(),
-                            zipzi_editor_render::OverlayPass::Vertices,
-                            window,
-                        );
-                        #[cfg(any(target_os = "macos", target_os = "windows"))]
-                        let gpui_markers = marker_result.is_err();
-                        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-                        let gpui_markers = true;
-                        if benchmark::parameter_overlay::paint_vertices() {
-                            #[cfg(feature = "bench-instrumentation")]
-                            let _span = zipzi_core::benchmark::span("overlay.gpui_markers");
-                            crate::canvas_overlay::paint_markers(
-                                &overlay,
-                                bounds.origin,
-                                palette,
-                                gpui_markers,
-                                benchmark::parameter_overlay::layer_markers(),
-                                window,
-                            );
-                        }
-                        if let Some((a, b)) = overlay.marquee {
-                            let rect = Bounds::new(
-                                bounds.origin + point(px(a.x.min(b.x)), px(a.y.min(b.y))),
-                                size(px((b.x - a.x).abs()), px((b.y - a.y).abs())),
-                            );
-                            window.paint_quad(fill(rect, selection_fill));
-                            let p = |x, y| ViewportPoint { x, y };
-                            mesh_edges::paint_edges(
-                                &[
-                                    (a, p(b.x, a.y)),
-                                    (p(b.x, a.y), b),
-                                    (b, p(a.x, b.y)),
-                                    (p(a.x, b.y), a),
-                                ],
-                                bounds.origin,
-                                |path| window.paint_path(path, selection_outline),
-                            );
-                        }
-                        if overlay.lasso.len() >= 2 {
-                            if let Some(path) = crate::canvas_overlay::polygon_fill_path(
-                                overlay
-                                    .lasso
-                                    .iter()
-                                    .map(|p| bounds.origin + point(px(p.x), px(p.y))),
-                            ) {
-                                window.paint_path(path, selection_fill);
-                            }
-                            let edges: Vec<_> =
-                                overlay.lasso.windows(2).map(|p| (p[0], p[1])).collect();
-                            mesh_edges::paint_edges(&edges, bounds.origin, |path| {
-                                window.paint_path(path, selection_outline);
-                            });
-                            let first = overlay.lasso[0];
-                            let last = *overlay.lasso.last().unwrap();
-                            let length = (last.x - first.x).hypot(last.y - first.y);
-                            // Bound the dash count when the captured pointer is far outside the viewport.
-                            let steps = (length / 8.).ceil().clamp(1., 4096.) as usize;
-                            let at = |t: f32| ViewportPoint {
-                                x: last.x + (first.x - last.x) * t,
-                                y: last.y + (first.y - last.y) * t,
-                            };
-                            let closure: Vec<_> = (0..steps)
-                                .map(|i| {
-                                    (
-                                        at(i as f32 / steps as f32),
-                                        at((i as f32 + 0.5) / steps as f32),
-                                    )
-                                })
-                                .collect();
-                            mesh_edges::paint_edges(&closure, bounds.origin, |path| {
-                                window.paint_path(path, selection_outline.opacity(0.7));
-                            });
+                            Err(error) => eprintln!("Canvas overlay preparation failed: {error}"),
                         }
                     }
                 });

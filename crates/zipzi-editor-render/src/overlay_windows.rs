@@ -1,5 +1,6 @@
 //! Immutable mesh overlays on GPUI's D3D11 device and immediate queue.
 //! A deferred context isolates pipeline state; execution restores GPUI's state.
+use crate::canvas_overlay::{CanvasDrawList, CanvasRenderStats};
 use crate::{OverlayPass, OverlayStyle, OverlayViewport, overlay_data::Key};
 use anyhow::{Context, Result, ensure};
 use std::{ffi::CString, sync::Arc};
@@ -17,6 +18,14 @@ pub struct WindowsOverlayRenderer {
     markers: ID3D11VertexShader,
     solid: ID3D11PixelShader,
     marker_fill: ID3D11PixelShader,
+    canvas: ID3D11VertexShader,
+    canvas_fill: ID3D11PixelShader,
+    canvas_stats: CanvasRenderStats,
+    canvas_cached: Option<(
+        OverlayViewport,
+        Arc<CanvasDrawList>,
+        Arc<gpui::DirectXSurface>,
+    )>,
     blend: ID3D11BlendState,
     raster: ID3D11RasterizerState,
     depth: ID3D11DepthStencilState,
@@ -88,6 +97,10 @@ impl WindowsOverlayRenderer {
             markers: vertex("marker_vertex")?,
             solid: pixel("solid_fragment")?,
             marker_fill: pixel("marker_fragment")?,
+            canvas: vertex("canvas_vertex")?,
+            canvas_fill: pixel("canvas_fragment")?,
+            canvas_stats: CanvasRenderStats::default(),
+            canvas_cached: None,
             immediate,
             deferred: deferred.context("overlay deferred context")?,
             blend: blend.context("overlay blend")?,
@@ -100,6 +113,87 @@ impl WindowsOverlayRenderer {
     }
     pub fn uses_device(&self, device: &ID3D11Device) -> bool {
         self.device == *device
+    }
+    pub fn canvas_stats(&self) -> CanvasRenderStats {
+        self.canvas_stats
+    }
+    /// Uses the same ordered 64-byte instances as Metal, on GPUI's D3D11 device.
+    pub fn draw_prepared(
+        &mut self,
+        viewport: OverlayViewport,
+        list: Arc<CanvasDrawList>,
+    ) -> Result<Option<Arc<gpui::DirectXSurface>>> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("overlay.d3d11_canvas");
+        let uniforms = crate::overlay_data::canvas_uniforms(viewport)?;
+        self.canvas_stats = CanvasRenderStats {
+            instances: list.primitives.len(),
+            ..Default::default()
+        };
+        if list.primitives.is_empty() {
+            self.canvas_cached = None;
+            return Ok(None);
+        }
+        if let Some((v, old, image)) = &self.canvas_cached {
+            if *v == viewport && (Arc::ptr_eq(old, &list) || **old == *list) {
+                self.canvas_stats.cached = true;
+                return Ok(Some(image.clone()));
+            }
+        }
+        let (texture, _) = self.target(viewport.extent, 1)?;
+        let (msaa, rtv) = self.target(viewport.extent, 4)?;
+        let constants = self.buffer(
+            std::slice::from_ref(&uniforms),
+            D3D11_BIND_CONSTANT_BUFFER,
+            0,
+        )?;
+        let buffer = self.buffer(&list.primitives, D3D11_BIND_SHADER_RESOURCE, 64)?;
+        let mut view = None;
+        unsafe {
+            self.device.CreateShaderResourceView(
+                &buffer,
+                Some(&D3D11_SHADER_RESOURCE_VIEW_DESC {
+                    Format: DXGI_FORMAT_UNKNOWN,
+                    ViewDimension: D3D_SRV_DIMENSION_BUFFER,
+                    Anonymous: D3D11_SHADER_RESOURCE_VIEW_DESC_0 {
+                        Buffer: D3D11_BUFFER_SRV {
+                            Anonymous1: D3D11_BUFFER_SRV_0 { FirstElement: 0 },
+                            Anonymous2: D3D11_BUFFER_SRV_1 {
+                                NumElements: list.primitives.len() as u32,
+                            },
+                        },
+                    },
+                }),
+                Some(&mut view),
+            )?;
+            let c = &self.deferred;
+            c.ClearState();
+            c.RSSetViewports(Some(&[D3D11_VIEWPORT {
+                Width: viewport.extent[0] as f32,
+                Height: viewport.extent[1] as f32,
+                MaxDepth: 1.,
+                ..Default::default()
+            }]));
+            c.RSSetState(&self.raster);
+            c.OMSetBlendState(&self.blend, None, u32::MAX);
+            c.OMSetDepthStencilState(&self.depth, 0);
+            c.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            c.VSSetConstantBuffers(0, Some(&[Some(constants)]));
+            c.ClearRenderTargetView(&rtv, &[0.; 4]);
+            c.OMSetRenderTargets(Some(&[Some(rtv)]), None);
+            c.VSSetShader(&self.canvas, None);
+            c.PSSetShader(&self.canvas_fill, None);
+            c.VSSetShaderResources(1, Some(&[view]));
+            c.DrawInstanced(6, list.primitives.len() as u32, 0, 0);
+            c.OMSetRenderTargets(None, None);
+            c.VSSetShaderResources(1, Some(&[None]));
+            c.ResolveSubresource(&texture, 0, &msaa, 0, DXGI_FORMAT_B8G8R8A8_UNORM);
+        }
+        let image = self.publish(texture, viewport.extent)?;
+        self.canvas_stats.upload_bytes = std::mem::size_of_val(list.primitives.as_slice());
+        self.canvas_stats.draw_calls = 1;
+        self.canvas_cached = Some((viewport, list, image.clone()));
+        Ok(Some(image))
     }
     pub fn draw_pass(
         &mut self,
@@ -169,9 +263,19 @@ impl WindowsOverlayRenderer {
             c.OMSetRenderTargets(None, None);
             c.VSSetShaderResources(0, Some(&[None]));
         }
+        let image = self.publish(texture, viewport.extent)?;
+        self.cached[slot] = Some((key, image.clone()));
+        Ok(Some(image))
+    }
+    fn publish(
+        &self,
+        texture: ID3D11Texture2D,
+        extent: [u32; 2],
+    ) -> Result<Arc<gpui::DirectXSurface>> {
         let mut commands = None;
         unsafe {
-            c.FinishCommandList(false, Some(&mut commands))?;
+            self.deferred
+                .FinishCommandList(false, Some(&mut commands))?;
         }
         let mut view = None;
         let device5: ID3D11Device5 = self.device.cast()?;
@@ -187,7 +291,7 @@ impl WindowsOverlayRenderer {
         let image = Arc::new(gpui::DirectXSurface {
             device: self.device.clone(),
             view: view.context("overlay SRV")?,
-            extent: viewport.extent,
+            extent,
             ready: ready.clone(),
             ready_value: 1,
             consumed: consumed.context("overlay consumed fence")?,
@@ -199,8 +303,7 @@ impl WindowsOverlayRenderer {
             self.immediate.ExecuteCommandList(&commands, true);
             context4.Signal(&ready, 1)?;
         }
-        self.cached[slot] = Some((key, image.clone()));
-        Ok(Some(image))
+        Ok(image)
     }
     fn target(
         &self,

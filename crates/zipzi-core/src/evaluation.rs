@@ -75,7 +75,8 @@ pub(crate) fn authoring_rotation_pose(
     }
     if blended {
         pose.angle = pose.angle.clamp(-3600., 3600.);
-        pose.scale = pose.scale.clamp(0.0001, 100.);
+        let (minimum, maximum) = doc.get_transform(id).unwrap().rotation_scale_bounds();
+        pose.scale = pose.scale.clamp(minimum, maximum);
     }
     pose
 }

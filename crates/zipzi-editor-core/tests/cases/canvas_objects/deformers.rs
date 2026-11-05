@@ -62,12 +62,15 @@ fn rotation_gizmo_retains_arbitrary_angles_at_small_authored_scales_and_large_or
                     ToolId::Select,
                     DeformerVisibility::default()
                 ),
-                // At subpixel sizes the root and tip share the same target;
-                // translation keeps precedence over an invisible scale marker.
-                Some(HitTarget::Component(ComponentRef {
-                    object: object.clone(),
-                    id: 0,
-                }))
+                // The closest point wins even when both controls fit in one pixel.
+                Some(if distance2(points[0], points[1]) == 0. {
+                    HitTarget::Component(ComponentRef {
+                        object: object.clone(),
+                        id: 0,
+                    })
+                } else {
+                    HitTarget::DeformerHandle(object.clone(), DeformerHandle::RotationScale)
+                })
             );
         }
     }
@@ -1276,5 +1279,132 @@ fn undriven_warp_binding_keeps_identity_during_control_drag() -> anyhow::Result<
         assert_eq!(control_points(&mut editor, &object)?, after);
         check(&editor);
     }
+    Ok(())
+}
+
+#[test]
+fn regular_warp_outline_picking_visibility_and_selection() -> anyhow::Result<()> {
+    let (mut editor, _dir, object) = deformer_editor(false)?;
+    editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+    let history = editor.document().unwrap().history_lengths();
+    for zoom in [0.1, 1., 4.] {
+        editor.set_zoom_at(zoom, None);
+        let frame = shown(&mut editor)?;
+        let control = frame
+            .geometry
+            .controls
+            .iter()
+            .find(|c| c.object == object)
+            .unwrap();
+        let edges = frame.geometry.warp_outline(control, frame.transform);
+        assert!(!edges.is_empty());
+        let (a, b) = edges[0];
+        let point = ViewportPoint {
+            x: (a.x + b.x) / 2.,
+            y: (a.y + b.y) / 2.,
+        };
+        assert!(
+            editor
+                .overlay()
+                .deformers
+                .iter()
+                .any(|d| d.kind == ControlKind::Warp && d.outline_only)
+        );
+        assert!(
+            editor
+                .pick_candidates(point, Some(frame.version))
+                .iter()
+                .any(|c| c.object == object)
+        );
+        let binding = frame.version.binding;
+        editor.set_regular_deformers_visible(binding, false);
+        assert!(!editor.regular_deformers_visible(binding));
+        assert!(
+            editor
+                .overlay()
+                .deformers
+                .iter()
+                .all(|d| d.kind != ControlKind::Warp)
+        );
+        assert!(editor.overlay().rotation_bones.is_empty());
+        assert_ne!(
+            frame.geometry.hit(
+                point,
+                frame.transform,
+                &[],
+                ToolId::Select,
+                DeformerVisibility {
+                    hide_unselected: true,
+                    ..Default::default()
+                }
+            ),
+            Some(HitTarget::Object(object.clone()))
+        );
+        editor.execute(EditorCommand::SelectObject(object.clone()))?;
+        assert!(
+            editor
+                .overlay()
+                .deformers
+                .iter()
+                .any(|d| d.kind == ControlKind::Warp && !d.outline_only)
+        );
+        editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+        editor.set_regular_deformers_visible(binding, true);
+    }
+    editor.set_zoom_at(1., None);
+    let frame = shown(&mut editor)?;
+    let control = frame
+        .geometry
+        .controls
+        .iter()
+        .find(|c| c.object == object)
+        .unwrap();
+    let (a, b) = frame.geometry.warp_outline(control, frame.transform)[0];
+    let point = ViewportPoint {
+        x: (a.x + b.x) / 2.,
+        y: (a.y + b.y) / 2.,
+    };
+    editor.hover_canvas(frame.version.binding, Some(point))?;
+    assert_eq!(
+        editor.overlay().hovered_deformer_label.as_deref(),
+        Some("Warp")
+    );
+    click(&mut editor, point, false)?;
+    assert_eq!(
+        editor.document().unwrap().context().selections,
+        [object.clone()]
+    );
+    editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+    editor.execute(EditorCommand::SetObjectsLocked {
+        objects: vec![object.clone()],
+        locked: true,
+    })?;
+    assert!(editor.overlay().deformers.iter().any(|d| d.outline_only));
+    assert!(
+        !editor
+            .pick_candidates(point, Some(frame.version))
+            .iter()
+            .any(|c| c.object == object)
+    );
+    Ok(())
+}
+
+#[test]
+fn regular_deformer_visibility_is_independent_between_viewports() -> anyhow::Result<()> {
+    let (mut editor, _dir, _) = deformer_editor(false)?;
+    let binding = shown(&mut editor)?.version.binding;
+    let other = ViewportId::new();
+    editor.register_viewport(other, ViewportKind::Modeling)?;
+    let other = editor.viewport_binding(other).unwrap();
+    let evaluations = editor.evaluation_count();
+    editor.set_regular_deformers_visible(binding, false);
+    assert!(!editor.regular_deformers_visible(binding));
+    assert!(editor.regular_deformers_visible(other));
+    editor.set_regular_deformers_visible(other, false);
+    editor.set_regular_deformers_visible(binding, true);
+    assert!(editor.regular_deformers_visible(binding));
+    assert!(!editor.regular_deformers_visible(other));
+    assert_eq!(editor.evaluation_count(), evaluations);
     Ok(())
 }

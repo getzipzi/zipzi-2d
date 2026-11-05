@@ -1424,6 +1424,12 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                                ('warp_authoring',
                                                 'Persistent Warp editing policy; never used for runtime deformation '
                                                 'evaluation.'),
+                                               ('rotation_scale_unit',
+                                                "Unit multiplier already applied to an imported Rotation's scale "
+                                                'channel.\n'
+                                                'Retains its BlendShape clamp limits and export units without '
+                                                'multiplying\n'
+                                                'the pose again. None uses native authoring units (1).'),
                                                ('original_shape',
                                                 'Independent original shape and its first-key update policy, retained '
                                                 'only by native projects.')],
@@ -1431,8 +1437,8 @@ DATA: dict[str, Entry] = {'zipzi.modeling.scene': {'children': ('zipzi.modeling.
                                     'signature': '(*, id: str, runtime_id: str, name: str, part_id: PartId | None = '
                                                  'None, parent_id: TransformId | None = None, data: TransformData, '
                                                  'enabled: bool, appearance: Appearance, warp_authoring: '
-                                                 'WarpAuthoringSettings | None = None, original_shape: '
-                                                 'DeformerOriginal | None = None)',
+                                                 'WarpAuthoringSettings | None = None, rotation_scale_unit: float | '
+                                                 'None = None, original_shape: DeformerOriginal | None = None)',
                                     'type_refs': ('zipzi.modeling.scene.Appearance',
                                                   'zipzi.modeling.scene.DeformerOriginal',
                                                   'zipzi.modeling.scene.PartId',

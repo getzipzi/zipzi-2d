@@ -294,7 +294,8 @@ pub(super) fn evaluate(
 
                 if t.kind() == TransformKind::Rotation {
                     transform_state.pose.angle = transform_state.pose.angle.clamp(-3600.0, 3600.0);
-                    transform_state.pose.scale = transform_state.pose.scale.clamp(0.0001, 100.0);
+                    let (minimum, maximum) = t.rotation_scale_bounds();
+                    transform_state.pose.scale = transform_state.pose.scale.clamp(minimum, maximum);
                 }
                 transform_state.appearance.opacity =
                     transform_state.appearance.opacity.clamp(0.0, 1.0);

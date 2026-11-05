@@ -185,6 +185,7 @@ struct Exporter<'a> {
     serial: u64,
     root_part: String,
     rest: HashMap<String, Vec<Vec2>>,
+    rotation_units: HashMap<String, f64>,
 }
 impl<'a> Exporter<'a> {
     fn uuid(&mut self) -> String {
@@ -227,7 +228,7 @@ impl<'a> Exporter<'a> {
         -1.
     }
     fn source_positions(&self, parent: &str, values: &[Vec2]) -> N {
-        if parent.is_empty() {
+        if parent.is_empty() || self.coordinate_unit(parent) != 1. {
             points(
                 &values
                     .iter()
@@ -247,21 +248,38 @@ impl<'a> Exporter<'a> {
         if parent.is_empty() {
             value + f64::from(self.canvas.origin.x)
         } else {
-            value
+            value * self.coordinate_unit(parent)
         }
     }
     fn source_origin_y(&self, parent: &str, value: f64) -> f64 {
         if parent.is_empty() {
             f64::from(self.canvas.origin.y) - value
         } else {
-            value
+            value * self.coordinate_unit(parent)
         }
     }
     fn source_delta(&self, parent: &str, value: Vec2) -> Vec2 {
         if parent.is_empty() {
             Vec2::new(value.x, -value.y)
         } else {
-            value
+            let unit = self.coordinate_unit(parent);
+            Vec2::new(
+                (f64::from(value.x) * unit) as f32,
+                (f64::from(value.y) * unit) as f32,
+            )
+        }
+    }
+    /// Undo imported scale-channel normalization in descendant length channels.
+    /// Warp inputs stay dimensionless, but pass inherited Rotation units through.
+    fn coordinate_unit(&self, parent: &str) -> f64 {
+        if self
+            .doc
+            .get_transform(parent)
+            .is_some_and(|t| t.warp().is_some())
+        {
+            1.
+        } else {
+            self.rotation_units.get(parent).copied().unwrap_or(1.)
         }
     }
     fn parent_deformer(&self, id: &str) -> N {
@@ -672,6 +690,15 @@ pub(crate) fn encode_with_animation(
             )
         })
         .collect();
+    let mut rotation_units = HashMap::new();
+    for id in doc.sorted_transforms() {
+        let transform = doc.get_transform(&id).unwrap();
+        let inherited = rotation_units
+            .get(transform.parent())
+            .copied()
+            .unwrap_or(1.);
+        rotation_units.insert(id, inherited * f64::from(transform.rotation_scale_unit()));
+    }
     let mut exporter = Exporter {
         doc,
         canvas,
@@ -681,6 +708,7 @@ pub(crate) fn encode_with_animation(
         serial: 0,
         root_part: String::new(),
         rest,
+        rotation_units,
     };
     let root_part = exporter.uuid();
     exporter.root_part = root_part.clone();

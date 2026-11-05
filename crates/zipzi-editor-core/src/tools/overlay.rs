@@ -6,7 +6,7 @@ use crate::{
 };
 use std::collections::HashSet;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayVertex {
     pub id: u32,
     pub position: ViewportPoint,
@@ -24,14 +24,15 @@ pub enum OverlayVertexKind {
     RotationCenter,
     RotationTip,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayDeformer {
+    pub outline_only: bool,
     pub kind: ControlKind,
     pub lines: Vec<(ViewportPoint, ViewportPoint)>,
     pub selected: bool,
     pub hovered: bool,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayRotationBone {
     pub points: [ViewportPoint; 4],
     pub scale: f32,
@@ -39,7 +40,7 @@ pub struct OverlayRotationBone {
     pub hovered: bool,
 }
 /// Glue endpoints describe a relationship, not draggable components.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayGlue {
     pub pairs: Vec<(ViewportPoint, ViewportPoint)>,
     pub points: Vec<OverlayGluePoint>,
@@ -52,15 +53,16 @@ pub enum GluePointState {
     Restricted,
     Editable,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayGluePoint {
     pub position: ViewportPoint,
     pub state: GluePointState,
     pub selected: bool,
     pub hovered: bool,
 }
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct OverlaySnapshot {
+    pub hovered_deformer_label: Option<String>,
     pub manual_mesh_feedback: Option<super::ManualMeshFeedback>,
     pub vertices: Vec<OverlayVertex>,
     /// Mesh topology; controls retain their own semantic line groups below.
@@ -107,7 +109,7 @@ pub struct OverlaySnapshot {
     pub active_component: Option<ComponentRef>,
     pub origin_crosshair: Option<ViewportPoint>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OverlayHandle {
     /// A Bezier tangent endpoint, distinct from transform-frame handles.
     pub tangent: bool,
@@ -162,7 +164,12 @@ impl ToolController {
             .filter(|c| {
                 c.kind != ControlKind::Glue
                     && selection.contains(&c.object)
-                    && scene.control_visible(c, &selection, self.active, self.deformer_visibility)
+                    && scene.control_visible(
+                        c,
+                        &selection,
+                        self.active,
+                        self.deformer_visibility_for(frame),
+                    )
             })
             .map(|c| &c.object);
         meshes
@@ -220,6 +227,20 @@ impl ToolController {
             .clone()
             .filter(|_| self.hovered_binding == Some(frame.version.binding));
         let mut out = OverlaySnapshot::default();
+        out.hovered_deformer_label = hovered_target
+            .as_ref()
+            .filter(|hit| {
+                scene.control(&hit.object().id).is_some_and(|c| {
+                    c.kind == ControlKind::Warp
+                        && scene.control_visible(
+                            c,
+                            selection,
+                            self.active,
+                            self.deformer_visibility_for(frame),
+                        )
+                })
+            })
+            .map(|hit| scene.index.name(hit.object()).to_owned());
         out.warp_frame_adjusting = self
             .gesture
             .as_ref()
@@ -408,11 +429,27 @@ impl ToolController {
         for control in &scene.controls {
             #[cfg(feature = "bench-instrumentation")]
             let _span = zipzi_core::benchmark::span("overlay.controls");
-            if !scene.control_visible(control, selection, self.active, self.deformer_visibility) {
+            if !scene.control_visible(
+                control,
+                selection,
+                self.active,
+                self.deformer_visibility_for(frame),
+            ) {
                 continue;
             }
-            let points = scene.control_points(control, t);
             let selected = selection.contains(&control.object);
+            let detail = selected
+                || (!self.deformer_visibility_for(frame).hide_unselected
+                    && (self.deformer_visibility.all
+                        || self.deformer_visibility.ancestors
+                            && selection
+                                .iter()
+                                .any(|r| scene.ancestors(r).contains(&control.object))));
+            let points = if control.kind == ControlKind::Warp && !detail {
+                Vec::new()
+            } else {
+                scene.control_points(control, t)
+            };
             let hovered = control.kind != ControlKind::Rotation
                 && hovered_target
                     .as_ref()
@@ -492,6 +529,7 @@ impl ToolController {
                 continue;
             }
             let mut deformer = OverlayDeformer {
+                outline_only: control.kind == ControlKind::Warp && !detail,
                 kind: control.kind,
                 lines: Vec::new(),
                 selected,
@@ -542,7 +580,9 @@ impl ToolController {
                 }
             }
             {
-                if control.kind != ControlKind::Rotation {
+                if control.kind == ControlKind::Warp && !detail {
+                    deformer.lines = scene.warp_outline(control, t);
+                } else if control.kind != ControlKind::Rotation {
                     deformer.lines.extend(
                         control
                             .edges

@@ -182,8 +182,9 @@ impl Document {
                     .fold(0., f64::max);
             }
         }
-        let minimum = f64::from(0.0001f32);
-        if low < minimum || high > 100. || low * ratio < minimum || high * ratio > 100. {
+        let (minimum, maximum) = self.get_transform(id).unwrap().rotation_scale_bounds();
+        let (minimum, maximum) = (f64::from(minimum), f64::from(maximum));
+        if low < minimum || high > maximum || low * ratio < minimum || high * ratio > maximum {
             return Err(Status::error(
                 "ROTATION_SCALE_CLAMP_UNPROVEN",
                 format!(

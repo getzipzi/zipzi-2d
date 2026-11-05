@@ -322,8 +322,10 @@ impl<'a> Moc3EncoderContext<'a> {
                             )?;
                             self.l.scalar("rotation_key_src.origin_x", origin.x)?;
                             self.l.scalar("rotation_key_src.origin_y", origin.y)?;
-                            self.l
-                                .scalar("rotation_key_src.scale", f.scale.unwrap_or(0.0))?;
+                            self.l.scalar(
+                                "rotation_key_src.scale",
+                                f.scale.unwrap_or(0.0) / rot.rotation_scale_unit(),
+                            )?;
                             self.l.integer("rotation_key_src.reflect_x", 0)?;
                             self.l.integer("rotation_key_src.reflect_y", 0)?;
                             write_bs_colors(&mut self.l, "rotation_key_src", f.multiply, f.screen)?;

@@ -159,6 +159,20 @@ overlays, live modifier changes, angle readouts, uniform scaling and Alt/Option
 display-length adjustment in all three languages. Set `ZIPZI_SCREENSHOT_SAVE=1`
 to save all fifteen images.
 
+Unselected Warp deformers show their evaluated outer lattice outline by default.
+Click the outline to select the Warp; its interior remains available for Mesh picking.
+The title-bar eye button hides unselected Warp outlines and Rotation bones in that
+viewport, including direct picking, while selected editing controls remain available.
+All/ancestor Warp grid commands add reference detail to these outlines.
+Object and Warp transform frames share a 6 logical-pixel margin.
+Primary editing points and handles render at 6 logical pixels; secondary Warp
+lattice points render at 5 pixels. Both use a circular 6-pixel hit radius. Editable lines use a 3-pixel hit tolerance. Rotation surfaces
+use the exact bone polygon; unselected bones render at 20% opacity.
+Picking ranks points, lines, then surfaces. Within a point/line class the nearest
+hit wins, with selected objects resolving equal distances; Mesh surfaces retain
+compositing order. Hover changes color without growing markers or their hitboxes.
+Reference lines use 0.5-pixel strokes and active lines use 1-pixel strokes.
+
 ## Deformer creation
 
 New Warp and New Rotation wrap the current selection in one undo step. Toolbar,

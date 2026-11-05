@@ -103,23 +103,17 @@ impl Exporter<'_> {
                     }
                     DeltaKeyforms::Rotation(values) => {
                         let delta = &values[slot];
+                        let transform = self.doc.get_transform(target).unwrap();
                         if let Some(origin) = delta.origin {
+                            let origin = self.source_delta(transform.parent(), origin);
                             add_attr(&mut form, "originX", origin.x);
-                            add_attr(
-                                &mut form,
-                                "originY",
-                                self.source_delta(
-                                    self.doc.get_transform(target).unwrap().parent(),
-                                    origin,
-                                )
-                                .y,
-                            );
+                            add_attr(&mut form, "originY", origin.y);
                         }
                         if let Some(angle) = delta.angle {
                             add_attr(&mut form, "angle", self.rotation_sign() * angle);
                         }
                         if let Some(scale) = delta.scale {
-                            add_attr(&mut form, "scale", scale);
+                            add_attr(&mut form, "scale", scale / transform.rotation_scale_unit());
                         }
                         add_appearance(&mut form, delta.opacity, delta.multiply, delta.screen);
                     }

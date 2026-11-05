@@ -158,6 +158,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 check_status!(
                     self.doc
                         .create_imported_transform(Transform {
+                            rotation_scale_unit: None,
                             warp_authoring: None,
                             original_shape: None,
                             id: id.clone(),
@@ -199,6 +200,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 }
             } else {
                 // Rotation Deformer
+                let scale_unit = self.import_scale_unit(&parent_id);
                 let kf_off = read_i32(
                     self.bytes,
                     offsets[section::ROTATION_SRC_KEYFORM_OFF] as usize + local_idx * 4,
@@ -285,7 +287,7 @@ impl<'a> Moc3DecoderContext<'a> {
                         rotation: RotationPose {
                             origin,
                             angle: self.import_angle(angle),
-                            scale,
+                            scale: scale * scale_unit,
                             reflect_x: ref_x,
                             reflect_y: ref_y,
                         },
@@ -298,6 +300,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 check_status!(
                     self.doc
                         .create_imported_transform(Transform {
+                            rotation_scale_unit: (scale_unit != 1.).then_some(scale_unit),
                             warp_authoring: None,
                             original_shape: None,
                             id: id.clone(),

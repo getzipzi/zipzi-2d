@@ -246,7 +246,18 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         let radius = |g: &zipzi_editor_core::DeformerGizmo| {
             (g.handles[0].1.x - g.center.x).hypot(g.handles[0].1.y - g.center.y)
         };
-        assert!((radius(&initial) - 128.).abs() < 0.01);
+        let authored_length = h.view.read_with(&h.cx, |view, _| {
+            let key = zipzi_editor_core::property::deformer::BONE_LENGTH.key;
+            view.editor
+                .document()
+                .unwrap()
+                .property_values(&object)
+                .unwrap()[&key]
+                .text()
+                .parse::<f32>()
+                .unwrap()
+        });
+        assert!((radius(&initial) - authored_length).abs() < 0.01);
         assert!((radius(&scaled) - radius(&initial) * 1.5).abs() < 0.01);
         h.view.read_with(&h.cx, |view, _| {
             let index = view.editor.document().unwrap().object_index();

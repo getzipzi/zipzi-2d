@@ -90,6 +90,11 @@ cargo run --locked -p zipzi-project --example project_cubism -- \
 | X/angle physics, vertices, normalization and integral FPS | Editable physics settings |
 | Artwork, including unused assets | Embedded PNG atlases and texture-input extensions |
 
+Imported Rotation scale units are undone in both ordinary and morph forms.
+Descendant length channels receive the accumulated unit conversion through mixed
+Rotation/Warp hierarchies, while Warp-local UVs remain dimensionless. This retains
+the original BlendShape scale clamp limits without requiring Zipzi metadata in CMO3.
+
 Texture assets do not contain original PSD layers, painting history or undo
 history. Unsupported features and conversion losses are reported. Examples
 include some blend curves, fractional draw orders, Y physics, custom forces,

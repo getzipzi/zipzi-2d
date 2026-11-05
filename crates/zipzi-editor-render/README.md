@@ -52,13 +52,32 @@ cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu
   models/local/mao/runtime/mao_pro.model3.json target/wgpu-mao
 ```
 
-Mesh edges and mesh vertex markers use native instanced overlay passes on both
+Canvas geometry uses an ordered native instance stream on both platforms.
+`canvas_overlay::CanvasDrawList` compiles Warp outlines/grids, Bezier controls,
+Rotation bones, Glue, transform frames, reference/guide/image lines, origin axes,
+marquee and even-odd lasso fills into lines, bordered round/square markers and
+triangles. The palette and painter order are shared with the GPUI fallback.
+Geometry and interaction remain in `zipzi-editor-core`; text and widgets remain
+in GPUI. The normal path composites one immutable surface with one instanced draw,
+using 4x MSAA plus analytic marker coverage. There is no normal-path GPUI geometry
+painting or CPU readback.
+
+`CanvasOverlayCache` belongs to each viewport and reuses prepared instances on
+unchanged repaints. Each renderer reuses its texture for unchanged instances,
+viewport and consumer queue. Hover, theme, view or geometry changes invalidate
+the appropriate cache. Retained scenes keep immutable old textures across later
+updates and renderer teardown. `canvas_stats` reports instances, upload bytes,
+draw calls and texture-cache hits. Shader/device initialization failures use the
+same prepared geometry through the GPUI fallback.
+
+The older Mesh edge/vertex diagnostic APIs remain available on both
 platforms: Metal (`overlay.rs`, `overlay.metal`) and D3D11 (`overlay_windows.rs`,
 `overlay.hlsl`). They share instance packing/cache keys in `overlay_data.rs`,
 including selection/hover/restriction flags and normal-before-emphasized ordering.
-Edges use 4x MSAA; markers use analytic circle coverage. Separate edge and vertex
-textures keep GPUI semantic/control lines between them, while non-mesh handles
-and interaction feedback remain GPUI primitives. Each published texture is
+Edges use 4x MSAA; markers use analytic circle coverage. Marker hover recolors the inner border
+without changing the six-logical-pixel silhouette; the shared radius and hover
+color come from `zipzi-editor-core::canvas_style`. Separate edge and vertex
+textures support the historical mesh-only comparison tests. Each published texture is
 immutable, so a retained old scene can be redrawn after later poses or renderer
 teardown. Shader/device failures retain the GPUI fallback.
 
@@ -66,11 +85,37 @@ The Windows overlay renderer is confined to its owning UI thread. It records on
 a private deferred context and executes with state restoration on GPUI's same
 D3D11 immediate context; ready/consumed fences use the existing surface contract.
 No D3D12 copy or CPU readback is needed for these D3D11-native overlay textures.
-`ZIPZI_TRACE_BATCH_MESH_EDGES=1` with tracing enabled selects the former batched
-GPUI mesh path for comparisons, matching the Metal diagnostic switch. Trace
-metadata includes `diagnostics.native_mesh_overlay`; `overlay_shader_surface`
-records the Windows edge/vertex passes. The historical `metal_mesh_overlay`
-metadata key is retained for existing trace consumers.
+`ZIPZI_TRACE_BATCH_MESH_EDGES=1` with tracing enabled selects the unified GPUI
+canvas fallback for same-binary comparisons on both platforms. Trace metadata
+includes `diagnostics.native_canvas_overlay`; historical `native_mesh_overlay`
+and `metal_mesh_overlay` keys remain available. `canvas_overlay_draw` records
+instance/upload/draw/cache counts; Windows `overlay_shader_surface` pass 0 is the
+complete canvas surface. Detailed CPU spans include `overlay.canvas_prepare`,
+`overlay.metal_canvas` / `overlay.d3d11_canvas`, and `overlay.gpui_canvas_fallback`.
+
+Focused coverage:
+
+```sh
+cargo test --locked -p zipzi-editor-render --lib canvas_overlay
+cargo test --locked -p zipzi-editor-render --test canvas_overlay_metal
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --features test-support --test native_render overlay::
+# Explicit Release CPU comparison (GPUI emission vs prepared native submission):
+env -u ZIPZI_DEV_SESSION_DIR cargo test --release --locked -p zipzi-editor --features test-support --test native_render native_canvas_cpu_submission_benchmark -- --ignored --nocapture
+```
+
+The Metal tests execute on a real GPU and cover themes, 1x/1.5x/2x DPI,
+fractional origins, control states, translucent bones, even-odd fills, cache reuse
+and retained surfaces. The native Editor tests compare complete surfaces with
+the shared GPUI fallback and the pre-migration deformer painter. D3D11 has the
+matching entry point, packed instances and Windows hardware tests. The
+[Windows validation record](../../docs/archive/benchmarks/2026-11-05-windows-native-canvas-validation.md)
+covers RTX 5060 hardware execution, pixel assertions and native-window workloads;
+complete Editor-surface parity with the GPUI fallback remains a separate gate.
+The explicit CPU benchmark writes `target/canvas-overlay-cpu.json`, with separate
+P50/P95 preparation, legacy/shared GPUI emission and native encode/submission
+times. It drains the queue outside timing to bound in-flight resources. This
+headless measurement excludes model evaluation, OS input, display and readback;
+it does not establish input-to-display latency.
 
 Windows model images use the D3D12-to-D3D11 shared texture bridge in
 `src/wgpu_windows.rs`. The Editor selects

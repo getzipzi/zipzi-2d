@@ -51,6 +51,205 @@ fn style() -> OverlayStyle {
         restricted: [0.6, 0.6, 0.6, 1.],
     }
 }
+
+#[test]
+fn full_canvas_controls_share_metal_layout_and_keep_immutable_surfaces() -> Result<()> {
+    use zipzi_editor_render::canvas_overlay::*;
+    let device = device()?;
+    let mut renderer = WindowsOverlayRenderer::new(device.clone())?;
+    let mut gpui = gpui_windows::SurfaceTestRenderer::new(device)?;
+    let overlay = OverlaySnapshot {
+        vertices: [
+            OverlayVertexKind::Mesh,
+            OverlayVertexKind::WarpGrid,
+            OverlayVertexKind::Warp,
+            OverlayVertexKind::RotationCenter,
+            OverlayVertexKind::RotationTip,
+        ]
+        .into_iter()
+        .enumerate()
+        .flat_map(|(row, kind)| {
+            (0..8).map(move |flags| OverlayVertex {
+                id: (row * 8 + flags) as u32,
+                kind,
+                position: ViewportPoint {
+                    x: 12. + flags as f32 * 16.,
+                    y: 12. + row as f32 * 16.,
+                },
+                selected: flags & 1 != 0,
+                hovered: flags & 2 != 0,
+                editable: flags & 4 == 0,
+            })
+        })
+        .collect(),
+        ..Default::default()
+    };
+    for dark in [false, true] {
+        let palette = CanvasPalette::new(dark);
+        let list = Arc::new(CanvasDrawList::new(
+            &overlay,
+            [140., 92.],
+            palette,
+            CanvasOptions::default(),
+        )?);
+        for scale in [1., 1.5, 2.] {
+            let extent = [(140. * scale) as u32, (92. * scale) as u32];
+            let viewport = OverlayViewport {
+                extent,
+                scale,
+                origin: [0.25, -0.375],
+            };
+            let image = renderer.draw_prepared(viewport, list.clone())?.unwrap();
+            assert_eq!(renderer.canvas_stats().draw_calls, 1);
+            assert!(Arc::ptr_eq(
+                &image,
+                &renderer.draw_prepared(viewport, list.clone())?.unwrap()
+            ));
+            assert!(renderer.canvas_stats().cached);
+            assert_eq!(renderer.canvas_stats().upload_bytes, 0);
+            let before = gpui.render(&scene(image.clone()), extent, [1.; 4])?;
+            if scale == 2. {
+                // A white canvas hides missing marker fill beneath translucent borders.
+                let transparent = gpui.render(&scene(image.clone()), extent, [0.; 4])?;
+                let v = &overlay.vertices[16]; // Idle, editable Warp.
+                let x = ((v.position.x + viewport.origin[0] - 3.) * scale
+                    - (viewport.origin[0] * scale).floor()
+                    + 1.) as u32;
+                let y = ((v.position.y + viewport.origin[1]) * scale
+                    - (viewport.origin[1] * scale).floor()) as u32;
+                let expected = palette
+                    .deformer
+                    .map(|v| ((v * 0.65 + 0.35) * 255.).round() as u8);
+                let actual = transparent.get_pixel(x, y).0;
+                assert!(
+                    actual.iter().zip(expected).all(|(a, b)| a.abs_diff(b) <= 2),
+                    "idle Warp border={actual:?}, expected={expected:?}"
+                );
+            }
+            for v in &overlay.vertices {
+                let center = [
+                    (v.position.x + viewport.origin[0]) * scale
+                        - (viewport.origin[0] * scale).floor(),
+                    (v.position.y + viewport.origin[1]) * scale
+                        - (viewport.origin[1] * scale).floor(),
+                ];
+                let mut c = if !v.editable {
+                    palette.restricted
+                } else if v.kind == OverlayVertexKind::WarpGrid {
+                    if v.selected {
+                        palette.hollow
+                    } else {
+                        let mut c = palette.mesh;
+                        c[3] = if v.hovered { 1. } else { 0.6 };
+                        c
+                    }
+                } else if !v.selected {
+                    palette.hollow
+                } else if v.kind == OverlayVertexKind::Mesh {
+                    palette.mesh_selected
+                } else {
+                    palette.deformer
+                };
+                c = [
+                    c[0] * c[3] + 1. - c[3],
+                    c[1] * c[3] + 1. - c[3],
+                    c[2] * c[3] + 1. - c[3],
+                    1.,
+                ];
+                let actual = before
+                    .get_pixel(center[0].floor() as u32, center[1].floor() as u32)
+                    .0;
+                assert!(
+                    actual
+                        .iter()
+                        .zip(c)
+                        .all(|(a, b)| i32::from(*a).abs_diff((b * 255.).round() as i32) <= 2),
+                    "kind={:?} scale={scale} actual={actual:?} expected={c:?}",
+                    v.kind
+                );
+            }
+            let mut changed = (*list).clone();
+            changed.primitives[0].color = [0., 0., 1., 1.];
+            let other = renderer
+                .draw_prepared(viewport, Arc::new(changed))?
+                .unwrap();
+            assert!(!Arc::ptr_eq(&image, &other));
+            assert_eq!(before, gpui.render(&scene(image), extent, [1.; 4])?);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn full_canvas_lines_bones_and_even_odd_feedback_use_shared_painter_order() -> Result<()> {
+    use zipzi_editor_core::OverlayRotationBone;
+    use zipzi_editor_render::canvas_overlay::*;
+    let device = device()?;
+    let mut renderer = WindowsOverlayRenderer::new(device.clone())?;
+    let mut gpui = gpui_windows::SurfaceTestRenderer::new(device)?;
+    let p = |x, y| ViewportPoint { x, y };
+    let overlay = OverlaySnapshot {
+        lines: vec![(p(10., 5.5), p(90., 5.5))],
+        rotation_bones: vec![OverlayRotationBone {
+            points: [p(10., 20.), p(30., 10.), p(90., 20.), p(30., 30.)],
+            selected: false,
+            hovered: false,
+            scale: 1.,
+        }],
+        vertices: vec![OverlayVertex {
+            id: 1,
+            kind: OverlayVertexKind::Warp,
+            position: p(30., 20.),
+            selected: false,
+            hovered: false,
+            editable: true,
+        }],
+        lasso: vec![p(10., 50.), p(90., 90.), p(10., 90.), p(90., 50.)],
+        ..Default::default()
+    };
+    let list = Arc::new(CanvasDrawList::new(
+        &overlay,
+        [100.; 2],
+        CanvasPalette::new(false),
+        CanvasOptions::default(),
+    )?);
+    let image = renderer
+        .draw_prepared(
+            OverlayViewport {
+                extent: [100, 100],
+                scale: 1.,
+                origin: [0.; 2],
+            },
+            list,
+        )?
+        .unwrap();
+    let pixels = gpui.render(&scene(image), [100, 100], [1.; 4])?;
+    assert_eq!(
+        pixels.get_pixel(30, 20).0,
+        [255; 4],
+        "control covers translucent bone"
+    );
+    assert!(
+        pixels.get_pixel(50, 20).0[..3]
+            .iter()
+            .all(|v| v.abs_diff(233) <= 1)
+    );
+    assert!(
+        pixels.get_pixel(50, 5).0[..3]
+            .iter()
+            .all(|v| v.abs_diff(205) <= 1)
+    );
+    assert!(
+        pixels.get_pixel(50, 55).0[0] < 255,
+        "upper bow tie lobe is filled"
+    );
+    assert_eq!(
+        pixels.get_pixel(20, 70).0,
+        [255; 4],
+        "outside bow tie remains clear"
+    );
+    Ok(())
+}
 #[test]
 fn mesh_markers_match_metal_coverage_flags_and_fractional_dpi() -> Result<()> {
     let device = device()?;
@@ -115,21 +314,18 @@ fn mesh_markers_match_metal_coverage_flags_and_fractional_dpi() -> Result<()> {
                     };
                     let inner = (radius - scale - d + 0.5).clamp(0., 1.);
                     let mut color = base.map(|c| c * coverage);
-                    let mut alpha = coverage;
-                    if !v.selected || !v.editable {
-                        let border = if !v.editable { 80. / 255. } else { 0. };
-                        color =
-                            std::array::from_fn(|i| base[i] * inner + border * (coverage - inner));
-                    }
-                    if v.hovered {
-                        let outer = radius + 2. * scale;
-                        let ring = (outer - d + 0.5).clamp(0., 1.)
-                            * (d - (outer - scale) + 0.5).clamp(0., 1.)
-                            * (1. - coverage);
-                        for c in &mut color {
-                            *c += ring;
-                        }
-                        alpha += ring;
+                    let alpha = coverage;
+                    if !v.selected || !v.editable || v.hovered {
+                        let border = if v.hovered {
+                            [98. / 255., 200. / 255., 120. / 255.]
+                        } else if !v.editable {
+                            [80. / 255.; 3]
+                        } else {
+                            [0.; 3]
+                        };
+                        color = std::array::from_fn(|i| {
+                            base[i] * inner + border[i] * (coverage - inner)
+                        });
                     }
                     let actual = pixels.get_pixel(x as u32, y as u32).0;
                     for i in 0..3 {

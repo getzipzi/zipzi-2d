@@ -294,7 +294,7 @@ impl ManualMeshMode {
             .iter()
             .enumerate()
             .map(|(slot, &(id, _))| (id, crate::picking::distance2(point, project(slot))))
-            .filter(|(_, distance)| *distance <= 49.)
+            .filter(|(_, distance)| *distance <= crate::canvas_style::POINT_HIT_RADIUS.powi(2))
             .min_by(|a, b| a.1.total_cmp(&b.1))
         {
             return Hit::Vertex(id);
@@ -314,7 +314,7 @@ impl ManualMeshMode {
                         crate::picking::segment_distance2(point, project(a), project(b)),
                     )
                 })
-                .filter(|(_, distance)| *distance <= 25.)
+                .filter(|(_, distance)| *distance <= crate::canvas_style::LINE_HIT_RADIUS.powi(2))
                 .min_by(|a, b| a.1.total_cmp(&b.1))
             {
                 let ids = [mesh.vertices[a].0, mesh.vertices[b].0];

@@ -105,7 +105,7 @@ Part.__module__ = "zipzi.modeling.scene"
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class Transform(CompactValue):
-    'Document deformation transform with independent organization and deformation parents.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.\nwarp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.\noriginal_shape: Independent original shape and its first-key update policy, retained only by native projects.'
+    "Document deformation transform with independent organization and deformation parents.\n\nFields:\nid: Stable document object ID used by references; it is distinct from the exported runtime_id.\nruntime_id: External format/runtime identifier retained for import/export; not the document object ID.\nname: Human-readable display name; use the stable ID for identity because names can change.\npart_id: Organizational Part owner ID; independent of the deformation parent. None selects the\nroot/unassigned container.\nparent_id: Parent object ID in this hierarchy; independent of storage and drawing order. None\nselects the root/unassigned container.\ndata: Typed Warp or Rotation deformation definition; its variant determines lattice versus\nrotation-pose interpretation.\nenabled: Whether this object participates in evaluation; editor hiding is a separate state.\nappearance: Opacity and multiply/screen color factors for this object or shape.\nwarp_authoring: Persistent Warp editing policy; never used for runtime deformation evaluation.\nrotation_scale_unit: Unit multiplier already applied to an imported Rotation's scale channel.\nRetains its BlendShape clamp limits and export units without multiplying\nthe pose again. None uses native authoring units (1).\noriginal_shape: Independent original shape and its first-key update policy, retained only by native projects."
     id: str
     runtime_id: str
     name: str
@@ -115,6 +115,7 @@ class Transform(CompactValue):
     enabled: bool
     appearance: Appearance
     warp_authoring: (WarpAuthoringSettings | None) = None
+    rotation_scale_unit: (float | None) = None
     original_shape: (DeformerOriginal | None) = None
 
 Transform.__module__ = "zipzi.modeling.scene"

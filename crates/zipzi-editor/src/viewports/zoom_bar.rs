@@ -23,6 +23,8 @@ pub(crate) struct HeaderState {
     percentage: i32,
     zoom_enabled: [bool; 3],
     show_transparency_grid: bool,
+    show_regular_deformers: bool,
+    deformers_enabled: bool,
     background_enabled: bool,
     show_origin_crosshair: bool,
     origin_crosshair_enabled: bool,
@@ -51,6 +53,13 @@ pub(super) fn state(
                 ))
         }),
         show_transparency_grid: canvas.show_transparency_grid,
+        show_regular_deformers: canvas
+            .binding(&owner.editor)
+            .is_some_and(|b| owner.editor.regular_deformers_visible(b)),
+        deformers_enabled: !modal
+            && canvas
+                .binding(&owner.editor)
+                .is_some_and(|b| b.kind == zipzi_editor_core::ViewportKind::Modeling),
         background_enabled: !modal,
         show_origin_crosshair: canvas.show_origin_crosshair
             && canvas.origin_crosshair_available(owner),
@@ -153,6 +162,7 @@ impl RenderOnce for CanvasZoomBar {
         });
         let background_canvas = self.canvas.clone();
         let origin_canvas = self.canvas.clone();
+        let deformer_canvas = self.canvas.clone();
         let commands = ZOOM_ACTIONS.map(|(_, id, _)| {
             self.canvas.read(cx).command(
                 &state.editor,
@@ -201,6 +211,40 @@ impl RenderOnce for CanvasZoomBar {
                 t!("dock.canvas_display"),
                 Axis::Horizontal,
                 vec![
+                    compact::header_button(compact::toggle(
+                        Button::new("btn_regular_deformers"),
+                        header.show_regular_deformers,
+                    ))
+                    .icon(
+                        Icon::default()
+                            .data(include_bytes!("../../assets/icons/deformer-visible.svg")),
+                    )
+                    .accessibility_label(t!("dock.regular_deformers").into_owned())
+                    .tooltip(t!("dock.regular_deformers"))
+                    .disabled(!header.deformers_enabled)
+                    .on_click(move |_, window, cx| {
+                        if window.has_active_dialog(cx) {
+                            return;
+                        }
+                        let surface = deformer_canvas.read(cx);
+                        let Some(owner) = surface.owner.upgrade() else {
+                            return;
+                        };
+                        if owner.read(cx).modal {
+                            return;
+                        }
+                        let Some(binding) = surface.binding(&owner.read(cx).editor) else {
+                            return;
+                        };
+                        let visible = owner.read(cx).editor.regular_deformers_visible(binding);
+                        owner.update(cx, |owner, cx| {
+                            owner
+                                .editor
+                                .set_regular_deformers_visible(binding, !visible);
+                            cx.notify();
+                        });
+                        deformer_canvas.update(cx, |_, cx| cx.notify());
+                    }),
                     compact::header_button(compact::toggle(
                         Button::new("btn_transparency_grid"),
                         header.show_transparency_grid,

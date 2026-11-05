@@ -9262,6 +9262,7 @@ dependencies = [
  "anyhow",
  "gpui-fast",
  "gpui-fast-windows",
+ "lyon",
  "objc2 0.6.4",
  "png 0.17.16",
  "wgpu",

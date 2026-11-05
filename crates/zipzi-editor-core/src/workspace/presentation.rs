@@ -4,6 +4,38 @@ use crate::{CanvasFrame, CanvasScene, FrameVersion, SceneSnapshot, ViewportBindi
 use std::sync::Arc;
 
 impl Editor {
+    /// Unselected Warp outlines and Rotation bones, independently for each document/viewport.
+    pub fn regular_deformers_visible(&self, binding: ViewportBinding) -> bool {
+        self.viewport_binding_valid(binding)
+            && binding.kind == ViewportKind::Modeling
+            && self.active_session().is_some_and(|s| {
+                !s.modeling
+                    .tools
+                    .hidden_deformer_viewports
+                    .contains(&binding.viewport)
+            })
+    }
+    pub fn set_regular_deformers_visible(&mut self, binding: ViewportBinding, visible: bool) {
+        if !self.viewport_binding_valid(binding) || binding.kind != ViewportKind::Modeling {
+            return;
+        }
+        self.cancel_gesture_for(binding);
+        if let Some(s) = self.active_session_mut() {
+            s.modeling.tools.clear_hover();
+            if visible {
+                s.modeling
+                    .tools
+                    .hidden_deformer_viewports
+                    .remove(&binding.viewport);
+            } else {
+                s.modeling
+                    .tools
+                    .hidden_deformer_viewports
+                    .insert(binding.viewport);
+            }
+        }
+    }
+
     pub fn gesture_active_for(&self, binding: ViewportBinding) -> bool {
         self.viewport_binding_valid(binding)
             && self.active_session().is_some_and(|session| {
@@ -86,7 +118,7 @@ impl Editor {
             frame.transform,
             &session.document().context().selections,
             session.modeling.tools.active,
-            session.modeling.tools.deformer_visibility,
+            session.modeling.tools.deformer_visibility_for(frame),
             &session.document().object_state_index(),
         )
     }

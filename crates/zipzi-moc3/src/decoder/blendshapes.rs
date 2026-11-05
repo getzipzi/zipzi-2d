@@ -464,7 +464,7 @@ impl<'a> Moc3DecoderContext<'a> {
                             sample_id: Default::default(),
                             origin: Some(origin),
                             angle: Some(self.import_angle(ang)),
-                            scale: Some(sc),
+                            scale: Some(sc * rot.rotation_scale_unit()),
                             opacity: Some(op),
                             multiply: mul,
                             screen: scr,

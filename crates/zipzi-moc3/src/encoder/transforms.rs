@@ -135,7 +135,10 @@ impl<'a> Moc3EncoderContext<'a> {
                     self.l.scalar("rotation_key_src.origin_x", origin.x)?;
                     self.l.scalar("rotation_key_src.origin_y", origin.y)?;
                     self.l.scalar("rotation_key_src.angle", f.rotation.angle)?;
-                    self.l.scalar("rotation_key_src.scale", f.rotation.scale)?;
+                    self.l.scalar(
+                        "rotation_key_src.scale",
+                        f.rotation.scale / t.rotation_scale_unit(),
+                    )?;
                     self.l.integer(
                         "rotation_key_src.reflect_x",
                         if f.rotation.reflect_x { 1 } else { 0 },

@@ -1,4 +1,5 @@
 //! Platform adapters for immutable Editor scene snapshots.
+pub mod canvas_overlay;
 #[cfg(target_os = "macos")]
 mod metal;
 #[cfg(target_os = "macos")]
@@ -25,7 +26,7 @@ mod wgpu_windows;
 pub use wgpu_windows::{WindowsPresenter, windows_context};
 
 /// Shared screen-space radius for filled and hollow editing markers.
-pub const OVERLAY_MARKER_RADIUS: f32 = 3.;
+pub use zipzi_editor_core::canvas_style::POINT_RADIUS as OVERLAY_MARKER_RADIUS;
 
 /// Separate textures let the canvas insert control lines beneath all markers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

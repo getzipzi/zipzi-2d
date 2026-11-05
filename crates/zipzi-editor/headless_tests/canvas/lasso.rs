@@ -42,7 +42,7 @@ fn select_all_shortcut_selects_canvas_vertices_and_leaves_text_selection_to_inpu
             );
             let vertex = harness.view.read(cx).editor.overlay().vertices[0].position;
             window.click_at("canvas-body", point(px(vertex.x), px(vertex.y)), cx);
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             window.render_frame(cx);
             let vertices = harness.view.read(cx).editor.overlay().vertices;
             assert_eq!(vertices.len(), 4);
@@ -62,7 +62,7 @@ fn select_all_shortcut_selects_canvas_vertices_and_leaves_text_selection_to_inpu
             let before = selected(&harness, cx);
             assert_eq!(before.len(), 3);
             window.click(format!("parameter-value-{parameter}"), cx);
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             let Some(AnyInputState::Input(input)) = window.focused_input(cx) else {
                 panic!("input not focused")
             };

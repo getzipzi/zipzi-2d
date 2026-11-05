@@ -1,14 +1,51 @@
-//! Ordered object/component hits and candidate selection, including editor locks.
+//! Shared point, line and surface picking policy, paired with the displayed frame.
 use super::{
-    CONTROL_RADIUS, CanvasScene, ComponentRef, ControlKind, HitTarget, PickCandidate, distance2,
-    segment_distance2,
+    CanvasScene, ComponentRef, ControlKind, HitTarget, PickCandidate, distance2, segment_distance2,
 };
+use crate::canvas_style::{LINE_HIT_RADIUS, POINT_HIT_RADIUS};
 use crate::{
     DeformerVisibility, ObjectKind as K, ObjectRef, ToolId, ViewportPoint, ViewportTransform,
 };
 use std::collections::HashSet;
 
 impl CanvasScene {
+    fn warp_outline_hits(
+        &self,
+        point: ViewportPoint,
+        t: ViewportTransform,
+        selection: &[ObjectRef],
+        tool: ToolId,
+        visibility: DeformerVisibility,
+        locks: &crate::ObjectStateIndex,
+    ) -> Vec<ObjectRef> {
+        if tool == ToolId::Hand {
+            return Vec::new();
+        }
+        let mut hits: Vec<_> = self
+            .controls
+            .iter()
+            .filter(|c| {
+                c.kind == ControlKind::Warp
+                    && !locks.is_locked(&c.object)
+                    && self.control_visible(c, selection, tool, visibility)
+            })
+            .filter_map(|c| {
+                let d = self
+                    .warp_outline(c, t)
+                    .into_iter()
+                    .map(|(a, b)| segment_distance2(point, a, b))
+                    .min_by(f32::total_cmp)?;
+                (d <= LINE_HIT_RADIUS.powi(2)).then_some((d, c.object.clone()))
+            })
+            .collect();
+        hits.sort_by(|a, b| {
+            a.0.total_cmp(&b.0)
+                .then_with(|| selection.contains(&b.1).cmp(&selection.contains(&a.1)))
+                .then_with(|| self.ancestors(&b.1).len().cmp(&self.ancestors(&a.1).len()))
+                .then(a.1.id.cmp(&b.1.id))
+        });
+        hits.into_iter().map(|(_, o)| o).collect()
+    }
     pub fn hit(
         &self,
         point: ViewportPoint,
@@ -40,221 +77,220 @@ impl CanvasScene {
         if tool == ToolId::Hand {
             return None;
         }
-        {
-            let mut hits = Vec::new();
-            for r in selection {
-                if r.kind == K::Mesh && !locks.is_locked(r) {
-                    if let Some(mesh) = self.mesh(&r.id).filter(|_| self.mesh_visible(&r.id)) {
-                        for (id, p) in &mesh.vertices {
-                            let distance = distance2(point, t.to_viewport(*p));
-                            if distance <= CONTROL_RADIUS * CONTROL_RADIUS {
-                                hits.push((distance, r.clone(), *id));
-                            }
-                        }
-                    }
-                }
-            }
-            hits.sort_by(|a, b| {
-                a.0.total_cmp(&b.0)
-                    .then(a.1.id.cmp(&b.1.id))
-                    .then(a.2.cmp(&b.2))
-            });
-            if let Some((_, object, id)) = hits.into_iter().next() {
-                return Some(HitTarget::Component(ComponentRef { object, id }));
-            }
-        }
-        // Native bone roots, tips and bodies win over mixed-selection frames.
-        for object in selection {
-            let Some(control) = self.control(&object.id).filter(|c| {
-                c.kind == ControlKind::Rotation
-                    && !locks.is_locked(object)
-                    && self.control_visible(c, selection, tool, visibility)
-            }) else {
-                continue;
+        // Rank actual geometry, rather than giving a particular object type a
+        // larger or earlier hitbox: points, then lines, then visible surfaces.
+        let mut hits = Vec::new();
+        let mut add = |class: u8, target: HitTarget, distance: f32| {
+            let limit = match class {
+                0 => POINT_HIT_RADIUS.powi(2),
+                1 => LINE_HIT_RADIUS.powi(2),
+                _ => 0.,
             };
-            let points = self.control_points(control, t);
-            if points
-                .first()
-                .is_some_and(|p| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
-            {
-                return Some(HitTarget::Component(ComponentRef {
-                    object: object.clone(),
-                    id: 0,
-                }));
+            if distance <= limit {
+                hits.push((
+                    class,
+                    distance,
+                    selection.contains(target.object())
+                        && (class != 2 || matches!(target, HitTarget::RotationHandle(_))),
+                    target,
+                ));
             }
-            if let Some(gizmo) = self.deformer_gizmo(control, t)
-                && let Some((handle, _)) = gizmo
-                    .handles
-                    .iter()
-                    .find(|(_, p)| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
-            {
-                return Some(HitTarget::DeformerHandle(object.clone(), *handle));
-            }
-            if let Some(gizmo) = self.deformer_gizmo(control, t)
-                && gizmo.bone_hit(point)
-            {
-                return Some(HitTarget::RotationHandle(object.clone()));
-            }
-        }
-        if let Some(frames) = warp_selection.filter(|s| !s.objects.is_empty()) {
-            for (object, gizmo) in &frames.items {
-                if frames.objects.iter().any(|o| locks.is_locked(o)) {
-                    continue;
-                }
-                if let Some((h, _)) = gizmo
-                    .handles
-                    .iter()
-                    .find(|(_, p)| distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS)
-                {
-                    return Some(HitTarget::DeformerHandle(object.clone(), *h));
-                }
-                if gizmo
-                    .outline
-                    .iter()
-                    .take(8)
-                    .any(|(a, b)| segment_distance2(point, *a, *b) <= 16.)
-                {
-                    return Some(HitTarget::DeformerHandle(
-                        object.clone(),
-                        crate::DeformerHandle::Move,
-                    ));
-                }
-            }
-        }
-        let mut controls: Vec<_> = self
-            .controls
+        };
+        for object in selection
             .iter()
-            .filter(|c| {
-                !locks.is_locked(&c.object) && self.control_visible(c, selection, tool, visibility)
-            })
-            .collect();
-        controls.sort_by_key(|c| !selection.contains(&c.object));
-        let mut object_hit = None;
-        for c in controls {
-            let points = self.control_points(c, t);
-            let editing = c.kind != ControlKind::Glue && selection.contains(&c.object);
-            if c.kind == ControlKind::Rotation
-                && self.deformer_gizmo(c, t).is_some_and(|g| g.bone_hit(point))
+            .filter(|o| o.kind == K::Mesh && !locks.is_locked(o))
+        {
+            if let Some(mesh) = self
+                .mesh(&object.id)
+                .filter(|_| self.mesh_visible(&object.id))
             {
-                object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
+                for (id, p) in &mesh.vertices {
+                    add(
+                        0,
+                        HitTarget::Component(ComponentRef {
+                            object: object.clone(),
+                            id: *id,
+                        }),
+                        distance2(point, t.to_viewport(*p)),
+                    );
+                }
             }
-            // Disabled controls must not steal a hit from an independently
-            // positioned frame, including when a frame handle overlaps a point.
-            if warp_selection.is_some_and(|g| g.adjusting.contains(&c.object)) {
+        }
+        if let Some(frames) = warp_selection
+            .filter(|s| !s.objects.is_empty() && s.objects.iter().all(|o| !locks.is_locked(o)))
+        {
+            for (object, gizmo) in &frames.items {
+                for (handle, p) in &gizmo.handles {
+                    add(
+                        0,
+                        HitTarget::DeformerHandle(object.clone(), *handle),
+                        distance2(point, *p),
+                    );
+                }
+                for &(a, b) in gizmo.outline.iter().take(8) {
+                    add(
+                        1,
+                        HitTarget::DeformerHandle(object.clone(), crate::DeformerHandle::Move),
+                        segment_distance2(point, a, b),
+                    );
+                }
+            }
+        }
+        for c in self.controls.iter().filter(|c| {
+            !locks.is_locked(&c.object) && self.control_visible(c, selection, tool, visibility)
+        }) {
+            let selected = selection.contains(&c.object);
+            if c.kind == ControlKind::Rotation {
+                if let Some(gizmo) = self.deformer_gizmo(c, t) {
+                    if selected {
+                        if let Some(p) = self.control_points(c, t).first() {
+                            add(
+                                0,
+                                HitTarget::Component(ComponentRef {
+                                    object: c.object.clone(),
+                                    id: 0,
+                                }),
+                                distance2(point, *p),
+                            );
+                        }
+                        for (handle, p) in &gizmo.handles {
+                            add(
+                                0,
+                                HitTarget::DeformerHandle(c.object.clone(), *handle),
+                                distance2(point, *p),
+                            );
+                        }
+                    }
+                    if gizmo.bone_hit(point) {
+                        add(
+                            2,
+                            if selected {
+                                HitTarget::RotationHandle(c.object.clone())
+                            } else {
+                                HitTarget::Object(c.object.clone())
+                            },
+                            0.,
+                        );
+                    }
+                }
                 continue;
             }
-            if editing && c.kind == ControlKind::Warp {
-                let bezier = self.bezier(&c.object.id);
-                // Controls are always available together. At coincident positions
-                // the visible Bezier control wins over the subdued lattice point.
-                let candidates = bezier
-                    .into_iter()
-                    .flat_map(|b| b.points().map(|(id, p)| (id, t.to_viewport(p))))
-                    .chain(points.iter().enumerate().map(|(i, p)| (i as u32, *p)));
-                let nearest = candidates
-                    .map(|(id, p)| (id, distance2(point, p)))
-                    .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
-                    .min_by(|a, b| a.1.total_cmp(&b.1).then(b.0.cmp(&a.0)));
-                let handle = self
-                    .gizmo_for_selection(c, t, warp_selection)
-                    .and_then(|g| {
-                        g.handles
-                            .into_iter()
-                            .map(|(h, p)| (h, distance2(point, p)))
-                            .filter(|(_, d)| *d <= CONTROL_RADIUS * CONTROL_RADIUS)
-                            .min_by(|a, b| a.1.total_cmp(&b.1))
-                    });
-                if let Some((h, d)) = handle {
-                    if nearest.is_none_or(|(_, n)| d < n) {
-                        return Some(HitTarget::DeformerHandle(c.object.clone(), h));
+            let adjusting = warp_selection.is_some_and(|s| s.adjusting.contains(&c.object));
+            let detail = selected
+                || visibility.all
+                || visibility.ancestors
+                    && selection
+                        .iter()
+                        .any(|r| self.ancestors(r).contains(&c.object));
+            if c.kind == ControlKind::Glue || detail {
+                let points = self.control_points(c, t);
+                if !adjusting && (selected || c.kind == ControlKind::Glue) {
+                    for (id, p) in points.iter().enumerate() {
+                        add(
+                            0,
+                            if c.kind == ControlKind::Glue {
+                                HitTarget::Object(c.object.clone())
+                            } else {
+                                HitTarget::Component(ComponentRef {
+                                    object: c.object.clone(),
+                                    id: id as u32,
+                                })
+                            },
+                            distance2(point, *p),
+                        );
                     }
                 }
-                if let Some((id, _)) = nearest {
-                    return Some(HitTarget::Component(ComponentRef {
-                        object: c.object.clone(),
-                        id,
-                    }));
-                }
-                if let Some(bezier) = bezier {
-                    if bezier.curves.iter().any(|(a, b)| {
-                        segment_distance2(point, t.to_viewport(*a), t.to_viewport(*b)) <= 25.
-                    }) {
-                        object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
+                for &(a, b) in c.edges.iter() {
+                    if let Some((a, b)) = points.get(a).zip(points.get(b)) {
+                        add(
+                            1,
+                            HitTarget::Object(c.object.clone()),
+                            segment_distance2(point, *a, *b),
+                        );
                     }
+                }
+            } else {
+                for (a, b) in self.warp_outline(c, t) {
+                    add(
+                        1,
+                        HitTarget::Object(c.object.clone()),
+                        segment_distance2(point, a, b),
+                    );
                 }
             }
-            for (i, p) in points.iter().enumerate() {
-                if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
-                    if editing {
-                        return Some(if c.kind == ControlKind::Rotation && i == 1 {
-                            HitTarget::DeformerHandle(
-                                c.object.clone(),
-                                crate::DeformerHandle::RotationScale,
-                            )
-                        } else {
-                            HitTarget::Component(ComponentRef {
-                                object: c.object.clone(),
-                                id: i as u32,
-                            })
-                        });
-                    }
-                    object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
-                }
-            }
-            if c.edges.iter().any(|&(a, b)| {
-                points
-                    .get(a)
-                    .zip(points.get(b))
-                    .is_some_and(|(a, b)| segment_distance2(point, *a, *b) <= 25.)
-            }) {
-                object_hit.get_or_insert_with(|| HitTarget::Object(c.object.clone()));
-            }
-        }
-        if tool != ToolId::Hand {
-            for c in self
-                .controls
-                .iter()
-                .filter(|c| selection.contains(&c.object) && !locks.is_locked(&c.object))
-            {
-                if c.kind != ControlKind::Rotation
-                    && warp_selection.is_some_and(|s| !s.objects.is_empty())
-                {
-                    continue;
-                }
-                let Some(gizmo) = self.gizmo_for_selection(c, t, warp_selection) else {
-                    continue;
-                };
-                for (handle, p) in &gizmo.handles {
-                    if distance2(point, *p) <= CONTROL_RADIUS * CONTROL_RADIUS {
-                        return Some(HitTarget::DeformerHandle(c.object.clone(), *handle));
-                    }
-                }
-                if gizmo.outline.iter().any(|&(a, b)| {
-                    segment_distance2(point, a, b)
-                        <= if c.kind == ControlKind::Rotation {
-                            36.
-                        } else {
-                            16.
+            if selected && c.kind == ControlKind::Warp {
+                if let Some(bezier) = self.bezier(&c.object.id) {
+                    if !adjusting {
+                        for (id, p) in bezier.points() {
+                            add(
+                                0,
+                                HitTarget::Component(ComponentRef {
+                                    object: c.object.clone(),
+                                    id,
+                                }),
+                                distance2(point, t.to_viewport(p)),
+                            );
                         }
-                }) {
-                    return Some(HitTarget::DeformerHandle(
-                        c.object.clone(),
-                        if c.kind == ControlKind::Rotation {
-                            crate::DeformerHandle::Rotate
-                        } else {
-                            crate::DeformerHandle::Move
-                        },
-                    ));
+                    }
+                    for &(a, b) in &bezier.curves {
+                        add(
+                            1,
+                            HitTarget::Object(c.object.clone()),
+                            segment_distance2(point, t.to_viewport(a), t.to_viewport(b)),
+                        );
+                    }
+                    for &(_, a, b) in &bezier.handles {
+                        add(
+                            1,
+                            HitTarget::Object(c.object.clone()),
+                            segment_distance2(point, t.to_viewport(a), t.to_viewport(b)),
+                        );
+                    }
+                }
+                if !warp_selection.is_some_and(|s| !s.objects.is_empty()) {
+                    if let Some(gizmo) = self.gizmo_for_selection(c, t, warp_selection) {
+                        for (handle, p) in gizmo.handles {
+                            add(
+                                0,
+                                HitTarget::DeformerHandle(c.object.clone(), handle),
+                                distance2(point, p),
+                            );
+                        }
+                        for (a, b) in gizmo.outline {
+                            add(
+                                1,
+                                HitTarget::DeformerHandle(
+                                    c.object.clone(),
+                                    crate::DeformerHandle::Move,
+                                ),
+                                segment_distance2(point, a, b),
+                            );
+                        }
+                    }
                 }
             }
         }
-        if object_hit.is_some() {
-            return object_hit;
-        }
-        self.mesh_hits(t.to_model(point))
-            .into_iter()
-            .find(|id| !locks.is_locked(&ObjectRef::new(K::Mesh, id)))
-            .map(|id| HitTarget::Object(ObjectRef::new(K::Mesh, id)))
+        // On a coincident point, an explicit component wins over its frame.
+        // Bezier component IDs rank before coincident lattice IDs.
+        let component_rank = |hit: &HitTarget| match hit {
+            HitTarget::Component(c) => (0, u32::MAX - c.id),
+            _ => (1, 0),
+        };
+        hits.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then(a.1.total_cmp(&b.1))
+                .then(b.2.cmp(&a.2))
+                .then_with(|| component_rank(&a.3).cmp(&component_rank(&b.3)))
+        });
+        hits.into_iter()
+            .next()
+            .map(|(_, _, _, target)| target)
+            .or_else(|| {
+                self.mesh_hits(t.to_model(point))
+                    .into_iter()
+                    .find(|id| !locks.is_locked(&ObjectRef::new(K::Mesh, id)))
+                    .map(|id| HitTarget::Object(ObjectRef::new(K::Mesh, id)))
+            })
     }
     pub fn candidates(
         &self,
@@ -300,6 +336,7 @@ impl CanvasScene {
                 }
             }
         }
+        objects.extend(self.warp_outline_hits(point, t, selection, tool, visibility, locks));
         for id in self.mesh_hits(t.to_model(point)) {
             let mesh = ObjectRef::new(K::Mesh, id);
             objects.push(mesh.clone());

@@ -13,7 +13,7 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             h.view.update(cx, |view, cx| {
                 view.replace_editor(Editor::from_document(document), cx);
                 view.editor
-                    .execute(EditorCommand::SelectObject(object))
+                    .execute(EditorCommand::SelectObject(object.clone()))
                     .unwrap();
                 view.editor.reset_view();
                 view.editor.pan_by(ViewportPoint { x: -128., y: 128. });
@@ -26,6 +26,34 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             &format!("warp-basic-{locale}.png"),
         )?;
         h.cx.update_window(h.window, |_, window, cx| {
+            h.view.update(cx, |view, cx| {
+                view.editor
+                    .execute(EditorCommand::SelectObjects(Vec::new()))
+                    .unwrap();
+                view.refresh_document(window, cx);
+            });
+        })?;
+        save(&h.capture()?, directory, &format!("warp-idle-{locale}.png"))?;
+        h.cx.update_window(h.window, |_, window, cx| {
+            assert_eq!(window.find("btn_regular_deformers").checked(), Some(true));
+            window.click("btn_regular_deformers", cx);
+        })?;
+        save(
+            &h.capture()?,
+            directory,
+            &format!("warp-hidden-{locale}.png"),
+        )?;
+        h.view.read_with(&h.cx, |view, _| {
+            assert!(view.editor.overlay().deformers.is_empty())
+        });
+        h.cx.update_window(h.window, |_, window, cx| {
+            window.click("btn_regular_deformers", cx);
+            h.view.update(cx, |view, cx| {
+                view.editor
+                    .execute(EditorCommand::SelectObject(object.clone()))
+                    .unwrap();
+                view.refresh_document(window, cx);
+            });
             show(window, "property-input-bezier_rows", cx);
         })?;
         save(
@@ -33,7 +61,7 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             directory,
             &format!("warp-inline-{locale}.png"),
         )?;
-        h.cx.update_window(h.window, |_, window, cx| {
+        h.cx.update_window(h.window, |_, window, _cx| {
             for id in [
                 "property-warp-transform",
                 "property-warp-frame",

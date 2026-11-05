@@ -1,14 +1,16 @@
 //! Canvas-specific visual language, independent of the application accent.
 use crate::mesh_edges;
-use gpui_kit::{
-    Bounds, FillOptions, FillRule, Hsla, PathBuilder, PathStyle, Pixels, Point, Window, fill,
-    point, px, rgb, rgba, size,
-};
-use zipzi_editor_core::{
-    GluePointState, OverlaySnapshot, OverlayVertex, OverlayVertexKind, ViewportPoint,
-};
+use gpui_kit::{Bounds, Hsla, Pixels, Point, Window, fill, point, px, size};
+#[cfg(test)]
+use gpui_kit::{FillOptions, FillRule, PathBuilder, PathStyle, rgb, rgba};
+use zipzi_editor_core::ViewportPoint;
+#[cfg(test)]
+use zipzi_editor_core::{GluePointState, OverlaySnapshot, OverlayVertex, OverlayVertexKind};
 
-const GLUE_MARKER_RADIUS: f32 = 3.25;
+#[cfg(test)]
+use zipzi_editor_core::canvas_style as style;
+#[cfg(test)]
+const GLUE_MARKER_RADIUS: f32 = style::POINT_RADIUS;
 
 /// The native regression tests paint these same primitives into a headless scene.
 pub(crate) trait Painter {
@@ -50,20 +52,48 @@ pub(crate) struct Palette {
 }
 impl Palette {
     pub fn new(dark: bool) -> Self {
+        let p = zipzi_editor_render::canvas_overlay::CanvasPalette::new(dark);
+        let color = |c: [f32; 4]| {
+            gpui_kit::Rgba {
+                r: c[0],
+                g: c[1],
+                b: c[2],
+                a: c[3],
+            }
+            .into()
+        };
         Self {
-            mesh: rgb(0x909090).into(),
-            image_bounds: rgb(if dark { 0x6b91b5 } else { 0x476b8e }).into(),
-            deformer: rgb(0x62c878).into(),
-            deformer_frame: rgb(if dark { 0x669eff } else { 0x2864dc }).into(),
-            glue: rgb(0xffd000).into(),
-            mesh_selected: rgb(0xff0000).into(),
-            selection_region: rgb(if dark { 0xb0b0b0 } else { 0x606060 }).into(),
-            hollow: rgb(0xffffff).into(),
-            restricted: rgb(0xb0b0b0).into(),
-            restricted_border: rgb(0x505050).into(),
+            mesh: color(p.mesh),
+            image_bounds: color(p.image_bounds),
+            deformer: color(p.deformer),
+            deformer_frame: color(p.deformer_frame),
+            glue: color(p.glue),
+            mesh_selected: color(p.mesh_selected),
+            selection_region: color(p.selection_region),
+            hollow: color(p.hollow),
+            restricted: color(p.restricted),
+            restricted_border: color(p.restricted_border),
         }
     }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    pub fn canvas(self) -> zipzi_editor_render::canvas_overlay::CanvasPalette {
+        let color = |c: Hsla| {
+            let c: gpui_kit::Rgba = c.into();
+            [c.r, c.g, c.b, c.a]
+        };
+        zipzi_editor_render::canvas_overlay::CanvasPalette {
+            mesh: color(self.mesh),
+            image_bounds: color(self.image_bounds),
+            deformer: color(self.deformer),
+            deformer_frame: color(self.deformer_frame),
+            glue: color(self.glue),
+            mesh_selected: color(self.mesh_selected),
+            hollow: color(self.hollow),
+            restricted: color(self.restricted),
+            restricted_border: color(self.restricted_border),
+            selection_region: color(self.selection_region),
+        }
+    }
+    #[cfg(test)]
     pub fn native(self) -> zipzi_editor_render::OverlayStyle {
         let color = |c: Hsla| {
             let c: gpui_kit::Rgba = c.into();
@@ -78,6 +108,145 @@ impl Palette {
     }
 }
 
+/// The fallback consumes exactly the same ordered geometry as both native backends.
+#[cfg(test)]
+pub(crate) fn paint_prepared<P: Painter>(
+    list: &zipzi_editor_render::canvas_overlay::CanvasDrawList,
+    origin: Point<Pixels>,
+    layer_quads: bool,
+    window: &mut P,
+) {
+    paint_prepared_with_options(
+        list,
+        origin,
+        FallbackOptions {
+            layer_quads,
+            ..Default::default()
+        },
+        window,
+    );
+}
+
+pub(crate) struct FallbackOptions {
+    pub layer_quads: bool,
+    pub batch_lines: bool,
+    pub tessellated_edges: bool,
+}
+impl Default for FallbackOptions {
+    fn default() -> Self {
+        Self {
+            layer_quads: true,
+            batch_lines: true,
+            tessellated_edges: false,
+        }
+    }
+}
+pub(crate) fn paint_prepared_with_options<P: Painter>(
+    list: &zipzi_editor_render::canvas_overlay::CanvasDrawList,
+    origin: Point<Pixels>,
+    options: FallbackOptions,
+    window: &mut P,
+) {
+    use zipzi_editor_render::canvas_overlay::PrimitiveKind as K;
+    let color = |c: [f32; 4]| -> Hsla {
+        gpui_kit::Rgba {
+            r: c[0],
+            g: c[1],
+            b: c[2],
+            a: c[3],
+        }
+        .into()
+    };
+    let point_at = |x, y| origin + point(px(x), px(y));
+    for run in list.primitives.chunk_by(|a, b| {
+        a.kind() == b.kind()
+            && (a.kind() == K::Marker || (a.color == b.color && a.parameters[1] == b.parameters[1]))
+    }) {
+        match run[0].kind() {
+            K::Marker => {
+                let draw = |window: &mut P| {
+                    for primitive in run {
+                        let [x, y, w, h] = primitive.geometry;
+                        window.paint_quad(
+                            fill(
+                                Bounds::new(point_at(x - w, y - h), size(px(w * 2.), px(h * 2.))),
+                                color(primitive.color),
+                            )
+                            .corner_radii(px(primitive.parameters[1]))
+                            .border_widths(px(primitive.parameters[2]))
+                            .border_color(color(primitive.border)),
+                        );
+                    }
+                };
+                let bounds = run
+                    .iter()
+                    .map(|p| {
+                        let [a, b, c, d] = p.bounds();
+                        Bounds::from_corners(point_at(a, b), point_at(c, d))
+                    })
+                    .reduce(|a, b| a.union(&b))
+                    .unwrap();
+                if options.layer_quads {
+                    window.quad_layer(bounds, draw);
+                } else {
+                    draw(window);
+                }
+            }
+            K::Line => {
+                let edges: Vec<_> = run
+                    .iter()
+                    .map(|p| {
+                        let [x, y, a, b] = p.geometry;
+                        (ViewportPoint { x, y }, ViewportPoint { x: a, y: b })
+                    })
+                    .collect();
+                let width = run[0].parameters[1];
+                let mut paint = |path| window.paint_path(path, color(run[0].color));
+                if !options.batch_lines {
+                    for edge in &edges {
+                        mesh_edges::paint_edges_with_width(
+                            std::slice::from_ref(edge),
+                            origin,
+                            width,
+                            &mut paint,
+                        );
+                    }
+                } else if options.tessellated_edges {
+                    if width == 1. {
+                        mesh_edges::paint_edges_tessellated(&edges, origin, paint);
+                    } else {
+                        mesh_edges::paint_edges_with_width_tessellated(
+                            &edges, origin, width, paint,
+                        );
+                    }
+                } else if width == 1. {
+                    mesh_edges::paint_edges(&edges, origin, paint);
+                } else {
+                    mesh_edges::paint_edges_with_width(&edges, origin, width, paint);
+                }
+            }
+            K::Triangle => {
+                let first = run[0].geometry;
+                let mut path = gpui_kit::Path::new(point_at(first[0], first[1]));
+                for p in run {
+                    let [x, y, a, b] = p.geometry;
+                    path.push_triangle(
+                        (
+                            point_at(x, y),
+                            point_at(a, b),
+                            point_at(p.parameters[1], p.parameters[2]),
+                        ),
+                        (point(0., 1.), point(0., 1.), point(0., 1.)),
+                    );
+                }
+                path.bounds = path.bounds.dilate(px(1.));
+                window.paint_path(path, color(run[0].color));
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 pub(crate) fn paint_lines(
     overlay: &OverlaySnapshot,
     bounds: Bounds<Pixels>,
@@ -93,7 +262,11 @@ pub(crate) fn paint_lines(
             mesh_edges::paint_edges_with_width(edges, bounds.origin, width, paint);
         }
     };
-    lines(&overlay.reference_lines, 0.75, p.mesh.opacity(0.5));
+    lines(
+        &overlay.reference_lines,
+        style::IDLE_LINE_WIDTH,
+        p.mesh.opacity(0.5),
+    );
     let image_bounds: Vec<_> = overlay
         .image_bounds
         .iter()
@@ -105,7 +278,11 @@ pub(crate) fn paint_lines(
             )
         })
         .collect();
-    lines(&image_bounds, 0.75, p.image_bounds.opacity(0.55));
+    lines(
+        &image_bounds,
+        style::IDLE_LINE_WIDTH,
+        p.image_bounds.opacity(0.55),
+    );
     let automatic: Vec<_> = overlay
         .automatic_lines
         .iter()
@@ -118,7 +295,7 @@ pub(crate) fn paint_lines(
         })
         .take(100_000)
         .collect();
-    lines(&automatic, 0.75, p.mesh.opacity(0.55));
+    lines(&automatic, style::IDLE_LINE_WIDTH, p.mesh.opacity(0.55));
     if let Some(origin) = overlay.origin_crosshair {
         let size = 10.;
         let x_axis = [(
@@ -149,23 +326,19 @@ pub(crate) fn paint_lines(
     lines(&overlay.accent_lines, 1., p.mesh.opacity(0.8));
     lines(&overlay.hover_lines, 1., p.mesh);
     for deformer in &overlay.deformers {
-        let (width, alpha) = if deformer.kind == zipzi_editor_core::ControlKind::Warp {
-            (
-                0.5,
-                if deformer.hovered {
-                    0.5
-                } else if deformer.selected {
-                    0.32
-                } else {
-                    0.2
-                },
-            )
+        let width = style::line_width(deformer.selected);
+        let alpha = if deformer.outline_only {
+            if deformer.hovered {
+                0.75
+            } else {
+                style::WARP_OUTLINE_OPACITY
+            }
         } else if deformer.hovered {
-            (1., 1.)
+            0.5
         } else if deformer.selected {
-            (1., 0.85)
+            0.32
         } else {
-            (0.75, 0.3)
+            0.2
         };
         let color = if deformer.kind == zipzi_editor_core::ControlKind::Warp {
             p.mesh
@@ -174,9 +347,17 @@ pub(crate) fn paint_lines(
         };
         lines(&deformer.lines, width, color.opacity(alpha));
     }
-    lines(&overlay.bezier_lines, 0.75, p.deformer.opacity(0.28));
+    lines(
+        &overlay.bezier_lines,
+        style::ACTIVE_LINE_WIDTH,
+        p.deformer.opacity(0.28),
+    );
     lines(&overlay.bezier_tangents, 1., p.deformer.opacity(0.85));
-    lines(&overlay.gizmo_lines, 0.75, p.deformer.opacity(0.45));
+    lines(
+        &overlay.gizmo_lines,
+        style::IDLE_LINE_WIDTH,
+        p.deformer.opacity(0.45),
+    );
     lines(
         &overlay.warp_frame_lines,
         1.,
@@ -197,7 +378,7 @@ pub(crate) fn paint_lines(
             .collect();
         lines(
             &dashed,
-            1.,
+            style::line_width(glue.selected),
             color.opacity(if glue.hovered { 1. } else { 0.85 }),
         );
     }
@@ -212,7 +393,11 @@ pub(crate) fn paint_lines(
             let color = if bone.selected {
                 p.deformer_frame
             } else {
-                p.mesh.opacity(if bone.hovered { 0.65 } else { 0.45 })
+                p.mesh.opacity(if bone.hovered {
+                    0.65
+                } else {
+                    style::ROTATION_IDLE_OPACITY
+                })
             };
             if let Some(path) = polygon_fill_path(
                 bone.points
@@ -226,6 +411,7 @@ pub(crate) fn paint_lines(
 }
 
 /// Clip before subdivision: extreme zoom or offscreen pairs cannot allocate unbounded dashes.
+#[cfg(test)]
 fn dashed_segments(
     a: ViewportPoint,
     b: ViewportPoint,
@@ -279,13 +465,14 @@ fn dashed_segments(
         .collect()
 }
 
-/// Every deformer control (anchor, tangent, frame or rotation handle) uses
-/// a black border and white center, with matching green fill and border when active.
+/// Shapes identify controls; selection and hover never change their extent.
+#[cfg(test)]
 fn marker(
     center: Point<Pixels>,
     r: f32,
     round: bool,
     solid: bool,
+    hovered: bool,
     color: Hsla,
     p: Palette,
     window: &mut impl Painter,
@@ -298,13 +485,21 @@ fn marker(
         )
         .corner_radii(if round { r } else { px(0.) })
         .border_widths(px(1.))
-        .border_color(if solid { color } else { rgb(0x000000).into() }),
+        .border_color(if hovered {
+            p.deformer
+        } else if solid {
+            color
+        } else {
+            rgb(0x000000).into()
+        }),
     );
 }
+#[cfg(test)]
 fn restricted_marker(
     center: Point<Pixels>,
     radius: f32,
     round: bool,
+    hovered: bool,
     p: Palette,
     window: &mut impl Painter,
 ) {
@@ -316,22 +511,15 @@ fn restricted_marker(
         )
         .corner_radii(if round { r } else { px(0.) })
         .border_widths(px(1.))
-        .border_color(p.restricted_border),
-    );
-}
-fn ring(center: Point<Pixels>, r: f32, window: &mut impl Painter) {
-    let r = px(r);
-    window.paint_quad(
-        fill(
-            Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-            rgba(0),
-        )
-        .corner_radii(r)
-        .border_widths(px(1.))
-        .border_color(rgb(0xffffff)),
+        .border_color(if hovered {
+            p.deformer
+        } else {
+            p.restricted_border
+        }),
     );
 }
 /// A closed, even-odd polygon with bounds that retain antialiased edge coverage.
+#[cfg(test)]
 pub(crate) fn polygon_fill_path(
     mut points: impl ExactSizeIterator<Item = Point<Pixels>>,
 ) -> Option<gpui_kit::Path<Pixels>> {
@@ -352,6 +540,7 @@ pub(crate) fn polygon_fill_path(
     })
 }
 
+#[cfg(test)]
 pub(crate) fn paint_markers(
     overlay: &OverlaySnapshot,
     origin: Point<Pixels>,
@@ -380,7 +569,7 @@ pub(crate) fn paint_markers(
                     }
                 };
                 if layer_quads && run[0].kind != OverlayVertexKind::RotationCenter {
-                    let radius = px(zipzi_editor_render::OVERLAY_MARKER_RADIUS + 2.);
+                    let radius = px(zipzi_editor_render::OVERLAY_MARKER_RADIUS + 1.);
                     let bounds = run
                         .iter()
                         .filter(visible)
@@ -404,100 +593,72 @@ pub(crate) fn paint_markers(
     paint_other_markers(overlay, origin, p, window);
 }
 
+#[cfg(test)]
 fn paint_vertex(v: &OverlayVertex, origin: Point<Pixels>, p: Palette, window: &mut impl Painter) {
     let center = origin + point(px(v.position.x), px(v.position.y));
+    let radius = if v.kind == OverlayVertexKind::WarpGrid {
+        style::WARP_GRID_POINT_RADIUS
+    } else {
+        style::POINT_RADIUS
+    };
+    let round = matches!(
+        v.kind,
+        OverlayVertexKind::Mesh
+            | OverlayVertexKind::RotationCenter
+            | OverlayVertexKind::RotationTip
+    );
     if !v.editable {
-        let radius = if v.kind == OverlayVertexKind::WarpGrid {
-            1.5
-        } else {
-            zipzi_editor_render::OVERLAY_MARKER_RADIUS
-        };
-        restricted_marker(
-            center,
-            radius,
-            !matches!(
-                v.kind,
-                OverlayVertexKind::Warp | OverlayVertexKind::WarpGrid
-            ),
-            p,
-            window,
-        );
-        if v.hovered {
-            ring(center, radius + 2., window);
-        }
+        restricted_marker(center, radius, round, v.hovered, p, window);
         return;
     }
-    let color = if v.kind == OverlayVertexKind::Mesh {
-        if v.selected {
-            p.mesh_selected
-        } else {
-            p.hollow
-        }
-    } else {
-        p.deformer
-    };
-    let radius = zipzi_editor_render::OVERLAY_MARKER_RADIUS;
     match v.kind {
         OverlayVertexKind::WarpGrid => {
-            let radius = px(if v.selected || v.hovered { 2.5 } else { 1.5 });
+            let r = px(radius);
             window.paint_quad(
                 fill(
-                    Bounds::new(
-                        center - point(radius, radius),
-                        size(radius * 2., radius * 2.),
-                    ),
+                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
                     if v.selected {
                         p.hollow
                     } else {
                         p.mesh.opacity(if v.hovered { 1. } else { 0.6 })
                     },
                 )
-                .border_widths(px(if v.selected { 1. } else { 0. }))
-                .border_color(p.mesh),
+                .border_widths(px(if v.selected || v.hovered { 1. } else { 0. }))
+                .border_color(if v.hovered { p.deformer } else { p.mesh }),
             );
         }
-        OverlayVertexKind::Mesh => {
+        OverlayVertexKind::Warp => {
             let r = px(radius);
             window.paint_quad(
                 fill(
                     Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-                    color,
+                    if v.selected { p.deformer } else { p.hollow },
                 )
-                .corner_radii(r)
                 .border_widths(px(1.))
-                .border_color(if v.selected {
-                    p.mesh_selected
-                } else {
-                    rgb(0x000000).into()
-                }),
+                .border_color(
+                    p.deformer
+                        .opacity(if v.selected || v.hovered { 1. } else { 0.65 }),
+                ),
             );
         }
-        OverlayVertexKind::Warp => {
-            let r = px(radius + 0.5);
-            window.paint_quad(
-                fill(
-                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-                    if v.selected { color } else { p.hollow },
-                )
-                .border_widths(px(1.5))
-                .border_color(color),
-            );
-        }
-        OverlayVertexKind::RotationCenter | OverlayVertexKind::RotationTip => marker(
+        _ => marker(
             center,
             radius,
-            v.kind == OverlayVertexKind::RotationCenter,
+            round,
             v.selected,
-            color,
+            v.hovered,
+            if v.kind == OverlayVertexKind::Mesh {
+                p.mesh_selected
+            } else {
+                p.deformer
+            },
             p,
             window,
         ),
     }
-    if v.hovered {
-        ring(center, radius + 2., window);
-    }
 }
 
+#[cfg(test)]
 fn paint_other_markers(
     overlay: &OverlaySnapshot,
     origin: Point<Pixels>,
@@ -506,43 +667,24 @@ fn paint_other_markers(
 ) {
     for handle in &overlay.handles {
         let center = origin + point(px(handle.position.x), px(handle.position.y));
-        let color = p.deformer;
-        if handle.editable && handle.tangent {
-            let r =
-                px(zipzi_editor_render::OVERLAY_MARKER_RADIUS
-                    + if handle.selected { 1. } else { 0.5 });
-            window.paint_quad(
-                fill(
-                    Bounds::new(center - point(r, r), size(r * 2., r * 2.)),
-                    color,
-                )
-                .corner_radii(r)
-                .border_widths(px(1.))
-                .border_color(if handle.selected { p.hollow } else { color }),
-            );
-        } else if handle.editable {
-            marker(
+        if !handle.editable {
+            restricted_marker(
                 center,
-                zipzi_editor_render::OVERLAY_MARKER_RADIUS,
-                handle.round,
-                handle.selected,
-                color,
+                style::POINT_RADIUS,
+                handle.round || handle.tangent,
+                handle.hovered,
                 p,
                 window,
             );
         } else {
-            restricted_marker(
+            marker(
                 center,
-                zipzi_editor_render::OVERLAY_MARKER_RADIUS,
-                handle.round,
+                style::POINT_RADIUS,
+                handle.round || handle.tangent,
+                handle.selected || handle.tangent,
+                handle.hovered,
+                p.deformer,
                 p,
-                window,
-            );
-        }
-        if handle.hovered {
-            ring(
-                center,
-                zipzi_editor_render::OVERLAY_MARKER_RADIUS + 2.,
                 window,
             );
         }
@@ -567,31 +709,40 @@ fn paint_other_markers(
         let bounds = Bounds::new(center - point(r, r), size(r * 2., r * 2.));
         match endpoint.state {
             GluePointState::Editable => {
-                window.paint_quad(fill(bounds, p.glue));
-                marker(
-                    center,
-                    2.75,
-                    true,
-                    endpoint.selected,
-                    p.mesh_selected,
-                    p,
-                    window,
+                window.paint_quad(
+                    fill(
+                        bounds,
+                        if endpoint.selected {
+                            p.mesh_selected
+                        } else {
+                            p.hollow
+                        },
+                    )
+                    .border_widths(px(1.))
+                    .border_color(if endpoint.hovered {
+                        p.deformer
+                    } else {
+                        p.glue
+                    }),
                 );
             }
             GluePointState::Reference => {
-                window.paint_quad(
-                    fill(bounds, rgba(0))
-                        .border_widths(px(0.75))
-                        .border_color(p.glue.opacity(0.4)),
-                );
+                window.paint_quad(fill(bounds, rgba(0)).border_widths(px(1.)).border_color(
+                    if endpoint.hovered {
+                        p.glue
+                    } else {
+                        p.glue.opacity(0.4)
+                    },
+                ));
             }
-            GluePointState::Restricted => {
-                window.paint_quad(fill(bounds, rgb(0x8b8b8b)));
-                restricted_marker(center, 2.75, true, p, window);
-            }
-        }
-        if endpoint.hovered {
-            ring(center, GLUE_MARKER_RADIUS + 1.5, window);
+            GluePointState::Restricted => restricted_marker(
+                center,
+                style::POINT_RADIUS,
+                false,
+                endpoint.hovered,
+                p,
+                window,
+            ),
         }
     }
 }
@@ -640,6 +791,59 @@ mod tests {
             self.layer = Some(bounds);
             paint(self);
             self.layer = None;
+        }
+    }
+
+    #[test]
+    fn point_sizes_stay_fixed_with_secondary_warp_grid_controls() {
+        #[derive(Default)]
+        struct BoundsRecorder(Vec<Bounds<Pixels>>);
+        impl Painter for BoundsRecorder {
+            fn paint_quad(&mut self, q: gpui_kit::PaintQuad) {
+                self.0.push(q.bounds);
+            }
+            fn paint_path(&mut self, _: gpui_kit::Path<Pixels>, _: Hsla) {
+                panic!("point must not grow a hover path");
+            }
+        }
+        for kind in [
+            OverlayVertexKind::Mesh,
+            OverlayVertexKind::WarpGrid,
+            OverlayVertexKind::Warp,
+            OverlayVertexKind::RotationCenter,
+            OverlayVertexKind::RotationTip,
+        ] {
+            for selected in [false, true] {
+                for hovered in [false, true] {
+                    for editable in [false, true] {
+                        let mut recorder = BoundsRecorder::default();
+                        paint_vertex(
+                            &OverlayVertex {
+                                id: 0,
+                                position: ViewportPoint { x: 20., y: 20. },
+                                selected,
+                                hovered,
+                                editable,
+                                kind,
+                            },
+                            point(px(0.), px(0.)),
+                            Palette::new(true),
+                            &mut recorder,
+                        );
+                        assert_eq!(recorder.0, {
+                            let size = if kind == OverlayVertexKind::WarpGrid {
+                                5.
+                            } else {
+                                6.
+                            };
+                            vec![Bounds::new(
+                                point(px(20. - size / 2.), px(20. - size / 2.)),
+                                gpui_kit::size(px(size), px(size)),
+                            )]
+                        });
+                    }
+                }
+            }
         }
     }
 

@@ -32,7 +32,7 @@ impl super::ToolController {
             frame.transform,
             &selection,
             self.active,
-            self.deformer_visibility,
+            self.deformer_visibility_for(frame),
             &locks,
             self.warp_selection_gizmo(document, frame).as_ref(),
         );
@@ -52,7 +52,12 @@ impl super::ToolController {
         let mut candidates = Vec::new();
         for g in scene.topology.glues.iter() {
             if !scene.control(&g.object.id).is_some_and(|c| {
-                scene.control_visible(c, &selection, self.active, self.deformer_visibility)
+                scene.control_visible(
+                    c,
+                    &selection,
+                    self.active,
+                    self.deformer_visibility_for(frame),
+                )
             }) {
                 continue;
             }

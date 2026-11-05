@@ -47,8 +47,8 @@ impl<'a> Moc3DecoderContext<'a> {
                 0.
             }
     }
-    /// Only model and rotation-local coordinates carry lengths. Warp-local
-    /// parameters stay dimensionless and retain their grid orientation.
+    /// Runtime model coordinates use PPU; Rotation-local coordinates already
+    /// use their own pixel-sized frame. Warp-local UVs retain their orientation.
     pub(super) fn import_origin(&self, parent: &str, x: f64, y: f64) -> zipzi_core::PreciseVec2 {
         if parent.is_empty()
             || self
@@ -56,8 +56,15 @@ impl<'a> Moc3DecoderContext<'a> {
                 .get_transform(parent)
                 .is_some_and(|t| t.rotation().is_some())
         {
-            let ppu = f64::from(self.inspection.canvas.pixels_per_unit);
-            zipzi_core::PreciseVec2::new(x * ppu, y * ppu * if self.reflected() { -1. } else { 1. })
+            let unit = if parent.is_empty() {
+                f64::from(self.inspection.canvas.pixels_per_unit)
+            } else {
+                1.
+            };
+            zipzi_core::PreciseVec2::new(
+                x * unit,
+                y * unit * if self.reflected() { -1. } else { 1. },
+            )
         } else {
             zipzi_core::PreciseVec2::new(x, y)
         }
@@ -68,6 +75,18 @@ impl<'a> Moc3DecoderContext<'a> {
     }
     pub(super) fn import_delta(&self, parent: &str, x: f32, y: f32) -> Vec2 {
         self.import_point(parent, x, y)
+    }
+
+    /// Warp nodes pass inherited Rotation scale through unchanged. Apply PPU
+    /// once, to the first Rotation on each branch, including beneath Warps.
+    pub(super) fn import_scale_unit<'b>(&'b self, mut parent: &'b str) -> f32 {
+        while let Some(transform) = self.doc.get_transform(parent) {
+            if transform.rotation().is_some() {
+                return 1.;
+            }
+            parent = transform.parent();
+        }
+        self.inspection.canvas.pixels_per_unit
     }
 
     pub(super) fn new(bytes: &'a [u8], textures: &'a [TextureSlotInfo]) -> Result<Self, Status> {

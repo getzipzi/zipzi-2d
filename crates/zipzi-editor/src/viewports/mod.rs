@@ -109,6 +109,8 @@ pub struct ViewportSurface {
     pub(super) show_origin_crosshair: bool,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     overlay_renderer: std::rc::Rc<std::cell::RefCell<CanvasOverlay>>,
+    overlay_cache:
+        std::rc::Rc<std::cell::RefCell<zipzi_editor_render::canvas_overlay::CanvasOverlayCache>>,
     bounds: Bounds<Pixels>,
     #[cfg(test)]
     pub(crate) layout_syncs: usize,
@@ -226,6 +228,7 @@ impl ViewportSurface {
                 show_origin_crosshair: true,
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
                 overlay_renderer: Default::default(),
+                overlay_cache: Default::default(),
                 bounds: Bounds::default(),
                 #[cfg(test)]
                 layout_syncs: 0,
@@ -350,6 +353,7 @@ impl Render for ViewportSurface {
         let muted = cx.theme().muted_foreground;
         let menu_owner = owner.downgrade();
         let menu_canvas = cx.weak_entity();
+        let hover_name = overlay.hovered_deformer_label.clone();
         let body = div()
             .id("canvas-body")
             .test_support()
@@ -398,6 +402,22 @@ impl Render for ViewportSurface {
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
             .child(self.overlay_element(overlay, palette, capture, cx))
+            .children(hover_name.map(|name| {
+                div()
+                    .id("hovered-deformer-name")
+                    .absolute()
+                    .bottom_2()
+                    .left_2()
+                    .max_w_full()
+                    .px_2()
+                    .py_1()
+                    .rounded_sm()
+                    .bg(cx.theme().background)
+                    .text_color(cx.theme().foreground)
+                    .text_xs()
+                    .truncate()
+                    .child(name)
+            }))
             .when(
                 generation_panel.is_none() && !self.toolbar.items().is_empty(),
                 |element| {
