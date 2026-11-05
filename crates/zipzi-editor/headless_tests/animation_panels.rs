@@ -146,7 +146,7 @@ fn motion_groups_collapse_without_changing_selection(cx: &mut TestAppContext) {
         window.render_frame(cx);
         assert!(window.try_find("animation-motion-search").is_none());
         assert!(window.find("animation-motion-toolbar").visible());
-        assert!(window.find("animation-new-motion").visible());
+        assert!(window.find("animation-motion-create").visible());
         assert!(window.try_find("animation-expression-search").is_none());
         window.click(("animation-motion", 0usize), cx);
         window.click(("animation-motion-group", 0usize), cx);

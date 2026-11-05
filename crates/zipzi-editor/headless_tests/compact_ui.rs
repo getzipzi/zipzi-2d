@@ -127,7 +127,7 @@ fn ui_scale_changes_controls_rows_and_chrome_together(cx: &mut TestAppContext) {
                 selector,
                 window.find("parts-tree-search").bounds(),
                 window.find("parts-tree-filter").bounds(),
-                window.find("parts-tree-new-part").bounds(),
+                window.find("parts-tree-create").bounds(),
                 window.find("parts-tree-toggle-expansion").bounds(),
             ] {
                 assert!(

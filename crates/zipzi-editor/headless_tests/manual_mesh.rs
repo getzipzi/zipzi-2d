@@ -748,7 +748,7 @@ fn manual_mesh_property_rename_and_new_parameter_exit_and_complete(cx: &mut Test
         window.click("tool_manual_mesh", cx);
         window.render_frame(cx);
         assert!(h.view.read(cx).editor.manual_active());
-        window.click("new-parameter", cx);
+        super::create_panel_object(window, "parameters-create", 0, cx);
         window.render_frame(cx);
     })
     .unwrap();

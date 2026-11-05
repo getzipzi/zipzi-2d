@@ -274,6 +274,13 @@ impl ManualMeshSession {
             return Ok(false);
         }
         if self.modes.len() == 1 {
+            match input {
+                CanvasInput::Move { point, .. } if !self.dragging() => {
+                    self.hovered = self.pick(frame, point);
+                }
+                CanvasInput::Leave => self.hovered = None,
+                _ => {}
+            }
             return self.modes[0].input(document, frame, input);
         }
         match input {
@@ -520,6 +527,22 @@ impl ManualMeshSession {
     }
     pub fn overlay(&self, frame: &CanvasFrame) -> OverlaySnapshot {
         let mut out = self.modes[self.active].overlay(frame);
+        out.hovered_object_label = self
+            .hovered
+            .filter(|&index| {
+                self.editable()
+                    && self.shown(index, frame)
+                    && self
+                        .edit_viewport
+                        .is_none_or(|v| v == frame.version.binding.viewport)
+            })
+            .map(|index| {
+                frame
+                    .geometry
+                    .index
+                    .name(&self.modes[index].target.object)
+                    .to_owned()
+            });
         for (index, mode) in self.modes.iter().enumerate() {
             if index == self.active || !self.shown(index, frame) {
                 continue;

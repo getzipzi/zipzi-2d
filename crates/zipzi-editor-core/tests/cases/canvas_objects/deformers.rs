@@ -1367,7 +1367,7 @@ fn regular_warp_outline_picking_visibility_and_selection() -> anyhow::Result<()>
     };
     editor.hover_canvas(frame.version.binding, Some(point))?;
     assert_eq!(
-        editor.overlay().hovered_deformer_label.as_deref(),
+        editor.overlay().hovered_object_label.as_deref(),
         Some("Warp")
     );
     click(&mut editor, point, false)?;

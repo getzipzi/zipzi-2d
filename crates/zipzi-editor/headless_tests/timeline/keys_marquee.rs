@@ -11,7 +11,7 @@ fn empty_motion_inline_value_creates_one_key_at_the_head_and_can_cancel(cx: &mut
     cx.update_window(harness.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
-        window.click("animation-new-motion", cx);
+        super::super::create_panel_object(window, "animation-motion-create", 0, cx);
         window.render_frame(cx);
     })
     .unwrap();

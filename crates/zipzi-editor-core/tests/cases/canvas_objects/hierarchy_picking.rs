@@ -81,12 +81,39 @@ fn deformer_lines_are_pickable_but_empty_interior_is_not_and_groups_are_candidat
             .any(|c| c.object == ObjectRef::new(ObjectKind::Deformer, &warp))
     );
     assert!(!candidates.iter().any(|c| c.object.id == rotation));
+    editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+    let rotation_control = scene
+        .controls
+        .iter()
+        .find(|c| c.object.id == rotation)
+        .unwrap();
+    let rotation_points = scene.control_points(rotation_control, f.transform);
+    let rotation_body = ViewportPoint {
+        x: (rotation_points[0].x + rotation_points[1].x) / 2.,
+        y: (rotation_points[0].y + rotation_points[1].y) / 2.,
+    };
+    for (point, name) in [
+        (p(32., 90.), "Warp"),
+        (p(90., 90.), "Mesh"),
+        (rotation_body, "Rotation"),
+    ] {
+        editor.hover_canvas(f.version.binding, Some(point))?;
+        assert_eq!(editor.overlay().hovered_object_label.as_deref(), Some(name));
+    }
     editor.execute(EditorCommand::SelectObject(ObjectRef::new(
         ObjectKind::Part,
         part,
     )))?;
     assert!(!editor.overlay().accent_lines.is_empty());
     assert!(editor.overlay().vertices.is_empty());
+    let handle = editor.overlay().handles[0].position;
+    editor.hover_canvas(f.version.binding, Some(handle))?;
+    assert_eq!(
+        editor.overlay().hovered_object_label.as_deref(),
+        Some("Part")
+    );
+    editor.hover_canvas(f.version.binding, None)?;
+    assert!(editor.overlay().hovered_object_label.is_none());
 
     let mut scene = (*f.geometry).clone();
     let glue = ObjectRef::new(ObjectKind::Glue, "readonly-connection");

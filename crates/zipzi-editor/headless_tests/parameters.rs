@@ -1038,7 +1038,7 @@ fn parameter_titlebar_adds_endpoint_keyforms(cx: &mut TestAppContext) {
     cx.update_window(harness.window, |_, window, cx| {
         window.click(format!("parameter-name-{}", parameter.id), cx);
         window.render_frame(cx);
-        let standard = window.find("new-parameter").bounds();
+        let standard = window.find("parameters-create").bounds();
         for button in [
             "parameter-toggle-link",
             "parameter-add-keyform",

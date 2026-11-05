@@ -345,7 +345,7 @@ fn parts_header_renders_external_save_without_workspace_sync(cx: &mut TestAppCon
         panel.update(cx, |panel, cx| drop(panel.render_header(window, cx)));
         harness.view.update(cx, |_, cx| cx.notify());
         window.render_frame(cx);
-        assert_ne!(window.find("parts-tree-new-part").disabled(), Some(true));
+        assert_ne!(window.find("parts-tree-create").disabled(), Some(true));
     })
     .unwrap();
     assert!(target.is_file());

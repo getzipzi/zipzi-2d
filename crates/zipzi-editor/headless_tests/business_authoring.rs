@@ -66,7 +66,7 @@ fn choose(h: &Harness, id: &str, text: &str, cx: &mut TestAppContext) {
 #[gpui_kit::test]
 fn pose_toolbar_creates_singleton_empty_group_members_and_links_with_undo(cx: &mut TestAppContext) {
     let h = setup(cx, false);
-    click(&h, "pose-new-group", cx);
+    create(&h, 0, cx);
     let root = h.view.read_with(cx, |v, _| {
         assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
         let p = v.editor.document().unwrap().pose_definition().unwrap();
@@ -78,7 +78,7 @@ fn pose_toolbar_creates_singleton_empty_group_members_and_links_with_undo(cx: &m
         );
         p.id.clone()
     });
-    click(&h, "pose-new-entry", cx);
+    create(&h, 1, cx);
     let entry = h.view.read_with(cx, |v, _| {
         v.editor.active_inspection().unwrap().object().unwrap()
     });
@@ -87,7 +87,7 @@ fn pose_toolbar_creates_singleton_empty_group_members_and_links_with_undo(cx: &m
         assert!(window.try_find("property-select-target").is_some())
     })
     .unwrap();
-    click(&h, "pose-new-link", cx);
+    create(&h, 2, cx);
     h.view.read_with(cx, |v, _| {
         assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
         let d = v.editor.document().unwrap();
@@ -125,12 +125,12 @@ fn pose_toolbar_creates_singleton_empty_group_members_and_links_with_undo(cx: &m
 #[gpui_kit::test]
 fn pose_name_root_fade_and_member_part_use_ordinary_properties(cx: &mut TestAppContext) {
     let h = setup(cx, false);
-    click(&h, "pose-new-group", cx);
+    create(&h, 0, cx);
     fill(&h, "property-input-name", "Blink", cx);
     cx.update_window(h.window, |_, window, cx| window.press("enter", cx))
         .unwrap();
     cx.run_until_parked();
-    click(&h, "pose-new-entry", cx);
+    create(&h, 1, cx);
     let (part, name) = h.view.read_with(cx, |v, _| {
         let index = v.editor.document().unwrap().object_index();
         let p = index
@@ -795,4 +795,13 @@ fn deleting_last_physics_channel_keeps_parent_available_for_creation(cx: &mut Te
             assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
         });
     }
+}
+
+fn create(h: &Harness, index: usize, cx: &mut TestAppContext) {
+    cx.update_window(h.window, |_, window, cx| {
+        super::create_panel_object(window, "pose-create", index, cx)
+    })
+    .unwrap();
+    cx.run_until_parked();
+    super::settle_object_deletion(h, cx);
 }

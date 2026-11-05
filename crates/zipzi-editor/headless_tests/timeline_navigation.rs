@@ -226,7 +226,7 @@ fn transport_buttons_and_shortcuts_share_endpoints_and_key_navigation(cx: &mut T
         );
         assert!(window.try_find("timeline-motion").is_none());
         assert!(window.try_find("timeline-new-motion").is_none());
-        assert!(window.find("animation-new-motion").visible());
+        assert!(window.find("animation-motion-create").visible());
     })
     .unwrap();
 }

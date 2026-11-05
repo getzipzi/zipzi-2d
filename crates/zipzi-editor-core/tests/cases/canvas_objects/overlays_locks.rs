@@ -513,6 +513,10 @@ fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> an
             },
         )?;
         assert!(editor.overlay().glues[0].hovered);
+        assert_eq!(
+            editor.overlay().hovered_object_label.as_deref(),
+            Some("Seam")
+        );
         click(&mut editor, point, false)?;
         assert!(editor.overlay().vertices.is_empty());
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));

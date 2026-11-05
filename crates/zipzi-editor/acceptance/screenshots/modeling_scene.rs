@@ -277,7 +277,9 @@ pub(crate) fn modeling_and_parameters_screenshots(
     harness.cx.update_window(harness.window, |_, window, cx| {
         cx.set_reduce_motion(true);
         theme::change(gpui_kit::component::ThemeMode::Dark, cx);
-        window.click("new-parameter", cx);
+        window.click("parameters-create", cx);
+        window.render_frame(cx);
+        window.within("popup-menu").click(0usize, cx);
     })?;
     let popup = harness.capture()?;
     harness.cx.update_window(harness.window, |_, window, _| {
@@ -337,7 +339,9 @@ pub(crate) fn modeling_and_parameters_screenshots(
         window.press("escape", cx);
         i18n::activate(Some("zh-CN"));
         theme::change(gpui_kit::component::ThemeMode::Light, cx);
-        window.click("new-parameter", cx);
+        window.click("parameters-create", cx);
+        window.render_frame(cx);
+        window.within("popup-menu").click(0usize, cx);
     })?;
     let popup_zh = harness.capture()?;
     save(

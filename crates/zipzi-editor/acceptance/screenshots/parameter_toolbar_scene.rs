@@ -42,7 +42,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             for state in ["empty", "keyed"] {
                 let frame = harness.capture()?;
                 let crop = harness.cx.update_window(harness.window, |_, window, _| {
-                    let standard = window.find("new-parameter").bounds();
+                    let standard = window.find("parameters-create").bounds();
                     let mut right = standard.right();
                     for id in [
                         "parameter-add-keyform",

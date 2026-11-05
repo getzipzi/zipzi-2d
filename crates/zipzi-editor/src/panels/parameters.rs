@@ -333,29 +333,6 @@ impl ParametersPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> PanelToolbar {
-        let new_label = t!("parameter.new").into_owned();
-        let available = |action: ParameterAction| {
-            self.owner
-                .upgrade()
-                .and_then(|o| action.availability(&o.read(cx).editor))
-        };
-        let new_cap = available(ParameterAction::Create(None));
-        let group_cap = available(ParameterAction::CreateGroup);
-        let new_disabled = create_disabled || new_cap.as_ref().is_none_or(|c| !c.enabled);
-        let group_disabled = create_disabled || group_cap.as_ref().is_none_or(|c| !c.enabled);
-        let new_tip = new_cap
-            .and_then(|c| c.reason)
-            .unwrap_or_else(|| t!("parameter.new").into());
-        let group_tip = group_cap
-            .and_then(|c| c.reason)
-            .unwrap_or_else(|| t!("parameter.new_group").into());
-
-        let on_create = cx.listener(|this, _, window, cx| {
-            this.open_management(ParameterAction::Create(None), window, cx)
-        });
-        let on_group = cx.listener(|this, _, window, cx| {
-            this.open_management(ParameterAction::CreateGroup, window, cx)
-        });
         let keyforms = self.keyform_toolbar_state(cx);
         let add_current = keyform_toolbar_button(
             "parameter-add-keyform",
@@ -423,21 +400,11 @@ impl ParametersPanel {
         .flex_shrink_0();
         let link_button = self.link_toolbar_button(interaction_reason, cx);
         PanelToolbar::new("parameters-panel-toolbar")
-            .action(move |_| {
-                Button::new("new-parameter")
-                    .icon(IconName::Plus)
-                    .accessibility_label(new_label.clone())
-                    .tooltip(new_tip)
-                    .disabled(new_disabled)
-                    .on_click(on_create)
-            })
-            .action(move |_| {
-                crate::ui::compact::new_group_button(Button::new("new-parameter-group-action"))
-                    .accessibility_label(t!("parameter.new_group"))
-                    .tooltip(group_tip)
-                    .disabled(group_disabled)
-                    .on_click(on_group)
-            })
+            .control(management::creation_button(
+                cx.weak_entity(),
+                self.document_id,
+                create_disabled,
+            ))
             .control(add_keyforms)
             .control(delete_keyforms)
             .control(link_button)
@@ -789,11 +756,9 @@ impl crate::docking::header::PanelHeader for ParametersPanel {
                 let interaction_reason = interaction_disabled
                     .then(|| t!("parameter.keyform_finish_operation").into_owned());
                 let create_disabled = interaction_disabled
-                    || !state.editor.command_available(
-                        state
-                            .editor
-                            .command(zipzi_editor_core::CommandId::CreateParameter),
-                    );
+                    || state.editor.active_id().is_none()
+                    || state.editor.editing_context()
+                        != Some(zipzi_editor_core::EditingContext::Modeling);
                 (interaction_reason, create_disabled)
             },
         );

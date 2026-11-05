@@ -62,7 +62,8 @@ pub struct OverlayGluePoint {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OverlaySnapshot {
-    pub hovered_deformer_label: Option<String>,
+    /// Name of the object beneath the pointer in this presented viewport.
+    pub hovered_object_label: Option<String>,
     pub manual_mesh_feedback: Option<super::ManualMeshFeedback>,
     pub vertices: Vec<OverlayVertex>,
     /// Mesh topology; controls retain their own semantic line groups below.
@@ -227,18 +228,21 @@ impl ToolController {
             .clone()
             .filter(|_| self.hovered_binding == Some(frame.version.binding));
         let mut out = OverlaySnapshot::default();
-        out.hovered_deformer_label = hovered_target
+        out.hovered_object_label = hovered_target
             .as_ref()
             .filter(|hit| {
-                scene.control(&hit.object().id).is_some_and(|c| {
-                    c.kind == ControlKind::Warp
-                        && scene.control_visible(
+                let object = hit.object();
+                scene.index.get(object).is_some()
+                    && scene.in_isolation_scope(object)
+                    && (object.kind != ObjectKind::Mesh || scene.mesh_visible(&object.id))
+                    && scene.control(&object.id).is_none_or(|c| {
+                        scene.control_visible(
                             c,
                             selection,
                             self.active,
                             self.deformer_visibility_for(frame),
                         )
-                })
+                    })
             })
             .map(|hit| scene.index.name(hit.object()).to_owned());
         out.warp_frame_adjusting = self

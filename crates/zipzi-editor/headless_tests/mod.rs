@@ -142,3 +142,21 @@ fn settle_object_deletion(h: &Harness, cx: &mut TestAppContext) {
     cx.update_window(h.window, |_, window, cx| window.render_frame(cx))
         .unwrap();
 }
+
+fn create_panel_object(
+    window: &mut gpui_kit::Window,
+    button: &str,
+    index: usize,
+    cx: &mut gpui_kit::App,
+) {
+    use gpui_kit::test::TestWindowExt;
+    window.click(button.to_owned(), cx);
+    window.render_frame(cx);
+    assert!(
+        window.try_find("popup-menu").is_some(),
+        "{button} did not open item {index}; disabled: {:?}",
+        window.find(button.to_owned()).disabled()
+    );
+    window.within("popup-menu").click(index, cx);
+    window.render_frame(cx);
+}

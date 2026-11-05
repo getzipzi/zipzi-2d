@@ -14,7 +14,7 @@ fn new_parameter_selects_properties_immediately_with_unique_ids_and_history(
     );
     for count in 1..=2 {
         cx.update_window(h.window, |_, window, cx| {
-            window.click("new-parameter", cx);
+            super::create_panel_object(window, "parameters-create", 0, cx);
             window.render_frame(cx);
             assert!(!window.has_active_dialog(cx));
             assert!(window.find("property-input-name").visible());
@@ -72,7 +72,7 @@ fn creation_reveals_last_parameter_and_reopens_hidden_properties(cx: &mut TestAp
                 cx,
             );
         });
-        window.click("new-parameter", cx);
+        super::create_panel_object(window, "parameters-create", 0, cx);
         window.render_frame(cx);
         let doc = h.view.read(cx).editor.document().unwrap();
         let id = doc.parameters().last().unwrap().id.clone();

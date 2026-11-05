@@ -74,7 +74,9 @@ pub(crate) fn compact_popup_screenshots(directory: &std::path::Path) -> anyhow::
             })?;
             harness.capture()?;
             harness.cx.update_window(harness.window, |_, window, cx| {
-                window.click("new-parameter", cx);
+                window.click("parameters-create", cx);
+                window.render_frame(cx);
+                window.within("popup-menu").click(0usize, cx);
             })?;
             harness.capture()?;
             for (id, suffix) in [

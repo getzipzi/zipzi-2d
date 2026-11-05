@@ -1,6 +1,6 @@
 use super::*;
 use crate::authoring::AuthoringContext;
-use gpui_kit::component::menu::{ContextMenuExt, PopupMenuItem};
+use gpui_kit::component::menu::{ContextMenuExt, DropdownMenu, PopupMenu, PopupMenuItem};
 
 #[derive(Clone)]
 pub(crate) enum ParameterAction {
@@ -283,79 +283,109 @@ pub(super) fn row_menu<E: ContextMenuExt + IntoElement + 'static>(
     document: Option<DocumentId>,
     actions: Vec<ParameterAction>,
 ) -> impl IntoElement {
-    element.context_menu(move |mut menu, window, cx| {
-        menu = crate::ui::compact::menu(menu);
-        if window.has_active_dialog(cx) {
-            return menu;
-        }
-        let owner = panel
-            .upgrade()
-            .and_then(|panel| panel.read(cx).owner.upgrade());
-        let Some(owner) = owner else {
-            return menu;
-        };
-        let ready = owner.update(cx, |state, cx| {
-            document.is_some_and(|document| {
-                state.editor.active_id() == Some(document)
-                    && state.prepare_property_inputs(document, window, cx)
-            })
-        });
-        if !ready {
-            return menu;
-        }
-        let context = AuthoringContext::capture(&owner.read(cx).editor);
-        for action in &actions {
-            let Some(availability) = action.availability(&owner.read(cx).editor) else {
-                continue;
-            };
-            let label = action.label();
-            let reason = availability.reason.map(|reason| reason.to_string());
-            let panel = panel.clone();
-            let action = action.clone();
-            menu = menu.item(PopupMenuItem::new(label).on_click(move |_, window, cx| {
-                let _ = panel.update(cx, |p, cx| {
-                    let (Some(owner), Some(captured)) = (p.owner.upgrade(), context) else {
-                        return;
-                    };
-                    if owner.update(cx, |view, cx| {
-                        view.authoring_menu_feedback(captured, reason.as_deref(), window, cx)
-                    }) {
-                        return;
-                    }
-                    if p.document_id == document
-                        && p.owner.upgrade().is_some_and(|owner| {
-                            AuthoringContext::capture(&owner.read(cx).editor) == context
-                        })
-                    {
-                        p.open_management(action.clone(), window, cx);
-                    }
-                });
-            }));
-        }
-        if let Some(object) = actions.iter().find_map(|action| match action {
-            ParameterAction::Edit(id) => Some(zipzi_editor_core::ObjectRef::new(
-                zipzi_editor_core::ObjectKind::Parameter,
-                id,
-            )),
-            ParameterAction::EditGroup(id) => Some(zipzi_editor_core::ObjectRef::new(
-                zipzi_editor_core::ObjectKind::ParameterGroup,
-                id,
-            )),
-            _ => None,
-        }) {
-            if let Some(document) = document {
-                menu = super::sorting::move_menu(
-                    menu.separator(),
-                    owner.downgrade(),
-                    document,
-                    zipzi_editor_core::PaletteProjection::Parameters,
-                    object,
-                    cx,
-                );
-            }
-        }
-        menu
+    element.context_menu(move |menu, window, cx| {
+        management_menu(menu, panel.clone(), document, actions.clone(), window, cx)
     })
+}
+
+pub(super) fn creation_button(
+    panel: WeakEntity<ParametersPanel>,
+    document: Option<DocumentId>,
+    disabled: bool,
+) -> impl IntoElement {
+    super::super::toolbar::new_object_button("parameters-create", disabled).dropdown_menu(
+        move |menu, window, cx| {
+            management_menu(
+                menu,
+                panel.clone(),
+                document,
+                vec![ParameterAction::Create(None), ParameterAction::CreateGroup],
+                window,
+                cx,
+            )
+        },
+    )
+}
+
+fn management_menu(
+    mut menu: PopupMenu,
+    panel: WeakEntity<ParametersPanel>,
+    document: Option<DocumentId>,
+    actions: Vec<ParameterAction>,
+    window: &mut Window,
+    cx: &mut App,
+) -> PopupMenu {
+    menu = crate::ui::compact::menu(menu);
+    if window.has_active_dialog(cx) {
+        return menu;
+    }
+    let owner = panel
+        .upgrade()
+        .and_then(|panel| panel.read(cx).owner.upgrade());
+    let Some(owner) = owner else {
+        return menu;
+    };
+    let ready = owner.update(cx, |state, cx| {
+        document.is_some_and(|document| {
+            state.editor.active_id() == Some(document)
+                && state.prepare_property_inputs(document, window, cx)
+        })
+    });
+    if !ready {
+        return menu;
+    }
+    let context = AuthoringContext::capture(&owner.read(cx).editor);
+    for action in &actions {
+        let Some(availability) = action.availability(&owner.read(cx).editor) else {
+            continue;
+        };
+        let label = action.label();
+        let reason = availability.reason.map(|reason| reason.to_string());
+        let panel = panel.clone();
+        let action = action.clone().capture(&owner.read(cx).editor);
+        menu = menu.item(PopupMenuItem::new(label).on_click(move |_, window, cx| {
+            let _ = panel.update(cx, |p, cx| {
+                let (Some(owner), Some(captured)) = (p.owner.upgrade(), context) else {
+                    return;
+                };
+                if owner.update(cx, |view, cx| {
+                    view.authoring_menu_feedback(captured, reason.as_deref(), window, cx)
+                }) {
+                    return;
+                }
+                if p.document_id == document
+                    && p.owner.upgrade().is_some_and(|owner| {
+                        AuthoringContext::capture(&owner.read(cx).editor) == context
+                    })
+                {
+                    p.open_management(action.clone(), window, cx);
+                }
+            });
+        }));
+    }
+    if let Some(object) = actions.iter().find_map(|action| match action {
+        ParameterAction::Edit(id) => Some(zipzi_editor_core::ObjectRef::new(
+            zipzi_editor_core::ObjectKind::Parameter,
+            id,
+        )),
+        ParameterAction::EditGroup(id) => Some(zipzi_editor_core::ObjectRef::new(
+            zipzi_editor_core::ObjectKind::ParameterGroup,
+            id,
+        )),
+        _ => None,
+    }) {
+        if let Some(document) = document {
+            menu = super::sorting::move_menu(
+                menu.separator(),
+                owner.downgrade(),
+                document,
+                zipzi_editor_core::PaletteProjection::Parameters,
+                object,
+                cx,
+            );
+        }
+    }
+    menu
 }
 
 pub(super) fn management_error(error: &anyhow::Error) -> String {

@@ -342,9 +342,6 @@ impl<const DEFORMER: bool> HierarchyTreePanel<DEFORMER> {
         let panel = cx.weak_entity();
         PanelToolbar::new(SharedString::from(format!("{prefix}-panel-toolbar")))
             .control(management::button(self, cx))
-            .when(!DEFORMER, |toolbar| {
-                toolbar.control(management::new_part_button(self, cx))
-            })
             .control(self.expansion_button(cx))
             .control(
                 PanelToolbarPopover::new(
@@ -708,14 +705,14 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                     let cursor = this.focus.is_focused(window)
                                         && this.selection.cursor.as_ref() == Some(&key);
                                     let icon = match node.kind {
-                                        TreeNodeKind::Part if node.offscreen => IconName::Layers,
+                                        TreeNodeKind::Part if node.offscreen => Icon::new(IconName::Layers),
                                         TreeNodeKind::Group | TreeNodeKind::Part => {
-                                            IconName::Folder
+                                            Icon::new(IconName::Folder)
                                         }
-                                        TreeNodeKind::Offscreen => IconName::Layers,
-                                        TreeNodeKind::Mesh => IconName::Grid2x2,
-                                        TreeNodeKind::WarpDeformer => IconName::Grid3x3,
-                                        TreeNodeKind::RotationDeformer => IconName::RotateCw,
+                                        TreeNodeKind::Offscreen => Icon::new(IconName::Layers),
+                                        TreeNodeKind::Mesh => Icon::new(IconName::Grid2x2),
+                                        TreeNodeKind::WarpDeformer => Icon::default().data(include_bytes!("../../assets/icons/warp-visible.svg")),
+                                        TreeNodeKind::RotationDeformer => Icon::default().data(include_bytes!("../../assets/icons/rotation-visible.svg")),
                                     };
                                     let label = if node.name.is_empty() {
                                         if is_mesh {
@@ -860,7 +857,7 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
                                                         .child(if let Some(image) = thumbnail {
                                                             img(image).size_full().into_any_element()
                                                         } else {
-                                                            Icon::new(icon).small().into_any_element()
+                                                            icon.small().into_any_element()
                                                         }),
                                                 )
                                                 .child(

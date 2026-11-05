@@ -427,7 +427,7 @@ fn offscreen_is_absent_from_creation_menu_and_toolbar_dispatches_scene_types(
 }
 
 #[gpui_kit::test]
-fn parts_header_creates_a_part_directly_and_disables_it_for_a_locked_parent(
+fn parts_header_creates_a_part_through_new_object_and_reports_a_locked_parent(
     cx: &mut TestAppContext,
 ) {
     let (mut document, assets) = document_fixture::sample_document_with_parts().unwrap();
@@ -435,10 +435,11 @@ fn parts_header_creates_a_part_directly_and_disables_it_for_a_locked_parent(
     document.navigate(parent.clone()).unwrap();
     let h = setup_with_document(cx, document, assets);
     cx.update_window(h.window, |_, window, cx| {
+        assert!(window.try_find("parts-tree-new-part").is_none());
         let toolbar = window.find("parts-panel-toolbar").bounds();
-        let button = window.find("parts-tree-new-part").bounds();
+        let button = window.find("parts-tree-create").bounds();
         assert!(button.top() >= toolbar.top() && button.bottom() <= toolbar.bottom());
-        window.click("parts-tree-new-part", cx);
+        super::create_panel_object(window, "parts-tree-create", 0, cx);
     })
     .unwrap();
     cx.run_until_parked();
@@ -475,7 +476,7 @@ fn parts_header_creates_a_part_directly_and_disables_it_for_a_locked_parent(
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        window.click("parts-tree-new-part", cx);
+        super::create_panel_object(window, "parts-tree-create", 0, cx);
         h.view.read_with(cx, |v, _| {
             assert_eq!(v.editor.document().unwrap().history_lengths(), (3, 0));
             assert!(v.edit_error.is_none(), "{:?}", v.edit_error);

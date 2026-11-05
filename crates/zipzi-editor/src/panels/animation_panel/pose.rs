@@ -7,7 +7,10 @@ use crate::{
 };
 use gpui_kit::{
     assets::IconName,
-    component::{button::ButtonRounded, menu::ContextMenuExt},
+    component::{
+        button::ButtonRounded,
+        menu::{ContextMenuExt, DropdownMenu, PopupMenuItem},
+    },
 };
 use zipzi_editor_core::{BusinessAction as A, ObjectKind as K, ObjectRef as R};
 #[derive(Clone)]
@@ -34,36 +37,67 @@ impl AnimationPanel {
         };
         let dialog = window.has_active_dialog(cx);
         let view = owner.read(cx);
-        let context = AuthoringContext::capture(&view.editor);
-        let selected = view.editor.active_inspection().and_then(|i| i.object());
-        for kind in [K::PoseGroup, K::PoseEntry, K::PoseLink] {
-            let action = A::Create(kind, selected.clone());
-            let availability = business::availability(&view.editor, &action);
-            let disabled = view.modal || dialog || availability.as_ref().is_none_or(|a| !a.enabled);
-            let hint = availability
-                .and_then(|a| a.reason)
-                .unwrap_or_else(|| business::create_label(kind));
-            let owner = self.owner.clone();
-            toolbar = toolbar.action(move |_| {
-                Button::new(match kind {
-                    K::PoseGroup => "pose-new-group",
-                    K::PoseEntry => "pose-new-entry",
-                    _ => "pose-new-link",
-                })
-                .icon(IconName::Plus)
-                .when(kind == K::PoseGroup, compact::new_group_button)
-                .accessibility_label(business::create_label(kind))
-                .tooltip(hint.clone())
-                .disabled(disabled)
-                .on_click(move |_, window, cx| {
-                    if let Some(context) = context {
-                        let _ = owner.update(cx, |v, cx| {
-                            v.run_business_action(context, action.clone(), window, cx)
-                        });
+        let disabled =
+            view.modal || view.editor.is_busy() || dialog || view.editor.active_id().is_none();
+        let document = view.editor.active_id();
+        let owner = self.owner.clone();
+        toolbar = toolbar.control(
+            super::super::toolbar::new_object_button("pose-create", disabled).dropdown_menu(
+                move |menu, window, cx| {
+                    let mut menu = compact::menu(menu);
+                    let Some(owner) = owner.upgrade() else {
+                        return menu;
+                    };
+                    if window.has_active_dialog(cx)
+                        || !owner.update(cx, |view, cx| {
+                            !view.modal
+                                && !view.editor.is_busy()
+                                && document.is_some_and(|document| {
+                                    view.editor.active_id() == Some(document)
+                                        && view.prepare_property_inputs(document, window, cx)
+                                })
+                        })
+                    {
+                        return menu;
                     }
-                })
-            });
-        }
+                    let view = owner.read(cx);
+                    let Some(context) = AuthoringContext::capture(&view.editor) else {
+                        return menu;
+                    };
+                    let selected = view.editor.active_inspection().and_then(|i| i.object());
+                    for kind in [K::PoseGroup, K::PoseEntry, K::PoseLink] {
+                        let action = A::Create(kind, selected.clone());
+                        let Some(availability) = business::availability(&view.editor, &action)
+                        else {
+                            continue;
+                        };
+                        let reason = availability.reason;
+                        let owner = owner.downgrade();
+                        menu =
+                            menu.item(PopupMenuItem::new(business::create_label(kind)).on_click(
+                                move |_, window, cx| {
+                                    let _ = owner.update(cx, |view, cx| {
+                                        if !view.authoring_menu_feedback(
+                                            context,
+                                            reason.as_deref(),
+                                            window,
+                                            cx,
+                                        ) {
+                                            view.run_business_action(
+                                                context,
+                                                action.clone(),
+                                                window,
+                                                cx,
+                                            );
+                                        }
+                                    });
+                                },
+                            ));
+                    }
+                    menu
+                },
+            ),
+        );
         toolbar.into_any_element()
     }
     pub(super) fn render_pose_list(

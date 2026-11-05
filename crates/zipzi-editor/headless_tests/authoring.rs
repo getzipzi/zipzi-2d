@@ -82,7 +82,7 @@ fn creation_focuses_name_and_keeps_rename_and_creation_in_separate_history(
         tempfile::tempdir().unwrap(),
     );
     cx.update_window(h.window, |_, window, cx| {
-        window.click("new-parameter", cx);
+        super::create_panel_object(window, "parameters-create", 0, cx);
         window.render_frame(cx);
     })
     .unwrap();
@@ -399,7 +399,7 @@ fn new_folder_inside_a_collapsed_folder_is_visible_and_escape_keeps_it(cx: &mut 
     let h = setup_with_document(cx, document, tempfile::tempdir().unwrap());
     cx.update_window(h.window, |_, window, cx| {
         window.click(format!("parameter-group-toggle-{parent}"), cx);
-        window.click("new-parameter-group-action", cx);
+        super::create_panel_object(window, "parameters-create", 1, cx);
     })
     .unwrap();
     cx.run_until_parked();

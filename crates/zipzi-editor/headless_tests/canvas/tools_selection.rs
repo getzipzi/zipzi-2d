@@ -1440,6 +1440,11 @@ fn glue_restricted_point_explains_its_parameter_on_hover_without_an_error(cx: &m
             );
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         });
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("hovered-object-name").label(),
+            Some("Rectangle")
+        );
     })
     .unwrap();
     harness.view.update(cx, |view, cx| {
@@ -1451,4 +1456,9 @@ fn glue_restricted_point_explains_its_parameter_on_hover_without_an_error(cx: &m
             Some(("Ready", false))
         );
     });
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("hovered-object-name").is_none());
+    })
+    .unwrap();
 }

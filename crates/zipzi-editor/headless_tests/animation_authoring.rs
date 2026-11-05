@@ -20,7 +20,7 @@ fn empty_group_creation_and_rename_preserve_preview_and_have_separate_undo(
         h.view.update(cx, |v, _| {
             v.editor.advance_animation_clock(0.4);
         });
-        window.click("animation-new-motion-group", cx);
+        super::create_panel_object(window, "animation-motion-create", 1, cx);
         window.render_frame(cx);
     })
     .unwrap();
@@ -82,7 +82,7 @@ fn collapsed_group_creation_reveals_motion_and_only_creation_activates(cx: &mut 
         window.render_frame(cx);
         window.click(("animation-motion-group-name", 0usize), cx);
         window.click(("animation-motion-group", 0usize), cx);
-        window.click("animation-new-motion", cx);
+        super::create_panel_object(window, "animation-motion-create", 0, cx);
         window.render_frame(cx);
     })
     .unwrap();

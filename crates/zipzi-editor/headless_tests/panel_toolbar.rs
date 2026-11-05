@@ -225,13 +225,13 @@ fn toolbar_preserves_input_arrows_and_forwards_popover_and_action_events(cx: &mu
 }
 
 #[gpui_kit::test]
-fn parameters_toolbar_only_creates_parameters_and_modal_disables_creation(cx: &mut TestAppContext) {
+fn parameters_toolbar_has_one_creation_menu_and_modal_disables_creation(cx: &mut TestAppContext) {
     let harness = super::setup(cx);
     cx.update_window(harness.window, |_, window, cx| {
         assert!(
             window
                 .within("parameters-panel-toolbar")
-                .try_find("new-parameter")
+                .try_find("parameters-create")
                 .is_some()
         );
         assert!(window.try_find("parameter-groups-toggle").is_none());
@@ -240,14 +240,15 @@ fn parameters_toolbar_only_creates_parameters_and_modal_disables_creation(cx: &m
             cx.notify();
         });
         window.render_frame(cx);
-        window.click("new-parameter", cx);
+        window.click("parameters-create", cx);
         assert!(!window.has_active_dialog(cx));
         harness.view.update(cx, |view, cx| {
             view.modal = false;
             cx.notify();
         });
         window.render_frame(cx);
-        window.click("new-parameter", cx);
+        assert!(window.try_find("new-parameter-group-action").is_none());
+        super::create_panel_object(window, "parameters-create", 0, cx);
         assert!(!window.has_active_dialog(cx));
         assert!(window.find("property-input-name").visible());
     })

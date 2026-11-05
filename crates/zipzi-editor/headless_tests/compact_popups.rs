@@ -116,7 +116,7 @@ fn compact_select_keeps_plain_and_searchable_selection_at_every_scale(cx: &mut T
                 crate::theme::change(mode, cx);
                 window.activate_window();
                 window.render_frame(cx);
-                window.click("new-parameter", cx);
+                super::create_panel_object(window, "parameters-create", 0, cx);
             })
             .unwrap();
             cx.run_until_parked();

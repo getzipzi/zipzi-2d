@@ -48,6 +48,7 @@ fn locating_a_later_registration_expands_the_whole_group_before_rendering(cx: &m
 fn locked_folder_toolbar_command_and_row_share_domain_reason_but_inspection_stays_available(
     cx: &mut TestAppContext,
 ) {
+    cx.update(|cx| cx.set_reduce_motion(true));
     let assets = tempfile::tempdir().unwrap();
     let mut s = zipzi_sdk::AuthoringSession::new(&id(), zipzi_core::Canvas::default()).unwrap();
     let group = ObjectRef::new(K::ParameterGroup, id());
@@ -76,11 +77,18 @@ fn locked_folder_toolbar_command_and_row_share_domain_reason_but_inspection_stay
     let mut d = Document::open(&saved.path).unwrap();
     d.navigate(group.clone()).unwrap();
     let h = setup_with_document(cx, d, assets);
+    let history = h
+        .view
+        .read_with(cx, |v, _| v.editor.document().unwrap().history_lengths());
+    for index in [0, 1] {
+        cx.update_window(h.window, |_, window, cx| {
+            super::create_panel_object(window, "parameters-create", index, cx);
+        })
+        .unwrap();
+        cx.run_until_parked();
+    }
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
-        let history = h.view.read(cx).editor.document().unwrap().history_lengths();
-        window.click("new-parameter", cx);
-        window.click("new-parameter-group-action", cx);
         assert_eq!(
             h.view.read(cx).editor.document().unwrap().history_lengths(),
             history
@@ -350,7 +358,7 @@ fn legacy_new_motion_uses_shared_result_focus_and_keeps_its_existing_activation(
     cx.update_window(h.window, |_, window, cx| {
         window.click("workspace-animation", cx);
         window.render_frame(cx);
-        window.click("animation-new-motion", cx);
+        super::create_panel_object(window, "animation-motion-create", 0, cx);
     })
     .unwrap();
     cx.run_until_parked();

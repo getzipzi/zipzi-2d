@@ -353,7 +353,7 @@ impl Render for ViewportSurface {
         let muted = cx.theme().muted_foreground;
         let menu_owner = owner.downgrade();
         let menu_canvas = cx.weak_entity();
-        let hover_name = overlay.hovered_deformer_label.clone();
+        let hover_name = overlay.hovered_object_label.clone();
         let body = div()
             .id("canvas-body")
             .test_support()
@@ -404,7 +404,9 @@ impl Render for ViewportSurface {
             .child(self.overlay_element(overlay, palette, capture, cx))
             .children(hover_name.map(|name| {
                 div()
-                    .id("hovered-deformer-name")
+                    .id("hovered-object-name")
+                    .test_support()
+                    .aria_label(name.clone())
                     .absolute()
                     .bottom_2()
                     .left_2()

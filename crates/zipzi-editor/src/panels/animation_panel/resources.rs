@@ -10,7 +10,11 @@ use crate::panels::{
     sorting::{self, SortItem},
 };
 use gpui_kit::assets::IconName;
-use gpui_kit::component::{Icon, button::ButtonRounded};
+use gpui_kit::component::{
+    Icon,
+    button::ButtonRounded,
+    menu::{DropdownMenu, PopupMenu, PopupMenuItem},
+};
 use std::collections::{HashMap, HashSet};
 use zipzi_editor_core::{CommandId, DocumentId, MotionSelection};
 use zipzi_editor_core::{ObjectKind, ObjectRef};
@@ -137,16 +141,21 @@ impl AnimationPanel {
         let mut toolbar = PanelToolbar::new(SharedString::from(format!("{prefix}-toolbar")));
         let context = AuthoringContext::capture(&state.editor);
         let selection = authoring::selection(&state.editor, motion_panel);
-        for kind in if motion_panel {
-            vec![ObjectKind::Motion, ObjectKind::MotionGroup]
-        } else {
-            vec![ObjectKind::Expression]
-        } {
-            let Some(availability) =
-                AnimationAction::Create(kind, selection.clone()).availability(&state.editor)
-            else {
-                continue;
-            };
+        if motion_panel {
+            let owner = self.owner.clone();
+            toolbar = toolbar.control(
+                super::super::toolbar::new_object_button("animation-motion-create", disabled)
+                    .dropdown_menu(move |menu, window, cx| {
+                        motion_creation_menu(menu, owner.clone(), id, window, cx)
+                    }),
+            );
+        }
+        if !motion_panel
+            && let Some(availability) =
+                AnimationAction::Create(ObjectKind::Expression, selection.clone())
+                    .availability(&state.editor)
+        {
+            let kind = ObjectKind::Expression;
             let unavailable = disabled || !availability.enabled;
             let hint = availability
                 .reason
@@ -154,31 +163,23 @@ impl AnimationPanel {
             let owner = self.owner.clone();
             let selection = selection.clone();
             toolbar = toolbar.action(move |_| {
-                Button::new(match kind {
-                    ObjectKind::Motion => "animation-new-motion",
-                    ObjectKind::MotionGroup => "animation-new-motion-group",
-                    _ => "animation-new-expression",
-                })
-                .icon(IconName::Plus)
-                .when(
-                    kind == ObjectKind::MotionGroup,
-                    crate::ui::compact::new_group_button,
-                )
-                .accessibility_label(authoring::create_label(kind))
-                .tooltip(hint.clone())
-                .disabled(unavailable)
-                .on_click(move |_, window, cx| {
-                    if let Some(context) = context {
-                        let _ = owner.update(cx, |owner, cx| {
-                            owner.run_animation_action(
-                                context,
-                                AnimationAction::Create(kind, selection.clone()),
-                                window,
-                                cx,
-                            )
-                        });
-                    }
-                })
+                Button::new("animation-new-expression")
+                    .icon(IconName::Plus)
+                    .accessibility_label(authoring::create_label(kind))
+                    .tooltip(hint.clone())
+                    .disabled(unavailable)
+                    .on_click(move |_, window, cx| {
+                        if let Some(context) = context {
+                            let _ = owner.update(cx, |owner, cx| {
+                                owner.run_animation_action(
+                                    context,
+                                    AnimationAction::Create(kind, selection.clone()),
+                                    window,
+                                    cx,
+                                )
+                            });
+                        }
+                    })
             });
         }
         if motion_panel {
@@ -190,8 +191,8 @@ impl AnimationPanel {
             let hint = availability
                 .and_then(|a| a.reason)
                 .unwrap_or_else(|| t!("authoring.add_motion_reference").into());
-            toolbar = toolbar.action(move |_| {
-                Button::new("animation-add-motion-reference")
+            toolbar = toolbar.control(
+                crate::ui::compact::header_button(Button::new("animation-add-motion-reference"))
                     .icon(IconName::Link)
                     .ghost()
                     .accessibility_label(t!("authoring.add_motion_reference"))
@@ -208,8 +209,8 @@ impl AnimationPanel {
                                 )
                             });
                         }
-                    })
-            });
+                    }),
+            );
         }
         if !motion_panel {
             let owner = self.owner.clone();
@@ -918,4 +919,50 @@ impl AnimationPanel {
             })
             .when(disabled, |row| row.text_color(theme.muted_foreground))
     }
+}
+
+fn motion_creation_menu(
+    menu: PopupMenu,
+    owner: WeakEntity<EditorView>,
+    document: DocumentId,
+    window: &mut Window,
+    cx: &mut App,
+) -> PopupMenu {
+    let mut menu = crate::ui::compact::menu(menu);
+    let Some(owner) = owner.upgrade() else {
+        return menu;
+    };
+    if window.has_active_dialog(cx)
+        || !owner.update(cx, |view, cx| {
+            !view.modal
+                && !view.editor.is_busy()
+                && view.editor.active_id() == Some(document)
+                && view.prepare_property_inputs(document, window, cx)
+        })
+    {
+        return menu;
+    }
+    let state = owner.read(cx);
+    let Some(context) = AuthoringContext::capture(&state.editor) else {
+        return menu;
+    };
+    let selection = authoring::selection(&state.editor, true);
+    for kind in [ObjectKind::Motion, ObjectKind::MotionGroup] {
+        let action = AnimationAction::Create(kind, selection.clone());
+        let Some(availability) = action.availability(&state.editor) else {
+            continue;
+        };
+        let reason = availability.reason;
+        let owner = owner.downgrade();
+        menu = menu.item(PopupMenuItem::new(authoring::create_label(kind)).on_click(
+            move |_, window, cx| {
+                let _ = owner.update(cx, |view, cx| {
+                    if !view.authoring_menu_feedback(context, reason.as_deref(), window, cx) {
+                        view.run_animation_action(context, action.clone(), window, cx);
+                    }
+                });
+            },
+        ));
+    }
+    menu
 }

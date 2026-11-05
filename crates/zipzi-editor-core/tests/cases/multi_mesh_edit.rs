@@ -145,6 +145,17 @@ fn multi_mesh_regions_share_selection_with_mesh_scoped_vertex_ids() -> anyhow::R
             8
         );
         assert!(!editor.command_available(editor.command(CommandId::ManualSourceView)));
+        for (x, y, name) in [
+            (40., 40., Some("Mesh 2")),
+            (140., 140., Some("Mesh 4")),
+            (153., 166., Some("Mesh 4")),
+            (250., 250., None),
+        ] {
+            let point = screen(&mut editor, x, y)?;
+            let binding = editor.primary_viewport_binding().unwrap();
+            editor.hover_canvas(binding, Some(point))?;
+            assert_eq!(editor.overlay().hovered_object_label.as_deref(), name);
+        }
         region(&mut editor, lasso, false, false)?;
         assert_eq!(selected(&editor), 5);
         region(&mut editor, lasso, false, true)?;
@@ -155,6 +166,18 @@ fn multi_mesh_regions_share_selection_with_mesh_scoped_vertex_ids() -> anyhow::R
         assert_eq!(selected(&editor), 8);
         assert_eq!(meshes(&editor), original);
         assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+        editor.exit_manual_mesh();
+        editor.execute(EditorCommand::SelectObject(objects()[0].clone()))?;
+        editor.enter_manual_mesh(editor.active_id().unwrap())?;
+        let point = screen(&mut editor, 40., 40.)?;
+        let binding = editor.primary_viewport_binding().unwrap();
+        editor.hover_canvas(binding, Some(point))?;
+        assert_eq!(
+            editor.overlay().hovered_object_label.as_deref(),
+            Some("Mesh 2")
+        );
+        editor.hover_canvas(binding, None)?;
+        assert!(editor.overlay().hovered_object_label.is_none());
     }
     Ok(())
 }

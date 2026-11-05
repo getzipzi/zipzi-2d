@@ -138,7 +138,7 @@ fn group_properties_validate_identity_and_delete_keeps_contents(cx: &mut TestApp
         tempfile::tempdir().unwrap(),
     );
     cx.update_window(h.window, |_, window, cx| {
-        window.click("new-parameter-group-action", cx);
+        super::create_panel_object(window, "parameters-create", 1, cx);
         window.render_frame(cx);
         assert!(!window.has_active_dialog(cx));
         assert!(window.try_find("property-edit-parameter").is_none());

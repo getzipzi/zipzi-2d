@@ -14,6 +14,14 @@ use gpui_kit::{prelude::*, *};
 
 const COMPACT_WIDTH: Pixels = px(260.);
 
+pub(super) fn new_object_button(id: impl Into<ElementId>, disabled: bool) -> Button {
+    compact::header_button(Button::new(id))
+        .icon(IconName::Plus)
+        .accessibility_label(t!("authoring.new_object"))
+        .tooltip(t!("authoring.new_object"))
+        .disabled(disabled)
+}
+
 #[derive(gpui_kit::IntoElement)]
 pub struct PanelToolbar {
     id: ElementId,
