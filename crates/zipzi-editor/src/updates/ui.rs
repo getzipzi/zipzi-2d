@@ -2,7 +2,7 @@
 use super::{Phase, Updater};
 use crate::{t, ui::compact};
 use gpui_kit::component::{
-    ActiveTheme, Disableable, WindowExt,
+    ActiveTheme, Disableable, Sizable, WindowExt,
     button::{Button, ButtonVariants},
     checkbox::Checkbox,
 };
@@ -114,6 +114,8 @@ impl Render for UpdatePanel {
             })
             .child(
                 Checkbox::new("updates-automatic")
+                    .small()
+                    .text_size(compact::rem(compact::BODY))
                     .label(t!("updates.automatic").into_owned())
                     .checked(automatic)
                     .disabled(phase == Phase::Unavailable || phase == Phase::Applying)
@@ -131,6 +133,7 @@ impl Render for UpdatePanel {
             .child(
                 div().flex().justify_end().child(
                     Button::new("updates-primary")
+                        .small()
                         .primary()
                         .label(label.into_owned())
                         .disabled(!enabled)
