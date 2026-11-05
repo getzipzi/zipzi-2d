@@ -14,6 +14,15 @@ impl Document {
     }
 
     pub(super) fn validate_transform(&self, t: &Transform) -> Status {
+        let (minimum, maximum) = t.rotation_scale_bounds();
+        if t.rotation_scale_unit.is_some()
+            && (t.rotation().is_none()
+                || minimum <= 0.
+                || !minimum.is_finite()
+                || !maximum.is_finite())
+        {
+            return Status::error("INVALID_ROTATION", format!("{}.rotation_scale_unit", t.id));
+        }
         if let Some(record) = &t.original_shape {
             if let Err(status) = self.validate_deformer_original(record) {
                 return status;

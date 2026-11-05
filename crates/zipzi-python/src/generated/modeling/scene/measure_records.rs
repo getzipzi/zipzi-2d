@@ -92,6 +92,11 @@ pub fn measure_transform(value: &Bound<'_, PyAny>) -> PyResult<usize> {
         } else {
             measure_warpauthoringsettings(&(value.getattr("warp_authoring")?))?
         })
+        .saturating_add(if (value.getattr("rotation_scale_unit")?).is_none() {
+            0usize
+        } else {
+            16usize
+        })
         .saturating_add(if (value.getattr("original_shape")?).is_none() {
             0usize
         } else {

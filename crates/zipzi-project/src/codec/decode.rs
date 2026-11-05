@@ -55,6 +55,7 @@ fn transform_from_wire(
     };
 
     Ok(Transform {
+        rotation_scale_unit: transform.rotation_scale_unit,
         original_shape: transform.original_shape.clone(),
         warp_authoring: transform.warp_authoring.clone(),
         id: transform.id.clone(),

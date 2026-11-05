@@ -121,16 +121,18 @@ def validate_Transform(value: Transform) -> None:
     validate_Appearance(value.appearance)
     if value.warp_authoring is not None:
         validate_WarpAuthoringSettings(value.warp_authoring)
+    if value.rotation_scale_unit is not None:
+        _check_f32(value.rotation_scale_unit)
     if value.original_shape is not None:
         validate_DeformerOriginal(value.original_shape)
 
 def encode_Transform(value: Transform) -> object:
-    return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'part_id': None if value.part_id is None else encode_PartId(value.part_id), 'parent_id': None if value.parent_id is None else encode_TransformId(value.parent_id), 'data': encode_TransformData(value.data), 'enabled': value.enabled, 'appearance': encode_Appearance(value.appearance), 'warp_authoring': None if value.warp_authoring is None else encode_WarpAuthoringSettings(value.warp_authoring), 'original_shape': None if value.original_shape is None else encode_DeformerOriginal(value.original_shape)}
+    return {'id': value.id, 'runtime_id': value.runtime_id, 'name': value.name, 'part_id': None if value.part_id is None else encode_PartId(value.part_id), 'parent_id': None if value.parent_id is None else encode_TransformId(value.parent_id), 'data': encode_TransformData(value.data), 'enabled': value.enabled, 'appearance': encode_Appearance(value.appearance), 'warp_authoring': None if value.warp_authoring is None else encode_WarpAuthoringSettings(value.warp_authoring), 'rotation_scale_unit': None if value.rotation_scale_unit is None else value.rotation_scale_unit, 'original_shape': None if value.original_shape is None else encode_DeformerOriginal(value.original_shape)}
 
 def read_Transform(value: object) -> Transform:
     if isinstance(value, Transform): return value
     r = record(value)
-    return Transform(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), part_id=None if r.get('part_id', None) is None else read_PartId(r.get('part_id', None)), parent_id=None if r.get('parent_id', None) is None else read_TransformId(r.get('parent_id', None)), data=read_TransformData(r['data']), enabled=_boolean(r['enabled']), appearance=read_Appearance(r['appearance']), warp_authoring=None if r.get('warp_authoring', None) is None else read_WarpAuthoringSettings(r.get('warp_authoring', None)), original_shape=None if r.get('original_shape', None) is None else read_DeformerOriginal(r.get('original_shape', None)))
+    return Transform(id=string(r['id']), runtime_id=string(r['runtime_id']), name=string(r['name']), part_id=None if r.get('part_id', None) is None else read_PartId(r.get('part_id', None)), parent_id=None if r.get('parent_id', None) is None else read_TransformId(r.get('parent_id', None)), data=read_TransformData(r['data']), enabled=_boolean(r['enabled']), appearance=read_Appearance(r['appearance']), warp_authoring=None if r.get('warp_authoring', None) is None else read_WarpAuthoringSettings(r.get('warp_authoring', None)), rotation_scale_unit=None if r.get('rotation_scale_unit', None) is None else number(r.get('rotation_scale_unit', None)), original_shape=None if r.get('original_shape', None) is None else read_DeformerOriginal(r.get('original_shape', None)))
 
 def validate_PartId(value: PartId) -> None:
     if not isinstance(value, PartId):

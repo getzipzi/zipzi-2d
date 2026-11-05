@@ -65,6 +65,11 @@ pub fn read_transform(value: &Bound<'_, PyAny>) -> PyResult<zipzi_core::Transfor
                 &value.getattr("warp_authoring")?,
             )?)
         },
+        rotation_scale_unit: if value.getattr("rotation_scale_unit")?.is_none() {
+            None
+        } else {
+            Some(value.getattr("rotation_scale_unit")?.extract()?)
+        },
         original_shape: if value.getattr("original_shape")?.is_none() {
             None
         } else {

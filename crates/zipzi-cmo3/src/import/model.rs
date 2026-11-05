@@ -208,6 +208,7 @@ pub(super) fn read(
                 tag => return Err(invalid(format!("Unsupported deformer {tag}"))),
             };
             edit(document.create_imported_transform(Transform {
+                rotation_scale_unit: None,
                 warp_authoring: None,
                 original_shape: None,
                 id: target,

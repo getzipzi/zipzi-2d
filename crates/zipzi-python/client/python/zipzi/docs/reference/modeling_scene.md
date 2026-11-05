@@ -1228,7 +1228,7 @@ Edit the ordinary shape selected by binding and sample identities.
 
 **Type**
 
-`(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance, warp_authoring: WarpAuthoringSettings | None = None, original_shape: DeformerOriginal | None = None)`
+`(*, id: str, runtime_id: str, name: str, part_id: PartId | None = None, parent_id: TransformId | None = None, data: TransformData, enabled: bool, appearance: Appearance, warp_authoring: WarpAuthoringSettings | None = None, rotation_scale_unit: float | None = None, original_shape: DeformerOriginal | None = None)`
 
 Document deformation transform with independent organization and deformation parents.
 
@@ -1248,6 +1248,9 @@ rotation-pose interpretation.
 - `enabled`: Whether this object participates in evaluation; editor hiding is a separate state.
 - `appearance`: Opacity and multiply/screen color factors for this object or shape.
 - `warp_authoring`: Persistent Warp editing policy; never used for runtime deformation evaluation.
+- `rotation_scale_unit`: Unit multiplier already applied to an imported Rotation's scale channel.
+Retains its BlendShape clamp limits and export units without multiplying
+the pose again. None uses native authoring units (1).
 - `original_shape`: Independent original shape and its first-key update policy, retained only by native projects.
 
 ## zipzi.modeling.scene.TransformData

@@ -103,18 +103,32 @@ pub(super) fn write_bs_colors(
     Ok(())
 }
 
-/// Convert pixel-sized model/rotation units to Cubism units at the file boundary.
-pub(super) fn format_units(doc: &Document, parent: &str, point: Vec2) -> Result<Vec2, Status> {
-    let point = if parent.is_empty()
-        || doc
+/// Invert the scale-channel normalization along the entire parent chain.
+/// Warps pass Rotation scale through, while their own input coordinates stay UVs.
+fn coordinate_unit(doc: &Document, parent: &str) -> f64 {
+    if !parent.is_empty()
+        && doc
             .get_transform(parent)
-            .is_some_and(|t| t.rotation().is_some())
+            .is_some_and(|t| t.warp().is_some())
     {
-        let ppu = doc.export_settings().pixels_per_unit;
-        Vec2::new(point.x / ppu, point.y / ppu)
-    } else {
-        point
-    };
+        return 1.;
+    }
+    let mut unit = 1. / f64::from(doc.export_settings().pixels_per_unit);
+    let mut ancestor = parent;
+    while let Some(transform) = doc.get_transform(ancestor) {
+        if transform.rotation().is_some() {
+            unit *= f64::from(transform.rotation_scale_unit());
+        }
+        ancestor = transform.parent();
+    }
+    unit
+}
+
+fn convert_units(point: Vec2, unit: f64) -> Result<Vec2, Status> {
+    let point = Vec2::new(
+        (f64::from(point.x) * unit) as f32,
+        (f64::from(point.y) * unit) as f32,
+    );
     if !point.x.is_finite() || !point.y.is_finite() {
         return Err(Status::error(
             "NON_FINITE",
@@ -122,6 +136,11 @@ pub(super) fn format_units(doc: &Document, parent: &str, point: Vec2) -> Result<
         ));
     }
     Ok(point)
+}
+
+/// Convert authoring coordinates to runtime units only at the format boundary.
+pub(super) fn format_units(doc: &Document, parent: &str, point: Vec2) -> Result<Vec2, Status> {
+    convert_units(point, coordinate_unit(doc, parent))
 }
 
 pub(super) fn format_delta(doc: &Document, parent: &str, point: Vec2) -> Result<Vec2, Status> {
@@ -136,10 +155,11 @@ pub(super) fn write_positions(
     positions: &[Vec2],
 ) -> Result<(), Status> {
     let converted = parent_positions(doc, parent, positions)?;
+    let unit = coordinate_unit(doc, parent);
     let offset = checked(l.field("key_pos_src.xy")?.len() / 4, "positions")?;
     l.integer(&format!("{prefix}.key_pos_off"), offset)?;
     for &p in converted {
-        let p = format_units(doc, parent, p)?;
+        let p = convert_units(p, unit)?;
         l.scalar("key_pos_src.xy", p.x)?;
         l.scalar("key_pos_src.xy", p.y)?;
     }
@@ -162,8 +182,9 @@ pub(super) fn write_delta_positions(
             l.scalar("key_pos_src.xy", 0.0)?;
         }
     } else {
+        let unit = coordinate_unit(doc, parent);
         for p in positions {
-            let p = format_delta(doc, parent, *p)?;
+            let p = convert_units(*p, unit)?;
             l.scalar("key_pos_src.xy", p.x)?;
             l.scalar("key_pos_src.xy", p.y)?;
         }

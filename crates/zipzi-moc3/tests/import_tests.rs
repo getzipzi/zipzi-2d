@@ -2,6 +2,8 @@ mod common;
 
 #[path = "import_tests/blendshape_glue.rs"]
 mod blendshape_glue;
+#[path = "import_tests/coordinate_units.rs"]
+mod coordinate_units;
 #[path = "import_tests/helpers.rs"]
 mod helpers;
 #[path = "import_tests/model_roundtrip.rs"]

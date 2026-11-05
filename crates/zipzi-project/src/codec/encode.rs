@@ -80,6 +80,7 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
     for id in document.transform_order() {
         let t = document.get_transform(id).unwrap();
         transforms_wire.push(TransformWire {
+            rotation_scale_unit: t.rotation_scale_unit,
             original_shape: t.original_shape.clone(),
             bezier: t.warp().and_then(|w| w.bezier.clone()),
             warp_authoring: t.warp_authoring.clone(),

@@ -168,6 +168,12 @@ pub(crate) fn write_transform_in(
             None => py.None(),
         }
     })?;
+    out.set_item("rotation_scale_unit", {
+        match (&value.rotation_scale_unit).as_ref() {
+            Some(item) => (item).into_pyobject(py)?.into_bound().into_any().unbind(),
+            None => py.None(),
+        }
+    })?;
     out.set_item("original_shape", {
         match (&value.original_shape).as_ref() {
             Some(item) => write_deformeroriginal_in(py, (item), classes)?,

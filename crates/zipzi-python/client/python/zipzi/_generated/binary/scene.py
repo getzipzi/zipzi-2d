@@ -98,6 +98,11 @@ def _write_transform(value: object, w: Writer) -> None:
     else:
         w.raw(b"\1")
         _write_warpauthoringsettings(_field(value, 'warp_authoring'), w)
+    if _field(value, 'rotation_scale_unit') is None:
+        w.raw(b"\0")
+    else:
+        w.raw(b"\1")
+        w.scalar('f', _field(value, 'rotation_scale_unit'))
     if _field(value, 'original_shape') is None:
         w.raw(b"\0")
     else:
@@ -105,7 +110,7 @@ def _write_transform(value: object, w: Writer) -> None:
         _write_deformeroriginal(_field(value, 'original_shape'), w)
 
 def _read_transform(r: Reader) -> m.Transform:
-    return m.Transform(id=r.text(), runtime_id=r.text(), name=r.text(), part_id=(_read_partid(r) if r.optional() else None), parent_id=(_read_transformid(r) if r.optional() else None), data=_read_transformdata(r), enabled=r.boolean(), appearance=_read_appearance(r), warp_authoring=(_read_warpauthoringsettings(r) if r.optional() else None), original_shape=(_read_deformeroriginal(r) if r.optional() else None))
+    return m.Transform(id=r.text(), runtime_id=r.text(), name=r.text(), part_id=(_read_partid(r) if r.optional() else None), parent_id=(_read_transformid(r) if r.optional() else None), data=_read_transformdata(r), enabled=r.boolean(), appearance=_read_appearance(r), warp_authoring=(_read_warpauthoringsettings(r) if r.optional() else None), rotation_scale_unit=(number(r.scalar('f')) if r.optional() else None), original_shape=(_read_deformeroriginal(r) if r.optional() else None))
 
 def _write_partid(value: object, w: Writer) -> None:
     w.text(_field(value, 'value'))

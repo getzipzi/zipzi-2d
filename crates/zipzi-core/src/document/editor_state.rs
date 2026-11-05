@@ -16,33 +16,55 @@ impl Document {
         if let Some(scale) = self.editor_state().rotation_bone_reference_scales.get(id) {
             return Some(*scale);
         }
-        if let Some(crate::DeformerOriginalShape::Rotation { pose }) = transform
-            .original_shape
-            .as_ref()
-            .and_then(|original| original.snapshot.as_ref())
-            .map(|snapshot| &snapshot.shape)
+        self.default_rotation_bone_scales().get(id).copied()
+    }
+
+    /// Evaluate all branches once at parameter defaults, including hidden objects.
+    /// Stored base poses and original snapshots can describe a different keyform.
+    fn default_rotation_bone_scales(&self) -> std::collections::BTreeMap<String, f32> {
+        let mut frame = crate::DrawableFrame::default();
+        if !crate::evaluation::evaluate_frame_including_hidden(
+            self,
+            &Default::default(),
+            &mut frame,
+        )
+        .is_ok()
         {
-            if pose.scale.is_finite() && pose.scale > 0. {
-                return Some(pose.scale);
-            }
+            return Default::default();
         }
-        // Imported rotations may use reciprocal pixel/unit scales. Capture their
-        // authored baseline once, rather than treating that conversion as UI size.
-        let mut scale = 1_f64;
-        let mut current = Some(transform);
-        let mut remaining = self.transform_order().len();
-        while let Some(transform) = current {
-            if remaining == 0 {
-                return None;
-            }
-            remaining -= 1;
-            if let Some(rotation) = transform.rotation() {
-                scale *= f64::from(rotation.pose.scale);
-            }
-            current = self.get_transform(transform.parent());
+        frame
+            .deformers
+            .into_iter()
+            .filter_map(|control| {
+                let [x, _] = control.rotation_basis?;
+                let scale = x.x.hypot(x.y);
+                (scale.is_finite() && scale > 0.).then_some((control.id, scale))
+            })
+            .collect()
+    }
+
+    fn initial_rotation_bone_scales(
+        &self,
+        ids: &[String],
+        state: &EditorState,
+    ) -> std::collections::BTreeMap<String, f32> {
+        let missing: Vec<_> = ids
+            .iter()
+            .filter(|id| {
+                !state.rotation_bone_reference_scales.contains_key(*id)
+                    && self
+                        .get_transform(id)
+                        .is_some_and(|t| t.rotation().is_some())
+            })
+            .collect();
+        if missing.is_empty() {
+            return Default::default();
         }
-        let scale = scale as f32;
-        (scale.is_finite() && scale > 0.).then_some(scale)
+        let evaluated = self.default_rotation_bone_scales();
+        missing
+            .into_iter()
+            .map(|id| (id.clone(), evaluated.get(id).copied().unwrap_or(1.)))
+            .collect()
     }
 
     /// Missing display lengths derive from descendant Mesh bounds at the frozen
@@ -120,7 +142,7 @@ impl Document {
             let b = bounds.get(control.id.as_str())?;
             let [x, _] = control.rotation_basis?;
             let evaluated_scale = f64::from(x.x).hypot(f64::from(x.y));
-            let reference = f64::from(self.rotation_bone_reference_scale(&control.id)?);
+            let reference = f64::from(*state.rotation_bone_reference_scales.get(&control.id)?);
             let origin = control.points.first()?;
             let axis = control.rotation_axis?;
             let angle = f64::from(
@@ -152,22 +174,11 @@ impl Document {
     /// Freeze native display preferences after the final creation geometry and
     /// parent relations have been installed, before original-shape updates.
     pub(super) fn initialize_rotation_bone_display(&mut self, ids: &[String]) {
-        for id in ids {
-            if self
-                .get_transform(id)
-                .is_some_and(|t| t.rotation().is_some())
-                && !self
-                    .editor_state()
-                    .rotation_bone_reference_scales
-                    .contains_key(id)
-            {
-                let scale = self.rotation_bone_reference_scale(id).unwrap_or(1.);
-                self.content
-                    .editor_state
-                    .rotation_bone_reference_scales
-                    .insert(id.clone(), scale);
-            }
-        }
+        let references = self.initial_rotation_bone_scales(ids, self.editor_state());
+        self.content
+            .editor_state
+            .rotation_bone_reference_scales
+            .extend(references);
         let lengths = self.initial_rotation_bone_lengths(ids, self.editor_state());
         self.content
             .editor_state
@@ -186,15 +197,9 @@ impl Document {
                     .entry(id.clone())
                     .or_insert(90.);
             }
-            if transform.rotation().is_some()
-                && !state.rotation_bone_reference_scales.contains_key(id)
-            {
-                state.rotation_bone_reference_scales.insert(
-                    id.clone(),
-                    self.rotation_bone_reference_scale(id).unwrap_or(1.),
-                );
-            }
         }
+        let references = self.initial_rotation_bone_scales(self.transform_order(), &state);
+        state.rotation_bone_reference_scales.extend(references);
         let lengths = self.initial_rotation_bone_lengths(self.transform_order(), &state);
         state.rotation_bone_lengths.extend(lengths);
         self.replace_editor_state(state)
@@ -365,6 +370,202 @@ fn rotation_bone_ray_length(origin: [f64; 2], axis: [f64; 2], bounds: [f64; 4]) 
 #[cfg(test)]
 mod bone_length_tests {
     use super::rotation_bone_ray_length as length;
+    use crate::{
+        BindingAxis, BlendShapeBinding, BlendShapeKeyTable, BlendShapeTargetKind, Canvas,
+        DeltaKeyforms, DeltaRotationKeyform, Document, Parameter, ParameterKind, RotationKeyform,
+        RotationPose, RotationTransform, SceneBinding, SceneTrack, Transform, TransformData, Vec2,
+        WarpTransform,
+    };
+
+    fn id(n: u32) -> String {
+        format!("{n:08x}-1111-4111-8111-111111111111")
+    }
+
+    fn animated_rotations() -> Document {
+        let mut doc = Document::new();
+        assert!(doc
+            .initialize(id(1), Canvas::new(100., 100., Vec2::default(), 1.))
+            .is_ok());
+        for (n, kind, default_value) in [
+            (2, ParameterKind::Normal, 0.),
+            (3, ParameterKind::BlendShape, 0.5),
+        ] {
+            assert!(doc
+                .create_parameter(Parameter {
+                    id: id(n),
+                    kind,
+                    default_value,
+                    minimum: -1.,
+                    maximum: 1.,
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+        }
+        for (n, parent, scale) in [(4, None, 0.25), (6, Some(id(5)), 0.1)] {
+            assert!(doc
+                .create_imported_transform(Transform {
+                    id: id(n),
+                    parent_id: parent.map(Into::into),
+                    enabled: n != 4,
+                    data: TransformData::Rotation(RotationTransform {
+                        pose: RotationPose {
+                            scale,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                })
+                .status
+                .is_ok());
+            let scales = if n == 4 {
+                [0.25, 4., 6.]
+            } else {
+                [0.1, 1., 2.]
+            };
+            assert!(doc
+                .create_scene_binding(SceneBinding {
+                    id: id(n + 10),
+                    axes: vec![BindingAxis {
+                        parameter_id: id(2),
+                        keys: vec![-1., 0., 1.],
+                        ..Default::default()
+                    }],
+                    track: SceneTrack::Rotation {
+                        target_id: id(n).into(),
+                        keyforms: [-1., 0., 1.]
+                            .into_iter()
+                            .zip(scales)
+                            .map(|(key, scale)| RotationKeyform {
+                                keys: vec![key],
+                                rotation: RotationPose {
+                                    scale,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            })
+                            .collect(),
+                    },
+                })
+                .status
+                .is_ok());
+            if n == 4 {
+                assert!(doc
+                    .create_imported_transform(Transform {
+                        id: id(5),
+                        parent_id: Some(id(4).into()),
+                        data: TransformData::Warp(WarpTransform {
+                            bezier: None,
+                            rows: 1,
+                            columns: 1,
+                            quad: true,
+                            points: vec![
+                                Vec2::new(0., 0.),
+                                Vec2::new(100., 0.),
+                                Vec2::new(0., 100.),
+                                Vec2::new(100., 100.)
+                            ],
+                        }),
+                        ..Default::default()
+                    })
+                    .status
+                    .is_ok());
+            }
+        }
+        assert!(doc
+            .create_blend_key_table(BlendShapeKeyTable {
+                id: id(20),
+                parameter_id: id(3),
+                keys: vec![0., 1.],
+                base_key_idx: 0,
+                samples: Default::default(),
+                base_sample_id: Default::default(),
+            })
+            .status
+            .is_ok());
+        assert!(doc
+            .create_blend_binding(BlendShapeBinding {
+                id: id(21),
+                target_id: id(6),
+                target_kind: BlendShapeTargetKind::Rotation,
+                key_table_id: id(20),
+                constraint_ids: vec![],
+                keyforms: DeltaKeyforms::Rotation(vec![
+                    DeltaRotationKeyform::default(),
+                    DeltaRotationKeyform {
+                        scale: Some(0.5),
+                        ..Default::default()
+                    },
+                ]),
+            })
+            .status
+            .is_ok());
+        doc.set_original_capture_context([(id(2), -1.)].into());
+        doc
+    }
+
+    #[test]
+    fn rotation_reference_uses_default_evaluation_with_warp_inheritance_blends_and_hidden_objects()
+    {
+        for native in [false, true] {
+            let mut doc = animated_rotations();
+            let mut before = crate::DrawableFrame::default();
+            assert!(crate::evaluation::evaluate_frame_including_hidden(
+                &doc,
+                &Default::default(),
+                &mut before
+            )
+            .is_ok());
+            assert_eq!(doc.rotation_bone_reference_scale(&id(4)), Some(4.));
+            assert_eq!(doc.rotation_bone_reference_scale(&id(6)), Some(5.));
+            if native {
+                doc.initialize_rotation_bone_display(&[id(4), id(6)]);
+            } else {
+                assert!(doc
+                    .initialize_rotation_bone_reference_scales()
+                    .status
+                    .is_ok());
+            }
+            assert_eq!(
+                doc.editor_state().rotation_bone_reference_scales[&id(4)],
+                4.
+            );
+            assert_eq!(
+                doc.editor_state().rotation_bone_reference_scales[&id(6)],
+                5.
+            );
+            let mut after = crate::DrawableFrame::default();
+            assert!(crate::evaluation::evaluate_frame_including_hidden(
+                &doc,
+                &Default::default(),
+                &mut after
+            )
+            .is_ok());
+            assert_eq!(before.deformers, after.deformers);
+            assert_eq!(before.drawables, after.drawables);
+        }
+    }
+
+    #[test]
+    fn default_evaluated_rotation_reference_stays_frozen_after_later_animation_edits() {
+        let mut doc = animated_rotations();
+        assert!(doc
+            .initialize_rotation_bone_reference_scales()
+            .status
+            .is_ok());
+        let state = doc.editor_state().clone();
+        let mut parameter = doc.get_parameter(&id(2)).unwrap().clone();
+        parameter.default_value = 1.;
+        assert!(doc.replace_parameter(parameter).status.is_ok());
+        assert!(doc
+            .initialize_rotation_bone_reference_scales()
+            .status
+            .is_ok());
+        assert_eq!(doc.editor_state(), &state);
+        assert_eq!(doc.rotation_bone_reference_scale(&id(6)), Some(5.));
+    }
+
     #[test]
     fn ray_length_uses_direction_and_off_center_origin() {
         let bounds = [-100., -20., 100., 20.];

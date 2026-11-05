@@ -1181,6 +1181,7 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
     let mut s = session();
     s.edit("Warp", None, |e| {
         e.create_transform(Transform {
+            rotation_scale_unit: None,
             warp_authoring: None,
             original_shape: None,
             id: id(2),

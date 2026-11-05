@@ -137,6 +137,11 @@ pub struct Transform {
     /// Persistent Warp editing policy; never used for runtime deformation evaluation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warp_authoring: Option<crate::warp_bezier::WarpAuthoringSettings>,
+    /// Unit multiplier already applied to an imported Rotation's scale channel.
+    /// Retains its BlendShape clamp limits and export units without multiplying
+    /// the pose again. None uses native authoring units (1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rotation_scale_unit: Option<f32>,
     /// Independent original shape and its first-key update policy, retained only by native projects.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub original_shape: Option<DeformerOriginal>,
@@ -154,6 +159,7 @@ impl Default for Transform {
             enabled: true,
             appearance: Appearance::default(),
             warp_authoring: None,
+            rotation_scale_unit: None,
             original_shape: None,
         }
     }
@@ -227,6 +233,17 @@ pub struct RotationTransform {
     pub pose: RotationPose,
 }
 impl Transform {
+    /// Unit conversion already included in this Rotation's stored scale values.
+    pub fn rotation_scale_unit(&self) -> f32 {
+        self.rotation_scale_unit.unwrap_or(1.)
+    }
+
+    /// Native BlendShape scale limits expressed in the current authoring units.
+    pub fn rotation_scale_bounds(&self) -> (f32, f32) {
+        let unit = self.rotation_scale_unit();
+        (0.0001 * unit, 100. * unit)
+    }
+
     /// Borrow a lookup key; an absent parent uses the root coordinate space.
     pub fn parent(&self) -> &str {
         self.parent_id.as_ref().map_or("", TransformId::as_str)

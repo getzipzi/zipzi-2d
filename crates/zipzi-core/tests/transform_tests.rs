@@ -11,6 +11,31 @@ fn id(n: i32) -> String {
 }
 
 #[test]
+fn invalid_rotation_scale_units_are_rejected_before_evaluation() {
+    let mut doc = Document::new();
+    assert!(doc
+        .initialize(id(1), Canvas::new(640., 480., Vec2::default(), 100.))
+        .is_ok());
+    for unit in [
+        0.,
+        -1.,
+        f32::NAN,
+        f32::INFINITY,
+        f32::MAX,
+        f32::MIN_POSITIVE * f32::EPSILON,
+    ] {
+        let result = doc.create_transform(Transform {
+            id: id(2),
+            runtime_id: "Rotation".into(),
+            rotation_scale_unit: Some(unit),
+            ..Default::default()
+        });
+        assert_eq!(result.status.code, "INVALID_ROTATION", "unit={unit}");
+        assert!(doc.transform_order().is_empty());
+    }
+}
+
+#[test]
 fn test_hierarchical_transforms_and_warp() {
     hierarchical_transforms_and_warp(1);
     hierarchical_transforms_and_warp(0);
