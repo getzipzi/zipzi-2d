@@ -300,7 +300,8 @@ mod tests {
         let manifest = root.join("sq.version");
         std::fs::write(
             &manifest,
-            "<package><metadata><id>Zipzi.Editor</id><version>1.0.0</version></metadata></package>",
+            "<package><metadata><id>Zipzi.Editor</id><version>1.0.0</version>\
+             <mainExe>zipzi-editor.exe</mainExe></metadata></package>",
         )
         .unwrap();
         // No updater process is launched by this test.

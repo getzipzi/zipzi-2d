@@ -137,7 +137,8 @@ publishing. Mac app, Windows app and Python on each platform build in four
 parallel jobs using the standard GitHub-hosted runners and all available CPU
 cores. App and Python dependency caches use `target/alpha-app-cargo` and
 `target/alpha-python-cargo`, independently per OS. Successful default-branch
-runs save caches for subsequent builds and tag runs to restore.
+runs and manual builds save caches for subsequent builds and tag runs to restore.
+Manual app builds retain dependency caches after a failed test as well.
 
 Only a pushed `vX.Y.Z-alpha.N` tag publishes to GitHub and PyPI. When a successful
 default-branch build for that exact commit still has all its artifacts, the tag
