@@ -56,7 +56,8 @@ arguments and output paths.
 | `packaging/build_project_preview.py` | Build macOS Quick Look extensions / Windows Shell preview DLL; `--test` checks native providers |
 | `packaging/collect_python.py` | Verify acceptance reports and collect the Python release distributions |
 | `packaging/reuse_release.py` | Select a successful default-branch build and verify its commit, version and publication hashes before tag promotion |
-| `packaging/release_downloads.py` | Prepare the Mac DMG, Windows ZIP, full source and matching checksums; generate desktop download links and Python install instructions |
+| `packaging/release_downloads.py` | Prepare the Mac DMG, Windows ZIP/installer, signed update assets, full source and matching checksums; generate desktop download links and Python install instructions |
+| `packaging/ci_updates.py`, `packaging/publish_updates.py` | Validate opt-in Alpha signing configuration and advance the fixed authenticated GitHub update feeds after versioned releases |
 | `workspace/workspace.sh`, `workspace/workspace_tools.py` | Shared path and Cargo artifact handling |
 
 See [test coverage](#test-coverage), [CI coverage](#ci-coverage) and
@@ -136,18 +137,23 @@ publishing. Mac app, Windows app and Python on each platform build in four
 parallel jobs using the standard GitHub-hosted runners and all available CPU
 cores. App and Python dependency caches use `target/alpha-app-cargo` and
 `target/alpha-python-cargo`, independently per OS. Successful default-branch
-runs save caches for subsequent builds and tag runs to restore.
+runs and manual builds save caches for subsequent builds and tag runs to restore.
+Manual app builds retain dependency caches after a failed test as well.
 
 Only a pushed `vX.Y.Z-alpha.N` tag publishes to GitHub and PyPI. When a successful
 default-branch build for that exact commit still has all its artifacts, the tag
-run skips native compilation and verifies its build manifest, version and every
+run skips native compilation and verifies its build manifest, update configuration, version and every
 publication file hash before publishing those same bytes. Missing, expired,
 failed, PR or other-commit builds cannot be reused; the workflow builds normally.
 Non-tag build artifacts last one day; tag artifacts last seven days. See
 [the release guide](../docs/RELEASING.md) for setup and recovery.
 
-The public GitHub release uploads only Mac DMG, Windows portable ZIP, complete
-source and their checksums. Python distributions remain on PyPI and in the
+The public GitHub release uploads the Mac DMG, Windows portable ZIP, complete
+source and their checksums by default. Opt-in signed desktop updates replace the
+ZIP with an installer and add authenticated feeds and packages. Only successful
+Alpha tags advance the fixed `desktop-alpha-updates` release; main/manual builds
+only prepare artifacts. See the [update configuration](../docs/references/desktop-updates.md#github-alpha-ci-configuration).
+Python distributions remain on PyPI and in the
 validated Actions bundle. A generated download section precedes GitHub's
 automatic changelog, so users do not need to choose between wheel files or
 duplicate Mac formats. It requires no per-version notes maintenance.
@@ -387,6 +393,11 @@ instructions](../native/project-preview/README.md) for builds and platform gates
 
 The enclosing macOS app still needs its final signature. These commands do not upload releases,
 notarize apps, change remote repositories or verify GitHub license presentation.
+
+`packaging/package_updates.py` creates Velopack installers and authenticated
+update feeds for Windows and macOS. See [desktop updates](../docs/references/desktop-updates.md)
+for the pinned packaging tool, build-time public configuration, private signing
+inputs and installed upgrade gates. It does not publish artifacts.
 
 
 P3A-3/4/5 was committed without acceptance, by user request. Subsequent selected

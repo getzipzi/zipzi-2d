@@ -1,5 +1,6 @@
 """Public release downloads must be unambiguous and keep correct checksums."""
 import hashlib
+import json
 import importlib.util
 from pathlib import Path
 import sys
@@ -15,6 +16,25 @@ TAG = 'v0.1.0-alpha.2'
 
 
 class ReleaseDownloads(unittest.TestCase):
+    def test_installer_and_signed_update_assets_are_included(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / 'input'
+            source.mkdir()
+            for name in downloads.download_names(TAG, True):
+                (source / name).write_bytes(name.encode())
+            package = 'Zipzi.Editor-0.1.0-alpha.2-full.nupkg'
+            (source / package).write_bytes(b'package')
+            feed = 'releases.windows-x86_64-alpha.json'
+            (source / feed).write_text(json.dumps({'Assets': [{'FileName': package}]}))
+            (source / (feed + '.sig')).write_text('signature')
+            output = Path(folder) / 'public'
+            self.assertTrue(downloads.prepare_downloads(source, output, TAG))
+            self.assertTrue((output / package).is_file())
+            self.assertTrue((output / (feed + '.sig')).is_file())
+            notes = downloads.download_notes('getzipzi/zipzi-2d', TAG, True)
+            self.assertIn('windows-x86_64.exe', notes)
+            self.assertIn('registered automatically', notes)
+
     def test_only_desktop_downloads_and_complete_source_are_published(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

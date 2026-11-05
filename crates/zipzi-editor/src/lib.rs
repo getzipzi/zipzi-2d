@@ -40,6 +40,7 @@ pub(crate) mod test_fixture;
 mod theme;
 mod transfer;
 mod ui;
+mod updates;
 mod viewports;
 mod worker;
 mod worker_queue;
@@ -395,6 +396,7 @@ impl EditorView {
 }
 
 pub fn run() {
+    updates::bootstrap();
     let options = match launch::LaunchOptions::parse(std::env::args_os().skip(1)) {
         Ok(options) => options,
         Err(error) => {
@@ -460,13 +462,17 @@ pub fn run() {
         gpui_kit::init(cx);
         #[cfg(target_os = "windows")]
         preview::init(cx);
-        cx.on_app_quit(|_| async {
-            benchmark::finish();
+        cx.on_app_quit(|cx| {
+            updates::on_quit(cx);
+            async {
+                benchmark::finish();
+            }
         })
         .detach();
         let settings = settings::Settings::load(cx);
         i18n::activate(settings.language.as_deref());
         cx.set_global(settings);
+        updates::init(cx);
         actions::init(cx);
         theme::init(cx);
         let host = host::DesktopHost::with_projects(no_window, project_queue, cx);

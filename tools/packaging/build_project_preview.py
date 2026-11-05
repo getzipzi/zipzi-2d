@@ -64,8 +64,10 @@ def build_macos(app, library, identity='-'):
         entitlements = contents / 'Resources/entitlements.plist'
         entitlements.parent.mkdir(exist_ok=True)
         entitlements.write_bytes(plistlib.dumps({'com.apple.security.app-sandbox': True}))
-        subprocess.run(['codesign', '--force', '--sign', identity, '--entitlements', str(entitlements),
-                        str(contents.parent)], check=True)
+        signing = ['codesign', '--force', '--sign', identity, '--entitlements', str(entitlements)]
+        if identity != '-':
+            signing += ['--options', 'runtime', '--timestamp']
+        subprocess.run([*signing, str(contents.parent)], check=True)
 
 
 def build_windows(output, library):

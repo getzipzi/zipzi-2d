@@ -1,7 +1,7 @@
 # Per-user Shell registration. Explorer/prevhost instantiate the DLL from IStream.
-param([switch]$Unregister)
+param([switch]$Unregister, [string]$PreviewPath = (Join-Path $PSScriptRoot 'ZipziProjectPreview.dll'))
 $ErrorActionPreference = 'Stop'
-$previewPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'ZipziProjectPreview.dll'))
+$previewPath = [System.IO.Path]::GetFullPath($PreviewPath)
 $classId = '{B7666151-0AD8-4B22-829E-4640CB90D3BE}'
 $thumbnailId = '{E357FCCD-A995-4576-B01F-234630154E96}'
 $previewId = '{8895B1C6-B41F-4C1C-A562-0D564250836F}'

@@ -58,6 +58,7 @@ actions!(
         CloseWindow,
         About,
         ShowWelcome,
+        CheckUpdates,
         Hide,
         HideOthers,
         ShowAll,
@@ -88,6 +89,13 @@ pub(super) fn init(cx: &mut App) {
     cx.on_action(|_: &Hide, cx| cx.hide());
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());
     cx.on_action(|_: &ShowAll, cx| cx.unhide_other_apps());
+    cx.on_action(|_: &CheckUpdates, cx| {
+        if cx.windows().is_empty() {
+            if let Some((handle, _)) = host::open_window(cx, true) {
+                let _ = handle.update(cx, |_, window, cx| updates::ui::show(window, cx, true));
+            }
+        }
+    });
 }
 
 impl EditorView {
@@ -172,6 +180,7 @@ impl EditorView {
                     this.show_welcome(window, cx);
                 }))
                 .on_action(|_: &About, window, cx| ui::about::show(window, cx))
+                .on_action(|_: &CheckUpdates, window, cx| updates::ui::show(window, cx, true))
             })
             // Fallback native text actions only at non-input focus; Kit always owns input history.
             .when(!modal && self.editor.can_undo(), |e| {

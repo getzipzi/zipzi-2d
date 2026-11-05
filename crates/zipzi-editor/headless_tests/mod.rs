@@ -46,6 +46,7 @@ mod timeline;
 mod timeline_navigation;
 mod timeline_regressions;
 mod titlebar;
+mod updates;
 mod tooltips;
 mod transfer;
 mod tree_selection;

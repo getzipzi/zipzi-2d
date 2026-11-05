@@ -54,16 +54,19 @@ Local/Connected acceptance. A collection job checks both acceptance reports,
 commit identity, wheel tags and file hashes. It selects the macOS copies of the
 source archives and pure wheel and one native wheel per platform, then checks
 the distribution metadata. A build manifest binds all release files to the
-source commit and version. Only tag pushes publish to GitHub and PyPI.
+source commit, version and desktop update configuration. Only tag pushes publish
+to GitHub and PyPI.
 
 When that exact commit already has a successful default-branch build with all
-required artifacts available, the tag run skips all four native builds. It
+required artifacts and the same update configuration available, the tag run
+skips all four native builds. It
 downloads the validated release, verifies the manifest's commit and version,
 every asset hash, and the Python publication bytes, then publishes. It never
 selects PR builds, other commits or incomplete builds. If no eligible build is
 available, or the lookup fails, the tag run performs a complete build. A downloaded
 manifest or hash mismatch fails publication. GitHub and PyPI receive the tested
-bytes without repackaging.
+bytes without repackaging. Changing update enablement, source URL or the public
+key forces a new build; those settings are also checked in the build manifest.
 
 Before the first PyPI publication:
 
@@ -99,9 +102,10 @@ For each release:
 4. Follow **Actions → Alpha release**. The tag reuses a successful build of the
    exact same commit when its artifacts are still available; otherwise it builds
    normally. Once verification passes, the workflow creates
-   a GitHub prerelease with four uploaded downloads: the Mac DMG, Windows portable
-   ZIP, complete workspace source (including submodules), and `SHA256SUMS` for
-   those three files. Python wheels and sdists go to PyPI and remain in internal
+   a GitHub prerelease with the Mac DMG, Windows portable ZIP (or installer
+   when desktop updates are enabled), complete workspace source (including
+   submodules), and `SHA256SUMS`. Enabled updates also include authenticated feeds,
+   signatures and packages. Python wheels and sdists go to PyPI and remain in internal
    Actions artifacts for verified reuse; they are not duplicated on the release
    page. GitHub's built-in Source code links are generated separately and are not
    installers. A generated download section links directly to the two desktop
@@ -110,10 +114,22 @@ For each release:
    Separate PyPI jobs then publish `zipzi` followed by `zipzi-native` using the
    configured API token.
 
-The Windows ZIP contains the executable, licenses/notices and build identity;
-it is unsigned. The macOS app is ad hoc signed, without Developer ID signing
-or notarization. macOS may block the first launch; if you trust the build, open
-System Settings → Privacy & Security → Open Anyway after attempting to launch it.
+Desktop updates are opt-in through `ZIPZI_DESKTOP_UPDATES=true`. Configure the
+repository variables and Ed25519 seed described in the [desktop update reference](references/desktop-updates.md#github-alpha-ci-configuration).
+Configuration is validated before any native jobs. Enabled app jobs embed the
+fixed GitHub Alpha source, authenticate update packages and verify update behavior.
+Without optional OS credentials, macOS uses ad hoc signing and Windows produces
+an unsigned installer. Complete developer signing inputs can be added per OS.
+After a versioned release succeeds, a separate serialized job uploads immutable
+packages and then advances the signed feeds in `desktop-alpha-updates`. Numeric
+version checks prevent older tags from replacing newer feeds. Main/manual builds
+never advance that channel; the channel job can be retried independently of PyPI.
+
+With updates disabled (the default), the Windows ZIP contains the executable,
+licenses/notices and build identity and is unsigned. The macOS app is ad hoc
+signed without Developer ID signing or notarization. macOS may block the first
+launch; if you trust the build, open System Settings → Privacy & Security → Open
+Anyway after attempting to launch it.
 Prebuild/manual Actions artifacts expire after one day; tag-run artifacts after
 seven days. GitHub Release assets persist. Tag within the prebuild retention
 window to reuse it; expiry only disables the shortcut and does not permit

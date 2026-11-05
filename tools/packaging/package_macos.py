@@ -41,7 +41,7 @@ def binary_digest(app):
         return hashlib.file_digest(binary, 'sha256').hexdigest()
 
 
-def package(app, output):
+def package(app, output, trusted=False):
     app, output = app.resolve(), output.resolve()
     if app.name != 'Zipzi Editor.app' or output.suffix != '.dmg':
         raise ValueError('Expected Zipzi Editor.app and a .dmg output path')
@@ -52,6 +52,8 @@ def package(app, output):
         raise ValueError('Expected the Zipzi Editor bundle identifier')
     version = versions(info['ZipziReleaseVersion'])['version']
     signature(app)
+    if trusted:
+        subprocess.run(['spctl', '--assess', '--type', 'execute', str(app)], check=True)
     digest = binary_digest(app)
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='zipzi-installer-') as directory:
@@ -61,7 +63,15 @@ def package(app, output):
         mount.mkdir()
         subprocess.run(['ditto', str(app), str(stage / app.name)], check=True)
         (stage / 'Applications').symlink_to('/Applications')
-        (stage / 'Install.txt').write_text(INSTALL, encoding='utf-8')
+        instructions = INSTALL
+        if trusted:
+            instructions = ('Install Zipzi Editor\n\n'
+                            '1. Drag Zipzi Editor.app onto Applications.\n'
+                            '2. Eject this disk image and open the installed app.\n\n'
+                            '安装 Zipzi Editor\n\n'
+                            '1. 将 Zipzi Editor.app 拖入 Applications（应用程序）文件夹。\n'
+                            '2. 推出此安装磁盘并打开已安装的应用。\n')
+        (stage / 'Install.txt').write_text(instructions, encoding='utf-8')
         image = temporary / output.name
         subprocess.run(['hdiutil', 'create', '-quiet', '-fs', 'HFS+', '-format', 'UDZO',
                         '-volname', 'Zipzi Editor ' + version, '-srcfolder', str(stage), str(image)], check=True)

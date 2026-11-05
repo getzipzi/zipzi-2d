@@ -22,7 +22,7 @@ def check_executable(data):
         raise ValueError('Editor executable must target Windows x86-64')
 
 
-def package(binary, output, revision, root=ROOT, preview_dll=None):
+def payload(binary, revision, root=ROOT, preview_dll=None):
     info = metadata(root)
     data = binary.read_bytes()
     check_executable(data)
@@ -53,6 +53,11 @@ def package(binary, output, revision, root=ROOT, preview_dll=None):
             files['vendor-notices/' + path.relative_to(vendor).as_posix()] = path.read_bytes()
     files['BUILD-INFO.txt'] = (f'Zipzi Editor {info["version"]}\nSource commit: {revision}\n'
                                'Platform: Windows x86-64\n').encode()
+    return files
+
+
+def package(binary, output, revision, root=ROOT, preview_dll=None):
+    files = payload(binary, revision, root, preview_dll)
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'x', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for name, content in sorted(files.items()):

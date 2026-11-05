@@ -7,6 +7,7 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+    "cryptography>=46,<49",
     "maturin==1.15.0",
     "psutil>=7,<8",
     "pyright==1.1.414",

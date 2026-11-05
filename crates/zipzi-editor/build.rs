@@ -1,5 +1,7 @@
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=ZIPZI_UPDATE_URL");
+    println!("cargo:rerun-if-env-changed=ZIPZI_UPDATE_PUBLIC_KEY");
     #[cfg(windows)]
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         println!("cargo:rerun-if-changed=assets/windows/editor.rc");

@@ -1,6 +1,7 @@
 //! Application identity, project links, and license notices.
 use crate::t;
 use gpui_kit::base::Link;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::{ActiveTheme, WindowExt};
 use gpui_kit::{prelude::*, *};
 
@@ -30,6 +31,15 @@ pub(crate) fn show(window: &mut Window, cx: &mut App) {
                                 )),
                             )
                             .child(t!("app.description")),
+                    )
+                    .child(
+                        Button::new("about-check-updates")
+                            .ghost()
+                            .label(t!("updates.check"))
+                            .on_click(|_, window, cx| {
+                                window.close_dialog(cx);
+                                crate::updates::ui::show(window, cx, true);
+                            }),
                     )
                     .child(
                         div()

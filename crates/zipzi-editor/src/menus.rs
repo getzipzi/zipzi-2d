@@ -331,6 +331,7 @@ impl EditorView {
             Menu::new(t!("app.title")).items([
                 MenuItem::action(t!("app.about"), About),
                 MenuItem::action(t!("welcome.show"), ShowWelcome).disabled(modal),
+                MenuItem::action(t!("updates.check"), CheckUpdates).disabled(modal),
                 MenuItem::submenu(
                     Menu::new(t!("menu.language")).items([
                         MenuItem::action(t!("menu.follow_system"), SetLanguage { language: None })
