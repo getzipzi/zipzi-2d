@@ -48,6 +48,18 @@ Use `-Unregister` before removal or relocation. Unregistration checks the curren
 DLL path and preserves registrations owned by another location. It does not change
 the user's default application. No administrator or `regsvr32` is needed.
 
+After registration, run the generated native test runner against the installed
+provider through the system COM host (read-only; it does not register anything):
+
+```powershell
+& target/release/project-preview-test/provider-test.exe --registered target/release/project-preview-test
+```
+
+This checks isolated activation, thumbnail pixels, preview resizing/unloading and
+missing/corrupt image fallback. Direct DLL tests alone do not exercise the system's
+registration view. If a development process sees a registration that Explorer does
+not, compare with a process launched from Explorer before diagnosing the DLL.
+
 The provider implements `IInitializeWithStream`, `IThumbnailProvider` and
 `IPreviewHandler` in an Apartment COM server. Explorer uses thumbnail isolation;
 Preview runs in the system low integrity preview surrogate. PNG pixels are cached

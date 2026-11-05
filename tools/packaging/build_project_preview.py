@@ -114,7 +114,7 @@ def test_windows(dll):
     windows_compile(['cl', '/nologo', '/std:c++17', '/EHsc', '/MD', '/DUNICODE', '/D_UNICODE',
                      str(ROOT / 'native/project-preview/windows/ProviderTest.cpp'),
                      '/Fo' + str(runner.with_suffix('.obj')), '/Fe' + str(runner),
-                     '/link', 'ole32.lib', 'shlwapi.lib', 'gdi32.lib', 'user32.lib', 'uuid.lib'], runner)
+                     '/link', 'ole32.lib', 'shell32.lib', 'shlwapi.lib', 'gdi32.lib', 'user32.lib', 'uuid.lib'], runner)
     subprocess.run([str(runner), str(dll), str(directory)], check=True)
 
 
