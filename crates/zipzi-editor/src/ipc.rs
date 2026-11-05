@@ -137,6 +137,12 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
         let _server = server; // Holds endpoint ownership throughout host residency.
         while let Ok(message) = incoming.recv().await {
             cx.update(|cx| {
+                if updates::applying(cx) {
+                    // Close the reply transport instead of admitting a new SDK request
+                    // between the update safety check and process shutdown.
+                    drop(message);
+                    return;
+                }
                 let host = cx.global::<host::DesktopHost>().clone();
                 match message {
                     Inbound::Frame {

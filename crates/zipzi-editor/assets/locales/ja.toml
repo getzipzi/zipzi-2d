@@ -1,5 +1,30 @@
 # Japanese editor translations.
 
+[updates]
+title = "ソフトウェアアップデート"
+check = "アップデートを確認…"
+installed = "現在のバージョン %{version}"
+unavailable = "このビルドの更新はダウンロードページから入手してください。"
+idle = "新しいバージョンがあるか確認します。"
+checking = "アップデートを確認中…"
+current = "最新バージョンです。"
+available = "バージョン %{version} をダウンロードできます。"
+downloading = "アップデートをダウンロード中 · %{progress}%"
+ready = "バージョン %{version} の準備ができました。再起動して更新します。"
+ready_hint = "アップデートの準備完了。クリックして詳細を表示"
+applying = "再起動を準備中…"
+failed = "アップデートを完了できませんでした。再試行してください。"
+download = "アップデートをダウンロード"
+restart = "再起動して更新"
+download_page = "ダウンロードページを開く"
+automatic = "更新を自動でダウンロードし、安全に終了したときにインストール"
+safe_exit = "未保存のプロジェクト、スクリプト接続、実行中のジョブを中断しません。"
+blocked_operation = "現在のダイアログ、編集、操作を完了してから再起動してください。"
+blocked_clients = "Python クライアントが接続中です。切断してから再試行してください。"
+blocked_jobs = "ジョブが実行中です。完了後に再試行してください。"
+blocked_documents = "未保存のプロジェクトを保存または閉じてから再起動してください。"
+not_ready = "アップデートの準備ができていません。先にダウンロードしてください。"
+
 [app]
 about = "Zipzi Editorについて"
 hide = "Zipzi Editorを隠す"

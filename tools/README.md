@@ -388,6 +388,11 @@ instructions](../native/project-preview/README.md) for builds and platform gates
 The enclosing macOS app still needs its final signature. These commands do not upload releases,
 notarize apps, change remote repositories or verify GitHub license presentation.
 
+`packaging/package_updates.py` creates Velopack installers and authenticated
+update feeds for Windows and macOS. See [desktop updates](../docs/references/desktop-updates.md)
+for the pinned packaging tool, build-time public configuration, private signing
+inputs and installed upgrade gates. It does not publish artifacts.
+
 
 P3A-3/4/5 was committed without acceptance, by user request. Subsequent selected
 checks and remaining gates are recorded in [P3A-6](../docs/archive/plans/python-sdk-rewrite/p3a-6.md).

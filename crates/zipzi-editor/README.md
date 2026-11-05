@@ -94,6 +94,12 @@ after moving the portable application.
 
 ## Resident application host
 
+The application menu and About dialog provide **Check for Updates**. A quiet
+title-bar icon appears only when an authenticated update is ready. Automatic
+updates and explicit restarts respect unsaved projects, Runtime jobs and SDK
+connections. See the [desktop update reference](../../docs/references/desktop-updates.md)
+for release configuration, signing, packaging and installed upgrade acceptance.
+
 Start the editor without a window using:
 
 ```sh

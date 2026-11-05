@@ -77,6 +77,20 @@ pub fn render_title_bar(
             controls::render_workspace_switcher(view, &owner, modal, window, cx),
         ))
         .child(div().flex_1().h_full().min_w_0())
+        .when(crate::updates::ready(cx), |bar| {
+            bar.child(
+                control_region("workspace-update-control").child(
+                    compact::button(Button::new("workspace-update-ready"))
+                        .ghost()
+                        .icon(IconName::RefreshCw)
+                        .text_color(cx.theme().muted_foreground)
+                        .accessibility_label(t!("updates.ready_hint"))
+                        .tooltip(t!("updates.ready_hint"))
+                        .disabled(modal)
+                        .on_click(|_, window, cx| crate::updates::ui::show(window, cx, false)),
+                ),
+            )
+        })
         .child(
             control_region("workspace-titlebar-more")
                 .mr(compact::chrome_inset(cx))
