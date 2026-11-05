@@ -35,8 +35,8 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         })?;
         save(&h.capture()?, directory, &format!("warp-idle-{locale}.png"))?;
         h.cx.update_window(h.window, |_, window, cx| {
-            assert_eq!(window.find("btn_regular_deformers").checked(), Some(true));
-            window.click("btn_regular_deformers", cx);
+            assert_eq!(window.find("btn_warp_deformers").checked(), Some(true));
+            window.click("btn_warp_deformers", cx);
         })?;
         save(
             &h.capture()?,
@@ -47,7 +47,7 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
             assert!(view.editor.overlay().deformers.is_empty())
         });
         h.cx.update_window(h.window, |_, window, cx| {
-            window.click("btn_regular_deformers", cx);
+            window.click("btn_warp_deformers", cx);
             h.view.update(cx, |view, cx| {
                 view.editor
                     .execute(EditorCommand::SelectObject(object.clone()))

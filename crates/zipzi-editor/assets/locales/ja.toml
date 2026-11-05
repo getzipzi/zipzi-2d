@@ -262,7 +262,8 @@ save_published = "保存済み"
 load_others = "他 %{count} 件"
 
 [dock]
-regular_deformers = "未選択のデフォーマを表示"
+warp_deformers = "未選択のワープデフォーマを表示"
+rotation_deformers = "未選択の回転デフォーマを表示"
 modeling_viewport = "モデリングビュー"
 animation_viewport = "アニメーションビュー"
 zoom_controls = "キャンバスの拡大率"

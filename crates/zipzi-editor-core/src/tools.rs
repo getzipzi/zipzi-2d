@@ -38,7 +38,8 @@ pub enum ToolId {
 }
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DeformerVisibility {
-    pub hide_unselected: bool,
+    pub hide_unselected_warps: bool,
+    pub hide_unselected_rotations: bool,
     pub ancestors: bool,
     pub all: bool,
 }
@@ -57,7 +58,8 @@ pub struct CanvasFrame {
 }
 #[derive(Default)]
 pub struct ToolController {
-    pub(crate) hidden_deformer_viewports: std::collections::HashSet<crate::ViewportId>,
+    pub(crate) hidden_deformer_viewports:
+        std::collections::HashSet<(crate::ViewportId, crate::ControlKind)>,
     pub active: ToolId,
     pub deformer_visibility: DeformerVisibility,
     pub deformer_grid: bool,
@@ -82,9 +84,12 @@ pub struct ToolController {
 impl ToolController {
     pub(crate) fn deformer_visibility_for(&self, frame: &CanvasFrame) -> DeformerVisibility {
         DeformerVisibility {
-            hide_unselected: self
+            hide_unselected_warps: self
                 .hidden_deformer_viewports
-                .contains(&frame.version.binding.viewport),
+                .contains(&(frame.version.binding.viewport, crate::ControlKind::Warp)),
+            hide_unselected_rotations: self
+                .hidden_deformer_viewports
+                .contains(&(frame.version.binding.viewport, crate::ControlKind::Rotation)),
             ..self.deformer_visibility
         }
     }

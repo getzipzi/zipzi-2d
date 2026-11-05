@@ -57,7 +57,8 @@ fn point_and_line_hit_limits_are_screen_space_and_points_win() -> anyhow::Result
         let (id, point) = frame.geometry.mesh(&mesh.id).unwrap().vertices[0];
         let point = frame.transform.to_viewport(point);
         let visibility = DeformerVisibility {
-            hide_unselected: true,
+            hide_unselected_warps: true,
+            hide_unselected_rotations: true,
             ..Default::default()
         };
         let component = HitTarget::Component(ComponentRef {

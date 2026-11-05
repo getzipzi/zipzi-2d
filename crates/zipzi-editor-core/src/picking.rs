@@ -30,7 +30,7 @@ pub struct MeshGeometry {
     pub bounds: Option<[f32; 4]>,
     pub boundary: Vec<(ModelPoint, ModelPoint)>,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ControlKind {
     Warp,
     Rotation,

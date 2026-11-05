@@ -360,7 +360,8 @@ fn hiding_parent_deformer_only_hides_its_controls_and_preserves_deformation() ->
         &[parent.clone()],
         ToolId::Select,
         DeformerVisibility {
-            hide_unselected: false,
+            hide_unselected_warps: false,
+            hide_unselected_rotations: false,
             all: true,
             ancestors: true
         }

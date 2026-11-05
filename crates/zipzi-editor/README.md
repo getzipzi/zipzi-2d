@@ -161,8 +161,8 @@ to save all fifteen images.
 
 Unselected Warp deformers show their evaluated outer lattice outline by default.
 Click the outline to select the Warp; its interior remains available for Mesh picking.
-The title-bar eye button hides unselected Warp outlines and Rotation bones in that
-viewport, including direct picking, while selected editing controls remain available.
+Separate title-bar buttons hide unselected Warp outlines and Rotation bones in that
+viewport independently, including direct picking. Selected editing controls remain available.
 All/ancestor Warp grid commands add reference detail to these outlines.
 Object and Warp transform frames share a 6 logical-pixel margin.
 Primary editing points and handles render at 6 logical pixels; secondary Warp

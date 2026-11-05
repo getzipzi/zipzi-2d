@@ -439,12 +439,11 @@ impl ToolController {
             }
             let selected = selection.contains(&control.object);
             let detail = selected
-                || (!self.deformer_visibility_for(frame).hide_unselected
-                    && (self.deformer_visibility.all
-                        || self.deformer_visibility.ancestors
-                            && selection
-                                .iter()
-                                .any(|r| scene.ancestors(r).contains(&control.object))));
+                || self.deformer_visibility.all
+                || self.deformer_visibility.ancestors
+                    && selection
+                        .iter()
+                        .any(|r| scene.ancestors(r).contains(&control.object));
             let points = if control.kind == ControlKind::Warp && !detail {
                 Vec::new()
             } else {

@@ -1317,8 +1317,8 @@ fn regular_warp_outline_picking_visibility_and_selection() -> anyhow::Result<()>
                 .any(|c| c.object == object)
         );
         let binding = frame.version.binding;
-        editor.set_regular_deformers_visible(binding, false);
-        assert!(!editor.regular_deformers_visible(binding));
+        editor.set_regular_deformers_visible(binding, ControlKind::Warp, false);
+        assert!(!editor.regular_deformers_visible(binding, ControlKind::Warp));
         assert!(
             editor
                 .overlay()
@@ -1326,7 +1326,7 @@ fn regular_warp_outline_picking_visibility_and_selection() -> anyhow::Result<()>
                 .iter()
                 .all(|d| d.kind != ControlKind::Warp)
         );
-        assert!(editor.overlay().rotation_bones.is_empty());
+        assert!(!editor.overlay().rotation_bones.is_empty());
         assert_ne!(
             frame.geometry.hit(
                 point,
@@ -1334,7 +1334,8 @@ fn regular_warp_outline_picking_visibility_and_selection() -> anyhow::Result<()>
                 &[],
                 ToolId::Select,
                 DeformerVisibility {
-                    hide_unselected: true,
+                    hide_unselected_warps: true,
+                    hide_unselected_rotations: true,
                     ..Default::default()
                 }
             ),
@@ -1349,7 +1350,7 @@ fn regular_warp_outline_picking_visibility_and_selection() -> anyhow::Result<()>
                 .any(|d| d.kind == ControlKind::Warp && !d.outline_only)
         );
         editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
-        editor.set_regular_deformers_visible(binding, true);
+        editor.set_regular_deformers_visible(binding, ControlKind::Warp, true);
     }
     editor.set_zoom_at(1., None);
     let frame = shown(&mut editor)?;
@@ -1398,13 +1399,89 @@ fn regular_deformer_visibility_is_independent_between_viewports() -> anyhow::Res
     editor.register_viewport(other, ViewportKind::Modeling)?;
     let other = editor.viewport_binding(other).unwrap();
     let evaluations = editor.evaluation_count();
-    editor.set_regular_deformers_visible(binding, false);
-    assert!(!editor.regular_deformers_visible(binding));
-    assert!(editor.regular_deformers_visible(other));
-    editor.set_regular_deformers_visible(other, false);
-    editor.set_regular_deformers_visible(binding, true);
-    assert!(editor.regular_deformers_visible(binding));
-    assert!(!editor.regular_deformers_visible(other));
+    for kind in [ControlKind::Warp, ControlKind::Rotation] {
+        editor.set_regular_deformers_visible(binding, kind, false);
+        assert!(!editor.regular_deformers_visible(binding, kind));
+        assert!(editor.regular_deformers_visible(other, kind));
+        editor.set_regular_deformers_visible(other, kind, false);
+        editor.set_regular_deformers_visible(binding, kind, true);
+        assert!(editor.regular_deformers_visible(binding, kind));
+        assert!(!editor.regular_deformers_visible(other, kind));
+    }
+    assert_eq!(editor.evaluation_count(), evaluations);
+    Ok(())
+}
+
+#[test]
+fn regular_deformer_visibility_separates_warp_and_rotation_display_and_picking()
+-> anyhow::Result<()> {
+    let (mut editor, _assets, _) = deformer_editor(false)?;
+    editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+    let frame = shown(&mut editor)?;
+    let binding = frame.version.binding;
+    let history = editor.document().unwrap().history_lengths();
+    let evaluations = editor.evaluation_count();
+    for warp_visible in [false, true] {
+        for rotation_visible in [false, true] {
+            editor.set_regular_deformers_visible(binding, ControlKind::Warp, warp_visible);
+            editor.set_regular_deformers_visible(binding, ControlKind::Rotation, rotation_visible);
+            for (kind, visible) in [
+                (ControlKind::Warp, warp_visible),
+                (ControlKind::Rotation, rotation_visible),
+            ] {
+                let control = frame
+                    .geometry
+                    .controls
+                    .iter()
+                    .find(|c| c.kind == kind)
+                    .unwrap();
+                let (a, b) = if kind == ControlKind::Warp {
+                    frame.geometry.warp_outline(control, frame.transform)[0]
+                } else {
+                    let points = frame.geometry.control_points(control, frame.transform);
+                    (points[0], points[1])
+                };
+                let point = ViewportPoint {
+                    x: (a.x + b.x) / 2.,
+                    y: (a.y + b.y) / 2.,
+                };
+                let overlay = editor.overlay();
+                let displayed = if kind == ControlKind::Warp {
+                    overlay
+                        .deformers
+                        .iter()
+                        .any(|d| d.kind == ControlKind::Warp)
+                } else {
+                    !overlay.rotation_bones.is_empty()
+                };
+                assert_eq!(displayed, visible, "{kind:?} display");
+                assert_eq!(
+                    editor
+                        .pick_candidates(point, Some(frame.version))
+                        .iter()
+                        .any(|c| c.object == control.object),
+                    visible,
+                    "{kind:?} picking",
+                );
+                // Selected deformers retain their editing controls even when their type is hidden.
+                editor.execute(EditorCommand::SelectObject(control.object.clone()))?;
+                let vertex_kind = if kind == ControlKind::Warp {
+                    OverlayVertexKind::Warp
+                } else {
+                    OverlayVertexKind::RotationCenter
+                };
+                assert!(
+                    editor
+                        .overlay()
+                        .vertices
+                        .iter()
+                        .any(|v| v.kind == vertex_kind)
+                );
+                editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
+            }
+        }
+    }
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
     assert_eq!(editor.evaluation_count(), evaluations);
     Ok(())
 }

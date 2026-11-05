@@ -248,7 +248,8 @@ fn deformer_detail_is_opt_in_per_document_while_outlines_remain_pickable() -> an
     assert_eq!(
         editor.deformer_visibility(),
         DeformerVisibility {
-            hide_unselected: false,
+            hide_unselected_warps: false,
+            hide_unselected_rotations: false,
             ancestors: true,
             all: false
         }

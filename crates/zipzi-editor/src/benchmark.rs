@@ -517,9 +517,11 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     let binding = view.modeling_frame().context("no displayed canvas")?.canvas.version.binding;
                     let history = view.editor.document().context("no document")?.history_lengths();
                     let evaluations = view.editor.evaluation_count();
-                    view.editor.set_regular_deformers_visible(binding, visible);
-                    ensure!(view.editor.regular_deformers_visible(binding) == visible,
-                        "deformer visibility did not change");
+                    for kind in [zipzi_editor_core::ControlKind::Warp, zipzi_editor_core::ControlKind::Rotation] {
+                        view.editor.set_regular_deformers_visible(binding, kind, visible);
+                        ensure!(view.editor.regular_deformers_visible(binding, kind) == visible,
+                            "deformer visibility did not change");
+                    }
                     ensure!(view.editor.evaluation_count() == evaluations
                         && view.editor.document().unwrap().history_lengths() == history,
                         "deformer display toggle changed model evaluation or history");

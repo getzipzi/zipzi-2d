@@ -4,19 +4,32 @@ use crate::{CanvasFrame, CanvasScene, FrameVersion, SceneSnapshot, ViewportBindi
 use std::sync::Arc;
 
 impl Editor {
-    /// Unselected Warp outlines and Rotation bones, independently for each document/viewport.
-    pub fn regular_deformers_visible(&self, binding: ViewportBinding) -> bool {
+    /// Unselected deformers, independently for each kind and document/viewport.
+    pub fn regular_deformers_visible(
+        &self,
+        binding: ViewportBinding,
+        kind: crate::ControlKind,
+    ) -> bool {
         self.viewport_binding_valid(binding)
             && binding.kind == ViewportKind::Modeling
+            && kind != crate::ControlKind::Glue
             && self.active_session().is_some_and(|s| {
                 !s.modeling
                     .tools
                     .hidden_deformer_viewports
-                    .contains(&binding.viewport)
+                    .contains(&(binding.viewport, kind))
             })
     }
-    pub fn set_regular_deformers_visible(&mut self, binding: ViewportBinding, visible: bool) {
-        if !self.viewport_binding_valid(binding) || binding.kind != ViewportKind::Modeling {
+    pub fn set_regular_deformers_visible(
+        &mut self,
+        binding: ViewportBinding,
+        kind: crate::ControlKind,
+        visible: bool,
+    ) {
+        if !self.viewport_binding_valid(binding)
+            || binding.kind != ViewportKind::Modeling
+            || kind == crate::ControlKind::Glue
+        {
             return;
         }
         self.cancel_gesture_for(binding);
@@ -26,12 +39,12 @@ impl Editor {
                 s.modeling
                     .tools
                     .hidden_deformer_viewports
-                    .remove(&binding.viewport);
+                    .remove(&(binding.viewport, kind));
             } else {
                 s.modeling
                     .tools
                     .hidden_deformer_viewports
-                    .insert(binding.viewport);
+                    .insert((binding.viewport, kind));
             }
         }
     }

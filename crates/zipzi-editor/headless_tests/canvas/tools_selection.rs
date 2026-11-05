@@ -726,7 +726,8 @@ fn helper_menu_toggles_preserve_selection_history_and_canvas_focus(cx: &mut Test
         (
             3usize,
             DeformerVisibility {
-                hide_unselected: false,
+                hide_unselected_warps: false,
+                hide_unselected_rotations: false,
                 ancestors: true,
                 all: false,
             },
@@ -734,7 +735,8 @@ fn helper_menu_toggles_preserve_selection_history_and_canvas_focus(cx: &mut Test
         (
             4usize,
             DeformerVisibility {
-                hide_unselected: false,
+                hide_unselected_warps: false,
+                hide_unselected_rotations: false,
                 ancestors: true,
                 all: true,
             },
@@ -742,7 +744,8 @@ fn helper_menu_toggles_preserve_selection_history_and_canvas_focus(cx: &mut Test
         (
             3usize,
             DeformerVisibility {
-                hide_unselected: false,
+                hide_unselected_warps: false,
+                hide_unselected_rotations: false,
                 ancestors: false,
                 all: true,
             },

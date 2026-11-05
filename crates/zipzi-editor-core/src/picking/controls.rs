@@ -14,7 +14,8 @@ impl CanvasScene {
             && c.visible
             && (selection.contains(&c.object)
                 || match c.kind {
-                    ControlKind::Warp | ControlKind::Rotation => !visibility.hide_unselected,
+                    ControlKind::Warp => !visibility.hide_unselected_warps,
+                    ControlKind::Rotation => !visibility.hide_unselected_rotations,
                     ControlKind::Glue => {
                         self.topology
                             .glues
