@@ -11,9 +11,9 @@ checks run after startup and every four hours. The automatic download/install
 preference is saved in the platform configuration directory as `updates.json`.
 Automatic installation happens only during a safe application exit. Explicit
 restart refuses active operations, unsaved documents (including parked Runtime
-sessions), SDK connections and running jobs. Saved open file paths are passed
-to the restarted Editor. The updater is armed only after these checks; its
-process deadline never includes a save dialog or a running job.
+sessions), SDK connections and running jobs. Saved file paths from visible and
+resident sessions are passed to the restarted Editor. The updater is armed only
+after these checks; its process deadline never includes a save dialog or a running job.
 
 ## Release configuration
 
@@ -62,7 +62,8 @@ For macOS, configure `ZIPZI_CODESIGN_IDENTITY` when building the sandboxed Quick
 extensions, and `VPK_SIGN_APP_IDENTITY` plus `VPK_NOTARY_PROFILE` when packaging.
 Import the matching certificates and notarization credentials on the build
 machine first. The packager disables recursive re-signing to retain extension
-entitlements. It packages Velopack's resulting app as the existing DMG.
+entitlements. It explicitly selects the `zipzi-editor` entrypoint and skips
+Velopack's PKG installer, packaging the resulting app as the existing DMG.
 
 The output includes a Windows Setup EXE or macOS DMG, `.nupkg` packages,
 `releases.<platform>-<architecture>-<channel>.json`, and its `.json.sig` file.
@@ -89,7 +90,9 @@ feed filenames include platform, architecture and channel.
 
 The Editor verifies the feed with the embedded public key before passing its
 package filenames, versions and SHA-256 hashes to Velopack. Velopack verifies
-the downloaded package's size and hash; the cached archive is checked again
+the downloaded package's size and hash. Existing cache entries are checked before
+reuse; corrupt entries are removed under the updater lock and downloaded again.
+The resulting archive is verified before the ready icon appears and checked again
 immediately before installation. HTML release notes are not rendered.
 Do not rotate the pinned key without a separately designed transition release.
 
@@ -112,8 +115,15 @@ rollback after an otherwise successful update that later crashes.
 ```powershell
 uv run --locked python tools/test_tools.py -p test_package_updates.py
 uv run --locked python tools/test_tools.py -p test_release_downloads.py
-uv run --locked python tools/dev.py test editor ui updates
+uv run --locked python tools/dev.py test editor ui updates::
 ```
+
+Local verification on macOS arm64 (2026-11-05): 14 update unit/UI tests and
+9 packaging/download tests passed. A fixture app packaged with the actual
+Velopack 1.2.161 CLI retained its bundle ID, channel and executable path, included
+`UpdateMac`, and produced a package feed that passed signing and verification
+with a disposable test key. The fixture used a placeholder executable and did
+not exercise Editor upgrades, Developer ID signing, notarization or Quick Look.
 
 Before enabling a production feed, test two real installed versions A and B:
 background check/download, explicit restart, automatic install on quit,

@@ -99,7 +99,8 @@ def package(args):
                 raise ValueError('macOS updates require VPK_SIGN_APP_IDENTITY and VPK_NOTARY_PROFILE')
             content = args.app.resolve()
             # Quick Look extensions were signed first with their sandbox entitlements.
-            extra = ['--runtime', 'osx-arm64', '--signDisableDeep']
+            extra = ['--runtime', 'osx-arm64', '--mainExe', 'zipzi-editor',
+                     '--noInst', '--signDisableDeep']
         command = [*vpk, 'pack', '--packId', PACKAGE_ID,
                    '--packVersion', info['version'], '--packTitle', 'Zipzi Editor',
                    '--packDir', str(content), '--outputDir', str(output),

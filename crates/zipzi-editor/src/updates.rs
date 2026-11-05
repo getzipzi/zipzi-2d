@@ -223,9 +223,13 @@ impl Updater {
             }
         });
         std::thread::spawn(move || {
-            let result = manager
-                .download_updates(&release, Some(progress))
-                .map_err(|error| error.to_string());
+            let result = velopack::locator::auto_locate_app_manifest(
+                velopack::locator::LocationContext::FromCurrentExe,
+            )
+            .and_then(|locator| {
+                source::download_verified(&manager, &release, &locator, Some(progress))
+            })
+            .map_err(|error| error.to_string());
             let _ = events.send_blocking(Event::Downloaded(result));
         });
     }
@@ -307,6 +311,7 @@ pub(crate) fn prepare_restart(cx: &mut App) -> Result<Vec<std::ffi::OsString>, S
                         || window.has_active_dialog(cx)
                         || view.editor.gesture_active()
                         || view.editor.is_busy()
+                        || view.editor.pending_io_count() != 0
                     {
                         return Err(t!("updates.blocked_operation").into_owned());
                     }
@@ -331,13 +336,14 @@ pub(crate) fn prepare_restart(cx: &mut App) -> Result<Vec<std::ffi::OsString>, S
     }
     if let Some(host) = cx.try_global::<host::DesktopHost>() {
         let runtime = host.runtime.read();
-        if runtime
-            .list_sessions()
+        let sessions = runtime.list_sessions();
+        if sessions
             .iter()
             .any(|session| session.modified || session.state != zipzi_runtime::SessionState::Ready)
         {
             return Err(t!("updates.blocked_documents").into_owned());
         }
+        paths.extend(sessions.into_iter().filter_map(|session| session.path));
     }
     paths.sort();
     paths.dedup();

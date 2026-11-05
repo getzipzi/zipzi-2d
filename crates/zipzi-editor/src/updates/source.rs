@@ -4,8 +4,9 @@ use sha2::{Digest, Sha256};
 use std::io::Read;
 use std::{path::Path, sync::mpsc::Sender, time::Duration};
 use velopack::{
-    Error, HttpOptions, VelopackAsset, VelopackAssetFeed,
+    Error, HttpOptions, UpdateInfo, UpdateManager, VelopackAsset, VelopackAssetFeed,
     bundle::Manifest,
+    locator::VelopackLocator,
     sources::{HttpSource, UpdateSource},
 };
 
@@ -132,6 +133,28 @@ impl UpdateSource for SignedSource {
     ) -> Result<(), Error> {
         self.downloads.download_release_entry(asset, path, progress)
     }
+}
+
+/// Velopack trusts an existing final filename without checking it again.
+/// Validate that cache entry before reuse, and validate the result before showing Ready.
+pub(super) fn download_verified(
+    manager: &UpdateManager,
+    release: &UpdateInfo,
+    locator: &VelopackLocator,
+    progress: Option<Sender<i16>>,
+) -> Result<(), Error> {
+    let asset = &release.TargetFullRelease;
+    let path = locator.get_packages_dir().join(&asset.FileName);
+    {
+        // Coordinate cache repair with Velopack's own download lock. Release it
+        // before download_updates, which acquires the same non-reentrant lock.
+        let _lock = locator.try_get_exclusive_lock()?;
+        if path.try_exists()? && verify_package(&path, asset).is_err() {
+            std::fs::remove_file(&path)?;
+        }
+    }
+    manager.download_updates(release, progress)?;
+    verify_package(&path, asset)
 }
 
 /// Revalidate a cached archive immediately before handing it to the installer.
@@ -262,5 +285,60 @@ mod tests {
         assert!(verify_package(&path, &asset).is_err());
         std::fs::write(&path, b"short").unwrap();
         assert!(verify_package(&path, &asset).is_err());
+    }
+
+    #[test]
+    fn corrupted_cache_is_downloaded_again_and_valid_cache_works_offline() {
+        use velopack::{locator::VelopackLocatorConfig, sources::FileSource};
+
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        let remote = root.join("remote");
+        let packages = root.join("packages");
+        std::fs::create_dir(&remote).unwrap();
+        std::fs::create_dir(&packages).unwrap();
+        let manifest = root.join("sq.version");
+        std::fs::write(
+            &manifest,
+            "<package><metadata><id>Zipzi.Editor</id><version>1.0.0</version></metadata></package>",
+        )
+        .unwrap();
+        // No updater process is launched by this test.
+        let updater = root.join("Update");
+        std::fs::write(&updater, b"").unwrap();
+        let config = VelopackLocatorConfig {
+            RootAppDir: root.into(),
+            UpdateExePath: updater,
+            PackagesDir: packages.clone(),
+            ManifestPath: manifest,
+            CurrentBinaryDir: root.into(),
+            IsPortable: true,
+        };
+        let locator = VelopackLocator::new(&config).unwrap();
+        let manager = UpdateManager::new(FileSource::new(&remote), None, Some(config)).unwrap();
+        let release = UpdateInfo {
+            TargetFullRelease: VelopackAsset {
+                FileName: "Zipzi.Editor-1.0.1-full.nupkg".into(),
+                Size: 9,
+                SHA256: hex(&Sha256::digest(b"authentic")),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let name = &release.TargetFullRelease.FileName;
+        let cached = packages.join(name);
+        std::fs::write(remote.join(name), b"authentic").unwrap();
+        for corrupted in [b"corrupted".as_slice(), b"short"] {
+            std::fs::write(&cached, corrupted).unwrap();
+            download_verified(&manager, &release, &locator, None).unwrap();
+            assert_eq!(std::fs::read(&cached).unwrap(), b"authentic");
+        }
+        std::fs::remove_file(remote.join(name)).unwrap();
+        download_verified(&manager, &release, &locator, None).unwrap();
+
+        // A failed repair cannot report Ready using the previous corrupt entry.
+        std::fs::write(&cached, b"corrupted").unwrap();
+        assert!(download_verified(&manager, &release, &locator, None).is_err());
+        assert!(!cached.exists());
     }
 }
