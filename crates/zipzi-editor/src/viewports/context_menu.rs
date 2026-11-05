@@ -1,6 +1,27 @@
 //! Canvas object picking menu and document-scoped actions.
 use super::*;
-use gpui_kit::component::menu::PopupMenu;
+use gpui_kit::{
+    assets::IconName,
+    component::{Icon, menu::PopupMenu},
+};
+use zipzi_editor_core::{ControlKind, ObjectKind};
+
+const INLINE_CANDIDATE_LIMIT: usize = 8;
+
+fn candidate_icon(kind: ObjectKind, rotation: bool) -> Icon {
+    match kind {
+        ObjectKind::Mesh => Icon::new(IconName::Grid2x2),
+        ObjectKind::Part => Icon::new(IconName::Folder),
+        ObjectKind::Offscreen => Icon::new(IconName::Layers),
+        ObjectKind::Deformer if rotation => {
+            Icon::default().data(include_bytes!("../../assets/icons/rotation-visible.svg"))
+        }
+        ObjectKind::Deformer => {
+            Icon::default().data(include_bytes!("../../assets/icons/warp-visible.svg"))
+        }
+        _ => Icon::new(IconName::Layers),
+    }
+}
 
 impl ViewportSurface {
     pub(super) fn object_menu(
@@ -10,7 +31,7 @@ impl ViewportSurface {
         window: &mut Window,
         cx: &mut Context<PopupMenu>,
     ) -> PopupMenu {
-        menu = crate::ui::compact::menu(menu);
+        menu = crate::ui::compact::menu(menu).scrollable(true);
         let Some(owner) = menu_owner.upgrade() else {
             return menu;
         };
@@ -35,11 +56,11 @@ impl ViewportSurface {
             .read(cx)
             .modeling_frame_for(canvas.read(cx).viewport)
             .map(|f| f.canvas.clone());
-        if let Some(frame) = frame {
+        if let Some(frame) = &frame {
             owner.update(cx, |view, cx| {
                 if !view.modal
                     && !view.editor.is_busy()
-                    && view.editor.activate_manual_target(&frame, point)
+                    && view.editor.activate_manual_target(frame, point)
                 {
                     view.redraw(cx);
                 }
@@ -151,40 +172,69 @@ impl ViewportSurface {
         if candidates.is_empty() {
             menu = menu.item(PopupMenuItem::new(t!("editor.no_canvas_objects")).disabled(true));
         }
+        let mut candidate_items = Vec::new();
         for candidate in candidates {
+            let label = frame.as_ref().map_or_else(
+                || candidate.object.id.clone(),
+                |f| f.geometry.index.name(&candidate.object).to_owned(),
+            );
+            let rotation = frame.as_ref().is_some_and(|f| {
+                f.geometry
+                    .controls
+                    .iter()
+                    .any(|c| c.object == candidate.object && c.kind == ControlKind::Rotation)
+            });
             let owner = owner.downgrade();
             let canvas = canvas.downgrade();
-            menu = menu.item(
-                PopupMenuItem::new(candidate.label).on_click(move |_, window, cx| {
-                    let Some(owner) = owner.upgrade() else {
-                        return;
-                    };
-                    owner.update(cx, |owner, cx| {
-                        if !owner.editor.viewport_binding_valid(binding)
-                            || owner.editor.editing_context()
-                                != Some(zipzi_editor_core::EditingContext::Modeling)
-                            || owner.modal
-                            || owner.editor.is_busy()
-                        {
+            candidate_items.push(
+                PopupMenuItem::new(label)
+                    .icon(candidate_icon(candidate.object.kind, rotation))
+                    .on_click(move |_, window, cx| {
+                        let Some(owner) = owner.upgrade() else {
                             return;
+                        };
+                        owner.update(cx, |owner, cx| {
+                            if !owner.editor.viewport_binding_valid(binding)
+                                || owner.editor.editing_context()
+                                    != Some(zipzi_editor_core::EditingContext::Modeling)
+                                || owner.modal
+                                || owner.editor.is_busy()
+                            {
+                                return;
+                            }
+                            let result =
+                                owner
+                                    .editor
+                                    .execute(EditorCommand::SelectCanvasObjects(vec![
+                                        candidate.object.clone(),
+                                    ]));
+                            owner.complete_edit(result, cx);
+                        });
+                        if let Some(canvas) = canvas.upgrade() {
+                            let focus = canvas.read(cx).focus.clone();
+                            // Let menu dismissal finish before returning keyboard input.
+                            window.defer(cx, move |window, cx| window.focus(&focus, cx));
                         }
-                        let result =
-                            owner
-                                .editor
-                                .execute(EditorCommand::SelectCanvasObjects(vec![
-                                    candidate.object.clone(),
-                                ]));
-                        owner.complete_edit(result, cx);
-                    });
-                    if let Some(canvas) = canvas.upgrade() {
-                        let focus = canvas.read(cx).focus.clone();
-                        // Let menu dismissal finish before returning keyboard input.
-                        window.defer(cx, move |window, cx| window.focus(&focus, cx));
-                    }
-                }),
+                    }),
             );
         }
+        if candidate_items.len() > INLINE_CANDIDATE_LIMIT {
+            let candidates = PopupMenu::build(window, cx, |menu, _, _| {
+                candidate_items
+                    .into_iter()
+                    .fold(menu.scrollable(true), |menu, item| menu.item(item))
+            });
+            menu = menu.item(PopupMenuItem::submenu(
+                t!("editor.select_canvas_object"),
+                candidates,
+            ));
+        } else {
+            for item in candidate_items {
+                menu = menu.item(item);
+            }
+        }
         menu = menu.separator();
+        let state = owner.read(cx);
         for (command, checked) in [
             (CommandId::ToggleAncestorDeformers, visibility.ancestors),
             (CommandId::ToggleDeformers, visibility.all),
