@@ -3,7 +3,7 @@ using namespace metal;
 struct Uniforms {
     float2 viewport; float scale; float padding;
     float2 origin; float2 texture_origin;
-    float4 edge; float4 vertex_color; float4 selected; float4 restricted;
+    float4 edge; float4 vertex_color; float4 selected; float4 restricted; float4 hover_color;
 };
 struct Out { float4 position [[position]]; float4 color [[flat]]; };
 Out output(float2 p, float4 color, constant Uniforms &u) {
@@ -27,6 +27,7 @@ struct MarkerOut {
     float hovered [[flat]];
     float selected [[flat]];
     float restricted [[flat]];
+    float4 hover_color [[flat]];
 };
 vertex MarkerOut marker_vertex(uint v [[vertex_id]], uint id [[instance_id]],
     const device float4 *markers [[buffer(0)]], constant Uniforms &u [[buffer(1)]]) {
@@ -36,29 +37,21 @@ vertex MarkerOut marker_vertex(uint v [[vertex_id]], uint id [[instance_id]],
     bool restricted = (uint(marker.w) & 4) != 0;
     bool selected = (uint(marker.w) & 1) != 0;
     float radius = marker.z * u.scale;
-    float extent = radius + (hovered ? 2.0 * u.scale : 0.0) + 1.0;
+    float extent = radius + 1.0;
     float2 local = corner[v] * extent;
     float2 center = (marker.xy + u.origin) * u.scale - u.texture_origin;
     Out base = output(center + local, restricted ? u.restricted : (selected ? u.selected : u.vertex_color), u);
-    return {base.position, base.color, local, radius, u.scale, hovered ? 1.0 : 0.0, selected ? 1.0 : 0.0, restricted ? 1.0 : 0.0};
+    return {base.position, base.color, local, radius, u.scale, hovered ? 1.0 : 0.0, selected ? 1.0 : 0.0, restricted ? 1.0 : 0.0, u.hover_color};
 }
 fragment float4 marker_fragment(MarkerOut input [[stage_in]]) {
     float d = length(input.local);
     float coverage = clamp(input.radius - d + 0.5, 0.0, 1.0);
     float4 color = input.color * coverage;
-    if (input.selected == 0 || input.restricted > 0) {
-        // Unselected mesh points have a 1 logical pixel black border inside
-        // the same silhouette as the solid selected point.
+    if (input.selected == 0 || input.restricted > 0 || input.hovered > 0) {
+        // Borders and hover emphasis stay inside the same six-pixel marker.
         float inner = clamp(input.radius - input.scale - d + 0.5, 0.0, 1.0);
-        float4 border = input.restricted > 0 ? float4(float3(80.0/255.0), 1.0) : float4(0.0,0.0,0.0,1.0);
+        float4 border = input.hovered > 0 ? input.hover_color : input.restricted > 0 ? float4(float3(80.0/255.0), 1.0) : float4(0.0,0.0,0.0,1.0);
         color = input.color * inner + border * (coverage - inner);
-    }
-    if (input.hovered > 0) {
-        float outer = input.radius + 2.0 * input.scale;
-        float ring = clamp(outer - d + 0.5, 0.0, 1.0)
-            * clamp(d - (outer - input.scale) + 0.5, 0.0, 1.0);
-        // Hollow hover rings are always white, independent of selection color.
-        color += float4(1.0) * ring * (1.0 - coverage);
     }
     return color;
 }

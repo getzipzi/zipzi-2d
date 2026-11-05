@@ -145,24 +145,11 @@ fn make_scene(
                 mask.scale(1.),
             );
             marker.corner_radii = gpui_kit::Corners::all(px(r * viewport.scale)).scale(1.);
-            if !v.selected {
+            if !v.selected || v.hovered {
                 marker.border_widths = gpui_kit::Edges::all(px(viewport.scale)).scale(1.);
-                marker.border_color = rgba(0x000000ff).into();
+                marker.border_color = rgba(if v.hovered { 0x62c878ff } else { 0x000000ff }).into();
             }
             scene.insert_primitive(marker);
-            if v.hovered {
-                let radius = (r + 2.) * viewport.scale;
-                let center = point(px(x * viewport.scale), px(y * viewport.scale));
-                let bounds = Bounds::new(
-                    center - point(px(radius), px(radius)),
-                    size(px(radius * 2.), px(radius * 2.)),
-                );
-                let mut ring = quad(bounds.scale(1.), 0, mask.scale(1.));
-                ring.corner_radii = gpui_kit::Corners::all(px(radius)).scale(1.);
-                ring.border_widths = gpui_kit::Edges::all(px(viewport.scale)).scale(1.);
-                ring.border_color = rgba(0xffffffff).into();
-                scene.insert_primitive(ring);
-            }
         }
     }
     scene.finish();
@@ -454,14 +441,18 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
             );
             assert_eq!(
                 image.get_pixel(44, 100).0,
-                [0, 0, 0, 255],
-                "mesh border is black"
+                rgb(palette.deformer),
+                "hovered mesh border uses the shared hover color"
             );
             for x in [80, 84] {
                 assert_eq!(
                     image.get_pixel(x, 100).0,
-                    [255, 0, 0, 255],
-                    "selected mesh center and border are red"
+                    if x == 80 {
+                        [255, 0, 0, 255]
+                    } else {
+                        rgb(palette.deformer)
+                    },
+                    "hover preserves selected fill and changes only its border"
                 );
             }
             assert_eq!(
@@ -477,7 +468,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
             assert_eq!(
                 image.get_pixel(120, 94).0,
                 rgb(palette.deformer),
-                "Bezier anchors have a visible green border in either theme"
+                "hovered Bezier anchors have a green border in either theme"
             );
             for x in [40, 100, 160, 220] {
                 assert_eq!(
@@ -487,8 +478,12 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 );
                 assert_eq!(
                     image.get_pixel(x + 4, 144).0,
-                    [0, 0, 0, 255],
-                    "idle/hovered deformer handles have black borders"
+                    if x == 100 || x == 220 {
+                        rgb(palette.deformer)
+                    } else {
+                        [0, 0, 0, 255]
+                    },
+                    "hover changes handle border color within its original extent"
                 );
                 assert_eq!(
                     image.get_pixel(x, 176).0,
@@ -509,8 +504,8 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 );
                 assert_eq!(
                     image.get_pixel(x + 4, 100).0,
-                    [0, 0, 0, 255],
-                    "Glue vertex border is black"
+                    rgb(palette.glue),
+                    "Glue endpoints use the common six-pixel marker with a yellow border"
                 );
             }
             for x in [264, 364] {
@@ -522,8 +517,8 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
             }
             assert_eq!(
                 image.get_pixel(304, 104).0,
-                [139, 139, 139, 255],
-                "restricted Glue point has a gray frame"
+                rgb(palette.restricted_border),
+                "restricted Glue point uses the common restricted border"
             );
             assert_eq!(
                 image.get_pixel(300, 99).0,
@@ -548,8 +543,12 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
                 );
                 assert_eq!(
                     image.get_pixel(x + 4, 40).0,
-                    [80, 80, 80, 255],
-                    "restricted controls keep a gray border"
+                    if x == 140 {
+                        rgb(palette.restricted_border)
+                    } else {
+                        rgb(palette.deformer)
+                    },
+                    "restricted controls retain size while hover emphasizes their border"
                 );
             }
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
@@ -558,7 +557,7 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
             ));
             image.save(path)?;
             // The production Metal mesh pass must match the GPUI fallback's
-            // white center, black border and solid red selection.
+            // white center, in-place hover border and solid red selection.
             let gpu = gpui.shared_metal_context();
             let mut renderer = MetalOverlayRenderer::new(gpu.device.clone())?;
             let viewport = OverlayViewport {
@@ -586,14 +585,14 @@ fn semantic_markers_survive_crossing_lines_and_coincident_glue() -> anyhow::Resu
             );
             assert_eq!(
                 metal_image.get_pixel(44, 40).0,
-                [80, 80, 80, 255],
-                "Metal disabled mesh border matches the fallback"
+                rgb(palette.deformer),
+                "Metal disabled mesh hover border matches the fallback"
             );
             for (x, color) in [
                 (40, [255, 255, 255, 255]),
-                (44, [0, 0, 0, 255]),
+                (44, rgb(palette.deformer)),
                 (80, [255, 0, 0, 255]),
-                (84, [255, 0, 0, 255]),
+                (84, rgb(palette.deformer)),
             ] {
                 assert_eq!(
                     metal_image.get_pixel(x, 100).0,

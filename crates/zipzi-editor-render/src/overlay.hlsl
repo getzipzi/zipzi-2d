@@ -3,7 +3,7 @@ StructuredBuffer<float4> instances : register(t0);
 cbuffer Uniforms : register(b0) {
     float2 viewport; float scale; float padding;
     float2 origin; float2 texture_origin;
-    float4 edge; float4 vertex_color; float4 selected_color; float4 restricted_color;
+    float4 edge; float4 vertex_color; float4 selected_color; float4 restricted_color; float4 hover_color;
 };
 struct Out { float4 position : SV_Position; nointerpolation float4 color : COLOR0; };
 Out output(float2 p, float4 color) {
@@ -29,6 +29,7 @@ struct MarkerOut {
     nointerpolation float hovered : TEXCOORD2;
     nointerpolation float selected : TEXCOORD3;
     nointerpolation float restricted : TEXCOORD4;
+    nointerpolation float4 hover_color : COLOR1;
 };
 MarkerOut marker_vertex(uint v : SV_VertexID, uint id : SV_InstanceID) {
     float4 marker = instances[id];
@@ -37,28 +38,23 @@ MarkerOut marker_vertex(uint v : SV_VertexID, uint id : SV_InstanceID) {
     bool restricted = (uint(marker.w) & 4) != 0;
     bool selected = (uint(marker.w) & 1) != 0;
     float radius = marker.z * scale;
-    float extent = radius + (hovered ? 2.0 * scale : 0.0) + 1.0;
+    float extent = radius + 1.0;
     float2 local = corner[v] * extent;
     float2 center = (marker.xy + origin) * scale - texture_origin;
     Out base = output(center + local, restricted ? restricted_color : (selected ? selected_color : vertex_color));
     MarkerOut o;
     o.position=base.position; o.color=base.color; o.local=local; o.radius=radius;
-    o.hovered=hovered; o.selected=selected; o.restricted=restricted;
+    o.hovered=hovered; o.selected=selected; o.restricted=restricted; o.hover_color=hover_color;
     return o;
 }
 float4 marker_fragment(MarkerOut input) : SV_Target {
     float d = length(input.local);
     float coverage = saturate(input.radius - d + 0.5);
     float4 color = input.color * coverage;
-    if (input.selected == 0 || input.restricted > 0) {
+    if (input.selected == 0 || input.restricted > 0 || input.hovered > 0) {
         float inner = saturate(input.radius - scale - d + 0.5);
-        float4 border = input.restricted > 0 ? float4(80.0/255.0,80.0/255.0,80.0/255.0,1) : float4(0,0,0,1);
+        float4 border = input.hovered > 0 ? input.hover_color : input.restricted > 0 ? float4(80.0/255.0,80.0/255.0,80.0/255.0,1) : float4(0,0,0,1);
         color = input.color * inner + border * (coverage - inner);
-    }
-    if (input.hovered > 0) {
-        float outer = input.radius + 2.0 * scale;
-        float ring = saturate(outer - d + 0.5) * saturate(d - (outer - scale) + 0.5);
-        color += float4(1,1,1,1) * ring * (1.0 - coverage);
     }
     return color;
 }

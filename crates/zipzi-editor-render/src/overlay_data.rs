@@ -13,6 +13,7 @@ pub(super) struct Uniforms {
     pub vertex: [f32; 4],
     pub selected: [f32; 4],
     pub restricted: [f32; 4],
+    pub hover_color: [f32; 4],
 }
 #[derive(PartialEq)]
 pub(super) struct Key {
@@ -91,6 +92,7 @@ impl Key {
             vertex: self.style.vertex,
             selected: self.style.selected,
             restricted: self.style.restricted,
+            hover_color: zipzi_editor_core::canvas_style::POINT_HOVER_COLOR,
         }
     }
 }

@@ -62,12 +62,15 @@ fn rotation_gizmo_retains_arbitrary_angles_at_small_authored_scales_and_large_or
                     ToolId::Select,
                     DeformerVisibility::default()
                 ),
-                // At subpixel sizes the root and tip share the same target;
-                // translation keeps precedence over an invisible scale marker.
-                Some(HitTarget::Component(ComponentRef {
-                    object: object.clone(),
-                    id: 0,
-                }))
+                // The closest point wins even when both controls fit in one pixel.
+                Some(if distance2(points[0], points[1]) == 0. {
+                    HitTarget::Component(ComponentRef {
+                        object: object.clone(),
+                        id: 0,
+                    })
+                } else {
+                    HitTarget::DeformerHandle(object.clone(), DeformerHandle::RotationScale)
+                })
             );
         }
     }

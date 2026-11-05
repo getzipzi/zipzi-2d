@@ -62,7 +62,14 @@ fn warp_grid_and_bezier_controls_share_one_surface_without_mode_switches(cx: &mu
                 .count(),
             4
         );
-        assert!(!overlay.deformers[0].lines.is_empty());
+        assert!(
+            overlay
+                .deformers
+                .iter()
+                .any(|d| d.kind == zipzi_editor_core::ControlKind::Warp
+                    && d.selected
+                    && !d.lines.is_empty())
+        );
         assert!(!overlay.bezier_lines.is_empty());
         assert_eq!(overlay.bezier_tangents.len(), 8);
         assert_eq!(overlay.handles.iter().filter(|h| h.tangent).count(), 8);

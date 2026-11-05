@@ -56,7 +56,9 @@ Mesh edges and mesh vertex markers use native instanced overlay passes on both
 platforms: Metal (`overlay.rs`, `overlay.metal`) and D3D11 (`overlay_windows.rs`,
 `overlay.hlsl`). They share instance packing/cache keys in `overlay_data.rs`,
 including selection/hover/restriction flags and normal-before-emphasized ordering.
-Edges use 4x MSAA; markers use analytic circle coverage. Separate edge and vertex
+Edges use 4x MSAA; markers use analytic circle coverage. Marker hover recolors the inner border
+without changing the six-logical-pixel silhouette; the shared radius and hover
+color come from `zipzi-editor-core::canvas_style`. Separate edge and vertex
 textures keep GPUI semantic/control lines between them, while non-mesh handles
 and interaction feedback remain GPUI primitives. Each published texture is
 immutable, so a retained old scene can be redrawn after later poses or renderer

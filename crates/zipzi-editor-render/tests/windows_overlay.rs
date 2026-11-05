@@ -115,21 +115,18 @@ fn mesh_markers_match_metal_coverage_flags_and_fractional_dpi() -> Result<()> {
                     };
                     let inner = (radius - scale - d + 0.5).clamp(0., 1.);
                     let mut color = base.map(|c| c * coverage);
-                    let mut alpha = coverage;
-                    if !v.selected || !v.editable {
-                        let border = if !v.editable { 80. / 255. } else { 0. };
-                        color =
-                            std::array::from_fn(|i| base[i] * inner + border * (coverage - inner));
-                    }
-                    if v.hovered {
-                        let outer = radius + 2. * scale;
-                        let ring = (outer - d + 0.5).clamp(0., 1.)
-                            * (d - (outer - scale) + 0.5).clamp(0., 1.)
-                            * (1. - coverage);
-                        for c in &mut color {
-                            *c += ring;
-                        }
-                        alpha += ring;
+                    let alpha = coverage;
+                    if !v.selected || !v.editable || v.hovered {
+                        let border = if v.hovered {
+                            [98. / 255., 200. / 255., 120. / 255.]
+                        } else if !v.editable {
+                            [80. / 255.; 3]
+                        } else {
+                            [0.; 3]
+                        };
+                        color = std::array::from_fn(|i| {
+                            base[i] * inner + border[i] * (coverage - inner)
+                        });
                     }
                     let actual = pixels.get_pixel(x as u32, y as u32).0;
                     for i in 0..3 {

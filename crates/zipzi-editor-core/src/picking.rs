@@ -18,7 +18,7 @@ pub(crate) use geometry::barycentric;
 pub use geometry::{bounds, distance2, segment_distance2};
 
 pub const PICK_ALPHA: f32 = 1. / 255.;
-pub const CONTROL_RADIUS: f32 = 7.;
+pub use crate::canvas_style::POINT_HIT_RADIUS as CONTROL_RADIUS;
 
 #[derive(Clone, Debug)]
 pub struct MeshGeometry {

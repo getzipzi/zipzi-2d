@@ -4,7 +4,7 @@ use crate::{CanvasScene, ControlGeometry, ControlKind, ViewportPoint, ViewportTr
 // Model-space display length, independent of the authored deformation.
 pub(crate) const ROTATION_BONE_LENGTH: f32 = zipzi_core::document::DEFAULT_ROTATION_BONE_LENGTH;
 // Fixed logical-pixel gap between editable geometry and its transform frame.
-const FRAME_PADDING: f32 = 6.;
+use crate::canvas_style::FRAME_PADDING;
 const WARP_ROTATE_OFFSET: f32 = 24.;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -180,12 +180,12 @@ impl CanvasScene {
 }
 
 impl DeformerGizmo {
-    /// Bone polygons are convex. Include the same small edge tolerance used for picking.
+    /// Bone surfaces use their exact convex polygon, with no extra edge tolerance.
     pub(crate) fn bone_hit(&self, point: ViewportPoint) -> bool {
         let mut positive = false;
         let mut negative = false;
         for &(a, b) in &self.outline {
-            if crate::picking::segment_distance2(point, a, b) <= 25. {
+            if crate::picking::segment_distance2(point, a, b) == 0. {
                 return true;
             }
             let cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);

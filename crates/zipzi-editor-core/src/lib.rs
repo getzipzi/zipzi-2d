@@ -1,5 +1,6 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
 pub mod adaptive_mesh;
+pub mod canvas_style;
 mod animation;
 mod physics;
 pub use physics::*;

@@ -1084,7 +1084,37 @@ fn imported_rotation_drag_follows_cursor_under_reflected_parents() -> anyhow::Re
                     .find(|c| c.object == *object)
                     .unwrap();
                 let g = frame.geometry.deformer_gizmo(c, frame.transform).unwrap();
-                let start = rotation_body_pointer(g.center, g.handles[0].1);
+                // Test rotation on the bone surface, away from crossing parent lines.
+                let body = |g: &DeformerGizmo, weights: [f32; 4]| ViewportPoint {
+                    x: g.outline
+                        .iter()
+                        .zip(weights)
+                        .map(|((p, _), w)| p.x * w)
+                        .sum(),
+                    y: g.outline
+                        .iter()
+                        .zip(weights)
+                        .map(|((p, _), w)| p.y * w)
+                        .sum(),
+                };
+                let weights = [
+                    [0.25; 4],
+                    [0.1, 0.7, 0.1, 0.1],
+                    [0.1, 0.1, 0.1, 0.7],
+                    [0.1, 0.4, 0.1, 0.4],
+                ]
+                .into_iter()
+                .find(|&weights| {
+                    frame.geometry.hit(
+                        body(&g, weights),
+                        frame.transform,
+                        std::slice::from_ref(object),
+                        ToolId::Select,
+                        DeformerVisibility::default(),
+                    ) == Some(HitTarget::RotationHandle(object.clone()))
+                })
+                .expect("bone must have an unobscured surface");
+                let start = body(&g, weights);
                 let (sin, cos) = degrees.to_radians().sin_cos();
                 let (x, y) = (start.x - g.center.x, start.y - g.center.y);
                 let end = ViewportPoint {
@@ -1109,10 +1139,10 @@ fn imported_rotation_drag_follows_cursor_under_reflected_parents() -> anyhow::Re
                     .find(|c| c.object == *object)
                     .unwrap();
                 let g = after.geometry.deformer_gizmo(c, after.transform).unwrap();
-                let body = rotation_body_pointer(g.center, g.handles[0].1);
+                let body_point = body(&g, weights);
                 assert!(
-                    (body.x - end.x).hypot(body.y - end.y) < 0.01,
-                    "warp={warp} rotation={rotation} nested={nested} degrees={degrees}: {body:?} != {end:?}"
+                    (body_point.x - end.x).hypot(body_point.y - end.y) < 0.01,
+                    "warp={warp} rotation={rotation} nested={nested} degrees={degrees}: {body_point:?} != {end:?}"
                 );
                 editor.execute(EditorCommand::Undo)?;
                 let restored = shown(&mut editor)?;
@@ -1126,8 +1156,8 @@ fn imported_rotation_drag_follows_cursor_under_reflected_parents() -> anyhow::Re
                     .geometry
                     .deformer_gizmo(c, restored.transform)
                     .unwrap();
-                let body = rotation_body_pointer(g.center, g.handles[0].1);
-                assert!((body.x - start.x).hypot(body.y - start.y) < 0.01);
+                let body_point = body(&g, weights);
+                assert!((body_point.x - start.x).hypot(body_point.y - start.y) < 0.01);
                 editor.execute(EditorCommand::Redo)?;
             }
         }
