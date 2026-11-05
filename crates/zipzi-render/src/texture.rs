@@ -3,15 +3,27 @@
 
 /// Convert straight RGBA8 to premultiplied RGBA8 without changing the source.
 pub fn premultiply_rgba8(rgba: &[u8]) -> Vec<u8> {
-    assert_eq!(rgba.len() % 4, 0);
     let mut result = rgba.to_vec();
-    for pixel in result.chunks_exact_mut(4) {
+    premultiply_rgba8_in_place(&mut result);
+    result
+}
+
+/// Premultiply an owned upload buffer without allocating another image.
+pub fn premultiply_rgba8_in_place(rgba: &mut [u8]) {
+    assert_eq!(rgba.len() % 4, 0);
+    for pixel in rgba.chunks_exact_mut(4) {
         let alpha = u16::from(pixel[3]);
+        if alpha == 255 {
+            continue;
+        }
+        if alpha == 0 {
+            pixel.fill(0);
+            continue;
+        }
         for color in &mut pixel[..3] {
             *color = ((u16::from(*color) * alpha + 127) / 255) as u8;
         }
     }
-    result
 }
 
 /// Version of the alpha-weighted area average, in the existing channel space.
@@ -116,16 +128,160 @@ pub fn straight_rgba_mipmaps(width: u32, height: u32, rgba: &[u8]) -> Vec<(u32, 
             .map_or(rgba, |(_, _, pixels)| pixels.as_slice());
         let next_width = (source_width / 2).max(1);
         let next_height = (source_height / 2).max(1);
-        let next = area_average_rgba8(source_width, source_height, source, next_width, next_height);
+        let next = half_rgba8(source_width, source_height, source, next_width, next_height);
         levels.push((next_width, next_height, next));
         (source_width, source_height) = (next_width, next_height);
     }
     levels
 }
 
+// Mip levels only halve each axis. Reuse their small footprints across rows
+// rather than recomputing fractional bounds for every source pixel/channel.
+// Keep the general area filter above as the independent thumbnail/reference path.
+fn half_rgba8(width: u32, height: u32, rgba: &[u8], next_width: u32, next_height: u32) -> Vec<u8> {
+    let mut next = vec![0; next_width as usize * next_height as usize * 4];
+    if width.is_multiple_of(2) && height.is_multiple_of(2) {
+        for (out, rows) in next
+            .chunks_exact_mut(next_width as usize * 4)
+            .zip(rgba.chunks_exact(width as usize * 8))
+        {
+            let (top, bottom) = rows.split_at(width as usize * 4);
+            for (pixel, (a, b)) in out
+                .chunks_exact_mut(4)
+                .zip(top.chunks_exact(8).zip(bottom.chunks_exact(8)))
+            {
+                let alpha = [
+                    u32::from(a[3]),
+                    u32::from(a[7]),
+                    u32::from(b[3]),
+                    u32::from(b[7]),
+                ];
+                let sum = alpha.iter().sum::<u32>();
+                if sum == 1020 {
+                    for c in 0..3 {
+                        pixel[c] = ((u32::from(a[c])
+                            + u32::from(a[c + 4])
+                            + u32::from(b[c])
+                            + u32::from(b[c + 4])
+                            + 2)
+                            / 4) as u8;
+                    }
+                } else if sum != 0 {
+                    for c in 0..3 {
+                        let color = u32::from(a[c]) * alpha[0]
+                            + u32::from(a[c + 4]) * alpha[1]
+                            + u32::from(b[c]) * alpha[2]
+                            + u32::from(b[c + 4]) * alpha[3];
+                        pixel[c] = ((color + sum / 2) / sum) as u8;
+                    }
+                }
+                pixel[3] = ((sum + 2) / 4) as u8;
+            }
+        }
+        return next;
+    }
+    struct Span {
+        first: usize,
+        count: usize,
+        weights: [f64; 4],
+        extent: f64,
+    }
+    let spans = |source: u32, target: u32| -> Vec<Span> {
+        (0..target)
+            .map(|i| {
+                let low = i as f64 * source as f64 / target as f64;
+                let high = (i + 1) as f64 * source as f64 / target as f64;
+                let first = low.floor() as usize;
+                let count = high.ceil() as usize - first;
+                let mut weights = [0.; 4];
+                for (offset, weight) in weights[..count].iter_mut().enumerate() {
+                    let pixel = (first + offset) as f64;
+                    *weight = high.min(pixel + 1.) - low.max(pixel);
+                }
+                Span {
+                    first,
+                    count,
+                    weights,
+                    extent: high - low,
+                }
+            })
+            .collect()
+    };
+    let xs = spans(width, next_width);
+    let ys = spans(height, next_height);
+    for (out, y) in next.chunks_exact_mut(next_width as usize * 4).zip(&ys) {
+        for (pixel, x) in out.chunks_exact_mut(4).zip(&xs) {
+            let mut sums = [0.; 4];
+            for (dy, wy) in y.weights[..y.count].iter().enumerate() {
+                let row = ((y.first + dy) * width as usize + x.first) * 4;
+                for (dx, wx) in x.weights[..x.count].iter().enumerate() {
+                    let p = &rgba[row + dx * 4..row + dx * 4 + 4];
+                    let alpha = u32::from(p[3]);
+                    if alpha == 0 {
+                        continue;
+                    }
+                    let weight = wx * wy;
+                    for c in 0..3 {
+                        // Integer color*alpha is exact in f64. Preserve the
+                        // reference's multiply/add order, including tie rounding.
+                        sums[c] += f64::from(u32::from(p[c]) * alpha) * weight;
+                    }
+                    sums[3] += f64::from(alpha) * weight;
+                }
+            }
+            if sums[3] > 0. {
+                for c in 0..3 {
+                    pixel[c] = (sums[c] / sums[3]).round() as u8;
+                }
+            }
+            pixel[3] = (sums[3] / (x.extent * y.extent)).round() as u8;
+        }
+    }
+    next
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mipmap_fast_paths_match_the_general_area_filter_byte_for_byte() {
+        let mut state = 0x12345678u32;
+        let sizes = (1..=33).flat_map(|w| (1..=33).map(move |h| (w, h))).chain([
+            (64, 64),
+            (128, 96),
+            (257, 129),
+        ]);
+        for (width, height) in sizes {
+            for alpha_kind in 0..4 {
+                let mut pixels = vec![0; width as usize * height as usize * 4];
+                for pixel in pixels.chunks_exact_mut(4) {
+                    for value in pixel.iter_mut() {
+                        state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+                        *value = (state >> 24) as u8;
+                    }
+                    match alpha_kind {
+                        1 => pixel[3] = 255,
+                        2 => pixel[3] = 0,
+                        3 => pixel[3] %= 4,
+                        _ => {}
+                    }
+                }
+                let mut source = pixels.clone();
+                let (mut w, mut h) = (width, height);
+                for (next_w, next_h, actual) in straight_rgba_mipmaps(width, height, &pixels) {
+                    let expected = area_average_rgba8(w, h, &source, next_w, next_h);
+                    let difference = actual.iter().zip(&expected).position(|(a, b)| a != b);
+                    assert_eq!(
+                        difference, None,
+                        "{width}x{height}, alpha {alpha_kind}, level {w}x{h}"
+                    );
+                    source = expected;
+                    (w, h) = (next_w, next_h);
+                }
+            }
+        }
+    }
 
     #[test]
     fn unchanged_size_preserves_transparent_rgb_exactly() {

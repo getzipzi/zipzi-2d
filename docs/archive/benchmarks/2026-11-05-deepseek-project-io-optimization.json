@@ -1,0 +1,2352 @@
+{
+  "date": "2026-11-05",
+  "profile": "Release, default features, Purism Core enabled",
+  "platform": "Apple M4, macOS 27.0.1 arm64",
+  "metadata": {
+    "probe_sha256": "b35b96f93ca5085f731909d4f8dc117e0089c94d8048cf221f54b30a132921c8",
+    "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: aarch64-apple-darwin\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+    "machine": "Apple M4",
+    "source": {
+      "alpha4": "d88c70c18268342789fea56f109dff4a518d0c15",
+      "77f1383b": "77f1383bf08f642333e793d3bfde66446916b17b",
+      "optimized": "77f1383b plus recorded production diff"
+    },
+    "model": {
+      "大肥鱼.model3.json": "ab4fc69a4f7c96a6b245d016061c4edb12cb1f23c442fa28e6f6d118e3c4e2b1",
+      "大肥鱼.moc3": "b708e7953db9deeb5bf783643255dee1f3bf20d24786bc287e72d07e1b1052e6",
+      "大肥鱼.physics3.json": "eb5f6cac515123a8b90ba476c898ffea28ed8b560e7be5fe82e096c5d7e21415",
+      "大肥鱼.cdi3.json": "24d1a66f530153b2b4c0c528b4bdf305f18ce6aa790d5b8d2612dbb641b0d746",
+      "大肥鱼.4096/texture_04.png": "02c90105162388eb2cd37c8171a4dd569b4c3a044d3451de4d62c0c816fbafc2",
+      "大肥鱼.4096/texture_03.png": "735e75a1b8fd56a936152d9a3510a361ebe369658ac43e6210a2fd06dcbc79b8",
+      "大肥鱼.4096/texture_02.png": "48b3ed2c2217cbe2c3dfe966eb40e9fadf364d3f1cb9b4a231552c07766269ba",
+      "大肥鱼.4096/texture_00.png": "a94e61d0f5a857b0c860b65d6c844b3f7dbb9e0dd53a72c21bc29a544ae48652",
+      "大肥鱼.4096/texture_01.png": "b2e32a429ed8cf37570959a4cddff9d1e5b83f70996317423da8fb6cf4c85e0d"
+    },
+    "binaries": {
+      "alpha4": "3d0de36384102d0496cdce622c4ae3fb3286794937bcde1c12aacec1b88b3750",
+      "77f1383b": "e56a6af99ff0e5c33c3103dbdf07d079479d6eb9ef99226a84f569fb32485259",
+      "optimized": "d13d6f0e3c636a25d26a2cfe2576729a0426dd493bfb2e03d17f7a07c80edd97"
+    },
+    "driver_sha256": "61b60e845a16766cf6b364fea7aad00f8a96470fe329e5ab888d6a1bbafd2ade",
+    "os_cache": "uncontrolled, primed by warmup",
+    "clock": 1793846058.294694,
+    "purism_core": "ad5127666ccffb34552d8e660852995858bee437",
+    "project_sha256": "708b8098820da9383cdd43babc71b75f3f0054137d10a7bd062f0977920e4c1e",
+    "production_diff_sha256": "1411f9c9e4873fdcccd1e4cf7cd85d0f5a62afbc42425cdea3d2c9f3503d87dc",
+    "production_diff_path": "target/deepseek-load-optimized/production.patch"
+  },
+  "method": {
+    "warmup_rounds": 1,
+    "measured_rounds": 5,
+    "measured_processes": 60,
+    "warmup_processes": 12,
+    "order": [
+      [
+        "alpha4",
+        "77f1383b",
+        "optimized"
+      ],
+      [
+        "optimized",
+        "77f1383b",
+        "alpha4"
+      ],
+      [
+        "77f1383b",
+        "optimized",
+        "alpha4"
+      ],
+      [
+        "alpha4",
+        "optimized",
+        "77f1383b"
+      ],
+      [
+        "optimized",
+        "alpha4",
+        "77f1383b"
+      ],
+      [
+        "77f1383b",
+        "alpha4",
+        "optimized"
+      ]
+    ],
+    "open_input": "77f1383b and optimized open the exact same preserved native archive; alpha4 opens its own directory project.",
+    "import": "Import-only process; resource validation outside timed import. Import/save/reopen verified separately once.",
+    "scope": "CPU readiness only; excludes process startup, window layout, GPU upload and screen presentation.",
+    "environment": "Fresh processes and private temp/cache/runtime directories; no OS cache flush or CPU/I/O isolation; ordinary desktop activity; no outlier removal."
+  },
+  "summary": {
+    "alpha4": {
+      "project-import/project-import": {
+        "median_ms": 3258.2166660000003,
+        "min_ms": 3217.4683330000003,
+        "max_ms": 3662.125167,
+        "samples_ms": [
+          3258.2166660000003,
+          3662.125167,
+          3217.4683330000003,
+          3222.208416,
+          3285.636375
+        ]
+      },
+      "project-open/project-open": {
+        "median_ms": 1882.226541,
+        "min_ms": 1805.8669169999998,
+        "max_ms": 2069.8685,
+        "samples_ms": [
+          1882.078542,
+          2069.8685,
+          1805.8669169999998,
+          2028.832875,
+          1882.226541
+        ]
+      },
+      "editor-import/editor-admit": {
+        "median_ms": 1.232583,
+        "min_ms": 0.0875,
+        "max_ms": 1.396125,
+        "samples_ms": [
+          1.208375,
+          1.232583,
+          0.0875,
+          1.2778340000000001,
+          1.396125
+        ]
+      },
+      "editor-import/editor-worker": {
+        "median_ms": 3514.634708,
+        "min_ms": 3371.708709,
+        "max_ms": 3540.380584,
+        "samples_ms": [
+          3396.426542,
+          3514.634708,
+          3540.380584,
+          3527.146625,
+          3371.708709
+        ]
+      },
+      "editor-import/editor-publish": {
+        "median_ms": 0.589542,
+        "min_ms": 0.276792,
+        "max_ms": 0.683625,
+        "samples_ms": [
+          0.589542,
+          0.504167,
+          0.276792,
+          0.6834589999999999,
+          0.683625
+        ]
+      },
+      "editor-import/editor-first-cpu-preview": {
+        "median_ms": 32.558625,
+        "min_ms": 31.841165999999998,
+        "max_ms": 40.44,
+        "samples_ms": [
+          34.348875,
+          32.558625,
+          31.841165999999998,
+          40.44,
+          32.213791
+        ]
+      },
+      "editor-import/cpu-ready-total": {
+        "median_ms": 3548.930083,
+        "min_ms": 3406.00225,
+        "max_ms": 3572.586042,
+        "samples_ms": [
+          3432.573334,
+          3548.930083,
+          3572.586042,
+          3569.5479179999998,
+          3406.00225
+        ]
+      },
+      "editor-open/editor-admit": {
+        "median_ms": 0.18770799999999999,
+        "min_ms": 0.174209,
+        "max_ms": 4.1893329999999995,
+        "samples_ms": [
+          0.178958,
+          0.18770799999999999,
+          4.1893329999999995,
+          0.193542,
+          0.174209
+        ]
+      },
+      "editor-open/editor-worker": {
+        "median_ms": 2372.279958,
+        "min_ms": 2310.2917500000003,
+        "max_ms": 2982.987458,
+        "samples_ms": [
+          2310.2917500000003,
+          2372.279958,
+          2982.987458,
+          2882.8440840000003,
+          2334.372334
+        ]
+      },
+      "editor-open/editor-publish": {
+        "median_ms": 0.560708,
+        "min_ms": 0.435792,
+        "max_ms": 0.705792,
+        "samples_ms": [
+          0.435792,
+          0.560708,
+          0.46916599999999997,
+          0.705792,
+          0.591333
+        ]
+      },
+      "editor-open/editor-first-cpu-preview": {
+        "median_ms": 30.965957999999997,
+        "min_ms": 30.548875,
+        "max_ms": 52.706958,
+        "samples_ms": [
+          32.727459,
+          30.548875,
+          30.681,
+          52.706958,
+          30.965957999999997
+        ]
+      },
+      "editor-open/cpu-ready-total": {
+        "median_ms": 2403.577249,
+        "min_ms": 2343.6339590000002,
+        "max_ms": 3018.326957,
+        "samples_ms": [
+          2343.6339590000002,
+          2403.577249,
+          3018.326957,
+          2936.4503760000002,
+          2366.103834
+        ]
+      }
+    },
+    "77f1383b": {
+      "project-import/project-import": {
+        "median_ms": 3404.1382909999998,
+        "min_ms": 3269.864042,
+        "max_ms": 3780.815375,
+        "samples_ms": [
+          3400.466625,
+          3404.1382909999998,
+          3269.864042,
+          3780.815375,
+          3406.381417
+        ]
+      },
+      "project-open/project-open": {
+        "median_ms": 2210.3272500000003,
+        "min_ms": 2144.57375,
+        "max_ms": 3057.265167,
+        "samples_ms": [
+          2210.3272500000003,
+          2235.754125,
+          2147.749417,
+          3057.265167,
+          2144.57375
+        ]
+      },
+      "editor-import/editor-admit": {
+        "median_ms": 1.58,
+        "min_ms": 0.08820800000000001,
+        "max_ms": 1.805208,
+        "samples_ms": [
+          1.578,
+          1.58,
+          1.753667,
+          1.805208,
+          0.08820800000000001
+        ]
+      },
+      "editor-import/editor-worker": {
+        "median_ms": 3559.318,
+        "min_ms": 3455.263,
+        "max_ms": 3683.285791,
+        "samples_ms": [
+          3455.263,
+          3512.5095420000002,
+          3559.318,
+          3683.285791,
+          3632.178417
+        ]
+      },
+      "editor-import/editor-publish": {
+        "median_ms": 1.393458,
+        "min_ms": 0.436667,
+        "max_ms": 1.77425,
+        "samples_ms": [
+          1.393458,
+          1.385375,
+          1.605917,
+          1.77425,
+          0.436667
+        ]
+      },
+      "editor-import/editor-first-cpu-preview": {
+        "median_ms": 32.567875,
+        "min_ms": 31.08125,
+        "max_ms": 33.9315,
+        "samples_ms": [
+          31.297208,
+          33.856417,
+          31.08125,
+          33.9315,
+          32.567875
+        ]
+      },
+      "editor-import/cpu-ready-total": {
+        "median_ms": 3593.758834,
+        "min_ms": 3489.531666,
+        "max_ms": 3720.7967489999996,
+        "samples_ms": [
+          3489.531666,
+          3549.3313340000004,
+          3593.758834,
+          3720.7967489999996,
+          3665.271167
+        ]
+      },
+      "editor-open/editor-admit": {
+        "median_ms": 0.200458,
+        "min_ms": 0.1965,
+        "max_ms": 0.23895899999999998,
+        "samples_ms": [
+          0.206666,
+          0.199042,
+          0.1965,
+          0.200458,
+          0.23895899999999998
+        ]
+      },
+      "editor-open/editor-worker": {
+        "median_ms": 2730.534625,
+        "min_ms": 2682.1055,
+        "max_ms": 2921.803625,
+        "samples_ms": [
+          2730.534625,
+          2765.068666,
+          2682.1055,
+          2921.803625,
+          2682.129792
+        ]
+      },
+      "editor-open/editor-publish": {
+        "median_ms": 0.31541600000000003,
+        "min_ms": 0.278583,
+        "max_ms": 1.33325,
+        "samples_ms": [
+          0.33929099999999995,
+          0.278583,
+          0.29862500000000003,
+          1.33325,
+          0.31541600000000003
+        ]
+      },
+      "editor-open/editor-first-cpu-preview": {
+        "median_ms": 30.991667,
+        "min_ms": 29.815167,
+        "max_ms": 32.540666,
+        "samples_ms": [
+          32.540666,
+          29.815167,
+          31.237792,
+          30.991667,
+          30.726625000000002
+        ]
+      },
+      "editor-open/cpu-ready-total": {
+        "median_ms": 2763.621248,
+        "min_ms": 2713.410792,
+        "max_ms": 2954.329,
+        "samples_ms": [
+          2763.621248,
+          2795.3614580000003,
+          2713.838417,
+          2954.329,
+          2713.410792
+        ]
+      }
+    },
+    "optimized": {
+      "project-import/project-import": {
+        "median_ms": 3036.400208,
+        "min_ms": 2800.837583,
+        "max_ms": 3184.8179170000003,
+        "samples_ms": [
+          2812.898792,
+          3036.400208,
+          2800.837583,
+          3184.8179170000003,
+          3068.644708
+        ]
+      },
+      "project-open/project-open": {
+        "median_ms": 1637.216709,
+        "min_ms": 1485.6433749999999,
+        "max_ms": 1754.039334,
+        "samples_ms": [
+          1485.6433749999999,
+          1742.5584999999999,
+          1754.039334,
+          1601.307875,
+          1637.216709
+        ]
+      },
+      "editor-import/editor-admit": {
+        "median_ms": 1.373667,
+        "min_ms": 0.090292,
+        "max_ms": 1.481791,
+        "samples_ms": [
+          0.09075,
+          1.415208,
+          1.373667,
+          0.090292,
+          1.481791
+        ]
+      },
+      "editor-import/editor-worker": {
+        "median_ms": 3031.906042,
+        "min_ms": 2939.85,
+        "max_ms": 3386.166583,
+        "samples_ms": [
+          2939.85,
+          3037.7652080000003,
+          3031.906042,
+          3031.55375,
+          3386.166583
+        ]
+      },
+      "editor-import/editor-publish": {
+        "median_ms": 1.3535000000000001,
+        "min_ms": 0.31429199999999996,
+        "max_ms": 2.0620410000000002,
+        "samples_ms": [
+          0.31429199999999996,
+          1.8615000000000002,
+          1.3535000000000001,
+          0.39729099999999995,
+          2.0620410000000002
+        ]
+      },
+      "editor-import/editor-first-cpu-preview": {
+        "median_ms": 30.872291999999998,
+        "min_ms": 30.265125,
+        "max_ms": 45.685625,
+        "samples_ms": [
+          32.351417,
+          30.872291999999998,
+          30.411167,
+          30.265125,
+          45.685625
+        ]
+      },
+      "editor-import/cpu-ready-total": {
+        "median_ms": 3065.0443760000003,
+        "min_ms": 2972.606459,
+        "max_ms": 3435.39604,
+        "samples_ms": [
+          2972.606459,
+          3071.914208,
+          3065.0443760000003,
+          3062.306458,
+          3435.39604
+        ]
+      },
+      "editor-open/editor-admit": {
+        "median_ms": 0.20862499999999998,
+        "min_ms": 0.182708,
+        "max_ms": 0.289667,
+        "samples_ms": [
+          0.263042,
+          0.20862499999999998,
+          0.191541,
+          0.182708,
+          0.289667
+        ]
+      },
+      "editor-open/editor-worker": {
+        "median_ms": 2068.637458,
+        "min_ms": 2006.759792,
+        "max_ms": 2959.525458,
+        "samples_ms": [
+          2068.637458,
+          2959.525458,
+          2006.759792,
+          2047.398542,
+          2121.387875
+        ]
+      },
+      "editor-open/editor-publish": {
+        "median_ms": 0.3725,
+        "min_ms": 0.308709,
+        "max_ms": 0.703792,
+        "samples_ms": [
+          0.3725,
+          0.703792,
+          0.308709,
+          0.322709,
+          0.422541
+        ]
+      },
+      "editor-open/editor-first-cpu-preview": {
+        "median_ms": 31.205833,
+        "min_ms": 28.397709,
+        "max_ms": 34.11475,
+        "samples_ms": [
+          31.575499999999998,
+          34.11475,
+          28.397709,
+          30.278833000000002,
+          31.205833
+        ]
+      },
+      "editor-open/cpu-ready-total": {
+        "median_ms": 2100.8485,
+        "min_ms": 2035.657751,
+        "max_ms": 2994.5526250000003,
+        "samples_ms": [
+          2100.8485,
+          2994.5526250000003,
+          2035.657751,
+          2078.182792,
+          2153.305916
+        ]
+      }
+    }
+  },
+  "samples": [
+    {
+      "pair": 0,
+      "version": "alpha4",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3427.375208,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "alpha4",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1897.949542,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "alpha4",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 0.34841700000000003,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3281.979458,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.35783400000000004,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 29.831416,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "alpha4",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.197333,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2332.203291,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.236125,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 29.087542000000003,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "77f1383b",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3352.507083,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "77f1383b",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 2187.070792,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "77f1383b",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 0.381667,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3484.715167,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.696292,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 32.107709,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "77f1383b",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.21258400000000002,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2733.363667,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.377625,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 47.995708,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "optimized",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 2913.88025,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "optimized",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1526.378625,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "optimized",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.57675,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2893.326833,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.8463749999999999,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.109041,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 0,
+      "version": "optimized",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.18312499999999998,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2022.2699579999999,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.298459,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 28.469,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "optimized",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 2812.898792,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "optimized",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1485.6433749999999,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "optimized",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 0.09075,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2939.85,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.31429199999999996,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 32.351417,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "optimized",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.263042,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2068.637458,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.3725,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 31.575499999999998,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "77f1383b",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3400.466625,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "77f1383b",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 2210.3272500000003,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "77f1383b",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.578,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3455.263,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.393458,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 31.297208,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "77f1383b",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.206666,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2730.534625,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.33929099999999995,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 32.540666,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "alpha4",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3258.2166660000003,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "alpha4",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1882.078542,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "alpha4",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.208375,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3396.426542,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.589542,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 34.348875,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "version": "alpha4",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.178958,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2310.2917500000003,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.435792,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 32.727459,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "77f1383b",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3404.1382909999998,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "77f1383b",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 2235.754125,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "77f1383b",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.58,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3512.5095420000002,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.385375,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 33.856417,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "77f1383b",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.199042,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2765.068666,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.278583,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 29.815167,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "optimized",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3036.400208,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "optimized",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1742.5584999999999,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "optimized",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.415208,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3037.7652080000003,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.8615000000000002,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.872291999999998,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "optimized",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.20862499999999998,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2959.525458,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.703792,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 34.11475,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "alpha4",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3662.125167,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "alpha4",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 2069.8685,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "alpha4",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.232583,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3514.634708,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.504167,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 32.558625,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "version": "alpha4",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.18770799999999999,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2372.279958,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.560708,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.548875,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "alpha4",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3217.4683330000003,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "alpha4",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1805.8669169999998,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "alpha4",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 0.0875,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3540.380584,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.276792,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 31.841165999999998,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "alpha4",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 4.1893329999999995,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2982.987458,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.46916599999999997,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.681,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "optimized",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 2800.837583,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "optimized",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1754.039334,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "optimized",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.373667,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3031.906042,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.3535000000000001,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.411167,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "optimized",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.191541,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2006.759792,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.308709,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 28.397709,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "77f1383b",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3269.864042,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "77f1383b",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 2147.749417,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "77f1383b",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.753667,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3559.318,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.605917,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 31.08125,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "version": "77f1383b",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.1965,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2682.1055,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.29862500000000003,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 31.237792,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "optimized",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3184.8179170000003,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "optimized",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1601.307875,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "optimized",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 0.090292,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3031.55375,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.39729099999999995,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.265125,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "optimized",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.182708,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2047.398542,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.322709,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.278833000000002,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "alpha4",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3222.208416,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "alpha4",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 2028.832875,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "alpha4",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.2778340000000001,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3527.146625,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.6834589999999999,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 40.44,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "alpha4",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.193542,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2882.8440840000003,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.705792,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 52.706958,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "77f1383b",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3780.815375,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "77f1383b",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 3057.265167,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "77f1383b",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.805208,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3683.285791,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.77425,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 33.9315,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 4,
+      "version": "77f1383b",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.200458,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2921.803625,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 1.33325,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.991667,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "77f1383b",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3406.381417,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "77f1383b",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 2144.57375,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "77f1383b",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 0.08820800000000001,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3632.178417,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.436667,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 32.567875,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "77f1383b",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.23895899999999998,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2682.129792,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.31541600000000003,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.726625000000002,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "alpha4",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3285.636375,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "alpha4",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1882.226541,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "alpha4",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.396125,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3371.708709,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.683625,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 32.213791,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "alpha4",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.174209,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2334.372334,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.591333,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 30.965957999999997,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "optimized",
+      "case": "project-import",
+      "rows": [
+        {
+          "elapsed_ms": 3068.644708,
+          "phase": "project-import"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [
+            {
+              "asset_id": "DisplayInfo",
+              "code": "UNRESOLVED_PART",
+              "message": "$.Parts[130].Id: Part160 is absent from the model"
+            }
+          ],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "optimized",
+      "case": "project-open",
+      "rows": [
+        {
+          "elapsed_ms": 1637.216709,
+          "phase": "project-open"
+        },
+        {
+          "assets": 715,
+          "bindings": 30,
+          "diagnostics": [],
+          "meshes": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "optimized",
+      "case": "editor-import",
+      "rows": [
+        {
+          "elapsed_ms": 1.481791,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 3386.166583,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 2.0620410000000002,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 45.685625,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [
+            "UNRESOLVED_PART: $.Parts[130].Id: Part160 is absent from the model"
+          ],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    },
+    {
+      "pair": 5,
+      "version": "optimized",
+      "case": "editor-open",
+      "rows": [
+        {
+          "elapsed_ms": 0.289667,
+          "phase": "editor-admit"
+        },
+        {
+          "elapsed_ms": 2121.387875,
+          "phase": "editor-worker"
+        },
+        {
+          "elapsed_ms": 0.422541,
+          "phase": "editor-publish"
+        },
+        {
+          "elapsed_ms": 31.205833,
+          "phase": "editor-first-cpu-preview"
+        },
+        {
+          "meshes": 715,
+          "notices": [],
+          "rgba_bytes": 703790836,
+          "textures": 715
+        }
+      ]
+    }
+  ],
+  "artifact_verification": {
+    "baseline_resave_all_entries_byte_identical": true,
+    "fresh_import_png_sha256_sets_equal": true,
+    "unique_pngs": 490,
+    "baseline_archive_sha256": "708b8098820da9383cdd43babc71b75f3f0054137d10a7bd062f0977920e4c1e",
+    "resaved_archive_sha256": "708b8098820da9383cdd43babc71b75f3f0054137d10a7bd062f0977920e4c1e",
+    "fresh_import_archive_sha256": "ff515dbd19a6192860ef9e97526d9c8f0bb78b34d438620c1677a361e54bf588"
+  },
+  "validation": {
+    "core_blendshape_glue_tests": {
+      "passed": 18
+    },
+    "core_keyform_tests": {
+      "passed": 1
+    },
+    "project_tests": {
+      "passed": 53
+    },
+    "archive_serial": {
+      "passed": 31
+    },
+    "archive_initial_parallel": {
+      "passed": 30,
+      "failed": 1,
+      "failure": "archive::publication::tests::abandoned_staging_cleanup_requires_metadata_and_released_owner_lock; assertion !stale_path.exists()",
+      "followup": "Isolated exact rerun passed; complete serial archive run passed; publication.rs was not modified. Cause not established."
+    }
+  },
+  "raw_directory": "target/deepseek-load-optimized",
+  "driver": "target/python/scratch/deepseek_optimized_compare.py"
+}

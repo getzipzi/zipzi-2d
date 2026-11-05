@@ -589,8 +589,7 @@ impl Document {
         let key_table = b.key_table_id.clone();
         self.content.blend_bindings.insert(id.clone(), b);
         self.content.blend_binding_order.push(id.clone());
-        let meshes = self.content.mesh_order.clone();
-        self.changed(ChangeKind::Structure, meshes, vec![id, target, key_table])
+        self.changed_blend_binding(vec![id, target, key_table])
     }
 
     pub fn replace_blend_binding(&mut self, mut b: BlendShapeBinding) -> EditResult {
@@ -617,7 +616,17 @@ impl Document {
         let target = b.target_id.clone();
         let key_table = b.key_table_id.clone();
         self.content.blend_bindings.insert(id.clone(), b);
+        self.changed_blend_binding(vec![id, target, key_table])
+    }
+
+    fn changed_blend_binding(&mut self, object_ids: Vec<String>) -> EditResult {
+        // BlendShape forms reference samples owned by key tables; they do not
+        // define axes or sample identities. Keep that immutable index while
+        // invalidating all ordinary structural/evaluation state as usual.
+        let identities = self.binding_lookup.clone();
         let meshes = self.content.mesh_order.clone();
-        self.changed(ChangeKind::Structure, meshes, vec![id, target, key_table])
+        let result = self.changed(ChangeKind::Structure, meshes, object_ids);
+        self.binding_lookup = identities;
+        result
     }
 }

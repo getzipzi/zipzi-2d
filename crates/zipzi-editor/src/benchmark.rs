@@ -3,6 +3,7 @@
 use super::*;
 mod animation;
 mod deformation;
+mod first_frame;
 pub(crate) mod parameter_overlay;
 #[cfg(feature = "test-support")]
 mod properties;
@@ -90,6 +91,7 @@ fn clock_alignment() -> anyhow::Result<serde_json::Value> {
 
 pub fn init() -> anyhow::Result<()> {
     let automatic = std::env::var("ZIPZI_WINDOW_BENCH").is_ok_and(|s| s == "1");
+    first_frame::init(automatic)?;
     let Some(path) = std::env::var_os("ZIPZI_FRAME_TRACE") else {
         ensure!(!automatic, "ZIPZI_WINDOW_BENCH requires ZIPZI_FRAME_TRACE");
         return Ok(());
@@ -187,6 +189,7 @@ pub fn init() -> anyhow::Result<()> {
                 + properties as u8
                 + deformer_selection as u8
                 + ui_only as u8)
+                + first_frame::enabled() as u8
                 <= 1,
             "choose one benchmark workload"
         );
@@ -285,6 +288,7 @@ pub fn init() -> anyhow::Result<()> {
                 "parameters_only": config.map(|c| c.parameters_only),
                 "regular_deformers": config.and_then(|c| c.regular_deformers),
                 "ui_only": config.map(|c| c.ui_only),
+                "first_frame": first_frame::enabled(),
                 "parameter_overlay": parameter_overlay::metadata(),
                 "manual_mesh": config.is_some_and(|c| c.manual_mesh),
                 "animation_drag": std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").ok(),
@@ -293,7 +297,7 @@ pub fn init() -> anyhow::Result<()> {
                 "selection_objects": std::env::var("ZIPZI_BENCH_SELECTION_OBJECTS").ok(),
                 "property_cases": property_cases,
                 "property_case": std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok(),
-                "workloads": config.map(|c| if c.deformer_selection { vec![310] } else if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.deformations { vec![5, 6, 7, 8] }
+                "workloads": config.map(|c| if first_frame::enabled() { vec![10] } else if c.deformer_selection { vec![310] } else if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else if c.navigation_only { vec![1, 2] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
@@ -346,6 +350,7 @@ pub fn init() -> anyhow::Result<()> {
         .ok();
     ensure!(
         frame_trace::install(|event| {
+            first_frame::observe(&event);
             if event.stage == "presented" {
                 LAST_PRESENTED.fetch_max(event.at_ns, Ordering::Relaxed);
             }
@@ -429,6 +434,10 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
     let Some(config) = CONFIG.get() else {
         return;
     };
+    if first_frame::enabled() {
+        first_frame::start(view, window, cx, config);
+        return;
+    }
     let request = if config.model.to_string_lossy().ends_with(".model3.json") {
         LoadRequest::Model3(config.model.clone())
     } else if config.model.extension().is_some_and(|s| s == "cmo3") {

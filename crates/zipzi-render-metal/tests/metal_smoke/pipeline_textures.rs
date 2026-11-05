@@ -12,6 +12,76 @@ use zipzi_render_metal::{
 };
 
 #[test]
+fn prepared_upload_preserves_every_premultiplied_channel_and_mip() {
+    use zipzi_render::texture::{premultiply_rgba8, straight_rgba_mipmaps};
+    let context = MetalContext::new().unwrap();
+    // Exhaust all channel/alpha combinations; odd dimensions exercise row tails
+    // and fractional mip footprints as well as Metal's per-level copies.
+    let (width, height) = (257, 257);
+    let rgba: Vec<u8> = (0..width * height)
+        .flat_map(|i| {
+            [
+                i as u8,
+                (255 - i % 256) as u8,
+                (i / 17) as u8,
+                (i / 256) as u8,
+            ]
+        })
+        .collect();
+    let mips = straight_rgba_mipmaps(width, height, &rgba);
+    let expected = premultiply_rgba8(&rgba);
+    let prepared_mips: Vec<_> = mips
+        .iter()
+        .map(|(w, h, pixels)| (*w, *h, premultiply_rgba8(pixels)))
+        .collect();
+    let straight = context.upload_rgba8(width, height, &rgba, &mips).unwrap();
+    let prepared = context
+        .upload_premultiplied_rgba8(width, height, &expected, &prepared_mips)
+        .unwrap();
+    for (level, (w, h, expected)) in std::iter::once((width, height, expected))
+        .chain(prepared_mips)
+        .enumerate()
+    {
+        let independent: Vec<_> = std::iter::once(&rgba)
+            .chain(mips.iter().map(|m| &m.2))
+            .nth(level)
+            .unwrap()
+            .chunks_exact(4)
+            .flat_map(|p| {
+                [
+                    ((u32::from(p[0]) * u32::from(p[3]) + 127) / 255) as u8,
+                    ((u32::from(p[1]) * u32::from(p[3]) + 127) / 255) as u8,
+                    ((u32::from(p[2]) * u32::from(p[3]) + 127) / 255) as u8,
+                    p[3],
+                ]
+            })
+            .collect();
+        assert_eq!(expected, independent);
+        for texture in [&straight, &prepared] {
+            let mut actual = vec![0u8; expected.len()];
+            texture.get_bytes(
+                actual.as_mut_ptr().cast(),
+                u64::from(w * 4),
+                zipzi_render_metal::metal::MTLRegion::new_2d(0, 0, w.into(), h.into()),
+                level as u64,
+            );
+            assert_eq!(actual, expected, "mip {level}");
+        }
+    }
+    // The prepared entrypoint must retain the same dimension/mip validation.
+    assert!(context.upload_premultiplied_rgba8(0, 1, &[], &[]).is_err());
+    assert!(context
+        .upload_premultiplied_rgba8(1, 1, &[0; 3], &[])
+        .is_err());
+    assert!(context
+        .upload_premultiplied_rgba8(2, 2, &[0; 16], &[(2, 1, vec![0; 8])])
+        .is_err());
+    assert!(context
+        .upload_premultiplied_rgba8(1, 1, &[0; 4], &[(1, 1, vec![0; 4])])
+        .is_err());
+}
+
+#[test]
 fn renders_pixels_through_native_metal() {
     const SIDE: u32 = 64;
     let context = MetalContext::new().unwrap();

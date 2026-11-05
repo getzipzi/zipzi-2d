@@ -5,6 +5,79 @@ use zipzi_core::types::{
 };
 
 #[test]
+fn blend_bindings_share_sample_identities_but_new_tables_refresh_them() {
+    let mut doc = create_base_document();
+    let table = BlendShapeKeyTable {
+        id: KEY_TABLE.into(),
+        parameter_id: PARAM_BS.into(),
+        keys: vec![0., 1.],
+        base_key_idx: 0,
+        samples: Default::default(),
+        base_sample_id: Default::default(),
+    };
+    assert!(doc.create_blend_key_table(table.clone()).status.is_ok());
+    let identities = doc.binding_identities();
+    let before = doc.clone(); // Retain the previous index, ruling out address reuse.
+    let mut binding = BlendShapeBinding {
+        id: BINDING_BS.into(),
+        target_id: MESH_A.into(),
+        target_kind: BlendShapeTargetKind::Mesh,
+        key_table_id: KEY_TABLE.into(),
+        constraint_ids: vec![],
+        keyforms: DeltaKeyforms::Mesh(vec![
+            DeltaMeshKeyform {
+                positions: vec![Vec2::default(); 3],
+                ..Default::default()
+            },
+            DeltaMeshKeyform {
+                positions: vec![Vec2::new(1., 0.); 3],
+                ..Default::default()
+            },
+        ]),
+    };
+    assert!(doc.create_blend_binding(binding.clone()).status.is_ok());
+    assert_eq!(doc.binding_identities(), identities);
+    assert!(before
+        .binding_identities_iter()
+        .zip(doc.binding_identities_iter())
+        .all(|(old, new)| std::ptr::eq(old, new)));
+    if let DeltaKeyforms::Mesh(forms) = &mut binding.keyforms {
+        forms[1].positions[0].x = 2.;
+    }
+    assert!(doc.replace_blend_binding(binding.clone()).status.is_ok());
+    assert!(before
+        .binding_identities_iter()
+        .zip(doc.binding_identities_iter())
+        .all(|(old, new)| std::ptr::eq(old, new)));
+    binding.id = identities[0].id.clone();
+    assert_eq!(
+        doc.create_blend_binding(binding.clone()).status.code,
+        "DUPLICATE_ID"
+    );
+
+    let mut another_table = table;
+    another_table.id = uuid::Uuid::new_v4().to_string();
+    assert!(doc
+        .create_blend_key_table(another_table.clone())
+        .status
+        .is_ok());
+    let sample = doc.get_blend_key_table(&another_table.id).unwrap().samples[0]
+        .id
+        .clone();
+    assert_eq!(
+        doc.binding_identity(&sample).unwrap().owner,
+        another_table.id
+    );
+    assert_eq!(doc.binding_identities().len(), identities.len() + 2);
+    binding.id = sample;
+    assert_eq!(
+        doc.create_blend_binding(binding).status.code,
+        "DUPLICATE_ID"
+    );
+    assert_eq!(before.binding_identities(), identities);
+}
+
+#[test]
 fn test_blendshape_key_table_and_constraint_crud() {
     let mut doc = create_base_document();
 

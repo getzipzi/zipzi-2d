@@ -13,6 +13,9 @@ queue for a renderer's lifetime so cached mask reads and writes stay ordered.
 `upload_rgba8` accepts straight RGBA pixels and premultiplies them for GPU
 storage. External catalog textures must already be premultiplied. Use
 `zipzi_render::texture::straight_rgba_mipmaps` for authored image mipmaps.
+Call `upload_premultiplied_rgba8` when CPU workers have already prepared the base
+and every mip using `premultiply_rgba8` (or its in-place variant). It retains
+dimension/mip validation and uploads without another conversion allocation.
 Assign increasing texture revisions when content changes; unversioned textures
 redraw masks every frame.
 
