@@ -1,7 +1,7 @@
 use super::*;
 use std::collections::BTreeSet;
 
-fn json<R: Read + Seek>(
+fn entry_bytes<R: Read + Seek>(
     zip: &mut ZipArchive<R>,
     name: &str,
     limit: u64,
@@ -14,8 +14,6 @@ fn json<R: Read + Seek>(
     let size = entry.size();
     let mut bytes = Vec::new();
     stream::copy_exact(&mut entry, &mut bytes, size, keep_going)?;
-    let text = std::str::from_utf8(&bytes).map_err(|_| invalid("Invalid UTF-8 JSON"))?;
-    crate::codec::validate_json_syntax(text)?;
     Ok(bytes)
 }
 fn unsupported(code: &str, message: &str) -> ArchiveError {
@@ -82,12 +80,17 @@ pub(super) fn open(
     if indexed != names || zip.len() != names.len() {
         return Err(invalid("ZIP index differs from admitted directory"));
     }
-    let format: Format = serde_json::from_slice(&json(
+    let format_bytes = entry_bytes(
         &mut zip,
         "format.json",
         limits.format_bytes,
         &mut keep_going,
-    )?)?;
+    )?;
+    crate::codec::validate_json_syntax(
+        std::str::from_utf8(&format_bytes).map_err(|_| invalid("Invalid UTF-8 JSON"))?,
+    )?;
+    let format: Format = serde_json::from_slice(&format_bytes)?;
+    drop(format_bytes);
     if format.format != "zipzi-project-package" || format.document != "project.json" {
         return Err(invalid("Not a Zipzi project package"));
     }
@@ -109,7 +112,7 @@ pub(super) fn open(
     if names.contains(zipzi_project_preview::PREVIEW_PATH) && format.preview.is_none() {
         return Err(invalid("Undeclared project preview"));
     }
-    let bytes = json(
+    let bytes = entry_bytes(
         &mut zip,
         "project.json",
         limits.document_bytes,
@@ -118,29 +121,15 @@ pub(super) fn open(
     if content_sha256(&bytes) != format.document_sha256 {
         return Err(invalid("Document hash mismatch"));
     }
-    // Decode a small header view rather than a second complete JSON Value tree.
-    #[derive(Deserialize)]
-    struct Header {
-        format: String,
-        format_version: u64,
-    }
-    let header: Header = serde_json::from_slice(&bytes)?;
     let (identifier, version) = if prototype {
         ("zipzi-directory-project", 21)
     } else {
         (NATIVE_FORMAT, NATIVE_DOCUMENT_VERSION)
     };
-    if header.format != identifier {
-        return Err(invalid("Unknown project document identifier"));
-    }
-    if header.format_version != version {
-        return Err(unsupported(
-            "UNSUPPORTED_VERSION",
-            "Unsupported project document version",
-        ));
-    }
-    let document = decode_project(
+    let document = crate::codec::decode_archive_project(
         std::str::from_utf8(&bytes).map_err(|_| invalid("Invalid UTF-8 document"))?,
+        identifier,
+        version,
     )?;
     drop(bytes);
     check(&mut keep_going)?;
@@ -229,9 +218,18 @@ pub(super) fn open(
             continue;
         }
         let mut valid = false;
+        // A private extracted PNG has immutable, verified bytes. Reuse only a
+        // successful decode with these exact declared dimensions; mismatched
+        // references still pass through bounded acquisition and diagnostics.
+        let mut verified_dimensions = None;
         for asset in references {
+            check(&mut keep_going)?;
+            let content = asset.content.as_ref().unwrap();
+            if verified_dimensions == Some((content.width, content.height)) {
+                valid = true;
+                continue;
+            }
             if let Some(memory) = memory {
-                let content = asset.content.as_ref().unwrap();
                 if let Ok(required) = zipzi_core::image::png_decode_workspace_bytes(
                     content.width,
                     content.height,
@@ -256,6 +254,7 @@ pub(super) fn open(
                 &mut keep_going,
             ) {
                 Ok(_) => {
+                    verified_dimensions = Some((content.width, content.height));
                     valid = true;
                     decoded_read_bytes += size;
                 }

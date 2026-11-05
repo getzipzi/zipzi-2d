@@ -1,17 +1,118 @@
 //! Native Metal preview adapter. No document editing or project IO lives here.
 pub use crate::overlay::MetalOverlayRenderer;
 use anyhow::{Result, anyhow, ensure};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use zipzi_core::Vec2;
 use zipzi_editor_core::{SceneSnapshot, ViewState, ViewportMetrics, ViewportTransform};
-use zipzi_render::texture::straight_rgba_mipmaps;
+use zipzi_render::texture::{premultiply_rgba8, premultiply_rgba8_in_place, straight_rgba_mipmaps};
 use zipzi_render::{Affine2, ViewportConfig};
 use zipzi_render_metal::{
     MetalContext, MetalOutputMode, MetalRenderer, MetalTexture, MetalTextureCatalog, metal,
 };
 
 pub use zipzi_render_metal::MetalTargetConfig;
+
+type Mipmaps = Vec<(u32, u32, Vec<u8>)>;
+struct PreparedTexture {
+    rgba: Vec<u8>,
+    mipmaps: Mipmaps,
+}
+
+fn prepare_texture(source: &zipzi_editor_core::SceneTexture) -> PreparedTexture {
+    let mut mipmaps = straight_rgba_mipmaps(source.width, source.height, &source.rgba);
+    // Generate every straight level before premultiplying owned upload buffers.
+    // The next level must always filter straight colors with alpha weighting.
+    for (_, _, pixels) in &mut mipmaps {
+        premultiply_rgba8_in_place(pixels);
+    }
+    PreparedTexture {
+        rgba: premultiply_rgba8(&source.rgba),
+        mipmaps,
+    }
+}
+type PendingTexture<'a> = (String, &'a zipzi_editor_core::SceneTexture);
+const PREPARE_BATCH_BYTES: usize = 64 << 20;
+
+fn preparation_bytes(source: &zipzi_editor_core::SceneTexture) -> usize {
+    // Bound the premultiplied base plus every mip (which together fit in twice
+    // the base RGBA size, even for single-pixel axes), footprint tables and metadata.
+    source
+        .rgba
+        .len()
+        .saturating_mul(2)
+        .saturating_add(
+            (source.width as usize)
+                .saturating_add(source.height as usize)
+                .saturating_mul(32),
+        )
+        .saturating_add(1024)
+}
+
+fn batch_end(pending: &[PendingTexture<'_>], start: usize, limit: usize) -> usize {
+    let mut bytes = 0usize;
+    let mut end = start;
+    while let Some((_, source)) = pending.get(end) {
+        let next = preparation_bytes(source);
+        if end != start && next > limit.saturating_sub(bytes) {
+            break;
+        }
+        bytes = bytes.saturating_add(next);
+        end += 1;
+        if bytes >= limit {
+            break;
+        }
+    }
+    end
+}
+
+fn prepare_texture_batch(pending: &[PendingTexture<'_>]) -> Vec<(usize, PreparedTexture)> {
+    let workers = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(4)
+        .min(pending.len());
+    if workers <= 1 || pending.iter().map(|(_, s)| s.rgba.len()).sum::<usize>() < 1 << 20 {
+        return pending
+            .iter()
+            .enumerate()
+            .map(|(i, (_, s))| (i, prepare_texture(s)))
+            .collect();
+    }
+    // Balance by pixels rather than asset count; model artwork has very
+    // different dimensions. Only owned CPU buffers cross these thread boundaries.
+    let mut jobs = vec![Vec::new(); workers];
+    let mut loads = vec![0usize; workers];
+    let mut order: Vec<_> = (0..pending.len()).collect();
+    order.sort_unstable_by_key(|&i| std::cmp::Reverse(pending[i].1.rgba.len()));
+    for i in order {
+        let worker = (0..workers).min_by_key(|&w| loads[w]).unwrap();
+        loads[worker] = loads[worker].saturating_add(pending[i].1.rgba.len());
+        jobs[worker].push(i);
+    }
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = jobs
+            .into_iter()
+            .map(|indices| {
+                scope.spawn(move || {
+                    indices
+                        .into_iter()
+                        .map(|i| {
+                            let source = pending[i].1;
+                            (i, prepare_texture(source))
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        let mut prepared = Vec::with_capacity(pending.len());
+        for handle in handles {
+            prepared.extend(handle.join().expect("texture preparation worker"));
+        }
+        // Keep upload revisions/cache behavior independent of worker scheduling.
+        prepared.sort_unstable_by_key(|(i, _)| *i);
+        prepared
+    })
+}
 
 /// The image is ordered on the consumer queue. Retain the command to bound
 /// producer work by GPU completion without ever waiting on the UI thread.
@@ -126,32 +227,63 @@ impl MetalSceneRenderer {
         let key = |source: &zipzi_editor_core::SceneTexture| {
             format!("{}:{}:{}", source.cache_key, source.width, source.height)
         };
+        let mut missing = Vec::new();
+        let mut scheduled = HashSet::new();
         for source in scene.textures.iter() {
             let key = key(source);
             if let Some(cached) = self.textures.get_mut(&key) {
                 cached.used = self.draws;
                 continue;
             }
-            let mipmaps = straight_rgba_mipmaps(source.width, source.height, &source.rgba);
-            let bytes =
-                source.rgba.len() as u64 + mipmaps.iter().map(|m| m.2.len() as u64).sum::<u64>();
-            let texture = self
-                .context
-                .upload_rgba8(source.width, source.height, &source.rgba, &mipmaps)
-                .map_err(status)?;
-            self.textures.insert(
-                key,
-                UploadedTexture {
-                    texture,
-                    width: source.width,
-                    height: source.height,
-                    revision: self.next_revision,
-                    used: self.draws,
-                    bytes,
-                },
+            ensure!(
+                source.width > 0
+                    && source.height > 0
+                    && source.width <= self.context.max_texture_dimension()
+                    && source.height <= self.context.max_texture_dimension()
+                    && u64::from(source.width) * u64::from(source.height) * 4
+                        == source.rgba.len() as u64,
+                "Invalid texture dimensions or RGBA bytes"
             );
-            self.next_revision += 1;
-            self.uploads += 1;
+            if scheduled.insert(key.clone()) {
+                missing.push((key, source));
+            }
+        }
+        let mut start = 0;
+        while start < missing.len() {
+            let end = batch_end(&missing, start, PREPARE_BATCH_BYTES);
+            let batch = &missing[start..end];
+            for (i, prepared) in prepare_texture_batch(batch) {
+                let (key, source) = &batch[i];
+                let bytes = source.rgba.len() as u64
+                    + prepared
+                        .mipmaps
+                        .iter()
+                        .map(|m| m.2.len() as u64)
+                        .sum::<u64>();
+                let texture = self
+                    .context
+                    .upload_premultiplied_rgba8(
+                        source.width,
+                        source.height,
+                        &prepared.rgba,
+                        &prepared.mipmaps,
+                    )
+                    .map_err(status)?;
+                self.textures.insert(
+                    key.clone(),
+                    UploadedTexture {
+                        texture,
+                        width: source.width,
+                        height: source.height,
+                        revision: self.next_revision,
+                        used: self.draws,
+                        bytes,
+                    },
+                );
+                self.next_revision += 1;
+                self.uploads += 1;
+            }
+            start = end;
         }
         let mut cached_bytes = self.textures.values().map(|t| t.bytes).sum::<u64>();
         if cached_bytes > self.cache_budget {
@@ -246,6 +378,54 @@ impl MetalSceneRenderer {
 mod tests {
     use super::*;
     use zipzi_editor_core::{Document, SceneTexture};
+
+    fn pixels(width: u32, height: u32, color: u8) -> SceneTexture {
+        SceneTexture {
+            asset_id: color.to_string(),
+            cache_key: color.to_string(),
+            width,
+            height,
+            rgba: vec![color; width as usize * height as usize * 4].into(),
+        }
+    }
+
+    #[test]
+    fn preparation_batches_bound_workspace_and_isolate_an_oversized_image() {
+        let images = [
+            pixels(128, 128, 1),
+            pixels(257, 257, 2),
+            pixels(32, 32, 3),
+            pixels(32, 32, 4),
+        ];
+        let pending: Vec<_> = images.iter().map(|s| (s.cache_key.clone(), s)).collect();
+        let limit = 256 << 10;
+        assert!(preparation_bytes(&images[0]) < limit);
+        assert!(preparation_bytes(&images[1]) > limit);
+        assert_eq!(batch_end(&pending, 0, limit), 1);
+        assert_eq!(batch_end(&pending, 1, limit), 2);
+        assert_eq!(batch_end(&pending, 2, limit), 4);
+    }
+
+    #[test]
+    fn parallel_preparation_keeps_each_images_upload_bytes_in_request_order() {
+        let images: Vec<_> = (0..8)
+            .map(|i| pixels(257 + i, 257 - i, i as u8 * 31))
+            .collect();
+        let pending: Vec<_> = images.iter().map(|s| (s.cache_key.clone(), s)).collect();
+        let prepared = prepare_texture_batch(&pending);
+        assert_eq!(prepared.len(), images.len());
+        for ((index, prepared), (expected_index, source)) in
+            prepared.into_iter().zip(images.iter().enumerate())
+        {
+            assert_eq!(index, expected_index);
+            assert_eq!(prepared.rgba, premultiply_rgba8(&source.rgba));
+            let mut expected = straight_rgba_mipmaps(source.width, source.height, &source.rgba);
+            for (_, _, rgba) in &mut expected {
+                *rgba = premultiply_rgba8(rgba);
+            }
+            assert_eq!(prepared.mipmaps, expected);
+        }
+    }
 
     #[test]
     fn boundless_offscreen_artwork_renders_after_pan_and_zoom() -> Result<()> {
@@ -359,8 +539,9 @@ mod tests {
             let mut draw = |ids: &[&str]| -> Result<(u64, u64, u64)> {
                 scene.textures = ids
                     .iter()
-                    .map(|id| SceneTexture {
-                        asset_id: (*id).into(),
+                    .enumerate()
+                    .map(|(slot, id)| SceneTexture {
+                        asset_id: format!("{id}-{slot}"),
                         cache_key: (*id).into(),
                         width: 1,
                         height: 1,
@@ -385,7 +566,7 @@ mod tests {
                 );
                 Ok(renderer.stats())
             };
-            assert_eq!(draw(&["a", "b", "c"])?, (1, 3, 12));
+            assert_eq!(draw(&["a", "a", "b", "c"])?, (1, 3, 12));
             assert_eq!(draw(&["a", "b"])?, (2, 3, 12));
             assert_eq!(draw(&["a", "d", "e"])?, (3, 5, 12));
             // The current scene survives eviction even when it exceeds budget.

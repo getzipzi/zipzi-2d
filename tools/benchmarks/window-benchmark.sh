@@ -46,7 +46,9 @@ export ZIPZI_WINDOW_BENCH=1 ZIPZI_BENCH_MODEL="$model"
 export ZIPZI_BENCH_SAMPLES="$samples" ZIPZI_BENCH_HZ="$hz"
 binary=$(python3 "$repo_root/tools/workspace/workspace_tools.py" executable "$output/build.jsonl")
 caffeinate -d -i "$binary" > "$output/application.log" 2>&1
-if [[ "${ZIPZI_BENCH_PROPERTIES:-0}" == 1 ]]; then
+if [[ "${ZIPZI_BENCH_FIRST_FRAME:-0}" == 1 ]]; then
+    python3 "$repo_root/tools/benchmarks/first-frame-trace-report.py" "$output/trace.jsonl" --output "$output/summary.json"
+elif [[ "${ZIPZI_BENCH_PROPERTIES:-0}" == 1 ]]; then
     python3 "$repo_root/tools/benchmarks/properties-trace-report.py" "$output/trace.jsonl" --output "$output"
 elif [[ "${ZIPZI_BENCH_ANIMATION:-0}" == 1 ]]; then
     python3 "$repo_root/tools/benchmarks/animation-trace-report.py" "$output/trace.jsonl" > "$output/summary.json"

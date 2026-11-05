@@ -1,0 +1,863 @@
+{
+  "metadata": {
+    "date": "2026-11-05",
+    "clock": 1793850831.407988,
+    "project_sha256": "708b8098820da9383cdd43babc71b75f3f0054137d10a7bd062f0977920e4c1e",
+    "offscreen_binary_sha256": {
+      "77f1383b": "0440d6fbfec75c401a620eaf74dbd05259d54d1b34fb6b791a2f229542b38b09",
+      "optimized": "cc6c65b42ff792f5bad7e394c27ee16b0cbfcf73cfe3ed9c0ca7460cbaed4d48"
+    },
+    "native_binary_sha256": "192517e86d978617761cc350a3285669fe88e0a7b24c3df4ca96426804f78732",
+    "driver_sha256": "ed7df2c095dc32f0a58fbf08cfde1f48f41c609ec44fc0732f3f32e5a440bbeb",
+    "source_sha256": {
+      "crates/zipzi-render/src/texture.rs": "78d68f41bf7279d966c21c805d423f2853a34b8fac045d8daa4fa00e3a1f3866",
+      "crates/zipzi-render-metal/src/native/context.rs": "5ada678420fc3eb7a95b081a1f35aec772e3728161f333347876726c2a5b2dff",
+      "crates/zipzi-editor-render/src/metal.rs": "acd7f9cb0d860b7468052f63df11139c9614e1e89032c53d4bf76ee3586ed57d",
+      "crates/zipzi-editor-render/examples/macos/first_frame_benchmark.rs": "f32aa59aea1e06d51225538add4683e0c42fa30870f1ca588fda4b47f67a6b2d"
+    }
+  },
+  "offscreen_samples": [
+    {
+      "pair": 0,
+      "version": "77f1383b",
+      "records": [
+        {
+          "type": "fixture",
+          "textures": 715,
+          "unique_textures": 490,
+          "rgba_bytes": 585517924,
+          "mipmap_bytes_equal": true
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": true,
+          "elapsed_ms": 753.12325
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": false,
+          "elapsed_ms": 735.298292
+        },
+        {
+          "type": "cold_frame",
+          "round": 0,
+          "texture_ms": 995.2412499999999,
+          "submit_ms": 1001.4960420000001,
+          "complete_ms": 1101.888542,
+          "uploads": 490,
+          "texture_bytes": 780216416,
+          "draw_calls": 518,
+          "pixels_equal": true
+        }
+      ],
+      "rgba_sha256": "d510ecf3f12f6a19c1f26d711562b873a721156f9b693aebf1a2cabac39fd3e4"
+    },
+    {
+      "pair": 0,
+      "version": "optimized",
+      "records": [
+        {
+          "type": "fixture",
+          "textures": 715,
+          "unique_textures": 490,
+          "rgba_bytes": 585517924,
+          "mipmap_bytes_equal": true
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": true,
+          "elapsed_ms": 711.751
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": false,
+          "elapsed_ms": 228.00133399999999
+        },
+        {
+          "type": "cold_frame",
+          "round": 0,
+          "texture_ms": 346.43425,
+          "submit_ms": 350.29879200000005,
+          "complete_ms": 422.298667,
+          "uploads": 490,
+          "texture_bytes": 780216416,
+          "draw_calls": 518,
+          "pixels_equal": true
+        }
+      ],
+      "rgba_sha256": "d510ecf3f12f6a19c1f26d711562b873a721156f9b693aebf1a2cabac39fd3e4"
+    },
+    {
+      "pair": 1,
+      "version": "optimized",
+      "records": [
+        {
+          "type": "fixture",
+          "textures": 715,
+          "unique_textures": 490,
+          "rgba_bytes": 585517924,
+          "mipmap_bytes_equal": true
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": true,
+          "elapsed_ms": 715.281584
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": false,
+          "elapsed_ms": 228.187791
+        },
+        {
+          "type": "cold_frame",
+          "round": 0,
+          "texture_ms": 330.474042,
+          "submit_ms": 334.47387499999996,
+          "complete_ms": 375.193209,
+          "uploads": 490,
+          "texture_bytes": 780216416,
+          "draw_calls": 518,
+          "pixels_equal": true
+        }
+      ],
+      "rgba_sha256": "d510ecf3f12f6a19c1f26d711562b873a721156f9b693aebf1a2cabac39fd3e4"
+    },
+    {
+      "pair": 1,
+      "version": "77f1383b",
+      "records": [
+        {
+          "type": "fixture",
+          "textures": 715,
+          "unique_textures": 490,
+          "rgba_bytes": 585517924,
+          "mipmap_bytes_equal": true
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": true,
+          "elapsed_ms": 711.0124169999999
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": false,
+          "elapsed_ms": 718.1195
+        },
+        {
+          "type": "cold_frame",
+          "round": 0,
+          "texture_ms": 985.1837919999999,
+          "submit_ms": 988.787458,
+          "complete_ms": 1053.6208330000002,
+          "uploads": 490,
+          "texture_bytes": 780216416,
+          "draw_calls": 518,
+          "pixels_equal": true
+        }
+      ],
+      "rgba_sha256": "d510ecf3f12f6a19c1f26d711562b873a721156f9b693aebf1a2cabac39fd3e4"
+    },
+    {
+      "pair": 2,
+      "version": "77f1383b",
+      "records": [
+        {
+          "type": "fixture",
+          "textures": 715,
+          "unique_textures": 490,
+          "rgba_bytes": 585517924,
+          "mipmap_bytes_equal": true
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": true,
+          "elapsed_ms": 720.741667
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": false,
+          "elapsed_ms": 718.5795
+        },
+        {
+          "type": "cold_frame",
+          "round": 0,
+          "texture_ms": 952.3774999999999,
+          "submit_ms": 955.674333,
+          "complete_ms": 1001.561291,
+          "uploads": 490,
+          "texture_bytes": 780216416,
+          "draw_calls": 518,
+          "pixels_equal": true
+        }
+      ],
+      "rgba_sha256": "d510ecf3f12f6a19c1f26d711562b873a721156f9b693aebf1a2cabac39fd3e4"
+    },
+    {
+      "pair": 2,
+      "version": "optimized",
+      "records": [
+        {
+          "type": "fixture",
+          "textures": 715,
+          "unique_textures": 490,
+          "rgba_bytes": 585517924,
+          "mipmap_bytes_equal": true
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": true,
+          "elapsed_ms": 728.604959
+        },
+        {
+          "type": "mipmaps",
+          "round": 0,
+          "reference": false,
+          "elapsed_ms": 239.498417
+        },
+        {
+          "type": "cold_frame",
+          "round": 0,
+          "texture_ms": 313.5385,
+          "submit_ms": 318.951292,
+          "complete_ms": 359.566833,
+          "uploads": 490,
+          "texture_bytes": 780216416,
+          "draw_calls": 518,
+          "pixels_equal": true
+        }
+      ],
+      "rgba_sha256": "d510ecf3f12f6a19c1f26d711562b873a721156f9b693aebf1a2cabac39fd3e4"
+    }
+  ],
+  "pixels_equal_across_versions": true,
+  "offscreen": {
+    "77f1383b": {
+      "texture_ms": {
+        "median": 985.1837919999999,
+        "min": 952.3774999999999,
+        "max": 995.2412499999999,
+        "samples": [
+          995.2412499999999,
+          985.1837919999999,
+          952.3774999999999
+        ]
+      },
+      "submit_ms": {
+        "median": 988.787458,
+        "min": 955.674333,
+        "max": 1001.4960420000001,
+        "samples": [
+          1001.4960420000001,
+          988.787458,
+          955.674333
+        ]
+      },
+      "complete_ms": {
+        "median": 1053.6208330000002,
+        "min": 1001.561291,
+        "max": 1101.888542,
+        "samples": [
+          1101.888542,
+          1053.6208330000002,
+          1001.561291
+        ]
+      }
+    },
+    "optimized": {
+      "texture_ms": {
+        "median": 330.474042,
+        "min": 313.5385,
+        "max": 346.43425,
+        "samples": [
+          346.43425,
+          330.474042,
+          313.5385
+        ]
+      },
+      "submit_ms": {
+        "median": 334.47387499999996,
+        "min": 318.951292,
+        "max": 350.29879200000005,
+        "samples": [
+          350.29879200000005,
+          334.47387499999996,
+          318.951292
+        ]
+      },
+      "complete_ms": {
+        "median": 375.193209,
+        "min": 359.566833,
+        "max": 422.298667,
+        "samples": [
+          422.298667,
+          375.193209,
+          359.566833
+        ]
+      }
+    }
+  },
+  "native_samples": [
+    {
+      "metadata": {
+        "type": "metadata",
+        "schema": 1,
+        "clock": "mach_host_nanoseconds",
+        "platform": "macos",
+        "clock_alignment": null,
+        "debug_assertions": false,
+        "automatic": true,
+        "gpui_backend": "gpui-fast",
+        "view_retention": true,
+        "scroll_layers": true,
+        "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+        "samples": 1,
+        "warmup": 0,
+        "parameters_only": false,
+        "ui_only": false,
+        "first_frame": true,
+        "parameter_overlay": {
+          "selection": "first",
+          "input": "track",
+          "viewport_style": "modeling",
+          "paint": "all",
+          "detail": false,
+          "eager_canvas": false,
+          "uncached_creation_menus": false,
+          "unlayered_markers": false,
+          "tessellated_edges": false,
+          "legacy_edge_bounds": false,
+          "eager_viewport_layout": false
+        },
+        "manual_mesh": false,
+        "animation_drag": null,
+        "properties": false,
+        "deformer_selection": false,
+        "selection_objects": null,
+        "property_cases": [],
+        "property_case": null,
+        "workloads": [
+          10
+        ],
+        "multi_vertices": 8,
+        "input_hz": 120,
+        "pid": 10377,
+        "diagnostics": {
+          "drawables": null,
+          "display_sync": null,
+          "offscreen": null,
+          "default_worker_qos": false,
+          "hide_mesh_edges": false,
+          "batch_mesh_edges": true,
+          "metal_mesh_overlay": true,
+          "native_mesh_overlay": true
+        }
+      },
+      "load": 4,
+      "preview": 12,
+      "composition": 19,
+      "cpu_frame": 18,
+      "presented_ns": 2898409797394875,
+      "retained_redraw_requests": 0,
+      "dropped_model_compositions": 0,
+      "viewport": {
+        "width": 941,
+        "height": 1312
+      },
+      "draw_calls": 518,
+      "metrics": {
+        "load_to_viewport_gpu_end_ms": 2915.147041,
+        "load_to_present_ms": 2941.580416,
+        "load_worker_ms": 2174.077708,
+        "load_to_scene_ready_ms": 2475.204083,
+        "attach_refresh_ms": 0.133458,
+        "scene_ms": 29.153708,
+        "mailbox_ms": 0.010042,
+        "texture_prepare_upload_ms": 368.677583,
+        "model_sync_ms": 1.976833,
+        "encode_ms": 0.822792,
+        "preview_submit_ms": 371.535,
+        "preview_queue_ms": 3.536333,
+        "preview_gpu_ms": 64.884333,
+        "scene_ready_to_gpu_end_ms": 439.942958,
+        "accepted_to_present_ms": 94.725666,
+        "ui_wait_ms": 7.561166,
+        "ui_draw_ms": 4.888625,
+        "drawable_wait_ms": 0.061291,
+        "compose_cpu_ms": 3.934875,
+        "compose_gpu_ms": 3.020625,
+        "compose_gpu_end_to_present_ms": 23.772125,
+        "preview_gpu_end_to_present_ms": 26.433375
+      }
+    },
+    {
+      "metadata": {
+        "type": "metadata",
+        "schema": 1,
+        "clock": "mach_host_nanoseconds",
+        "platform": "macos",
+        "clock_alignment": null,
+        "debug_assertions": false,
+        "automatic": true,
+        "gpui_backend": "gpui-fast",
+        "view_retention": true,
+        "scroll_layers": true,
+        "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+        "samples": 1,
+        "warmup": 0,
+        "parameters_only": false,
+        "ui_only": false,
+        "first_frame": true,
+        "parameter_overlay": {
+          "selection": "first",
+          "input": "track",
+          "viewport_style": "modeling",
+          "paint": "all",
+          "detail": false,
+          "eager_canvas": false,
+          "uncached_creation_menus": false,
+          "unlayered_markers": false,
+          "tessellated_edges": false,
+          "legacy_edge_bounds": false,
+          "eager_viewport_layout": false
+        },
+        "manual_mesh": false,
+        "animation_drag": null,
+        "properties": false,
+        "deformer_selection": false,
+        "selection_objects": null,
+        "property_cases": [],
+        "property_case": null,
+        "workloads": [
+          10
+        ],
+        "multi_vertices": 8,
+        "input_hz": 120,
+        "pid": 10384,
+        "diagnostics": {
+          "drawables": null,
+          "display_sync": null,
+          "offscreen": null,
+          "default_worker_qos": false,
+          "hide_mesh_edges": false,
+          "batch_mesh_edges": true,
+          "metal_mesh_overlay": true,
+          "native_mesh_overlay": true
+        }
+      },
+      "load": 3,
+      "preview": 12,
+      "composition": 19,
+      "cpu_frame": 18,
+      "presented_ns": 2898413405773917,
+      "retained_redraw_requests": 0,
+      "dropped_model_compositions": 0,
+      "viewport": {
+        "width": 941,
+        "height": 1312
+      },
+      "draw_calls": 518,
+      "metrics": {
+        "load_to_viewport_gpu_end_ms": 2992.32425,
+        "load_to_present_ms": 3023.08875,
+        "load_worker_ms": 2334.861833,
+        "load_to_scene_ready_ms": 2578.728875,
+        "attach_refresh_ms": 0.096583,
+        "scene_ms": 30.092291,
+        "mailbox_ms": 0.015708,
+        "texture_prepare_upload_ms": 348.464667,
+        "model_sync_ms": 2.167583,
+        "encode_ms": 1.080042,
+        "preview_submit_ms": 351.75475,
+        "preview_queue_ms": 2.274958,
+        "preview_gpu_ms": 59.56225,
+        "scene_ready_to_gpu_end_ms": 413.595375,
+        "accepted_to_present_ms": 92.435041,
+        "ui_wait_ms": 4.967874,
+        "ui_draw_ms": 3.63275,
+        "drawable_wait_ms": 0.056,
+        "compose_cpu_ms": 0.700583,
+        "compose_gpu_ms": 4.111792,
+        "compose_gpu_end_to_present_ms": 22.432125,
+        "preview_gpu_end_to_present_ms": 30.7645
+      }
+    },
+    {
+      "metadata": {
+        "type": "metadata",
+        "schema": 1,
+        "clock": "mach_host_nanoseconds",
+        "platform": "macos",
+        "clock_alignment": null,
+        "debug_assertions": false,
+        "automatic": true,
+        "gpui_backend": "gpui-fast",
+        "view_retention": true,
+        "scroll_layers": true,
+        "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+        "samples": 1,
+        "warmup": 0,
+        "parameters_only": false,
+        "ui_only": false,
+        "first_frame": true,
+        "parameter_overlay": {
+          "selection": "first",
+          "input": "track",
+          "viewport_style": "modeling",
+          "paint": "all",
+          "detail": false,
+          "eager_canvas": false,
+          "uncached_creation_menus": false,
+          "unlayered_markers": false,
+          "tessellated_edges": false,
+          "legacy_edge_bounds": false,
+          "eager_viewport_layout": false
+        },
+        "manual_mesh": false,
+        "animation_drag": null,
+        "properties": false,
+        "deformer_selection": false,
+        "selection_objects": null,
+        "property_cases": [],
+        "property_case": null,
+        "workloads": [
+          10
+        ],
+        "multi_vertices": 8,
+        "input_hz": 120,
+        "pid": 10390,
+        "diagnostics": {
+          "drawables": null,
+          "display_sync": null,
+          "offscreen": null,
+          "default_worker_qos": false,
+          "hide_mesh_edges": false,
+          "batch_mesh_edges": true,
+          "metal_mesh_overlay": true,
+          "native_mesh_overlay": true
+        }
+      },
+      "load": 3,
+      "preview": 12,
+      "composition": 19,
+      "cpu_frame": 18,
+      "presented_ns": 2898416772483625,
+      "retained_redraw_requests": 0,
+      "dropped_model_compositions": 0,
+      "viewport": {
+        "width": 941,
+        "height": 1312
+      },
+      "draw_calls": 518,
+      "metrics": {
+        "load_to_viewport_gpu_end_ms": 2790.311666,
+        "load_to_present_ms": 2824.902041,
+        "load_worker_ms": 2205.718583,
+        "load_to_scene_ready_ms": 2365.40025,
+        "attach_refresh_ms": 0.046292,
+        "scene_ms": 35.849125,
+        "mailbox_ms": 0.010625,
+        "texture_prepare_upload_ms": 351.763125,
+        "model_sync_ms": 2.070625,
+        "encode_ms": 0.985167,
+        "preview_submit_ms": 354.861501,
+        "preview_queue_ms": 2.163041,
+        "preview_gpu_ms": 67.874625,
+        "scene_ready_to_gpu_end_ms": 424.911416,
+        "accepted_to_present_ms": 104.529999,
+        "ui_wait_ms": 1.406458,
+        "ui_draw_ms": 4.296833,
+        "drawable_wait_ms": 0.051917,
+        "compose_cpu_ms": 0.673458,
+        "compose_gpu_ms": 7.9935,
+        "compose_gpu_end_to_present_ms": 23.410625,
+        "preview_gpu_end_to_present_ms": 34.590375
+      }
+    }
+  ],
+  "native": {
+    "load_to_viewport_gpu_end_ms": {
+      "median": 2915.147041,
+      "min": 2790.311666,
+      "max": 2992.32425,
+      "samples": [
+        2915.147041,
+        2992.32425,
+        2790.311666
+      ]
+    },
+    "load_to_present_ms": {
+      "median": 2941.580416,
+      "min": 2824.902041,
+      "max": 3023.08875,
+      "samples": [
+        2941.580416,
+        3023.08875,
+        2824.902041
+      ]
+    },
+    "load_worker_ms": {
+      "median": 2205.718583,
+      "min": 2174.077708,
+      "max": 2334.861833,
+      "samples": [
+        2174.077708,
+        2334.861833,
+        2205.718583
+      ]
+    },
+    "load_to_scene_ready_ms": {
+      "median": 2475.204083,
+      "min": 2365.40025,
+      "max": 2578.728875,
+      "samples": [
+        2475.204083,
+        2578.728875,
+        2365.40025
+      ]
+    },
+    "attach_refresh_ms": {
+      "median": 0.096583,
+      "min": 0.046292,
+      "max": 0.133458,
+      "samples": [
+        0.133458,
+        0.096583,
+        0.046292
+      ]
+    },
+    "scene_ms": {
+      "median": 30.092291,
+      "min": 29.153708,
+      "max": 35.849125,
+      "samples": [
+        29.153708,
+        30.092291,
+        35.849125
+      ]
+    },
+    "mailbox_ms": {
+      "median": 0.010625,
+      "min": 0.010042,
+      "max": 0.015708,
+      "samples": [
+        0.010042,
+        0.015708,
+        0.010625
+      ]
+    },
+    "texture_prepare_upload_ms": {
+      "median": 351.763125,
+      "min": 348.464667,
+      "max": 368.677583,
+      "samples": [
+        368.677583,
+        348.464667,
+        351.763125
+      ]
+    },
+    "model_sync_ms": {
+      "median": 2.070625,
+      "min": 1.976833,
+      "max": 2.167583,
+      "samples": [
+        1.976833,
+        2.167583,
+        2.070625
+      ]
+    },
+    "encode_ms": {
+      "median": 0.985167,
+      "min": 0.822792,
+      "max": 1.080042,
+      "samples": [
+        0.822792,
+        1.080042,
+        0.985167
+      ]
+    },
+    "preview_submit_ms": {
+      "median": 354.861501,
+      "min": 351.75475,
+      "max": 371.535,
+      "samples": [
+        371.535,
+        351.75475,
+        354.861501
+      ]
+    },
+    "preview_queue_ms": {
+      "median": 2.274958,
+      "min": 2.163041,
+      "max": 3.536333,
+      "samples": [
+        3.536333,
+        2.274958,
+        2.163041
+      ]
+    },
+    "preview_gpu_ms": {
+      "median": 64.884333,
+      "min": 59.56225,
+      "max": 67.874625,
+      "samples": [
+        64.884333,
+        59.56225,
+        67.874625
+      ]
+    },
+    "scene_ready_to_gpu_end_ms": {
+      "median": 424.911416,
+      "min": 413.595375,
+      "max": 439.942958,
+      "samples": [
+        439.942958,
+        413.595375,
+        424.911416
+      ]
+    },
+    "accepted_to_present_ms": {
+      "median": 94.725666,
+      "min": 92.435041,
+      "max": 104.529999,
+      "samples": [
+        94.725666,
+        92.435041,
+        104.529999
+      ]
+    },
+    "ui_wait_ms": {
+      "median": 4.967874,
+      "min": 1.406458,
+      "max": 7.561166,
+      "samples": [
+        7.561166,
+        4.967874,
+        1.406458
+      ]
+    },
+    "ui_draw_ms": {
+      "median": 4.296833,
+      "min": 3.63275,
+      "max": 4.888625,
+      "samples": [
+        4.888625,
+        3.63275,
+        4.296833
+      ]
+    },
+    "drawable_wait_ms": {
+      "median": 0.056,
+      "min": 0.051917,
+      "max": 0.061291,
+      "samples": [
+        0.061291,
+        0.056,
+        0.051917
+      ]
+    },
+    "compose_cpu_ms": {
+      "median": 0.700583,
+      "min": 0.673458,
+      "max": 3.934875,
+      "samples": [
+        3.934875,
+        0.700583,
+        0.673458
+      ]
+    },
+    "compose_gpu_ms": {
+      "median": 4.111792,
+      "min": 3.020625,
+      "max": 7.9935,
+      "samples": [
+        3.020625,
+        4.111792,
+        7.9935
+      ]
+    },
+    "compose_gpu_end_to_present_ms": {
+      "median": 23.410625,
+      "min": 22.432125,
+      "max": 23.772125,
+      "samples": [
+        23.772125,
+        22.432125,
+        23.410625
+      ]
+    },
+    "preview_gpu_end_to_present_ms": {
+      "median": 30.7645,
+      "min": 26.433375,
+      "max": 34.590375,
+      "samples": [
+        26.433375,
+        30.7645,
+        34.590375
+      ]
+    }
+  },
+  "measurement_scope": "DeepSeek fixed scene; project loading and renderer construction excluded from offscreen timings; native figures start at scene_end",
+  "baseline_commit": "77f1383bf08f642333e793d3bfde66446916b17b",
+  "environment": {
+    "source_base": "77f1383bf08f642333e793d3bfde66446916b17b",
+    "files": {
+      "crates/zipzi-editor/src/benchmark.rs": "264ba1c1da9a194ccb80b211459d0e6eeeb3119c93e903750c020101b5ca0c44",
+      "crates/zipzi-editor/src/benchmark/first_frame.rs": "712508196af703735a7dd84681b72c355b134dbb4290a7f897ed10ee8c882f30",
+      "tools/benchmarks/first-frame-trace-report.py": "93cb28ef9030abad68f95898a4b21676cf083b7f999297f34b67c4aab090e3c3"
+    },
+    "runtime_probe_sha256": "0214417bfe8176a37d68db886e6839d3f9c481c1c6088e0b1e4d9a1c4b1544a0",
+    "production_diff_sha256": "1411f9c9e4873fdcccd1e4cf7cd85d0f5a62afbc42425cdea3d2c9f3503d87dc",
+    "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: aarch64-apple-darwin\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434\n",
+    "machine": "hw.model: Mac16,10\nmachdep.cpu.brand_string: Apple M4\nhw.memsize: 17179869184\n",
+    "displays": "Graphics/Displays:\n\n    Apple M4:\n\n      Chipset Model: Apple M4\n      Type: GPU\n      Bus: Built-In\n      Total Number of Cores: 10\n      Vendor: Apple (0x106b)\n      Metal Support: Metal 4\n      Displays:\n        CB27U1:\n          Resolution: 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition)\n          UI Looks like: 1920 x 1080 @ 120.00Hz\n          Main Display: Yes\n          Mirror: On\n          Mirror Status: Master Mirror\n          Online: Yes\n          Rotation: Supported\n        LG HDR 4K:\n          Resolution: 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition)\n          UI Looks like: 1920 x 1080 @ 60.00Hz\n          Mirror: On\n          Mirror Status: Hardware Mirror\n          Online: Yes\n          Rotation: Supported\n\n",
+    "version": "retained-image redraw on a dropped model drawable"
+  },
+  "native_scene_ready_to_present_ms": {
+    "samples": [
+      466.376333,
+      444.359875,
+      459.50179099999997
+    ],
+    "median": 459.50179099999997,
+    "min": 444.359875,
+    "max": 466.376333
+  },
+  "artifact_directory": "target/viewport-first-frame/textures-final",
+  "tests": {
+    "texture_cpu_passed": 10,
+    "metal_scene_passed": 4,
+    "metal_scene_ignored": 1,
+    "metal_pipeline_textures_passed": 8,
+    "native_trace_passed": 3,
+    "exact_old_new_gpu_readbacks": 6,
+    "changed_files_rustfmt": "passed",
+    "workspace_rustfmt": "fails on existing untouched files",
+    "git_diff_check": "passed"
+  },
+  "frozen_binaries": {
+    "77f1383b-offscreen": {
+      "path": "target/viewport-first-frame/textures-final/binaries/77f1383b-offscreen",
+      "sha256": "0440d6fbfec75c401a620eaf74dbd05259d54d1b34fb6b791a2f229542b38b09"
+    },
+    "optimized-offscreen": {
+      "path": "target/viewport-first-frame/textures-final/binaries/optimized-offscreen",
+      "sha256": "cc6c65b42ff792f5bad7e394c27ee16b0cbfcf73cfe3ed9c0ca7460cbaed4d48"
+    },
+    "optimized-editor": {
+      "path": "target/viewport-first-frame/textures-final/binaries/optimized-editor",
+      "sha256": "192517e86d978617761cc350a3285669fe88e0a7b24c3df4ca96426804f78732"
+    }
+  }
+}

@@ -6,6 +6,8 @@ and how to interpret their output; measured results belong in
 
 | Guide | Use it for |
 | --- | --- |
+| [Project import and open](#project-import-and-open) | Fresh-process project I/O and Editor CPU preparation |
+| [Viewport first frame](#viewport-first-frame) | Native load-to-GPU completion and first model presentation |
 | [Manual Mesh drag](#manual-mesh-drag) | Continuous model-space topology dragging, CPU cost and native presentation |
 | [Native Properties: Mesh and Physics](#properties-native-window-benchmark) | Real-window input, UI/Metal work and presentation correlation |
 | [Property editing chain](#property-editing-chain-benchmark) | Synchronous CPU editing cost, stage attribution and ownership controls |
@@ -16,6 +18,105 @@ See the [tool index](../README.md#benchmarks-and-research-tools) for Timeline,
 window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
 window or GPU latency.
+
+## Project import and open
+
+`project_io_benchmark` separates project import/save/open from the Editor's
+admission, load worker, publication and first CPU preview. It accepts absolute
+paths and prints one JSON record per phase. Import with a new output also saves
+and verifies a full document round trip outside the import/save timings:
+
+```sh
+git submodule update --init third_party/purism-core
+env -u ZIPZI_DEV_SESSION_DIR cargo build --locked --release \
+  -p zipzi-editor-core --example project_io_benchmark
+target/release/examples/project_io_benchmark project-import \
+  "$PWD/models/local/DeepSeek/大肥鱼.model3.json" "$PWD/target/deepseek.zipzi"
+target/release/examples/project_io_benchmark project-open "$PWD/target/deepseek.zipzi"
+target/release/examples/project_io_benchmark editor-import \
+  "$PWD/models/local/DeepSeek/大肥鱼.model3.json"
+target/release/examples/project_io_benchmark editor-open "$PWD/target/deepseek.zipzi"
+```
+
+`editor-psd` accepts a PSD instead of model3. An optional new output on Editor
+commands records the production save admission/worker/publication phases too.
+The Editor worker includes SDK loading, texture preparation and object indexing;
+first CPU preview includes evaluation and viewport geometry. No timing includes
+window layout, GPU uploads or screen presentation.
+
+For version comparisons, copy this same example into both isolated checkouts,
+build Release executables before measuring, and preserve copied binaries plus
+source/model/binary SHA-256 values. Give each process a private temporary directory
+(`TMPDIR` on macOS), `ZIPZI_CACHE_DIR`, `ZIPZI_RUNTIME_DIR` and
+`ZIPZI_RUNTIME_PROFILE`, clearing `ZIPZI_DEV_SESSION_DIR`
+and `ZIPZI_RUNTIME_OWNER_FD`. Prime both versions once, then alternate AB/BA in
+fresh processes; retain every sample and report per-case medians and ranges.
+These are warmed filesystem-cache measurements, not cold-storage measurements.
+Generate an independent project using each version when native formats differ.
+Do not include the untimed round-trip check in import/save figures or claim that
+an OS process's total duration measures a single recorded phase.
+
+## Viewport first frame
+
+On macOS, `ZIPZI_BENCH_FIRST_FRAME=1` selects a single load in a fresh native
+window. It keeps the ordinary empty selection and exits after an accepted model
+preview has completed GPU rendering and appeared in a presented composition.
+If a model-containing drawable is dropped, it requests another composition of
+the retained image, without evaluating or rendering a new model frame. The
+report counts those redraws and requires the same preview identity throughout.
+It does not run interaction warmups or gestures. Use model3 for import or a saved
+`.zipzi` for open, with an unlocked desktop and an otherwise unused output path:
+
+```sh
+vff_runtime=$(mktemp -d /tmp/zff.XXXXXX)
+env -u ZIPZI_DEV_SESSION_DIR -u ZIPZI_RUNTIME_OWNER_FD \
+  ZIPZI_RUNTIME_DIR="$vff_runtime" ZIPZI_RUNTIME_PROFILE=first-frame \
+  ZIPZI_CACHE_DIR="$vff_runtime/cache" TMPDIR="$vff_runtime" \
+  ZIPZI_BENCH_FIRST_FRAME=1 ZIPZI_BENCH_WARMUP=0 \
+  ./tools/benchmarks/window-benchmark.sh \
+  "$PWD/models/local/DeepSeek/大肥鱼.model3.json" target/first-frame-import 1 120
+```
+
+The wrapper writes `summary.json` using `first-frame-trace-report.py`. To inspect
+an existing capture:
+
+```sh
+uv run --locked python tools/benchmarks/first-frame-trace-report.py \
+  target/first-frame-import/trace.jsonl
+uv run --locked python tools/test_tools.py -p test_first_frame_trace_report.py
+```
+
+The report requires a complete trace with zero lost events, successful preview
+and composition GPU commands, a nonempty model, and a composition carrying the
+accepted preview texture's trace label. Empty-window presents and dropped frames
+cannot satisfy the gate; a later redraw cannot replace the first presentation.
+Metal GPU and drawable timestamps use the same host clock as the load markers.
+
+`load_to_viewport_gpu_end_ms` ends at the model rendering command's GPU end;
+`load_to_present_ms` ends at the first corresponding drawable `presentedTime`.
+The latter is compositor confirmation, not display scanout or input-to-photon.
+Application initialization and file-picker interaction precede `load_begin`.
+Texture preparation includes CPU mipmap generation, premultiplication, texture
+allocation and upload calls; it is separate from the model command's GPU time.
+UI draw and composition scopes can overlap other stages; do not sum independent
+percentiles. Compare frozen Release binaries outside builds, alternate fresh
+process order, retain all traces, and keep viewport dimensions, display settings
+and inputs identical. System/driver caches are not cleared by a fresh process.
+
+To isolate rendering from project loading, use the macOS fixed-scene probe:
+
+```sh
+cargo build --locked --release -p zipzi-editor-render --example first_frame_benchmark
+target/release/examples/first_frame_benchmark /absolute/path/to/model.zipzi 3 target/first-frame.rgba
+```
+
+Each sample starts with an empty texture cache after loading the same scene.
+JSON lines separate texture preparation/upload calls, submission and GPU completion;
+renderer creation, project loading, pixel readback and reference checks are untimed.
+The probe checks artwork mipmaps against the general area filter before sampling
+and requires repeated GPU readbacks to match. Compare the optional raw RGBA bytes
+between builds too. This probe measures an offscreen 941×1312 target; native
+window/presentation claims still require the trace gate above.
 
 ## Manual Mesh drag
 

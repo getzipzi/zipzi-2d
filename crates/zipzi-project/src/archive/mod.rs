@@ -24,9 +24,11 @@ use serde::{Deserialize, Serialize};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 use zipzi_core::{Document, Status};
 
+#[cfg(test)]
+use crate::decode_project;
 #[cfg(any(test, feature = "archive-prototype"))]
 use crate::encode_project;
-use crate::{content_sha256, decode_project, read_project_texture_bounded};
+use crate::{content_sha256, read_project_texture_bounded};
 
 pub use stream::{read_fingerprint, IoCounts, MeteredIo, ProjectFingerprint};
 

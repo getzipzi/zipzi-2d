@@ -1,0 +1,3555 @@
+{
+  "date": "2026-11-05",
+  "profile": "Release, default features; Metal native visible windows",
+  "source_base": "77f1383bf08f642333e793d3bfde66446916b17b",
+  "environment": {
+    "source_base": "77f1383bf08f642333e793d3bfde66446916b17b",
+    "files": {
+      "crates/zipzi-editor/src/benchmark.rs": "264ba1c1da9a194ccb80b211459d0e6eeeb3119c93e903750c020101b5ca0c44",
+      "crates/zipzi-editor/src/benchmark/first_frame.rs": "712508196af703735a7dd84681b72c355b134dbb4290a7f897ed10ee8c882f30",
+      "tools/benchmarks/first-frame-trace-report.py": "93cb28ef9030abad68f95898a4b21676cf083b7f999297f34b67c4aab090e3c3"
+    },
+    "runtime_probe_sha256": "0214417bfe8176a37d68db886e6839d3f9c481c1c6088e0b1e4d9a1c4b1544a0",
+    "production_diff_sha256": "1411f9c9e4873fdcccd1e4cf7cd85d0f5a62afbc42425cdea3d2c9f3503d87dc",
+    "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: aarch64-apple-darwin\nrelease: 1.99.0\nLLVM version: 23.1.1\n",
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434\n",
+    "machine": "hw.model: Mac16,10\nmachdep.cpu.brand_string: Apple M4\nhw.memsize: 17179869184\n",
+    "displays": "Graphics/Displays:\n\n    Apple M4:\n\n      Chipset Model: Apple M4\n      Type: GPU\n      Bus: Built-In\n      Total Number of Cores: 10\n      Vendor: Apple (0x106b)\n      Metal Support: Metal 4\n      Displays:\n        CB27U1:\n          Resolution: 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition)\n          UI Looks like: 1920 x 1080 @ 120.00Hz\n          Main Display: Yes\n          Mirror: On\n          Mirror Status: Master Mirror\n          Online: Yes\n          Rotation: Supported\n        LG HDR 4K:\n          Resolution: 3840 x 2160 (2160p/4K UHD 1 - Ultra High Definition)\n          UI Looks like: 1920 x 1080 @ 60.00Hz\n          Mirror: On\n          Mirror Status: Hardware Mirror\n          Online: Yes\n          Rotation: Supported\n\n",
+    "version": "retained-image redraw on a dropped model drawable"
+  },
+  "metadata": {
+    "date": "2026-11-05",
+    "binaries": {
+      "77f1383b": "75d9ded16a98497c46ddca6a3dc06dc846117bd6c4e258d3245a80cd8802c8b7",
+      "optimized": "ec0740099980d813cae998b7dfc5e4bb0d790fd15af3c92979bacc723b81d15c"
+    },
+    "inputs": {
+      "import": {
+        "path": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+        "sha256": "ab4fc69a4f7c96a6b245d016061c4edb12cb1f23c442fa28e6f6d118e3c4e2b1"
+      },
+      "open": {
+        "path": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+        "sha256": "708b8098820da9383cdd43babc71b75f3f0054137d10a7bd062f0977920e4c1e"
+      }
+    },
+    "harness_sha256": "712508196af703735a7dd84681b72c355b134dbb4290a7f897ed10ee8c882f30",
+    "reporter_sha256": "93cb28ef9030abad68f95898a4b21676cf083b7f999297f34b67c4aab090e3c3",
+    "driver_sha256": "6c5f3c67ba73b04fbed65399255b867441cd54754a38e9a4953ba2a996e0cfaf",
+    "clock": 1793848295.8055198
+  },
+  "method": {
+    "measured_pairs": 5,
+    "warmup_pairs": 1,
+    "measured_processes": 20,
+    "warmup_processes": 4,
+    "order": "BA, AB, BA, AB, BA after AB warmup; A=77f1383b, B=optimized",
+    "inputs": "DeepSeek model3 and the same frozen native project archive",
+    "boundary": "load_begin to GPU end of the first actually presented model preview; separately to drawable presentedTime",
+    "scope": "Fresh native window, empty workspace/selection, cold per-process texture cache; excludes application initialization/file picker. Filesystem/driver caches not cleared.",
+    "retry": "A dropped model drawable requests a retained-image window redraw. Preview identity must remain the same. GPU end time is the original model render; presentedTime includes redraw waiting.",
+    "environment_limit": "Normal desktop activity; CPU/I/O/display focus not isolated. Mac desktop unlocked; main reported display 120 Hz mirrored to another reported 60 Hz display.",
+    "trace": "Accepted preview label -> composition surface -> successful Metal GPU commands -> first actual drawable presentation; all full traces have zero lost events.",
+    "no_outlier_removal": true
+  },
+  "summary": {
+    "77f1383b": {
+      "import": {
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": [
+          518,
+          518,
+          518,
+          518,
+          518
+        ],
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": {
+            "median_ms": 4886.177333,
+            "min_ms": 4793.505666,
+            "max_ms": 5509.305,
+            "samples_ms": [
+              5249.719666,
+              5509.305,
+              4886.177333,
+              4793.505666,
+              4806.604791
+            ]
+          },
+          "load_to_present_ms": {
+            "median_ms": 4912.061417,
+            "min_ms": 4823.609708,
+            "max_ms": 5534.999125,
+            "samples_ms": [
+              5275.258583,
+              5534.999125,
+              4912.061417,
+              4823.609708,
+              4832.671042
+            ]
+          },
+          "load_worker_ms": {
+            "median_ms": 3620.036292,
+            "min_ms": 3521.270417,
+            "max_ms": 4221.354833,
+            "samples_ms": [
+              3971.380833,
+              4221.354833,
+              3620.036292,
+              3540.545833,
+              3521.270417
+            ]
+          },
+          "load_to_scene_ready_ms": {
+            "median_ms": 3827.839458,
+            "min_ms": 3719.457958,
+            "max_ms": 4501.450083,
+            "samples_ms": [
+              4227.630291,
+              4501.450083,
+              3827.839458,
+              3719.457958,
+              3762.095125
+            ]
+          },
+          "attach_refresh_ms": {
+            "median_ms": 0.623709,
+            "min_ms": 0.062,
+            "max_ms": 0.993209,
+            "samples_ms": [
+              0.623709,
+              0.261458,
+              0.629917,
+              0.062,
+              0.993209
+            ]
+          },
+          "scene_ms": {
+            "median_ms": 29.648125,
+            "min_ms": 29.381334,
+            "max_ms": 31.868541,
+            "samples_ms": [
+              31.165083,
+              31.868541,
+              29.648125,
+              29.563666,
+              29.381334
+            ]
+          },
+          "mailbox_ms": {
+            "median_ms": 0.012625,
+            "min_ms": 0.009916,
+            "max_ms": 0.021584,
+            "samples_ms": [
+              0.012625,
+              0.016874,
+              0.009916,
+              0.021584,
+              0.011542
+            ]
+          },
+          "texture_prepare_upload_ms": {
+            "median_ms": 957.466042,
+            "min_ms": 948.79525,
+            "max_ms": 970.37775,
+            "samples_ms": [
+              970.37775,
+              948.79525,
+              957.466042,
+              961.512208,
+              954.747584
+            ]
+          },
+          "model_sync_ms": {
+            "median_ms": 1.730874,
+            "min_ms": 1.691333,
+            "max_ms": 2.05725,
+            "samples_ms": [
+              2.05725,
+              1.813167,
+              1.691333,
+              1.72325,
+              1.730874
+            ]
+          },
+          "encode_ms": {
+            "median_ms": 0.959291,
+            "min_ms": 0.833959,
+            "max_ms": 1.083,
+            "samples_ms": [
+              1.083,
+              1.003584,
+              0.959291,
+              0.950541,
+              0.833959
+            ]
+          },
+          "preview_submit_ms": {
+            "median_ms": 960.1535,
+            "min_ms": 951.645709,
+            "max_ms": 973.548791,
+            "samples_ms": [
+              973.548791,
+              951.645709,
+              960.1535,
+              964.211416,
+              957.335542
+            ]
+          },
+          "preview_queue_ms": {
+            "median_ms": 1.885375,
+            "min_ms": 1.573666,
+            "max_ms": 2.208041,
+            "samples_ms": [
+              1.840249,
+              1.573666,
+              1.967625,
+              1.885375,
+              2.208041
+            ]
+          },
+          "preview_gpu_ms": {
+            "median_ms": 84.95675,
+            "min_ms": 46.69075,
+            "max_ms": 107.932,
+            "samples_ms": [
+              46.69075,
+              54.624417,
+              96.213125,
+              107.932,
+              84.95675
+            ]
+          },
+          "scene_ready_to_gpu_end_ms": {
+            "median_ms": 1044.509666,
+            "min_ms": 1007.854917,
+            "max_ms": 1074.047708,
+            "samples_ms": [
+              1022.089375,
+              1007.854917,
+              1058.337875,
+              1074.047708,
+              1044.509666
+            ]
+          },
+          "accepted_to_present_ms": {
+            "median_ms": 112.494042,
+            "min_ms": 73.875792,
+            "max_ms": 139.8485,
+            "samples_ms": [
+              73.875792,
+              81.823291,
+              123.719709,
+              139.8485,
+              112.494042
+            ]
+          },
+          "ui_wait_ms": {
+            "median_ms": 3.359625,
+            "min_ms": 0.937041,
+            "max_ms": 4.000459,
+            "samples_ms": [
+              4.000459,
+              2.855083,
+              3.832959,
+              3.359625,
+              0.937041
+            ]
+          },
+          "ui_draw_ms": {
+            "median_ms": 5.214126,
+            "min_ms": 3.179208,
+            "max_ms": 5.844667,
+            "samples_ms": [
+              4.376625,
+              3.179208,
+              5.844667,
+              5.747167,
+              5.214126
+            ]
+          },
+          "drawable_wait_ms": {
+            "median_ms": 0.061541,
+            "min_ms": 0.03175,
+            "max_ms": 0.08975,
+            "samples_ms": [
+              0.08975,
+              0.076042,
+              0.03875,
+              0.061541,
+              0.03175
+            ]
+          },
+          "compose_cpu_ms": {
+            "median_ms": 0.80075,
+            "min_ms": 0.633667,
+            "max_ms": 1.120542,
+            "samples_ms": [
+              1.120542,
+              0.80075,
+              0.698667,
+              1.040542,
+              0.633667
+            ]
+          },
+          "compose_gpu_ms": {
+            "median_ms": 3.612125,
+            "min_ms": 2.851625,
+            "max_ms": 8.159875,
+            "samples_ms": [
+              8.159875,
+              3.612125,
+              3.596876,
+              8.070875,
+              2.851625
+            ]
+          },
+          "compose_gpu_end_to_present_ms": {
+            "median_ms": 21.783167,
+            "min_ms": 17.775417,
+            "max_ms": 23.012001,
+            "samples_ms": [
+              17.792375,
+              22.393042,
+              21.783167,
+              17.775417,
+              23.012001
+            ]
+          },
+          "preview_gpu_end_to_present_ms": {
+            "median_ms": 25.884084,
+            "min_ms": 25.538917,
+            "max_ms": 30.104042,
+            "samples_ms": [
+              25.538917,
+              25.694125,
+              25.884084,
+              30.104042,
+              26.066251
+            ]
+          }
+        }
+      },
+      "open": {
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": [
+          518,
+          518,
+          518,
+          518,
+          518
+        ],
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": {
+            "median_ms": 4263.083249,
+            "min_ms": 3970.005833,
+            "max_ms": 4408.016458,
+            "samples_ms": [
+              4408.016458,
+              4252.341875,
+              3970.005833,
+              4263.083249,
+              4382.571
+            ]
+          },
+          "load_to_present_ms": {
+            "median_ms": 4294.550042,
+            "min_ms": 4026.421333,
+            "max_ms": 4434.097,
+            "samples_ms": [
+              4434.097,
+              4285.299084,
+              4026.421333,
+              4294.550042,
+              4407.482958
+            ]
+          },
+          "load_worker_ms": {
+            "median_ms": 2972.741125,
+            "min_ms": 2706.855834,
+            "max_ms": 3091.094417,
+            "samples_ms": [
+              3091.094417,
+              2961.523167,
+              2706.855834,
+              2972.741125,
+              3087.523542
+            ]
+          },
+          "load_to_scene_ready_ms": {
+            "median_ms": 3223.644167,
+            "min_ms": 2912.235333,
+            "max_ms": 3334.23125,
+            "samples_ms": [
+              3334.23125,
+              3223.644167,
+              2912.235333,
+              3218.733458,
+              3291.935667
+            ]
+          },
+          "attach_refresh_ms": {
+            "median_ms": 0.224041,
+            "min_ms": 0.171625,
+            "max_ms": 0.226333,
+            "samples_ms": [
+              0.195167,
+              0.225875,
+              0.224041,
+              0.171625,
+              0.226333
+            ]
+          },
+          "scene_ms": {
+            "median_ms": 30.629958,
+            "min_ms": 29.285875,
+            "max_ms": 33.908916,
+            "samples_ms": [
+              30.629958,
+              29.285875,
+              33.908916,
+              31.455583,
+              30.288625
+            ]
+          },
+          "mailbox_ms": {
+            "median_ms": 0.015292,
+            "min_ms": 0.005584,
+            "max_ms": 0.019167,
+            "samples_ms": [
+              0.019167,
+              0.015292,
+              0.01625,
+              0.005584,
+              0.013208
+            ]
+          },
+          "texture_prepare_upload_ms": {
+            "median_ms": 986.51325,
+            "min_ms": 961.628917,
+            "max_ms": 1004.651958,
+            "samples_ms": [
+              1001.054458,
+              961.628917,
+              986.51325,
+              968.152916,
+              1004.651958
+            ]
+          },
+          "model_sync_ms": {
+            "median_ms": 1.769917,
+            "min_ms": 1.614959,
+            "max_ms": 1.971167,
+            "samples_ms": [
+              1.971167,
+              1.697833,
+              1.800917,
+              1.614959,
+              1.769917
+            ]
+          },
+          "encode_ms": {
+            "median_ms": 0.90075,
+            "min_ms": 0.770374,
+            "max_ms": 0.95425,
+            "samples_ms": [
+              0.90075,
+              0.770374,
+              0.939875,
+              0.828916,
+              0.95425
+            ]
+          },
+          "preview_submit_ms": {
+            "median_ms": 989.29225,
+            "min_ms": 964.123334,
+            "max_ms": 1007.410125,
+            "samples_ms": [
+              1003.983125,
+              964.123334,
+              989.29225,
+              970.631625,
+              1007.410125
+            ]
+          },
+          "preview_queue_ms": {
+            "median_ms": 1.818292,
+            "min_ms": 1.518333,
+            "max_ms": 4.770416,
+            "samples_ms": [
+              1.740833,
+              4.76675,
+              4.770416,
+              1.818292,
+              1.518333
+            ]
+          },
+          "preview_gpu_ms": {
+            "median_ms": 68.0465,
+            "min_ms": 59.79575,
+            "max_ms": 81.699042,
+            "samples_ms": [
+              68.0465,
+              59.79575,
+              63.690375,
+              71.897249,
+              81.699042
+            ]
+          },
+          "scene_ready_to_gpu_end_ms": {
+            "median_ms": 1057.7705,
+            "min_ms": 1028.697708,
+            "max_ms": 1090.635333,
+            "samples_ms": [
+              1073.785208,
+              1028.697708,
+              1057.7705,
+              1044.349791,
+              1090.635333
+            ]
+          },
+          "accepted_to_present_ms": {
+            "median_ms": 105.099709,
+            "min_ms": 95.794625,
+            "max_ms": 124.795625,
+            "samples_ms": [
+              95.794625,
+              97.458667,
+              124.795625,
+              105.099709,
+              108.051875
+            ]
+          },
+          "ui_wait_ms": {
+            "median_ms": 2.580417,
+            "min_ms": 0.9115,
+            "max_ms": 96.614375,
+            "samples_ms": [
+              0.9115,
+              2.580417,
+              96.614375,
+              1.873917,
+              4.397709
+            ]
+          },
+          "ui_draw_ms": {
+            "median_ms": 5.625708,
+            "min_ms": 4.888666,
+            "max_ms": 10.259417,
+            "samples_ms": [
+              5.625708,
+              4.99625,
+              8.393209,
+              10.259417,
+              4.888666
+            ]
+          },
+          "drawable_wait_ms": {
+            "median_ms": 0.03625,
+            "min_ms": 0.032583,
+            "max_ms": 0.085791,
+            "samples_ms": [
+              0.085791,
+              0.03625,
+              0.033791,
+              0.032583,
+              0.058834
+            ]
+          },
+          "compose_cpu_ms": {
+            "median_ms": 0.719709,
+            "min_ms": 0.193583,
+            "max_ms": 4.555625,
+            "samples_ms": [
+              1.045166,
+              0.621584,
+              0.193583,
+              4.555625,
+              0.719709
+            ]
+          },
+          "compose_gpu_ms": {
+            "median_ms": 8.88825,
+            "min_ms": 3.149583,
+            "max_ms": 12.158416,
+            "samples_ms": [
+              9.824334,
+              8.88825,
+              3.149583,
+              12.158416,
+              6.71975
+            ]
+          },
+          "compose_gpu_end_to_present_ms": {
+            "median_ms": 16.557375,
+            "min_ms": 16.1935,
+            "max_ms": 24.434709,
+            "samples_ms": [
+              16.375167,
+              24.434709,
+              16.1935,
+              18.796168,
+              16.557375
+            ]
+          },
+          "preview_gpu_end_to_present_ms": {
+            "median_ms": 31.466793,
+            "min_ms": 24.911958,
+            "max_ms": 56.4155,
+            "samples_ms": [
+              26.080542,
+              32.957209,
+              56.4155,
+              31.466793,
+              24.911958
+            ]
+          }
+        }
+      }
+    },
+    "optimized": {
+      "import": {
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": [
+          518,
+          518,
+          518,
+          518,
+          518
+        ],
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": {
+            "median_ms": 4316.482,
+            "min_ms": 4261.543666,
+            "max_ms": 4529.019667,
+            "samples_ms": [
+              4529.019667,
+              4316.482,
+              4316.432291,
+              4515.192833,
+              4261.543666
+            ]
+          },
+          "load_to_present_ms": {
+            "median_ms": 4341.986,
+            "min_ms": 4294.589541,
+            "max_ms": 4561.399084,
+            "samples_ms": [
+              4561.399084,
+              4341.608292,
+              4341.986,
+              4546.943792,
+              4294.589541
+            ]
+          },
+          "load_worker_ms": {
+            "median_ms": 3066.309958,
+            "min_ms": 3021.771291,
+            "max_ms": 3311.347875,
+            "samples_ms": [
+              3311.347875,
+              3053.667292,
+              3066.309958,
+              3254.395791,
+              3021.771291
+            ]
+          },
+          "load_to_scene_ready_ms": {
+            "median_ms": 3282.861,
+            "min_ms": 3215.881,
+            "max_ms": 3538.801625,
+            "samples_ms": [
+              3512.916917,
+              3282.861,
+              3264.5995,
+              3538.801625,
+              3215.881
+            ]
+          },
+          "attach_refresh_ms": {
+            "median_ms": 0.093042,
+            "min_ms": 0.067,
+            "max_ms": 0.703875,
+            "samples_ms": [
+              0.093042,
+              0.703875,
+              0.069458,
+              0.651167,
+              0.067
+            ]
+          },
+          "scene_ms": {
+            "median_ms": 29.67375,
+            "min_ms": 28.711917,
+            "max_ms": 30.159916,
+            "samples_ms": [
+              29.67375,
+              30.159916,
+              28.738959,
+              29.7085,
+              28.711917
+            ]
+          },
+          "mailbox_ms": {
+            "median_ms": 0.014041,
+            "min_ms": 0.010833,
+            "max_ms": 0.019625,
+            "samples_ms": [
+              0.01175,
+              0.010833,
+              0.01775,
+              0.014041,
+              0.019625
+            ]
+          },
+          "texture_prepare_upload_ms": {
+            "median_ms": 940.136166,
+            "min_ms": 937.849125,
+            "max_ms": 961.545333,
+            "samples_ms": [
+              961.545333,
+              939.447458,
+              940.136166,
+              937.849125,
+              959.0735
+            ]
+          },
+          "model_sync_ms": {
+            "median_ms": 1.698625,
+            "min_ms": 1.594084,
+            "max_ms": 2.029791,
+            "samples_ms": [
+              1.981042,
+              1.6125,
+              1.698625,
+              1.594084,
+              2.029791
+            ]
+          },
+          "encode_ms": {
+            "median_ms": 0.894833,
+            "min_ms": 0.86175,
+            "max_ms": 4.408292,
+            "samples_ms": [
+              0.86175,
+              0.894833,
+              4.408292,
+              0.872625,
+              1.29375
+            ]
+          },
+          "preview_submit_ms": {
+            "median_ms": 946.273375,
+            "min_ms": 940.345042,
+            "max_ms": 964.423166,
+            "samples_ms": [
+              964.423166,
+              941.982375,
+              946.273375,
+              940.345042,
+              962.418375
+            ]
+          },
+          "preview_queue_ms": {
+            "median_ms": 1.213708,
+            "min_ms": 1.090958,
+            "max_ms": 3.60575,
+            "samples_ms": [
+              1.090958,
+              3.60575,
+              1.213708,
+              1.091166,
+              1.440041
+            ]
+          },
+          "preview_gpu_ms": {
+            "median_ms": 81.787625,
+            "min_ms": 34.947375,
+            "max_ms": 104.331125,
+            "samples_ms": [
+              50.58275,
+              88.026875,
+              104.331125,
+              34.947375,
+              81.787625
+            ]
+          },
+          "scene_ready_to_gpu_end_ms": {
+            "median_ms": 1033.621,
+            "min_ms": 976.391208,
+            "max_ms": 1051.832791,
+            "samples_ms": [
+              1016.10275,
+              1033.621,
+              1051.832791,
+              976.391208,
+              1045.662666
+            ]
+          },
+          "accepted_to_present_ms": {
+            "median_ms": 115.895375,
+            "min_ms": 67.351084,
+            "max_ms": 131.028834,
+            "samples_ms": [
+              83.966708,
+              115.895375,
+              131.028834,
+              67.351084,
+              116.209333
+            ]
+          },
+          "ui_wait_ms": {
+            "median_ms": 4.684125,
+            "min_ms": 2.81275,
+            "max_ms": 5.753666,
+            "samples_ms": [
+              5.753666,
+              4.377917,
+              2.81275,
+              5.216625,
+              4.684125
+            ]
+          },
+          "ui_draw_ms": {
+            "median_ms": 5.010042,
+            "min_ms": 4.699126,
+            "max_ms": 5.992708,
+            "samples_ms": [
+              5.010042,
+              5.992708,
+              4.699126,
+              5.242959,
+              4.709583
+            ]
+          },
+          "drawable_wait_ms": {
+            "median_ms": 0.049625,
+            "min_ms": 0.040875,
+            "max_ms": 0.057167,
+            "samples_ms": [
+              0.055333,
+              0.044083,
+              0.057167,
+              0.049625,
+              0.040875
+            ]
+          },
+          "compose_cpu_ms": {
+            "median_ms": 0.764958,
+            "min_ms": 0.62575,
+            "max_ms": 2.398458,
+            "samples_ms": [
+              0.69675,
+              2.398458,
+              0.62575,
+              0.764958,
+              1.2485
+            ]
+          },
+          "compose_gpu_ms": {
+            "median_ms": 8.44625,
+            "min_ms": 3.71475,
+            "max_ms": 11.063417,
+            "samples_ms": [
+              11.063417,
+              3.71475,
+              8.44625,
+              9.515375,
+              6.307375
+            ]
+          },
+          "compose_gpu_end_to_present_ms": {
+            "median_ms": 22.894917,
+            "min_ms": 16.693459,
+            "max_ms": 23.239334,
+            "samples_ms": [
+              22.894917,
+              21.808375,
+              16.693459,
+              23.239334,
+              22.9885
+            ]
+          },
+          "preview_gpu_end_to_present_ms": {
+            "median_ms": 31.750959,
+            "min_ms": 25.126292,
+            "max_ms": 33.045875,
+            "samples_ms": [
+              32.379417,
+              25.126292,
+              25.553709,
+              31.750959,
+              33.045875
+            ]
+          }
+        }
+      },
+      "open": {
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": [
+          518,
+          518,
+          518,
+          518,
+          518
+        ],
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": {
+            "median_ms": 3467.907666,
+            "min_ms": 3355.563416,
+            "max_ms": 3628.254291,
+            "samples_ms": [
+              3628.254291,
+              3467.907666,
+              3498.451457,
+              3369.828167,
+              3355.563416
+            ]
+          },
+          "load_to_present_ms": {
+            "median_ms": 3518.070167,
+            "min_ms": 3415.041958,
+            "max_ms": 3695.143417,
+            "samples_ms": [
+              3695.143417,
+              3518.070167,
+              3528.764,
+              3442.901334,
+              3415.041958
+            ]
+          },
+          "load_worker_ms": {
+            "median_ms": 2181.8745,
+            "min_ms": 2110.848333,
+            "max_ms": 2302.023833,
+            "samples_ms": [
+              2302.023833,
+              2199.838417,
+              2181.8745,
+              2116.037959,
+              2110.848333
+            ]
+          },
+          "load_to_scene_ready_ms": {
+            "median_ms": 2406.194208,
+            "min_ms": 2310.059166,
+            "max_ms": 2550.770166,
+            "samples_ms": [
+              2550.770166,
+              2406.194208,
+              2466.661666,
+              2323.3985,
+              2310.059166
+            ]
+          },
+          "attach_refresh_ms": {
+            "median_ms": 0.069833,
+            "min_ms": 0.03925,
+            "max_ms": 0.616375,
+            "samples_ms": [
+              0.068167,
+              0.616375,
+              0.069833,
+              0.262834,
+              0.03925
+            ]
+          },
+          "scene_ms": {
+            "median_ms": 29.868041,
+            "min_ms": 29.341833,
+            "max_ms": 32.829875,
+            "samples_ms": [
+              32.829875,
+              29.868041,
+              29.751666,
+              29.341833,
+              30.281166
+            ]
+          },
+          "mailbox_ms": {
+            "median_ms": 0.013541,
+            "min_ms": 0.010583,
+            "max_ms": 0.015458,
+            "samples_ms": [
+              0.014375,
+              0.011083,
+              0.013541,
+              0.010583,
+              0.015458
+            ]
+          },
+          "texture_prepare_upload_ms": {
+            "median_ms": 975.841542,
+            "min_ms": 964.782667,
+            "max_ms": 1005.395458,
+            "samples_ms": [
+              1005.395458,
+              975.841542,
+              965.244875,
+              977.217917,
+              964.782667
+            ]
+          },
+          "model_sync_ms": {
+            "median_ms": 1.888208,
+            "min_ms": 1.674,
+            "max_ms": 2.412501,
+            "samples_ms": [
+              2.412501,
+              1.854041,
+              1.674,
+              1.888208,
+              2.025542
+            ]
+          },
+          "encode_ms": {
+            "median_ms": 1.140376,
+            "min_ms": 0.900125,
+            "max_ms": 2.161625,
+            "samples_ms": [
+              1.153209,
+              2.161625,
+              1.046458,
+              1.140376,
+              0.900125
+            ]
+          },
+          "preview_submit_ms": {
+            "median_ms": 979.889666,
+            "min_ms": 967.758167,
+            "max_ms": 1009.033833,
+            "samples_ms": [
+              1009.033833,
+              979.889666,
+              968.0145,
+              980.309875,
+              967.758167
+            ]
+          },
+          "preview_queue_ms": {
+            "median_ms": 2.436166,
+            "min_ms": 1.953582,
+            "max_ms": 3.485124,
+            "samples_ms": [
+              2.436166,
+              1.953582,
+              2.064333,
+              3.485124,
+              2.689458
+            ]
+          },
+          "preview_gpu_ms": {
+            "median_ms": 66.011333,
+            "min_ms": 61.702374,
+            "max_ms": 79.862334,
+            "samples_ms": [
+              66.011333,
+              79.862334,
+              61.702374,
+              62.630292,
+              75.038583
+            ]
+          },
+          "scene_ready_to_gpu_end_ms": {
+            "median_ms": 1046.429667,
+            "min_ms": 1031.789791,
+            "max_ms": 1077.484125,
+            "samples_ms": [
+              1077.484125,
+              1061.713458,
+              1031.789791,
+              1046.429667,
+              1045.50425
+            ]
+          },
+          "accepted_to_present_ms": {
+            "median_ms": 135.237584,
+            "min_ms": 94.009209,
+            "max_ms": 139.095084,
+            "samples_ms": [
+              135.237584,
+              131.914459,
+              94.009209,
+              139.095084,
+              137.120916
+            ]
+          },
+          "ui_wait_ms": {
+            "median_ms": 100.576833,
+            "min_ms": 6.553917,
+            "max_ms": 110.867875,
+            "samples_ms": [
+              98.704792,
+              103.704458,
+              6.553917,
+              110.867875,
+              100.576833
+            ]
+          },
+          "ui_draw_ms": {
+            "median_ms": 7.782334,
+            "min_ms": 3.522042,
+            "max_ms": 9.086166,
+            "samples_ms": [
+              9.086166,
+              7.782334,
+              3.522042,
+              5.266417,
+              7.785708
+            ]
+          },
+          "drawable_wait_ms": {
+            "median_ms": 0.042667,
+            "min_ms": 0.023792,
+            "max_ms": 0.062791,
+            "samples_ms": [
+              0.048958,
+              0.031584,
+              0.062791,
+              0.023792,
+              0.042667
+            ]
+          },
+          "compose_cpu_ms": {
+            "median_ms": 0.226583,
+            "min_ms": 0.190958,
+            "max_ms": 0.646874,
+            "samples_ms": [
+              0.261625,
+              0.196167,
+              0.646874,
+              0.190958,
+              0.226583
+            ]
+          },
+          "compose_gpu_ms": {
+            "median_ms": 5.035833,
+            "min_ms": 2.630125,
+            "max_ms": 6.752583,
+            "samples_ms": [
+              2.630125,
+              4.063875,
+              6.752583,
+              5.393417,
+              5.035833
+            ]
+          },
+          "compose_gpu_end_to_present_ms": {
+            "median_ms": 22.609834,
+            "min_ms": 15.965876,
+            "max_ms": 24.080126,
+            "samples_ms": [
+              24.080126,
+              15.965876,
+              22.609834,
+              16.979292,
+              23.208667
+            ]
+          },
+          "preview_gpu_end_to_present_ms": {
+            "median_ms": 59.478542,
+            "min_ms": 30.312543,
+            "max_ms": 73.073167,
+            "samples_ms": [
+              66.889126,
+              50.162501,
+              30.312543,
+              73.073167,
+              59.478542
+            ]
+          }
+        }
+      }
+    }
+  },
+  "samples": [
+    {
+      "pair": 0,
+      "version": "77f1383b",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98554,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 51,
+        "composition": 98,
+        "cpu_frame": 97,
+        "presented_ns": 2895838702153292,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4956.1875,
+          "load_to_present_ms": 4982.854542,
+          "load_worker_ms": 3629.867042,
+          "load_to_scene_ready_ms": 3907.047667,
+          "attach_refresh_ms": 0.102292,
+          "scene_ms": 29.575,
+          "mailbox_ms": 0.009417,
+          "texture_prepare_upload_ms": 984.090792,
+          "model_sync_ms": 1.763542,
+          "encode_ms": 0.9735,
+          "preview_submit_ms": 986.852042,
+          "preview_queue_ms": 4.052125,
+          "preview_gpu_ms": 58.233125,
+          "scene_ready_to_gpu_end_ms": 1049.139833,
+          "accepted_to_present_ms": 88.827875,
+          "ui_wait_ms": 1.527042,
+          "ui_draw_ms": 5.213208,
+          "drawable_wait_ms": 0.040375,
+          "compose_cpu_ms": 3.161417,
+          "compose_gpu_ms": 3.357625,
+          "compose_gpu_end_to_present_ms": 23.760792,
+          "preview_gpu_end_to_present_ms": 26.667042
+        }
+      }
+    },
+    {
+      "pair": 0,
+      "version": "77f1383b",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98590,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895843493866209,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4241.649333,
+          "load_to_present_ms": 4273.4935,
+          "load_worker_ms": 2989.171042,
+          "load_to_scene_ready_ms": 3195.614,
+          "attach_refresh_ms": 0.104792,
+          "scene_ms": 29.329875,
+          "mailbox_ms": 0.011708,
+          "texture_prepare_upload_ms": 974.393376,
+          "model_sync_ms": 1.946333,
+          "encode_ms": 0.79025,
+          "preview_submit_ms": 977.1555,
+          "preview_queue_ms": 2.2825,
+          "preview_gpu_ms": 66.591917,
+          "scene_ready_to_gpu_end_ms": 1046.035333,
+          "accepted_to_present_ms": 100.644917,
+          "ui_wait_ms": 4.93075,
+          "ui_draw_ms": 4.74625,
+          "drawable_wait_ms": 0.034083,
+          "compose_cpu_ms": 0.59575,
+          "compose_gpu_ms": 7.31525,
+          "compose_gpu_end_to_present_ms": 23.987959,
+          "preview_gpu_end_to_present_ms": 31.844167
+        }
+      }
+    },
+    {
+      "pair": 0,
+      "version": "optimized",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98600,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895849018920334,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4431.879124,
+          "load_to_present_ms": 4465.418583,
+          "load_worker_ms": 3243.224458,
+          "load_to_scene_ready_ms": 3438.144166,
+          "attach_refresh_ms": 0.197874,
+          "scene_ms": 29.385458,
+          "mailbox_ms": 0.018208,
+          "texture_prepare_upload_ms": 941.817083,
+          "model_sync_ms": 1.707375,
+          "encode_ms": 1.009458,
+          "preview_submit_ms": 944.564083,
+          "preview_queue_ms": 0.831875,
+          "preview_gpu_ms": 48.323125,
+          "scene_ready_to_gpu_end_ms": 993.734958,
+          "accepted_to_present_ms": 82.621875,
+          "ui_wait_ms": 3.761958,
+          "ui_draw_ms": 4.85025,
+          "drawable_wait_ms": 0.042126,
+          "compose_cpu_ms": 0.618959,
+          "compose_gpu_ms": 10.67575,
+          "compose_gpu_end_to_present_ms": 24.073209,
+          "preview_gpu_end_to_present_ms": 33.539459
+        }
+      }
+    },
+    {
+      "pair": 0,
+      "version": "optimized",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98610,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 19,
+        "cpu_frame": 18,
+        "presented_ns": 2895852810623750,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 3272.669833,
+          "load_to_present_ms": 3311.723833,
+          "load_worker_ms": 2137.065667,
+          "load_to_scene_ready_ms": 2262.302333,
+          "attach_refresh_ms": 0.063416,
+          "scene_ms": 31.06175,
+          "mailbox_ms": 0.005958,
+          "texture_prepare_upload_ms": 955.049417,
+          "model_sync_ms": 1.6,
+          "encode_ms": 0.9085,
+          "preview_submit_ms": 957.585042,
+          "preview_queue_ms": 1.339083,
+          "preview_gpu_ms": 51.445333,
+          "scene_ready_to_gpu_end_ms": 1010.3675,
+          "accepted_to_present_ms": 91.767083,
+          "ui_wait_ms": 4.609,
+          "ui_draw_ms": 3.34375,
+          "drawable_wait_ms": 0.059208,
+          "compose_cpu_ms": 0.747416,
+          "compose_gpu_ms": 14.875208,
+          "compose_gpu_end_to_present_ms": 22.923,
+          "preview_gpu_end_to_present_ms": 39.054
+        }
+      }
+    },
+    {
+      "pair": 1,
+      "version": "optimized",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98615,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895857852340084,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4529.019667,
+          "load_to_present_ms": 4561.399084,
+          "load_worker_ms": 3311.347875,
+          "load_to_scene_ready_ms": 3512.916917,
+          "attach_refresh_ms": 0.093042,
+          "scene_ms": 29.67375,
+          "mailbox_ms": 0.01175,
+          "texture_prepare_upload_ms": 961.545333,
+          "model_sync_ms": 1.981042,
+          "encode_ms": 0.86175,
+          "preview_submit_ms": 964.423166,
+          "preview_queue_ms": 1.090958,
+          "preview_gpu_ms": 50.58275,
+          "scene_ready_to_gpu_end_ms": 1016.10275,
+          "accepted_to_present_ms": 83.966708,
+          "ui_wait_ms": 5.753666,
+          "ui_draw_ms": 5.010042,
+          "drawable_wait_ms": 0.055333,
+          "compose_cpu_ms": 0.69675,
+          "compose_gpu_ms": 11.063417,
+          "compose_gpu_end_to_present_ms": 22.894917,
+          "preview_gpu_end_to_present_ms": 32.379417
+        }
+      }
+    },
+    {
+      "pair": 1,
+      "version": "optimized",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98650,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 23,
+        "cpu_frame": 20,
+        "presented_ns": 2895862102383001,
+        "retained_redraw_requests": 1,
+        "dropped_model_compositions": 1,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 3628.254291,
+          "load_to_present_ms": 3695.143417,
+          "load_worker_ms": 2302.023833,
+          "load_to_scene_ready_ms": 2550.770166,
+          "attach_refresh_ms": 0.068167,
+          "scene_ms": 32.829875,
+          "mailbox_ms": 0.014375,
+          "texture_prepare_upload_ms": 1005.395458,
+          "model_sync_ms": 2.412501,
+          "encode_ms": 1.153209,
+          "preview_submit_ms": 1009.033833,
+          "preview_queue_ms": 2.436166,
+          "preview_gpu_ms": 66.011333,
+          "scene_ready_to_gpu_end_ms": 1077.484125,
+          "accepted_to_present_ms": 135.237584,
+          "ui_wait_ms": 98.704792,
+          "ui_draw_ms": 9.086166,
+          "drawable_wait_ms": 0.048958,
+          "compose_cpu_ms": 0.261625,
+          "compose_gpu_ms": 2.630125,
+          "compose_gpu_end_to_present_ms": 24.080126,
+          "preview_gpu_end_to_present_ms": 66.889126
+        }
+      }
+    },
+    {
+      "pair": 1,
+      "version": "77f1383b",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98682,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 14,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895868052445792,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 5249.719666,
+          "load_to_present_ms": 5275.258583,
+          "load_worker_ms": 3971.380833,
+          "load_to_scene_ready_ms": 4227.630291,
+          "attach_refresh_ms": 0.623709,
+          "scene_ms": 31.165083,
+          "mailbox_ms": 0.012625,
+          "texture_prepare_upload_ms": 970.37775,
+          "model_sync_ms": 2.05725,
+          "encode_ms": 1.083,
+          "preview_submit_ms": 973.548791,
+          "preview_queue_ms": 1.840249,
+          "preview_gpu_ms": 46.69075,
+          "scene_ready_to_gpu_end_ms": 1022.089375,
+          "accepted_to_present_ms": 73.875792,
+          "ui_wait_ms": 4.000459,
+          "ui_draw_ms": 4.376625,
+          "drawable_wait_ms": 0.08975,
+          "compose_cpu_ms": 1.120542,
+          "compose_gpu_ms": 8.159875,
+          "compose_gpu_end_to_present_ms": 17.792375,
+          "preview_gpu_end_to_present_ms": 25.538917
+        }
+      }
+    },
+    {
+      "pair": 1,
+      "version": "77f1383b",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98692,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895872977500167,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4408.016458,
+          "load_to_present_ms": 4434.097,
+          "load_worker_ms": 3091.094417,
+          "load_to_scene_ready_ms": 3334.23125,
+          "attach_refresh_ms": 0.195167,
+          "scene_ms": 30.629958,
+          "mailbox_ms": 0.019167,
+          "texture_prepare_upload_ms": 1001.054458,
+          "model_sync_ms": 1.971167,
+          "encode_ms": 0.90075,
+          "preview_submit_ms": 1003.983125,
+          "preview_queue_ms": 1.740833,
+          "preview_gpu_ms": 68.0465,
+          "scene_ready_to_gpu_end_ms": 1073.785208,
+          "accepted_to_present_ms": 95.794625,
+          "ui_wait_ms": 0.9115,
+          "ui_draw_ms": 5.625708,
+          "drawable_wait_ms": 0.085791,
+          "compose_cpu_ms": 1.045166,
+          "compose_gpu_ms": 9.824334,
+          "compose_gpu_end_to_present_ms": 16.375167,
+          "preview_gpu_end_to_present_ms": 26.080542
+        }
+      }
+    },
+    {
+      "pair": 2,
+      "version": "77f1383b",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98699,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 14,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895879094235917,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 5509.305,
+          "load_to_present_ms": 5534.999125,
+          "load_worker_ms": 4221.354833,
+          "load_to_scene_ready_ms": 4501.450083,
+          "attach_refresh_ms": 0.261458,
+          "scene_ms": 31.868541,
+          "mailbox_ms": 0.016874,
+          "texture_prepare_upload_ms": 948.79525,
+          "model_sync_ms": 1.813167,
+          "encode_ms": 1.003584,
+          "preview_submit_ms": 951.645709,
+          "preview_queue_ms": 1.573666,
+          "preview_gpu_ms": 54.624417,
+          "scene_ready_to_gpu_end_ms": 1007.854917,
+          "accepted_to_present_ms": 81.823291,
+          "ui_wait_ms": 2.855083,
+          "ui_draw_ms": 3.179208,
+          "drawable_wait_ms": 0.076042,
+          "compose_cpu_ms": 0.80075,
+          "compose_gpu_ms": 3.612125,
+          "compose_gpu_end_to_present_ms": 22.393042,
+          "preview_gpu_end_to_present_ms": 25.694125
+        }
+      }
+    },
+    {
+      "pair": 2,
+      "version": "77f1383b",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98730,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 3,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895883919290709,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4252.341875,
+          "load_to_present_ms": 4285.299084,
+          "load_worker_ms": 2961.523167,
+          "load_to_scene_ready_ms": 3223.644167,
+          "attach_refresh_ms": 0.225875,
+          "scene_ms": 29.285875,
+          "mailbox_ms": 0.015292,
+          "texture_prepare_upload_ms": 961.628917,
+          "model_sync_ms": 1.697833,
+          "encode_ms": 0.770374,
+          "preview_submit_ms": 964.123334,
+          "preview_queue_ms": 4.76675,
+          "preview_gpu_ms": 59.79575,
+          "scene_ready_to_gpu_end_ms": 1028.697708,
+          "accepted_to_present_ms": 97.458667,
+          "ui_wait_ms": 2.580417,
+          "ui_draw_ms": 4.99625,
+          "drawable_wait_ms": 0.03625,
+          "compose_cpu_ms": 0.621584,
+          "compose_gpu_ms": 8.88825,
+          "compose_gpu_end_to_present_ms": 24.434709,
+          "preview_gpu_end_to_present_ms": 32.957209
+        }
+      }
+    },
+    {
+      "pair": 2,
+      "version": "optimized",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98740,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895888802678042,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4316.482,
+          "load_to_present_ms": 4341.608292,
+          "load_worker_ms": 3053.667292,
+          "load_to_scene_ready_ms": 3282.861,
+          "attach_refresh_ms": 0.703875,
+          "scene_ms": 30.159916,
+          "mailbox_ms": 0.010833,
+          "texture_prepare_upload_ms": 939.447458,
+          "model_sync_ms": 1.6125,
+          "encode_ms": 0.894833,
+          "preview_submit_ms": 941.982375,
+          "preview_queue_ms": 3.60575,
+          "preview_gpu_ms": 88.026875,
+          "scene_ready_to_gpu_end_ms": 1033.621,
+          "accepted_to_present_ms": 115.895375,
+          "ui_wait_ms": 4.377917,
+          "ui_draw_ms": 5.992708,
+          "drawable_wait_ms": 0.044083,
+          "compose_cpu_ms": 2.398458,
+          "compose_gpu_ms": 3.71475,
+          "compose_gpu_end_to_present_ms": 21.808375,
+          "preview_gpu_end_to_present_ms": 25.126292
+        }
+      }
+    },
+    {
+      "pair": 2,
+      "version": "optimized",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98745,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 3,
+        "preview": 12,
+        "composition": 23,
+        "cpu_frame": 20,
+        "presented_ns": 2895892777721626,
+        "retained_redraw_requests": 1,
+        "dropped_model_compositions": 1,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 3467.907666,
+          "load_to_present_ms": 3518.070167,
+          "load_worker_ms": 2199.838417,
+          "load_to_scene_ready_ms": 2406.194208,
+          "attach_refresh_ms": 0.616375,
+          "scene_ms": 29.868041,
+          "mailbox_ms": 0.011083,
+          "texture_prepare_upload_ms": 975.841542,
+          "model_sync_ms": 1.854041,
+          "encode_ms": 2.161625,
+          "preview_submit_ms": 979.889666,
+          "preview_queue_ms": 1.953582,
+          "preview_gpu_ms": 79.862334,
+          "scene_ready_to_gpu_end_ms": 1061.713458,
+          "accepted_to_present_ms": 131.914459,
+          "ui_wait_ms": 103.704458,
+          "ui_draw_ms": 7.782334,
+          "drawable_wait_ms": 0.031584,
+          "compose_cpu_ms": 0.196167,
+          "compose_gpu_ms": 4.063875,
+          "compose_gpu_end_to_present_ms": 15.965876,
+          "preview_gpu_end_to_present_ms": 50.162501
+        }
+      }
+    },
+    {
+      "pair": 3,
+      "version": "optimized",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98777,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895897561106584,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4316.432291,
+          "load_to_present_ms": 4341.986,
+          "load_worker_ms": 3066.309958,
+          "load_to_scene_ready_ms": 3264.5995,
+          "attach_refresh_ms": 0.069458,
+          "scene_ms": 28.738959,
+          "mailbox_ms": 0.01775,
+          "texture_prepare_upload_ms": 940.136166,
+          "model_sync_ms": 1.698625,
+          "encode_ms": 4.408292,
+          "preview_submit_ms": 946.273375,
+          "preview_queue_ms": 1.213708,
+          "preview_gpu_ms": 104.331125,
+          "scene_ready_to_gpu_end_ms": 1051.832791,
+          "accepted_to_present_ms": 131.028834,
+          "ui_wait_ms": 2.81275,
+          "ui_draw_ms": 4.699126,
+          "drawable_wait_ms": 0.057167,
+          "compose_cpu_ms": 0.62575,
+          "compose_gpu_ms": 8.44625,
+          "compose_gpu_end_to_present_ms": 16.693459,
+          "preview_gpu_end_to_present_ms": 25.553709
+        }
+      }
+    },
+    {
+      "pair": 3,
+      "version": "optimized",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98781,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 12,
+        "composition": 19,
+        "cpu_frame": 18,
+        "presented_ns": 2895901602816584,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 3498.451457,
+          "load_to_present_ms": 3528.764,
+          "load_worker_ms": 2181.8745,
+          "load_to_scene_ready_ms": 2466.661666,
+          "attach_refresh_ms": 0.069833,
+          "scene_ms": 29.751666,
+          "mailbox_ms": 0.013541,
+          "texture_prepare_upload_ms": 965.244875,
+          "model_sync_ms": 1.674,
+          "encode_ms": 1.046458,
+          "preview_submit_ms": 968.0145,
+          "preview_queue_ms": 2.064333,
+          "preview_gpu_ms": 61.702374,
+          "scene_ready_to_gpu_end_ms": 1031.789791,
+          "accepted_to_present_ms": 94.009209,
+          "ui_wait_ms": 6.553917,
+          "ui_draw_ms": 3.522042,
+          "drawable_wait_ms": 0.062791,
+          "compose_cpu_ms": 0.646874,
+          "compose_gpu_ms": 6.752583,
+          "compose_gpu_end_to_present_ms": 22.609834,
+          "preview_gpu_end_to_present_ms": 30.312543
+        }
+      }
+    },
+    {
+      "pair": 3,
+      "version": "77f1383b",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98786,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895907052874959,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4886.177333,
+          "load_to_present_ms": 4912.061417,
+          "load_worker_ms": 3620.036292,
+          "load_to_scene_ready_ms": 3827.839458,
+          "attach_refresh_ms": 0.629917,
+          "scene_ms": 29.648125,
+          "mailbox_ms": 0.009916,
+          "texture_prepare_upload_ms": 957.466042,
+          "model_sync_ms": 1.691333,
+          "encode_ms": 0.959291,
+          "preview_submit_ms": 960.1535,
+          "preview_queue_ms": 1.967625,
+          "preview_gpu_ms": 96.213125,
+          "scene_ready_to_gpu_end_ms": 1058.337875,
+          "accepted_to_present_ms": 123.719709,
+          "ui_wait_ms": 3.832959,
+          "ui_draw_ms": 5.844667,
+          "drawable_wait_ms": 0.03875,
+          "compose_cpu_ms": 0.698667,
+          "compose_gpu_ms": 3.596876,
+          "compose_gpu_end_to_present_ms": 21.783167,
+          "preview_gpu_end_to_present_ms": 25.884084
+        }
+      }
+    },
+    {
+      "pair": 3,
+      "version": "77f1383b",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98798,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 23,
+        "cpu_frame": 20,
+        "presented_ns": 2895911561256625,
+        "retained_redraw_requests": 1,
+        "dropped_model_compositions": 1,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 3970.005833,
+          "load_to_present_ms": 4026.421333,
+          "load_worker_ms": 2706.855834,
+          "load_to_scene_ready_ms": 2912.235333,
+          "attach_refresh_ms": 0.224041,
+          "scene_ms": 33.908916,
+          "mailbox_ms": 0.01625,
+          "texture_prepare_upload_ms": 986.51325,
+          "model_sync_ms": 1.800917,
+          "encode_ms": 0.939875,
+          "preview_submit_ms": 989.29225,
+          "preview_queue_ms": 4.770416,
+          "preview_gpu_ms": 63.690375,
+          "scene_ready_to_gpu_end_ms": 1057.7705,
+          "accepted_to_present_ms": 124.795625,
+          "ui_wait_ms": 96.614375,
+          "ui_draw_ms": 8.393209,
+          "drawable_wait_ms": 0.033791,
+          "compose_cpu_ms": 0.193583,
+          "compose_gpu_ms": 3.149583,
+          "compose_gpu_end_to_present_ms": 16.1935,
+          "preview_gpu_end_to_present_ms": 56.4155
+        }
+      }
+    },
+    {
+      "pair": 4,
+      "version": "77f1383b",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98824,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895916877980417,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4793.505666,
+          "load_to_present_ms": 4823.609708,
+          "load_worker_ms": 3540.545833,
+          "load_to_scene_ready_ms": 3719.457958,
+          "attach_refresh_ms": 0.062,
+          "scene_ms": 29.563666,
+          "mailbox_ms": 0.021584,
+          "texture_prepare_upload_ms": 961.512208,
+          "model_sync_ms": 1.72325,
+          "encode_ms": 0.950541,
+          "preview_submit_ms": 964.211416,
+          "preview_queue_ms": 1.885375,
+          "preview_gpu_ms": 107.932,
+          "scene_ready_to_gpu_end_ms": 1074.047708,
+          "accepted_to_present_ms": 139.8485,
+          "ui_wait_ms": 3.359625,
+          "ui_draw_ms": 5.747167,
+          "drawable_wait_ms": 0.061541,
+          "compose_cpu_ms": 1.040542,
+          "compose_gpu_ms": 8.070875,
+          "compose_gpu_end_to_present_ms": 17.775417,
+          "preview_gpu_end_to_present_ms": 30.104042
+        }
+      }
+    },
+    {
+      "pair": 4,
+      "version": "77f1383b",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98843,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895921769700584,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4263.083249,
+          "load_to_present_ms": 4294.550042,
+          "load_worker_ms": 2972.741125,
+          "load_to_scene_ready_ms": 3218.733458,
+          "attach_refresh_ms": 0.171625,
+          "scene_ms": 31.455583,
+          "mailbox_ms": 0.005584,
+          "texture_prepare_upload_ms": 968.152916,
+          "model_sync_ms": 1.614959,
+          "encode_ms": 0.828916,
+          "preview_submit_ms": 970.631625,
+          "preview_queue_ms": 1.818292,
+          "preview_gpu_ms": 71.897249,
+          "scene_ready_to_gpu_end_ms": 1044.349791,
+          "accepted_to_present_ms": 105.099709,
+          "ui_wait_ms": 1.873917,
+          "ui_draw_ms": 10.259417,
+          "drawable_wait_ms": 0.032583,
+          "compose_cpu_ms": 4.555625,
+          "compose_gpu_ms": 12.158416,
+          "compose_gpu_end_to_present_ms": 18.796168,
+          "preview_gpu_end_to_present_ms": 31.466793
+        }
+      }
+    },
+    {
+      "pair": 4,
+      "version": "optimized",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98885,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895926969758209,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4515.192833,
+          "load_to_present_ms": 4546.943792,
+          "load_worker_ms": 3254.395791,
+          "load_to_scene_ready_ms": 3538.801625,
+          "attach_refresh_ms": 0.651167,
+          "scene_ms": 29.7085,
+          "mailbox_ms": 0.014041,
+          "texture_prepare_upload_ms": 937.849125,
+          "model_sync_ms": 1.594084,
+          "encode_ms": 0.872625,
+          "preview_submit_ms": 940.345042,
+          "preview_queue_ms": 1.091166,
+          "preview_gpu_ms": 34.947375,
+          "scene_ready_to_gpu_end_ms": 976.391208,
+          "accepted_to_present_ms": 67.351084,
+          "ui_wait_ms": 5.216625,
+          "ui_draw_ms": 5.242959,
+          "drawable_wait_ms": 0.049625,
+          "compose_cpu_ms": 0.764958,
+          "compose_gpu_ms": 9.515375,
+          "compose_gpu_end_to_present_ms": 23.239334,
+          "preview_gpu_end_to_present_ms": 31.750959
+        }
+      }
+    },
+    {
+      "pair": 4,
+      "version": "optimized",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98892,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 3,
+        "preview": 12,
+        "composition": 27,
+        "cpu_frame": 24,
+        "presented_ns": 2895930911468459,
+        "retained_redraw_requests": 2,
+        "dropped_model_compositions": 2,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 3369.828167,
+          "load_to_present_ms": 3442.901334,
+          "load_worker_ms": 2116.037959,
+          "load_to_scene_ready_ms": 2323.3985,
+          "attach_refresh_ms": 0.262834,
+          "scene_ms": 29.341833,
+          "mailbox_ms": 0.010583,
+          "texture_prepare_upload_ms": 977.217917,
+          "model_sync_ms": 1.888208,
+          "encode_ms": 1.140376,
+          "preview_submit_ms": 980.309875,
+          "preview_queue_ms": 3.485124,
+          "preview_gpu_ms": 62.630292,
+          "scene_ready_to_gpu_end_ms": 1046.429667,
+          "accepted_to_present_ms": 139.095084,
+          "ui_wait_ms": 110.867875,
+          "ui_draw_ms": 5.266417,
+          "drawable_wait_ms": 0.023792,
+          "compose_cpu_ms": 0.190958,
+          "compose_gpu_ms": 5.393417,
+          "compose_gpu_end_to_present_ms": 16.979292,
+          "preview_gpu_end_to_present_ms": 73.073167
+        }
+      }
+    },
+    {
+      "pair": 5,
+      "version": "optimized",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98898,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 3,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895935653187250,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4261.543666,
+          "load_to_present_ms": 4294.589541,
+          "load_worker_ms": 3021.771291,
+          "load_to_scene_ready_ms": 3215.881,
+          "attach_refresh_ms": 0.067,
+          "scene_ms": 28.711917,
+          "mailbox_ms": 0.019625,
+          "texture_prepare_upload_ms": 959.0735,
+          "model_sync_ms": 2.029791,
+          "encode_ms": 1.29375,
+          "preview_submit_ms": 962.418375,
+          "preview_queue_ms": 1.440041,
+          "preview_gpu_ms": 81.787625,
+          "scene_ready_to_gpu_end_ms": 1045.662666,
+          "accepted_to_present_ms": 116.209333,
+          "ui_wait_ms": 4.684125,
+          "ui_draw_ms": 4.709583,
+          "drawable_wait_ms": 0.040875,
+          "compose_cpu_ms": 1.2485,
+          "compose_gpu_ms": 6.307375,
+          "compose_gpu_end_to_present_ms": 22.9885,
+          "preview_gpu_end_to_present_ms": 33.045875
+        }
+      }
+    },
+    {
+      "pair": 5,
+      "version": "optimized",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98905,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 23,
+        "cpu_frame": 20,
+        "presented_ns": 2895939503229417,
+        "retained_redraw_requests": 1,
+        "dropped_model_compositions": 1,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 3355.563416,
+          "load_to_present_ms": 3415.041958,
+          "load_worker_ms": 2110.848333,
+          "load_to_scene_ready_ms": 2310.059166,
+          "attach_refresh_ms": 0.03925,
+          "scene_ms": 30.281166,
+          "mailbox_ms": 0.015458,
+          "texture_prepare_upload_ms": 964.782667,
+          "model_sync_ms": 2.025542,
+          "encode_ms": 0.900125,
+          "preview_submit_ms": 967.758167,
+          "preview_queue_ms": 2.689458,
+          "preview_gpu_ms": 75.038583,
+          "scene_ready_to_gpu_end_ms": 1045.50425,
+          "accepted_to_present_ms": 137.120916,
+          "ui_wait_ms": 100.576833,
+          "ui_draw_ms": 7.785708,
+          "drawable_wait_ms": 0.042667,
+          "compose_cpu_ms": 0.226583,
+          "compose_gpu_ms": 5.035833,
+          "compose_gpu_end_to_present_ms": 23.208667,
+          "preview_gpu_end_to_present_ms": 59.478542
+        }
+      }
+    },
+    {
+      "pair": 5,
+      "version": "77f1383b",
+      "case": "import",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/web/zipzi-2d/models/local/DeepSeek/大肥鱼.model3.json",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98912,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 4,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895944836621376,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4806.604791,
+          "load_to_present_ms": 4832.671042,
+          "load_worker_ms": 3521.270417,
+          "load_to_scene_ready_ms": 3762.095125,
+          "attach_refresh_ms": 0.993209,
+          "scene_ms": 29.381334,
+          "mailbox_ms": 0.011542,
+          "texture_prepare_upload_ms": 954.747584,
+          "model_sync_ms": 1.730874,
+          "encode_ms": 0.833959,
+          "preview_submit_ms": 957.335542,
+          "preview_queue_ms": 2.208041,
+          "preview_gpu_ms": 84.95675,
+          "scene_ready_to_gpu_end_ms": 1044.509666,
+          "accepted_to_present_ms": 112.494042,
+          "ui_wait_ms": 0.937041,
+          "ui_draw_ms": 5.214126,
+          "drawable_wait_ms": 0.03175,
+          "compose_cpu_ms": 0.633667,
+          "compose_gpu_ms": 2.851625,
+          "compose_gpu_end_to_present_ms": 23.012001,
+          "preview_gpu_end_to_present_ms": 26.066251
+        }
+      }
+    },
+    {
+      "pair": 5,
+      "version": "77f1383b",
+      "case": "open",
+      "report": {
+        "metadata": {
+          "type": "metadata",
+          "schema": 1,
+          "clock": "mach_host_nanoseconds",
+          "platform": "macos",
+          "clock_alignment": null,
+          "debug_assertions": false,
+          "automatic": true,
+          "gpui_backend": "gpui-fast",
+          "view_retention": true,
+          "scroll_layers": true,
+          "model": "/Users/liangbohao/.codex/worktrees/cc0a/zipzi-2d/target/deepseek-load/runs/0-77f1383b.zipzi",
+          "samples": 1,
+          "warmup": 0,
+          "parameters_only": false,
+          "ui_only": false,
+          "first_frame": true,
+          "parameter_overlay": {
+            "selection": "first",
+            "input": "track",
+            "viewport_style": "modeling",
+            "paint": "all",
+            "detail": false,
+            "eager_canvas": false,
+            "uncached_creation_menus": false,
+            "unlayered_markers": false,
+            "tessellated_edges": false,
+            "legacy_edge_bounds": false,
+            "eager_viewport_layout": false
+          },
+          "manual_mesh": false,
+          "animation_drag": null,
+          "properties": false,
+          "deformer_selection": false,
+          "selection_objects": null,
+          "property_cases": [],
+          "property_case": null,
+          "workloads": [
+            10
+          ],
+          "multi_vertices": 8,
+          "input_hz": 120,
+          "pid": 98919,
+          "diagnostics": {
+            "drawables": null,
+            "display_sync": null,
+            "offscreen": null,
+            "default_worker_qos": false,
+            "hide_mesh_edges": false,
+            "batch_mesh_edges": true,
+            "metal_mesh_overlay": true,
+            "native_mesh_overlay": true
+          }
+        },
+        "load": 2,
+        "preview": 12,
+        "composition": 21,
+        "cpu_frame": 20,
+        "presented_ns": 2895949703342500,
+        "retained_redraw_requests": 0,
+        "dropped_model_compositions": 0,
+        "viewport": {
+          "width": 941,
+          "height": 1312
+        },
+        "draw_calls": 518,
+        "metrics": {
+          "load_to_viewport_gpu_end_ms": 4382.571,
+          "load_to_present_ms": 4407.482958,
+          "load_worker_ms": 3087.523542,
+          "load_to_scene_ready_ms": 3291.935667,
+          "attach_refresh_ms": 0.226333,
+          "scene_ms": 30.288625,
+          "mailbox_ms": 0.013208,
+          "texture_prepare_upload_ms": 1004.651958,
+          "model_sync_ms": 1.769917,
+          "encode_ms": 0.95425,
+          "preview_submit_ms": 1007.410125,
+          "preview_queue_ms": 1.518333,
+          "preview_gpu_ms": 81.699042,
+          "scene_ready_to_gpu_end_ms": 1090.635333,
+          "accepted_to_present_ms": 108.051875,
+          "ui_wait_ms": 4.397709,
+          "ui_draw_ms": 4.888666,
+          "drawable_wait_ms": 0.058834,
+          "compose_cpu_ms": 0.719709,
+          "compose_gpu_ms": 6.71975,
+          "compose_gpu_end_to_present_ms": 16.557375,
+          "preview_gpu_end_to_present_ms": 24.911958
+        }
+      }
+    }
+  ],
+  "retry_counts": {
+    "77f1383b": {
+      "import": {
+        "samples": 5,
+        "with_redraw": 0,
+        "redraws": 0,
+        "dropped_compositions": 0
+      },
+      "open": {
+        "samples": 5,
+        "with_redraw": 1,
+        "redraws": 1,
+        "dropped_compositions": 1
+      }
+    },
+    "optimized": {
+      "import": {
+        "samples": 5,
+        "with_redraw": 0,
+        "redraws": 0,
+        "dropped_compositions": 0
+      },
+      "open": {
+        "samples": 5,
+        "with_redraw": 4,
+        "redraws": 5,
+        "dropped_compositions": 5
+      }
+    }
+  },
+  "validation": {
+    "tracker_rust_tests_passed": 2,
+    "reporter_python_tests_passed": 6,
+    "native_complete_traces": 24,
+    "same_viewport": {
+      "width": 941,
+      "height": 1312
+    },
+    "same_draw_calls": 518
+  },
+  "preliminary_v1_capture": {
+    "path": "target/viewport-first-frame/paired",
+    "completed_successful_runs": 7,
+    "failure": "1-77f1383b-open: GPU commands completed but first model composition reported present_dropped; without retained redraw, no presentation before 60-second timeout.",
+    "disposition": "Preserved separately; restarted the complete measurement with v2 recovery enabled for both versions. No preliminary v1 timings enter the final statistics."
+  },
+  "raw_directory": "target/viewport-first-frame/paired-v2",
+  "driver": "target/python/scratch/viewport_first_frame.py"
+}

@@ -659,6 +659,133 @@ fn repack(bytes: &[u8], change: impl Fn(&str, Vec<u8>) -> Option<Vec<u8>>) -> Ve
     output.into_inner()
 }
 
+fn replace_archive_document(bytes: &[u8], document: &[u8]) -> Vec<u8> {
+    repack(bytes, |name, data| {
+        Some(match name {
+            "project.json" => document.to_vec(),
+            "format.json" => {
+                let mut format: Format = serde_json::from_slice(&data).unwrap();
+                format.document_sha256 = content_sha256(document);
+                serde_json::to_vec(&format).unwrap()
+            }
+            _ => data,
+        })
+    })
+}
+
+#[test]
+fn native_document_admission_rejects_duplicate_members_and_incompatible_headers() {
+    let root = tempfile::tempdir().unwrap();
+    let document = fixture(root.path());
+    let bytes = native_bytes(&document, root.path());
+    let mut zip = ZipArchive::new(Cursor::new(&bytes)).unwrap();
+    let mut original = String::new();
+    zip.by_name("project.json")
+        .unwrap()
+        .read_to_string(&mut original)
+        .unwrap();
+    let nested = original.replacen(
+        "\"document\":{",
+        "\"document\":{\"unused\":{\"x\":0,\"x\":1},",
+        1,
+    );
+    assert_ne!(nested, original);
+    for (text, code, message) in [
+        (
+            original.replacen('{', "{\"format\":\"zipzi-project\",", 1),
+            "INVALID_PROJECT",
+            "Duplicate JSON",
+        ),
+        (nested, "INVALID_PROJECT", "Duplicate JSON"),
+        (
+            r#"{"format":"zipzi-project","format_version":99,"document":null}"#.into(),
+            "UNSUPPORTED_VERSION",
+            "Unsupported project document version",
+        ),
+        (
+            r#"{"format":"zipzi-directory-project","format_version":21,"document":null}"#.into(),
+            "INVALID_PROJECT",
+            "Unknown project document identifier",
+        ),
+        (
+            r#"{"format":"zipzi-project","format_version":22,"document":{"unused":"\u0000"}}"#
+                .into(),
+            "INVALID_PROJECT",
+            "Embedded NUL",
+        ),
+    ] {
+        let path = root.path().join("bad-header.zipzi");
+        fs::write(&path, replace_archive_document(&bytes, text.as_bytes())).unwrap();
+        let error = ProjectArchiveStore::new(root.path())
+            .open(&path, || true)
+            .err()
+            .unwrap();
+        assert!(error.to_string().contains(message), "{error}");
+        assert_eq!(Status::from(error).code, code);
+    }
+}
+
+#[test]
+fn shared_png_validation_checks_each_reference_before_and_after_a_valid_one() {
+    let root = tempfile::tempdir().unwrap();
+    let mut document = fixture(root.path());
+    let mut repeated = document
+        .get_asset(&uuid::Uuid::from_u128(2).to_string())
+        .unwrap()
+        .clone();
+    repeated.id = uuid::Uuid::from_u128(5).to_string();
+    assert!(document.add_asset(repeated).status.is_ok());
+    let bytes = native_bytes(&document, root.path());
+    let mut zip = ZipArchive::new(Cursor::new(&bytes)).unwrap();
+    let mut json = String::new();
+    zip.by_name("project.json")
+        .unwrap()
+        .read_to_string(&mut json)
+        .unwrap();
+    for (bad_id, width, code) in [
+        (2, 7, "RESOURCE_DIMENSIONS"),
+        (3, 7, "RESOURCE_DIMENSIONS"),
+        (2, u32::MAX, "DECODE_WORKSPACE_LIMIT"),
+    ] {
+        let bad_id = uuid::Uuid::from_u128(bad_id).to_string();
+        let mut wire: serde_json::Value = serde_json::from_str(&json).unwrap();
+        for asset in wire["document"]["assets"].as_array_mut().unwrap() {
+            if asset["id"] == bad_id {
+                asset["content"]["width"] = width.into();
+            }
+        }
+        let path = root.path().join("shared.zipzi");
+        fs::write(
+            &path,
+            replace_archive_document(&bytes, &serde_json::to_vec(&wire).unwrap()),
+        )
+        .unwrap();
+        let mut store = ProjectArchiveStore::new(root.path());
+        let budget = crate::ImageMemoryBudget::default();
+        let memory = Arc::new(budget.reserve_transfer(0).unwrap());
+        store.set_open_memory(Some(memory));
+        let opened = store.open(&path, || true).unwrap();
+        assert_eq!(opened.unique_assets, 1);
+        assert_eq!(opened.diagnostics.len(), 2); // Also the missing-content asset.
+        assert!(opened
+            .diagnostics
+            .iter()
+            .any(|d| d.asset_id == bad_id && d.code == code));
+        assert!(!opened
+            .diagnostics
+            .iter()
+            .any(|d| d.asset_id == uuid::Uuid::from_u128(5).to_string()));
+        let good = opened
+            .document
+            .get_asset(&uuid::Uuid::from_u128(5).to_string())
+            .unwrap();
+        let texture =
+            read_project_texture_bounded(opened.asset_root(), good, Default::default(), || true)
+                .unwrap();
+        assert_eq!((texture.texture.width, texture.texture.height), (8, 8));
+    }
+}
+
 #[test]
 fn expanded_json_is_admitted_before_decoding_and_failed_candidates_are_reclaimed() {
     let root = tempfile::tempdir().unwrap();

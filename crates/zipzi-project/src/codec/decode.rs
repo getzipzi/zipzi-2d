@@ -105,6 +105,23 @@ fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh, Status> {
 }
 
 pub fn decode_project(text: &str) -> Result<Document, Status> {
+    decode_project_with_format(text, None)
+}
+
+/// Archive admission shares the codec's syntax/header pass while requiring its
+/// exact document format before allocating the full wire representation.
+pub(crate) fn decode_archive_project(
+    text: &str,
+    identifier: &str,
+    version: u64,
+) -> Result<Document, Status> {
+    decode_project_with_format(text, Some((identifier, version)))
+}
+
+fn decode_project_with_format(
+    text: &str,
+    expected: Option<(&str, u64)>,
+) -> Result<Document, Status> {
     validate_json_syntax(text)?;
 
     #[derive(serde::Deserialize)]
@@ -116,6 +133,20 @@ pub fn decode_project(text: &str) -> Result<Document, Status> {
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     let format = header.format.as_deref();
     let version = header.format_version;
+    if let Some((identifier, expected_version)) = expected {
+        if format != Some(identifier) {
+            return Err(Status::error(
+                "INVALID_PROJECT",
+                "Unknown project document identifier",
+            ));
+        }
+        if version != Some(expected_version) {
+            return Err(Status::error(
+                "UNSUPPORTED_VERSION",
+                "Unsupported project document version",
+            ));
+        }
+    }
     if format == Some("zipzi-project") && version.is_some_and(|v| v < 21) {
         return Err(Status::error(
             "LEGACY_PROJECT",

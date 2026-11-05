@@ -19,6 +19,27 @@ render planning belongs in `zipzi-render`; reusable Metal rendering belongs in
 `zipzi-render-metal`. This crate adapts those facilities to Editor scene and
 interaction data.
 
+Cold Metal texture misses are deduplicated by content and prepared with at most
+four CPU workers. Batches bound the estimated temporary base/mipmap/footprint
+workspace to 64 MiB; a single image exceeding that bound is processed alone.
+Workers generate straight mipmaps before premultiplying owned upload buffers.
+Metal allocation/upload stays on the rendering thread in source order. Cached
+frames create no preparation threads. Authored image bytes remain unchanged.
+
+The fixed-scene first-frame probe excludes project loading and renderer creation
+from its timers, checks real artwork mipmaps against the general area filter,
+and reads GPU output back after timing. Each cold sample uses a fresh renderer:
+
+```sh
+cargo run --locked --release -p zipzi-editor-render --example first_frame_benchmark -- \
+  /absolute/path/to/model.zipzi 3 target/first-frame.rgba
+```
+
+It reports CPU texture preparation/upload calls, submission, and GPU completion.
+The optional raw RGBA output permits byte comparison across builds. This offscreen
+probe does not measure GPUI/window presentation; see the native
+[first-frame guide](../../tools/benchmarks/README.md#viewport-first-frame).
+
 ## Build and test
 
 For native Metal, run on macOS from the repository root:

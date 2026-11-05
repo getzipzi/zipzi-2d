@@ -58,6 +58,31 @@ impl MetalContext {
         rgba: &[u8],
         mipmaps: &[(u32, u32, Vec<u8>)],
     ) -> Result<Texture, Status> {
+        self.upload_pixels(width, height, rgba, mipmaps, false)
+    }
+
+    /// Upload RGBA8 pixels and mip levels already premultiplied on the CPU.
+    /// Every level must use `(channel * alpha + 127) / 255`, as produced by
+    /// `zipzi_render::texture::premultiply_rgba8`. No conversion or copy is made
+    /// before Metal copies these buffers into the texture.
+    pub fn upload_premultiplied_rgba8(
+        &self,
+        width: u32,
+        height: u32,
+        rgba: &[u8],
+        mipmaps: &[(u32, u32, Vec<u8>)],
+    ) -> Result<Texture, Status> {
+        self.upload_pixels(width, height, rgba, mipmaps, true)
+    }
+
+    fn upload_pixels(
+        &self,
+        width: u32,
+        height: u32,
+        rgba: &[u8],
+        mipmaps: &[(u32, u32, Vec<u8>)],
+        premultiplied: bool,
+    ) -> Result<Texture, Status> {
         if width == 0
             || height == 0
             || width > MAX_TEXTURE_DIMENSION
@@ -94,21 +119,20 @@ impl MetalContext {
         );
         descriptor.set_mipmap_level_count(1 + mipmaps.len() as u64);
         let texture = self.device.new_texture(&descriptor);
-        let premultiplied = zipzi_render::texture::premultiply_rgba8(rgba);
-        texture.replace_region(
-            MTLRegion::new_2d(0, 0, width as u64, height as u64),
-            0,
-            premultiplied.as_ptr().cast(),
-            (width * 4) as u64,
-        );
-        for (index, (w, h, bytes)) in mipmaps.iter().enumerate() {
-            let premultiplied = zipzi_render::texture::premultiply_rgba8(bytes);
+        let upload = |w: u32, h: u32, level: u64, bytes: &[u8]| {
+            let converted =
+                (!premultiplied).then(|| zipzi_render::texture::premultiply_rgba8(bytes));
+            let pixels = converted.as_deref().unwrap_or(bytes);
             texture.replace_region(
-                MTLRegion::new_2d(0, 0, *w as u64, *h as u64),
-                (index + 1) as u64,
-                premultiplied.as_ptr().cast(),
-                (*w * 4) as u64,
+                MTLRegion::new_2d(0, 0, w as u64, h as u64),
+                level,
+                pixels.as_ptr().cast(),
+                (w * 4) as u64,
             );
+        };
+        upload(width, height, 0, rgba);
+        for (index, (w, h, bytes)) in mipmaps.iter().enumerate() {
+            upload(*w, *h, (index + 1) as u64, bytes);
         }
         Ok(texture)
     }
