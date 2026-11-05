@@ -126,7 +126,8 @@ jobs:
           shared-key: alpha-app-${{ matrix.platform }}
           workspaces: . -> target/alpha-app-cargo
           cache-bin: false
-          save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          cache-on-failure: true
+          save-if: ${{ github.event_name == 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
       - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
@@ -224,11 +225,13 @@ jobs:
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: python tools/packaging/package_windows.py --binary "${env:CARGO_TARGET_DIR}/release/zipzi-editor.exe" --preview-dll "${env:CARGO_TARGET_DIR}/release/ZipziProjectPreview.dll" --output "target/releases/Zipzi-Editor-${env:RELEASE_TAG}-windows-x86_64.zip" --revision "${env:GITHUB_SHA}"
       - name: Test desktop update behavior
+        env:
+          RUST_BACKTRACE: '1'
         if: env.DESKTOP_UPDATES == 'true'
         shell: bash
         run: |
           unset ZIPZI_DEV_SESSION_DIR
-          cargo test --locked --release -p zipzi-editor --lib updates::
+          cargo test --locked --release -p zipzi-editor --lib updates:: -- --nocapture --test-threads=1
       - name: Package authenticated desktop updates
         if: env.DESKTOP_UPDATES == 'true'
         shell: bash
@@ -298,7 +301,8 @@ jobs:
           shared-key: alpha-python-${{ matrix.platform }}
           workspaces: . -> target/alpha-python-cargo
           cache-bin: false
-          save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          cache-on-failure: true
+          save-if: ${{ github.event_name == 'workflow_dispatch' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           prune-cache: true
