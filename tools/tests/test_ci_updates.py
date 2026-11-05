@@ -52,6 +52,17 @@ class AlphaConfiguration(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 updates.configure({'ZIPZI_DESKTOP_UPDATES': value})
 
+    def test_alpha_needs_only_feed_keys_when_neither_os_has_signing_credentials(self):
+        env = self.enabled()
+        for name in updates.SIGNING_INPUTS:
+            del env[name]
+        result = updates.configure(env)
+        self.assertEqual(result['updates_enabled'], 'true')
+        self.assertEqual(result['macos_signing'], 'false')
+        self.assertEqual(result['windows_signing'], 'false')
+        self.assertNotEqual(result['build_configuration'],
+                            updates.configure(self.enabled())['build_configuration'])
+
     def test_developer_id_previews_keep_sandbox_entitlements_and_hardened_runtime(self):
         import build_project_preview
 

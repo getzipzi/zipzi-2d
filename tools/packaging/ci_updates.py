@@ -33,12 +33,19 @@ def configure(env):
         key = private_key(env.get('ZIPZI_UPDATE_SIGNING_KEY', ''))
         if key.public_key().public_bytes_raw().hex() != public_key:
             raise ValueError('ZIPZI_UPDATE_SIGNING_KEY does not match ZIPZI_UPDATE_PUBLIC_KEY')
-        missing = [name for name in SIGNING_INPUTS if not env.get(name)]
-        if missing:
-            raise ValueError('Desktop updates require: ' + ', '.join(missing))
+        macos = SIGNING_INPUTS[:6]
+        windows = SIGNING_INPUTS[6:]
+        signing = {}
+        for platform, inputs in (('macos', macos), ('windows', windows)):
+            present = [name for name in inputs if env.get(name)]
+            if present and len(present) != len(inputs):
+                raise ValueError(f'Incomplete {platform} signing configuration; missing: '
+                                 + ', '.join(name for name in inputs if not env.get(name)))
+            signing[platform] = bool(present)
         configuration.update(
             url=f'https://github.com/{repository}/releases/download/{CHANNEL_TAG}',
             public_key=public_key,
+            signing=signing,
         )
     # Reuse requires the same public trust settings and enabled/disabled mode.
     identity = hashlib.sha256(json.dumps(configuration, sort_keys=True).encode()).hexdigest()
@@ -48,6 +55,8 @@ def configure(env):
         'update_public_key': configuration.get('public_key', ''),
         'build_configuration': identity,
         'manifest_artifact': f'alpha-release-manifest-{identity}',
+        'macos_signing': str(configuration.get('signing', {}).get('macos', False)).lower(),
+        'windows_signing': str(configuration.get('signing', {}).get('windows', False)).lower(),
     }
 
 

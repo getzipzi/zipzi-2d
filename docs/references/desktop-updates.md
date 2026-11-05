@@ -56,8 +56,10 @@ uv run --locked python tools/packaging/package_updates.py \
 
 Windows signing uses Velopack's `VPK_SIGN_PARAMS` or `VPK_SIGN_TEMPLATE`
 configuration. Sign the installer, launcher, updater, EXE and DLL.
-Unsigned Windows packages require an explicit `--allow-unsigned` flag and are
-only for local validation with a disposable signing seed, never distribution.
+Alpha packages without OS developer certificates use `--allow-unsigned` on
+both platforms. Windows produces an unsigned installer; Velopack ad hoc signs
+the macOS updater and final app. Feed signing remains mandatory in both cases.
+This flag is rejected for beta, rc and stable releases.
 For macOS, configure `ZIPZI_CODESIGN_IDENTITY` when building the sandboxed Quick Look
 extensions, and `VPK_SIGN_APP_IDENTITY` plus `VPK_NOTARY_PROFILE` when packaging.
 Import the matching certificates and notarization credentials on the build
@@ -75,64 +77,54 @@ separate channels and never switch implicitly.
 `release_downloads.py` accepts the Windows EXE when present and includes signed
 update assets in the release's checksums. Existing ZIP releases remain readable
 while the production update source and signing credentials are being configured.
-The Alpha workflow supports these packages behind the repository variable
-`ZIPZI_DESKTOP_UPDATES=true`. Unset or `false` preserves the existing ad hoc Mac
-DMG and unsigned Windows ZIP. Enabling updates requires both platforms' signing
-inputs and a matching feed key; `prepare` fails before native builds if they are
-missing. It never falls back to unsigned updater packages.
+The Alpha workflow supports authenticated updates behind the repository variable
+`ZIPZI_DESKTOP_UPDATES=true`. Unset or `false` preserves the previous portable
+releases. Feed authentication is required; OS developer certificates are optional.
 
 ### GitHub Alpha CI configuration
 
-Configure these repository **variables**, then use a manual prebuild for the
-installed upgrade gate before pushing a release tag:
+The required repository configuration is:
 
-| Variable | Value |
-| --- | --- |
-| `ZIPZI_DESKTOP_UPDATES` | `true` to enable signed packages and feed publication; default `false` |
-| `ZIPZI_UPDATE_PUBLIC_KEY` | Lowercase 64-character hex Ed25519 public key |
-| `ZIPZI_MACOS_CODESIGN_IDENTITY` | Full Developer ID Application certificate identity |
-| `ZIPZI_APPLE_TEAM_ID` | Apple Developer team ID |
+| Setting | Kind | Value |
+| --- | --- | --- |
+| `ZIPZI_DESKTOP_UPDATES` | Variable | `true` |
+| `ZIPZI_UPDATE_PUBLIC_KEY` | Variable | Lowercase 64-character hex Ed25519 public key |
+| `ZIPZI_UPDATE_SIGNING_KEY` | Secret | Matching 64-character hex private seed |
 
-Configure these repository **secrets**:
+Without OS credentials, the app jobs produce an ad hoc signed macOS app/DMG and
+an unsigned Windows installer, with authenticated feeds and packages. macOS
+installation instructions retain the existing unnotarized Alpha notice.
+The feed seed is available only to configuration validation and packaging,
+never Cargo or shipped artifacts. The pinned packager uses .NET 8 and Velopack
+1.2.161, with noninteractive operation and self-update checks disabled.
 
-| Secret | Value |
-| --- | --- |
-| `ZIPZI_UPDATE_SIGNING_KEY` | 64-character hex Ed25519 private seed matching the public key |
-| `ZIPZI_MACOS_CERTIFICATE_P12` | Base64-encoded Developer ID Application PKCS#12 with private key |
-| `ZIPZI_MACOS_CERTIFICATE_PASSWORD` | Password for that PKCS#12 |
-| `ZIPZI_APPLE_ID` | Apple ID used for notarization |
-| `ZIPZI_APPLE_APP_PASSWORD` | App-specific password for notarization |
-| `ZIPZI_WINDOWS_CERTIFICATE_PFX` | Base64-encoded Authenticode PKCS#12 with private key |
-| `ZIPZI_WINDOWS_CERTIFICATE_PASSWORD` | Password for that PKCS#12 |
+Optional developer signing can be enabled independently for each OS by providing
+that platform's complete set of inputs. A partial set fails preflight:
 
-The app jobs install .NET 8 and pinned Velopack 1.2.161. macOS imports its
-certificate and notarization profile into a temporary keychain, signs the sandboxed
-Quick Look extensions with hardened runtime and timestamps, and notarizes the
-packaged app. Windows imports its certificate into the runner's current-user store
-and uses timestamped SHA-256 Authenticode signing. Cleanup removes the temporary
-keychain or imported Windows private key even after failure. The feed seed is
-available only to configuration validation and the packaging step, never Cargo.
+| Platform | Repository variables | Repository secrets |
+| --- | --- | --- |
+| macOS | `ZIPZI_MACOS_CODESIGN_IDENTITY`, `ZIPZI_APPLE_TEAM_ID` | `ZIPZI_MACOS_CERTIFICATE_P12` (base64), `ZIPZI_MACOS_CERTIFICATE_PASSWORD`, `ZIPZI_APPLE_ID`, `ZIPZI_APPLE_APP_PASSWORD` |
+| Windows | None | `ZIPZI_WINDOWS_CERTIFICATE_PFX` (base64), `ZIPZI_WINDOWS_CERTIFICATE_PASSWORD` |
 
-Enabled builds embed the fixed source
+Configured macOS credentials are imported into a temporary keychain and used for
+Developer ID signing and notarization. Windows credentials are imported into
+the runner's current-user certificate store for timestamped Authenticode signing.
+Cleanup removes imported private keys after the app job.
+
+Enabled builds embed
 `https://github.com/<owner>/<repo>/releases/download/desktop-alpha-updates`.
-`main` pushes and manual runs only build and validate artifacts. After an Alpha
-tag's versioned GitHub release succeeds, `desktop-update-feed` creates or advances
-the `desktop-alpha-updates` prerelease. This channel release must remain mutable;
-versioned release assets retain their existing no-overwrite policy. All local
-feeds, signatures and package hashes are checked before any channel writes.
-Packages are uploaded without replacement before the exact feed/signature bytes
-are replaced. Existing packages must have matching hashes, so a partial upload can
-be retried. The jobs serialize channel publication and compare numeric Alpha
-versions, including already-uploaded packages, so older tags cannot roll it back.
-An interrupted feed/signature replacement can be repaired by rerunning the same
-authenticated build. Do not delete older channel packages that installed clients
-may still be downloading.
+Main pushes and manual runs build and validate artifacts. After a versioned Alpha
+release succeeds, a separate job advances the fixed mutable
+`desktop-alpha-updates` prerelease. It verifies signatures and local package hashes,
+uploads immutable packages first, and then replaces the exact feed/signature bytes.
+Numeric version checks prevent older tags from rolling the channel back.
+Matching package hashes permit retries after interruption; do not remove packages
+that installed clients may still be downloading.
 
-Build reuse binds the enabled flag, source URL and public key into its manifest
-identity. A configuration change forces a new build even for the same source
-commit; the downloaded manifest checks that identity again before publication.
-Feed publication failure does not rewrite the versioned release or block the
-independent PyPI jobs. Rerun only the failed channel job once the cause is fixed.
+Build reuse binds update enablement, URL, public key and each platform's signing
+mode into its manifest identity. Changed configuration forces a rebuild for the
+same commit. The downloaded manifest verifies that identity before publication.
+Feed publication can be retried independently of the versioned release and PyPI.
 
 ## Publishing and trust
 
@@ -160,8 +152,9 @@ previous handler first. Uninstall removes registration only when it still owns
 the recorded paths. Registration never writes the user's default-app choice.
 
 macOS retains `dev.zipzi.editor` and both embedded Quick Look extensions.
-Developer ID signing, notarization and a writable installation location are
-required for the intended distribution experience. This integration does not
+Alpha builds use ad hoc signing when no developer certificate is configured.
+Developer ID signing and notarization remain available for formal distribution.
+A writable installation location is needed for replacement. This integration does not
 promise that an OS authorization can never recur, or implement automatic
 rollback after an otherwise successful update that later crashes.
 

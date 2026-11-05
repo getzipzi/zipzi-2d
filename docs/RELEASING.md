@@ -102,7 +102,7 @@ For each release:
 4. Follow **Actions → Alpha release**. The tag reuses a successful build of the
    exact same commit when its artifacts are still available; otherwise it builds
    normally. Once verification passes, the workflow creates
-   a GitHub prerelease with the Mac DMG, Windows portable ZIP (or signed installer
+   a GitHub prerelease with the Mac DMG, Windows portable ZIP (or installer
    when desktop updates are enabled), complete workspace source (including
    submodules), and `SHA256SUMS`. Enabled updates also include authenticated feeds,
    signatures and packages. Python wheels and sdists go to PyPI and remain in internal
@@ -115,10 +115,11 @@ For each release:
    configured API token.
 
 Desktop updates are opt-in through `ZIPZI_DESKTOP_UPDATES=true`. Configure the
-repository variables, Ed25519 seed, Windows certificate and Apple signing/notary
-credentials described in the [desktop update reference](references/desktop-updates.md#github-alpha-ci-configuration).
+repository variables and Ed25519 seed described in the [desktop update reference](references/desktop-updates.md#github-alpha-ci-configuration).
 Configuration is validated before any native jobs. Enabled app jobs embed the
-fixed GitHub Alpha source, sign/package both platforms and verify update behavior.
+fixed GitHub Alpha source, authenticate update packages and verify update behavior.
+Without optional OS credentials, macOS uses ad hoc signing and Windows produces
+an unsigned installer. Complete developer signing inputs can be added per OS.
 After a versioned release succeeds, a separate serialized job uploads immutable
 packages and then advances the signed feeds in `desktop-alpha-updates`. Numeric
 version checks prevent older tags from replacing newer feeds. Main/manual builds

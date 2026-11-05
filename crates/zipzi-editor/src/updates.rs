@@ -12,6 +12,7 @@ use std::time::Duration;
 use velopack::{UpdateCheck, UpdateInfo, UpdateManager};
 use zipzi_editor_core::ConfigStore;
 
+/// Download-page fallback when this build cannot perform an installed update.
 pub(crate) const DOWNLOADS: &str = "https://github.com/getzipzi/zipzi-2d/releases";
 
 #[derive(Clone, Debug, PartialEq, Eq)]

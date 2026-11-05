@@ -59,6 +59,8 @@ def sign_feed(feed, key):
 
 def package(args):
     info = metadata()
+    if args.allow_unsigned and '-alpha.' not in info['version']:
+        raise ValueError('--allow-unsigned is restricted to Alpha releases')
     key = private_key(os.environ.get('ZIPZI_UPDATE_SIGNING_KEY', ''))
     expected_key = os.environ.get('ZIPZI_UPDATE_PUBLIC_KEY', '')
     if key.public_key().public_bytes_raw().hex() != expected_key:
@@ -88,7 +90,7 @@ def package(args):
         if args.binary:
             if not args.allow_unsigned and not any(os.environ.get(name) for name in
                     ('VPK_SIGN_PARAMS', 'VPK_SIGN_TEMPLATE', 'VPK_AZURE_TRUSTED_SIGN_FILE')):
-                raise ValueError('Configure Windows code signing, or use --allow-unsigned for local tests only')
+                raise ValueError('Configure Windows code signing, or use --allow-unsigned for Alpha')
             from package_windows import payload
             content = temporary / 'content'
             content.mkdir()
@@ -101,12 +103,16 @@ def package(args):
         else:
             if sys.platform != 'darwin':
                 raise ValueError('Build macOS update packages on macOS')
-            if not os.environ.get('VPK_SIGN_APP_IDENTITY') or not os.environ.get('VPK_NOTARY_PROFILE'):
-                raise ValueError('macOS updates require VPK_SIGN_APP_IDENTITY and VPK_NOTARY_PROFILE')
+            trusted = bool(os.environ.get('VPK_SIGN_APP_IDENTITY')
+                           and os.environ.get('VPK_NOTARY_PROFILE'))
+            if not trusted and not args.allow_unsigned:
+                raise ValueError('Configure macOS signing/notarization, or use --allow-unsigned for Alpha')
             content = args.app.resolve()
             # Quick Look extensions were signed first with their sandbox entitlements.
             extra = ['--runtime', 'osx-arm64', '--mainExe', 'zipzi-editor',
                      '--noInst', '--signDisableDeep']
+            if not trusted:
+                extra += ['--signAppIdentity', '-']
         command = [*vpk, 'pack', '--packId', PACKAGE_ID,
                    '--packVersion', info['version'], '--packTitle', 'Zipzi Editor',
                    '--packDir', str(content), '--outputDir', str(output),
@@ -132,7 +138,7 @@ def package(args):
             if len(apps) != 1:
                 raise ValueError('Expected one packaged app')
             from package_macos import package as dmg
-            dmg(apps[0], args.output / f'Zipzi-Editor-{info["tag"]}-macos-arm64.dmg', trusted=True)
+            dmg(apps[0], args.output / f'Zipzi-Editor-{info["tag"]}-macos-arm64.dmg', trusted=trusted)
         for name in names:
             shutil.copy2(output / name, args.output / name)
     print(f'PASS {platform}: installer and signed {channel} update feed')
@@ -147,7 +153,7 @@ def main():
     parser.add_argument('--revision', required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--vpk', default='vpk')
-    parser.add_argument('--allow-unsigned', action='store_true', help='Windows local packaging checks only; never for distribution')
+    parser.add_argument('--allow-unsigned', action='store_true', help='Allow Alpha packages without OS developer signing; feed signing is still required')
     args = parser.parse_args()
     package(args)
 

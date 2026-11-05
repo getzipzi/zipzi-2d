@@ -31,6 +31,8 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       reuse-run-id: ${{ steps.reuse.outputs.run_id }}
       updates-enabled: ${{ steps.updates.outputs.updates_enabled }}
+      macos-signing: ${{ steps.updates.outputs.macos_signing }}
+      windows-signing: ${{ steps.updates.outputs.windows_signing }}
       update-url: ${{ steps.updates.outputs.update_url }}
       update-public-key: ${{ steps.updates.outputs.update_public_key }}
       build-configuration: ${{ steps.updates.outputs.build_configuration }}
@@ -105,9 +107,11 @@ jobs:
       CARGO_INCREMENTAL: '0'
       CARGO_TARGET_DIR: ${{ github.workspace }}/target/alpha-app-cargo
       DESKTOP_UPDATES: ${{ needs.prepare.outputs.updates-enabled }}
+      MACOS_SIGNING: ${{ needs.prepare.outputs.macos-signing }}
+      WINDOWS_SIGNING: ${{ needs.prepare.outputs.windows-signing }}
       ZIPZI_UPDATE_URL: ${{ needs.prepare.outputs.update-url }}
       ZIPZI_UPDATE_PUBLIC_KEY: ${{ needs.prepare.outputs.update-public-key }}
-      ZIPZI_CODESIGN_IDENTITY: ${{ needs.prepare.outputs.updates-enabled == 'true' && vars.ZIPZI_MACOS_CODESIGN_IDENTITY || '-' }}
+      ZIPZI_CODESIGN_IDENTITY: ${{ needs.prepare.outputs.macos-signing == 'true' && vars.ZIPZI_MACOS_CODESIGN_IDENTITY || '-' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -140,7 +144,7 @@ jobs:
         if: env.DESKTOP_UPDATES == 'true'
         run: dotnet tool install vpk --version 1.2.161 --tool-path target/tools/vpk
       - name: Prepare macOS signing and notarization
-        if: matrix.platform == 'macos' && env.DESKTOP_UPDATES == 'true'
+        if: matrix.platform == 'macos' && env.MACOS_SIGNING == 'true'
         env:
           ZIPZI_MACOS_CERTIFICATE_P12: ${{ secrets.ZIPZI_MACOS_CERTIFICATE_P12 }}
           ZIPZI_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.ZIPZI_MACOS_CERTIFICATE_PASSWORD }}
@@ -165,7 +169,7 @@ jobs:
           echo "VPK_NOTARY_PROFILE=zipzi-alpha" >> "$GITHUB_ENV"
           echo "VPK_SIGN_APP_IDENTITY=$ZIPZI_CODESIGN_IDENTITY" >> "$GITHUB_ENV"
       - name: Prepare Windows signing
-        if: matrix.platform == 'windows' && env.DESKTOP_UPDATES == 'true'
+        if: matrix.platform == 'windows' && env.WINDOWS_SIGNING == 'true'
         env:
           ZIPZI_WINDOWS_CERTIFICATE_PFX: ${{ secrets.ZIPZI_WINDOWS_CERTIFICATE_PFX }}
           ZIPZI_WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.ZIPZI_WINDOWS_CERTIFICATE_PASSWORD }}
@@ -192,7 +196,7 @@ jobs:
           sh tools/build-editor-app.sh editor release
           python3 tools/packaging/build_project_preview.py --app 'target/Zipzi Editor.app' --test
           python3 tools/packaging/verify_artifacts.py --app 'target/Zipzi Editor.app'
-          if [[ "$DESKTOP_UPDATES" == 'true' ]]; then
+          if [[ "$MACOS_SIGNING" == 'true' ]]; then
             codesign --force --options runtime --timestamp --sign "$ZIPZI_CODESIGN_IDENTITY" 'target/Zipzi Editor.app'
           else
             codesign --force --sign - 'target/Zipzi Editor.app'
@@ -233,8 +237,10 @@ jobs:
         run: |
           if [[ "$RUNNER_OS" == 'macOS' ]]; then
             args=(--app 'target/Zipzi Editor.app' --vpk target/tools/vpk/vpk)
+            if [[ "$MACOS_SIGNING" != 'true' ]]; then args+=(--allow-unsigned); fi
           else
             args=(--binary "$CARGO_TARGET_DIR/release/zipzi-editor.exe" --preview-dll "$CARGO_TARGET_DIR/release/ZipziProjectPreview.dll" --vpk target/tools/vpk/vpk.exe)
+            if [[ "$WINDOWS_SIGNING" != 'true' ]]; then args+=(--allow-unsigned); fi
           fi
           uv run --locked python tools/packaging/package_updates.py "${args[@]}" --revision "$GITHUB_SHA" --output target/releases
       - uses: actions/upload-artifact@v7
@@ -245,13 +251,13 @@ jobs:
           retention-days: ${{ github.ref_type == 'tag' && 7 || 1 }}
           compression-level: 0
       - name: Remove macOS signing keychain
-        if: always() && matrix.platform == 'macos' && env.DESKTOP_UPDATES == 'true'
+        if: always() && matrix.platform == 'macos' && env.MACOS_SIGNING == 'true'
         run: |
           keychain="$RUNNER_TEMP/zipzi-signing.keychain-db"
           if [[ -f "$keychain" ]]; then security delete-keychain "$keychain"; fi
           rm -f "$RUNNER_TEMP/zipzi-signing.p12"
       - name: Remove Windows signing key
-        if: always() && matrix.platform == 'windows' && env.DESKTOP_UPDATES == 'true'
+        if: always() && matrix.platform == 'windows' && env.WINDOWS_SIGNING == 'true'
         run: |
           if ($env:ZIPZI_WINDOWS_CERTIFICATE_THUMBPRINTS) {
             foreach ($thumbprint in $env:ZIPZI_WINDOWS_CERTIFICATE_THUMBPRINTS.Split(',')) {

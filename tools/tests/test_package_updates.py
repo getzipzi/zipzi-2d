@@ -19,8 +19,15 @@ SPEC.loader.exec_module(updates)
 
 class UpdatePackages(unittest.TestCase):
     def test_macos_packaging_uses_editor_entrypoint_and_exports_signed_feed(self):
+        self.macos_package(trusted=True)
+
+    def test_alpha_macos_uses_adhoc_signing_without_disabling_feed_authentication(self):
+        self.macos_package(trusted=False)
+
+    def macos_package(self, trusted):
         import package_macos
 
+        expected_trust = trusted
         key = updates.private_key('07' * 32)
         public_key = key.public_key().public_bytes_raw().hex()
         update_url = 'https://example.com/updates'
@@ -33,7 +40,7 @@ class UpdatePackages(unittest.TestCase):
             binary.write_bytes((public_key + update_url).encode())
             output = root / 'release'
             args = SimpleNamespace(app=app, binary=None, output=output, vpk='vpk',
-                                   revision='a' * 40, allow_unsigned=False)
+                                   revision='a' * 40, allow_unsigned=not trusted)
 
             def run(command, **kwargs):
                 if command[:2] == ['vpk', 'pack']:
@@ -48,6 +55,8 @@ class UpdatePackages(unittest.TestCase):
                     self.assertIn('--signDisableDeep', command)
                     self.assertIn('--yes', command)
                     self.assertIn('--skip-updates', command)
+                    if not expected_trust:
+                        self.assertEqual(command[command.index('--signAppIdentity') + 1], '-')
                     target = Path(command[command.index('--outputDir') + 1])
                     channel = command[command.index('--channel') + 1]
                     target.mkdir()
@@ -66,15 +75,16 @@ class UpdatePackages(unittest.TestCase):
                     self.fail(f'Unexpected command: {command}')
 
             def dmg(packaged_app, destination, trusted):
-                self.assertTrue(trusted)
+                self.assertEqual(trusted, expected_trust)
                 self.assertEqual((packaged_app / 'Contents/MacOS/zipzi-editor').read_bytes(),
                                  binary.read_bytes())
                 destination.write_bytes(b'disk image')
 
             env = dict(ZIPZI_UPDATE_SIGNING_KEY='07' * 32, ZIPZI_UPDATE_PUBLIC_KEY=public_key,
-                       ZIPZI_UPDATE_URL=update_url, VPK_SIGN_APP_IDENTITY='test identity',
-                       VPK_NOTARY_PROFILE='test profile')
-            with (patch.dict(updates.os.environ, env), patch.object(updates.sys, 'platform', 'darwin'),
+                       ZIPZI_UPDATE_URL=update_url)
+            if trusted:
+                env.update(VPK_SIGN_APP_IDENTITY='test identity', VPK_NOTARY_PROFILE='test profile')
+            with (patch.dict(updates.os.environ, env, clear=True), patch.object(updates.sys, 'platform', 'darwin'),
                   patch.object(updates.subprocess, 'check_output', return_value=f'Velopack CLI {updates.VELOPACK_VERSION},'),
                   patch.object(updates.subprocess, 'run', side_effect=run),
                   patch.object(package_macos, 'package', side_effect=dmg)):
