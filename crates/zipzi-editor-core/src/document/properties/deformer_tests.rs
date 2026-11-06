@@ -533,7 +533,7 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
     let (mut doc, object, _) = fixture(false, true)?;
     let blend = uuid::Uuid::new_v4().to_string();
     doc.session.edit("Curved Warp fixture", None, |edit| {
-        edit.edit_scene_content(zipzi_sdk::SceneContentEdit::ResizeWarp {
+        edit.edit_scene_content(zipzi_contract::document::SceneContentEdit::ResizeWarp {
             transform_id: object.id.clone(),
             rows: 2,
             columns: 2,

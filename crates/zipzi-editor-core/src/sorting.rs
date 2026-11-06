@@ -1,7 +1,8 @@
 //! Persistent palette moves, validated against the complete document projection.
 use crate::{Document, ObjectRef};
 use anyhow::{Result, anyhow, ensure};
-use zipzi_sdk::{OrganizationCollection as C, OrganizationEdit as E};
+use zipzi_contract::document::OrganizationCollection as C;
+use zipzi_contract::document::OrganizationEdit as E;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ReorderPosition {
@@ -104,7 +105,7 @@ impl Document {
         let parent = model_read_guard_37
             .scene_deformer_parent(&target.id)
             .ok_or_else(|| anyhow!("Target has no deformation collection"))?;
-        let collection = zipzi_sdk::SceneCollection::Deformation {
+        let collection = zipzi_contract::document::SceneCollection::Deformation {
             parent_id: (!parent.is_empty()).then(|| parent.to_owned()),
         };
         let mut members = self
@@ -129,11 +130,13 @@ impl Document {
         };
         drop(model_read_guard_37);
         self.finish_edit()?;
-        let plan = self.session.plan_scene_edit(zipzi_sdk::SceneEdit::Move {
-            ids: vec![source.id.clone()],
-            destination: collection,
-            before,
-        })?;
+        let plan = self
+            .session
+            .plan_scene_edit(zipzi_contract::document::SceneEdit::Move {
+                ids: vec![source.id.clone()],
+                destination: collection,
+                before,
+            })?;
         self.execute_scene_authoring(&plan)?;
         Ok(())
     }
@@ -198,7 +201,7 @@ impl Document {
     }
 }
 fn placement_after(
-    d: &zipzi_core::Document,
+    d: &zipzi_core::state::DocumentState,
     c: &C,
     source: &str,
     target: &str,
@@ -224,7 +227,7 @@ fn placement_after(
         .ok_or_else(|| anyhow!("Target no longer exists"))?;
     Ok(members.get(index + 1).cloned())
 }
-pub(crate) fn ordered_parameter_ids(model: &zipzi_core::Document) -> Vec<String> {
+pub(crate) fn ordered_parameter_ids(model: &zipzi_core::state::DocumentState) -> Vec<String> {
     model.ordered_parameter_ids()
 }
 pub(crate) struct OrganizationMove {
@@ -235,7 +238,7 @@ impl OrganizationMove {
         self,
         edit: &mut zipzi_sdk::EditSession<'_>,
         _source: &ObjectRef,
-    ) -> std::result::Result<(), zipzi_sdk::SdkError> {
+    ) -> std::result::Result<(), zipzi_core::Status> {
         edit.edit_organization(self.intent)
     }
 }

@@ -5,9 +5,10 @@ use super::moving::{MovePlan, PaletteMovePlan, PaletteProjection};
 use super::*;
 use anyhow::{Result, anyhow};
 use std::collections::{HashMap, HashSet};
-use zipzi_sdk::{
-    OrganizationCollection as Collection, OrganizationEdit, SceneCollection, SceneEdit,
-};
+use zipzi_contract::document::OrganizationCollection as Collection;
+use zipzi_contract::document::OrganizationEdit;
+use zipzi_contract::document::SceneCollection;
+use zipzi_contract::document::SceneEdit;
 
 #[derive(Debug)]
 pub struct PaletteMovePlanningError(pub(super) zipzi_core::Status);
@@ -62,7 +63,7 @@ impl StepCollection {
             _ => unreachable!(),
         }
     }
-    fn members(&self, model: &zipzi_core::Document) -> Result<Vec<String>> {
+    fn members(&self, model: &zipzi_core::state::DocumentState) -> Result<Vec<String>> {
         Ok(match self {
             Self::Deformation {
                 parent,
@@ -109,7 +110,7 @@ enum StepEdit {
     Scene(SceneEdit),
 }
 impl StepEdit {
-    fn preflight(&self, candidate: &mut zipzi_core::Document) -> Result<bool> {
+    fn preflight(&self, candidate: &mut zipzi_core::state::DocumentState) -> Result<bool> {
         let (noop, result) = match self {
             Self::Organization(intent) => {
                 let plan = candidate

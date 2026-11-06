@@ -16,13 +16,13 @@ pub struct AnimationEvaluator {
     identity: Option<AnimationIdentity>,
     motion: Option<MotionSelection>,
     source: Option<Arc<AnimationSource>>,
-    editing: Option<zipzi_sdk::MotionEditingPreview>,
+    editing: Option<zipzi_animation::MotionEditingPreview>,
     completed: Option<(AnimationRequest, AnimationEvaluated)>,
     physics: crate::PhysicsPreviewSettings,
 }
 impl AnimationEvaluator {
     /// Detached SDK cache accounting for profiling; preview state is unchanged.
-    pub fn seek_cache_stats(&self) -> Option<zipzi_sdk::SeekCacheStats> {
+    pub fn seek_cache_stats(&self) -> Option<zipzi_animation::SeekCacheStats> {
         self.preview.as_ref().map(MotionPreview::seek_cache_stats)
     }
     pub fn evaluate(
@@ -35,7 +35,7 @@ impl AnimationEvaluator {
         if let Some((previous, frame)) = &self.completed {
             if previous.same_pose(request) {
                 if !progress(0, 0) {
-                    anyhow::bail!(zipzi_sdk::AnimationError::SeekCancelled);
+                    anyhow::bail!(zipzi_animation::AnimationError::SeekCancelled);
                 }
                 let mut frame = frame.clone();
                 frame.identity.request = request.identity.request;
@@ -70,12 +70,12 @@ impl AnimationEvaluator {
                     #[cfg(feature = "bench-instrumentation")]
                     let _benchmark_preview =
                         zipzi_core::benchmark::span("editor.new_motion_editing_preview");
-                    zipzi_sdk::MotionEditingPreview::new(request.source.document())
+                    zipzi_animation::MotionEditingPreview::new(request.source.document())
                 });
             }
             let mut progress = progress;
             if !progress(0, 1) {
-                anyhow::bail!(zipzi_sdk::AnimationError::SeekCancelled);
+                anyhow::bail!(zipzi_animation::AnimationError::SeekCancelled);
             }
             let preview = self.editing.as_mut().unwrap();
             let clip = request
@@ -95,7 +95,7 @@ impl AnimationEvaluator {
             preview.sample_clip(clip, id.time)?;
             let frame = Arc::new(preview.evaluate_drawables()?);
             if !progress(1, 1) {
-                anyhow::bail!(zipzi_sdk::AnimationError::SeekCancelled);
+                anyhow::bail!(zipzi_animation::AnimationError::SeekCancelled);
             }
             let snapshot = Arc::new(preview.snapshot().clone());
             self.identity = Some(id);

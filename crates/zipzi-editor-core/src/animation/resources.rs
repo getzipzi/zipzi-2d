@@ -36,7 +36,7 @@ pub struct ExpressionResource {
     pub id: String,
     pub name: String,
     pub unresolved_targets: Vec<String>,
-    pub disabled_entries: Vec<zipzi_core::document::DisabledExpressionEntry>,
+    pub disabled_entries: Vec<zipzi_core::state::DisabledExpressionEntry>,
     pub fade_in: f32,
     pub fade_out: f32,
     pub parameters: usize,

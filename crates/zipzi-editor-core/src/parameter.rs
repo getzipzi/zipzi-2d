@@ -221,13 +221,13 @@ impl Document {
         self.validate_new_parameter(&draft)?;
         self.finish_edit()?;
         let id = uuid::Uuid::new_v4().to_string();
-        let plan =
-            self.session
-                .plan_organization_edit(zipzi_sdk::OrganizationEdit::CreateParameter {
-                    parameter: draft.parameter(&id),
-                    group_id: draft.group_id.clone(),
-                    before: None,
-                })?;
+        let plan = self.session.plan_organization_edit(
+            zipzi_contract::document::OrganizationEdit::CreateParameter {
+                parameter: draft.parameter(&id),
+                group_id: draft.group_id.clone(),
+                before: None,
+            },
+        )?;
         self.execute_organization_authoring(&plan)?;
         self.focus_parameter(&id)?;
         Ok(id)
@@ -324,9 +324,9 @@ impl Document {
             .into());
         }
         if old.group_id != draft.group_id {
-            edit.edit_organization(zipzi_sdk::OrganizationEdit::Move {
+            edit.edit_organization(zipzi_contract::document::OrganizationEdit::Move {
                 ids: vec![id.into()],
-                destination: zipzi_sdk::OrganizationCollection::Parameters {
+                destination: zipzi_contract::document::OrganizationCollection::Parameters {
                     group_id: draft.group_id.clone(),
                 },
                 before: None,
@@ -371,7 +371,10 @@ impl Document {
         self.parameter_draft(id)?;
         Ok(self
             .model()
-            .organization_delete_users(&[id.into()], zipzi_sdk::OrganizationDeletePolicy::Contents)
+            .organization_delete_users(
+                &[id.into()],
+                zipzi_contract::document::OrganizationDeletePolicy::Contents,
+            )
             .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?)
     }
 

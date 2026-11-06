@@ -369,9 +369,9 @@ impl DocumentSession {
                 self.document.apply_manual_mesh_once(
                     &target,
                     if constrained {
-                        zipzi_sdk::ManualMeshOperation::ConstrainEdge { a, b }
+                        zipzi_contract::authoring::ManualMeshOperation::ConstrainEdge { a, b }
                     } else {
-                        zipzi_sdk::ManualMeshOperation::ReleaseConstraint { a, b }
+                        zipzi_contract::authoring::ManualMeshOperation::ReleaseConstraint { a, b }
                     },
                 )?;
                 self.modeling.tools.refresh_manual_source(&self.document)

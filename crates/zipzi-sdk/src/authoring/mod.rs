@@ -5,10 +5,13 @@ mod history;
 mod project;
 mod session;
 mod snapshot;
-pub use project::{OpenReceipt, PreparedProject, ProjectContext, SaveReceipt, SavedMarker};
+pub use project::{
+    CompletedSave, OpenReceipt, PreparedProject, PreparedSave, ProjectContext, SaveReceipt,
+    SavedMarker,
+};
 
 pub use commands::{Commands, NameTarget};
-pub use draft::{Draft, PreparedChange};
+pub use draft::{Draft, PreparedChange, PreparedPreview};
 pub use history::{HistoryLimits, HistoryState};
 pub use session::{AuthoringSession, Publication, PublicationKind};
 pub use snapshot::{Snapshot, SourcedSnapshot};
@@ -68,3 +71,5 @@ pub use zipzi_contract::document::{
 pub use zipzi_core::state::ReferenceOutcome;
 
 pub use zipzi_contract::authoring::{GeometrySpace, MeshCreateSpec};
+
+pub use zipzi_contract::kernel_commands::{Command, CommandOutcome, ImageInput, ObjectAddress};

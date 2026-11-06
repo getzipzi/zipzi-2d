@@ -293,7 +293,7 @@ impl ReparentReview {
                 }
                 cx.notify();
             });
-            let defaults = zipzi_sdk::DeletionTolerance::default();
+            let defaults = zipzi_contract::document::DeletionTolerance::default();
             let tolerance = [defaults.absolute, defaults.relative].map(|value| {
                 cx.new(|cx| InputState::new(window, cx).default_value(value.to_string()))
             });

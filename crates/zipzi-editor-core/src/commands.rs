@@ -869,7 +869,7 @@ impl Editor {
     pub fn command_state(&self, command: Command) -> CommandState {
         self.command_state_with_availability(command, || {
             self.authoring_command_capability(command.id)
-                .is_ok_and(|state| state == zipzi_sdk::CapabilityState::Available)
+                .is_ok_and(|state| state == zipzi_contract::authoring::CapabilityState::Available)
         })
     }
     /// Reuse a capability queried during this UI refresh. Target and lifecycle
@@ -877,12 +877,12 @@ impl Editor {
     pub fn command_state_with_authoring_capability(
         &self,
         command: Command,
-        capability: &Result<zipzi_sdk::CapabilityState>,
+        capability: &Result<zipzi_contract::authoring::CapabilityState>,
     ) -> CommandState {
         self.command_state_with_availability(command, || {
             capability
                 .as_ref()
-                .is_ok_and(|state| *state == zipzi_sdk::CapabilityState::Available)
+                .is_ok_and(|state| *state == zipzi_contract::authoring::CapabilityState::Available)
         })
     }
     fn command_state_with_availability(
@@ -1263,9 +1263,10 @@ impl Editor {
             ManualReconnect => {
                 let session = self.active_session_mut().unwrap();
                 let target = session.modeling.tools.manual_target().unwrap().clone();
-                let changed = session
-                    .document
-                    .apply_manual_mesh_once(&target, zipzi_sdk::ManualMeshOperation::Reconnect)?;
+                let changed = session.document.apply_manual_mesh_once(
+                    &target,
+                    zipzi_contract::authoring::ManualMeshOperation::Reconnect,
+                )?;
                 session
                     .modeling
                     .tools

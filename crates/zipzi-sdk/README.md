@@ -56,13 +56,18 @@ metadata without rewriting content, resources or historical paths. `SavedMarker`
 contains only the saved ContentId. Undo to that node becomes clean; manually
 recreating identical values in a new node may remain dirty.
 
-Save holds an exclusive mutable Session borrow through capture, projection,
-atomic file publication and marker installation. Existing snapshot holders may
-continue reading. There is no concurrent edit/replacement/save through that borrow,
-and I/O does not take ownership of the Session. File publication failure preserves
-the old marker and destination. Cancellation after publication and directory-sync
-failure return a published receipt (with durability warnings) and install the marker.
-Asynchronous host project-task coordination belongs to the later host migration.
+Synchronous saves use the same split protocol as workers: `prepare_save` /
+`prepare_save_as` captures a Snapshot and an exclusive permit, `PreparedSave::write`
+performs value-only I/O, and `complete_save` installs the published metadata.
+Session remains readable while the permit blocks publication, replacement,
+Undo/Redo and other saves. Runtime also blocks Draft writes during project work.
+Failed, unentered or panicking work releases its permit. A successful file write
+must be completed even after cancellation or client disconnection; dropping that
+completion deliberately leaves publication blocked. Wrong-session completion is
+rejected without consuming the receipt. File publication failure preserves the
+old marker and destination; late cancellation and directory-sync warnings still
+install the actual published marker. No validation/history admission follows a
+matching save completion.
 
 `PreparedProject::load` is a value-only load result with its original Version;
 `publish_loaded` rejects stale results before replacing generation, history,
@@ -88,7 +93,7 @@ algorithms also have a standalone `cargo test --locked -p zipzi-sdk --test alpha
 gate. Remaining old integration targets and examples are migration inputs for
 host migration and final cleanup; these gates do not imply their full coverage.
 
-Observe, Runtime, Editor and the Python native adapter still consume removed APIs
-and do not yet compile against this intermediate SDK. They switch in stage four
-of the [architecture plan](../../docs/plans/authoring-architecture.md).
+Observe and the resident Runtime core now consume this API. Runtime domain/wire
+handlers, Editor and the Python native adapter still require stage-four migration
+in the [architecture plan](../../docs/plans/authoring-architecture.md).
 Whole-workspace, legacy regression/full and client gates are not claimed passing.

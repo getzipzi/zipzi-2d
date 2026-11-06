@@ -34,14 +34,14 @@ pub struct ExpressionEntryEditToken(Uuid);
 
 #[derive(Debug, Clone)]
 pub struct OperationResult {
-    pub receipt: zipzi_sdk::EditReceipt,
+    pub receipt: zipzi_sdk::Publication,
     pub suggested_selection: Vec<ObjectRef>,
     pub locations: Vec<ObjectRef>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ExpressionAuthoringCapabilities {
-    pub domain: zipzi_sdk::ExpressionCapabilities,
+    pub domain: zipzi_contract::authoring::ExpressionCapabilities,
     /// Editor-only conditions remain separate from SDK domain reasons.
     pub session_reason: Option<AuthoringSessionReason>,
 }
@@ -66,7 +66,7 @@ mod physics;
 pub use business::{BusinessAction, BusinessDestination, BusinessPlan};
 #[derive(Debug, Clone)]
 pub struct PhysicsAuthoringCapabilities {
-    pub domain: zipzi_sdk::PhysicsCapabilities,
+    pub domain: zipzi_contract::authoring::PhysicsCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
 

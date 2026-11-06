@@ -17,17 +17,17 @@ impl Document {
         let mut candidate = self.model().fork_candidate();
         let intent = match command {
             EditorCommand::CreateParameter(draft)
-            | EditorCommand::CreateParameterChecked { draft, .. } => {
-                Some(zipzi_sdk::OrganizationEdit::CreateParameter {
+            | EditorCommand::CreateParameterChecked { draft, .. } => Some(
+                zipzi_contract::document::OrganizationEdit::CreateParameter {
                     parameter: draft.parameter(&uuid::Uuid::new_v4().to_string()),
                     group_id: draft.group_id.clone(),
                     before: None,
-                })
-            }
+                },
+            ),
             EditorCommand::DeleteParameter { id, .. } => {
-                Some(zipzi_sdk::OrganizationEdit::Delete {
+                Some(zipzi_contract::document::OrganizationEdit::Delete {
                     ids: vec![id.clone()],
-                    policy: zipzi_sdk::OrganizationDeletePolicy::Contents,
+                    policy: zipzi_contract::document::OrganizationDeletePolicy::Contents,
                 })
             }
             EditorCommand::CreateParameterGroup { draft, .. } => {
@@ -37,9 +37,9 @@ impl Document {
                 self.group_intent(Some(id), draft).ok()
             }
             EditorCommand::DeleteParameterGroup { id, .. } => {
-                Some(zipzi_sdk::OrganizationEdit::Delete {
+                Some(zipzi_contract::document::OrganizationEdit::Delete {
                     ids: vec![id.clone()],
-                    policy: zipzi_sdk::OrganizationDeletePolicy::Dissolve,
+                    policy: zipzi_contract::document::OrganizationDeletePolicy::Dissolve,
                 })
             }
             EditorCommand::UpdateParameter { id, draft, .. } => {
@@ -51,9 +51,9 @@ impl Document {
                     return Vec::new();
                 }
                 (candidate.parameter_group_for(id) != draft.group_id.as_deref()).then(|| {
-                    zipzi_sdk::OrganizationEdit::Move {
+                    zipzi_contract::document::OrganizationEdit::Move {
                         ids: vec![id.clone()],
-                        destination: zipzi_sdk::OrganizationCollection::Parameters {
+                        destination: zipzi_contract::document::OrganizationCollection::Parameters {
                             group_id: draft.group_id.clone(),
                         },
                         before: None,
@@ -92,7 +92,7 @@ impl Document {
     }
 }
 
-fn export_diagnostics(doc: &zipzi_core::Document) -> Vec<(String, String, String)> {
+fn export_diagnostics(doc: &zipzi_core::state::DocumentState) -> Vec<(String, String, String)> {
     let mut result = Vec::new();
     macro_rules! inspect {
         ($resource:expr, $export:expr) => {

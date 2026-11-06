@@ -21,17 +21,10 @@ pub(crate) fn selection(
     };
     zipzi_sdk::resolve_mesh_ids(meshes, parts, targets)
         .map(|ids| Some(ids.into_iter().collect()))
-        .map_err(|e| {
-            let code = match &e {
-                zipzi_sdk::SpatialError::MissingMesh(_) => "MISSING_MESH",
-                zipzi_sdk::SpatialError::MissingPart(_) => "MISSING_PART",
-                _ => "INVALID_TOPOLOGY_OPTIONS",
-            };
-            ObservationError {
-                code: code.into(),
-                message: format!("Invalid topology target: {e:?}"),
-                asset_id: None,
-            }
+        .map_err(|e| ObservationError {
+            code: e.code,
+            message: e.message,
+            asset_id: None,
         })
 }
 

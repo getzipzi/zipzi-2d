@@ -48,7 +48,7 @@ impl ObjectStateIndex {
         self.states.contains_key(object)
     }
 
-    fn build(model: &zipzi_core::Document) -> Self {
+    fn build(model: &zipzi_core::state::DocumentState) -> Self {
         let mut organization = HashMap::new();
         let mut add = |kind, id: &str, part: &str| {
             let object = ObjectRef::new(kind, id);

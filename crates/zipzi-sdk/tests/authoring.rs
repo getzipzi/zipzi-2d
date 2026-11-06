@@ -423,3 +423,6 @@ mod expressions;
 
 #[path = "authoring/animation_domains.rs"]
 mod animation_domains;
+
+#[path = "authoring/save_worker.rs"]
+mod save_worker;

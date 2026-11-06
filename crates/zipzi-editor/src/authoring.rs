@@ -59,8 +59,8 @@ pub(crate) struct ActionAvailability {
     pub reason: Option<SharedString>,
 }
 impl ActionAvailability {
-    pub fn from_core(state: &zipzi_sdk::CapabilityState) -> Option<Self> {
-        use zipzi_sdk::CapabilityState;
+    pub fn from_core(state: &zipzi_contract::authoring::CapabilityState) -> Option<Self> {
+        use zipzi_contract::authoring::CapabilityState;
         match state {
             CapabilityState::Unsupported { .. } => None,
             CapabilityState::Available => Some(Self {

@@ -32,6 +32,14 @@ impl ImageResource {
     pub fn texture(&self) -> TextureData {
         self.0.image.texture()
     }
+    /// Read verified captured pixels without revisiting a source file or encoding PNG.
+    pub fn verified_texture_with_control(
+        &self,
+        keep_running: impl FnMut() -> bool,
+    ) -> Result<crate::VerifiedTexture, Status> {
+        self.0.image.verified_texture_with_control(keep_running)
+    }
+
     /// The existing budgeted encoder produces a save projection, not new model content.
     pub fn read_asset(&self) -> Result<crate::AssetData, Status> {
         self.0.image.read_asset()

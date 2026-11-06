@@ -30,7 +30,7 @@ impl Document {
         let receipt = self.session.execute_attachment_plan(plan)?;
         Ok(self.motion_operation_result(receipt))
     }
-    fn motion_operation_result(&mut self, receipt: zipzi_sdk::EditReceipt) -> OperationResult {
+    fn motion_operation_result(&mut self, receipt: zipzi_sdk::Publication) -> OperationResult {
         if receipt.changed {
             self.pristine_blank = None;
         }

@@ -109,7 +109,7 @@ pub(crate) fn is_offscreen(key: PropertyKey) -> bool {
 }
 
 fn slot(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<(usize, Option<usize>)> {
@@ -136,7 +136,7 @@ fn slot(
 }
 
 pub(crate) fn payload(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
@@ -173,7 +173,7 @@ pub(crate) fn payload(
 }
 
 pub(crate) fn values(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<PropertyValues> {
@@ -245,10 +245,10 @@ pub(crate) fn apply_offscreen(
         );
         if data["present"] == true {
             if original.is_none() {
-                edit.edit_scene(zipzi_sdk::SceneEdit::Create {
+                edit.edit_scene(zipzi_contract::document::SceneEdit::Create {
                     id: uuid::Uuid::new_v4().to_string(),
                     name: model.get_part(id).unwrap().name.clone(),
-                    object: zipzi_sdk::SceneCreate::Offscreen,
+                    object: zipzi_contract::document::SceneCreate::Offscreen,
                     part_id: Some(id.into()),
                     parent_id: None,
                     before: None,
@@ -256,9 +256,9 @@ pub(crate) fn apply_offscreen(
                 })?;
             }
         } else if let Some(os) = original {
-            edit.edit_scene(zipzi_sdk::SceneEdit::Delete {
+            edit.edit_scene(zipzi_contract::document::SceneEdit::Delete {
                 ids: vec![os.id.clone()],
-                scope: zipzi_sdk::SceneCopyScope::Selected,
+                scope: zipzi_contract::document::SceneCopyScope::Selected,
             })?;
         }
         return Ok(());

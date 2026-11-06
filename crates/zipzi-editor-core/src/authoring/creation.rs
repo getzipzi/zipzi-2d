@@ -1,7 +1,8 @@
 //! Editor creation defaults and stable insertion locations; domain validation
 //! remains in the organization planner.
 use super::*;
-use zipzi_sdk::{OrganizationCollection as Collection, OrganizationEdit as Edit};
+use zipzi_contract::document::OrganizationCollection as Collection;
+use zipzi_contract::document::OrganizationEdit as Edit;
 
 impl Document {
     /// Build a single creation transaction from a captured panel selection.
@@ -56,7 +57,7 @@ impl Document {
         &self,
         kind: ObjectKind,
         selection: &[ObjectRef],
-    ) -> anyhow::Result<zipzi_sdk::CapabilityState> {
+    ) -> anyhow::Result<zipzi_contract::authoring::CapabilityState> {
         anyhow::ensure!(
             matches!(kind, ObjectKind::Parameter | ObjectKind::ParameterGroup),
             "Expected a parameter or folder"
@@ -78,14 +79,16 @@ impl Document {
             let owner = match object.kind {
                 ObjectKind::Parameter => {
                     self.session
-                        .handle(zipzi_sdk::ObjectKind::Parameter, &object.id)?;
+                        .handle(zipzi_contract::authoring::ObjectKind::Parameter, &object.id)?;
                     self.model()
                         .parameter_group_for(&object.id)
                         .map(str::to_owned)
                 }
                 ObjectKind::ParameterGroup => {
-                    self.session
-                        .handle(zipzi_sdk::ObjectKind::CdiParameterGroup, &object.id)?;
+                    self.session.handle(
+                        zipzi_contract::authoring::ObjectKind::CdiParameterGroup,
+                        &object.id,
+                    )?;
                     let model = self.model();
                     let group = model.get_parameter_group(&object.id).unwrap();
                     if selection.len() == 1 {

@@ -130,7 +130,7 @@ impl Document {
         &self,
         source: &ObjectRef,
         kind: MotionCopyKind,
-    ) -> Result<zipzi_sdk::CapabilityState> {
+    ) -> Result<zipzi_contract::authoring::CapabilityState> {
         if !matches!(
             (kind, source.kind),
             (MotionCopyKind::Group, ObjectKind::MotionGroup)
@@ -139,7 +139,7 @@ impl Document {
                     ObjectKind::Motion | ObjectKind::MotionRegistration
                 )
         ) {
-            return Ok(zipzi_sdk::CapabilityState::Unsupported {
+            return Ok(zipzi_contract::authoring::CapabilityState::Unsupported {
                 code: "WRONG_OBJECT_KIND",
             });
         }
@@ -159,7 +159,7 @@ impl Document {
         let state = self
             .authoring_capabilities(&target)?
             .state(AuthoringAction::Duplicate);
-        if state != zipzi_sdk::CapabilityState::Available {
+        if state != zipzi_contract::authoring::CapabilityState::Available {
             return Ok(state);
         }
         self.animation_resource_creation_capability(

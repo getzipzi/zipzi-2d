@@ -1,7 +1,10 @@
 //! Thin Editor adapter; Pose ownership and execution rules stay in SDK/core.
 use super::*;
 use anyhow::Result;
-use zipzi_sdk::{PoseCapabilities, PoseEdit, PoseEditPlan, PoseFieldAddress, PoseFields};
+use zipzi_contract::authoring::PoseCapabilities;
+use zipzi_contract::document::PoseEdit;
+use zipzi_contract::document::PoseFields;
+use zipzi_sdk::{PoseEditPlan, PoseFieldAddress};
 #[derive(Debug, Clone)]
 pub struct PoseAuthoringCapabilities {
     pub domain: PoseCapabilities,
@@ -13,10 +16,10 @@ impl Document {
         object: &ObjectRef,
     ) -> Result<PoseAuthoringCapabilities> {
         let kind = match object.kind {
-            ObjectKind::Pose => zipzi_sdk::ObjectKind::Pose,
-            ObjectKind::PoseGroup => zipzi_sdk::ObjectKind::PoseGroup,
-            ObjectKind::PoseEntry => zipzi_sdk::ObjectKind::PoseEntry,
-            ObjectKind::PoseLink => zipzi_sdk::ObjectKind::PoseLink,
+            ObjectKind::Pose => zipzi_contract::authoring::ObjectKind::Pose,
+            ObjectKind::PoseGroup => zipzi_contract::authoring::ObjectKind::PoseGroup,
+            ObjectKind::PoseEntry => zipzi_contract::authoring::ObjectKind::PoseEntry,
+            ObjectKind::PoseLink => zipzi_contract::authoring::ObjectKind::PoseLink,
             _ => anyhow::bail!("Expected a Pose object"),
         };
         let handle = self.session.handle(kind, &object.id)?;

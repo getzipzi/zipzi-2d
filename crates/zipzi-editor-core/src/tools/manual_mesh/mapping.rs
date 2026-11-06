@@ -2,8 +2,10 @@
 use crate::{CanvasFrame, Document, ModelPoint, ModelVector, control_edit::ControlSpace};
 use anyhow::Result;
 use std::{collections::HashMap, sync::Arc};
+use zipzi_contract::authoring::ManualVertexTarget;
+use zipzi_contract::authoring::MeshGeometry;
 use zipzi_core::{Vec2, VertexId};
-use zipzi_sdk::{ManualMeshUvMap, ManualVertexTarget, MeshGeometry};
+use zipzi_sdk::ManualMeshUvMap;
 
 pub(super) struct PositionUvMap {
     mapping: ManualMeshUvMap,

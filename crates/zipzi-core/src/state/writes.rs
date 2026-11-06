@@ -1,5 +1,5 @@
 /// Persistent record collections; writes never use string field patches.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
 pub enum RecordDomain {
     Asset,
     Parameter,
@@ -17,14 +17,14 @@ pub enum RecordDomain {
     Motion,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
 pub enum RecordChange {
     Created,
     Replaced,
     Deleted,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct RecordWrite {
     pub domain: RecordDomain,
     pub id: String,
@@ -32,7 +32,7 @@ pub struct RecordWrite {
 }
 
 /// Net writes, derived solely from typed writes and their touched records.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct WriteSet {
     pub(super) orders: std::collections::BTreeSet<RecordDomain>,
     pub(super) roots: std::collections::BTreeSet<RootDomain>,
@@ -75,7 +75,7 @@ impl WriteSet {
 }
 
 /// Independently shared persistent singleton/metadata roots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
 pub enum RootDomain {
     DrawOrderGroups,
     DisplayInfo,

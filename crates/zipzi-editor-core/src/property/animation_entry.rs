@@ -64,7 +64,10 @@ pub const BLEND: PropertySpec = PropertySpec::new(
 pub const GROUP_FIELDS: &[PropertySpec] = &[GROUP_NAME];
 pub const REGISTRATION_FIELDS: &[PropertySpec] = &[REG_FADE_IN, REG_FADE_OUT, SOUND];
 pub const ENTRY_FIELDS: &[PropertySpec] = &[TARGET, VALUE, BLEND];
-pub(crate) fn payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
+pub(crate) fn payload(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<Value> {
     Ok(match object.kind {
         ObjectKind::MotionGroup => {
             serde_json::json!({"name": model.get_motion_group(&object.id).ok_or_else(|| anyhow::anyhow!("Missing motion group"))?.name})
@@ -96,7 +99,7 @@ pub(crate) fn payload(model: &zipzi_core::Document, object: &ObjectRef) -> Resul
     })
 }
 pub(crate) fn motion_patch(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
     payload: Value,
 ) -> Result<MotionEdit> {
@@ -131,7 +134,7 @@ pub(crate) fn motion_patch(
     })
 }
 pub(crate) fn expression_patch(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
     payload: Value,
 ) -> Result<ExpressionEdit> {

@@ -2,9 +2,10 @@
 
 use std::collections::BTreeMap;
 
+use crate::CapturedAsset;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use zipzi_core::{DrawableFrame, ImageAsset};
+use zipzi_core::DrawableFrame;
 
 use crate::{
     CapturedAuthoring, ObservationError, ObservationSource, RenderRequest, ResolvedObservation,
@@ -26,7 +27,7 @@ struct SceneContent {
 #[derive(PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct TextureContent {
-    asset: ImageAsset,
+    asset: CapturedAsset,
     source_content_identity: zipzi_contract::runtime::ObservationContentIdentity,
 }
 
@@ -92,7 +93,7 @@ fn scene_hash(scene: &SceneContent) -> Result<String, ObservationError> {
             "Scene has a nonfinite or non-roundtrippable value",
         ));
     }
-    let mut bytes = b"zipzi-observe-scene-digest-v3\0".to_vec();
+    let mut bytes = b"zipzi-observe-scene-digest-v4\0".to_vec();
     canonical_json(&value, &mut bytes)?;
     Ok(zipzi_project::content_sha256(&bytes))
 }
@@ -114,7 +115,7 @@ impl ResolvedObservation {
                 .textures
                 .iter()
                 .map(|texture| TextureContent {
-                    asset: texture.asset.clone(),
+                    asset: CapturedAsset::from(&texture.asset),
                     source_content_identity: texture.source_content_identity.clone(),
                 })
                 .collect(),
@@ -194,20 +195,20 @@ mod tests {
 
     #[test]
     fn scene_hash_accepts_evaluated_deformers() {
-        let mut doc = zipzi_core::Document::new();
-        assert!(doc
-            .initialize(
-                "00000000-0000-4000-8000-000000000001",
-                zipzi_core::Canvas::new(100.0, 100.0, zipzi_core::Vec2::new(50.0, 50.0), 10.0),
-            )
-            .is_ok());
+        let mut doc = zipzi_core::state::DocumentState::new(
+            "00000000-0000-4000-8000-000000000001",
+            zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(50., 50.), 10.).into(),
+        )
+        .unwrap()
+        .builder();
         assert!(doc
             .create_transform(zipzi_core::Transform {
                 id: "00000000-0000-4000-8000-000000000002".into(),
+                runtime_id: "Rotation".into(),
                 ..Default::default()
             })
-            .status
             .is_ok());
+        let doc = doc.freeze().unwrap().state;
         let mut scene = empty_scene();
         assert!(zipzi_core::evaluate_frame(&doc, &Default::default(), &mut scene.frame).is_ok());
         assert_eq!(scene.frame.deformers.len(), 1);

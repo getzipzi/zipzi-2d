@@ -6,20 +6,22 @@ impl Document {
     /// stays in the native plan; this list is only an inspection preference.
     pub fn authoring_neighbors(&self, object: &ObjectRef) -> Vec<ObjectRef> {
         let collection = match object.kind {
-            ObjectKind::Parameter => Some(zipzi_sdk::OrganizationCollection::Parameters {
-                group_id: self
-                    .model()
-                    .organization_owner(&object.id)
-                    .map(str::to_owned),
-            }),
-            ObjectKind::ParameterGroup => {
-                Some(zipzi_sdk::OrganizationCollection::ParameterGroups {
+            ObjectKind::Parameter => Some(
+                zipzi_contract::document::OrganizationCollection::Parameters {
+                    group_id: self
+                        .model()
+                        .organization_owner(&object.id)
+                        .map(str::to_owned),
+                },
+            ),
+            ObjectKind::ParameterGroup => Some(
+                zipzi_contract::document::OrganizationCollection::ParameterGroups {
                     parent_id: self
                         .model()
                         .organization_owner(&object.id)
                         .map(str::to_owned),
-                })
-            }
+                },
+            ),
             _ => None,
         };
         if let Some(collection) = collection {
@@ -61,7 +63,7 @@ impl Document {
             .chain(parent)
             .collect()
     }
-    pub(crate) fn authoring_result(&self, receipt: zipzi_sdk::EditReceipt) -> OperationResult {
+    pub(crate) fn authoring_result(&self, receipt: zipzi_sdk::Publication) -> OperationResult {
         let reference = |entity: &zipzi_sdk::EntityRef| {
             ObjectRef::new(ObjectKind::from_sdk(entity.kind), &entity.id)
         };
@@ -74,7 +76,8 @@ impl Document {
                 locations.push(ObjectRef::new(
                     if matches!(
                         change.entity.kind,
-                        zipzi_sdk::ObjectKind::Parameter | zipzi_sdk::ObjectKind::CdiParameterGroup
+                        zipzi_contract::authoring::ObjectKind::Parameter
+                            | zipzi_contract::authoring::ObjectKind::CdiParameterGroup
                     ) {
                         ObjectKind::ParameterGroup
                     } else {
@@ -89,10 +92,10 @@ impl Document {
         // second identity table.
         let index = self.object_index();
         for collection in &receipt.changes.collections {
-            use zipzi_sdk::{
-                CollectionRef as C, OrganizationCollection as O, ReferenceCollection as R,
-                SceneCollection as S,
-            };
+            use zipzi_contract::document::OrganizationCollection as O;
+            use zipzi_contract::document::ReferenceCollection as R;
+            use zipzi_contract::document::SceneCollection as S;
+            use zipzi_sdk::CollectionRef as C;
             let owner = match collection {
                 C::ExpressionEntries { expression_id, .. } => Some(expression_id),
                 C::SceneContent { owner_id, .. } => Some(owner_id),

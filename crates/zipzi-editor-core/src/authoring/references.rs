@@ -1,22 +1,28 @@
 //! Editor session checks around the native reference authoring rules.
 use super::*;
 use anyhow::Result;
-use zipzi_sdk::{
-    ReferenceCapabilities, ReferenceCollection, ReferenceEdit, ReferenceEditPlan,
-    ReferenceFieldAddress, ReferenceFields, ReferenceSelectionAddress, ReferenceSelectionField,
-};
+use zipzi_contract::authoring::ReferenceCapabilities;
+use zipzi_contract::document::ReferenceCollection;
+use zipzi_contract::document::ReferenceEdit;
+use zipzi_contract::document::ReferenceFields;
+use zipzi_contract::document::ReferenceSelectionField;
+use zipzi_sdk::{ReferenceEditPlan, ReferenceFieldAddress, ReferenceSelectionAddress};
 #[derive(Debug, Clone)]
 pub struct ReferenceAuthoringCapabilities {
     pub domain: ReferenceCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
-fn editor_kind(k: zipzi_sdk::ObjectKind) -> Option<ObjectKind> {
+fn editor_kind(k: zipzi_contract::authoring::ObjectKind) -> Option<ObjectKind> {
     Some(match k {
-        zipzi_sdk::ObjectKind::ModelParameterGroup => ObjectKind::ModelParameterGroup,
-        zipzi_sdk::ObjectKind::ModelParameterMember => ObjectKind::ModelParameterMember,
-        zipzi_sdk::ObjectKind::ModelHitArea => ObjectKind::ModelHitArea,
-        zipzi_sdk::ObjectKind::CdiCombinedSet => ObjectKind::CdiCombinedSet,
-        zipzi_sdk::ObjectKind::CdiCombinedMember => ObjectKind::CdiCombinedMember,
+        zipzi_contract::authoring::ObjectKind::ModelParameterGroup => {
+            ObjectKind::ModelParameterGroup
+        }
+        zipzi_contract::authoring::ObjectKind::ModelParameterMember => {
+            ObjectKind::ModelParameterMember
+        }
+        zipzi_contract::authoring::ObjectKind::ModelHitArea => ObjectKind::ModelHitArea,
+        zipzi_contract::authoring::ObjectKind::CdiCombinedSet => ObjectKind::CdiCombinedSet,
+        zipzi_contract::authoring::ObjectKind::CdiCombinedMember => ObjectKind::CdiCombinedMember,
         _ => return None,
     })
 }
@@ -34,11 +40,17 @@ impl Document {
         object: &ObjectRef,
     ) -> Result<ReferenceAuthoringCapabilities> {
         let k = match object.kind {
-            ObjectKind::ModelParameterGroup => zipzi_sdk::ObjectKind::ModelParameterGroup,
-            ObjectKind::ModelParameterMember => zipzi_sdk::ObjectKind::ModelParameterMember,
-            ObjectKind::ModelHitArea => zipzi_sdk::ObjectKind::ModelHitArea,
-            ObjectKind::CdiCombinedSet => zipzi_sdk::ObjectKind::CdiCombinedSet,
-            ObjectKind::CdiCombinedMember => zipzi_sdk::ObjectKind::CdiCombinedMember,
+            ObjectKind::ModelParameterGroup => {
+                zipzi_contract::authoring::ObjectKind::ModelParameterGroup
+            }
+            ObjectKind::ModelParameterMember => {
+                zipzi_contract::authoring::ObjectKind::ModelParameterMember
+            }
+            ObjectKind::ModelHitArea => zipzi_contract::authoring::ObjectKind::ModelHitArea,
+            ObjectKind::CdiCombinedSet => zipzi_contract::authoring::ObjectKind::CdiCombinedSet,
+            ObjectKind::CdiCombinedMember => {
+                zipzi_contract::authoring::ObjectKind::CdiCombinedMember
+            }
             _ => anyhow::bail!("Expected a reference object"),
         };
         Ok(ReferenceAuthoringCapabilities {

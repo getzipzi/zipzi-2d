@@ -14,8 +14,8 @@ mod types;
 
 use properties::deformer_properties;
 use std::{collections::HashMap, sync::Arc};
-use zipzi_core::Document as Model;
 use zipzi_core::SharedVec;
+use zipzi_core::state::DocumentState as Model;
 
 pub use bindings::BindingInfo;
 pub use context::{NavigationContext, PanelContext};

@@ -9,7 +9,7 @@ use zipzi_core::WarpBezierEvaluation;
 use zipzi_core::{Mesh, MeshBinding, SceneBinding, SceneTrack, Transform, Vec2};
 
 fn keyform_edit_hint(
-    doc: &zipzi_core::Document,
+    doc: &zipzi_core::state::DocumentState,
     parameters: &[zipzi_core::EvaluatedParameter],
     axes: &[zipzi_core::BindingAxis],
 ) -> String {
@@ -228,7 +228,7 @@ impl EditOriginal {
             Self::Batch(v) => v[0].id(),
         }
     }
-    pub fn unchanged(&self, doc: &zipzi_core::Document) -> bool {
+    pub fn unchanged(&self, doc: &zipzi_core::state::DocumentState) -> bool {
         match self {
             Self::Mesh(v) => doc.get_mesh(&v.id) == Some(v),
             Self::Transform(v) => doc.get_transform(&v.id) == Some(v),
@@ -272,7 +272,7 @@ pub(crate) struct ControlSpace {
 /// multiple contributions still require an explicit authoring destination.
 fn mesh_blend_target<'a>(
     document: &Document,
-    doc: &'a zipzi_core::Document,
+    doc: &'a zipzi_core::state::DocumentState,
     scene: &CanvasScene,
     object: &ObjectRef,
 ) -> Result<Option<(&'a zipzi_core::BlendShapeBinding, usize, f32)>> {
@@ -373,7 +373,7 @@ fn mesh_blend_target<'a>(
 /// Base deformer poses remain editable when their BlendShapes are neutral.
 /// Nonzero deltas need their own authoring path rather than an implicit base edit.
 fn deformer_blend_edit_hint(
-    doc: &zipzi_core::Document,
+    doc: &zipzi_core::state::DocumentState,
     scene: &CanvasScene,
     object: &ObjectRef,
 ) -> Option<String> {

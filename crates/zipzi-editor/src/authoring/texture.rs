@@ -1,7 +1,8 @@
 //! PNG preparation runs off-thread; native tokens own resource incarnation and
 //! content epochs, while the host guards document/workspace lifetimes.
 use super::*;
-use zipzi_sdk::{ImageLoadToken, ResourceEdit};
+use zipzi_contract::document::ResourceEdit;
+use zipzi_sdk::ImageLoadToken;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Control {
@@ -210,7 +211,7 @@ impl EditorView {
         key: &str,
         serial: uuid::Uuid,
         imported_name: Option<String>,
-        image: anyhow::Result<zipzi_sdk::PreparedImageContent>,
+        image: anyhow::Result<zipzi_project::PreparedImageContent>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {

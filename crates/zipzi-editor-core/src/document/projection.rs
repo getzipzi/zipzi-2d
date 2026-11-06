@@ -148,7 +148,10 @@ impl Document {
                 })
                 .map(|set| set.id.clone())
                 .collect();
-            let plan = self.plan_reference_authoring(zipzi_sdk::ReferenceEdit::Delete { ids })?;
+            let plan =
+                self.plan_reference_authoring(zipzi_contract::document::ReferenceEdit::Delete {
+                    ids,
+                })?;
             return self.execute_reference_authoring(&plan);
         }
         let next_id = self

@@ -4,9 +4,9 @@ use std::{
     collections::{BTreeSet, HashMap},
     sync::Arc,
 };
+use zipzi_animation::MotionSnapshot;
 use zipzi_core::document::PhysicsTargetProjection;
 use zipzi_core::document::{ExpressionTarget, MotionTrackTarget};
-use zipzi_sdk::MotionSnapshot;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AnimationFailure {
@@ -14,13 +14,13 @@ pub enum AnimationFailure {
     ExpressionUnavailable,
     TriggersRemoved,
     RendererStopped,
-    Runtime(zipzi_sdk::AnimationError),
+    Runtime(zipzi_animation::AnimationError),
     Other(String),
 }
 impl AnimationFailure {
     pub fn from_error(error: &anyhow::Error) -> Self {
         error
-            .downcast_ref::<zipzi_sdk::AnimationError>()
+            .downcast_ref::<zipzi_animation::AnimationError>()
             .map_or_else(
                 || Self::Other(error.to_string()),
                 |error| Self::Runtime(error.clone()),
@@ -111,7 +111,7 @@ impl AnimationCatalog {
         }
         result.into_iter().collect()
     }
-    fn from_model(model: &zipzi_core::Document) -> Self {
+    fn from_model(model: &zipzi_core::state::DocumentState) -> Self {
         let mut issues = BTreeSet::new();
         let mut coverage = HashMap::new();
         for path in model.missing_attachments() {
@@ -326,7 +326,7 @@ mod tests {
 
     #[test]
     fn missing_files_are_visible_without_starting_a_preview() {
-        let mut model = zipzi_core::Document::new();
+        let mut model = zipzi_core::state::DocumentState::new();
         model.set_missing_attachments(vec![
             "motions/missing.motion3.json".into(),
             "textures/missing.png".into(),

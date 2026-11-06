@@ -2,10 +2,13 @@
 //! ordering, subtree normalization, locks, cycles and atomic publication.
 use super::*;
 use anyhow::{Result, anyhow, ensure};
-use zipzi_sdk::{
-    OrganizationCollection as Collection, OrganizationEdit, ReparentEdit, ReparentPlacement,
-    ReparentStrategy, SceneCollection, SceneEdit,
-};
+use zipzi_contract::document::OrganizationCollection as Collection;
+use zipzi_contract::document::OrganizationEdit;
+use zipzi_contract::document::ReparentEdit;
+use zipzi_contract::document::ReparentPlacement;
+use zipzi_contract::document::ReparentStrategy;
+use zipzi_contract::document::SceneCollection;
+use zipzi_contract::document::SceneEdit;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PaletteProjection {
@@ -148,7 +151,8 @@ impl Document {
             let mut children = Vec::new();
             let handles = self.session.organization_collection(collection)?;
             for handle in handles {
-                if (kind == ObjectKind::Part && handle.kind() != zipzi_sdk::ObjectKind::Part)
+                if (kind == ObjectKind::Part
+                    && handle.kind() != zipzi_contract::authoring::ObjectKind::Part)
                     || !seen.insert(handle.id().to_owned())
                 {
                     continue;

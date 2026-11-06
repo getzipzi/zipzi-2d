@@ -34,16 +34,17 @@ pub(super) fn choice_label(choice: &C) -> String {
     })
     .into_owned()
 }
-pub(super) fn strategy_label(s: &zipzi_sdk::ReparentStrategy) -> String {
+pub(super) fn strategy_label(s: &zipzi_contract::document::ReparentStrategy) -> String {
     t!(match s {
-        zipzi_sdk::ReparentStrategy::KeepLocalData => "deletion.local",
-        zipzi_sdk::ReparentStrategy::PreserveEditState => "deletion.edit_state",
-        zipzi_sdk::ReparentStrategy::PreserveParameterDomain => "deletion.parameter_domain",
+        zipzi_contract::document::ReparentStrategy::KeepLocalData => "deletion.local",
+        zipzi_contract::document::ReparentStrategy::PreserveEditState => "deletion.edit_state",
+        zipzi_contract::document::ReparentStrategy::PreserveParameterDomain =>
+            "deletion.parameter_domain",
     })
     .into_owned()
 }
-pub(super) fn field_label(f: &zipzi_sdk::DeletionField) -> String {
-    use zipzi_sdk::DeletionField::*;
+pub(super) fn field_label(f: &zipzi_contract::document::DeletionField) -> String {
+    use zipzi_contract::document::DeletionField::*;
     t!(match f {
         Owned => "deletion.owned",
         MeshMask { .. } | OffscreenMask { .. } | MeshInvertedMask => "deletion.mask",
@@ -68,8 +69,11 @@ pub(super) fn field_label(f: &zipzi_sdk::DeletionField) -> String {
     })
     .into_owned()
 }
-pub(super) fn decision_label(r: &zipzi_sdk::DeletionDecisionReason, details: bool) -> String {
-    use zipzi_sdk::DeletionDecisionReason::*;
+pub(super) fn decision_label(
+    r: &zipzi_contract::document::DeletionDecisionReason,
+    details: bool,
+) -> String {
+    use zipzi_contract::document::DeletionDecisionReason::*;
     match r {
         ConversionUnproven { code } => crate::authoring::availability::reason_message(code)
             .unwrap_or_else(|| {
@@ -98,10 +102,10 @@ pub(super) fn decision_label(r: &zipzi_sdk::DeletionDecisionReason, details: boo
     }
 }
 pub(super) fn effect_label(
-    e: &zipzi_sdk::DeletionEffect,
+    e: &zipzi_contract::document::DeletionEffect,
     name: impl Fn(&DeletionObject) -> String,
 ) -> String {
-    use zipzi_sdk::DeletionEffect::*;
+    use zipzi_contract::document::DeletionEffect::*;
     let (key, object) = match e {
         MotionRegistrationMoved {
             registration,
@@ -197,10 +201,13 @@ pub(super) fn effect_label(
                 channels
                     .iter()
                     .map(|c| t!(match c {
-                        zipzi_sdk::DeletionChannel::Appearance => "deletion.appearance",
-                        zipzi_sdk::DeletionChannel::Enabled => "deletion.enabled",
-                        zipzi_sdk::DeletionChannel::GluePostprocessing => "deletion.glue",
-                        zipzi_sdk::DeletionChannel::DrawingOrder => "deletion.drawing",
+                        zipzi_contract::document::DeletionChannel::Appearance =>
+                            "deletion.appearance",
+                        zipzi_contract::document::DeletionChannel::Enabled => "deletion.enabled",
+                        zipzi_contract::document::DeletionChannel::GluePostprocessing =>
+                            "deletion.glue",
+                        zipzi_contract::document::DeletionChannel::DrawingOrder =>
+                            "deletion.drawing",
                     })
                     .into_owned())
                     .collect::<Vec<_>>()

@@ -1,6 +1,6 @@
 # Authoring 新内核重写方案
 
-状态：第一至第三阶段已完成；下一阶段为宿主与客户端切换。日期：2026-11-06。
+状态：第一至第三阶段已完成；第四阶段进行中，Observe、Runtime 常驻核心、v4 命令/查询及 Python Local/Connected 基础工作流已切换；Editor、二进制传输和剩余领域任务仍待完成。日期：2026-11-06。
 代码审计基线：`main@44111d1c`；实施起点：`main@0262b010`；实施分支：`codex/authoring-kernel`。
 
 重新实现 authoring 的状态与执行内核。新内核以不可变模型、隔离 Draft、唯一发布入口、
@@ -165,6 +165,86 @@ Observe、Runtime、Editor、Python native/生成客户端仍消费已移除接�
 本阶段迁入了对应领域数值和失败断言；旧 checkpoint/事务内部保证的测试随机制删除，
 新 snapshot/WriteSet/Draft/资源与发布测试覆盖替代契约。未执行 Windows 与完整桌面验收。
 本地 Metal 验证仅指上面的 PSD 裁剪六项，不代表 Editor/Observe 全链路完成。
+
+第四阶段首批实现（Observe；阶段尚未完成）：
+
+- Observe 参数/动画捕获、纹理规划、CPU 准备、GPU 渲染、拓扑/质量与工程预览直接消费
+  SourcedSnapshot、DocumentState 和 ResourceView，删除旧 AuthoringSnapshot、图片路径、
+  asset_root 和 ProjectResourceLease 依赖。工作输入只持有不可变值与实际资源版本。
+- 动画预览绑定完整 QuerySource；批次/动画匹配同时检查来源与 ContentId。不同 Draft、
+  sequence，以及 Undo 恢复相同内容后的新 publication 均不能复用旧来源。
+- 原图准备共享已捕获像素，无外部文件重读、PNG 编码或整图复制。保留缩放、透明度采样、
+  元数据、输出/GPU 限制及取消检查。scene digest 升至 v4，按语义资产描述与已验证像素
+  计算，不纳入随机 ResourceKey；相同像素的不同资源版本摘要相同。
+- 迁移观察行为测试和公开动画渲染示例；新增来源竞争、Undo 旧来源拒绝、资源版本保活及
+  内容摘要稳定性测试。Metal 捕获测试验证关闭 Session/删除全部源文件后仍渲染。
+
+本批验证：Observe 默认构建 38 项单元、11 项捕获/Metal 集成测试通过；CPU-only 22 项通过。
+公开动画渲染示例编译通过；Animation 6 项、SDK 66 项、ResourceStore 8 项回归通过；
+所改 crate 格式、`git diff --check` 与 package-domain 检查通过。
+本批未验证完整 Runtime/Editor/Python 调用链、WGPU 或 Windows。
+
+第四阶段第二批实现（Runtime 常驻核心与异步保存；阶段尚未完成）：
+
+- Runtime 根模块直接编译新宿主核心；SessionEntry 始终持有 AuthoringSession，派发不再
+  take/归还 Session 或保留恢复副本。Work/Completion 只持有来源、Draft/快照、准备结果、
+  取消信号和任务资源责任。WorkerPool 使用该协议，拒绝派发时完整归还未执行 Work。
+- 支持多个隔离 Draft；独占 worker 只阻塞自己的 Draft。普通/忽略的命令错误及 panic
+  结束候选；所有权、busy 和任务额度准入失败保留候选。prepare/publish 消耗尝试。
+  宿主检查 Job、client、Session/generation/revision、Draft/sequence 后安装结果。
+- Undo/Redo 直接恢复 SDK 历史；迟到 Worker 不能覆盖新版本或 Undo 后相同 ContentId。
+  只读任务保持冻结 QuerySource；Worker panic 不丢失正式 Session 或历史。通知采用有界
+  publication 队列，订阅同时捕获内容与 cursor，间隙要求重新同步，不互相消费事件。
+- 保留 client/session/draft/job 数量、并发、任务工作区和只读结果限额，不加入文档/history
+  倍率准入。取消与客户端释放不提前释放进入执行的任务/租约；ReadResult 外部副本继续
+  持有资源责任。误投的 Completion 返回给宿主，避免丢弃已发布保存结果。
+- SDK 新增 PreparedSave/CompletedSave 及保存许可；Worker 不持有 Session，保存期间仍
+  可读但拒绝发布、Undo/Redo、替换和其他保存。Runtime 同时阻止 Draft 写入，保留原 Draft。
+  文件发布成功后迟到取消/断开仍安装 ProjectContext/SavedMarker；失败或未执行任务释放
+  许可；成功完成结果遗失则保持阻塞，不假装文件发布已撤销。
+- 原生 open/save 走上述协议；保留规范化路径占用/预留、指纹冲突检查及 dirty 语义。
+  打开结果检查最初来源再替换代次/清空历史；保存不与未完成的修改任务并发。
+
+本批验证：Runtime 核心 17 项单元测试通过，含真实 WorkerPool、临时原生工程读写、
+取消/panic、隔离候选、过期来源、通知间隙、任务/结果保活、误投完成与断开后保存。
+SDK authoring 集成 31 项通过，其中新增 3 项保存许可测试；SDK 单元回归 66 项通过。
+Runtime `--all-features --lib` 编译通过；所改 Rust 入口格式、`git diff --check` 与
+package-domain 检查通过。all-features 仅为编译检查，不代表 WGPU 运行或 Windows 验收。
+
+迁移边界：旧 Runtime domain/host/local/protocol 模块及集成目标保留为迁移输入，未通过
+旧 API facade 接入；原有调用恢复、wire major/schema、领域导入/导出/观察任务、分步只读
+调度、Editor 和 Python Local/Connected/生成契约仍需迁移。D9 已从编译执行路径移除，
+D10 与旧 Runtime 部分 D12 源码待后续清理；不宣称全 Runtime/Editor/Python gates 通过。
+第四阶段尚未验收，不执行阶段结束 commit。
+
+第四阶段第三批实现（v4 契约、Python 和协作调度；阶段尚未完成）：
+
+- 共享 Contract 定义带 `DraftSource` 的命令、预览与发布，以及带 `QuerySource` 的
+  对象/集合查询；稳定 `ObjectKind + ID` 取代新路径上的对象/字段注册句柄。
+- wire major 改为 `zipzi-runtime-v4`。私有端点沿用原传输权限检查；恢复使用原请求 ID
+  和参数摘要，过期结果禁止重放。释放客户端后仍可恢复最后回执，但不允许新操作。
+- Runtime 查询只序列化选定的记录/分页并限制结果大小。Local PyO3 接收 owned 值，
+  在复制前计量并申请实际输入额度，不使用 JSON 字符串往返调用。
+- Python `Session`、`Draft`、`Job`、不可变值和两种 backend 已切到 v4；异步命令更新
+  精确候选序号，超时不取消任务，回执丢失的恢复保留原调用的对象投影和生命周期。
+- `PreparedPreview` 在独立 Builder 中准备，成功后核对来源再安装；预览失败保留
+  有效候选，普通 batch 仍失败即中止。读取任务支持分片让出，快照与租约随续体保留，
+  取消/断连后的大对象在 Worker 退出时释放。
+- 官方 `generate.py` 与 Contract exporter 切到 v4；生成 manifest 退役旧代理产物，
+  新值由编译得到的 shape 生成。生成覆盖漂移、文件保护及正反类型检查。
+
+本批 focused 验证：Contract 全 crate 测试、Runtime 28 项 lib 测试、3 项 owner/worker
+集成测试、SDK 原 66 项 lib 测试，以及加入预览后的 43 项 authoring 过滤测试通过。
+Python Local/Connected 的 10 项端到端测试通过，覆盖创建/竞争候选、预览拒绝、异步修改、
+带图片保存/重开，以及创建/提交/关闭回执丢失恢复。新 Python 入口与生成值严格类型检查
+通过；7 个错误用法得到预期诊断，生成与类型检查共 9 项通过。
+
+尚未完成：Editor 当前仍引用旧 EditSession、领域 Plan、字段地址及旧发布分类，
+`zipzi-editor-core` 整体尚未编译通过；生产 Editor host 未验收。Runtime 的二进制 bulk
+传输、格式转换/观察/空间/动画任务接线，以及完整 Python gate/旧示例迁移仍未完成。
+上述 focused 通过不能代替第四阶段完成。按用户后续要求，先提交本批 checkpoint，
+然后继续 Editor 与其余接线；此提交不标记第四阶段完成。
+
 
 ## 1 新内核的边界
 

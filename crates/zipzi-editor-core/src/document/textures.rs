@@ -66,7 +66,7 @@ impl DocumentTextures {
     pub(in crate::document) fn prepare_refresh(
         &self,
         session: &AuthoringSession,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
     ) -> Result<Option<Self>> {
         let assets: HashMap<_, _> = model
             .asset_order()

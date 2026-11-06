@@ -1,10 +1,11 @@
 //! Session coordination around the SDK's dedicated content rules.
 use super::*;
 use anyhow::Result;
-use zipzi_sdk::{
-    SceneContentAddress, SceneContentCapabilities, SceneContentEdit, SceneContentEditPlan,
-    SceneContentTarget, SceneContentValue,
-};
+use zipzi_contract::authoring::SceneContentCapabilities;
+use zipzi_contract::document::SceneContentEdit;
+use zipzi_contract::document::SceneContentTarget;
+use zipzi_contract::document::SceneContentValue;
+use zipzi_sdk::{SceneContentAddress, SceneContentEditPlan};
 #[derive(Debug, Clone)]
 pub struct SceneContentAuthoringCapabilities {
     pub domain: SceneContentCapabilities,
@@ -16,11 +17,11 @@ impl Document {
         object: &ObjectRef,
     ) -> Result<SceneContentAuthoringCapabilities> {
         let kind = match object.kind {
-            ObjectKind::Mesh => zipzi_sdk::ObjectKind::Mesh,
-            ObjectKind::Deformer => zipzi_sdk::ObjectKind::Transform,
-            ObjectKind::Glue => zipzi_sdk::ObjectKind::Glue,
-            ObjectKind::GlueVertexPair => zipzi_sdk::ObjectKind::GlueVertexPair,
-            ObjectKind::Offscreen => zipzi_sdk::ObjectKind::Offscreen,
+            ObjectKind::Mesh => zipzi_contract::authoring::ObjectKind::Mesh,
+            ObjectKind::Deformer => zipzi_contract::authoring::ObjectKind::Transform,
+            ObjectKind::Glue => zipzi_contract::authoring::ObjectKind::Glue,
+            ObjectKind::GlueVertexPair => zipzi_contract::authoring::ObjectKind::GlueVertexPair,
+            ObjectKind::Offscreen => zipzi_contract::authoring::ObjectKind::Offscreen,
             _ => anyhow::bail!("Expected a content owner"),
         };
         Ok(SceneContentAuthoringCapabilities {

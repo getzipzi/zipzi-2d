@@ -1,6 +1,7 @@
 //! Receipts drive the same projection updates for commands and history.
 use super::*;
-use zipzi_sdk::{ChangeCategory, ObjectKind as SdkKind};
+use zipzi_contract::authoring::ObjectKind as SdkKind;
+use zipzi_sdk::ChangeCategory;
 
 impl Document {
     pub(in crate::document) fn invalidate_expression_projection(&mut self) {
@@ -29,7 +30,7 @@ impl Document {
     /// leaves the old revision in place so the next read rebuilds the index.
     fn refresh_authoring_projection(
         &mut self,
-        refresh: impl FnOnce(&mut crate::ObjectIndex, &zipzi_core::Document) -> bool,
+        refresh: impl FnOnce(&mut crate::ObjectIndex, &zipzi_core::state::DocumentState) -> bool,
     ) {
         let previous = self.projection_revision;
         self.invalidate_projection(false);
@@ -45,7 +46,7 @@ impl Document {
 
     pub(in crate::document) fn consume_authoring_receipt(
         &mut self,
-        receipt: &EditReceipt,
+        receipt: &Publication,
         fallback_topology: bool,
     ) {
         if !receipt.changed {
@@ -85,7 +86,8 @@ impl Document {
                 .chain(&changes.modified)
                 .any(|entity| scene_kind(entity.kind)))
             || changes.scene_fields.iter().any(|field| {
-                field.field == zipzi_sdk::SceneField::Context && scene_kind(field.entity.kind)
+                field.field == zipzi_contract::document::SceneField::Context
+                    && scene_kind(field.entity.kind)
             })
             || changes
                 .organization_references
@@ -118,10 +120,10 @@ impl Document {
                     };
                     self.session
                         .document()
-                        .scene_field(&entity.id, zipzi_sdk::SceneField::Label)
+                        .scene_field(&entity.id, zipzi_contract::document::SceneField::Label)
                         .ok()
                         .and_then(|value| match value {
-                            zipzi_sdk::SceneFieldValue::Label(name) => {
+                            zipzi_contract::document::SceneFieldValue::Label(name) => {
                                 Some((ObjectRef::new(kind, &entity.id), name))
                             }
                             _ => None,
@@ -149,7 +151,7 @@ impl Document {
         let document_only = changes
             .document_fields
             .iter()
-            .any(|field| *field != zipzi_sdk::DocumentField::DisplayInfo)
+            .any(|field| *field != zipzi_contract::document::DocumentField::DisplayInfo)
             || (!changes.document_fields.is_empty()
                 && changes.created.is_empty()
                 && changes.deleted.is_empty()
@@ -176,10 +178,10 @@ impl Document {
                 && changes.document_fields.iter().all(|f| {
                     matches!(
                         f,
-                        zipzi_sdk::DocumentField::Layout
-                            | zipzi_sdk::DocumentField::ExportSettings
-                            | zipzi_sdk::DocumentField::SourceCanvas
-                            | zipzi_sdk::DocumentField::OpaqueMetadata
+                        zipzi_contract::document::DocumentField::Layout
+                            | zipzi_contract::document::DocumentField::ExportSettings
+                            | zipzi_contract::document::DocumentField::SourceCanvas
+                            | zipzi_contract::document::DocumentField::OpaqueMetadata
                     )
                 });
             if labels || document_fields_only {
@@ -239,7 +241,7 @@ impl Document {
                 && changes
                     .scene_fields
                     .iter()
-                    .all(|f| f.field == zipzi_sdk::SceneField::Label)
+                    .all(|f| f.field == zipzi_contract::document::SceneField::Label)
                 && !changes.categories.contains(&ChangeCategory::EditorState);
             if labels {
                 let references: Vec<_> = changes
@@ -272,7 +274,7 @@ impl Document {
                     .chain(&changes.deleted)
                     .any(|e| e.kind != SdkKind::DrawOrderGroup)
                     || changes.scene_fields.iter().any(|f| {
-                        f.field == zipzi_sdk::SceneField::Context
+                        f.field == zipzi_contract::document::SceneField::Context
                             && f.entity.kind != SdkKind::DrawOrderGroup
                     })
                     || changes.categories.contains(&ChangeCategory::Topology);
@@ -604,8 +606,11 @@ impl Document {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zipzi_contract::document::DocumentAuthoringEdit;
+    use zipzi_contract::document::DocumentValue;
+    use zipzi_contract::document::SceneEdit;
+    use zipzi_contract::document::SceneFieldValue;
     use zipzi_core::Vec2;
-    use zipzi_sdk::{DocumentAuthoringEdit, DocumentValue, SceneEdit, SceneFieldValue};
 
     #[test]
     fn manual_mesh_constraint_only_receipt_invalidates_canvas_topology_through_history()
@@ -798,9 +803,9 @@ mod tests {
                 expected: DocumentValue::Layout(None),
                 value: DocumentValue::Layout(Some(Default::default())),
             })?;
-            edit.edit_organization(zipzi_sdk::OrganizationEdit::Move {
+            edit.edit_organization(zipzi_contract::document::OrganizationEdit::Move {
                 ids: vec![mesh.clone()],
-                destination: zipzi_sdk::OrganizationCollection::PartMembers {
+                destination: zipzi_contract::document::OrganizationCollection::PartMembers {
                     part_id: Some(part.clone()),
                 },
                 before: None,

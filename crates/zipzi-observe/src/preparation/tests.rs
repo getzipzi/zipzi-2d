@@ -18,11 +18,20 @@ fn fixture() -> (AuthoringSession, zipzi_project::PreparedImageContent) {
         &zipzi_project::ImageMemoryBudget::default(),
     )
     .unwrap();
+    let store = zipzi_project::ResourceStore::default();
+    let owned = store.adopt_image(image.clone()).unwrap();
+    let state = zipzi_core::state::DocumentState::new(
+        id(1),
+        Canvas::new(100., 100., Vec2::new(50., 50.), 10.).into(),
+    )
+    .unwrap();
     let mut session =
-        AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
-    session
-        .edit("fixture", None, |edit| {
-            edit.create_prepared_image(id(2), "texture".into(), &image)?;
+        AuthoringSession::new(zipzi_sdk::Snapshot::new(state, Default::default()).unwrap());
+    let mut draft = session.begin_draft();
+    draft
+        .batch(draft.source(), |edit| {
+            edit.create_empty_asset(id(2), "texture".into())?;
+            edit.replace_image(&id(2), owned)?;
             edit.create_mesh(
                 zipzi_sdk::rectangle_mesh(
                     &id(3),
@@ -35,12 +44,13 @@ fn fixture() -> (AuthoringSession, zipzi_project::PreparedImageContent) {
             )
         })
         .unwrap();
+    session.publish(draft.prepare("fixture").unwrap()).unwrap();
     (session, image)
 }
 
-fn plan(snapshot: &AuthoringSnapshot, budget: Option<u64>) -> planning::ObservationTexturePlan {
+fn plan(snapshot: &SourcedSnapshot, budget: Option<u64>) -> planning::ObservationTexturePlan {
     match planning::plan_textures(
-        planning::texture_sources(snapshot.document()).unwrap(),
+        planning::texture_sources(snapshot.snapshot.document()).unwrap(),
         budget.map_or_else(Default::default, |max_rgba_bytes| {
             planning::ObservationTexturePolicy::FitBudget { max_rgba_bytes }
         }),
@@ -54,7 +64,7 @@ fn plan(snapshot: &AuthoringSnapshot, budget: Option<u64>) -> planning::Observat
 }
 
 fn resolve(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &SourcedSnapshot,
     plan: &planning::ObservationTexturePlan,
     alpha: bool,
 ) -> ResolvedObservation {
@@ -208,7 +218,7 @@ fn mismatched_plan_and_workspace_fail_before_source_acquisition() {
     let snapshot = session.read_snapshot();
     let mut input =
         ObservationInput::capture_from_snapshot(&snapshot, &Default::default()).unwrap();
-    input.memory_images.clear(); // Would cause missing-file failure if acquisition ran.
+    input.resources = ResourceView::default(); // Acquisition would fail if attempted.
     let mut wrong = plan(&snapshot, None);
     wrong.textures[0].render_size.width += 1;
     assert_eq!(

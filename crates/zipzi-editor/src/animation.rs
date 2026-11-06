@@ -191,7 +191,7 @@ impl Drop for AnimationWorker {
 pub struct Presentation {
     pub identity: AnimationIdentity,
     pub viewport: zipzi_editor_core::AnimationViewportIdentity,
-    pub snapshot: Arc<zipzi_sdk::MotionSnapshot>,
+    pub snapshot: Arc<zipzi_animation::MotionSnapshot>,
     pub transform: zipzi_editor_core::ViewportTransform,
 }
 #[derive(Clone)]
@@ -201,7 +201,7 @@ pub struct Presented {
 }
 
 impl EditorView {
-    pub(crate) fn displayed_animation(&self) -> Option<&zipzi_sdk::MotionSnapshot> {
+    pub(crate) fn displayed_animation(&self) -> Option<&zipzi_animation::MotionSnapshot> {
         self.animation_frame()
             .filter(|frame| {
                 self.editor

@@ -614,8 +614,8 @@ impl Render for BindingDialog {
     }
 }
 
-fn guarantee_label(guarantee: &zipzi_sdk::GridGuarantee) -> String {
-    use zipzi_sdk::GridGuarantee as G;
+fn guarantee_label(guarantee: &zipzi_contract::document::GridGuarantee) -> String {
+    use zipzi_contract::document::GridGuarantee as G;
     match guarantee {
         G::BaseShape => t!("binding.guarantee_base").into_owned(),
         G::PreservedOnDomain => t!("binding.guarantee_domain").into_owned(),

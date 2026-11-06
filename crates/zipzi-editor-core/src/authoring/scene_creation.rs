@@ -2,9 +2,11 @@
 //! The SDK validates owners, locks and object data and publishes one transaction.
 use super::moving::PaletteProjection;
 use super::*;
-use zipzi_sdk::{
-    OrganizationCollection, OrganizationEdit, SceneCollection, SceneCreate, SceneEdit,
-};
+use zipzi_contract::document::OrganizationCollection;
+use zipzi_contract::document::OrganizationEdit;
+use zipzi_contract::document::SceneCollection;
+use zipzi_contract::document::SceneCreate;
+use zipzi_contract::document::SceneEdit;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SceneObjectType {
@@ -85,8 +87,8 @@ impl Document {
                 part_id: part_id.clone(),
             })?
             .create;
-        if let zipzi_sdk::CapabilityState::Unavailable { code }
-        | zipzi_sdk::CapabilityState::Unsupported { code } = state
+        if let zipzi_contract::authoring::CapabilityState::Unavailable { code }
+        | zipzi_contract::authoring::CapabilityState::Unsupported { code } = state
         {
             anyhow::bail!(AuthoringPlanningError::new(code));
         }
@@ -95,8 +97,8 @@ impl Document {
                 .session
                 .scene_collection_capabilities(&SceneCollection::Deformation { parent_id })?
                 .create;
-            if let zipzi_sdk::CapabilityState::Unavailable { code }
-            | zipzi_sdk::CapabilityState::Unsupported { code } = state
+            if let zipzi_contract::authoring::CapabilityState::Unavailable { code }
+            | zipzi_contract::authoring::CapabilityState::Unsupported { code } = state
             {
                 anyhow::bail!(AuthoringPlanningError::new(code));
             }
@@ -214,7 +216,8 @@ impl Document {
                         .iter()
                         .filter(|object| {
                             parent.is_some()
-                                || (object.kind() == zipzi_sdk::ObjectKind::Transform)
+                                || (object.kind()
+                                    == zipzi_contract::authoring::ObjectKind::Transform)
                                     == (kind != SceneObjectType::Mesh)
                         })
                         .collect();
@@ -457,7 +460,7 @@ impl Document {
             .iter()
             .filter(|handle| {
                 owner.is_some()
-                    || (handle.kind() == zipzi_sdk::ObjectKind::Part)
+                    || (handle.kind() == zipzi_contract::authoring::ObjectKind::Part)
                         == (kind == SceneObjectType::Part)
             })
             .collect();

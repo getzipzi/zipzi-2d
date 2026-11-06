@@ -13,21 +13,24 @@ pub use evaluation::{AnimationEvaluated, AnimationEvaluator};
 pub use provenance::{AnimationIdentity, AnimationRequest};
 pub use resources::{ExpressionResource, ExpressionTrigger, MotionResource, MotionSelection};
 use std::sync::{Arc, OnceLock};
-use zipzi_sdk::{AuthoringSnapshot, ExpressionTransition, MotionPreview, MotionSnapshot};
+use zipzi_animation::ExpressionTransition;
+use zipzi_animation::MotionPreview;
+use zipzi_animation::MotionSnapshot;
+use zipzi_sdk::Snapshot;
 
 pub struct AnimationSource {
     /// Immutable committed model shared by all revisions of a gesture.
-    pub snapshot: Arc<AuthoringSnapshot>,
+    pub snapshot: Arc<Snapshot>,
     pub textures: Arc<[SceneTexture]>,
     /// Validated motion overlay; the base document remains unchanged.
     pub candidate: Option<Arc<zipzi_sdk::MotionClipCandidate>>,
     /// Detached inspector candidate; remains isolated from authoring history.
-    pub properties: Option<Arc<zipzi_core::Document>>,
-    pub(crate) materialized: OnceLock<Arc<AuthoringSnapshot>>,
+    pub properties: Option<Arc<zipzi_core::state::DocumentState>>,
+    pub(crate) materialized: OnceLock<Arc<Snapshot>>,
 }
 
 impl AnimationSource {
-    pub fn document(&self) -> &zipzi_core::Document {
+    pub fn document(&self) -> &zipzi_core::state::DocumentState {
         self.properties
             .as_deref()
             .unwrap_or_else(|| self.snapshot.document())
@@ -44,7 +47,7 @@ impl AnimationSource {
 
     /// Result playback needs a document containing the candidate. Raw editing
     /// samples its curve overlay directly and shares the immutable model.
-    pub fn materialized_snapshot(&self) -> Result<Arc<AuthoringSnapshot>> {
+    pub fn materialized_snapshot(&self) -> Result<Arc<Snapshot>> {
         let Some(candidate) = &self.candidate else {
             return Ok(self.snapshot.clone());
         };
@@ -72,7 +75,7 @@ pub struct AnimationSession {
     /// Preview clock multiplier; never changes the authored motion timing.
     pub playback_speed: f32,
     pub candidate: Option<TimelineCandidateIdentity>,
-    result_position: Option<zipzi_sdk::MotionPlaybackPosition>,
+    result_position: Option<zipzi_animation::MotionPlaybackPosition>,
     pub playing: bool,
     /// A paused loop scrub denotes the first cycle, including its right endpoint.
     pub loop_position: bool,

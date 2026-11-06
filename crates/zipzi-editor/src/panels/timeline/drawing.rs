@@ -1,5 +1,6 @@
 use super::*;
-use zipzi_sdk::{CompiledSegment, MotionBezierHandle, sample_motion_curve};
+use zipzi_animation::sample_motion_curve;
+use zipzi_sdk::{CompiledSegment, MotionBezierHandle};
 
 #[derive(Clone)]
 pub(super) enum Hit {

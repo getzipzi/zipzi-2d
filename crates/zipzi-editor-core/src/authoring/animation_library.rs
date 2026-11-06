@@ -78,7 +78,7 @@ impl Document {
         &self,
         kind: ObjectKind,
         selection: Option<&ObjectRef>,
-    ) -> Result<zipzi_sdk::CapabilityState> {
+    ) -> Result<zipzi_contract::authoring::CapabilityState> {
         use zipzi_sdk::AuthoringCollection as C;
         if let Some(object) = selection {
             ensure!(
@@ -102,7 +102,7 @@ impl Document {
             ObjectKind::Expression => C::Expressions,
             ObjectKind::ExpressionEntry => {
                 let Some(object) = selection else {
-                    return Ok(zipzi_sdk::CapabilityState::Unavailable {
+                    return Ok(zipzi_contract::authoring::CapabilityState::Unavailable {
                         code: "MISSING_EXPRESSION",
                     });
                 };
@@ -122,7 +122,7 @@ impl Document {
                 C::ExpressionEntries { expression_id }
             }
             _ => {
-                return Ok(zipzi_sdk::CapabilityState::Unsupported {
+                return Ok(zipzi_contract::authoring::CapabilityState::Unsupported {
                     code: "WRONG_OBJECT_KIND",
                 });
             }

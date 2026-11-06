@@ -172,13 +172,13 @@ impl CanvasTopology {
             index.objects[slot].name = if name.is_empty() { &object.id } else { name }.into();
         }
     }
-    pub fn new(model: &zipzi_core::Document) -> Self {
+    pub fn new(model: &zipzi_core::state::DocumentState) -> Self {
         Self::with_previous(model, None, None)
     }
     /// `changed` is a proven set of mesh topology writes. Other mesh Arcs can be
     /// reused without rescanning their triangles.
     pub fn with_previous(
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         previous: Option<&Self>,
         changed: Option<&HashSet<String>>,
     ) -> Self {

@@ -7,7 +7,8 @@ use std::{
 };
 use uuid::Uuid;
 use zipzi_core::{Mesh, ModelSetup, ParameterKind, preview::PreviewState};
-use zipzi_sdk::{AuthoringSession, EditReceipt, EditSession, SaveReceipt};
+use zipzi_sdk::Publication;
+use zipzi_sdk::{AuthoringSession, EditSession, SaveReceipt};
 
 #[path = "object_state.rs"]
 mod object_state;
@@ -118,7 +119,7 @@ impl PendingOriginal {
             Self::Properties(object, _, _) => &object.id,
         }
     }
-    fn unchanged(&self, model: &zipzi_core::Document) -> bool {
+    fn unchanged(&self, model: &zipzi_core::state::DocumentState) -> bool {
         match self {
             Self::RotationLength(id, value) => {
                 model.editor_state().rotation_bone_lengths.get(id).copied() == *value
@@ -126,7 +127,8 @@ impl PendingOriginal {
             Self::ExpressionEntry(address) => model
                 .get_expression_entry(address.entry_id())
                 .is_some_and(|(_, entry)| {
-                    zipzi_sdk::ExpressionEntryFields::from(entry) == *address.expected()
+                    zipzi_contract::document::ExpressionEntryFields::from(entry)
+                        == *address.expected()
                 }),
             Self::Controls(original) => original.unchanged(model),
             Self::Properties(object, values, scope) => {

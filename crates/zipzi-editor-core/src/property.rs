@@ -556,7 +556,10 @@ pub struct PropertyEditToken {
     property: PropertyKey,
 }
 
-pub(crate) fn object_payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
+pub(crate) fn object_payload(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<Value> {
     #[cfg(feature = "bench-instrumentation")]
     let _benchmark_span = zipzi_core::benchmark::span("editor.object_payload");
     use ObjectKind as K;
@@ -620,7 +623,10 @@ pub(crate) fn object_payload(model: &zipzi_core::Document, object: &ObjectRef) -
 }
 
 /// Inspector reads need descriptors, not geometry, motion curves or expression entries.
-pub(crate) fn inspector_payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
+pub(crate) fn inspector_payload(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<Value> {
     Ok(match object.kind {
         ObjectKind::Mesh => mesh::inspector_payload(model, &object.id, &PropertyScope::Object)?,
         ObjectKind::Deformer => {
@@ -643,7 +649,7 @@ pub(crate) fn inspector_payload(model: &zipzi_core::Document, object: &ObjectRef
 }
 
 pub(crate) fn values_from(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
 ) -> Result<PropertyValues> {
     if object.kind == ObjectKind::PhysicsGroup {

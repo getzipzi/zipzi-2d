@@ -225,7 +225,7 @@ pub const FIELDS: &[PropertySpec] = &[
 ];
 
 pub(crate) fn keyform<'a>(
-    model: &'a zipzi_core::Document,
+    model: &'a zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Option<(&'a SceneBinding, usize)>> {
@@ -247,7 +247,7 @@ pub(crate) fn keyform<'a>(
 
 /// Project only inspector scalars, never the Warp grid or keyform collection.
 pub(crate) fn inspector_payload(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
@@ -303,7 +303,7 @@ pub(crate) fn inspector_payload(
 }
 
 pub(crate) fn values(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<PropertyValues> {
@@ -353,14 +353,16 @@ pub(crate) fn apply(
             patch.changes.len() == 1,
             "Original shape policy must be edited independently"
         );
-        edit.edit_scene_content(zipzi_sdk::SceneContentEdit::DeformerOriginal {
-            transform_id: id.into(),
-            target: zipzi_sdk::ShapeTarget::Base,
-            action: zipzi_core::DeformerOriginalAction::AutoUpdate {
-                enabled: payload["original_shape"]["auto_update"].as_bool().unwrap(),
+        edit.edit_scene_content(
+            zipzi_contract::document::SceneContentEdit::DeformerOriginal {
+                transform_id: id.into(),
+                target: zipzi_contract::document::ShapeTarget::Base,
+                action: zipzi_core::DeformerOriginalAction::AutoUpdate {
+                    enabled: payload["original_shape"]["auto_update"].as_bool().unwrap(),
+                },
+                context: Default::default(),
             },
-            context: Default::default(),
-        })?;
+        )?;
         return Ok(());
     }
     let authoring = [
@@ -386,12 +388,12 @@ pub(crate) fn apply(
                 columns: payload["warp"]["bezier_columns"].as_u64().unwrap() as u32,
             });
         }
-        return Ok(
-            edit.edit_scene_content(zipzi_sdk::SceneContentEdit::WarpAuthoring {
+        return Ok(edit.edit_scene_content(
+            zipzi_contract::document::SceneContentEdit::WarpAuthoring {
                 transform_id: id.into(),
                 settings,
-            })?,
-        );
+            },
+        )?);
     }
     if patch
         .changes
@@ -405,14 +407,14 @@ pub(crate) fn apply(
                 .all(|key| [COLUMNS.key, ROWS.key, QUAD.key].contains(key)),
             "Warp grid changes must be independent"
         );
-        return Ok(
-            edit.edit_scene_content(zipzi_sdk::SceneContentEdit::ResizeWarp {
+        return Ok(edit.edit_scene_content(
+            zipzi_contract::document::SceneContentEdit::ResizeWarp {
                 transform_id: id.into(),
                 rows: payload["warp"]["rows"].as_u64().unwrap() as u32,
                 columns: payload["warp"]["columns"].as_u64().unwrap() as u32,
                 quad: payload["warp"]["quad"].as_bool().unwrap(),
-            })?,
-        );
+            },
+        )?);
     }
     let model = edit.candidate_document();
     let original = model
@@ -485,7 +487,7 @@ pub(crate) fn apply(
 }
 
 fn keyform_for_edit<'a>(
-    model: &'a zipzi_core::Document,
+    model: &'a zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Option<(&'a SceneBinding, usize)>> {

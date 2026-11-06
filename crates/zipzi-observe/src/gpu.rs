@@ -47,7 +47,8 @@ pub struct ObservedFrame {
     pub width: u32,
     pub height: u32,
     pub rgba: Vec<u8>,
-    pub evaluation_revision: u64,
+    pub source: zipzi_sdk::QuerySource,
+    pub content_id: zipzi_sdk::ContentId,
     pub document_id: String,
     pub parameters: zipzi_core::PreviewValues,
     pub view: ViewMapping,
@@ -485,7 +486,8 @@ impl Observer {
             width,
             height,
             rgba,
-            evaluation_revision: input.evaluation_revision,
+            source: input.provenance,
+            content_id: input.content_id,
             document_id: input.document_id.clone(),
             parameters: input
                 .frame

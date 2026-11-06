@@ -1,8 +1,10 @@
 //! Physics and Pose defaults and placement are resolved by stable identity.
 use super::*;
 use anyhow::{Result, ensure};
+use zipzi_contract::authoring::CapabilityState as C;
+use zipzi_contract::document::PoseCollection as PC;
+use zipzi_contract::document::PoseEdit;
 use zipzi_core::document::PhysicsEdit;
-use zipzi_sdk::{CapabilityState as C, PoseCollection as PC, PoseEdit};
 
 #[derive(Clone, Debug)]
 pub enum BusinessAction {
@@ -59,7 +61,7 @@ pub struct BusinessDestination {
     pub label: String,
     pub nodes: Vec<(String, String)>,
 }
-fn inventory(model: &zipzi_core::Document) -> Vec<ObjectRef> {
+fn inventory(model: &zipzi_core::state::DocumentState) -> Vec<ObjectRef> {
     use ObjectKind as K;
     let mut objects = vec![];
     let mut add = |kind, id: &str| objects.push(ObjectRef::new(kind, id));
@@ -174,9 +176,9 @@ impl Document {
         match action {
             A::Create(kind, at) => {
                 let collection = match kind {
-                    K::PhysicsGroup => {
-                        AuthoringCollection::Physics(zipzi_sdk::PhysicsCollection::Groups)
-                    }
+                    K::PhysicsGroup => AuthoringCollection::Physics(
+                        zipzi_contract::authoring::PhysicsCollection::Groups,
+                    ),
                     K::PoseGroup | K::PoseEntry | K::PoseLink => AuthoringCollection::Pose(
                         self.pose_creation_collection(*kind, at.as_ref())?,
                     ),
@@ -220,7 +222,7 @@ impl Document {
     }
     fn business_order(&self, object: &ObjectRef) -> Result<Vec<String>> {
         use ObjectKind as K;
-        use zipzi_sdk::PhysicsCollection as P;
+        use zipzi_contract::authoring::PhysicsCollection as P;
         if matches!(object.kind, K::PoseGroup | K::PoseEntry | K::PoseLink) {
             return self.pose_order(&self.pose_collection_for(object)?);
         }

@@ -1,9 +1,9 @@
 //! Editor session adapter for the SDK's expression domain operations.
 use super::*;
 use anyhow::{Result, ensure};
-use zipzi_sdk::{
-    ExpressionEdit, ExpressionEditPlan, ExpressionEntryAddress, ExpressionEntryFields,
-};
+use zipzi_contract::document::ExpressionEdit;
+use zipzi_contract::document::ExpressionEntryFields;
+use zipzi_sdk::{ExpressionEditPlan, ExpressionEntryAddress};
 
 impl Document {
     pub fn expression_authoring_capabilities(
@@ -11,8 +11,8 @@ impl Document {
         object: &ObjectRef,
     ) -> Result<ExpressionAuthoringCapabilities> {
         let kind = match object.kind {
-            ObjectKind::Expression => zipzi_sdk::ObjectKind::Expression,
-            ObjectKind::ExpressionEntry => zipzi_sdk::ObjectKind::ExpressionEntry,
+            ObjectKind::Expression => zipzi_contract::authoring::ObjectKind::Expression,
+            ObjectKind::ExpressionEntry => zipzi_contract::authoring::ObjectKind::ExpressionEntry,
             _ => anyhow::bail!("Expected an expression or entry"),
         };
         let handle = self.session.handle(kind, &object.id)?;
@@ -162,7 +162,7 @@ impl Document {
 
     fn expression_operation_result(
         &mut self,
-        receipt: zipzi_sdk::EditReceipt,
+        receipt: zipzi_sdk::Publication,
     ) -> Result<OperationResult> {
         if receipt.changed {
             self.pristine_blank = None;

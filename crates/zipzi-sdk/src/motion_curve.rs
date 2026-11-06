@@ -14,32 +14,9 @@ use zipzi_core::state::DocumentBuilder;
 
 use crate::Status;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MotionKeyRef {
-    pub track_id: String,
-    pub key_id: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct MotionKeyMove {
-    pub key: MotionKeyRef,
-    /// Absolute seconds and raw channel value, calculated from the gesture origin.
-    pub point: MotionPoint,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MotionInterpolation {
-    Linear,
-    Bezier,
-    Stepped,
-    InverseStepped,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MotionBezierHandle {
-    Control1,
-    Control2,
-}
+pub use zipzi_contract::kernel_commands::{
+    MotionBezierHandle, MotionCurveEdit, MotionInterpolation, MotionKeyMove, MotionKeyRef,
+};
 
 /// One independently owned clip, suitable for immutable preview snapshots.
 /// Rebuild from the gesture's original clip for each total displacement. UUIDs
@@ -676,31 +653,6 @@ fn verify_bezier_split(
         }
     }
     Ok(())
-}
-
-/// Key time order and Bezier roles use dedicated curve operations, never row sorting.
-#[derive(Debug, Clone)]
-pub enum MotionCurveEdit {
-    MoveKeys(Vec<MotionKeyMove>),
-    InsertKey {
-        track: String,
-        id: String,
-        time: f32,
-        value: Option<f32>,
-    },
-    DeleteKeys(Vec<MotionKeyRef>),
-    Interpolation {
-        keys: Vec<MotionKeyRef>,
-        kind: MotionInterpolation,
-    },
-    BezierHandle {
-        end: MotionKeyRef,
-        handle: MotionBezierHandle,
-        point: zipzi_core::document::MotionPoint,
-    },
-    ScaleTime {
-        duration: f32,
-    },
 }
 
 #[cfg(test)]

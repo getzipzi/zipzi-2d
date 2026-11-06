@@ -1,44 +1,5 @@
 use super::*;
-#[derive(Debug, Clone)]
-pub enum PropertyPatch {
-    Mesh {
-        id: String,
-        keyform: Option<(String, Vec<String>)>,
-        appearance: Appearance,
-        draw_order: Option<f32>,
-    },
-    Parameter {
-        id: String,
-        minimum: f32,
-        maximum: f32,
-        default_value: f32,
-        decimal_places: i32,
-    },
-    Part {
-        id: String,
-        draw_order: f32,
-    },
-    Glue {
-        id: String,
-        intensity: f32,
-    },
-    Motion {
-        id: String,
-        duration: f32,
-        fps: f32,
-        fade_in: Option<f32>,
-        fade_out: Option<f32>,
-    },
-    Expression {
-        id: String,
-        fade_in: Option<f32>,
-        fade_out: Option<f32>,
-    },
-    Export {
-        padding_pixels: f32,
-        minimum_extent: f32,
-    },
-}
+pub use zipzi_contract::kernel_commands::PropertyPatch;
 
 impl DocumentBuilder {
     pub fn patch_property(&mut self, patch: PropertyPatch) -> Result<(), Status> {

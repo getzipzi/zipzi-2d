@@ -16,7 +16,7 @@ impl Document {
     pub fn physics_group_step(&self, id: &str, down: bool) -> Result<Option<PhysicsEdit>> {
         let groups = self
             .session
-            .physics_collection(zipzi_sdk::PhysicsCollection::Groups)?;
+            .physics_collection(zipzi_contract::authoring::PhysicsCollection::Groups)?;
         let i = groups
             .iter()
             .position(|g| g.id() == id)
@@ -44,11 +44,11 @@ impl Document {
         object: &ObjectRef,
     ) -> Result<PhysicsAuthoringCapabilities> {
         let kind = match object.kind {
-            ObjectKind::Physics => zipzi_sdk::ObjectKind::Physics,
-            ObjectKind::PhysicsGroup => zipzi_sdk::ObjectKind::PhysicsGroup,
-            ObjectKind::PhysicsInput => zipzi_sdk::ObjectKind::PhysicsInput,
-            ObjectKind::PhysicsOutput => zipzi_sdk::ObjectKind::PhysicsOutput,
-            ObjectKind::PhysicsNode => zipzi_sdk::ObjectKind::PhysicsNode,
+            ObjectKind::Physics => zipzi_contract::authoring::ObjectKind::Physics,
+            ObjectKind::PhysicsGroup => zipzi_contract::authoring::ObjectKind::PhysicsGroup,
+            ObjectKind::PhysicsInput => zipzi_contract::authoring::ObjectKind::PhysicsInput,
+            ObjectKind::PhysicsOutput => zipzi_contract::authoring::ObjectKind::PhysicsOutput,
+            ObjectKind::PhysicsNode => zipzi_contract::authoring::ObjectKind::PhysicsNode,
             _ => anyhow::bail!("Expected a physics object"),
         };
         let handle = self.session.handle(kind, &object.id)?;
@@ -106,8 +106,8 @@ impl Document {
         &self,
         group: &str,
         action: &PhysicsChannelAction,
-    ) -> Result<zipzi_sdk::CapabilityState> {
-        use zipzi_sdk::CapabilityState as C;
+    ) -> Result<zipzi_contract::authoring::CapabilityState> {
+        use zipzi_contract::authoring::CapabilityState as C;
         let (object, kind) = match action {
             PhysicsChannelAction::CreateInput | PhysicsChannelAction::CreateOutput => (
                 ObjectRef::new(ObjectKind::PhysicsGroup, group),
@@ -180,12 +180,16 @@ impl Document {
             }
             PhysicsChannelAction::Step { object, down } => {
                 let collection = match object.kind {
-                    ObjectKind::PhysicsInput => zipzi_sdk::PhysicsCollection::Inputs {
-                        group_id: group.into(),
-                    },
-                    ObjectKind::PhysicsOutput => zipzi_sdk::PhysicsCollection::Outputs {
-                        group_id: group.into(),
-                    },
+                    ObjectKind::PhysicsInput => {
+                        zipzi_contract::authoring::PhysicsCollection::Inputs {
+                            group_id: group.into(),
+                        }
+                    }
+                    ObjectKind::PhysicsOutput => {
+                        zipzi_contract::authoring::PhysicsCollection::Outputs {
+                            group_id: group.into(),
+                        }
+                    }
                     _ => anyhow::bail!("Expected a Physics input or output"),
                 };
                 let ids = self.session.physics_collection(collection)?;

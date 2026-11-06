@@ -481,3 +481,98 @@ mod deletion;
 mod mesh;
 
 mod metadata;
+
+#[test]
+fn prepared_preview_is_bound_to_one_candidate_and_retains_prior_net_writes() {
+    let mut session = AuthoringSession::new(snapshot());
+    let mut draft = session.begin_draft();
+    let mut other = session.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            c.create_parameter(Parameter {
+                id: id(99),
+                name: "new".into(),
+                ..Default::default()
+            })
+        })
+        .unwrap();
+    let (prepared, ()) = draft
+        .prepare_preview(draft.source(), |c| {
+            c.rename(NameTarget::Parameter(&id(99)), "preview".into())
+        })
+        .unwrap();
+    assert_eq!(
+        prepared
+            .read_snapshot()
+            .unwrap()
+            .document()
+            .parameter(&id(99))
+            .unwrap()
+            .name,
+        "preview"
+    );
+    assert_eq!(
+        other.install_preview(prepared).unwrap_err().code,
+        "STALE_SOURCE"
+    );
+    assert!(other.is_active());
+    let (prepared, ()) = draft
+        .prepare_preview(draft.source(), |c| {
+            c.rename(NameTarget::Parameter(&id(99)), "final".into())
+        })
+        .unwrap();
+    draft.install_preview(prepared).unwrap();
+    let receipt = session.publish(draft.prepare("preview").unwrap()).unwrap();
+    assert!(receipt.writes.records().iter().any(
+        |write| write.id == id(99) && write.change == zipzi_core::state::RecordChange::Created
+    ));
+    session.undo(session.version()).unwrap();
+    assert!(session.snapshot().document().parameter(&id(99)).is_none());
+}
+
+#[test]
+fn preview_tracks_ignored_command_failure_without_mutating_the_live_draft() {
+    let session = AuthoringSession::new(snapshot());
+    let mut draft = session.begin_draft();
+    let source = draft.source();
+    let failed = draft.prepare_preview(source, |c| {
+        c.rename(NameTarget::Parameter(&id(2)), "temporary".into())?;
+        let _ = c.rename(NameTarget::Parameter(&id(99)), "missing".into());
+        Ok(())
+    });
+    assert_eq!(failed.unwrap_err().code, "MISSING_OBJECT");
+    assert_eq!(draft.source(), source);
+    assert_eq!(
+        draft
+            .read_snapshot()
+            .unwrap()
+            .snapshot
+            .document()
+            .parameter(&id(2))
+            .unwrap()
+            .name,
+        "parameter"
+    );
+    let (prepared, ()) = draft.prepare_preview(source, |_| Ok(())).unwrap();
+    draft
+        .batch(source, |c| {
+            c.rename(NameTarget::Parameter(&id(2)), "changed".into())
+        })
+        .unwrap();
+    assert_eq!(
+        draft.install_preview(prepared).unwrap_err().code,
+        "STALE_SOURCE"
+    );
+    assert!(draft.is_active());
+    assert_eq!(
+        draft
+            .read_snapshot()
+            .unwrap()
+            .snapshot
+            .document()
+            .parameter(&id(2))
+            .unwrap()
+            .name,
+        "changed"
+    );
+}

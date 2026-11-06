@@ -100,7 +100,7 @@ pub struct PreviewGeometryTimings {
 pub struct MotionPreview {
     document: Arc<DocumentState>,
     curves: Arc<BTreeMap<String, CompiledCurve>>,
-    source_identity: Option<(u64, u64)>,
+    source_identity: Option<zipzi_contract::kernel::QuerySource>,
     base: BTreeMap<String, f32>,
     snapshot: MotionSnapshot,
     pose: PoseRuntime,
@@ -230,13 +230,12 @@ impl MotionPreview {
             Vec::new()
         }
     }
-    /// Associate the preview with an observer session and generation.
-    /// This metadata does not change playback, schedules or cached checkpoints.
-    pub fn bind_session_identity(&mut self, session_id: u64, generation: u64) {
-        self.source_identity = Some((session_id, generation));
+    /// Bind the exact published or candidate source, including candidate sequence.
+    /// Playback controls do not change this source or the frozen document.
+    pub fn bind_source(&mut self, source: zipzi_contract::kernel::QuerySource) {
+        self.source_identity = Some(source);
     }
-    /// Return the observer session/generation, or `None` for an unbound preview.
-    pub fn source_identity(&self) -> Option<(u64, u64)> {
+    pub fn source_identity(&self) -> Option<zipzi_contract::kernel::QuerySource> {
         self.source_identity
     }
     /// Return the captured document UUID.

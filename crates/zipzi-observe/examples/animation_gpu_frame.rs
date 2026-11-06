@@ -2,13 +2,11 @@
 use std::{collections::HashMap, env, fs, path::PathBuf};
 use zipzi_core::DrawableFrameBounds;
 
-use zipzi_core::{Canvas, Vec2};
 use zipzi_observe::{
     ModelRoi, ObservationInput, Observer, ObserverConfig, RenderRequest, ResolvedObservation,
 };
-use zipzi_sdk::AuthoringSession;
+use zipzi_sdk::{AuthoringSession, Snapshot};
 
-const DOCUMENT: &str = "00000000-0000-4000-8000-00000000f901";
 const MOTION: &str = "00000000-0000-4000-8000-00000000f902";
 const POSE: &str = "00000000-0000-4000-8000-00000000f903";
 
@@ -17,35 +15,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() != 6 {
         return Err("expected MOC3 texture motion3 pose3 output.png time".into());
     }
-    let mut session = AuthoringSession::new(
-        DOCUMENT,
-        Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0),
-    )?;
-    session.import_bare_moc3(
+    let importer = zipzi_project::ProjectImporter::default();
+    let (result, imported, _) = importer.import_bare_moc3(
         &PathBuf::from(&args[0]),
         &HashMap::from([(0, PathBuf::from(&args[1]))]),
-        None,
+    );
+    if !result.status.is_ok() {
+        return Err(format!("{}: {}", result.status.code, result.status.message).into());
+    }
+    let imported = imported.ok_or("import returned no model")?;
+    let motion = zipzi_project::import_motion3(
+        &imported.document,
+        MOTION,
+        "Motion",
+        &fs::read_to_string(&args[2])?,
     )?;
-    let motion_text = fs::read_to_string(&args[2])?;
-    let pose_text = fs::read_to_string(&args[3])?;
-    session.edit("load animation reference", None, |edit| {
-        let motion_issues = edit.import_motion3(MOTION, "Motion", &motion_text)?;
-        let pose_issues = edit.import_pose3(POSE, &pose_text)?;
-        if !motion_issues.is_empty() || !pose_issues.is_empty() {
-            return Err(zipzi_sdk::SdkError {
-                code: "UNRESOLVED_ANIMATION_TARGET".into(),
-                message: format!("motion: {motion_issues:?}, pose: {pose_issues:?}").into(),
-                operation: "load_animation_reference",
-                object_ids: Vec::new(),
-                field_path: None,
-                expected_version: None,
-                actual_version: None,
-                referrers: Box::new([]),
-            });
-        }
-        Ok(())
-    })?;
-    let mut preview = session.motion_preview();
+    let pose =
+        zipzi_project::import_pose3(&motion.candidate, POSE, &fs::read_to_string(&args[3])?)?;
+    if !motion.diagnostics.is_empty() || !pose.diagnostics.is_empty() {
+        return Err(format!(
+            "Unresolved animation targets: {:?}, {:?}",
+            motion.diagnostics, pose.diagnostics
+        )
+        .into());
+    }
+    let session = AuthoringSession::new(
+        Snapshot::new(pose.candidate, imported.resources)
+            .map_err(|e| format!("{}: {}", e.code, e.message))?,
+    );
+    let source = session.read_snapshot();
+    let mut preview = zipzi_animation::MotionPreview::new(source.snapshot.document());
+    preview.bind_source(source.source);
     preview.schedule_motion(MOTION, 0.0)?;
     preview.seek(args[5].parse()?)?;
     let input = ObservationInput::capture_motion_from_snapshot(&session.read_snapshot(), &preview)?;
@@ -78,8 +78,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     })?;
     fs::write(&args[4], observer.render(&captured, request)?.png_bytes()?)?;
     let snapshot = preview.snapshot();
-    for (index, id) in session.parameter_ids().iter().enumerate() {
-        let runtime_id = &session.parameter(id).ok_or("missing parameter")?.runtime_id;
+    for (index, id) in session
+        .snapshot()
+        .document()
+        .parameter_order()
+        .iter()
+        .enumerate()
+    {
+        let runtime_id = &session
+            .snapshot()
+            .document()
+            .parameter(id)
+            .ok_or("missing parameter")?
+            .runtime_id;
         println!(
             "PARAM {index} {runtime_id} {}",
             snapshot
@@ -88,8 +99,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .ok_or("missing parameter value")?
         );
     }
-    for (index, id) in session.part_ids().iter().enumerate() {
-        let runtime_id = &session.part(id).ok_or("missing part")?.runtime_id;
+    for (index, id) in session
+        .snapshot()
+        .document()
+        .part_order()
+        .iter()
+        .enumerate()
+    {
+        let runtime_id = &session
+            .snapshot()
+            .document()
+            .part(id)
+            .ok_or("missing part")?
+            .runtime_id;
         println!(
             "PART {index} {runtime_id} {}",
             snapshot

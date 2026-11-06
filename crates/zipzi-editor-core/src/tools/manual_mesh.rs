@@ -6,8 +6,11 @@ use super::{
 use crate::{Document, ManualMeshTarget, ViewportPoint, ViewportTransform};
 use anyhow::Result;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
+use zipzi_contract::authoring::ManualMeshOperation;
+use zipzi_contract::authoring::ManualVertexTarget;
+use zipzi_contract::authoring::MeshGeometry;
 use zipzi_core::{Vec2, VertexId};
-use zipzi_sdk::{ManualMeshOperation, ManualVertexIdAllocator, ManualVertexTarget, MeshGeometry};
+use zipzi_sdk::ManualVertexIdAllocator;
 mod mapping;
 mod session;
 use mapping::{PoseMapping, PositionUvMap};

@@ -4,9 +4,11 @@ use std::{
     ops::Deref,
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
-use zipzi_core::{Document as Model, PreviewValues, preview::PreviewState};
+use zipzi_core::Status;
+use zipzi_core::{PreviewValues, preview::PreviewState, state::DocumentState as Model};
 use zipzi_runtime::{ClientId, EditId, EventCursor, EventKind, Runtime, SessionId};
-use zipzi_sdk::{AuthoringSession, EditReceipt, EditSession, SaveReceipt, SdkError, Version};
+use zipzi_sdk::Publication;
+use zipzi_sdk::{AuthoringSession, EditSession, SaveReceipt, Version};
 
 #[derive(Clone)]
 pub struct RuntimeHost {
@@ -223,7 +225,7 @@ impl Deref for EditRead<'_> {
 pub(crate) enum ModelRead<'a> {
     Formal(SessionRead<'a>),
     Candidate(EditRead<'a>),
-    Frozen(Arc<zipzi_sdk::AuthoringSnapshot>),
+    Frozen(Arc<zipzi_sdk::Snapshot>),
 }
 impl Deref for ModelRead<'_> {
     type Target = Model;
@@ -286,7 +288,7 @@ impl HostedSession {
     /// Fallible queries must tolerate an external job taking SDK ownership
     /// between UI reads. Keep the checked guard through the query so admission
     /// cannot race the readiness check.
-    pub(crate) fn try_read(&self) -> Result<SessionRead<'_>, SdkError> {
+    pub(crate) fn try_read(&self) -> Result<SessionRead<'_>, Status> {
         let read = self.read();
         read.guard.session(self.id).map_err(|error| {
             let code = match error {
@@ -295,7 +297,7 @@ impl HostedSession {
                 zipzi_runtime::RuntimeError::InvalidReference => "INVALID_REFERENCE",
                 _ => "SESSION_UNAVAILABLE",
             };
-            SdkError::new(code, &error.to_string(), "hosted_session.read")
+            Status::new(code, &error.to_string(), "hosted_session.read")
         })?;
         Ok(read)
     }
@@ -319,7 +321,7 @@ impl HostedSession {
     pub(crate) fn project_path(&self) -> Option<&std::path::Path> {
         self.path.as_deref()
     }
-    pub(crate) fn receipts(&mut self) -> zipzi_runtime::Result<Vec<EditReceipt>> {
+    pub(crate) fn receipts(&mut self) -> zipzi_runtime::Result<Vec<Publication>> {
         self.poll_receipts(false)
     }
     pub(crate) fn take_management_changed(&mut self) -> bool {
@@ -328,7 +330,7 @@ impl HostedSession {
     fn poll_receipts(
         &mut self,
         acknowledge_local: bool,
-    ) -> zipzi_runtime::Result<Vec<EditReceipt>> {
+    ) -> zipzi_runtime::Result<Vec<Publication>> {
         if !acknowledge_local && std::mem::take(&mut self.needs_resync) {
             return Err(zipzi_runtime::RuntimeError::ResyncRequired);
         }
@@ -365,7 +367,7 @@ impl HostedSession {
             })
             .collect())
     }
-    pub(crate) fn acknowledge_receipts(&mut self) -> Vec<EditReceipt> {
+    pub(crate) fn acknowledge_receipts(&mut self) -> Vec<Publication> {
         match self.poll_receipts(true) {
             Ok(receipts) => receipts,
             Err(_) => {
@@ -413,8 +415,8 @@ impl HostedSession {
         &mut self,
         label: impl Into<String>,
         expected: Option<Version>,
-        apply: impl FnOnce(&mut EditSession<'static>) -> Result<T, SdkError>,
-    ) -> zipzi_runtime::Result<(T, EditReceipt)> {
+        apply: impl FnOnce(&mut EditSession<'static>) -> Result<T, Status>,
+    ) -> zipzi_runtime::Result<(T, Publication)> {
         let mut edit = self.begin_owned_edit(label, expected)?;
         let value = edit.apply_sdk(false, apply)?;
         let receipt = edit.commit_to(self)?;
@@ -424,7 +426,7 @@ impl HostedSession {
         &mut self,
         plan: zipzi_runtime::PlanId,
         expected: Version,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         let edit =
             self.begin_owned_edit("Delete objects and clean dependencies", Some(expected))?;
         self.host
@@ -435,10 +437,10 @@ impl HostedSession {
             .apply_modeling_plan(self.client, edit.id.unwrap(), plan)?;
         edit.commit_to(self)
     }
-    pub(crate) fn undo(&mut self) -> zipzi_runtime::Result<EditReceipt> {
+    pub(crate) fn undo(&mut self) -> zipzi_runtime::Result<Publication> {
         self.host.write().undo(self.client, self.id)
     }
-    pub(crate) fn redo(&mut self) -> zipzi_runtime::Result<EditReceipt> {
+    pub(crate) fn redo(&mut self) -> zipzi_runtime::Result<Publication> {
         self.host.write().redo(self.client, self.id)
     }
     pub(crate) fn save_project(
@@ -487,7 +489,7 @@ pub(crate) struct HostedEdit {
 impl HostedEdit {
     pub(crate) fn apply_manual_mesh_batch(
         &mut self,
-        operations: Vec<(String, zipzi_sdk::ManualMeshOperation)>,
+        operations: Vec<(String, zipzi_contract::authoring::ManualMeshOperation)>,
     ) -> zipzi_runtime::Result<()> {
         self.apply_sdk(true, |edit| {
             edit.edit_manual_mesh_batch(operations).map(|_| ())
@@ -497,8 +499,8 @@ impl HostedEdit {
     pub(crate) fn apply_manual_mesh(
         &mut self,
         mesh_id: &str,
-        operation: zipzi_sdk::ManualMeshOperation,
-    ) -> zipzi_runtime::Result<zipzi_sdk::ManualMeshTransferReport> {
+        operation: zipzi_contract::authoring::ManualMeshOperation,
+    ) -> zipzi_runtime::Result<zipzi_contract::authoring::ManualMeshTransferReport> {
         let expected = self.source_ref();
         let result = self.host.write().apply_authoring(
             self.client,
@@ -587,14 +589,14 @@ impl HostedEdit {
     pub(crate) fn apply_sdk<T>(
         &mut self,
         recoverable: bool,
-        apply: impl FnOnce(&mut EditSession<'static>) -> Result<T, SdkError>,
+        apply: impl FnOnce(&mut EditSession<'static>) -> Result<T, Status>,
     ) -> zipzi_runtime::Result<T> {
         self.apply_inner(recoverable, apply)?.map_err(Into::into)
     }
     pub(crate) fn commit_to(
         mut self,
         session: &mut HostedSession,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         if self.session != session.id || !self.host.same_host(&session.host) {
             return Err(zipzi_runtime::RuntimeError::InvalidReference);
         }

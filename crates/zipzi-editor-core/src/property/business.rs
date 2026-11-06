@@ -46,7 +46,10 @@ fn reference(value: &str) -> PosePartRef {
         }
     }
 }
-pub(crate) fn payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
+pub(crate) fn payload(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<Value> {
     if object.kind == ObjectKind::Physics {
         let asset = model
             .physics()
@@ -65,7 +68,7 @@ pub(crate) fn payload(model: &zipzi_core::Document, object: &ObjectRef) -> Resul
     })
 }
 pub(crate) fn pose_patch(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
     payload: Value,
 ) -> Result<PoseEdit> {

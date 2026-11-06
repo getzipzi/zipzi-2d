@@ -14,7 +14,7 @@ pub(super) struct SceneCreationMenuCache {
     selection: Vec<zipzi_editor_core::ObjectRef>,
     states: std::collections::HashMap<
         CommandId,
-        std::sync::Arc<anyhow::Result<zipzi_sdk::CapabilityState>>,
+        std::sync::Arc<anyhow::Result<zipzi_contract::authoring::CapabilityState>>,
     >,
     #[cfg(test)]
     pub builds: usize,
@@ -233,10 +233,10 @@ impl EditorView {
                 .map(|id| {
                     let capability = capabilities.get(&id)?;
                     match capability.as_ref() {
-                        Ok(zipzi_sdk::CapabilityState::Available) => None,
+                        Ok(zipzi_contract::authoring::CapabilityState::Available) => None,
                         Ok(
-                            zipzi_sdk::CapabilityState::Unavailable { code }
-                            | zipzi_sdk::CapabilityState::Unsupported { code },
+                            zipzi_contract::authoring::CapabilityState::Unavailable { code }
+                            | zipzi_contract::authoring::CapabilityState::Unsupported { code },
                         ) => Some(crate::authoring::availability_reason(code)),
                         Err(error) => {
                             Some(crate::authoring::scene_creation::creation_error(&error))

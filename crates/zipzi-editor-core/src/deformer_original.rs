@@ -92,10 +92,10 @@ impl Document {
         self.ensure_editable(std::slice::from_ref(&target.object))?;
         let shape = match (&target.scope, action) {
             (_, DeformerOriginalAction::AutoUpdate { .. }) | (PropertyScope::Object, _) => {
-                zipzi_sdk::ShapeTarget::Base
+                zipzi_contract::document::ShapeTarget::Base
             }
             (PropertyScope::DeformerKeyform { binding, samples }, _) => {
-                zipzi_sdk::ShapeTarget::Ordinary {
+                zipzi_contract::document::ShapeTarget::Ordinary {
                     binding_id: binding.clone(),
                     samples: samples.clone(),
                 }
@@ -109,12 +109,14 @@ impl Document {
             .iter()
             .map(|p| (p.id.clone(), p.value))
             .collect();
-        let plan = self.plan_scene_content(zipzi_sdk::SceneContentEdit::DeformerOriginal {
-            transform_id: target.object.id.clone(),
-            target: shape,
-            action,
-            context,
-        })?;
+        let plan = self.plan_scene_content(
+            zipzi_contract::document::SceneContentEdit::DeformerOriginal {
+                transform_id: target.object.id.clone(),
+                target: shape,
+                action,
+                context,
+            },
+        )?;
         self.execute_scene_content(&plan)?;
         Ok(())
     }

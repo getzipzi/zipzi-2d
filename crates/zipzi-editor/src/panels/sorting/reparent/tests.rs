@@ -133,7 +133,7 @@ fn fixed_review_reports_native_proof_and_commits_once_with_selection_and_undo(
                 .as_ref()
                 .unwrap()
                 .strategy,
-            zipzi_sdk::ReparentStrategy::PreserveParameterDomain
+            zipzi_contract::document::ReparentStrategy::PreserveParameterDomain
         );
     });
     cx.update_window(h.window, |_, window, cx| {
@@ -236,7 +236,7 @@ fn full_domain_failure_requires_explicit_scope_change_before_submit(cx: &mut Tes
                 .as_ref()
                 .unwrap()
                 .strategy,
-            zipzi_sdk::ReparentStrategy::PreserveEditState
+            zipzi_contract::document::ReparentStrategy::PreserveEditState
         );
     });
     assert_eq!(

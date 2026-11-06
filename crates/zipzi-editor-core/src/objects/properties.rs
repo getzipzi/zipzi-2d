@@ -6,7 +6,7 @@ impl super::ObjectIndex {
     /// These mesh fields cannot change identities, relation edges or draw groups.
     pub(crate) fn refresh_mesh_presentation(
         &mut self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &super::ObjectRef,
     ) -> bool {
         let Some(mesh) = model.get_mesh(&object.id) else {
@@ -41,7 +41,7 @@ impl super::ObjectIndex {
 
     pub(crate) fn refresh_physics_properties(
         &mut self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         owners: &[String],
     ) -> bool {
         let Some(asset) = model.physics() else {
@@ -91,7 +91,7 @@ impl super::ObjectIndex {
 
     fn refresh_physics_preview(
         &mut self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &super::ObjectRef,
     ) -> bool {
         let Some(asset) = model.physics() else {
@@ -227,7 +227,7 @@ impl super::ObjectIndex {
     /// payloads without rebuilding bindings or influence paths.
     pub(crate) fn refresh_property_preview(
         &mut self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &super::ObjectRef,
         keyform_order_changed: bool,
     ) -> bool {

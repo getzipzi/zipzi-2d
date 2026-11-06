@@ -1,6 +1,8 @@
 //! A manual gesture owns one Runtime candidate and one frozen source image.
 use super::*;
-use zipzi_sdk::{AffineUvMap, ManualMeshOperation, MeshGeometry, extract_manual_meshing};
+use zipzi_contract::authoring::ManualMeshOperation;
+use zipzi_contract::authoring::MeshGeometry;
+use zipzi_sdk::{AffineUvMap, extract_manual_meshing};
 
 #[derive(Clone, Debug)]
 pub struct ManualMeshTarget {

@@ -1,13 +1,12 @@
 //! Resource loading and metadata plans attach editor context to SDK authority.
 use super::*;
 use anyhow::Result;
-use zipzi_sdk::{
-    AttachmentLoadToken, DocumentAuthoringEdit, DocumentEditPlan, ImageLoadToken, ResourceEdit,
-    ResourceEditPlan,
-};
+use zipzi_contract::document::DocumentAuthoringEdit;
+use zipzi_contract::document::ResourceEdit;
+use zipzi_sdk::{AttachmentLoadToken, DocumentEditPlan, ImageLoadToken, ResourceEditPlan};
 #[derive(Debug, Clone)]
 pub struct ResourceAuthoringCapabilities {
-    pub domain: zipzi_sdk::ResourceCapabilities,
+    pub domain: zipzi_contract::authoring::ResourceCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
 #[derive(Debug, Clone)]
@@ -40,7 +39,7 @@ impl Document {
         &mut self,
         id: String,
         name: String,
-        image: &zipzi_sdk::PreparedImageContent,
+        image: &zipzi_project::PreparedImageContent,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.import_prepared_image(id, name, image)?;
@@ -57,9 +56,11 @@ impl Document {
     }
     pub fn resource_capabilities(&self, id: &str) -> Result<ResourceAuthoringCapabilities> {
         Ok(ResourceAuthoringCapabilities {
-            domain: self
-                .session
-                .resource_capabilities(&self.session.handle(zipzi_sdk::ObjectKind::Asset, id)?)?,
+            domain: self.session.resource_capabilities(
+                &self
+                    .session
+                    .handle(zipzi_contract::authoring::ObjectKind::Asset, id)?,
+            )?,
             session_reason: self
                 .pending
                 .as_ref()
@@ -92,8 +93,11 @@ impl Document {
     }
     pub fn document_field_capability(
         &self,
-        f: zipzi_sdk::DocumentField,
-    ) -> (zipzi_sdk::CapabilityState, Option<AuthoringSessionReason>) {
+        f: zipzi_contract::document::DocumentField,
+    ) -> (
+        zipzi_contract::authoring::CapabilityState,
+        Option<AuthoringSessionReason>,
+    ) {
         (
             self.session.document_field_capability(f),
             self.pending
@@ -140,7 +144,7 @@ impl Document {
     pub fn replace_prepared_image_content(
         &mut self,
         t: &ImageLoadToken,
-        image: &zipzi_sdk::PreparedImageContent,
+        image: &zipzi_project::PreparedImageContent,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = self.session.replace_prepared_image_content(t, image)?;
@@ -174,19 +178,19 @@ impl Document {
     }
     pub fn document_field_address(
         &self,
-        f: zipzi_sdk::DocumentField,
+        f: zipzi_contract::document::DocumentField,
     ) -> Result<zipzi_sdk::DocumentFieldAddress> {
         Ok(self.session.document_field_address(f)?)
     }
     pub fn plan_document_field_patch(
         &self,
         a: &zipzi_sdk::DocumentFieldAddress,
-        v: zipzi_sdk::DocumentValue,
+        v: zipzi_contract::document::DocumentValue,
     ) -> Result<DocumentEditPlan> {
         self.ensure_authoring_idle()?;
         Ok(self.session.plan_document_field_patch(a, v)?)
     }
-    fn resource_operation_result(&mut self, receipt: zipzi_sdk::EditReceipt) -> OperationResult {
+    fn resource_operation_result(&mut self, receipt: zipzi_sdk::Publication) -> OperationResult {
         if receipt.changed {
             self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, false);
@@ -214,7 +218,7 @@ impl crate::Editor {
         document: crate::DocumentId,
         id: String,
         name: String,
-        image: &zipzi_sdk::PreparedImageContent,
+        image: &zipzi_project::PreparedImageContent,
     ) -> Result<OperationResult> {
         self.ensure_authoring_target(document, "Resource")?;
         self.active_session_mut()
@@ -276,7 +280,7 @@ impl crate::Editor {
         &mut self,
         id: crate::DocumentId,
         t: &ImageLoadToken,
-        image: &zipzi_sdk::PreparedImageContent,
+        image: &zipzi_project::PreparedImageContent,
     ) -> Result<OperationResult> {
         self.ensure_authoring_target(id, "Resource")?;
         self.active_session_mut()

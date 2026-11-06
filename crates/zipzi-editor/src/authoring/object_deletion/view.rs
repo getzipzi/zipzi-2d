@@ -171,7 +171,7 @@ impl DeletionDialog {
     }
 
     fn render_scope(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        use zipzi_sdk::DeletionTarget as T;
+        use zipzi_contract::document::DeletionTarget as T;
         let roots: Vec<_> = self
             .intent
             .request
@@ -322,7 +322,7 @@ impl Render for DeletionDialog {
             .roots
             .iter()
             .filter_map(|root| match root {
-                zipzi_sdk::DeletionTarget::Parameter(id) => Some(id.clone()),
+                zipzi_contract::document::DeletionTarget::Parameter(id) => Some(id.clone()),
                 _ => None,
             })
             .collect();
@@ -564,10 +564,12 @@ impl Render for DeletionDialog {
                     .child(text);
                 if let R::Removal { removal } = &row {
                     let reason = t!(match removal.reason {
-                        zipzi_sdk::DeletionReason::Requested => "deletion.reason_requested",
-                        zipzi_sdk::DeletionReason::Scope => "deletion.reason_child",
-                        zipzi_sdk::DeletionReason::Owned => "deletion.reason_owned",
-                        zipzi_sdk::DeletionReason::Dependency => "deletion.reason_dependency",
+                        zipzi_contract::document::DeletionReason::Requested =>
+                            "deletion.reason_requested",
+                        zipzi_contract::document::DeletionReason::Scope => "deletion.reason_child",
+                        zipzi_contract::document::DeletionReason::Owned => "deletion.reason_owned",
+                        zipzi_contract::document::DeletionReason::Dependency =>
+                            "deletion.reason_dependency",
                     })
                     .into_owned();
                     item = item.child(

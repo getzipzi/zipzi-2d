@@ -1,6 +1,9 @@
 //! Deterministic authoring geometry and dependency-preserving remeshing.
+use crate::ConversionControl;
 use crate::Status;
-use zipzi_core::{Mesh, Vec2};
+use std::collections::HashSet;
+pub use zipzi_contract::spatial::ObjectTarget;
+use zipzi_core::{Mesh, Part, Vec2};
 
 pub use zipzi_contract::authoring::MeshGeometry;
 
@@ -188,4 +191,70 @@ pub fn rectangle_mesh(
         triangles: vec![[0, 1, 2], [0, 2, 3]],
         ..Mesh::default()
     })
+}
+
+/// Resolve target IDs in authoring mesh order. Missing IDs are errors; an
+/// existing Part without descendant meshes resolves to an empty vector.
+pub fn resolve_mesh_ids(
+    meshes: &[Mesh],
+    parts: &[Part],
+    targets: &[ObjectTarget],
+) -> Result<Vec<String>, Status> {
+    resolve_mesh_ids_from(
+        meshes.iter(),
+        parts.iter(),
+        targets,
+        &ConversionControl::default(),
+    )
+}
+
+fn resolve_mesh_ids_from<'a>(
+    meshes: impl Iterator<Item = &'a Mesh> + Clone,
+    parts: impl Iterator<Item = &'a Part> + Clone,
+    targets: &[ObjectTarget],
+    control: &ConversionControl,
+) -> Result<Vec<String>, Status> {
+    let mesh_by_id: HashSet<_> = meshes.clone().map(|mesh| mesh.id.as_str()).collect();
+    let part_by_id: HashSet<_> = parts.clone().map(|part| part.id.as_str()).collect();
+    let mut selected: HashSet<&str> = HashSet::new();
+    let mut descendants: HashSet<&str> = HashSet::new();
+    for target in targets {
+        control.check()?;
+        match target {
+            ObjectTarget::Mesh(id) => {
+                if !mesh_by_id.contains(id.as_str()) {
+                    return Err(Status::error("MISSING_MESH", id));
+                }
+                selected.insert(id.as_str());
+            }
+            ObjectTarget::Part(id) => {
+                if !part_by_id.contains(id.as_str()) {
+                    return Err(Status::error("MISSING_PART", id));
+                }
+                descendants.insert(id.as_str());
+            }
+        }
+    }
+    loop {
+        control.check()?;
+        let before = descendants.len();
+        for part in parts.clone() {
+            if descendants.contains(part.parent_id.as_str()) {
+                descendants.insert(part.id.as_str());
+            }
+        }
+        if descendants.len() == before {
+            break;
+        }
+    }
+    for mesh in meshes.clone() {
+        if descendants.contains(mesh.part_id.as_str()) {
+            selected.insert(mesh.id.as_str());
+        }
+    }
+    Ok(meshes
+        .clone()
+        .filter(|mesh| selected.contains(mesh.id.as_str()))
+        .map(|mesh| mesh.id.clone())
+        .collect())
 }

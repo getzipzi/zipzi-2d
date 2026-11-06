@@ -2,8 +2,11 @@
 use super::*;
 use anyhow::{Result, ensure};
 use std::sync::Arc;
+use zipzi_contract::authoring::DeletionIntent;
+use zipzi_contract::authoring::DeletionPage;
+use zipzi_contract::authoring::DeletionSection;
+use zipzi_contract::authoring::DeletionSummary;
 use zipzi_runtime::{Completion, JobId, JobValue, PlanId, Work};
-use zipzi_sdk::{DeletionIntent, DeletionPage, DeletionSection, DeletionSummary};
 
 struct PlanLease {
     host: crate::RuntimeHost,
@@ -54,7 +57,9 @@ impl TreeDeletionPlan {
         let mut offset = 0;
         while let Ok(page) = self.page(DeletionSection::Removed, offset, 256) {
             ids.extend(page.rows.into_iter().filter_map(|row| match row {
-                zipzi_sdk::DeletionRow::Removal { removal } => Some(removal.object.id),
+                zipzi_contract::authoring::DeletionRow::Removal { removal } => {
+                    Some(removal.object.id)
+                }
                 _ => None,
             }));
             match page.next_offset {
@@ -156,7 +161,7 @@ impl Drop for TreeDeletionTask {
 }
 impl Document {
     pub fn deletion_intent(&self, objects: &[ObjectRef]) -> Result<DeletionIntent> {
-        let mut request = zipzi_sdk::DeletionRequest::default();
+        let mut request = zipzi_contract::document::DeletionRequest::default();
         for object in objects {
             if object.kind == crate::ObjectKind::GlueBinding {
                 ensure!(
@@ -167,13 +172,15 @@ impl Document {
                         .is_some_and(|g| g.binding.is_some()),
                     "Missing Glue binding"
                 );
-                request.roots.push(zipzi_sdk::DeletionTarget::Record(
-                    zipzi_sdk::DeletionObject {
-                        kind: zipzi_sdk::DeletionKind::GlueBinding,
-                        id: object.id.clone(),
-                        owner_id: None,
-                    },
-                ));
+                request
+                    .roots
+                    .push(zipzi_contract::document::DeletionTarget::Record(
+                        zipzi_contract::document::DeletionObject {
+                            kind: zipzi_contract::document::DeletionKind::GlueBinding,
+                            id: object.id.clone(),
+                            owner_id: None,
+                        },
+                    ));
             } else {
                 let kind = object
                     .kind
@@ -197,7 +204,7 @@ impl Document {
             .request
             .reparent
             .values()
-            .any(|s| *s == zipzi_sdk::ReparentStrategy::PreserveEditState);
+            .any(|s| *s == zipzi_contract::document::ReparentStrategy::PreserveEditState);
         if current || intent.request.conversion_context.is_none() {
             intent.request.conversion_context = Some(self.preservation_context());
         }
@@ -206,7 +213,7 @@ impl Document {
             host.client_id(),
             self.runtime_session_id(),
             None,
-            zipzi_sdk::ModelingIntent::Deletion(intent),
+            zipzi_contract::authoring::ModelingIntent::Deletion(intent),
         )?;
         let work = host.dispatch_job(job)?;
         Ok(TreeDeletionTask {
@@ -241,7 +248,7 @@ impl Document {
         let mut reported = false;
         loop {
             let page = plan.page(DeletionSection::Locks, offset, 256)?;
-            if page.rows.iter().any(|row|matches!(row,zipzi_sdk::DeletionRow::Lock {blocker} if blocker.source_id==source_id)) {reported=true;break;}
+            if page.rows.iter().any(|row|matches!(row,zipzi_contract::authoring::DeletionRow::Lock {blocker} if blocker.source_id==source_id)) {reported=true;break;}
             match page.next_offset {
                 Some(next) => offset = next,
                 None => break,

@@ -6,7 +6,7 @@ impl AnimationSession {
         self.scrubbing
     }
     /// Last SDK result coordinates, retained while inspecting raw clip values.
-    pub fn result_playback_position(&self) -> Option<&zipzi_sdk::MotionPlaybackPosition> {
+    pub fn result_playback_position(&self) -> Option<&zipzi_animation::MotionPlaybackPosition> {
         self.result_position.as_ref()
     }
     pub(crate) fn new(document: &Document) -> Self {

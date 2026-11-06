@@ -1,7 +1,7 @@
 use crate::{Document, ObjectKind, ObjectRef, ParameterManagementError as E};
 use anyhow::{Result, ensure};
+use zipzi_contract::document::OrganizationEdit as Edit;
 use zipzi_core::document::CdiParameterGroup;
-use zipzi_sdk::OrganizationEdit as Edit;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParameterGroupDraft {
     pub name: String,

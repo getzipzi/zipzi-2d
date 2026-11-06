@@ -303,10 +303,10 @@ impl HostedSession {
         width: u32,
         height: u32,
         rgba: std::sync::Arc<[u8]>,
-    ) -> Result<zipzi_sdk::PreparedImageContent, SdkError> {
+    ) -> Result<zipzi_project::PreparedImageContent, SdkError> {
         self.try_read()?.prepare_rgba_image(width, height, rgba)
     }
-    pub fn read_snapshot(&self) -> AuthoringSnapshot {
+    pub fn read_snapshot(&self) -> Snapshot {
         self.read().read_snapshot()
     }
     pub fn reference_capabilities(
@@ -397,7 +397,7 @@ impl HostedSession {
     pub fn execute_attachment_plan(
         &mut self,
         plan: &AttachmentEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_attachment_plan(self.client, self.id, plan)
@@ -405,7 +405,7 @@ impl HostedSession {
     pub fn execute_binding_plan(
         &mut self,
         plan: &BindingEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_binding_plan(self.client, self.id, plan)
@@ -413,7 +413,7 @@ impl HostedSession {
     pub fn execute_document_plan(
         &mut self,
         p: &DocumentEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_document_plan(self.client, self.id, p)
@@ -421,7 +421,7 @@ impl HostedSession {
     pub fn execute_expression_plan(
         &mut self,
         plan: &ExpressionEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_expression_plan(self.client, self.id, plan)
@@ -429,7 +429,7 @@ impl HostedSession {
     pub fn execute_motion_plan(
         &mut self,
         plan: &MotionEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_motion_plan(self.client, self.id, plan)
@@ -437,7 +437,7 @@ impl HostedSession {
     pub fn execute_organization_plan(
         &mut self,
         plan: &OrganizationEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_organization_plan(self.client, self.id, plan)
@@ -445,12 +445,12 @@ impl HostedSession {
     pub fn execute_physics_plan(
         &mut self,
         plan: &PhysicsEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_physics_plan(self.client, self.id, plan)
     }
-    pub fn execute_pose_plan(&mut self, plan: &PoseEditPlan) -> zipzi_runtime::Result<EditReceipt> {
+    pub fn execute_pose_plan(&mut self, plan: &PoseEditPlan) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_pose_plan(self.client, self.id, plan)
@@ -458,7 +458,7 @@ impl HostedSession {
     pub fn execute_reference_plan(
         &mut self,
         p: &ReferenceEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_reference_plan(self.client, self.id, p)
@@ -466,7 +466,7 @@ impl HostedSession {
     pub fn execute_scene_content_plan(
         &mut self,
         plan: &SceneContentEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_scene_content_plan(self.client, self.id, plan)
@@ -474,7 +474,7 @@ impl HostedSession {
     pub fn execute_scene_plan(
         &mut self,
         plan: &SceneEditPlan,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .execute_scene_plan(self.client, self.id, plan)
@@ -484,7 +484,7 @@ impl HostedSession {
         id: String,
         name: String,
         image: &PreparedImageContent,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .import_prepared_image(self.client, self.id, id, name, image)
@@ -493,7 +493,7 @@ impl HostedSession {
         &mut self,
         token: &AttachmentLoadToken,
         bytes: Option<std::sync::Arc<Vec<u8>>>,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .replace_attachment_content(self.client, self.id, token, bytes)
@@ -502,7 +502,7 @@ impl HostedSession {
         &mut self,
         token: &ImageLoadToken,
         image: &PreparedImageContent,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host
             .write()
             .replace_prepared_image_content(self.client, self.id, token, image)
@@ -513,7 +513,7 @@ impl HostedSession {
         columns: usize,
         rows: usize,
         expected: Option<Version>,
-    ) -> zipzi_runtime::Result<EditReceipt> {
+    ) -> zipzi_runtime::Result<Publication> {
         self.host.write().remesh_rectangle_grid(
             self.client,
             self.id,
@@ -549,7 +549,7 @@ impl HostedEdit {
     }
     pub fn preview_property(
         &mut self,
-        patch: &zipzi_core::document::PropertyPatch,
+        patch: &zipzi_core::state::PropertyPatch,
         preview: &mut zipzi_core::preview::PreviewState,
         values: zipzi_core::PreviewValues,
     ) -> zipzi_runtime::Result<()> {

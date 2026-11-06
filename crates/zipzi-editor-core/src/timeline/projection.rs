@@ -1,9 +1,10 @@
 use super::*;
 use anyhow::{Result, ensure};
+use zipzi_animation::CompiledCurve;
+use zipzi_animation::motion_bezier_time_is_monotonic;
+use zipzi_animation::sample_motion_curve;
 use zipzi_core::document::{MotionClip, MotionEvent, MotionSegment};
-use zipzi_sdk::{
-    CompiledCurve, MotionInterpolation, motion_bezier_time_is_monotonic, sample_motion_curve,
-};
+use zipzi_sdk::MotionInterpolation;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TimelineDiagnostic {
@@ -430,7 +431,7 @@ impl TimelineProjection {
         self.channels.iter().find(|channel| &channel.id == id)
     }
     pub fn display_handles(&self, end: &TimelineKeyRef) -> Option<TimelineBezierHandles> {
-        use zipzi_sdk::CompiledCurve;
+        use zipzi_animation::CompiledCurve;
         let track = self.tracks.get(&end.track_id)?;
         self.key(end)?;
         let index = track.key_indices[&end.key_id].checked_sub(1)?;

@@ -82,6 +82,7 @@ pub struct AuthoringSession {
     events: VecDeque<Publication>,
     pub(super) project: Option<ProjectContext>,
     pub(super) saved: Option<SavedMarker>,
+    pub(super) saving: Option<Arc<std::sync::atomic::AtomicU8>>,
 }
 impl AuthoringSession {
     pub fn new(snapshot: Snapshot) -> Self {
@@ -96,6 +97,7 @@ impl AuthoringSession {
             events: VecDeque::new(),
             project: None,
             saved: None,
+            saving: None,
         }
     }
     pub fn version(&self) -> Version {
@@ -125,6 +127,7 @@ impl AuthoringSession {
         std::mem::take(&mut self.events)
     }
     fn check_source(&self, version: Version) -> Result<(), Status> {
+        self.check_not_saving()?;
         if version == self.version {
             Ok(())
         } else {

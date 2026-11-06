@@ -17,6 +17,22 @@ macro_rules! identity {
                 Self(Uuid::new_v4())
             }
         }
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+        impl std::str::FromStr for $name {
+            type Err = uuid::Error;
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                value.parse().map(Self)
+            }
+        }
+        impl crate::api_shape::ApiShape for $name {
+            fn api_shape() -> crate::api_shape::Shape {
+                crate::api_shape::Shape::String
+            }
+        }
         impl Default for $name {
             fn default() -> Self {
                 Self::new()
@@ -25,6 +41,9 @@ macro_rules! identity {
     };
 }
 
+identity!(ClientId, "Identity of an authenticated Runtime client.");
+identity!(JobId, "Identity of an owned Runtime task.");
+identity!(RuntimeInstanceId, "Identity of a host process lifetime.");
 identity!(
     ContentId,
     "Frozen content identity; history may restore the same identity."
@@ -43,7 +62,9 @@ identity!(
 );
 
 /// Publication identity. Restoring old content must still advance revision.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, zipzi_api_derive::ApiShape,
+)]
 #[serde(deny_unknown_fields)]
 pub struct Version {
     pub session: SessionKey,
@@ -70,7 +91,9 @@ impl Version {
 }
 
 /// Exact candidate source for queries and prepared worker results.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, zipzi_api_derive::ApiShape,
+)]
 #[serde(deny_unknown_fields)]
 pub struct DraftSource {
     pub draft: DraftId,
@@ -88,7 +111,9 @@ impl DraftSource {
 }
 
 /// Queries preserve whether they observed formal or candidate content.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, zipzi_api_derive::ApiShape,
+)]
 #[serde(
     tag = "kind",
     content = "source",
@@ -101,7 +126,7 @@ pub enum QuerySource {
 }
 
 /// Persistent image object. Storage locations never enter resolved model content.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(deny_unknown_fields)]
 pub struct AssetRecord {
     pub id: String,
@@ -109,7 +134,7 @@ pub struct AssetRecord {
     pub content: AssetContent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum AssetContent {
     Empty,

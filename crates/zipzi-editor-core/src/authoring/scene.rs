@@ -1,10 +1,11 @@
 //! Editor session coordination; scene rules and copy closures live in the SDK.
 use super::*;
 use anyhow::Result;
-use zipzi_sdk::{
-    DrawingGroupAddress, SceneCapabilities, SceneEdit, SceneEditPlan, SceneField,
-    SceneFieldAddress, SceneFieldValue,
-};
+use zipzi_contract::authoring::SceneCapabilities;
+use zipzi_contract::document::SceneEdit;
+use zipzi_contract::document::SceneField;
+use zipzi_contract::document::SceneFieldValue;
+use zipzi_sdk::{DrawingGroupAddress, SceneEditPlan, SceneFieldAddress};
 
 #[derive(Debug, Clone)]
 pub struct SceneAuthoringCapabilities {
@@ -18,11 +19,11 @@ impl Document {
         object: &ObjectRef,
     ) -> Result<SceneAuthoringCapabilities> {
         let kind = match object.kind {
-            ObjectKind::Mesh => zipzi_sdk::ObjectKind::Mesh,
-            ObjectKind::Deformer => zipzi_sdk::ObjectKind::Transform,
-            ObjectKind::Offscreen => zipzi_sdk::ObjectKind::Offscreen,
-            ObjectKind::Glue => zipzi_sdk::ObjectKind::Glue,
-            ObjectKind::DrawOrderGroup => zipzi_sdk::ObjectKind::DrawOrderGroup,
+            ObjectKind::Mesh => zipzi_contract::authoring::ObjectKind::Mesh,
+            ObjectKind::Deformer => zipzi_contract::authoring::ObjectKind::Transform,
+            ObjectKind::Offscreen => zipzi_contract::authoring::ObjectKind::Offscreen,
+            ObjectKind::Glue => zipzi_contract::authoring::ObjectKind::Glue,
+            ObjectKind::DrawOrderGroup => zipzi_contract::authoring::ObjectKind::DrawOrderGroup,
             _ => anyhow::bail!("Expected a scene object or drawing group"),
         };
         Ok(SceneAuthoringCapabilities {

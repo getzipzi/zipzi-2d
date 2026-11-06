@@ -111,7 +111,7 @@ impl Document {
         self.begin_control_edit(&[prepared])?;
         let result = (|| {
             self.pending.as_mut().unwrap().edit.apply(|edit| {
-                edit.edit_scene_content(zipzi_sdk::SceneContentEdit::WarpShape {
+                edit.edit_scene_content(zipzi_contract::document::SceneContentEdit::WarpShape {
                     transform_id: object.id.clone(),
                     target,
                     action,

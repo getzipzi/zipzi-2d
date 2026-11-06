@@ -1,8 +1,11 @@
 //! Ordinary binding workflow. SDK plans own all grid conversion and validation.
 use super::*;
 use anyhow::{Result, ensure};
+use zipzi_contract::authoring::BindingAuthoringEdit;
+use zipzi_contract::document::BindingGridEdit;
+use zipzi_contract::document::BindingGridTarget;
+use zipzi_contract::document::GridOperation;
 use zipzi_core::BindingAxisEditing;
-use zipzi_sdk::{BindingAuthoringEdit, BindingGridEdit, BindingGridTarget, GridOperation};
 
 #[derive(Clone, Debug)]
 pub enum OrdinaryBindingAction {
@@ -56,7 +59,7 @@ impl ParameterKeyformAction {
 #[derive(Clone, Debug)]
 enum Native {
     Request {
-        snapshot: Arc<zipzi_sdk::AuthoringSnapshot>,
+        snapshot: Arc<zipzi_sdk::Snapshot>,
         edit: BindingAuthoringEdit,
         limits: zipzi_sdk::AuthoringLimits,
     },
@@ -77,7 +80,7 @@ pub struct OrdinaryBindingPlan {
     pub selection: ObjectRef,
     pub deleted_binding: bool,
     pub report: Option<zipzi_sdk::ConversionReport>,
-    pub cost: zipzi_sdk::ConversionCost,
+    pub cost: zipzi_contract::document::ConversionCost,
 }
 #[derive(Clone, Debug)]
 pub struct OrdinaryBindingCapture(OrdinaryBindingPlan);
@@ -248,7 +251,9 @@ impl Document {
                             if axis.samples.len() == 1 {
                                 GridOperation::RemoveAxis {
                                     axis_id: axis.id.clone(),
-                                    reduction: Some(zipzi_sdk::AxisReduction::Slice(value)),
+                                    reduction: Some(
+                                        zipzi_contract::document::AxisReduction::Slice(value),
+                                    ),
                                     keep_pending: false,
                                 }
                             } else {
@@ -263,7 +268,9 @@ impl Document {
                         let reduction = value.clamp(axis.keys[0], *axis.keys.last().unwrap());
                         vec![GridOperation::RemoveAxis {
                             axis_id: axis.id.clone(),
-                            reduction: Some(zipzi_sdk::AxisReduction::Resample(reduction)),
+                            reduction: Some(zipzi_contract::document::AxisReduction::Resample(
+                                reduction,
+                            )),
                             keep_pending: false,
                         }]
                     }
@@ -359,7 +366,7 @@ impl Document {
     pub fn ordinary_binding_creation_capability(
         &self,
         object: &ObjectRef,
-    ) -> Result<zipzi_sdk::CapabilityState> {
+    ) -> Result<zipzi_contract::authoring::CapabilityState> {
         ensure!(
             matches!(
                 object.kind,
@@ -372,7 +379,7 @@ impl Document {
         if self.model().binding_for_mesh(&object.id).is_some()
             || self.model().binding_for_scene(&object.id).is_some()
         {
-            return Ok(zipzi_sdk::CapabilityState::Unavailable {
+            return Ok(zipzi_contract::authoring::CapabilityState::Unavailable {
                 code: "BINDING_CONFLICT",
             });
         }
@@ -406,7 +413,7 @@ impl Document {
             ensure!(
                 matches!(
                     self.ordinary_binding_creation_capability(target)?,
-                    zipzi_sdk::CapabilityState::Available
+                    zipzi_contract::authoring::CapabilityState::Available
                 ),
                 "Binding target is unavailable"
             );
@@ -507,7 +514,8 @@ impl Document {
                         GridOperation::SetParameter {
                             axis_id: source.id.clone(),
                             parameter_id: parameter.clone(),
-                            reduction: reduction.map(zipzi_sdk::AxisReduction::Slice),
+                            reduction: reduction
+                                .map(zipzi_contract::document::AxisReduction::Slice),
                         }
                     }
                     A::InsertSample { value, .. } => {
@@ -546,7 +554,8 @@ impl Document {
                         selection = binding.clone();
                         GridOperation::RemoveAxis {
                             axis_id: source.id.clone(),
-                            reduction: reduction.map(zipzi_sdk::AxisReduction::Slice),
+                            reduction: reduction
+                                .map(zipzi_contract::document::AxisReduction::Slice),
                             keep_pending: false,
                         }
                     }

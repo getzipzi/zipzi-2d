@@ -2,7 +2,8 @@
 //! SDK; session state is kept separate so active field gestures can stay alive.
 use super::*;
 use anyhow::{Result, ensure};
-use zipzi_sdk::{CapabilityState as C, ObjectKind as K};
+use zipzi_contract::authoring::CapabilityState as C;
+use zipzi_contract::authoring::ObjectKind as K;
 
 #[derive(Default)]
 pub(in crate::document) struct AuthoringCapabilityCache {
@@ -190,8 +191,9 @@ impl Document {
             if object.kind == ObjectKind::Document {
                 result.states.push((
                     A::Patch,
-                    self.session
-                        .document_field_capability(zipzi_sdk::DocumentField::ExportSettings),
+                    self.session.document_field_capability(
+                        zipzi_contract::document::DocumentField::ExportSettings,
+                    ),
                 ));
             }
             return Ok(result);
@@ -281,7 +283,7 @@ impl Document {
 pub use zipzi_sdk::AuthoringCollection;
 #[derive(Clone, Debug)]
 pub struct AuthoringCollectionCapabilities {
-    pub domain: zipzi_sdk::CollectionCapabilities,
+    pub domain: zipzi_contract::authoring::CollectionCapabilities,
     pub session_reason: Option<AuthoringSessionReason>,
 }
 impl Document {

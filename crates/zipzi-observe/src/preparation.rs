@@ -54,7 +54,7 @@ impl ResolvedObservation {
     }
 
     pub(super) fn prepare_texture(
-        asset: ImageAsset,
+        asset: AssetRecord,
         target: &ObservationTextureTarget,
         verified: zipzi_project::VerifiedTexture,
         save_alpha: bool,
@@ -167,8 +167,8 @@ impl ResolvedObservation {
                 .map(|t| ObservationTextureReportEntry {
                     asset_id: t.asset.id.clone(),
                     source_size: ObservationTextureSize {
-                        width: t.asset.content.as_ref().unwrap().width,
-                        height: t.asset.content.as_ref().unwrap().height,
+                        width: image_descriptor(&t.asset).expect("resolved image").1,
+                        height: image_descriptor(&t.asset).expect("resolved image").2,
                     },
                     render_size: ObservationTextureSize {
                         width: t.data.width,

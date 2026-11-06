@@ -10,6 +10,23 @@ pub struct Draft {
     workspace: Option<(DocumentBuilder, ResourceView)>,
 }
 
+/// An independently prepared preview. Only its exact originating candidate can
+/// install it; preparation has no access to the live Draft's mutable workspace.
+#[derive(Debug)]
+pub struct PreparedPreview {
+    source: DraftSource,
+    builder: DocumentBuilder,
+    resources: ResourceView,
+}
+impl PreparedPreview {
+    pub fn source(&self) -> DraftSource {
+        self.source
+    }
+    pub fn read_snapshot(&self) -> Result<Snapshot, Status> {
+        Snapshot::new(self.builder.preview()?, self.resources.clone())
+    }
+}
+
 /// An already frozen, resource-validated candidate. Consumed by publication.
 #[derive(Debug)]
 pub struct PreparedChange {
@@ -97,6 +114,51 @@ impl Draft {
     }
     pub fn cancel(mut self) {
         self.workspace.take();
+    }
+    /// A rejected preview does not destroy the previous valid gesture position.
+    /// Ordinary `batch` commands retain their abort-on-failure semantics.
+    pub fn prepare_preview<T>(
+        &self,
+        expected: DraftSource,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
+    ) -> Result<(PreparedPreview, T), Status> {
+        if expected != self.source {
+            return Err(error("STALE_SOURCE", "Preview source is stale"));
+        }
+        let (mut builder, mut resources) = self
+            .workspace
+            .as_ref()
+            .ok_or_else(|| error("DRAFT_ENDED", "Draft has ended"))?
+            .clone();
+        let mut commands = Commands::new(&mut builder, &mut resources);
+        let value = run(&mut commands)?;
+        commands.finish()?;
+        builder.validate_candidate()?;
+        // Resource validation is also preparation, never a post-install failure.
+        Snapshot::new(builder.preview()?, resources.clone())?;
+        Ok((
+            PreparedPreview {
+                source: expected,
+                builder,
+                resources,
+            },
+            value,
+        ))
+    }
+    pub fn install_preview(&mut self, prepared: PreparedPreview) -> Result<DraftSource, Status> {
+        if self.workspace.is_none() {
+            return Err(error("DRAFT_ENDED", "Draft has ended"));
+        }
+        if prepared.source != self.source {
+            return Err(error("STALE_SOURCE", "Prepared preview source is stale"));
+        }
+        let source = self
+            .source
+            .next_sequence()
+            .ok_or_else(|| error("VERSION_OVERFLOW", "Candidate sequence exhausted"))?;
+        self.workspace = Some((prepared.builder, prepared.resources));
+        self.source = source;
+        Ok(source)
     }
     /// Consuming preparation also consumes failed/stale commit attempts.
     pub fn prepare(mut self, description: impl Into<String>) -> Result<PreparedChange, Status> {

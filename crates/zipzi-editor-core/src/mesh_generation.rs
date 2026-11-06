@@ -12,7 +12,9 @@ use std::sync::{
     Arc,
     atomic::{AtomicU64, Ordering},
 };
-use zipzi_sdk::{ManualMeshOperation, MeshGeometry, edit_manual_mesh, rectangle_grid_geometry};
+use zipzi_contract::authoring::ManualMeshOperation;
+use zipzi_contract::authoring::MeshGeometry;
+use zipzi_sdk::{edit_manual_mesh, rectangle_grid_geometry};
 
 /// Each backend owns its typed configuration. Preview and apply share this dispatch.
 #[derive(Clone, Copy, Debug, PartialEq)]

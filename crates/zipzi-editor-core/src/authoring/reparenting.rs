@@ -3,11 +3,13 @@
 use super::*;
 use anyhow::{Result, ensure};
 use std::sync::Arc;
+use zipzi_contract::document::ReparentEdit;
+use zipzi_contract::document::ReparentPlacement;
+use zipzi_contract::document::ReparentStrategy;
+use zipzi_contract::document::SceneCollection;
+use zipzi_contract::document::SceneEdit;
 use zipzi_core::document::{ConversionDomain, ReparentContext};
-use zipzi_sdk::{
-    AuthoringLimits, AuthoringSnapshot, ConversionControl, ReparentEdit, ReparentPlacement,
-    ReparentStrategy, SceneCollection, SceneEdit, SceneEditPlan,
-};
+use zipzi_sdk::{AuthoringLimits, ConversionControl, SceneEditPlan, Snapshot};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PalettePreservation {
@@ -17,7 +19,7 @@ pub enum PalettePreservation {
 
 #[derive(Clone, Debug)]
 pub struct PaletteReparentCapture {
-    snapshot: Arc<AuthoringSnapshot>,
+    snapshot: Arc<Snapshot>,
     limits: AuthoringLimits,
     context: ReparentContext,
     preview_revision: u64,
@@ -39,7 +41,7 @@ impl PaletteReparentCapture {
         scope: PalettePreservation,
         control: &ConversionControl,
     ) -> Result<PaletteReparentPlan> {
-        let tolerance = zipzi_sdk::DeletionTolerance::default();
+        let tolerance = zipzi_contract::document::DeletionTolerance::default();
         self.plan_with_tolerance(
             request,
             scope,
@@ -76,7 +78,7 @@ impl PaletteReparentCapture {
 }
 
 pub(super) fn deformation_destination(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     request: &PaletteMove,
 ) -> Result<(SceneCollection, Option<String>)> {
     let parent = match (&request.target, request.position) {
@@ -128,7 +130,7 @@ pub(super) fn deformation_destination(
     Ok((collection, before))
 }
 pub(super) fn reparent_edit(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     request: &PaletteMove,
     mut context: ReparentContext,
     scope: PalettePreservation,
@@ -163,7 +165,7 @@ pub(super) fn reparent_edit(
     if scope == PalettePreservation::EditState {
         context.parameter_domain.clear();
     }
-    let tolerance = zipzi_sdk::DeletionTolerance::default();
+    let tolerance = zipzi_contract::document::DeletionTolerance::default();
     Ok(ReparentEdit {
         sources: request.sources.iter().map(|s| s.id.clone()).collect(),
         parent_id: parent_id.unwrap_or_default(),

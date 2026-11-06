@@ -8,7 +8,10 @@ pub use zipzi_contract::runtime::{
     ObservationTexturePolicy, ObservationTextureSize, ObservationTextureSource,
     ObservationTextureTarget, DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,
 };
-use zipzi_core::{Document, DrawableFrame, ImageAsset};
+use zipzi_core::{
+    state::{AssetRecord, DocumentState},
+    DrawableFrame,
+};
 
 use crate::ObservationError;
 
@@ -26,10 +29,10 @@ fn invalid(code: &str, message: impl Into<String>, asset_id: Option<&str>) -> Ob
 /// All mesh references, including disabled/hidden meshes and all mask sources.
 /// Mesh and Offscreen masks name meshes in this same collection, not assets.
 /// ROI, poses, visibility and encoded content do not affect the set.
-pub fn referenced_assets(document: &Document) -> Result<Vec<ImageAsset>, ObservationError> {
+pub fn referenced_assets(document: &DocumentState) -> Result<Vec<AssetRecord>, ObservationError> {
     let mut assets = BTreeMap::new();
     for mesh_id in document.mesh_order() {
-        let mesh = document.get_mesh(mesh_id).expect("document mesh order");
+        let mesh = document.mesh(mesh_id).expect("document mesh order");
         let id = mesh.texture_asset_id.resolved_id().ok_or_else(|| {
             invalid(
                 "MISSING_ASSET",
@@ -41,7 +44,7 @@ pub fn referenced_assets(document: &Document) -> Result<Vec<ImageAsset>, Observa
             continue;
         }
         let asset = document
-            .get_asset(id)
+            .asset(id)
             .ok_or_else(|| invalid("MISSING_ASSET", "Mesh references an absent asset", Some(id)))?;
         assets.insert(id.to_owned(), asset.clone());
     }
@@ -52,7 +55,7 @@ pub fn referenced_assets(document: &Document) -> Result<Vec<ImageAsset>, Observa
 /// Never silently resolve additional, uncharged textures during execution.
 pub(crate) fn validate_frame_references(
     frame: &DrawableFrame,
-    assets: &[ImageAsset],
+    assets: &[AssetRecord],
 ) -> Result<(), ObservationError> {
     let required: BTreeSet<_> = assets.iter().map(|a| a.id.as_str()).collect();
     for drawable in &frame.drawables {
@@ -67,34 +70,25 @@ pub(crate) fn validate_frame_references(
     Ok(())
 }
 
-/// Collect sources without reading files. PNG identities here are declarations,
-/// not verified identities; generated memory sources can have no declaration.
+/// Collect sizes without reading pixels. ResourceKey is not a content hash;
+/// content identities are verified from captured resources during preparation.
 pub fn texture_sources(
-    document: &Document,
+    document: &DocumentState,
 ) -> Result<Vec<ObservationTextureSource>, ObservationError> {
     sources_from_assets(&referenced_assets(document)?)
 }
 
 pub(crate) fn sources_from_assets(
-    assets: &[ImageAsset],
+    assets: &[AssetRecord],
 ) -> Result<Vec<ObservationTextureSource>, ObservationError> {
     assets
         .iter()
         .map(|asset| {
-            let content = asset
-                .image_content()
-                .map_err(|e| invalid(&e.code, e.message, Some(&asset.id)))?;
+            let (_, width, height) = crate::image_descriptor(asset)?;
             Ok(ObservationTextureSource {
                 asset_id: asset.id.clone(),
-                source_size: ObservationTextureSize {
-                    width: content.width,
-                    height: content.height,
-                },
-                source_content_identity: (!content.sha256.is_empty()).then(|| {
-                    ObservationContentIdentity::PngSha256 {
-                        hash: content.sha256.clone(),
-                    }
-                }),
+                source_size: ObservationTextureSize { width, height },
+                source_content_identity: None,
             })
         })
         .collect()

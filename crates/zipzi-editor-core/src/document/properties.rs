@@ -38,7 +38,7 @@ impl PropertyPayload {
 impl Document {
     fn scene_property_scope(
         &self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         id: &str,
         blend_id: &str,
     ) -> PropertyScope {
@@ -216,7 +216,7 @@ impl Document {
     }
 
     pub(crate) fn property_values_in(
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &ObjectRef,
         scope: &PropertyScope,
     ) -> Result<PropertyValues> {
@@ -464,11 +464,13 @@ impl Document {
                 .candidate_document()
                 .get_asset(&object.id)
                 .ok_or_else(|| anyhow!("Texture no longer exists"))?;
-            return Ok(edit.edit_resource(zipzi_sdk::ResourceEdit::PatchName {
-                id: object.id.clone(),
-                expected: original.name.clone(),
-                name: payload["name"].as_str().unwrap().into(),
-            })?);
+            return Ok(
+                edit.edit_resource(zipzi_contract::document::ResourceEdit::PatchName {
+                    id: object.id.clone(),
+                    expected: original.name.clone(),
+                    name: payload["name"].as_str().unwrap().into(),
+                })?,
+            );
         }
         if object.kind == ObjectKind::Part
             && patch
@@ -489,12 +491,12 @@ impl Document {
             );
             let expected = edit
                 .candidate_document()
-                .scene_field(&object.id, zipzi_sdk::SceneField::Texture)
+                .scene_field(&object.id, zipzi_contract::document::SceneField::Texture)
                 .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-            return Ok(edit.edit_scene(zipzi_sdk::SceneEdit::Patch {
+            return Ok(edit.edit_scene(zipzi_contract::document::SceneEdit::Patch {
                 id: object.id.clone(),
                 expected,
-                value: zipzi_sdk::SceneFieldValue::Texture(
+                value: zipzi_contract::document::SceneFieldValue::Texture(
                     payload["texture_choice"].as_str().unwrap().into(),
                 ),
                 clear_glue_pairs: false,
@@ -514,12 +516,14 @@ impl Document {
         {
             let expected = edit
                 .candidate_document()
-                .scene_field(&object.id, zipzi_sdk::SceneField::Label)
+                .scene_field(&object.id, zipzi_contract::document::SceneField::Label)
                 .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-            return Ok(edit.edit_scene(zipzi_sdk::SceneEdit::Patch {
+            return Ok(edit.edit_scene(zipzi_contract::document::SceneEdit::Patch {
                 id: object.id.clone(),
                 expected,
-                value: zipzi_sdk::SceneFieldValue::Label(payload["name"].as_str().unwrap().into()),
+                value: zipzi_contract::document::SceneFieldValue::Label(
+                    payload["name"].as_str().unwrap().into(),
+                ),
                 clear_glue_pairs: false,
             })?);
         }
@@ -613,8 +617,8 @@ impl Document {
         object: &ObjectRef,
         patch: &PropertyPatch,
         payload: &serde_json::Value,
-    ) -> Result<zipzi_core::document::PropertyPatch> {
-        use zipzi_core::document::PropertyPatch as P;
+    ) -> Result<zipzi_core::state::PropertyPatch> {
+        use zipzi_core::state::PropertyPatch as P;
         let id = object.id.clone();
         fn read<T: serde::de::DeserializeOwned>(p: &serde_json::Value, key: &str) -> Result<T> {
             Ok(serde_json::from_value(p[key].clone())?)
@@ -815,7 +819,7 @@ impl Document {
                 .changes
                 .scene_fields
                 .iter()
-                .all(|f| f.field == zipzi_sdk::SceneField::Label))
+                .all(|f| f.field == zipzi_contract::document::SceneField::Label))
         {
             if receipt.changed {
                 self.pristine_blank = None;

@@ -1,9 +1,9 @@
 //! Session coordination only. Collection rules and copy/delete closures live in SDK.
 use super::*;
 use anyhow::Result;
-use zipzi_sdk::{
-    OrganizationAddress, OrganizationCapabilities, OrganizationEdit, OrganizationEditPlan,
-};
+use zipzi_contract::authoring::OrganizationCapabilities;
+use zipzi_contract::document::OrganizationEdit;
+use zipzi_sdk::{OrganizationAddress, OrganizationEditPlan};
 #[derive(Debug, Clone)]
 pub struct OrganizationAuthoringCapabilities {
     pub domain: OrganizationCapabilities,
@@ -18,8 +18,10 @@ impl Document {
     ) -> Result<OrganizationEditPlan> {
         self.check_parameter_version(expected)?;
         let policy = match object.kind {
-            ObjectKind::Parameter => zipzi_sdk::OrganizationDeletePolicy::Contents,
-            ObjectKind::ParameterGroup => zipzi_sdk::OrganizationDeletePolicy::Dissolve,
+            ObjectKind::Parameter => zipzi_contract::document::OrganizationDeletePolicy::Contents,
+            ObjectKind::ParameterGroup => {
+                zipzi_contract::document::OrganizationDeletePolicy::Dissolve
+            }
             _ => anyhow::bail!("Expected a parameter or folder"),
         };
         self.session
@@ -29,7 +31,7 @@ impl Document {
             policy,
         })
         .map_err(|error| {
-            if let Some(native) = error.downcast_ref::<zipzi_sdk::SdkError>() {
+            if let Some(native) = error.downcast_ref::<zipzi_core::Status>() {
                 if native.code.as_ref() == "OBJECT_REFERENCED" {
                     return crate::ParameterManagementError::Referenced(
                         native.referrers.iter().cloned().collect(),
@@ -45,12 +47,12 @@ impl Document {
         object: &ObjectRef,
     ) -> Result<OrganizationAuthoringCapabilities> {
         let kind = match object.kind {
-            ObjectKind::Parameter => zipzi_sdk::ObjectKind::Parameter,
-            ObjectKind::ParameterGroup => zipzi_sdk::ObjectKind::CdiParameterGroup,
-            ObjectKind::Part => zipzi_sdk::ObjectKind::Part,
-            ObjectKind::Mesh => zipzi_sdk::ObjectKind::Mesh,
-            ObjectKind::Deformer => zipzi_sdk::ObjectKind::Transform,
-            ObjectKind::Offscreen => zipzi_sdk::ObjectKind::Offscreen,
+            ObjectKind::Parameter => zipzi_contract::authoring::ObjectKind::Parameter,
+            ObjectKind::ParameterGroup => zipzi_contract::authoring::ObjectKind::CdiParameterGroup,
+            ObjectKind::Part => zipzi_contract::authoring::ObjectKind::Part,
+            ObjectKind::Mesh => zipzi_contract::authoring::ObjectKind::Mesh,
+            ObjectKind::Deformer => zipzi_contract::authoring::ObjectKind::Transform,
+            ObjectKind::Offscreen => zipzi_contract::authoring::ObjectKind::Offscreen,
             _ => anyhow::bail!("Expected an organization object"),
         };
         Ok(OrganizationAuthoringCapabilities {
@@ -89,19 +91,19 @@ impl Document {
                 .any(|e| {
                     matches!(
                         e.kind,
-                        zipzi_sdk::ObjectKind::Part
-                            | zipzi_sdk::ObjectKind::Mesh
-                            | zipzi_sdk::ObjectKind::Transform
-                            | zipzi_sdk::ObjectKind::Offscreen
+                        zipzi_contract::authoring::ObjectKind::Part
+                            | zipzi_contract::authoring::ObjectKind::Mesh
+                            | zipzi_contract::authoring::ObjectKind::Transform
+                            | zipzi_contract::authoring::ObjectKind::Offscreen
                     )
                 })
                 || receipt.changes.organization_references.iter().any(|r| {
                     matches!(
                         r.entity.kind,
-                        zipzi_sdk::ObjectKind::Part
-                            | zipzi_sdk::ObjectKind::Mesh
-                            | zipzi_sdk::ObjectKind::Transform
-                            | zipzi_sdk::ObjectKind::Offscreen
+                        zipzi_contract::authoring::ObjectKind::Part
+                            | zipzi_contract::authoring::ObjectKind::Mesh
+                            | zipzi_contract::authoring::ObjectKind::Transform
+                            | zipzi_contract::authoring::ObjectKind::Offscreen
                     )
                 });
             self.consume_authoring_receipt(&receipt, scene_changed);

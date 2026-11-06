@@ -209,7 +209,7 @@ impl EditorView {
         id: DocumentId,
         path: PathBuf,
         close_after: bool,
-        baseline: zipzi_sdk::ProjectFingerprint,
+        baseline: zipzi_contract::authoring::ProjectFingerprint,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -254,7 +254,7 @@ impl EditorView {
         id: DocumentId,
         path: PathBuf,
         close_after: bool,
-        target_fingerprint: Option<&zipzi_sdk::ProjectFingerprint>,
+        target_fingerprint: Option<&zipzi_contract::authoring::ProjectFingerprint>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {

@@ -163,7 +163,7 @@ pub(crate) fn inspector_fields(mesh: &Mesh, payload: &mut Value) {
 }
 
 pub(crate) fn keyform<'a>(
-    model: &'a zipzi_core::Document,
+    model: &'a zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Option<(&'a str, &'a zipzi_core::MeshKeyform)>> {
@@ -185,7 +185,7 @@ pub(crate) fn keyform<'a>(
 }
 
 pub(crate) fn payload(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
@@ -205,7 +205,7 @@ pub(crate) fn payload(
 
 /// Inspector reads do not need vertex arrays or authored source metadata.
 pub(crate) fn inspector_payload(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
