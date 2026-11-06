@@ -19,8 +19,9 @@
 - [Runtime R5 / Python P5 animation authoring](archive/plans/sdk-runtime/python2-r5-authoring.md): typed edits, records, SDK plans and addresses; Preview, spatial/GPU observation, fair scheduling and Editor playback isolation are delivered; [R7 acceptance](archive/plans/sdk-runtime/python2-r7-closeout.md) records final workflows, distribution and performance
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
 - [`.zipzi` 原生工程格式设计](plans/native-project-format.md): 单文件容器、原子保存、资源工作集、SDK 生命周期与跨平台文件打开；设计提案，尚未实现
-- [编辑内存与历史记录架构重构方案](plans/authoring-memory-architecture.md): 共享分配计费、统一操作预算、按实际保留内存限制历史及独立步数上限；架构方案，尚未实施
+- [Authoring 新内核重写方案](plans/authoring-architecture.md): 内核所有权与依赖边界、快照/准备结果任务协议、新 API、实施顺序与旧实现删除清单；直接替换接口，尚未实施
 - [Warp Deformer 交互与属性面板方案](archive/plans/warp-deformer-interaction.md): 画布变换、Warp／Rotation 属性透出、Bezier 整形、子对象保形编辑与原始形状恢复
+- [Cubism 笔刷交互与需求方案](plans/cubism-brush-interaction.md): Mesh 与 Warp 的四种笔刷、Cubism 操作对齐、Zipzi 面板、待确认交互与验收草案；需求讨论稿，尚未实施
 - [对象删除与依赖清理方案](archive/plans/object-deletion.md): 按关系清理引用、统一删除范围、跨域原子计划与影响审阅
 - [观察纹理策略实施方案](archive/plans/observation-texture-policy.md): 显式原图与预算缩图、共同尺寸规划、资源预估、批级报告和任务预算生命周期
 - [Manual Mesh 编辑实施方案](archive/plans/manual-mesh-editing.md): authoring topology, dashed-edge caches, atomic editing and staged mesh generation
