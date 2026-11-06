@@ -6,6 +6,7 @@ and how to interpret their output; measured results belong in
 
 | Guide | Use it for |
 | --- | --- |
+| [Authoring workflow comparison](#authoring-workflow-comparison) | Paired SDK history, project I/O, latency and process memory |
 | [Project import and open](#project-import-and-open) | Fresh-process project I/O and Editor CPU preparation |
 | [Viewport first frame](#viewport-first-frame) | Native load-to-GPU completion and first model presentation |
 | [Manual Mesh drag](#manual-mesh-drag) | Continuous model-space topology dragging, CPU cost and native presentation |
@@ -18,6 +19,51 @@ See the [tool index](../README.md#benchmarks-and-research-tools) for Timeline,
 window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
 window or GPU latency.
+
+## Authoring workflow comparison
+
+The phase-six driver runs the same sequence against the frozen main baseline
+and the completed rewrite. It uses the default SDK history and resource limits,
+the local Mao Model3 tree, fresh Release processes and alternating AB/BA
+order. It measures SDK authoring and project I/O on macOS. The desktop view,
+GPU and IPC are outside this benchmark.
+
+Run from this checkout with the benchmark sources present. Use new output and
+worktree paths for an independent run.
+
+```sh
+probe="$PWD/tools/benchmarks/authoring-workflow"
+base_rev=0262b0108b920a2b573c7a3e6d689591566e5099
+candidate_rev=c7ca7fe9b2a05646008c21a3c923bd3a62471ee2
+base_tree="$PWD/target/workflow-baseline"
+candidate_tree="$PWD/target/workflow-candidate"
+git worktree add --detach "$base_tree" "$base_rev"
+git worktree add --detach "$candidate_tree" "$candidate_rev"
+
+for side in baseline candidate; do
+  tree="$base_tree"
+  if [ "$side" = candidate ]; then tree="$candidate_tree"; fi
+  examples="$tree/crates/zipzi-sdk/examples"
+  cp "$probe/workflow.rs" "$examples/authoring_workflow.rs"
+  cp "$probe/$side.rs" "$examples/support/authoring_workflow_adapter.rs"
+  cargo build --locked --release --manifest-path "$tree/Cargo.toml" \
+    -p zipzi-sdk --example authoring_workflow
+done
+
+uv run --locked python "$probe/compare.py" \
+  --baseline "$base_tree/target/release/examples/authoring_workflow" \
+  --candidate "$candidate_tree/target/release/examples/authoring_workflow" \
+  --baseline-commit "$base_rev" --candidate-commit "$candidate_rev" \
+  --model "$PWD/models/local/mao/runtime/mao_pro.model3.json" \
+  --output "$PWD/target/authoring-workflow-comparison"
+```
+
+The driver verifies the source tree and decoded pixels, reloads the saved copy,
+and checks an edit after reopening. It records every sample, input and binary
+fingerprint under the output directory. Stop other benchmarks and builds while
+measuring. The first run of each binary primes the filesystem cache. Allocation
+counters measure requested Rust bytes, and `/usr/bin/time -l` supplies process
+peak RSS and peak footprint. [Phase-six results](../../docs/plans/authoring-architecture.md#第六阶段集中对照)
 
 ## Project import and open
 
