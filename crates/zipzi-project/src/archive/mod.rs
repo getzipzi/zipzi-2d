@@ -28,10 +28,6 @@ use crate::{content_sha256, read_project_texture_bounded};
 
 pub use stream::{read_fingerprint, IoCounts, MeteredIo, ProjectFingerprint};
 
-const EXPERIMENT: &str = "prototype-directory-document-v21";
-const NATIVE_FORMAT: &str = "zipzi-project";
-const NATIVE_DOCUMENT_VERSION: u64 = 22;
-
 #[derive(Debug, thiserror::Error)]
 pub enum ArchiveError {
     #[error(transparent)]
@@ -75,10 +71,6 @@ impl From<ArchiveError> for Status {
 
 pub type Result<T> = std::result::Result<T, ArchiveError>;
 
-/// Compatibility name for the opt-in P0 benchmark API.
-#[cfg(any(test, feature = "archive-prototype"))]
-pub type PrototypeLimits = ArchiveIoLimits;
-
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Format {
@@ -91,24 +83,15 @@ struct Format {
     preview: Option<serde_json::Value>,
 }
 
-pub struct WrittenArchive<D = ()> {
-    /// Same authoring data with complete content-addressed asset paths.
-    pub document: D,
+pub(super) struct WrittenArchive {
+    #[cfg(test)]
     pub unique_assets: usize,
     pub asset_bytes: u64,
     pub document_bytes: u64,
-    /// Logical reads for resource preparation and verification during writing.
-    pub resource_read_bytes: u64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ArchiveDocumentFormat {
-    NativeV22,
 }
 
 #[derive(Debug, Clone)]
-pub struct ArchiveSaveReceipt<D = ()> {
-    pub document: D,
+pub struct ArchiveSaveReceipt {
     pub path: PathBuf,
     pub fingerprint: ProjectFingerprint,
     pub published: bool,
@@ -258,13 +241,13 @@ impl ProjectArchiveStore {
         Ok(())
     }
 
-    fn publish_prepared<D>(
+    fn publish_prepared(
         &self,
-        mut prepared: writer::PreparedArchive<D>,
+        mut prepared: writer::PreparedArchive,
         target: &Path,
         expected: Option<&ProjectFingerprint>,
         mut keep_going: impl FnMut() -> bool,
-    ) -> Result<ArchiveSaveReceipt<D>> {
+    ) -> Result<ArchiveSaveReceipt> {
         check(&mut keep_going)?;
         crate::filesystem::reject_symlink(target)?;
         let target = crate::filesystem::local_path(target)?;
@@ -323,7 +306,6 @@ impl ProjectArchiveStore {
             progress.set_stage(ProjectSaveStage::Published);
         }
         Ok(ArchiveSaveReceipt {
-            document: written.document,
             path: target,
             fingerprint,
             published: true,

@@ -73,7 +73,7 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
     // Only Multiply/Overwrite inputs require the expression-semantics notice.
     let needs_semantics_notice = original.expression_order().iter().any(|id| {
         original
-            .get_expression(id)
+            .expression(id)
             .unwrap()
             .entries
             .iter()
@@ -90,10 +90,9 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
         needs_semantics_notice,
     );
     let model = zipzi_cmo3::import_model(&std::fs::read(destination.join("v3a9.cmo3"))?)?;
-    let mut returned = model.document;
-    zipzi_cmo3::import_animation(
+    let returned = zipzi_cmo3::import_animation(
         &std::fs::read(destination.join("v3a9.can3"))?,
-        &mut returned,
+        &model.document,
     )?;
     assert_eq!(returned.mesh_order().len(), original.mesh_order().len());
     assert_eq!(returned.motion_order().len(), 27);
@@ -104,8 +103,8 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
     );
     let mut animation_reference = Vec::new();
     for id in original.expression_order() {
-        let before = original.get_expression(id).unwrap();
-        let after = returned.get_expression(id).unwrap();
+        let before = original.expression(id).unwrap();
+        let after = returned.expression(id).unwrap();
         assert_eq!(after.name, before.name);
         assert_eq!(after.entries.len(), before.entries.len());
         let mut reference_tracks = Vec::new();
@@ -114,13 +113,13 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
             let ExpressionTarget::Resolved { parameter_id } = &entry.target else {
                 panic!("unresolved fixture expression")
             };
-            let default = original.get_parameter(parameter_id).unwrap().default_value;
+            let default = original.parameter(parameter_id).unwrap().default_value;
             let expected = match entry.blend.unwrap_or(ExpressionBlend::Add) {
                 ExpressionBlend::Add => default + entry.value,
                 ExpressionBlend::Multiply => default * entry.value,
                 ExpressionBlend::Overwrite => entry.value,
             };
-            let parameter = original.get_parameter(parameter_id).unwrap();
+            let parameter = original.parameter(parameter_id).unwrap();
             let expected = expected.clamp(parameter.minimum, parameter.maximum);
             let actual = after
                 .entries
@@ -149,19 +148,19 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
             assert_eq!(exported["Blend"], expected_blend);
             assert!((exported["Value"].as_f64().unwrap() as f32 - entry.value).abs() < 0.000001);
             reference_tracks.push(serde_json::json!({
-                "attribute": format!("live2dParam_{}", original.get_parameter(parameter_id).unwrap().runtime_id),
+                "attribute": format!("live2dParam_{}", original.parameter(parameter_id).unwrap().runtime_id),
                 "values": [expected],
             }));
         }
         animation_reference
             .push(serde_json::json!({"name":before.name, "tracks":reference_tracks}));
         for baseline in ["min", "default", "max"] {
-            let mut expected = zipzi_sdk::ExpressionPreview::new(&original);
-            let mut actual = zipzi_sdk::ExpressionPreview::new(&returned);
+            let mut expected = zipzi_animation::ExpressionPreview::new(&original);
+            let mut actual = zipzi_animation::ExpressionPreview::new(&returned);
             for preview in [&mut expected, &mut actual] {
                 if baseline != "default" {
                     for parameter_id in original.parameter_order() {
-                        let parameter = original.get_parameter(parameter_id).unwrap();
+                        let parameter = original.parameter(parameter_id).unwrap();
                         preview.set_base_parameter(
                             parameter_id,
                             if baseline == "min" {
@@ -198,8 +197,8 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
     let mut dense_checks = 0;
     let mut maximum_error = 0f32;
     for id in original.motion_order() {
-        let before = original.get_motion(id).unwrap();
-        let after = returned.get_motion(id).unwrap();
+        let before = original.motion(id).unwrap();
+        let after = returned.motion(id).unwrap();
         assert_eq!(after.fps, 60.);
         assert!((after.duration - before.duration).abs() <= 0.000501);
         assert_eq!(after.tracks.len(), before.tracks.len());
@@ -238,16 +237,22 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
                 start = old_end;
                 normalized_start = new_end;
             }
-            let source_curve = zipzi_sdk::CompiledCurve::from(&normalized);
-            let result_curve = zipzi_sdk::CompiledCurve::from(actual);
+            let source_curve = zipzi_animation::CompiledCurve::from(&normalized);
+            let result_curve = zipzi_animation::CompiledCurve::from(actual);
             let mut reference_values = Vec::new();
             let mut extra_checks = Vec::new();
             for frame in 0..=(before.duration * 60.).round() as usize {
                 let time = frame as f32 / 60.;
-                let expected =
-                    zipzi_sdk::sample_motion_curve(&source_curve, time, before.restricted_beziers);
-                let actual =
-                    zipzi_sdk::sample_motion_curve(&result_curve, time, after.restricted_beziers);
+                let expected = zipzi_animation::sample_motion_curve(
+                    &source_curve,
+                    time,
+                    before.restricted_beziers,
+                );
+                let actual = zipzi_animation::sample_motion_curve(
+                    &result_curve,
+                    time,
+                    after.restricted_beziers,
+                );
                 assert!(
                     (actual - expected).abs() < 0.0001,
                     "{} {} frame {frame}: {actual} != {expected}",
@@ -294,12 +299,12 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
                     }
                     for fraction in [0.125, 0.25, 0.5, 0.75, 0.875] {
                         let time = start + (end - start) * fraction;
-                        let expected = zipzi_sdk::sample_motion_curve(
+                        let expected = zipzi_animation::sample_motion_curve(
                             &source_curve,
                             time,
                             before.restricted_beziers,
                         );
-                        let value = zipzi_sdk::sample_motion_curve(
+                        let value = zipzi_animation::sample_motion_curve(
                             &result_curve,
                             time,
                             after.restricted_beziers,
@@ -323,11 +328,11 @@ fn local_v3a9_cubism_export_retains_expression_poses_and_playback_frames() -> an
             let attribute = match &track.target {
                 MotionTrackTarget::Parameter { parameter_id } => format!(
                     "live2dParam_{}",
-                    original.get_parameter(parameter_id).unwrap().runtime_id
+                    original.parameter(parameter_id).unwrap().runtime_id
                 ),
                 MotionTrackTarget::PartOpacity { part_id } => format!(
                     "live2DPartsOpacity_{}",
-                    original.get_part(part_id).unwrap().runtime_id
+                    original.part(part_id).unwrap().runtime_id
                 ),
                 MotionTrackTarget::Model { runtime_id } if runtime_id == "Opacity" => {
                     "opacity".into()
@@ -440,7 +445,7 @@ fn export_settings_are_project_data_and_continue_keeps_them_without_output() -> 
     };
     let snapshot = editor.prepare_export(id, revision, canvas)?;
     assert_eq!(
-        snapshot.document().export_settings().bounds,
+        snapshot.document().setup().export.bounds,
         Some([-300., -350., 500., 250.])
     );
     assert_eq!(
@@ -719,32 +724,32 @@ fn mao_runtime_returns_to_cubism_with_part_names_and_motion_groups() -> anyhow::
         eprintln!("SKIP: local Mao Cubism project unavailable");
         return Ok(());
     }
-    let session = || {
-        zipzi_sdk::AuthoringSession::new(
-            &uuid::Uuid::new_v4().to_string(),
-            Canvas::new(1., 1., Vec2::default(), 1.),
-        )
+    let importer = zipzi_project::ProjectImporter {
+        resources: Default::default(),
     };
-    let part_names = |doc: &zipzi_core::Document| -> std::collections::BTreeMap<String, String> {
-        doc.part_order()
-            .iter()
-            .map(|id| {
-                let part = doc.get_part(id).unwrap();
-                (part.runtime_id.clone(), part.name.clone())
-            })
-            .collect()
-    };
+    let part_names =
+        |doc: &zipzi_core::state::DocumentState| -> std::collections::BTreeMap<String, String> {
+            doc.part_order()
+                .iter()
+                .map(|id| {
+                    let part = doc.part(id).unwrap();
+                    (part.runtime_id.clone(), part.name.clone())
+                })
+                .collect()
+        };
     let fixture = portable_mao_fixture()?;
-    let mut original = session()?;
-    original.import_cubism(&fixture.path().join("mao_pro_t06.cmo3"), None)?;
-    let expected = part_names(original.document());
+    let original = importer.import_cubism_authoring(&fixture.path().join("mao_pro_t06.cmo3"))?;
+    let expected = part_names(&original.document);
     assert_eq!(expected.len(), 32);
     let temp = tempfile::tempdir()?;
     let runtime_path = temp.path().join("runtime");
-    original
-        .transfer_snapshot()?
-        .publish(TransferFormat::Runtime, &runtime_path)
-        .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
+    zipzi_project::TransferSnapshot::new(
+        original.document.clone(),
+        original.resources.clone(),
+        original.protected_paths.clone(),
+    )?
+    .publish(TransferFormat::Runtime, &runtime_path)
+    .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
     let cdi: serde_json::Value =
         serde_json::from_slice(&std::fs::read(runtime_path.join("model.cdi3.json"))?)?;
     let parts = cdi["Parts"].as_array().unwrap();
@@ -758,35 +763,40 @@ fn mao_runtime_returns_to_cubism_with_part_names_and_motion_groups() -> anyhow::
         })
         .collect();
     assert_eq!(actual, expected);
-    let mut runtime = session()?;
-    runtime.import_model3(&runtime_path.join("model.model3.json"), None)?;
-    assert_eq!(part_names(runtime.document()), expected);
-    let groups = runtime.document().motion_groups().to_vec();
+    let (runtime, _) =
+        crate::support::import_model3_fixture(&runtime_path.join("model.model3.json"))?;
+    assert_eq!(part_names(&runtime.document), expected);
+    let groups = runtime.document.motion_groups().to_vec();
     assert!(!groups.is_empty());
     let returned_path = temp.path().join("returned");
-    runtime
-        .transfer_snapshot()?
-        .publish(TransferFormat::Cubism, &returned_path)
-        .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
-    let mut returned = session()?;
-    returned.import_cubism(&returned_path.join("returned.can3"), None)?;
-    assert_eq!(part_names(returned.document()), expected);
+    zipzi_project::TransferSnapshot::new(
+        runtime.document.clone(),
+        runtime.resources.clone(),
+        runtime.protected_paths.clone(),
+    )?
+    .publish(TransferFormat::Cubism, &returned_path)
+    .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
+    let returned = importer.import_cubism_authoring(&returned_path.join("returned.can3"))?;
+    assert_eq!(part_names(&returned.document), expected);
     assert_eq!(
-        external_motion_groups(returned.document().motion_groups()),
+        external_motion_groups(returned.document.motion_groups()),
         external_motion_groups(&groups)
     );
-    assert_eq!(returned.document().motion_order().len(), 7);
-    assert_eq!(returned.document().expression_order().len(), 8);
+    assert_eq!(returned.document.motion_order().len(), 7);
+    assert_eq!(returned.document.expression_order().len(), 8);
     let final_runtime = temp.path().join("final-runtime");
-    returned
-        .transfer_snapshot()?
-        .publish(TransferFormat::Runtime, &final_runtime)
-        .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
-    let mut final_document = session()?;
-    final_document.import_model3(&final_runtime.join("model.model3.json"), None)?;
-    assert_eq!(part_names(final_document.document()), expected);
+    zipzi_project::TransferSnapshot::new(
+        returned.document.clone(),
+        returned.resources.clone(),
+        returned.protected_paths.clone(),
+    )?
+    .publish(TransferFormat::Runtime, &final_runtime)
+    .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?;
+    let (final_document, _) =
+        crate::support::import_model3_fixture(&final_runtime.join("model.model3.json"))?;
+    assert_eq!(part_names(&final_document.document), expected);
     let group_names: Vec<_> = final_document
-        .document()
+        .document
         .motion_groups()
         .iter()
         .map(|g| (&g.name, g.entries.len()))

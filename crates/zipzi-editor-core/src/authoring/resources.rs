@@ -48,7 +48,7 @@ impl Document {
             commands.replace_image(&id, image)
         })?;
         self.refresh_textures()?;
-        Ok(self.resource_operation_result(receipt))
+        Ok(self.resource_operation_result(receipt, None))
     }
     pub fn resource_collection(&self) -> Result<Vec<ObjectRef>> {
         Ok(self
@@ -144,7 +144,9 @@ impl Document {
         if let Some(textures) = textures {
             self.textures = textures;
         }
-        Ok(self.resource_operation_result(receipt).with_preview(p))
+        Ok(self
+            .resource_operation_result(receipt, Some(p.baseline().document()))
+            .with_preview(p))
     }
     pub fn resource_name_address(&self, id: &str) -> Result<crate::FieldCapture<String>> {
         let captured = self.image_load_token(id)?;
@@ -210,7 +212,7 @@ impl Document {
                 commands.replace_image(&t.id, image)
             })?;
         self.refresh_textures()?;
-        Ok(self.resource_operation_result(receipt))
+        Ok(self.resource_operation_result(receipt, None))
     }
     pub fn attachment_load_token(
         &self,
@@ -250,7 +252,7 @@ impl Document {
                     attachment,
                 })
             })?;
-        Ok(self.resource_operation_result(receipt))
+        Ok(self.resource_operation_result(receipt, None))
     }
     pub fn plan_document_authoring(
         &self,
@@ -270,7 +272,7 @@ impl Document {
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = p.publish(&mut self.session)?;
-        Ok(self.resource_operation_result(receipt))
+        Ok(self.resource_operation_result(receipt, Some(p.baseline().document())))
     }
     pub fn document_field_address(
         &self,
@@ -306,26 +308,16 @@ impl Document {
             },
         )?)
     }
-    fn resource_operation_result(&mut self, receipt: zipzi_sdk::Publication) -> OperationResult {
+    fn resource_operation_result(
+        &mut self,
+        receipt: zipzi_sdk::Publication,
+        before: Option<&zipzi_core::state::DocumentState>,
+    ) -> OperationResult {
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, false);
+            self.consume_authoring_receipt(&receipt, before);
         }
         self.authoring_result(receipt)
-    }
-
-    fn commit_resource_edit(
-        &mut self,
-        mut edit: crate::runtime_host::HostedDraft,
-    ) -> Result<OperationResult> {
-        let textures = self
-            .textures
-            .prepare_refresh(&edit.read_snapshot()?.snapshot)?;
-        let receipt = edit.commit_to(&mut self.session)?;
-        if let Some(textures) = textures {
-            self.textures = textures;
-        }
-        Ok(self.resource_operation_result(receipt))
     }
 }
 impl crate::Editor {

@@ -22,12 +22,12 @@ fn normalizes_first_rotation_beneath_warp_and_preserves_local_pixels() {
     let imported = import_from_bare_moc3(&bytes, &fixture_textures()).unwrap();
     let doc = &imported.document;
     let rotation = doc
-        .get_transform(&imported.report.id_mapping.deformers["RotChild"])
+        .transform(&imported.report.id_mapping.deformers["RotChild"])
         .unwrap();
     near(rotation.rotation().unwrap().pose.scale, 1., 1.);
     assert_eq!(rotation.rotation_scale_unit, Some(5800.));
     let warp = doc
-        .get_transform(&imported.report.id_mapping.deformers["WarpRoot"])
+        .transform(&imported.report.id_mapping.deformers["WarpRoot"])
         .unwrap();
     assert_eq!(warp.warp().unwrap().points[0], Vec2::new(-5800., -5800.));
     let binding = doc.binding_for_mesh(&doc.mesh_order()[0]).unwrap();
@@ -41,19 +41,24 @@ fn normalizes_first_rotation_beneath_warp_and_preserves_local_pixels() {
     // Repeated exports must not apply PPU a second time.
     let mut doc = imported.document;
     for _ in 0..3 {
-        let encoded = encode_moc3(&doc).unwrap();
+        let encoded = encode_moc3(&capture_images(&doc).0).unwrap();
         let imported = import_from_bare_moc3(&encoded.bytes, &fixture_textures()).unwrap();
         let rotation = imported
             .document
-            .get_transform(&imported.report.id_mapping.deformers["RotChild"])
+            .transform(&imported.report.id_mapping.deformers["RotChild"])
             .unwrap();
         near(rotation.rotation().unwrap().pose.scale, 1., 1.);
         assert_runtime_matches(&imported.document, &bytes, &[vec![0.37, -0.52]]);
         doc = imported.document;
     }
-    let mut settings = doc.export_settings();
+    let mut settings = doc.setup().export;
     settings.pixels_per_unit = 37.5;
-    assert!(doc.replace_export_settings(settings).status.is_ok());
+    doc = prepare(&doc, |builder| {
+        builder.set_setup(zipzi_core::ModelSetup {
+            export: settings,
+            ..builder.setup()
+        })
+    });
     assert_runtime_matches(&doc, &bytes, &[vec![0.37, -0.52]]);
 }
 
@@ -64,13 +69,13 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
     let rotation_id = imported.report.id_mapping.deformers["RotChild"].clone();
     let mut doc = imported.document;
     let pose = doc
-        .get_transform(&rotation_id)
+        .transform(&rotation_id)
         .unwrap()
         .rotation()
         .unwrap()
         .pose;
-    assert!(doc
-        .create_scene_binding(SceneBinding {
+    doc = prepare(&doc, |builder| {
+        builder.create_scene_binding(SceneBinding {
             id: id(914),
             axes: vec![BindingAxis {
                 parameter_id: imported.report.id_mapping.parameters["ParamX"].clone(),
@@ -94,11 +99,10 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
                     .collect(),
             },
         })
-        .status
-        .is_ok());
+    });
     let child_id = id(910);
-    assert!(doc
-        .create_transform(Transform {
+    doc = prepare(&doc, |builder| {
+        builder.create_transform(Transform {
             id: child_id.clone(),
             runtime_id: "NestedRotation".into(),
             parent_id: Some(rotation_id.clone().into()),
@@ -113,9 +117,8 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
             }),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    let mut mesh = doc.get_mesh(&doc.mesh_order()[0]).unwrap().clone();
+    });
+    let mut mesh = doc.mesh(&doc.mesh_order()[0]).unwrap().clone();
     mesh.deformer_id = child_id.clone();
     // Keep even the upper-clamped pose within normal pixel magnitudes, so the
     // numerical tolerance measures conversion rather than large-coordinate ULPs.
@@ -123,7 +126,7 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
         point.x *= 0.01;
         point.y *= 0.01;
     }
-    assert!(doc.replace_mesh(mesh).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(mesh));
     let mut binding = doc.binding_for_mesh(&doc.mesh_order()[0]).unwrap().clone();
     for form in &mut binding.keyforms {
         for point in &mut form.positions {
@@ -131,10 +134,10 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
             point.y *= 0.01;
         }
     }
-    assert!(doc.replace_binding(binding).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_binding(binding));
 
-    assert!(doc
-        .create_parameter(Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: id(911),
             runtime_id: "ScaleBlend".into(),
             kind: ParameterKind::BlendShape,
@@ -143,10 +146,9 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
             default_value: 0.,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_blend_key_table(BlendShapeKeyTable {
+    });
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_key_table(BlendShapeKeyTable {
             id: id(912),
             parameter_id: id(911),
             keys: vec![-1., 0., 1.],
@@ -154,12 +156,11 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
             samples: Default::default(),
             base_sample_id: Default::default(),
         })
-        .status
-        .is_ok());
+    });
     // Both ends exceed the runtime clamp after applying these deltas. Preserve
     // that clamp in normalized units, including an origin and angle animation.
-    assert!(doc
-        .create_blend_binding(BlendShapeBinding {
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_binding(BlendShapeBinding {
             id: id(913),
             target_id: rotation_id.clone(),
             target_kind: BlendShapeTargetKind::Rotation,
@@ -179,17 +180,16 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
                 },
             ]),
         })
-        .status
-        .is_ok());
-    let exported = encode_moc3(&doc).unwrap();
+    });
+    let exported = encode_moc3(&capture_images(&doc).0).unwrap();
     let imported = import_from_bare_moc3(&exported.bytes, &fixture_textures()).unwrap();
     let root = imported
         .document
-        .get_transform(&imported.report.id_mapping.deformers["RotChild"])
+        .transform(&imported.report.id_mapping.deformers["RotChild"])
         .unwrap();
     let child = imported
         .document
-        .get_transform(&imported.report.id_mapping.deformers["NestedRotation"])
+        .transform(&imported.report.id_mapping.deformers["NestedRotation"])
         .unwrap();
     near(root.rotation().unwrap().pose.scale, 0.8, 1.);
     let SceneTrack::Rotation { keyforms, .. } =
@@ -207,14 +207,7 @@ fn normalized_scale_clamps_and_nested_frames_survive_project_and_moc3_roundtrip(
         Vec2::new(0.012, -0.007).into()
     );
 
-    let mut project = imported.document;
-    for asset_id in project.asset_order().to_vec() {
-        let mut asset = project.get_asset(&asset_id).unwrap().clone();
-        asset.content.as_mut().unwrap().source = "assets/texture.png".into();
-        assert!(project.replace_asset(asset).status.is_ok());
-    }
-    let restored =
-        zipzi_project::decode_project(&zipzi_project::encode_project(&project).unwrap()).unwrap();
+    let restored = native_roundtrip(&imported.document);
     let samples = [
         vec![0., 0., 0.],
         vec![0.3, -0.4, -1.],
@@ -238,7 +231,7 @@ fn mao_normalization_preserves_parameter_animation_and_export() {
     let doc = &imported.document;
     for runtime_id in ["Rotation29", "Rotation65", "Rotation63", "Rotation60"] {
         let transform = doc
-            .get_transform(&imported.report.id_mapping.deformers[runtime_id])
+            .transform(&imported.report.id_mapping.deformers[runtime_id])
             .unwrap();
         near(transform.rotation().unwrap().pose.scale, 1., 1.);
         if let Some(binding) = doc.binding_for_scene(&transform.id) {
@@ -251,7 +244,7 @@ fn mao_normalization_preserves_parameter_animation_and_export() {
         }
     }
     let child = doc
-        .get_transform(&imported.report.id_mapping.deformers["Rotation36"])
+        .transform(&imported.report.id_mapping.deformers["Rotation36"])
         .unwrap();
     assert!((child.rotation().unwrap().pose.origin.x + 734.21826).abs() < 0.001);
     // Rotation70's first key is 10.281%, but its default pose (and Rotation60's)
@@ -267,11 +260,11 @@ fn mao_normalization_preserves_parameter_animation_and_export() {
     let defaults: Vec<_> = doc
         .parameter_order()
         .iter()
-        .map(|id| doc.get_parameter(id).unwrap().default_value)
+        .map(|id| doc.parameter(id).unwrap().default_value)
         .collect();
     let mut samples = vec![defaults.clone()];
     for (index, id) in doc.parameter_order().iter().enumerate() {
-        let parameter = doc.get_parameter(id).unwrap();
+        let parameter = doc.parameter(id).unwrap();
         for value in [
             parameter.minimum,
             parameter.maximum,
@@ -288,7 +281,7 @@ fn mao_normalization_preserves_parameter_animation_and_export() {
                 .iter()
                 .enumerate()
                 .map(|(index, id)| {
-                    let p = doc.get_parameter(id).unwrap();
+                    let p = doc.parameter(id).unwrap();
                     let weight = ((index * 17 + phase * 13) % 101) as f32 / 100.;
                     p.minimum * (1. - weight) + p.maximum * weight
                 })

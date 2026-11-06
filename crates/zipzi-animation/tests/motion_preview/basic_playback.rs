@@ -46,9 +46,9 @@ fn operation_identity_distinguishes_zero_time_actions_and_failed_seek() {
 
 #[test]
 fn physics_inputs_replay_with_seek_without_editing_document() {
-    let mut doc = document();
+    let mut builder = document().builder();
     let y = "00000000-0000-4000-8000-000000000d0a";
-    assert!(doc
+    builder
         .create_parameter(Parameter {
             id: y.into(),
             runtime_id: "ParamY".into(),
@@ -58,8 +58,8 @@ fn physics_inputs_replay_with_seek_without_editing_document() {
             default_value: 0.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
     let physics = import_physics3(
         &doc,
         "00000000-0000-4000-8000-000000000d0b",
@@ -67,7 +67,7 @@ fn physics_inputs_replay_with_seek_without_editing_document() {
     )
     .unwrap()
     .candidate;
-    let revision = physics.revision();
+    let content = physics.content_id();
     let mut preview = MotionPreview::new(&physics);
     let mut time = 0.0f32;
     for (dt, input) in [
@@ -86,14 +86,14 @@ fn physics_inputs_replay_with_seek_without_editing_document() {
     let first = preview.seek(time).unwrap().parameters[y];
     let second = preview.seek(time).unwrap().parameters[y];
     assert_eq!(first, second);
-    assert_eq!(physics.revision(), revision);
+    assert_eq!(physics.content_id(), content);
 }
 
 #[test]
 fn expression_then_physics_replays_in_one_preview() {
-    let mut doc = document();
+    let mut builder = document().builder();
     let y = "00000000-0000-4000-8000-000000000d0c";
-    assert!(doc
+    builder
         .create_parameter(Parameter {
             id: y.into(),
             runtime_id: "ParamY".into(),
@@ -103,10 +103,10 @@ fn expression_then_physics_replays_in_one_preview() {
             default_value: 0.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     let expression_id = "00000000-0000-4000-8000-000000000d0d";
     let source = r#"{"Type":"Live2D Expression","FadeInTime":0,"Parameters":[{"Id":"ParamX","Value":0.75,"Blend":"Add"}]}"#;
+    let doc = builder.freeze().unwrap().state;
     let doc = import_expression3(&doc, expression_id, "Add", source)
         .unwrap()
         .candidate;
@@ -170,7 +170,7 @@ fn loop_v2_matches_official_framework_frames() {
         preview.seek_with_progress(1.0, |_, _| true).unwrap().time,
         1.0
     );
-    assert!(imported.candidate.get_motion(MOTION).is_some());
+    assert!(imported.candidate.motion(MOTION).is_some());
 }
 
 #[test]
@@ -202,8 +202,8 @@ fn canonical_output_bound_covers_repeated_short_loops_and_large_diagnostics() {
     use zipzi_core::document::{
         MotionClip, MotionEvent, MotionKey, MotionTrack, MotionTrackTarget,
     };
-    let mut doc = document();
-    assert!(doc
+    let mut builder = document().builder();
+    builder
         .create_motion(MotionClip {
             id: MOTION.into(),
             name: "Short loop".into(),
@@ -218,12 +218,12 @@ fn canonical_output_bound_covers_repeated_short_loops_and_large_diagnostics() {
                 id: "00000000-0000-4000-8000-000000000d04".into(),
                 target: MotionTrackTarget::Unresolved {
                     category: "Parameter".into(),
-                    runtime_id: "r".repeat(8192)
+                    runtime_id: "r".repeat(8192),
                 },
                 initial: MotionKey {
                     id: "00000000-0000-4000-8000-000000000d05".into(),
                     time: 0.,
-                    value: 0.
+                    value: 0.,
                 },
                 segments: Default::default(),
                 fade_in: None,
@@ -235,7 +235,7 @@ fn canonical_output_bound_covers_repeated_short_loops_and_large_diagnostics() {
                 id: "00000000-0000-4000-8000-000000000d06".into(),
                 time: 0.0005,
                 value: "x".repeat(1024),
-                extensions: Default::default()
+                extensions: Default::default(),
             }]
             .into(),
             extensions: Default::default(),
@@ -243,8 +243,8 @@ fn canonical_output_bound_covers_repeated_short_loops_and_large_diagnostics() {
             opaque_source_ids: None,
             opaque_source_content_hash: None,
         })
-        .status
-        .is_ok());
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
     let mut preview = MotionPreview::new(&doc);
     for _ in 0..4 {
         preview.schedule_motion(MOTION, 0.).unwrap();

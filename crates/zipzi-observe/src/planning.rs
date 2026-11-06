@@ -3,7 +3,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-pub use zipzi_contract::runtime::{
+pub use zipzi_contract::observation::{
     ObservationContentIdentity, ObservationTexturePlan, ObservationTexturePlanning,
     ObservationTexturePolicy, ObservationTextureSize, ObservationTextureSource,
     ObservationTextureTarget, DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,

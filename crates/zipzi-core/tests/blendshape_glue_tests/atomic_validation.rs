@@ -7,8 +7,8 @@ use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 
 #[test]
 fn parameter_edits_validate_blend_dependents_atomically() {
-    let mut doc = create_base_document();
-    assert!(doc
+    let mut builder = create_base_document().builder();
+    builder
         .create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
@@ -17,20 +17,18 @@ fn parameter_edits_validate_blend_dependents_atomically() {
             keys: vec![0.0, 1.0],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
-    let before = doc.clone();
-    let mut p = doc.get_parameter(PARAM_BS).unwrap().clone();
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
+    let mut p = doc.parameter(PARAM_BS).unwrap().clone();
     p.maximum = 0.5;
-    assert!(!doc.replace_parameter(p).status.is_ok());
-    assert!(doc.same_content(&before));
-    let mut p = doc.get_parameter(PARAM_BS).unwrap().clone();
+    assert!(prepare(&doc, |b| b.replace_parameter(p)).is_err());
+    let mut p = doc.parameter(PARAM_BS).unwrap().clone();
     p.kind = ParameterKind::Normal;
-    assert!(!doc.replace_parameter(p).status.is_ok());
-    assert!(doc.same_content(&before));
+    assert!(prepare(&doc, |b| b.replace_parameter(p)).is_err());
 
-    // Constraints may reference normal parameters, as the Core does.
-    assert!(doc
+    // Constraints may reference normal parameters.
+    let mut builder = doc.builder();
+    builder
         .create_blend_constraint(BlendShapeConstraint {
             samples: Default::default(),
             id: CONSTRAINT.into(),
@@ -38,21 +36,19 @@ fn parameter_edits_validate_blend_dependents_atomically() {
             keys: vec![-1.0, 1.0],
             weights: vec![1.0, 0.0],
         })
-        .status
-        .is_ok());
-    let before = doc.clone();
-    let mut p = doc.get_parameter(PARAM_NORM).unwrap().clone();
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
+    let mut p = doc.parameter(PARAM_NORM).unwrap().clone();
     p.minimum = 0.0;
-    assert!(!doc.replace_parameter(p).status.is_ok());
-    assert!(doc.same_content(&before));
+    assert!(prepare(&doc, |b| b.replace_parameter(p)).is_err());
 }
 
 #[test]
 fn warp_grid_edits_validate_blend_dependents_atomically() {
     use zipzi_core::types::{DeltaWarpKeyform, Transform};
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
     let warp_id = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-    assert!(doc
+    builder
         .create_transform(Transform {
             id: warp_id.into(),
             runtime_id: "Warp".into(),
@@ -61,13 +57,12 @@ fn warp_grid_edits_validate_blend_dependents_atomically() {
                 rows: 1,
                 columns: 1,
                 quad: true,
-                points: vec![Vec2::default(); 4]
+                points: vec![Vec2::default(); 4],
             }),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
+        .unwrap();
+    builder
         .create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
@@ -76,9 +71,8 @@ fn warp_grid_edits_validate_blend_dependents_atomically() {
             keys: vec![0.0, 1.0],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
-    assert!(doc
+        .unwrap();
+    builder
         .create_blend_binding(BlendShapeBinding {
             id: BINDING_BS.into(),
             target_id: warp_id.into(),
@@ -93,25 +87,22 @@ fn warp_grid_edits_validate_blend_dependents_atomically() {
                 2
             ]),
         })
-        .status
-        .is_ok());
-    let before = doc.clone();
-    let mut warp = doc.get_transform(warp_id).unwrap().clone();
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
+    let mut warp = doc.transform(warp_id).unwrap().clone();
     warp.warp_mut().unwrap().rows = 2;
     warp.warp_mut().unwrap().points = vec![Vec2::default(); 6];
-    assert!(!doc.replace_transform(warp).status.is_ok());
-    assert!(doc.same_content(&before));
-    let mut warp = doc.get_transform(warp_id).unwrap().clone();
+    assert!(prepare(&doc, |b| b.replace_transform(warp)).is_err());
+    let mut warp = doc.transform(warp_id).unwrap().clone();
     warp.data = TransformData::Rotation(RotationTransform::default());
-    assert!(!doc.replace_transform(warp).status.is_ok());
-    assert!(doc.same_content(&before));
+    assert!(prepare(&doc, |b| b.replace_transform(warp)).is_err());
 }
 
 #[test]
 fn topology_edit_updates_all_dependencies_atomically() {
     use std::collections::HashMap;
-    let mut doc = create_base_document();
-    assert!(doc
+    let mut builder = create_base_document().builder();
+    builder
         .create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
@@ -120,8 +111,7 @@ fn topology_edit_updates_all_dependencies_atomically() {
             keys: vec![0.0, 1.0],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
+        .unwrap();
     let blend = BlendShapeBinding {
         id: BINDING_BS.into(),
         target_id: MESH_A.into(),
@@ -136,7 +126,7 @@ fn topology_edit_updates_all_dependencies_atomically() {
             2
         ]),
     };
-    assert!(doc.create_blend_binding(blend.clone()).status.is_ok());
+    builder.create_blend_binding(blend.clone()).unwrap();
     let glue = Glue {
         id: GLUE_ID.into(),
         runtime_id: "TopologyGlue".into(),
@@ -153,8 +143,11 @@ fn topology_edit_updates_all_dependencies_atomically() {
         intensity: 1.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue.clone()).status.is_ok());
-    let original = doc.get_mesh(MESH_A).unwrap().clone();
+    builder.create_glue(glue.clone()).unwrap();
+    let doc = builder.freeze().unwrap().state;
+    let blend = doc.blend_binding(BINDING_BS).unwrap().clone();
+    let glue = doc.glue(GLUE_ID).unwrap().clone();
+    let original = doc.mesh(MESH_A).unwrap().clone();
     let mut mesh = original.clone();
     mesh.vertex_ids[0] = 10;
     for tri in &mut mesh.triangles {
@@ -165,32 +158,33 @@ fn topology_edit_updates_all_dependencies_atomically() {
         }
     }
     let mapping = HashMap::from([(1, Some(10)), (2, Some(2)), (3, Some(3))]);
-    let revision = doc.revision();
-    let failed = doc.replace_mesh_topology(
-        mesh.clone(),
-        None,
-        vec![blend.clone()],
-        vec![glue.clone()],
-        mapping.clone(),
-    );
-    assert!(!failed.status.is_ok());
-    assert_eq!(doc.get_mesh(MESH_A), Some(&original));
-    assert_eq!(doc.revision(), revision);
+    let failed = prepare(&doc, |b| {
+        b.replace_mesh_topology(
+            mesh.clone(),
+            None,
+            vec![blend.clone()],
+            vec![glue.clone()],
+            mapping.clone(),
+        )
+    });
+    assert!(failed.is_err());
+    assert_eq!(doc.mesh(MESH_A), Some(&original));
     let mut updated = glue.clone();
     updated.pairs[0].vertex_a = Some(10);
-    assert!(doc
-        .replace_mesh_topology(
+    let edited = prepare(&doc, |b| {
+        b.replace_mesh_topology(
             mesh.clone(),
             None,
             vec![blend],
             vec![updated.clone()],
-            mapping
+            mapping,
         )
-        .status
-        .is_ok());
-    assert_eq!(doc.get_mesh(MESH_A), Some(&mesh));
-    assert_eq!(doc.get_glue(GLUE_ID), Some(&updated));
-    assert_eq!(doc.revision(), revision + 1);
+    })
+    .unwrap();
+    assert_eq!(edited.writes.records().len(), 2);
+    let doc = edited.state;
+    assert_eq!(doc.mesh(MESH_A), Some(&mesh));
+    assert_eq!(doc.glue(GLUE_ID), Some(&updated));
     assert_eq!(doc.glue_order(), &[GLUE_ID]);
     assert_eq!(doc.blend_binding_order(), &[BINDING_BS]);
 }

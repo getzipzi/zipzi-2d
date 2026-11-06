@@ -429,27 +429,28 @@ fn dense_document_properties_virtualize_and_remain_scrollable_after_resize(
     use zipzi_core::{Canvas, Vec2, document::CdiParameterGroup};
     use zipzi_sdk::AuthoringSession;
     let assets = tempfile::tempdir().unwrap();
-    let mut session = AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
     )
     .unwrap();
-    session
-        .edit("Dense property fixture", None, |edit| {
-            for i in 0..200 {
-                edit.create_parameter_group(CdiParameterGroup {
+    crate::test_fixture::publish_fixture(&mut session, "Dense property fixture", |edit| {
+        for i in 0..200 {
+            edit.edit_organization(zipzi_sdk::OrganizationEdit::CreateGroup {
+                group: CdiParameterGroup {
                     id: uuid::Uuid::from_u128(i + 1).to_string(),
                     name: format!("Group {i}"),
                     runtime_id: format!("Group{i}"),
                     parent_id: None,
                     extensions: Default::default(),
-                })?;
-            }
-            Ok(())
-        })
-        .unwrap();
-    let saved = session
-        .save_project(&assets.path().join("dense.zipzi"), None)
+                },
+                before: None,
+            })?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    let saved = crate::test_fixture::save_fixture(&mut session, &assets.path().join("dense.zipzi"))
         .unwrap();
     let document = zipzi_editor_core::Document::open(&saved.path).unwrap();
     let fields: Vec<_> = crate::panels::document_panel::property_rows(

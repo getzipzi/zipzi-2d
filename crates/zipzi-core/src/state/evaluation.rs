@@ -137,6 +137,9 @@ impl DocumentState {
         for id in self.glue_order() {
             builder.remove_glue(id)?;
         }
+        let mut hierarchy = builder.hierarchy_order().clone();
+        hierarchy.glues.clear();
+        builder.set_hierarchy_order(hierarchy)?;
         let mut editor = builder.editor_state().clone();
         editor
             .objects

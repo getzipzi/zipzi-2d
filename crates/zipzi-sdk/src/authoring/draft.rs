@@ -130,14 +130,38 @@ impl Draft {
         expected: DraftSource,
         run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
     ) -> Result<(PreparedPreview, T), Status> {
+        self.prepare_preview_with(expected, false, run)
+    }
+    /// Prepare another position of a gesture against the original snapshot.
+    /// Installing it replaces the current preview without accumulating interpolation drift.
+    pub fn prepare_baseline_preview<T>(
+        &self,
+        expected: DraftSource,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
+    ) -> Result<(PreparedPreview, T), Status> {
+        self.prepare_preview_with(expected, true, run)
+    }
+    fn prepare_preview_with<T>(
+        &self,
+        expected: DraftSource,
+        use_baseline: bool,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
+    ) -> Result<(PreparedPreview, T), Status> {
         if expected != self.source {
             return Err(error("STALE_SOURCE", "Preview source is stale"));
         }
-        let (mut builder, mut resources) = self
+        let workspace = self
             .workspace
             .as_ref()
-            .ok_or_else(|| error("DRAFT_ENDED", "Draft has ended"))?
-            .clone();
+            .ok_or_else(|| error("DRAFT_ENDED", "Draft has ended"))?;
+        let (mut builder, mut resources) = if use_baseline {
+            (
+                self.baseline.document().builder(),
+                self.baseline.resources().clone(),
+            )
+        } else {
+            workspace.clone()
+        };
         let mut commands = Commands::new(&mut builder, &mut resources);
         let value = run(&mut commands)?;
         commands.finish()?;

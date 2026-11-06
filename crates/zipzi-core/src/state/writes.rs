@@ -41,9 +41,31 @@ pub struct WriteSet {
     pub(super) setup: bool,
     pub(super) assets_order: bool,
     pub(super) parameters_order: bool,
+    #[serde(skip)]
+    pub(super) animation_inputs_changed: bool,
 }
 
 impl WriteSet {
+    /// The same touched domains in the opposite publication direction.
+    /// The history estimate belongs to the retained step, so it is unchanged.
+    pub fn reversed(&self) -> Self {
+        let mut reversed = self.clone();
+        for record in &mut reversed.records {
+            if matches!(
+                record.domain,
+                RecordDomain::Motion | RecordDomain::Expression
+            ) && record.change == RecordChange::Created
+            {
+                reversed.animation_inputs_changed = true;
+            }
+            record.change = match record.change {
+                RecordChange::Created => RecordChange::Deleted,
+                RecordChange::Deleted => RecordChange::Created,
+                RecordChange::Replaced => RecordChange::Replaced,
+            };
+        }
+        reversed
+    }
     /// Fixed conservative step estimate; never an admission limit.
     pub fn estimated_bytes(&self) -> usize {
         self.estimated_bytes
@@ -53,6 +75,10 @@ impl WriteSet {
     }
     pub fn records(&self) -> &[RecordWrite] {
         &self.records
+    }
+    /// Existing playback recipes must be rebuilt when their evaluated inputs change.
+    pub fn animation_inputs_changed(&self) -> bool {
+        self.animation_inputs_changed
     }
     pub fn setup_changed(&self) -> bool {
         self.setup

@@ -35,25 +35,31 @@ fn fixture(rotation: bool, bound: bool) -> Result<(Document, ObjectRef, String)>
                 ],
             })
         };
-        edit.create_transform(Transform {
-            id: object.id.clone(),
-            name: "Deformer".into(),
-            runtime_id: "Deformer".into(),
-            data,
-            appearance: zipzi_core::Appearance {
-                opacity: 1.00005,
+        crate::test_sdk::insert_transform(
+            edit,
+            Transform {
+                id: object.id.clone(),
+                name: "Deformer".into(),
+                runtime_id: "Deformer".into(),
+                data,
+                appearance: zipzi_core::Appearance {
+                    opacity: 1.00005,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        })?;
+        )?;
         if bound {
-            edit.create_parameter(zipzi_core::Parameter {
-                id: parameter.clone(),
-                minimum: 0.,
-                maximum: 1.,
-                default_value: 0.,
-                ..Default::default()
-            })?;
+            crate::test_sdk::insert_fixture_parameter(
+                edit,
+                zipzi_core::Parameter {
+                    id: parameter.clone(),
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
+                },
+            )?;
             let track = if rotation {
                 SceneTrack::Rotation {
                     target_id: object.id.clone().into(),
@@ -73,19 +79,14 @@ fn fixture(rotation: bool, bound: bool) -> Result<(Document, ObjectRef, String)>
                         .to_vec(),
                 }
             } else {
+                let document = edit.read_document()?;
+                let warp = document.transform(&object.id).unwrap().warp().unwrap();
                 SceneTrack::Warp {
                     target_id: object.id.clone().into(),
                     keyforms: [0., 1.]
                         .map(|key| zipzi_core::WarpKeyform {
                             keys: vec![key],
-                            positions: edit
-                                .candidate_document()
-                                .transform(&object.id)
-                                .unwrap()
-                                .warp()
-                                .unwrap()
-                                .points
-                                .clone(),
+                            positions: warp.points.clone(),
                             appearance: zipzi_core::Appearance {
                                 opacity: 0.2 + key * 0.4,
                                 ..Default::default()
@@ -303,53 +304,62 @@ fn deformer_blend_contributions_reject_shape_edits_and_neutral_shapes_remain_edi
         let parameter = uuid::Uuid::new_v4().to_string();
         let table = uuid::Uuid::new_v4().to_string();
         doc.session.edit("Blend fixture", None, |edit| {
-            edit.create_parameter(Parameter {
-                id: parameter.clone(),
-                kind: ParameterKind::BlendShape,
-                minimum: 0.,
-                maximum: 1.,
-                default_value: 0.,
-                ..Default::default()
-            })?;
-            edit.create_blend_key_table(BlendShapeKeyTable {
-                id: table.clone(),
-                parameter_id: parameter.clone(),
-                keys: vec![0., 1.],
-                base_key_idx: 0,
-                samples: Default::default(),
-                base_sample_id: Default::default(),
-            })?;
-            edit.create_blend_binding(BlendShapeBinding {
-                id: uuid::Uuid::new_v4().to_string(),
-                target_id: object.id.clone(),
-                target_kind: if rotation {
-                    BlendShapeTargetKind::Rotation
-                } else {
-                    BlendShapeTargetKind::Warp
+            crate::test_sdk::insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: parameter.clone(),
+                    kind: ParameterKind::BlendShape,
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
                 },
-                key_table_id: table.clone(),
-                constraint_ids: vec![],
-                keyforms: if rotation {
-                    DeltaKeyforms::Rotation(vec![
-                        DeltaRotationKeyform::default(),
-                        DeltaRotationKeyform {
-                            angle: Some(10.),
-                            ..Default::default()
-                        },
-                    ])
-                } else {
-                    DeltaKeyforms::Warp(vec![
-                        DeltaWarpKeyform {
-                            points: vec![Vec2::default(); 4],
-                            ..Default::default()
-                        },
-                        DeltaWarpKeyform {
-                            points: vec![Vec2::new(1., 2.); 4],
-                            ..Default::default()
-                        },
-                    ])
+            )?;
+            crate::test_sdk::insert_blend_table(
+                edit,
+                BlendShapeKeyTable {
+                    id: table.clone(),
+                    parameter_id: parameter.clone(),
+                    keys: vec![0., 1.],
+                    base_key_idx: 0,
+                    samples: Default::default(),
+                    base_sample_id: Default::default(),
                 },
-            })
+            )?;
+            crate::test_sdk::insert_blend_binding(
+                edit,
+                BlendShapeBinding {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    target_id: object.id.clone(),
+                    target_kind: if rotation {
+                        BlendShapeTargetKind::Rotation
+                    } else {
+                        BlendShapeTargetKind::Warp
+                    },
+                    key_table_id: table.clone(),
+                    constraint_ids: vec![],
+                    keyforms: if rotation {
+                        DeltaKeyforms::Rotation(vec![
+                            DeltaRotationKeyform::default(),
+                            DeltaRotationKeyform {
+                                angle: Some(10.),
+                                ..Default::default()
+                            },
+                        ])
+                    } else {
+                        DeltaKeyforms::Warp(vec![
+                            DeltaWarpKeyform {
+                                points: vec![Vec2::default(); 4],
+                                ..Default::default()
+                            },
+                            DeltaWarpKeyform {
+                                points: vec![Vec2::new(1., 2.); 4],
+                                ..Default::default()
+                            },
+                        ])
+                    },
+                },
+            )
         })?;
         doc.invalidate_projection(true);
         assert_eq!(doc.property_scope(&object), PropertyScope::Object);
@@ -391,11 +401,7 @@ fn deformer_blend_contributions_reject_shape_edits_and_neutral_shapes_remain_edi
 fn repeating_parameter_upper_endpoint_targets_the_wrapped_deformer_keyform() -> Result<()> {
     let (mut doc, object, parameter) = fixture(true, true)?;
     doc.session.edit("Repeat", None, |edit| {
-        let mut next = edit
-            .candidate_document()
-            .parameter(&parameter)
-            .unwrap()
-            .clone();
+        let mut next = edit.read_document()?.parameter(&parameter).unwrap().clone();
         next.repeat = true;
         edit.replace_parameter(next)
     })?;
@@ -422,33 +428,35 @@ fn deformer_reference_properties_share_organization_and_preserving_tree_plans() 
     let part = uuid::Uuid::new_v4().to_string();
     let mesh = uuid::Uuid::new_v4().to_string();
     doc.session.edit("Reference fixture", None, |edit| {
-        edit.create_part(Part {
-            id: part.clone(),
-            name: "Part".into(),
-            ..Default::default()
-        })?;
-        edit.create_transform(Transform {
-            id: parent.clone(),
-            name: "Parent".into(),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 0.,
-                pose: RotationPose {
-                    origin: PreciseVec2::new(10., 20.),
-                    angle: 30.,
-                    ..Default::default()
-                },
-            }),
-            ..Default::default()
-        })?;
-        let mut transform = edit
-            .candidate_document()
-            .transform(&object.id)
-            .unwrap()
-            .clone();
+        crate::test_sdk::insert_fixture_part(
+            edit,
+            Part {
+                id: part.clone(),
+                name: "Part".into(),
+                ..Default::default()
+            },
+        )?;
+        crate::test_sdk::insert_transform(
+            edit,
+            Transform {
+                id: parent.clone(),
+                name: "Parent".into(),
+                data: TransformData::Rotation(RotationTransform {
+                    base_angle: 0.,
+                    pose: RotationPose {
+                        origin: PreciseVec2::new(10., 20.),
+                        angle: 30.,
+                        ..Default::default()
+                    },
+                }),
+                ..Default::default()
+            },
+        )?;
+        let mut transform = edit.read_document()?.transform(&object.id).unwrap().clone();
         transform.rotation_mut().unwrap().pose.origin = PreciseVec2::default();
         edit.replace_transform(transform)?;
         let mut binding = edit
-            .candidate_document()
+            .read_document()?
             .binding_for_scene(&object.id)
             .unwrap()
             .clone();
@@ -459,16 +467,19 @@ fn deformer_reference_properties_share_organization_and_preserving_tree_plans() 
             form.rotation.origin = PreciseVec2::default();
         }
         edit.replace_scene_binding(binding)?;
-        edit.create_mesh(Mesh {
-            id: mesh.clone(),
-            name: "Child".into(),
-            deformer_id: object.id.clone(),
-            vertex_ids: vec![0, 1, 2],
-            base_positions: vec![Vec2::new(1., 2.), Vec2::new(11., 2.), Vec2::new(1., 12.)],
-            uvs: vec![Vec2::default(); 3],
-            triangles: vec![[0, 1, 2]],
-            ..Default::default()
-        })
+        crate::test_sdk::insert_fixture_mesh(
+            edit,
+            Mesh {
+                id: mesh.clone(),
+                name: "Child".into(),
+                deformer_id: object.id.clone(),
+                vertex_ids: vec![0, 1, 2],
+                base_positions: vec![Vec2::new(1., 2.), Vec2::new(11., 2.), Vec2::new(1., 12.)],
+                uvs: vec![Vec2::default(); 3],
+                triangles: vec![[0, 1, 2]],
+                ..Default::default()
+            },
+        )
     })?;
     doc.invalidate_projection(true);
     let positions = |doc: &Document| {
@@ -476,7 +487,7 @@ fn deformer_reference_properties_share_organization_and_preserving_tree_plans() 
             .into_iter()
             .map(|value| {
                 zipzi_core::evaluation::authoring_mesh_positions(
-                    &doc.model(),
+                    &*doc.model(),
                     &mesh,
                     &[(parameter.clone(), value)].into(),
                 )
@@ -527,22 +538,22 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
     let (mut doc, object, _) = fixture(false, true)?;
     let blend = uuid::Uuid::new_v4().to_string();
     doc.session.edit("Curved Warp fixture", None, |edit| {
-        edit.edit_scene_content(zipzi_contract::document::SceneContentEdit::ResizeWarp {
-            transform_id: object.id.clone(),
-            rows: 2,
-            columns: 2,
-            quad: true,
-        })?;
-        let mut transform = edit
-            .candidate_document()
-            .transform(&object.id)
-            .unwrap()
-            .clone();
+        edit.edit_scene_content(
+            zipzi_contract::document::SceneContentEdit::ResizeWarp {
+                transform_id: object.id.clone(),
+                rows: 2,
+                columns: 2,
+                quad: true,
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        let mut transform = edit.read_document()?.transform(&object.id).unwrap().clone();
         let grid = transform.warp_mut().unwrap();
         grid.points[4].x += 25.;
         grid.bezier = Some(WarpBezier::from_lattice(2, 2, true, &grid.points));
         let mut binding = edit
-            .candidate_document()
+            .read_document()?
             .binding_for_scene(&object.id)
             .unwrap()
             .clone();
@@ -553,44 +564,54 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
             form.positions[4].y += 20.;
             form.bezier = Some(WarpBezier::from_lattice(2, 2, true, &form.positions));
         }
-        edit.replace_warp_authoring(transform, Some(binding))?;
+        edit.replace_transform(transform)?;
+        edit.replace_scene_binding(binding)?;
         let parameter = uuid::Uuid::new_v4().to_string();
         let table = uuid::Uuid::new_v4().to_string();
-        edit.create_parameter(Parameter {
-            id: parameter.clone(),
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.,
-            kind: ParameterKind::BlendShape,
-            ..Default::default()
-        })?;
-        edit.create_blend_key_table(BlendShapeKeyTable {
-            id: table.clone(),
-            parameter_id: parameter,
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-            samples: Default::default(),
-            base_sample_id: Default::default(),
-        })?;
+        crate::test_sdk::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: parameter.clone(),
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                kind: ParameterKind::BlendShape,
+                ..Default::default()
+            },
+        )?;
+        crate::test_sdk::insert_blend_table(
+            edit,
+            BlendShapeKeyTable {
+                id: table.clone(),
+                parameter_id: parameter,
+                keys: vec![0., 1.],
+                base_key_idx: 0,
+                samples: Default::default(),
+                base_sample_id: Default::default(),
+            },
+        )?;
         let mut delta = vec![Vec2::default(); 9];
         delta[4] = Vec2::new(5., 6.);
-        edit.create_blend_binding(BlendShapeBinding {
-            id: blend.clone(),
-            target_id: object.id.clone(),
-            target_kind: BlendShapeTargetKind::Warp,
-            key_table_id: table,
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Warp(vec![
-                DeltaWarpKeyform {
-                    points: vec![Vec2::default(); 9],
-                    ..Default::default()
-                },
-                DeltaWarpKeyform {
-                    points: delta,
-                    ..Default::default()
-                },
-            ]),
-        })
+        crate::test_sdk::insert_blend_binding(
+            edit,
+            BlendShapeBinding {
+                id: blend.clone(),
+                target_id: object.id.clone(),
+                target_kind: BlendShapeTargetKind::Warp,
+                key_table_id: table,
+                constraint_ids: vec![],
+                keyforms: DeltaKeyforms::Warp(vec![
+                    DeltaWarpKeyform {
+                        points: vec![Vec2::default(); 9],
+                        ..Default::default()
+                    },
+                    DeltaWarpKeyform {
+                        points: delta,
+                        ..Default::default()
+                    },
+                ]),
+            },
+        )
     })?;
     doc.invalidate_projection(true);
     let original = doc.model().transform(&object.id).unwrap().clone();
@@ -697,10 +718,7 @@ fn bone_length_is_global_editor_metadata_with_history_and_no_runtime_changes() -
         doc.property_values(&object)?[&fields::BONE_LENGTH.key],
         PropertyValue::Float(240.)
     );
-    assert!(std::sync::Arc::ptr_eq(
-        &frame,
-        &doc.snapshot()?.viewport_frame
-    ));
+    assert_eq!(frame.drawables, doc.snapshot()?.viewport_frame.drawables);
     assert_eq!(doc.model().transform(&object.id), Some(&transform));
     assert_eq!(doc.model().binding_for_scene(&object.id), Some(&binding));
     doc.undo()?;

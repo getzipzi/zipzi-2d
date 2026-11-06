@@ -2,42 +2,64 @@ use super::*;
 use zipzi_core::BindingAxisEditing;
 
 #[test]
-fn topology_replacement_cannot_revive_deleted_child_handles_in_one_edit() {
+fn restoring_binding_in_one_draft_is_an_exact_noop() {
     let mut s = base();
-    let original = s.binding(BINDING_ID).unwrap();
-    let handle = s
-        .handle(ObjectKind::BindingSample, &original.axes[0].samples[0].id)
+    let original = s
+        .snapshot()
+        .document()
+        .binding(BINDING_ID)
+        .cloned()
         .unwrap();
-    let source = s.geometry(MESH_ID).unwrap();
-    let mesh = s.document().get_mesh(MESH_ID).unwrap().clone();
-    let replacement = zipzi_sdk::TopologyReplacement {
-        vertex_mapping: mesh.vertex_ids.iter().map(|id| (*id, Some(*id))).collect(),
-        mesh,
-        binding: Some(MeshBinding {
-            id: BINDING_ID.into(),
-            mesh_id: MESH_ID.into(),
-            axes: vec![],
-            keyforms: vec![],
-        }),
-        blend_bindings: vec![],
-        glues: vec![],
+    let handle = {
+        let kind = ObjectKind::BindingSample;
+        let object_id = (&original.axes[0].samples[0].id).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
+    let replacement = MeshBinding {
+        id: BINDING_ID.into(),
+        mesh_id: MESH_ID.into(),
+        axes: vec![],
+        keyforms: vec![],
     };
-    let (_, receipt) = s
-        .edit("recreate through topology", None, |e| {
-            e.replace_topology(&source, replacement)?;
-            e.replace_binding(original.clone())
-        })
-        .unwrap();
-    assert!(receipt.changed);
-    assert_eq!(s.binding(BINDING_ID).unwrap(), original);
-    assert!(s.resolve_handle(&handle).is_err());
+    let (_, receipt) = {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.replace_binding(replacement)?;
+                e.replace_binding(original.clone())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("recreate through topology")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    assert!(receipt.writes.is_empty());
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .binding(BINDING_ID)
+            .cloned()
+            .unwrap(),
+        original
+    );
+    assert_eq!(s.read_snapshot().source, handle.2);
 }
 
 #[test]
 fn topology_conversion_respects_owned_sample_locks() {
     let mut s = base();
-    let b = s.binding(BINDING_ID).unwrap();
-    let mut flags = s.document().editor_state().clone();
+    let b = s
+        .snapshot()
+        .document()
+        .binding(BINDING_ID)
+        .cloned()
+        .unwrap();
+    let mut flags = s.snapshot().document().editor_state().clone();
     flags.objects.insert(
         b.axes[0].samples[0].id.clone(),
         zipzi_core::document::ObjectEditorState {
@@ -45,26 +67,32 @@ fn topology_conversion_respects_owned_sample_locks() {
             ..Default::default()
         },
     );
-    s.edit("lock sample", None, |e| e.replace_editor_state(flags))
-        .unwrap();
-    let source = s.geometry(MESH_ID).unwrap();
-    let mesh = s.document().get_mesh(MESH_ID).unwrap().clone();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_editor_state(flags))
+            .and_then(|value| {
+                let prepared = draft.prepare("lock sample")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     let mut changed = b;
     changed.keyforms[0].positions[0].x += 1.;
-    let replacement = zipzi_sdk::TopologyReplacement {
-        vertex_mapping: mesh.vertex_ids.iter().map(|id| (*id, Some(*id))).collect(),
-        mesh,
-        binding: Some(changed),
-        blend_bindings: vec![],
-        glues: vec![],
-    };
     let version = s.version();
     assert_eq!(
-        s.edit("bypass locked sample", None, |e| e
-            .replace_topology(&source, replacement))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_binding(changed))
+                .and_then(|value| {
+                    let prepared = draft.prepare("bypass locked sample")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap_err()
+        .code
+        .as_str(),
         "OBJECT_LOCKED"
     );
     assert_eq!(s.version(), version);
@@ -97,15 +125,27 @@ fn warp_replacement_tracks_removed_sample_lifetime_and_locks() {
             keyforms: vec![],
         },
     };
-    s.edit("warp fixture", None, |e| {
-        e.create_transform(transform.clone())?;
-        e.create_scene_binding(binding.clone())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(e, transform.clone())?;
+                e.create_scene_binding(binding.clone())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("warp fixture")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let transform = s.document().get_transform(&transform.id).unwrap().clone();
+    let binding = s
+        .snapshot()
+        .document()
+        .scene_binding(&binding.id)
+        .unwrap()
+        .clone();
     let sample = &binding.axes[0].samples[0].id;
-    let handle = s.handle(ObjectKind::BindingSample, sample).unwrap();
-    let mut flags = s.document().editor_state().clone();
+    let mut flags = s.snapshot().document().editor_state().clone();
     flags.objects.insert(
         sample.clone(),
         zipzi_core::document::ObjectEditorState {
@@ -113,26 +153,56 @@ fn warp_replacement_tracks_removed_sample_lifetime_and_locks() {
             ..Default::default()
         },
     );
-    s.edit("lock sample", None, |e| e.replace_editor_state(flags))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_editor_state(flags))
+            .and_then(|value| {
+                let prepared = draft.prepare("lock sample")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     let mut empty = binding.clone();
     empty.axes.clear();
+    if let SceneTrack::Warp { keyforms, .. } = &mut empty.track {
+        keyforms.clear();
+    }
     let version = s.version();
     assert_eq!(
-        s.edit("bypass warp sample lock", None, |e| e
-            .replace_warp_authoring(transform.clone(), Some(empty.clone())))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_scene_binding(empty.clone()))
+                .and_then(|value| {
+                    let prepared = draft.prepare("bypass warp sample lock")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap_err()
+        .code
+        .as_str(),
         "OBJECT_LOCKED"
     );
     assert_eq!(s.version(), version);
-    s.undo().unwrap();
-    s.edit("remove and restore warp sample", None, |e| {
-        e.replace_warp_authoring(transform.clone(), Some(empty))?;
-        e.replace_warp_authoring(transform, Some(binding.clone()))
-    })
+    s.undo(s.version()).unwrap();
+    let source = s.read_snapshot().source;
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.replace_scene_binding(empty)?;
+                e.replace_scene_binding(binding.clone())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("remove and restore warp sample")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    assert!(s.resolve_handle(&handle).is_err());
-    assert_eq!(s.document().get_scene_binding(&binding.id), Some(&binding));
+    assert_eq!(s.read_snapshot().source, source);
+    assert_eq!(
+        s.snapshot().document().scene_binding(&binding.id),
+        Some(&binding)
+    );
 }

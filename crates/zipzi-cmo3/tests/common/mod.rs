@@ -83,6 +83,7 @@ pub fn fixture() -> (DocumentState, Vec<u8>) {
 use std::io::{Cursor, Read};
 // Independent CAFF reader in the contract test: check offsets, varints, XOR
 // widths, archive guards and the ZIP payload, rather than calling writer internals.
+#[allow(dead_code)]
 pub fn archive(bytes: &[u8]) -> Vec<(String, String, u8, Vec<u8>)> {
     assert_eq!(&bytes[..4], b"CAFF");
     assert_eq!(&bytes[bytes.len() - 2..], b"bc");
@@ -144,4 +145,40 @@ pub fn archive(bytes: &[u8]) -> Vec<(String, String, u8, Vec<u8>)> {
         entries.push((path, tag, compression, content));
     }
     entries
+}
+
+/// Construct a validated fixture candidate without mutating the source snapshot.
+#[allow(dead_code)]
+pub fn prepare(
+    state: &DocumentState,
+    write: impl FnOnce(&mut DocumentBuilder) -> Result<(), zipzi_core::Status>,
+) -> DocumentState {
+    let mut builder = state.builder();
+    write(&mut builder).unwrap();
+    builder.freeze().unwrap().state
+}
+
+/// Resolve the decoder's source descriptors against the PNGs owned by this
+/// codec fixture. Production Project import adopts these bytes into ResourceStore.
+#[allow(dead_code)]
+pub fn resolve_images(imported: &zipzi_cmo3::ImportedModel) -> DocumentState {
+    prepare(&imported.document, |builder| {
+        for id in imported.document.asset_order() {
+            let mut asset = imported.document.asset(id).unwrap().clone();
+            let AssetContent::Unresolved { source } = &asset.content else {
+                continue;
+            };
+            let decoder = png::Decoder::new(Cursor::new(&imported.images[source]));
+            let mut reader = decoder.read_info().unwrap();
+            let mut pixels = vec![0; reader.output_buffer_size()];
+            let image = reader.next_frame(&mut pixels).unwrap();
+            asset.content = AssetContent::Image {
+                resource: ResourceKey::new(),
+                width: image.width,
+                height: image.height,
+            };
+            builder.replace_asset(asset)?;
+        }
+        Ok(())
+    })
 }

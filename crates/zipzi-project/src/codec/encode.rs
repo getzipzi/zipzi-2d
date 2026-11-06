@@ -298,8 +298,8 @@ pub(super) fn encode_wire(document: &impl super::view::EncodeModel) -> Result<Pr
     }
 
     let project = ProjectWire {
-        format: "zipzi-directory-project".to_string(),
-        format_version: 21,
+        format: "zipzi-project".into(),
+        format_version: 22,
         document: DocumentWire {
             id: document.id().to_string(),
             export_settings: document.export_settings(),
@@ -376,9 +376,7 @@ pub(crate) fn encode_state(
             .map(|image| (image.id.clone(), image))
             .collect(),
     };
-    let mut project = encode_wire(&projection)?;
-    project.format = "zipzi-project".into();
-    project.format_version = 22;
+    let project = encode_wire(&projection)?;
     let mut out = serde_json::to_vec(&project)
         .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     out.push(b'\n');

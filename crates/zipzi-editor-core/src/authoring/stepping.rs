@@ -122,7 +122,6 @@ impl StepEdit {
 #[derive(Clone, Debug)]
 pub(super) struct PaletteStepsPlan {
     preview: crate::EditPreview<()>,
-    scene: bool,
 }
 impl PaletteStepsPlan {
     pub(super) fn version(&self) -> zipzi_sdk::Version {
@@ -292,7 +291,6 @@ impl Document {
                 source.captured.snapshot.clone(),
                 (),
             )?,
-            scene: projection != PaletteProjection::Parameters,
         })))
     }
 
@@ -304,7 +302,7 @@ impl Document {
         let receipt = plan.preview.publish(&mut self.session)?;
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, plan.scene);
+            self.consume_authoring_receipt(&receipt, None);
             self.reconcile_parameter_preview()?;
             self.context.reconcile(&self.object_index());
         }

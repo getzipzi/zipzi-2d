@@ -1,20 +1,3 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-#[derive(zipzi_api_derive::BinaryWire)]
-pub struct Version {
-    pub session_id: u64,
-    pub generation: u64,
-    pub revision: u64,
-}
-
-impl crate::api_shape::ApiShape for Version {
-    fn api_shape() -> crate::api_shape::Shape {
-        crate::api_shape::Shape::Opaque {
-            name: concat!(module_path!(), "::Version").into(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
@@ -46,7 +29,7 @@ pub struct ParameterCreateSpec {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
-/// Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.
+/// Partial replacement of a parameter's authored fields.
 /// Omitted or None fields preserve their current values; supplied values are validated as replacements.
 pub struct ParameterPatch {
     /// Human-readable display name; use the stable ID for identity because names can change.
@@ -74,27 +57,6 @@ pub struct ParameterPatch {
     /// Replacement repeat flag; false explicitly disables repeating. None preserves the current
     /// value; it does not reset the field to its default.
     pub repeat: Option<bool>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
-/// Parameter creation or partial replacement in an Edit candidate; publication is separate.
-pub enum ParameterOperation {
-    /// Create a parameter from its specification, allocating an ID when none is supplied.
-    Create {
-        /// Creation specification; native admission supplies identities/defaults and rejects
-        /// invalid input.
-        spec: ParameterCreateSpec,
-    },
-    /// Replace only the supplied fields of the parameter selected by stable document ID.
-    Patch {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-        /// Typed patch for the addressed object; apply through the Edit to mutate candidate state.
-        patch: ParameterPatch,
-    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -145,24 +107,4 @@ pub struct MeshBindingCreateSpec {
     pub keyforms: Vec<MeshKeyformSpec>,
     /// Optional new binding UUID; None allocates a fresh UUID when the create operation executes.
     pub id: Option<String>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
-#[derive(zipzi_api_derive::BinaryWire, zipzi_api_derive::ApiShape)]
-/// Create an ordinary mesh binding or write a shape sample in an Edit candidate.
-pub enum MeshBindingOperation {
-    /// Create a mesh binding and allocate its identity if omitted.
-    Create {
-        /// Creation specification; native admission supplies identities/defaults and rejects
-        /// invalid input.
-        spec: MeshBindingCreateSpec,
-    },
-    /// Insert or replace the shape sample at the supplied axis coordinates.
-    SetKeyform {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-        /// Complete shape sample to insert or replace; unrelated samples are retained.
-        keyform: MeshKeyformSpec,
-    },
 }

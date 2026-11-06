@@ -1,18 +1,18 @@
 #![cfg(feature = "gpu-observation")]
 
-use std::collections::VecDeque;
-use zipzi_runtime::{authoring::*, observation::*, *};
-#[derive(Default)]
-struct Manual(VecDeque<Work>);
-impl Executor for Manual {
-    fn submit(&mut self, w: Work) -> std::result::Result<(), Box<Work>> {
-        self.0.push_back(w);
-        Ok(())
-    }
-}
+use serde_json::Value;
+use zipzi_contract::{
+    kernel_commands::{Command, ImageInput},
+    kernel_tasks::SampleInput,
+    observation::ObservationView,
+};
+use zipzi_core::Vec2;
+use zipzi_runtime::*;
+
 fn id(n: u32) -> String {
     format!("79660000-0000-4000-8000-{n:012x}")
 }
+
 fn view() -> ObservationView {
     ObservationView {
         texture_policy: Default::default(),
@@ -24,204 +24,232 @@ fn view() -> ObservationView {
         quality: false,
     }
 }
-fn fixture() -> (Runtime, ClientId, SessionId) {
-    let mut rt = Runtime::default();
-    let c = rt.register_client().unwrap();
-    let s = rt
-        .create_session(c, &id(1), zipzi_core::ModelSetup::default())
-        .unwrap();
-    let image = rt
-        .prepare_image(c, 1, 1, vec![255, 0, 0, 255])
-        .unwrap()
-        .image;
-    let e = rt.begin_edit(c, s, "red", None).unwrap();
-    rt.apply_authoring(
-        c,
-        e,
-        vec![EditOperation::Resource(ResourceOperation::CreateImage {
-            spec: zipzi_sdk::ImageCreateSpec {
-                id: Some(id(2)),
-                name: "Red".into(),
-            },
-            image,
-        })],
-    )
-    .unwrap();
-    rt.apply_edit(c, e, |edit| {
-        edit.create_mesh(zipzi_core::Mesh {
-            id: id(3),
-            name: "Quad".into(),
-            texture_asset_id: id(2).into(),
-            vertex_ids: vec![10, 20, 30, 40],
-            base_positions: vec![
-                zipzi_core::Vec2::new(0., 0.),
-                zipzi_core::Vec2::new(1., 0.),
-                zipzi_core::Vec2::new(1., 1.),
-                zipzi_core::Vec2::new(0., 1.),
-            ],
-            uvs: vec![
-                zipzi_core::Vec2::new(0., 0.),
-                zipzi_core::Vec2::new(1., 0.),
-                zipzi_core::Vec2::new(1., 1.),
-                zipzi_core::Vec2::new(0., 1.),
-            ],
-            triangles: vec![[10, 20, 30], [10, 30, 40]],
-            ..Default::default()
-        })
-    })
-    .unwrap();
-    rt.commit_edit(c, e).unwrap();
-    rt.release_prepared_image(c, image).unwrap();
-    (rt, c, s)
-}
-fn replace(rt: &mut Runtime, c: ClientId, e: EditId, rgba: Vec<u8>) {
-    let image = rt.prepare_image(c, 1, 1, rgba).unwrap().image;
-    rt.apply_authoring(
-        c,
-        e,
-        vec![EditOperation::Resource(ResourceOperation::ReplaceImage {
-            id: id(2),
-            image,
-        })],
-    )
-    .unwrap();
-    rt.release_prepared_image(c, image).unwrap();
-}
-fn finish(rt: &mut Runtime, c: ClientId, j: JobId) -> JobValue {
-    let mut exec = Manual::default();
-    while !rt.job_info(c, j).unwrap().state.is_terminal() {
-        rt.dispatch(&mut exec);
-        assert!(rt.complete(exec.0.pop_front().unwrap().run_quantum()));
+
+fn replace(rgba: [u8; 4]) -> Command {
+    Command::ReplaceImage {
+        id: id(2),
+        input: ImageInput::Rgba {
+            width: 1,
+            height: 1,
+            bytes: rgba.to_vec(),
+        },
     }
-    let value = rt.job_info(c, j).unwrap().result.unwrap().unwrap();
-    rt.release_job(c, j).unwrap();
-    value
 }
-fn pixel(image: &ObservationImage) -> &[u8] {
-    let index = (8 * 16 + 8) * 4;
-    &image.rgba[index..index + 4]
+
+fn fixture(limits: RuntimeLimits) -> (Runtime, ClientId, Version) {
+    let mut rt = Runtime::new(limits);
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), Default::default())
+        .unwrap();
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![
+                Command::CreateAsset {
+                    id: id(2),
+                    name: "Red".into(),
+                },
+                replace([255, 0, 0, 255]),
+            ],
+        )
+        .unwrap();
+    let (draft, ()) = rt
+        .batch(client, draft, |c| {
+            c.create_mesh(zipzi_sdk::rectangle_mesh(
+                &id(3),
+                "Quad",
+                &id(2),
+                Vec2::default(),
+                Vec2::new(1., 1.),
+            )?)
+        })
+        .unwrap();
+    let version = rt.publish(client, draft, "Fixture").unwrap().version;
+    (rt, client, version)
 }
+
+fn params(count: usize) -> SampleInput {
+    SampleInput::Parameters {
+        values: vec![Default::default(); count],
+    }
+}
+
+fn finish(rt: &mut Runtime, client: ClientId, job: JobId) -> ReadResult {
+    let work = rt.take_work(job).unwrap();
+    rt.complete(work.run()).unwrap();
+    let result = rt
+        .job(client, job)
+        .unwrap()
+        .result
+        .clone()
+        .unwrap()
+        .unwrap();
+    rt.release_job(client, job).unwrap();
+    let JobValue::Read(result) = result else {
+        panic!("expected observation")
+    };
+    result
+}
+
+fn frames(result: &ReadResult) -> Vec<(Value, [u8; 4])> {
+    let mut rest = result.bytes();
+    let mut frames = Vec::new();
+    while !rest.is_empty() {
+        let length = u32::from_be_bytes(rest[..4].try_into().unwrap()) as usize;
+        let header: Value = serde_json::from_slice(&rest[4..4 + length]).unwrap();
+        rest = &rest[4 + length..];
+        let png_bytes = header["png_bytes"].as_u64().unwrap() as usize;
+        let png = &rest[..png_bytes];
+        assert_eq!(&png[..8], &[137, 80, 78, 71, 13, 10, 26, 10]);
+        let decoded = zipzi_core::image::decode_png(png).unwrap();
+        let index = (8 * 16 + 8) * 4;
+        assert_eq!((decoded.width, decoded.height), (16, 16));
+        frames.push((header, decoded.rgba[index..index + 4].try_into().unwrap()));
+        rest = &rest[png_bytes..];
+    }
+    frames
+}
+
 #[test]
 #[ignore = "requires GPU; run --test observation -- --include-ignored"]
 fn frozen_formal_and_candidate_images_never_mix_texture_replacements() {
-    let (mut rt, c, s) = fixture();
-    assert_eq!(rt.runtime_capabilities().gpu, None);
-    let before = rt.session_info(s).unwrap();
-    let j = rt
-        .request_observation(c, s, None, vec![Default::default(); 2], view(), None)
+    let (mut rt, client, version) = fixture(Default::default());
+    let source = QuerySource::Published(version);
+    let job = rt
+        .request_observation(client, source, params(2), view())
         .unwrap();
-    // Capture the first pose, then publish a new texture while this same batch
-    // is yielded. The remaining acquisition and rendering must stay frozen.
-    let mut exec = Manual::default();
-    rt.dispatch(&mut exec);
-    let completion = exec.0.pop_front().unwrap().run_quantum();
-    assert!(!completion.is_terminal());
-    assert!(rt.complete(completion));
-    let e = rt.begin_edit(c, s, "green", None).unwrap();
-    replace(&mut rt, c, e, vec![0, 255, 0, 255]);
-    rt.commit_edit(c, e).unwrap();
-    let JobValue::Observed(batch) = finish(&mut rt, c, j) else {
-        panic!("images")
-    };
-    assert_eq!(batch.source.version(), before.version);
-    assert_eq!(rt.runtime_capabilities().gpu, Some(true));
-    let a = &batch.samples.frames[0];
-    assert_eq!(pixel(a), [255, 0, 0, 255]);
-    assert_eq!(a.png[..8], [137, 80, 78, 71, 13, 10, 26, 10]);
-    assert_eq!(a.capture_id, batch.samples.frames[1].capture_id);
-    assert_eq!(batch.samples.texture_report.textures.len(), 1);
-    assert_eq!(a.scale, 16.);
-    assert_eq!(a.offset, [0., 16.]);
-    let e = rt.begin_edit(c, s, "blue candidate", None).unwrap();
-    replace(&mut rt, c, e, vec![0, 0, 255, 255]);
-    let j = rt
-        .request_observation(c, s, Some(e), vec![Default::default()], view(), None)
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt
+        .commands(client, draft, vec![replace([0, 255, 0, 255])])
         .unwrap();
-    rt.dispatch(&mut exec);
-    assert!(rt.complete(exec.0.pop_front().unwrap().run_quantum()));
-    replace(&mut rt, c, e, vec![255, 255, 0, 255]);
-    rt.release_edit(c, e).unwrap();
-    let JobValue::Observed(candidate) = finish(&mut rt, c, j) else {
-        panic!("candidate image")
-    };
-    assert_eq!(pixel(&candidate.samples.frames[0]), [0, 0, 255, 255]);
-    assert!(matches!(
-        candidate.source,
-        SourceRef::Edit { sequence: 1, .. }
-    ));
+    let green = rt.publish(client, draft, "Green").unwrap();
+    let result = finish(&mut rt, client, job);
+    assert_eq!(result.source, source);
+    let formal = frames(&result);
+    assert_eq!(formal.len(), 2);
+    assert!(formal.iter().all(|(header, color)| {
+        header["source"] == serde_json::to_value(source).unwrap() && *color == [255, 0, 0, 255]
+    }));
+    let header = &formal[0].0;
+    assert_eq!(header["view"]["scale"], 16.);
+    assert_eq!(header["view"]["offset"], serde_json::json!([0., 16.]));
+    let textures = header["texture_report"]["textures"].as_array().unwrap();
+    assert_eq!(textures.len(), 1);
+    let draft = rt.begin_draft(client, green.version).unwrap();
+    let (draft, _) = rt
+        .commands(client, draft, vec![replace([0, 0, 255, 255])])
+        .unwrap();
+    let source = QuerySource::Draft(draft);
+    let job = rt
+        .request_observation(client, source, params(1), view())
+        .unwrap();
+    let (draft, _) = rt
+        .commands(client, draft, vec![replace([255, 255, 0, 255])])
+        .unwrap();
+    rt.cancel_draft(client, draft.draft).unwrap();
+    let result = finish(&mut rt, client, job);
+    assert_eq!(result.source, source);
+    let candidate = frames(&result);
+    assert_eq!(candidate[0].1, [0, 0, 255, 255]);
     assert_ne!(
-        batch.samples.texture_report.textures[0].render_rgba_hash,
-        candidate.samples.texture_report.textures[0].render_rgba_hash
+        textures[0]["render_rgba_hash"],
+        candidate[0].0["texture_report"]["textures"][0]["render_rgba_hash"]
     );
-    assert_eq!(rt.session_info(s).unwrap().history_lengths, (2, 0));
+    assert_eq!(
+        rt.subscribe(client, version.session)
+            .unwrap()
+            .history
+            .undo_steps,
+        2
+    );
 }
+
 #[test]
 #[ignore = "requires GPU; run --test observation -- --include-ignored"]
-fn preview_images_use_the_captured_source_without_changing_history() {
-    let (mut rt, c, s) = fixture();
-    let before = rt.session_info(s).unwrap();
-    let (p, source) = rt.create_preview(c, s, None, None).unwrap();
-    let e = rt.begin_edit(c, s, "green", None).unwrap();
-    replace(&mut rt, c, e, vec![0, 255, 0, 255]);
-    rt.commit_edit(c, e).unwrap();
-    let j = rt
-        .request_preview_frames(c, p, vec![0., 0.25, 0.], false, false, vec![], Some(view()))
-        .unwrap();
-    let JobValue::Previewed(batch) = finish(&mut rt, c, j) else {
-        panic!("preview image")
+fn animation_images_use_the_captured_source_without_changing_history() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let source = QuerySource::Published(version);
+    let input = SampleInput::Animation {
+        times: vec![0., 0.25, 0.],
+        motions: vec![],
+        expressions: vec![],
+        inputs: vec![],
+        physics: false,
+        stabilized_start: false,
     };
-    assert_eq!(batch.source, source);
-    assert_eq!(source.version(), before.version);
-    for frame in &batch.samples.frames {
-        assert!(frame.geometry.is_none());
-        assert_eq!(pixel(frame.observation.as_ref().unwrap()), [255, 0, 0, 255]);
-    }
-    assert_eq!(rt.preview_state(c, p).unwrap().1.time, 0.);
-    assert_eq!(rt.session_info(s).unwrap().history_lengths, (2, 0));
+    let job = rt
+        .request_observation(client, source, input, view())
+        .unwrap();
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt
+        .commands(client, draft, vec![replace([0, 255, 0, 255])])
+        .unwrap();
+    let green = rt.publish(client, draft, "Green").unwrap();
+    let result = finish(&mut rt, client, job);
+    assert_eq!(result.source, source);
+    let frames = frames(&result);
+    assert_eq!(frames.len(), 3);
+    assert!(frames.iter().all(|(_, color)| *color == [255, 0, 0, 255]));
+    let after = rt.subscribe(client, version.session).unwrap();
+    assert_eq!(after.cursor, green.version);
+    assert_eq!(after.history.undo_steps, 2);
 }
+
 #[test]
-fn invalid_views_and_cancelled_queued_images_preserve_sources_and_release_budget() {
-    let (mut rt, c, s) = fixture();
-    let before = rt.session_info(s).unwrap();
-    let bytes = rt.accounted_bytes();
+fn invalid_and_cancelled_observations_keep_the_source_and_release_budget() {
+    let (mut rt, client, version) = fixture(RuntimeLimits {
+        task_bytes: 384 << 20,
+        ..Default::default()
+    });
+    let source = QuerySource::Published(version);
+    let before = rt.task_bytes();
     assert!(rt
-        .request_observation(c, s, None, vec![Default::default(); 65], view(), None)
+        .request_observation(client, source, params(65), view())
         .is_err());
     assert!(rt
         .request_observation(
-            c,
-            s,
-            None,
-            vec![Default::default()],
+            client,
+            source,
+            params(1),
             ObservationView {
                 roi: [0.; 4],
                 ..view()
-            },
-            None
+            }
         )
         .is_err());
-    assert!(rt
-        .request_observation(
-            c,
-            s,
-            None,
-            vec![Default::default(); 64],
+    assert_eq!(
+        rt.request_observation(
+            client,
+            source,
+            params(64),
             ObservationView {
                 width: 4096,
                 height: 4096,
                 ..view()
-            },
-            None
+            }
         )
-        .is_err());
+        .unwrap_err()
+        .code,
+        "BUDGET_EXCEEDED"
+    );
     for _ in 0..100 {
-        let j = rt
-            .request_observation(c, s, None, vec![Default::default()], view(), None)
+        let job = rt
+            .request_observation(client, source, params(1), view())
             .unwrap();
-        rt.cancel_job(c, j).unwrap();
-        rt.release_job(c, j).unwrap();
+        assert!(rt.task_bytes() > before);
+        rt.cancel_job(client, job).unwrap();
+        let work = rt.take_work(job).unwrap();
+        rt.complete(work.run()).unwrap();
+        assert_eq!(rt.job(client, job).unwrap().state, JobState::Cancelled);
+        rt.release_job(client, job).unwrap();
     }
-    assert_eq!(rt.accounted_bytes(), bytes);
-    assert_eq!(rt.session_info(s).unwrap(), before);
-    assert_eq!(rt.runtime_capabilities().gpu, None);
+    assert_eq!(rt.task_bytes(), before);
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
 }

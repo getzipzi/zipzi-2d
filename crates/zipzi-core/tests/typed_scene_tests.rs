@@ -1,24 +1,27 @@
+mod support;
+
+use support::prepare;
+use zipzi_core::state::{DocumentState, RecordDomain};
 use zipzi_core::SceneTrackEvaluation;
 use zipzi_core::*;
 
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
 }
-fn document() -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(id(1), Canvas::new(100., 100., Vec2::default(), 1.))
-        .is_ok());
-    assert!(doc
+fn document() -> DocumentState {
+    let doc =
+        DocumentState::new(id(1), Canvas::new(100., 100., Vec2::default(), 1.).into()).unwrap();
+    let mut builder = doc.builder();
+    builder
         .create_parameter(Parameter {
             id: id(2),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
+        .unwrap();
+    builder
         .create_transform(Transform {
             id: id(3),
+            runtime_id: "Warp".into(),
             data: TransformData::Warp(WarpTransform {
                 bezier: None,
                 rows: 1,
@@ -28,14 +31,13 @@ fn document() -> Document {
                     Vec2::new(0., 0.),
                     Vec2::new(1., 0.),
                     Vec2::new(0., 1.),
-                    Vec2::new(1., 1.)
+                    Vec2::new(1., 1.),
                 ],
             }),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    doc
+        .unwrap();
+    builder.freeze().unwrap().state
 }
 fn axes() -> Vec<BindingAxis> {
     vec![BindingAxis {
@@ -47,30 +49,34 @@ fn axes() -> Vec<BindingAxis> {
 }
 
 #[test]
-fn scene_field_changes_distinguish_warp_content_from_address_context() {
+fn warp_shape_changes_record_one_transform_and_keep_context() {
     use zipzi_core::document::{SceneField as F, SceneFieldValue as V};
     let before = document();
-    let mut after = before.clone();
-    let mut warp = after.get_transform(&id(3)).unwrap().clone();
+    let mut warp = before.transform(&id(3)).unwrap().clone();
     let TransformData::Warp(grid) = &mut warp.data else {
         unreachable!()
     };
     grid.points[0].x = -1.;
-    assert!(after.replace_transform(warp).status.is_ok());
-    let mut changes = Vec::new();
-    before.visit_scene_field_changes(&after, &id(3), |field| changes.push(field));
-    assert_eq!(changes, [F::Warp]);
+    let edited = prepare(&before, |builder| builder.replace_transform(warp)).unwrap();
+    assert_eq!(edited.writes.records().len(), 1);
+    assert_eq!(edited.writes.records()[0].domain, RecordDomain::Transform);
+    assert_eq!(edited.writes.records()[0].id, id(3));
+    let after = edited.state;
+    assert_ne!(
+        before.scene_field(&id(3), F::Warp),
+        after.scene_field(&id(3), F::Warp)
+    );
 
-    let mut warp = after.get_transform(&id(3)).unwrap().clone();
+    let mut warp = after.transform(&id(3)).unwrap().clone();
     let TransformData::Warp(grid) = &mut warp.data else {
         unreachable!()
     };
     grid.columns = 2;
     grid.points = vec![Vec2::default(); 6];
-    assert!(after.replace_transform(warp).status.is_ok());
-    changes.clear();
-    before.visit_scene_field_changes(&after, &id(3), |field| changes.push(field));
-    assert_eq!(changes, [F::Warp, F::Context]);
+    let after = prepare(&after, |builder| builder.replace_transform(warp))
+        .unwrap()
+        .state;
+    assert_eq!(after.transform(&id(3)).unwrap().warp().unwrap().columns, 2);
     assert_eq!(
         before.scene_field(&id(3), F::Context),
         after.scene_field(&id(3), F::Context)
@@ -90,8 +96,7 @@ fn scene_field_changes_distinguish_warp_content_from_address_context() {
 
 #[test]
 fn wrong_track_and_single_form_types_fail_without_mutation() {
-    let mut doc = document();
-    let before = doc.clone();
+    let doc = document();
     let invalid = SceneBinding {
         id: id(4),
         axes: axes(),
@@ -110,19 +115,21 @@ fn wrong_track_and_single_form_types_fail_without_mutation() {
         },
     };
     assert_eq!(
-        doc.create_scene_binding(invalid).status.code,
+        prepare(&doc, |builder| builder.create_scene_binding(invalid))
+            .unwrap_err()
+            .code,
         "INVALID_BINDING_TARGET"
     );
-    assert!(doc.same_content(&before));
+    assert!(doc.scene_binding_order().is_empty());
     let positions = doc
-        .get_transform(&id(3))
+        .transform(&id(3))
         .unwrap()
         .warp()
         .unwrap()
         .points
         .clone();
-    assert!(doc
-        .create_scene_binding(SceneBinding {
+    let doc = prepare(&doc, |builder| {
+        builder.create_scene_binding(SceneBinding {
             id: id(4),
             axes: axes(),
             track: SceneTrack::Warp {
@@ -138,35 +145,39 @@ fn wrong_track_and_single_form_types_fail_without_mutation() {
                     .collect(),
             },
         })
-        .status
-        .is_ok());
-    let binding = doc.get_scene_binding(&id(4)).unwrap();
+    })
+    .unwrap()
+    .state;
+    let binding = doc.scene_binding(&id(4)).unwrap();
     assert_eq!(binding.track.sample(0).keys, [-1.]);
     assert_eq!(binding.track.sample(1).keys, [1.]);
-    let before = doc.clone();
+    let before = doc.content_id();
+    let mut builder = doc.builder();
     assert_eq!(
-        doc.set_scene_keyform(
-            &id(4),
-            SceneKeyform::Part(PartKeyform {
-                samples: Default::default(),
-                keys: vec![-1.],
-                draw_order: 2.,
-            })
-        )
-        .status
-        .code,
+        builder
+            .set_scene_keyform(
+                &id(4),
+                SceneKeyform::Part(PartKeyform {
+                    samples: Default::default(),
+                    keys: vec![-1.],
+                    draw_order: 2.,
+                })
+            )
+            .unwrap_err()
+            .code,
         "INVALID_KEYFORM_TYPE"
     );
-    assert!(doc.same_content(&before));
-    assert_eq!(doc.revision(), before.revision());
+    assert_eq!(builder.freeze().unwrap_err().code, "INVALID_KEYFORM_TYPE");
+    assert_eq!(doc.content_id(), before);
 }
 
 #[test]
 fn typed_parent_references_and_rotation_precision_survive_edits() {
-    let mut doc = document();
+    let doc = document();
     let origin = PreciseVec2::new(16777217.125, -16777217.375);
     let rotation = Transform {
         id: id(5),
+        runtime_id: "Rotation".into(),
         parent_id: Some(id(3).into()),
         data: TransformData::Rotation(RotationTransform {
             base_angle: 12.,
@@ -177,16 +188,25 @@ fn typed_parent_references_and_rotation_precision_survive_edits() {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(rotation).status.is_ok());
-    let mut changed = doc.get_transform(&id(5)).unwrap().clone();
+    let doc = prepare(&doc, |builder| builder.create_transform(rotation))
+        .unwrap()
+        .state;
+    let mut changed = doc.transform(&id(5)).unwrap().clone();
     assert_eq!(changed.rotation().unwrap().pose.origin, origin);
     changed.parent_id = Some("".into());
-    assert_eq!(doc.replace_transform(changed).status.code, "INVALID_ID");
-    let mut changed = doc.get_transform(&id(5)).unwrap().clone();
-    changed.parent_id = None;
-    assert!(doc.replace_transform(changed).status.is_ok());
     assert_eq!(
-        doc.get_transform(&id(5))
+        prepare(&doc, |builder| builder.replace_transform(changed))
+            .unwrap_err()
+            .code,
+        "INVALID_ID"
+    );
+    let mut changed = doc.transform(&id(5)).unwrap().clone();
+    changed.parent_id = None;
+    let doc = prepare(&doc, |builder| builder.replace_transform(changed))
+        .unwrap()
+        .state;
+    assert_eq!(
+        doc.transform(&id(5))
             .unwrap()
             .rotation()
             .unwrap()
@@ -194,5 +214,5 @@ fn typed_parent_references_and_rotation_precision_survive_edits() {
             .origin,
         origin
     );
-    assert!(doc.get_transform(&id(5)).unwrap().parent_id.is_none());
+    assert!(doc.transform(&id(5)).unwrap().parent_id.is_none());
 }

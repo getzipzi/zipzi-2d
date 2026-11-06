@@ -11,19 +11,25 @@ fn fixture(bound: bool) -> Result<(Document, ObjectRef, String)> {
     let part = ObjectRef::new(ObjectKind::Part, uuid::Uuid::new_v4().to_string());
     let parameter = uuid::Uuid::new_v4().to_string();
     doc.session.edit("Fixture", None, |edit| {
-        edit.create_part(Part {
-            id: part.id.clone(),
-            name: "Eyes".into(),
-            ..Default::default()
-        })?;
-        if bound {
-            edit.create_parameter(zipzi_core::Parameter {
-                id: parameter.clone(),
-                minimum: 0.,
-                maximum: 1.,
-                default_value: 0.,
+        crate::test_sdk::insert_fixture_part(
+            edit,
+            Part {
+                id: part.id.clone(),
+                name: "Eyes".into(),
                 ..Default::default()
-            })?;
+            },
+        )?;
+        if bound {
+            crate::test_sdk::insert_fixture_parameter(
+                edit,
+                zipzi_core::Parameter {
+                    id: parameter.clone(),
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
+                },
+            )?;
             edit.create_scene_binding(SceneBinding {
                 id: uuid::Uuid::new_v4().to_string(),
                 axes: vec![BindingAxis::new(parameter.clone(), vec![0., 1.])],
@@ -47,7 +53,7 @@ fn fixture(bound: bool) -> Result<(Document, ObjectRef, String)> {
 
 fn native_lock(doc: &mut Document, id: &str, locked: bool) -> Result<()> {
     doc.session.edit("Native lock", None, |edit| {
-        let mut state = edit.candidate_document().editor_state().clone();
+        let mut state = edit.read_document()?.editor_state().clone();
         state.objects.entry(id.into()).or_default().locked = locked;
         edit.replace_editor_state(state)
     })?;
@@ -199,12 +205,15 @@ fn part_offscreen_removal_preserves_nested_parts_and_their_composites() -> Resul
     let (mut doc, part, _) = fixture(false)?;
     let child = ObjectRef::new(ObjectKind::Part, uuid::Uuid::new_v4().to_string());
     doc.session.edit("Child Part", None, |edit| {
-        edit.create_part(Part {
-            id: child.id.clone(),
-            parent_id: part.id.clone(),
-            name: "Child".into(),
-            ..Default::default()
-        })
+        crate::test_sdk::insert_fixture_part(
+            edit,
+            Part {
+                id: child.id.clone(),
+                parent_id: part.id.clone(),
+                name: "Child".into(),
+                ..Default::default()
+            },
+        )
     })?;
     doc.invalidate_projection(true);
     doc.set_object_property(&child, fields::OFFSCREEN.path, json!(true))?;
@@ -287,10 +296,13 @@ fn part_offscreen_deletion_cleans_owned_blends_but_retains_shared_animation_and_
     let (mut doc, part, ordinary_parameter) = fixture(true)?;
     let other = ObjectRef::new(ObjectKind::Part, uuid::Uuid::new_v4().to_string());
     doc.session.edit("Other Part", None, |edit| {
-        edit.create_part(Part {
-            id: other.id.clone(),
-            ..Default::default()
-        })
+        crate::test_sdk::insert_fixture_part(
+            edit,
+            Part {
+                id: other.id.clone(),
+                ..Default::default()
+            },
+        )
     })?;
     doc.invalidate_projection(true);
     for target in [&part, &other] {
@@ -305,47 +317,63 @@ fn part_offscreen_deletion_cleans_owned_blends_but_retains_shared_animation_and_
     let own_blend = uuid::Uuid::new_v4().to_string();
     let other_blend = uuid::Uuid::new_v4().to_string();
     doc.session.edit("Shared BlendShape", None, |edit| {
-        edit.create_parameter(Parameter {
-            id: blend_parameter.clone(),
-            kind: ParameterKind::BlendShape,
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.,
-            ..Default::default()
-        })?;
-        edit.create_blend_key_table(BlendShapeKeyTable {
-            id: table.clone(),
-            parameter_id: blend_parameter.clone(),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-            samples: Default::default(),
-            base_sample_id: Default::default(),
-        })?;
-        edit.create_blend_constraint(BlendShapeConstraint {
-            id: constraint.clone(),
-            parameter_id: ordinary_parameter.clone(),
-            keys: vec![0., 1.],
-            weights: vec![1., 1.],
-            samples: Default::default(),
-        })?;
+        crate::test_sdk::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: blend_parameter.clone(),
+                kind: ParameterKind::BlendShape,
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                ..Default::default()
+            },
+        )?;
+        crate::test_sdk::insert_blend_table(
+            edit,
+            BlendShapeKeyTable {
+                id: table.clone(),
+                parameter_id: blend_parameter.clone(),
+                keys: vec![0., 1.],
+                base_key_idx: 0,
+                samples: Default::default(),
+                base_sample_id: Default::default(),
+            },
+        )?;
+        edit.edit_blend_shape(
+            zipzi_sdk::BlendAuthoringEdit::CreateConstraint {
+                constraint: BlendShapeConstraint {
+                    id: constraint.clone(),
+                    parameter_id: ordinary_parameter.clone(),
+                    keys: vec![0., 1.],
+                    weights: vec![1., 1.],
+                    samples: Default::default(),
+                },
+            },
+            Default::default(),
+            &Default::default(),
+        )
+        .map(|_| ())?;
         for (id, target) in [
             (&own_blend, &offscreen.id),
             (&other_blend, &other_offscreen.id),
         ] {
-            edit.create_blend_binding(BlendShapeBinding {
-                id: id.clone(),
-                target_id: target.clone(),
-                target_kind: BlendShapeTargetKind::Offscreen,
-                key_table_id: table.clone(),
-                constraint_ids: vec![constraint.clone()],
-                keyforms: DeltaKeyforms::Offscreen(vec![
-                    DeltaOffscreenKeyform::default(),
-                    DeltaOffscreenKeyform {
-                        opacity: -0.4,
-                        ..Default::default()
-                    },
-                ]),
-            })?;
+            crate::test_sdk::insert_blend_binding(
+                edit,
+                BlendShapeBinding {
+                    id: id.clone(),
+                    target_id: target.clone(),
+                    target_kind: BlendShapeTargetKind::Offscreen,
+                    key_table_id: table.clone(),
+                    constraint_ids: vec![constraint.clone()],
+                    keyforms: DeltaKeyforms::Offscreen(vec![
+                        DeltaOffscreenKeyform::default(),
+                        DeltaOffscreenKeyform {
+                            opacity: -0.4,
+                            ..Default::default()
+                        },
+                    ]),
+                },
+            )?;
         }
         Ok(())
     })?;
@@ -487,7 +515,7 @@ fn part_offscreen_enabled_recovery_honors_component_locks_atomically() -> Result
     native_lock(&mut doc, &os.id, true)?;
     for raw_part_enabled in [true, false] {
         doc.session.edit("Raw Part visibility", None, |edit| {
-            let mut part = edit.candidate_document().part(&part.id).unwrap().clone();
+            let mut part = edit.read_document()?.part(&part.id).unwrap().clone();
             part.enabled = raw_part_enabled;
             edit.replace_part(part)
         })?;

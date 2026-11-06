@@ -2,7 +2,7 @@
 use super::*;
 use crate::resources::{content_sha256_with_control, rgba8_sha256_with_control};
 use std::io::Read;
-use zipzi_contract::runtime::ObservationContentIdentity;
+use zipzi_contract::observation::ObservationContentIdentity;
 use zipzi_core::image::{decode_png_bounded, png_decode_workspace_bytes, PngDecodeLimits};
 
 /// Validated source pixels and representation-specific identity. Encoded input

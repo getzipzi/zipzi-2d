@@ -48,7 +48,10 @@ fn preservation_review_applies_exact_order_atomically_and_keeps_organization_and
     )?;
     assert_eq!(
         plan.scene()
-            .conversion_report()
+            .outcome
+            .conversion
+            .as_ref()
+            .map(|outcome| &outcome.report)
             .unwrap()
             .reparent_guarantee
             .as_ref()
@@ -116,16 +119,19 @@ fn driven_parent_requires_explicit_edit_state_scope() -> anyhow::Result<()> {
         .unwrap_err();
     assert_eq!(
         error
-            .downcast_ref::<zipzi_sdk::SdkError>()
+            .downcast_ref::<zipzi_sdk::Status>()
             .unwrap()
             .code
-            .as_ref(),
+            .as_str(),
         "PARAMETER_DOMAIN_UNPROVEN"
     );
     let plan = capture.plan_with_tolerance(r, S::EditState, 0.001, 1e-6, &control)?;
     let g = plan
         .scene()
-        .conversion_report()
+        .outcome
+        .conversion
+        .as_ref()
+        .map(|outcome| &outcome.report)
         .unwrap()
         .reparent_guarantee
         .as_ref()
@@ -169,15 +175,22 @@ fn changed_frozen_values_and_stale_document_reject_reviewed_plans_without_consum
     assert!(d.execute_palette_reparent(&plan).is_err());
     assert_eq!(d.history_lengths(), history);
     let control = ConversionControl::default();
-    let plan = d.capture_palette_reparent()?.plan_with_tolerance(
+    control.cancel();
+    let result = d.capture_palette_reparent()?.plan_with_tolerance(
         r,
         S::ParameterDomain,
         0.001,
         1e-6,
         &control,
-    )?;
-    control.cancel();
-    assert!(d.execute_palette_reparent(&plan).is_err());
+    );
+    assert_eq!(
+        result
+            .unwrap_err()
+            .downcast_ref::<zipzi_sdk::Status>()
+            .unwrap()
+            .code,
+        "AUTHORING_CANCELLED"
+    );
     assert_eq!(d.history_lengths(), history);
     d.redo()?;
     Ok(())
@@ -191,10 +204,7 @@ fn preservation_converts_rotation_subtrees_and_checks_cycles_and_locks() -> anyh
         .plan_palette_move(request(&d, Some(object(502)), P::Inside))
         .unwrap_err();
     assert_eq!(
-        e.downcast_ref::<zipzi_sdk::SdkError>()
-            .unwrap()
-            .code
-            .as_ref(),
+        e.downcast_ref::<zipzi_sdk::Status>().unwrap().code.as_str(),
         "OBJECT_LOCKED"
     );
     d.set_objects_locked(std::slice::from_ref(&object(502)), false)?;
@@ -217,10 +227,7 @@ fn preservation_converts_rotation_subtrees_and_checks_cycles_and_locks() -> anyh
         })
         .unwrap_err();
     assert_eq!(
-        e.downcast_ref::<zipzi_sdk::SdkError>()
-            .unwrap()
-            .code
-            .as_ref(),
+        e.downcast_ref::<zipzi_sdk::Status>().unwrap().code.as_str(),
         "RELATION_CYCLE"
     );
     let warp =
@@ -263,7 +270,7 @@ fn whole_rotation_and_mixed_parent_moves_preserve_child_meshes_and_roundtrip() -
         };
         assert_eq!(
             d.palette_deformation_move_support(&move_request)?,
-            Some(zipzi_sdk::ReparentSupport::RequiresConversionPlan)
+            Some(zipzi_core::document::ReparentSupport::RequiresConversionPlan)
         );
         let plan = d.plan_palette_move(move_request)?;
         d.execute_palette_move(&plan)?;
@@ -402,7 +409,7 @@ fn default_mesh_tree_moves_into_and_out_of_warp_keep_visible_geometry_and_undo()
     };
     assert_eq!(
         d.palette_deformation_move_support(&into)?,
-        Some(zipzi_sdk::ReparentSupport::RequiresConversionPlan)
+        Some(zipzi_core::document::ReparentSupport::RequiresConversionPlan)
     );
     assert_eq!(d.history_lengths(), history);
     let plan = d.plan_palette_move(into)?;
@@ -454,7 +461,10 @@ fn default_tolerance_matches_deletion_and_explicit_tolerance_is_never_relaxed() 
     assert_eq!(
         default
             .scene()
-            .conversion_report()
+            .outcome
+            .conversion
+            .as_ref()
+            .map(|outcome| &outcome.report)
             .unwrap()
             .reparent_guarantee
             .as_ref()
@@ -473,17 +483,20 @@ fn default_tolerance_matches_deletion_and_explicit_tolerance_is_never_relaxed() 
         .unwrap_err();
     assert_eq!(
         error
-            .downcast_ref::<zipzi_sdk::SdkError>()
+            .downcast_ref::<zipzi_sdk::Status>()
             .unwrap()
             .code
-            .as_ref(),
+            .as_str(),
         "REPARENT_TOLERANCE_EXCEEDED"
     );
     let plan =
         capture.plan_with_tolerance(r, S::EditState, 0.001, 1e-6, &ConversionControl::default())?;
     assert_eq!(
         plan.scene()
-            .conversion_report()
+            .outcome
+            .conversion
+            .as_ref()
+            .map(|outcome| &outcome.report)
             .unwrap()
             .reparent_guarantee
             .as_ref()

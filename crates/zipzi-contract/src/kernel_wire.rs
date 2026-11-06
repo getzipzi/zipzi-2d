@@ -72,7 +72,7 @@ pub enum Operation {
     Observe {
         source: QuerySource,
         input: crate::kernel_tasks::SampleInput,
-        view: crate::runtime::ObservationView,
+        view: crate::observation::ObservationView,
     },
     Export {
         source: QuerySource,

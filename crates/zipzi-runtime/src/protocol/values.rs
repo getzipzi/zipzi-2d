@@ -3,12 +3,42 @@ pub(super) fn history(v: zipzi_sdk::HistoryState) -> Value {
     json!({"undo_steps":v.undo_steps,"redo_steps":v.redo_steps,"estimated_bytes":v.estimated_bytes,"over_target":v.over_target,
         "limits":{"max_steps":v.limits.max_steps,"target_bytes":v.limits.target_bytes}})
 }
-pub(super) fn publication(v: &zipzi_sdk::Publication) -> Value {
-    json!({"version":v.version,"content":v.content,"kind":match v.kind {
-        zipzi_sdk::PublicationKind::Commit=>"commit",zipzi_sdk::PublicationKind::Undo=>"undo",
-        zipzi_sdk::PublicationKind::Redo=>"redo",zipzi_sdk::PublicationKind::Replace=>"replace",zipzi_sdk::PublicationKind::Unchanged=>"unchanged"},
-        "description":v.description,"history":history(v.history),"writes":v.writes})
+#[derive(Serialize)]
+struct PublicationValue<'a> {
+    version: Version,
+    content: zipzi_sdk::ContentId,
+    kind: &'static str,
+    description: &'a str,
+    history: Value,
+    writes: &'a zipzi_core::state::WriteSet,
 }
+
+fn publication_value(v: &zipzi_sdk::Publication) -> PublicationValue<'_> {
+    PublicationValue {
+        version: v.version,
+        content: v.content,
+        kind: match v.kind {
+            zipzi_sdk::PublicationKind::Commit => "commit",
+            zipzi_sdk::PublicationKind::Undo => "undo",
+            zipzi_sdk::PublicationKind::Redo => "redo",
+            zipzi_sdk::PublicationKind::Replace => "replace",
+            zipzi_sdk::PublicationKind::Unchanged => "unchanged",
+        },
+        description: &v.description,
+        history: history(v.history),
+        writes: &v.writes,
+    }
+}
+
+pub(super) fn publication(v: &zipzi_sdk::Publication) -> Value {
+    json!(publication_value(v))
+}
+
+pub(super) fn publications(items: &[zipzi_sdk::Publication], mut limit: usize) -> Result<Value> {
+    let values: Vec<_> = items.iter().map(publication_value).collect();
+    crate::query::bounded(&values, &mut limit)
+}
+
 pub(super) fn session(rt: &Runtime, client: ClientId, key: SessionKey) -> Result<Value> {
     let s = rt.session_read(client, key)?;
     Ok(

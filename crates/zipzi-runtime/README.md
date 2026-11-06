@@ -87,21 +87,15 @@ lease. Image replacement consumes sealed RGBA inside one ordinary Draft batch;
 source pixels remain valid after the upload is released. Job byte results are
 retrieved through `ReadJobBlob`, rather than embedded in control frames.
 
-## Migration and focused tests
-
-The v4 protocol, Local/Connected clients, native Editor and Observe directly use
-the resident kernel. No compiled legacy field-address or Session-moving facade
-is provided. Legacy uncompiled domain files and old aggregate test targets remain
-for stage-five deletion and behavior-test migration.
+## Focused tests
 
 ```sh
-cargo test --locked -p zipzi-runtime --lib
+./tools/test-sdk.sh runtime
 cargo test --locked -p zipzi-runtime --features gpu-observation --lib
-cargo test --locked -p zipzi-sdk --test authoring
 env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test authoring_kernel
 ```
 
-These focused gates cover resident ownership, isolated Drafts, immutable source
-identity, cancellation, binary recovery, native load/save/import/export and
-resource lifetime. The GPU gate requires a usable device. They do not imply the
-legacy aggregate tests or Windows native acceptance have passed.
+The CPU gate covers resident ownership, isolated Drafts, immutable source
+identity, cancellation, binary recovery, private transport, native project work
+and CPU sampling. The GPU gate requires a usable device. Track the remaining
+integration migrations in the [authoring plan](../../docs/plans/authoring-architecture.md).

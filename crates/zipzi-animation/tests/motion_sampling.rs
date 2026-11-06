@@ -1,18 +1,16 @@
 use zipzi_animation::{sample_motion_curve, CompiledCurve};
-use zipzi_core::{Canvas, Document, Vec2};
+use zipzi_core::{state::DocumentState, Canvas, Vec2};
 fn decode_motion3(
     source: &str,
 ) -> Result<zipzi_core::document::MotionClip, Box<dyn std::error::Error>> {
-    let mut document = Document::new();
-    assert!(document
-        .initialize(
-            "00000000-0000-4000-8000-000000000001",
-            Canvas::new(100.0, 100.0, Vec2::default(), 10.0)
-        )
-        .is_ok());
+    let document = DocumentState::new(
+        "00000000-0000-4000-8000-000000000001",
+        Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into(),
+    )
+    .unwrap();
     let id = "00000000-0000-4000-8000-000000000002";
     let imported = zipzi_project::import_motion3(&document, id, "Sample", source).unwrap();
-    Ok(imported.candidate.get_motion(id).unwrap().clone())
+    Ok(imported.candidate.motion(id).unwrap().clone())
 }
 
 const RESTRICTED: &str =

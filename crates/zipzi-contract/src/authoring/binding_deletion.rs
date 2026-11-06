@@ -35,27 +35,6 @@ pub enum BindingAuthoringEdit {
     ),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, zipzi_api_derive::ApiShape)]
-/// Replacement value for a selected binding field address.
-pub enum BindingFieldPatch {
-    /// Replace a sample coordinate.
-    SampleValue(#[doc = "Scalar value in the referenced parameter domain."] f32),
-    /// Replace a constraint sample coordinate and weight.
-    ConstraintSample {
-        /// Scalar value in the referenced parameter domain.
-        value: f32,
-        /// Dimensionless BlendShape constraint weight at this parameter sample.
-        weight: f32,
-    },
-    /// Change the parameter assigned to an axis.
-    AxisParameter {
-        /// Stable document parameter ID; an empty string clears the axis parameter.
-        parameter_id: String,
-        /// Required reduction when clearing an active axis; otherwise no reduction is applied.
-        reduction: Option<AxisReduction>,
-    },
-}
-
 #[derive(
     Debug,
     Clone,

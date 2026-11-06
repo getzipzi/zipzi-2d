@@ -17,24 +17,27 @@ fn setup_with_glue(glue: bool) -> anyhow::Result<(Editor, tempfile::TempDir)> {
         include_bytes!("../fixtures/alpha-asymmetric.png"),
     )?;
     if glue {
-        session.edit("Glue", None, |edit| {
-            edit.create_glue(zipzi_core::Glue {
-                id: fixture::id(5),
-                mesh_a_id: fixture::id(2).into(),
-                mesh_b_id: fixture::id(4).into(),
-                intensity: 0.5,
-                pairs: vec![zipzi_core::GlueVertexPair {
-                    id: fixture::id(6),
-                    vertex_a: Some(0),
-                    vertex_b: Some(0),
-                    weight_a: 0.5,
-                    weight_b: 0.5,
-                }],
-                ..Default::default()
-            })
+        crate::support::publish_fixture(&mut session, "Glue", |edit| {
+            crate::support::insert_glue(
+                edit,
+                zipzi_core::Glue {
+                    id: fixture::id(5),
+                    mesh_a_id: fixture::id(2).into(),
+                    mesh_b_id: fixture::id(4).into(),
+                    intensity: 0.5,
+                    pairs: vec![zipzi_core::GlueVertexPair {
+                        id: fixture::id(6),
+                        vertex_a: Some(0),
+                        vertex_b: Some(0),
+                        weight_a: 0.5,
+                        weight_b: 0.5,
+                    }],
+                    ..Default::default()
+                },
+            )
         })?;
     }
-    let saved = session.save_project(&dir.path().join("multi.zipzi"), None)?;
+    let saved = crate::support::save_fixture(&mut session, &dir.path().join("multi.zipzi"))?;
     let mut document = Document::open(&saved.path)?;
     document.select_objects(objects())?;
     let mut editor = crate::support::editor_from_document(document);
@@ -52,11 +55,12 @@ fn setup_with_glue(glue: bool) -> anyhow::Result<(Editor, tempfile::TempDir)> {
 fn meshes(editor: &Editor) -> Vec<zipzi_core::Mesh> {
     let document = editor.document().unwrap();
     let host = document.runtime_host();
-    let runtime = host.read();
-    let model = runtime.document(document.runtime_session_id()).unwrap();
+    let captured =
+        crate::support::published_snapshot(&host, document.runtime_session_id()).unwrap();
+    let model = captured.document();
     objects()
         .iter()
-        .map(|o| model.get_mesh(&o.id).unwrap().clone())
+        .map(|o| model.mesh(&o.id).unwrap().clone())
         .collect()
 }
 fn screen(editor: &mut Editor, x: f32, y: f32) -> anyhow::Result<ViewportPoint> {

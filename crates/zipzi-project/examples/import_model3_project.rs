@@ -4,7 +4,7 @@
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
-use zipzi_project::{encode_project, DocumentSession};
+use zipzi_project::{ProjectImporter, ProjectIo, ResourceStore};
 
 fn main() {
     let args: Vec<_> = std::env::args_os().collect();
@@ -17,62 +17,44 @@ fn main() {
     assert!(source.is_absolute() && output.is_absolute());
     assert!(!output.exists(), "Output already exists");
 
-    let mut session = DocumentSession::new();
+    let resources = ResourceStore::default();
+    let importer = ProjectImporter {
+        resources: resources.clone(),
+    };
+    let io = ProjectIo::new(std::env::temp_dir(), resources);
     let start = Instant::now();
-    let (imported, report) = session.import_model3_authoring(source);
+    let (imported, model, report) = importer.import_model3(source);
     assert!(imported.status.is_ok(), "{imported:?}");
     let import_diagnostics = imported.diagnostics.clone();
-    assert!(session.diagnose().is_empty(), "Invalid image resources");
+    assert!(imported.resources_complete(), "{imported:?}");
+    let model = model.unwrap();
     let import_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     let report = report.expect("successful import has a report");
-    let meshes = session.document().mesh_order().len();
-    let bindings = session.document().binding_order().len();
-    let assets = session.document().asset_order().len();
+    let meshes = model.document.mesh_order().len();
+    let bindings = model.document.binding_order().len();
+    let assets = model.document.asset_order().len();
     let start = Instant::now();
-    let saved = session.save(output);
-    assert!(
-        saved.status.is_ok() && saved.resources_complete(),
-        "{saved:?}"
-    );
+    let saved = io
+        .save(&model.document, &model.resources, output, None, || true)
+        .expect("save imported model");
+    assert!(saved.published);
     let initial_save_ms = start.elapsed().as_secs_f64() * 1000.0;
-
-    let mut reopened = DocumentSession::new();
     let start = Instant::now();
-    let opened = reopened.open_authoring(output);
-    assert!(
-        opened.status.is_ok() && opened.resources_complete(),
-        "{opened:?}"
-    );
+    let reopened = io.load(output, || true).expect("reopen imported model");
+    assert!(reopened.diagnostics.is_empty());
     let first_open_ms = start.elapsed().as_secs_f64() * 1000.0;
-    let roundtrip_equal = session.document().same_content(reopened.document());
-    if !roundtrip_equal {
-        let before = encode_project(session.document()).unwrap();
-        let after = encode_project(reopened.document()).unwrap();
-        if before != after {
-            let offset = before
-                .bytes()
-                .zip(after.bytes())
-                .position(|(a, b)| a != b)
-                .unwrap_or(before.len().min(after.len()));
-            let before_start = before.floor_char_boundary(offset.saturating_sub(100));
-            let after_start = after.floor_char_boundary(offset.saturating_sub(100));
-            let before_end = before.ceil_char_boundary((offset + 100).min(before.len()));
-            let after_end = after.ceil_char_boundary((offset + 100).min(after.len()));
-            eprintln!(
-                "First serialized difference at byte {offset}: before {:?}, after {:?}",
-                &before[before_start..before_end],
-                &after[after_start..after_end]
-            );
-        } else {
-            eprintln!("Document differs after reopen, but serialized JSON is identical");
-        }
-    }
-
-    let asset_bytes: u64 = fs::read_dir(session.asset_root().join("assets"))
-        .unwrap()
-        .map(|entry| entry.unwrap().metadata().unwrap().len())
-        .sum();
+    let before = fs::read(output).unwrap();
+    io.save(
+        &reopened.document,
+        &reopened.resources,
+        output,
+        Some(&saved.fingerprint),
+        || true,
+    )
+    .expect("save reopened model");
+    let roundtrip_equal = before == fs::read(output).unwrap();
+    let asset_bytes = saved.asset_bytes;
     println!(
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({

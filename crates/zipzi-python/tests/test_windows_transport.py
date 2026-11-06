@@ -8,13 +8,15 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
-import psutil
+if os.name == "nt":
+    import psutil
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'client/python'))
-from zipzi._windows_pipe import Pipe, endpoint_name
-from zipzi.backends.connected import _exchange, _body, CONTRACT
+if os.name == 'nt':
+    from zipzi._windows_pipe import Pipe, endpoint_name
+    from zipzi.backends.connected import _exchange, _body, CONTRACT
 
 
+@unittest.skipUnless(os.name == "nt", "Windows named pipes")
 class WindowsTransport(unittest.TestCase):
     def test_sendall_has_one_budget_across_chunks(self):
         pipe = Pipe()
@@ -29,7 +31,7 @@ class WindowsTransport(unittest.TestCase):
 
     def test_concurrent_public_clients_and_crash_restart(self):
         import zipzi
-        host_str = os.environ.get('ZIPZI_PYTHON_HOST') or os.environ['ZIPZI_PYTHON2_HOST']
+        host_str = os.environ['ZIPZI_KERNEL_HOST']
         host = Path(host_str).resolve(strict=True)
         with tempfile.TemporaryDirectory(prefix='zipzi race 中文 ') as folder:
             log = Path(folder) / 'owners.txt'
@@ -56,7 +58,7 @@ class WindowsTransport(unittest.TestCase):
                 owner.wait(timeout=10)
                 with patch.dict(os.environ, environment):
                     with zipzi.connect(start=True, host=host, startup_timeout=10) as runtime:
-                        self.assertNotEqual(str(runtime.connection.runtime), results[0]['runtime'])
+                        self.assertNotEqual(str(runtime.connection['runtime']), results[0]['runtime'])
                         self.assertEqual(len(runtime.sessions.list()), 0)
                 self.assertEqual(len(log.read_text().splitlines()), 2)
             finally:
@@ -76,19 +78,19 @@ class WindowsTransport(unittest.TestCase):
 
     def test_cold_start_then_reuse_resident(self):
         from zipzi._endpoint import connect_backend
-        host_str = os.environ.get('ZIPZI_PYTHON_HOST') or os.environ['ZIPZI_PYTHON2_HOST']
+        host_str = os.environ['ZIPZI_KERNEL_HOST']
         host = Path(host_str).resolve(strict=True)
         with tempfile.TemporaryDirectory(prefix='zipzi cold ') as folder, patch.dict(os.environ,
             ZIPZI_RUNTIME_DIR=folder, ZIPZI_RUNTIME_PROFILE='cold'):
             first = connect_backend(None, start=True, host=host, timeout=3, startup_timeout=10, sdk_build=None)
-            owner = psutil.Process(first.connection_info.host_pid)
+            owner = psutil.Process(first.connection_info['host_pid'])
             try:
                 first._disconnect()
                 self.assertTrue(owner.is_running())
                 second = connect_backend(None, start=True, host=host, timeout=3, startup_timeout=10, sdk_build=None)
                 try:
-                    self.assertEqual(first.connection_info.runtime, second.connection_info.runtime)
-                    self.assertEqual(first.connection_info.host_pid, second.connection_info.host_pid)
+                    self.assertEqual(first.connection_info['runtime'], second.connection_info['runtime'])
+                    self.assertEqual(first.connection_info['host_pid'], second.connection_info['host_pid'])
                 finally:
                     second._disconnect()
             finally:
@@ -97,7 +99,7 @@ class WindowsTransport(unittest.TestCase):
                 owner.wait(timeout=10)
 
     def test_real_fixture_handshake_and_idle_timeout(self):
-        host_str = os.environ.get('ZIPZI_PYTHON_HOST') or os.environ['ZIPZI_PYTHON2_HOST']
+        host_str = os.environ['ZIPZI_KERNEL_HOST']
         host = Path(host_str).resolve(strict=True)
         with tempfile.TemporaryDirectory(prefix='zipzi 中文 ') as folder:
             environment = dict(os.environ, ZIPZI_RUNTIME_DIR=folder, ZIPZI_RUNTIME_PROFILE='test')
@@ -134,11 +136,11 @@ if __name__ == '__main__':
             if time.monotonic() > deadline:
                 raise TimeoutError('client start barrier')
             time.sleep(.005)
-        host_env = os.environ.get('ZIPZI_PYTHON_HOST') or os.environ['ZIPZI_PYTHON2_HOST']
+        host_env = os.environ['ZIPZI_KERNEL_HOST']
         with zipzi.connect(start=True, host=Path(host_env),
                            startup_timeout=15) as runtime:
             assert len(runtime.sessions.list()) == 0
-            print(json.dumps({'runtime': str(runtime.connection.runtime),
-                              'pid': runtime.connection.host_pid}))
+            print(json.dumps({'runtime': str(runtime.connection['runtime']),
+                              'pid': runtime.connection['host_pid']}))
     else:
         unittest.main()

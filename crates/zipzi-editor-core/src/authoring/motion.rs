@@ -18,7 +18,9 @@ impl Document {
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = plan.publish(&mut self.session)?;
-        Ok(self.motion_operation_result(receipt).with_preview(plan))
+        Ok(self
+            .motion_operation_result(receipt, plan.baseline().document())
+            .with_preview(plan))
     }
     pub fn plan_attachment_authoring(
         &self,
@@ -38,13 +40,19 @@ impl Document {
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = plan.publish(&mut self.session)?;
-        Ok(self.motion_operation_result(receipt).with_preview(plan))
+        Ok(self
+            .motion_operation_result(receipt, plan.baseline().document())
+            .with_preview(plan))
     }
-    fn motion_operation_result(&mut self, receipt: zipzi_sdk::Publication) -> OperationResult {
+    fn motion_operation_result(
+        &mut self,
+        receipt: zipzi_sdk::Publication,
+        before: &zipzi_core::state::DocumentState,
+    ) -> OperationResult {
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
-        self.consume_authoring_receipt(&receipt, false);
+        self.consume_authoring_receipt(&receipt, Some(before));
         self.authoring_result(receipt)
     }
 }

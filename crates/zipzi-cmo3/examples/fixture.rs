@@ -1,31 +1,27 @@
 //! Generate a small editable model for inspection in Cubism Editor.
 use zipzi_cmo3::{encode_cmo3, Cmo3Options};
-use zipzi_core::{types::*, Document};
+use zipzi_core::{state::*, types::*};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::env::args_os()
         .nth(1)
         .ok_or("usage: fixture OUTPUT.cmo3")?;
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            "00000000-0000-4000-8000-000000001000",
-            Canvas::new(128., 128., Vec2::new(64., 64.), 64.)
-        )
-        .is_ok());
+    let mut doc = DocumentState::new(
+        "00000000-0000-4000-8000-000000001000",
+        Canvas::new(128., 128., Vec2::new(64., 64.), 64.).into(),
+    )
+    .unwrap()
+    .builder();
     let asset = "00000000-0000-4000-8000-000000001001";
     assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+        .create_asset(AssetRecord {
             id: asset.into(),
             name: "Artwork".into(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/texture.png".into(),
+            content: AssetContent::Image {
+                resource: ResourceKey::new(),
                 width: 2,
                 height: 2,
-                ..Default::default()
-            }),
+            },
         })
-        .status
         .is_ok());
     let mesh = "00000000-0000-4000-8000-000000001002";
     let rotation = std::env::args().nth(2).is_some();
@@ -47,7 +43,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }),
                 ..Default::default()
             })
-            .status
             .is_ok());
     }
     let nested = std::env::args().nth(2).as_deref() == Some("nested");
@@ -70,7 +65,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }),
                 ..Default::default()
             })
-            .status
             .is_ok());
     }
     let mut positions = vec![
@@ -112,7 +106,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             draw_order: Some(500.),
             ..Default::default()
         })
-        .status
         .is_ok());
     let parameter = "00000000-0000-4000-8000-000000001003";
     assert!(doc
@@ -122,7 +115,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             name: "水平移动".into(),
             ..Default::default()
         })
-        .status
         .is_ok());
     assert!(doc
         .create_binding(MeshBinding {
@@ -147,7 +139,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 })
                 .collect()
         })
-        .status
         .is_ok());
     let mut png = Vec::new();
     {
@@ -158,9 +149,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 128,
         ])?;
     }
+    let doc = doc.freeze().unwrap().state;
     let artifact = encode_cmo3(
         &doc,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &Cmo3Options::default(),
     )?;
     let mut frame = zipzi_core::DrawableFrame::default();

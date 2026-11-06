@@ -120,6 +120,18 @@ fn preview(
     }
     Ok(Some(preview))
 }
+fn check_animation_expansion(
+    preview: Option<&zipzi_animation::MotionPreview>,
+    max_bytes: usize,
+) -> Result<()> {
+    if preview.is_some_and(|p| p.canonical_motion_output_bytes() > max_bytes) {
+        return Err(error(
+            "RESOURCE_LIMIT",
+            "Scheduled motion event and coverage expansion exceeds the task budget",
+        ));
+    }
+    Ok(())
+}
 fn seek(
     preview: &mut zipzi_animation::MotionPreview,
     input: &SampleInput,
@@ -172,6 +184,7 @@ impl Runtime {
                         &cancel.conversion_control(),
                     )?;
                     animation = preview(snapshot, &request.input)?;
+                    check_animation_expansion(animation.as_ref(), limit)?;
                     if request.quality {
                         reference = Some(snapshot.snapshot.quality_reference()?);
                     }
@@ -245,7 +258,7 @@ impl Runtime {
         client: ClientId,
         source: QuerySource,
         input: SampleInput,
-        view: zipzi_contract::runtime::ObservationView,
+        view: zipzi_contract::observation::ObservationView,
     ) -> Result<JobId> {
         #[cfg(not(feature = "gpu-observation"))]
         {
@@ -289,7 +302,7 @@ impl Runtime {
             let planning =
                 zipzi_observe::planning::plan_textures(sources, view.texture_policy, 64 << 20)
                     .map_err(observation_error)?;
-            let zipzi_contract::runtime::ObservationTexturePlanning::Ready { plan } = planning
+            let zipzi_contract::observation::ObservationTexturePlanning::Ready { plan } = planning
             else {
                 return Err(error(
                     "RESOURCE_LIMIT",
@@ -302,6 +315,7 @@ impl Runtime {
                 .saturating_add(view.width as usize * view.height as usize * 32);
             self.request_read(client, source, TaskBudget { workspace_bytes, result_bytes: limit }, move |snapshot, cancel| {
                 let mut animation = preview(&snapshot, &input)?;
+                check_animation_expansion(animation.as_ref(), workspace_bytes)?;
                 let mut observer = Observer::new(ObserverConfig { width: view.width, height: view.height }).map_err(observation_error)?;
                 let mut out = Bytes::new(limit);
                 for index in 0..count {

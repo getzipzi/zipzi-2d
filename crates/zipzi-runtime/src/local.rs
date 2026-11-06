@@ -272,3 +272,40 @@ pub fn write_frame(writer: &mut impl Write, value: &Value) -> io::Result<()> {
 mod windows;
 #[cfg(windows)]
 pub use windows::{Endpoint, Owner, Server};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn framing_limits_utf8_nonfinite_empty_arrays_roundtrip() {
+        let original = serde_json::json!({"array":[], "float":1.2345678901234567, "text":"你好"});
+        let mut bytes = Vec::new();
+        write_frame(&mut bytes, &original).unwrap();
+        assert_eq!(read_frame(&mut bytes.as_slice()).unwrap(), original);
+        for length in [0, (MAX_FRAME + 1) as u32, u32::MAX] {
+            assert!(read_frame(&mut length.to_be_bytes().as_slice()).is_err());
+        }
+        for body in [b"[NaN]".as_slice(), b"[1e999]", b"\xff"] {
+            let mut bytes = (body.len() as u32).to_be_bytes().to_vec();
+            bytes.extend(body);
+            assert!(read_frame(&mut bytes.as_slice()).is_err());
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn private_unix_endpoint_permissions_and_ownership() {
+        let temp = tempfile::tempdir_in("/tmp").unwrap();
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        assert!(Endpoint::new(temp.path(), "BAD").is_err());
+        let endpoint = Endpoint::new(temp.path(), "a").unwrap();
+        let owner = endpoint.claim().unwrap().unwrap();
+        assert!(endpoint.claim().unwrap().is_none());
+        drop(owner);
+        assert!(endpoint.claim().unwrap().is_some());
+        std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(Endpoint::new(temp.path(), "a").is_err());
+    }
+}

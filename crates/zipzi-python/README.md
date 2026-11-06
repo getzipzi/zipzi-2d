@@ -51,26 +51,22 @@ at most 1 MiB per recoverable call. Seal uploads before `draft.replace_image_blo
 source/content and ordered frames. `session.observe(input, view)` returns packets:
 a four-byte big-endian JSON-header length, that header, then `png_bytes` bytes of
 PNG, repeated for each sample. The first header includes the shared texture report.
-Legacy source files and aggregate tests outside this v4 entrypoint remain inputs
-for stage-five cleanup, not supported alternate APIs.
+## Generation and validation
 
-## Generation and focused validation
-
-The Rust Contract exporter has no SDK/Runtime dependency. `values.py` and
-`schema/authoring.json` are generated from compiled `ApiShape` declarations;
-the manifest controls replacement and retirement of generated files.
+The Contract exporter builds without SDK or Runtime dependencies. It generates
+`values.py` and `schema/authoring.json` from Rust `ApiShape` declarations.
 
 ```sh
 uv run --locked python crates/zipzi-python/tools/generate.py
 uv run --locked python crates/zipzi-python/tools/generate.py --check
-uv run --locked python tools/test_tools.py -p test_python_codegen.py
-cargo build --locked -p zipzi-runtime --example local_host_fixture --features gpu-observation
-./tools/dev-python crates/zipzi-python/tests/test_kernel.py
+./tools/test-sdk.sh python
+./tools/test-sdk.sh python --recovery
+./tools/test-sdk.sh python --discovery
+./tools/test-sdk.sh python-connected
+./tools/test-sdk.sh python-connected --editor-host /absolute/path/to/zipzi-editor
 ```
 
-The fixture exercises real local IPC and intentionally dropped responses; it is
-not a substitute for production Editor-host validation. To run the same lifecycle
-cases against a built desktop host, set `ZIPZI_KERNEL_EDITOR_HOST` to its absolute
-path and run `./tools/dev-python crates/zipzi-python/tests/test_kernel.py ConnectedLifecycle`.
-The broad Python gate and older examples still need stage-five migration. Use the repository development launcher
-rather than global Python or a custom `PYTHONPATH` for native tests.
+The source gate rebuilds the native adapter and private IPC fixture and checks
+generated types. The Connected gate uses an isolated installed wheel. The
+optional Editor host runs the same Connected lifecycle cases in the production
+desktop process.

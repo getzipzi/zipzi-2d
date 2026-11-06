@@ -15,14 +15,14 @@ fn blend_colors_and_fractional_orders_match_core_and_roundtrip() {
     let mut doc = create_m1_fixture_doc();
     let mesh_id = doc.mesh_order()[0].clone();
     let binding_id = doc.binding_for_mesh(&mesh_id).unwrap().id.clone();
-    assert!(doc.erase_object(&binding_id).status.is_ok());
-    let mut mesh = doc.get_mesh(&mesh_id).unwrap().clone();
+    doc = prepare(&doc, |builder| builder.remove_binding(&binding_id));
+    let mut mesh = doc.mesh(&mesh_id).unwrap().clone();
     mesh.draw_order = Some(10.75);
     mesh.appearance.multiply = [0.5; 3];
     mesh.appearance.screen = [0.1; 3];
-    assert!(doc.replace_mesh(mesh.clone()).status.is_ok());
-    assert!(doc
-        .create_parameter(Parameter {
+    doc = prepare(&doc, |builder| builder.replace_mesh(mesh.clone()));
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: id(400),
             runtime_id: "ReviewBlend".into(),
             minimum: 0.0,
@@ -31,10 +31,9 @@ fn blend_colors_and_fractional_orders_match_core_and_roundtrip() {
             kind: ParameterKind::BlendShape,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_blend_key_table(BlendShapeKeyTable {
+    });
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
             id: id(401),
@@ -42,8 +41,7 @@ fn blend_colors_and_fractional_orders_match_core_and_roundtrip() {
             keys: vec![0.0, 1.0, 2.0],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
+    });
     let base = DeltaMeshKeyform {
         positions: vec![Vec2::default(); mesh.vertex_ids.len()],
         ..Default::default()
@@ -54,8 +52,8 @@ fn blend_colors_and_fractional_orders_match_core_and_roundtrip() {
     let mut right = base.clone();
     right.screen = Some([0.4; 3]);
     right.draw_order = Some(0.5);
-    assert!(doc
-        .create_blend_binding(BlendShapeBinding {
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_binding(BlendShapeBinding {
             id: id(402),
             target_id: mesh_id.clone(),
             target_kind: BlendShapeTargetKind::Mesh,
@@ -63,14 +61,13 @@ fn blend_colors_and_fractional_orders_match_core_and_roundtrip() {
             constraint_ids: vec![],
             keyforms: DeltaKeyforms::Mesh(vec![base, left, right]),
         })
-        .status
-        .is_ok());
-    let encoded = encode_moc3(&doc).unwrap();
+    });
+    let encoded = encode_moc3(&capture_images(&doc).0).unwrap();
     let imported = import_from_bare_moc3(&encoded.bytes, &fixture_textures())
         .unwrap()
         .document;
     let forms = &imported
-        .get_blend_binding(&imported.blend_binding_order()[0])
+        .blend_binding(&imported.blend_binding_order()[0])
         .unwrap()
         .keyforms;
     let DeltaKeyforms::Mesh(forms) = forms else {
@@ -107,9 +104,9 @@ fn animated_glue_roundtrips_and_matches_core() {
     use zipzi_core::types::{Glue, GlueVertexPair};
     let mut doc = create_m1_fixture_doc();
     let mesh_id = doc.mesh_order()[0].clone();
-    let vertices = doc.get_mesh(&mesh_id).unwrap().vertex_ids.clone();
-    assert!(doc
-        .create_glue(Glue {
+    let vertices = doc.mesh(&mesh_id).unwrap().vertex_ids.clone();
+    doc = prepare(&doc, |builder| {
+        builder.create_glue(Glue {
             id: id(410),
             runtime_id: "ReviewGlue".into(),
             name: "ReviewGlue".into(),
@@ -125,9 +122,8 @@ fn animated_glue_roundtrips_and_matches_core() {
             intensity: 1.0,
             binding: None,
         })
-        .status
-        .is_ok());
-    let mut bytes = encode_moc3(&doc).unwrap().bytes;
+    });
+    let mut bytes = encode_moc3(&capture_images(&doc).0).unwrap().bytes;
     let report = inspect_moc3(&bytes).unwrap();
     let ordinary_binding = i32::from_le_bytes(
         bytes[report.section_offsets[34] as usize..][..4]
@@ -149,7 +145,7 @@ fn animated_glue_roundtrips_and_matches_core() {
     let imported = import_from_bare_moc3(&bytes, &fixture_textures())
         .unwrap()
         .document;
-    let glue = imported.get_glue(&imported.glue_order()[0]).unwrap();
+    let glue = imported.glue(&imported.glue_order()[0]).unwrap();
     let binding = glue.binding.as_ref().unwrap();
     assert_eq!(
         binding
@@ -159,12 +155,10 @@ fn animated_glue_roundtrips_and_matches_core() {
             .collect::<Vec<_>>(),
         vec![0.0, 0.5, 1.0]
     );
-    let exported = encode_moc3(&imported).unwrap().bytes;
+    let exported = encode_moc3(&capture_images(&imported).0).unwrap().bytes;
     let mut original_core = PurismModelInstance::new(&bytes);
     let mut exported_core = PurismModelInstance::new(&exported);
-    let parameter = imported
-        .get_parameter(&binding.axes[0].parameter_id)
-        .unwrap();
+    let parameter = imported.parameter(&binding.axes[0].parameter_id).unwrap();
     for value in [
         parameter.minimum,
         parameter.default_value,
@@ -193,24 +187,32 @@ fn animated_glue_roundtrips_and_matches_core() {
                 .zip(&roundtrip.positions)
             {
                 near(
-                    a.x / imported.source_canvas().unwrap().pixels_per_unit,
+                    a.x / imported.setup().source_canvas.unwrap().pixels_per_unit,
                     e.x,
-                    imported.source_canvas().unwrap().pixels_per_unit,
+                    imported.setup().source_canvas.unwrap().pixels_per_unit,
                 );
                 near(
-                    a.y / imported.source_canvas().unwrap().pixels_per_unit,
+                    a.y / imported.setup().source_canvas.unwrap().pixels_per_unit,
                     e.y,
-                    imported.source_canvas().unwrap().pixels_per_unit,
+                    imported.setup().source_canvas.unwrap().pixels_per_unit,
                 );
-                near(r.x, e.x, imported.source_canvas().unwrap().pixels_per_unit);
-                near(r.y, e.y, imported.source_canvas().unwrap().pixels_per_unit);
+                near(
+                    r.x,
+                    e.x,
+                    imported.setup().source_canvas.unwrap().pixels_per_unit,
+                );
+                near(
+                    r.y,
+                    e.y,
+                    imported.setup().source_canvas.unwrap().pixels_per_unit,
+                );
             }
         }
     }
     // A second ordinary axis exercises the dedicated encoder grid and ordering.
     let mut multi = imported.clone();
-    assert!(multi
-        .create_parameter(zipzi_core::types::Parameter {
+    multi = prepare(&multi, |builder| {
+        builder.create_parameter(zipzi_core::types::Parameter {
             id: id(411),
             runtime_id: "GlueSecondAxis".into(),
             minimum: 0.0,
@@ -218,9 +220,8 @@ fn animated_glue_roundtrips_and_matches_core() {
             default_value: 0.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    let mut glue = multi.get_glue(&multi.glue_order()[0]).unwrap().clone();
+    });
+    let mut glue = multi.glue(&multi.glue_order()[0]).unwrap().clone();
     let grid = glue.binding.as_mut().unwrap();
     let axis = zipzi_core::types::BindingAxis::new(id(411), vec![0., 1.]);
     for form in &mut grid.keyforms {
@@ -239,8 +240,8 @@ fn animated_glue_roundtrips_and_matches_core() {
             }),
     );
     grid.axes.push(axis);
-    assert!(multi.replace_glue(glue).status.is_ok());
-    let encoded = encode_moc3(&multi).unwrap();
+    multi = prepare(&multi, |builder| builder.replace_glue(glue));
+    let encoded = encode_moc3(&capture_images(&multi).0).unwrap();
     let mut runtime = PurismModelInstance::new(&encoded.bytes);
     for (a, b) in [
         (parameter.minimum, 0.0),
@@ -262,33 +263,36 @@ fn animated_glue_roundtrips_and_matches_core() {
             let expected = runtime.get_drawable(&actual.runtime_id).unwrap();
             for (a, e) in actual.positions.iter().zip(&expected.positions) {
                 near(
-                    a.x / multi.source_canvas().unwrap().pixels_per_unit,
+                    a.x / multi.setup().source_canvas.unwrap().pixels_per_unit,
                     e.x,
-                    multi.source_canvas().unwrap().pixels_per_unit,
+                    multi.setup().source_canvas.unwrap().pixels_per_unit,
                 );
                 near(
-                    a.y / multi.source_canvas().unwrap().pixels_per_unit,
+                    a.y / multi.setup().source_canvas.unwrap().pixels_per_unit,
                     e.y,
-                    multi.source_canvas().unwrap().pixels_per_unit,
+                    multi.setup().source_canvas.unwrap().pixels_per_unit,
                 );
             }
         }
     }
-    let mut glue = doc.get_glue(&id(410)).unwrap().clone();
+    let mut glue = doc.glue(&id(410)).unwrap().clone();
     glue.runtime_id = "x".repeat(64);
-    assert!(doc.replace_glue(glue).status.is_ok());
-    assert_eq!(encode_moc3(&doc).unwrap_err().code, "UNREPRESENTABLE_ID");
+    doc = prepare(&doc, |builder| builder.replace_glue(glue));
+    assert_eq!(
+        encode_moc3(&capture_images(&doc).0).unwrap_err().code,
+        "UNREPRESENTABLE_ID"
+    );
 }
 
 #[test]
 fn test_cyclic_parameter_moc3_roundtrip_and_evaluation() {
     let mut doc = create_m1_fixture_doc();
     let param_id = doc.parameter_order()[0].clone();
-    let mut p = doc.get_parameter(&param_id).unwrap().clone();
+    let mut p = doc.parameter(&param_id).unwrap().clone();
     p.repeat = true;
-    assert!(doc.replace_parameter(p).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_parameter(p));
 
-    let encoded = encode_moc3(&doc).expect("encode_moc3 failed");
+    let encoded = encode_moc3(&capture_images(&doc).0).expect("encode_moc3 failed");
     let offsets = &inspect_moc3(&encoded.bytes).unwrap().section_offsets;
     let rep_off = offsets[54] as usize;
     let rep_val = i32::from_le_bytes(encoded.bytes[rep_off..rep_off + 4].try_into().unwrap());
@@ -299,7 +303,7 @@ fn test_cyclic_parameter_moc3_roundtrip_and_evaluation() {
     let re_doc = &imported.document;
     assert!(
         re_doc
-            .get_parameter(re_doc.parameter_order()[0].as_str())
+            .parameter(re_doc.parameter_order()[0].as_str())
             .unwrap()
             .repeat,
         "Re-imported document must have repeat: true"
@@ -344,12 +348,12 @@ fn test_blendshape_glue_moc3_roundtrip_and_evaluation() {
 
     assert_eq!(doc.glue_order().len(), 1);
     let glue_id = &doc.glue_order()[0];
-    let glue = doc.get_glue(glue_id).unwrap();
+    let glue = doc.glue(glue_id).unwrap();
     assert_eq!(glue.intensity, 0.2);
 
     assert_eq!(doc.blend_binding_order().len(), 1);
     let bb_id = &doc.blend_binding_order()[0];
-    let bb = doc.get_blend_binding(bb_id).unwrap();
+    let bb = doc.blend_binding(bb_id).unwrap();
     assert_eq!(bb.target_kind, BlendShapeTargetKind::Glue);
     assert_eq!(bb.target_id, *glue_id);
     match &bb.keyforms {
@@ -375,31 +379,29 @@ fn test_blendshape_glue_moc3_roundtrip_and_evaluation() {
 fn static_offscreen_export_preserves_appearance() {
     use zipzi_core::types::{Offscreen, OffscreenKeyform, Part};
     let mut doc = create_m1_fixture_doc();
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: id(900),
             runtime_id: "StaticPart".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_offscreen(Offscreen {
+    });
+    doc = prepare(&doc, |builder| {
+        builder.create_offscreen(Offscreen {
             id: id(901),
             runtime_id: "StaticOffscreen".into(),
             part_id: id(900),
             keyforms: vec![OffscreenKeyform {
                 opacity: 0.3,
                 multiply: Some([0.4, 0.5, 0.6]),
-                screen: Some([0.1, 0.2, 0.3])
+                screen: Some([0.1, 0.2, 0.3]),
             }],
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let mut before = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut before).is_ok());
-    let exported = encode_moc3(&doc).unwrap();
+    let exported = encode_moc3(&capture_images(&doc).0).unwrap();
     let imported = import_from_bare_moc3(&exported.bytes, &fixture_textures()).unwrap();
     let mut after = DrawableFrame::default();
     assert!(evaluate_frame(&imported.document, &HashMap::new(), &mut after).is_ok());
@@ -418,26 +420,20 @@ fn static_offscreen_export_preserves_appearance() {
 fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
     use zipzi_core::{Offscreen, OffscreenKeyform, Part, SceneBinding};
     let mut doc = create_m1_fixture_doc();
-    let mut asset = doc.get_asset(&id(2)).unwrap().clone();
-    asset.content.as_mut().unwrap().sha256 = "0".repeat(64);
-    asset.content.as_mut().unwrap().source = "assets/textures/0.png".into();
-    assert!(doc.replace_asset(asset).status.is_ok());
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: id(910),
             runtime_id: "JointPart".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_parameter(Parameter {
+    });
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: id(911),
             runtime_id: "JointParam".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let mut binding = SceneBinding {
         id: id(912),
         axes: vec![BindingAxis {
@@ -460,7 +456,9 @@ fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
             ],
         },
     };
-    assert!(doc.create_scene_binding(binding.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| {
+        builder.create_scene_binding(binding.clone())
+    });
     let mut os = Offscreen {
         id: id(913),
         runtime_id: "JointOS".into(),
@@ -473,7 +471,7 @@ fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
         }],
         ..Default::default()
     };
-    assert!(doc.create_offscreen(os.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_offscreen(os.clone()));
     binding.axes[0].keys.insert(1, 0.0);
     binding.track.part_keyforms_mut().unwrap().insert(
         1,
@@ -488,10 +486,10 @@ fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
         screen: Some([0.2, 0.3, 0.4]),
     });
     os.part_keyform_indices = vec![0, 1, -1];
-    assert!(doc
-        .replace_part_binding_with_offscreen(binding, os.clone())
-        .status
-        .is_ok());
+    doc = prepare(&doc, |builder| {
+        builder.replace_scene_binding(binding)?;
+        builder.replace_offscreen(os.clone())
+    });
     // Reordered, reused and neutral slots must preserve interpolated appearance.
     for mapping in [
         vec![0, 1, -1],
@@ -500,18 +498,17 @@ fn joint_offscreen_edit_survives_project_and_moc3_roundtrip() {
         vec![-1, -1, -1],
     ] {
         os.part_keyform_indices = mapping;
-        assert!(doc.replace_offscreen(os.clone()).status.is_ok());
-        let reopened =
-            zipzi_project::decode_project(&zipzi_project::encode_project(&doc).unwrap()).unwrap();
-        assert_eq!(reopened.get_offscreen(&id(913)), Some(&os));
-        let bytes = encode_moc3(&reopened).unwrap().bytes;
+        doc = prepare(&doc, |builder| builder.replace_offscreen(os.clone()));
+        let reopened = native_roundtrip(&doc);
+        assert_eq!(reopened.offscreen(&id(913)), Some(&os));
+        let bytes = encode_moc3(&capture_images(&reopened).0).unwrap().bytes;
         let imported = import_from_bare_moc3(&bytes, &fixture_textures())
             .unwrap()
             .document;
         let imported_param = imported
             .parameter_order()
             .iter()
-            .find(|id| imported.get_parameter(id).unwrap().runtime_id == "JointParam")
+            .find(|id| imported.parameter(id).unwrap().runtime_id == "JointParam")
             .unwrap();
         for value in [-1.0, -0.5, 0.0, 0.5, 1.0] {
             let mut before = DrawableFrame::default();

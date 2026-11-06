@@ -21,7 +21,7 @@ PACKAGE = Path('crates/zipzi-python')
 IMPLEMENTATIONS = (
     ('core', 'crates/zipzi-core/src/draw_order.rs', '.copied().unwrap_or(1)', '.copied().unwrap_or({value})'),
     ('sdk', 'crates/zipzi-sdk/src/manual_mesh.rs', '[a.min(b), a.max(b)]', '[a.min(b).saturating_add({value}), a.max(b)]'),
-    ('runtime', 'crates/zipzi-runtime/src/runtime/sampling.rs', '.fold(4096usize, |n, m| {', '.fold({value}usize, |n, m| {{'),
+    ('runtime', 'crates/zipzi-runtime/src/runtime/tasks.rs', 'result_bytes.min(32 << 20)', 'result_bytes.min({value} << 20)'),
 )
 
 
@@ -67,11 +67,11 @@ def generate_instrumented(root, metrics, arguments):
         return call
 
     gen.subprocess.run = run
-    for name in ('export', 'render', 'cached_render', 'write_outputs'):
+    for name in ('export_contract', 'render', 'write_outputs'):
         setattr(gen, name, timed(name, getattr(gen, name)))
-    sys.argv = [str(root / PACKAGE / 'tools/generate.py'), *arguments]
+    assert not arguments or arguments == ['--check'], arguments
     try:
-        gen.main()
+        gen.generate(check=bool(arguments))
     finally:
         metrics.write_text(json.dumps(dict(phases=timings, cargo=cargo), indent=2) + '\n')
 
@@ -83,7 +83,7 @@ class Acceptance:
         self.samples = samples
         self.runs = []
         snapshot(self.root)
-        self.environment = dict(os.environ, CARGO_TARGET_DIR=str(output / 'external-target'), CARGO_BUILD_JOBS='2')
+        self.environment = dict(os.environ, CARGO_TARGET_DIR=str(output / 'cargo-target'), CARGO_BUILD_JOBS='2')
 
     def generate(self, scenario, *arguments, failure=None):
         index = len(self.runs)
@@ -119,7 +119,7 @@ class Acceptance:
             try:
                 for attempt in range(self.samples):
                     # Change actual expression bytes every time; touching is insufficient.
-                    value = attempt + (4097 if domain == 'runtime' else 2)
+                    value = attempt + 2
                     path.write_text(original.replace(before, after.format(value=value), 1))
                     row = self.generate(domain, '--check')
                     states = [p['state'] for p in row['cargo'] if p['package'] == 'zipzi-contract']
@@ -136,7 +136,7 @@ class Acceptance:
         baseline = self.outputs()
         path.write_text(original.replace(before, after, 1))
         try:
-            self.generate(label + '-drift', '--check', failure='Generated drift:')
+            self.generate(label + '-drift', '--check', failure='Generated v4 drift:')
             assert self.outputs() == baseline, '--check wrote generated files'
             self.generate(label + '-generate')
             assert self.outputs() != baseline, label
@@ -164,36 +164,17 @@ class Acceptance:
             path.write_text(original)
             self.generate('field-build-restore')
             assert self.outputs() == baseline
-        self.drift('default', 'crates/zipzi-contract/src/authoring/meshes.rs',
-                   'min_triangle_area: 0.0,', 'min_triangle_area: 0.5,')
-        try:
-            for attempt in range(self.samples):
-                path.write_text(original.replace('min_triangle_area: 0.0,',
-                                                 f'min_triangle_area: {attempt + 1}.0,', 1))
-                self.generate('default-build-generate')
-                self.generate('default-build-verified', '--check')
-        finally:
-            path.write_text(original)
-            self.generate('default-build-restore')
-            assert self.outputs() == baseline
         self.drift('enum', 'crates/zipzi-contract/src/model/appearance.rs',
                    'pub enum MeshConstraintKind {', 'pub enum MeshConstraintKind {\n    ContractProbe,')
-        self.drift('operation-input', 'crates/zipzi-contract/src/runtime/snapshots.rs',
-                   'pub struct MeshQuery {', 'pub struct MeshQuery {\n'
-                   '        /// Acceptance input probe.\n        pub contract_probe: u32,')
-        self.drift('operation-output', 'crates/zipzi-contract/src/runtime/snapshots.rs',
-                   '    pub source: SourceRef,', '    pub source: SourceRef,\n'
-                   '    /// Acceptance output probe.\n    pub contract_probe: u32,')
-
+        self.drift('operation-input', 'crates/zipzi-contract/src/kernel_tasks.rs',
+                   'pub struct SampleRequest {', 'pub struct SampleRequest {\n    pub contract_probe: bool,')
     def cache_and_failure(self):
         baseline = self.outputs()
-        cache = self.root / 'target/python/generate-cache.json'
-        cache.unlink()
+        subprocess.run(['cargo', 'clean', '-p', 'zipzi-contract'], cwd=self.root,
+                       env=self.environment, check=True, capture_output=True)
         self.generate('cache-deleted', '--check')
-        self.generate('uncached', '--check', '--no-cache')
         assert self.outputs() == baseline
-        # A successful cache must never hide a Rust compilation error.
-        path = self.root / 'crates/zipzi-contract/src/operations.rs'
+        path = self.root / 'crates/zipzi-contract/src/kernel_commands.rs'
         original = path.read_text()
         try:
             path.write_text(original + '\ncompile_error!("acceptance invalid contract");\n')
@@ -202,7 +183,6 @@ class Acceptance:
         finally:
             path.write_text(original)
         self.generate('failure-recovered', '--check')
-        assert not (self.output / 'external-target').exists(), 'ambient Cargo target was used'
 
     def run(self):
         self.generate('cold', '--check')

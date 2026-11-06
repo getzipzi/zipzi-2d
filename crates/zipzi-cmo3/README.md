@@ -134,12 +134,19 @@ playback boundaries.
 ## Validation
 
 ```sh
-cargo test --locked -p zipzi-cmo3 --lib
+cargo test --locked -p zipzi-cmo3
+cargo check --locked -p zipzi-cmo3 --all-targets --features test-support
 cargo test --locked -p zipzi-project --test authoring_formats
 # Optional: validate with a local Cubism Editor installation.
 uv run --locked python tools/validation/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' --check-textures /tmp/model.cmo3
 ```
+
+The crate's fixtures use Builder/frozen model values. Import returns unresolved
+image descriptors and owned PNGs; fixture resolvers validate those PNGs before
+re-export, while production Project import adopts them into ResourceStore.
+The suite retains geometry, texture padding, ordinary/morph interpolation,
+animation curves, expression semantics, metadata and rejection checks.
 
 The optional probe uses Cubism internals and may need adaptation for other
 versions. `--check-textures` checks GPU padding and rebuilds UVs through Cubism's

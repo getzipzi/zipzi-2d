@@ -1,5 +1,5 @@
 use super::*;
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use zipzi_core::document::PhysicsEdit;
 impl Document {
     pub fn physics_group_creation(&self, name: String) -> PhysicsEdit {
@@ -44,14 +44,17 @@ impl Document {
         &self,
         object: &ObjectRef,
     ) -> Result<PhysicsAuthoringCapabilities> {
-        let kind = match object.kind {
-            ObjectKind::Physics => zipzi_contract::authoring::ObjectKind::Physics,
-            ObjectKind::PhysicsGroup => zipzi_contract::authoring::ObjectKind::PhysicsGroup,
-            ObjectKind::PhysicsInput => zipzi_contract::authoring::ObjectKind::PhysicsInput,
-            ObjectKind::PhysicsOutput => zipzi_contract::authoring::ObjectKind::PhysicsOutput,
-            ObjectKind::PhysicsNode => zipzi_contract::authoring::ObjectKind::PhysicsNode,
-            _ => anyhow::bail!("Expected a physics object"),
-        };
+        ensure!(
+            matches!(
+                object.kind,
+                ObjectKind::Physics
+                    | ObjectKind::PhysicsGroup
+                    | ObjectKind::PhysicsInput
+                    | ObjectKind::PhysicsOutput
+                    | ObjectKind::PhysicsNode
+            ),
+            "Expected an authorable physics object"
+        );
 
         Ok(PhysicsAuthoringCapabilities {
             domain: self.model().physics_capabilities(&object.id)?,
@@ -70,7 +73,7 @@ impl Document {
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
-        self.consume_authoring_receipt(&receipt, false);
+        self.consume_authoring_receipt(&receipt, None);
         Ok(self.authoring_result(receipt).with_preview(plan))
     }
 }

@@ -195,7 +195,7 @@ impl Document {
         })?;
         let receipt = edit.commit_to(&mut self.session)?;
         self.pristine_blank = None;
-        self.consume_authoring_receipt(&receipt, false);
+        self.consume_authoring_receipt(&receipt, None);
         self.context.reconcile(&self.object_index());
         Ok(self.authoring_result(receipt))
     }

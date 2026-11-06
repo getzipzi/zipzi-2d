@@ -70,9 +70,7 @@ impl ProjectIo {
             &self.archive.workspace_parent,
             self.archive.limits,
             self.archive.disk_budget.clone(),
-            false,
             self.archive.open_memory.as_deref(),
-            |text, _, _| crate::codec::decode_state(text),
             &mut keep_going,
         )?;
         let mut decoded = loaded.document;
@@ -137,7 +135,7 @@ impl ProjectIo {
         target: &Path,
         expected: Option<&ProjectFingerprint>,
         mut keep_going: impl FnMut() -> bool,
-    ) -> Result<ArchiveSaveReceipt<()>> {
+    ) -> Result<ArchiveSaveReceipt> {
         check(&mut keep_going)?;
         self.archive.prepare_workspace()?;
         let target = self.normalize_path(target)?;

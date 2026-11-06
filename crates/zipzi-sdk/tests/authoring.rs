@@ -69,6 +69,34 @@ fn image(s: &mut AuthoringSession, store: &ResourceStore, bytes: [u8; 4]) {
 }
 
 #[test]
+fn empty_images_are_native_resources_and_save_without_fake_pixels() {
+    let root = tempfile::tempdir().unwrap();
+    let io = ProjectIo::new(root.path().join("cache"), ResourceStore::default());
+    let mut session = session();
+    let asset_id = id(4);
+    let snapshot = session.snapshot();
+    assert_eq!(
+        snapshot.document().asset(&asset_id).unwrap().content,
+        AssetContent::Empty
+    );
+    assert!(snapshot.resources().is_empty());
+
+    let path = root.path().join("empty-image.zipzi");
+    session.save_as(&io, &path, None, || true).unwrap();
+    let reopened = io.load(&path, || true).unwrap();
+    assert_eq!(reopened.diagnostics.len(), 1);
+    assert_eq!(reopened.diagnostics[0].asset_id, asset_id);
+    assert_eq!(reopened.diagnostics[0].code, "MISSING_IMAGE_CONTENT");
+    assert_eq!(
+        reopened.document.asset(&asset_id).unwrap().content,
+        AssetContent::Empty
+    );
+    assert!(reopened.resources.is_empty());
+    assert_eq!(reopened.stats.unique_assets, 0);
+    assert_eq!(reopened.stats.asset_bytes, 0);
+}
+
+#[test]
 fn native_image_load_edit_batch_history_save_and_save_as() {
     let root = tempfile::tempdir().unwrap();
     let store = ResourceStore::default();
@@ -340,12 +368,16 @@ fn authored_parameter_mesh_and_scene_binding_identities_survive_native_save() {
     let mut draft = s.begin_draft();
     draft
         .batch(draft.source(), |c| {
-            c.create_parameter(Parameter {
-                id: id(5),
-                minimum: 0.,
-                maximum: 1.,
-                default_value: 0.,
-                ..Default::default()
+            c.create_parameter({
+                let mut value = Parameter {
+                    id: id(5),
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
+                };
+                value.runtime_id = value.id.clone();
+                value
             })?;
             c.create_mesh_binding_spec(MeshBindingCreateSpec {
                 id: Some(id(6)),
@@ -426,3 +458,97 @@ mod animation_domains;
 
 #[path = "authoring/save_worker.rs"]
 mod save_worker;
+
+mod candidate_snapshot;
+mod motion_properties;
+
+mod history_budget;
+
+mod handles;
+
+mod animation_field_epochs;
+
+mod expression_authoring;
+
+mod pose_authoring;
+
+#[path = "physics_authoring.rs"]
+mod physics_authoring;
+
+#[path = "physics_editing.rs"]
+mod physics_editing;
+
+mod support;
+
+#[path = "motion_library.rs"]
+mod motion_library;
+
+#[path = "editor_state.rs"]
+mod editor_state;
+
+#[path = "scene_creation_placement.rs"]
+mod scene_creation_placement;
+
+#[path = "cdi_authoring.rs"]
+mod cdi_authoring;
+
+#[path = "hierarchy_order.rs"]
+mod hierarchy_order;
+
+#[path = "effects_authoring.rs"]
+mod effects_authoring;
+
+#[path = "cmo3_export.rs"]
+mod cmo3_export;
+
+#[path = "organization_authoring.rs"]
+mod organization_authoring;
+
+#[path = "project_io.rs"]
+mod project_io;
+
+#[path = "authoring_acceptance.rs"]
+mod authoring_acceptance;
+
+#[path = "image_memory.rs"]
+mod image_memory;
+
+#[path = "image_edit.rs"]
+mod image_edit;
+
+#[path = "resource_authoring.rs"]
+mod resource_authoring;
+
+#[path = "authoring_collections.rs"]
+mod authoring_collections;
+
+#[path = "mesh_editing.rs"]
+mod mesh_editing;
+
+#[path = "reference_authoring.rs"]
+mod reference_authoring;
+
+#[path = "mesh_binding_editing.rs"]
+mod mesh_binding_editing;
+
+#[path = "scene_authoring.rs"]
+mod scene_authoring;
+
+#[path = "deformer_grouping.rs"]
+mod deformer_grouping;
+
+#[path = "binding_authoring.rs"]
+mod binding_authoring;
+
+#[path = "document_operations.rs"]
+mod document_operations;
+
+#[path = "scene_lifecycle.rs"]
+mod scene_lifecycle;
+
+#[path = "scene_content.rs"]
+mod scene_content;
+
+mod deletion;
+
+mod manual_mesh;

@@ -96,6 +96,7 @@ struct Content {
 pub struct DocumentState {
     read_cache: Arc<StateReadCache>,
     content_id: ContentId,
+    frame_input_id: ContentId,
     content: Arc<Content>,
 }
 
@@ -114,9 +115,11 @@ impl DocumentState {
                 "Invalid model dimensions or export settings",
             ));
         }
+        let content_id = ContentId::new();
         Ok(Self {
             read_cache: Arc::default(),
-            content_id: ContentId::new(),
+            content_id,
+            frame_input_id: content_id,
             content: Arc::new(Content {
                 id,
                 setup,
@@ -152,6 +155,12 @@ impl DocumentState {
 
     pub fn content_id(&self) -> ContentId {
         self.content_id
+    }
+
+    /// Identity of the inputs to static frame evaluation. Formal content and
+    /// query sources continue to use their full, independent identities.
+    pub(crate) fn frame_input_id(&self) -> ContentId {
+        self.frame_input_id
     }
     pub fn id(&self) -> &str {
         &self.content.id
@@ -421,16 +430,85 @@ impl DocumentBuilder {
             self.content.parameter_runtime_ids = self.base.content.parameter_runtime_ids.clone();
         }
         writes.estimated_bytes = cost::estimate(&self.base.content, &self.content, &writes);
+        let frame_changed = self.frame_inputs_changed(&writes);
+        writes.animation_inputs_changed = frame_changed || self.animation_inputs_changed(&writes);
         let state = if writes.is_empty() {
             self.base
         } else {
+            let content_id = ContentId::new();
             DocumentState {
                 read_cache: Arc::default(),
-                content_id: ContentId::new(),
+                content_id,
+                frame_input_id: if frame_changed {
+                    content_id
+                } else {
+                    self.base.frame_input_id
+                },
                 content: Arc::new(self.content),
             }
         };
         Ok(FrozenDocument { state, writes })
+    }
+
+    fn frame_inputs_changed(&self, writes: &WriteSet) -> bool {
+        use RecordDomain::{Asset, Expression, Motion};
+        writes.assets_order
+            || writes.parameters_order
+            || writes
+                .orders
+                .iter()
+                .any(|domain| !matches!(domain, Expression | Motion))
+            || writes.root_changed(RootDomain::DrawOrderGroups)
+            || writes.records.iter().any(|record| match record.domain {
+                Expression | Motion => false,
+                Asset => {
+                    self.base.asset(&record.id).map(|asset| &asset.content)
+                        != self
+                            .content
+                            .assets
+                            .get(&record.id)
+                            .map(|asset| &asset.content)
+                }
+                _ => true,
+            })
+    }
+
+    fn animation_inputs_changed(&self, writes: &WriteSet) -> bool {
+        if writes.root_changed(RootDomain::Physics)
+            || writes.root_changed(RootDomain::Pose)
+            || writes.records.iter().any(|record| {
+                matches!(
+                    record.domain,
+                    RecordDomain::Motion | RecordDomain::Expression
+                ) && record.change != RecordChange::Created
+            })
+        {
+            return true;
+        }
+        if !writes.root_changed(RootDomain::MotionGroups)
+            && !writes.root_changed(RootDomain::MotionRoots)
+        {
+            return false;
+        }
+        fn registrations(content: &Content) -> impl Iterator<Item = &MotionRegistration> {
+            content.motion_roots.iter().chain(
+                content
+                    .motion_groups
+                    .iter()
+                    .flat_map(|group| &group.entries),
+            )
+        }
+        let current: HashMap<_, _> = registrations(&self.content)
+            .map(|entry| (entry.id.as_str(), entry))
+            .collect();
+        registrations(&self.base.content).any(|old| {
+            current.get(old.id.as_str()).is_some_and(|new| {
+                old.clip_id != new.clip_id
+                    || old.fade_in != new.fade_in
+                    || old.fade_out != new.fade_out
+                    || old.sound != new.sound
+            })
+        })
     }
 
     /// Normalize in place and validate a completed batch, retaining generated

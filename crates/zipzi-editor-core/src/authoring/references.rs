@@ -163,7 +163,7 @@ impl Document {
         let receipt = p.publish(&mut self.session)?;
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, false);
+            self.consume_authoring_receipt(&receipt, Some(p.baseline().document()));
             self.context.reconcile(&self.object_index());
         }
         Ok(self.authoring_result(receipt).with_preview(p))

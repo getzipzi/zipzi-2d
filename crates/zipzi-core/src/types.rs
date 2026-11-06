@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 pub use zipzi_contract::model::{
     Appearance, BlendMode, Canvas, CoordinateSpace, ExportSettings, ImageAsset, ImageContent,
     ModelSetup, PreciseVec2, RotationPose, Status, TransformKind, Vec2, VertexId,
@@ -194,43 +192,3 @@ impl SceneTrackEvaluation for SceneTrack {
 }
 
 pub use zipzi_contract::model::SceneBinding;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct VertexMapping {
-    pub new_id: VertexId,
-    pub old_id: Option<VertexId>,
-}
-
-pub use zipzi_contract::model::ChangeKind;
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct ChangeSet {
-    pub kind: ChangeKind,
-    pub mesh_ids: Vec<String>,
-    pub revision: u64,
-    pub object_ids: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct EditResult {
-    pub status: Status,
-    pub changes: ChangeSet,
-    pub referrers: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
-pub struct VertexPositionUpdate {
-    pub mesh_id: String,
-    pub vertex_ids: Vec<VertexId>,
-    pub positions: Vec<Vec2>,
-}
-
-/// A validated edit that can be staged in a document transaction.
-///
-/// New atomic edit kinds can be added here without adding another parallel
-/// transaction API. A failed commit applies none of the staged edits.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DocumentEdit {
-    VertexPositions(VertexPositionUpdate),
-    MeshName { mesh_id: String, name: String },
-}

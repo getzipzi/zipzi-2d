@@ -1,6 +1,6 @@
 use zipzi_animation::{AnimationError, ExpressionPreview};
 use zipzi_core::document::{ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget};
-use zipzi_core::{Canvas, Document, Parameter, Vec2};
+use zipzi_core::{state::DocumentState, Canvas, Parameter, Vec2};
 
 const DOC: &str = "00000000-0000-4000-8000-000000000a01";
 const X: &str = "00000000-0000-4000-8000-000000000a02";
@@ -8,21 +8,19 @@ const Y: &str = "00000000-0000-4000-8000-000000000a03";
 const FIRST: &str = "00000000-0000-4000-8000-000000000a04";
 const SECOND: &str = "00000000-0000-4000-8000-000000000a05";
 
-fn document() -> Document {
-    let mut document = Document::new();
-    assert!(document
-        .initialize(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0))
-        .is_ok());
+fn document() -> DocumentState {
+    let document =
+        DocumentState::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into()).unwrap();
+    let mut document = document.builder();
     for (id, runtime_id) in [(X, "ParamX"), (Y, "ParamY")] {
-        assert!(document
+        document
             .create_parameter(Parameter {
                 id: id.into(),
                 runtime_id: runtime_id.into(),
                 name: runtime_id.into(),
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
     let first = ExpressionAsset {
         id: FIRST.into(),
@@ -54,7 +52,7 @@ fn document() -> Document {
         opaque_source_ids: None,
         opaque_source_content_hash: None,
     };
-    assert!(document.create_expression(first).status.is_ok());
+    document.create_expression(first).unwrap();
     let second = ExpressionAsset {
         id: SECOND.into(),
         name: "Second".into(),
@@ -74,14 +72,14 @@ fn document() -> Document {
         opaque_source_ids: None,
         opaque_source_content_hash: None,
     };
-    assert!(document.create_expression(second).status.is_ok());
-    document
+    document.create_expression(second).unwrap();
+    document.freeze().unwrap().state
 }
 
 #[test]
 fn matches_official_framework_expression_queue_trace() {
     let document = document();
-    let revision = document.revision();
+    let content = document.content_id();
     let mut preview = ExpressionPreview::new(&document);
     preview.set_base_parameter(Y, 0.5).unwrap();
     preview.schedule_expression(FIRST, 0.0).unwrap();
@@ -120,8 +118,8 @@ fn matches_official_framework_expression_queue_trace() {
             expected_y[index]
         );
     }
-    assert_eq!(document.revision(), revision);
-    assert_eq!(preview.document_revision(), revision);
+    assert_eq!(document.content_id(), content);
+    assert_eq!(preview.content_id(), content);
     let first_seek = preview.seek(0.75).unwrap().clone();
     let second_seek = preview.seek(0.75).unwrap().clone();
     assert_eq!(first_seek, second_seek);
@@ -174,8 +172,8 @@ fn expression_clamps_target_before_fade_weight_like_framework() {
         (ExpressionBlend::Overwrite, -4.0, 0.0, -0.5),
         (ExpressionBlend::Multiply, 4.0, 0.5, 0.75),
     ] {
-        let mut doc = document();
-        let mut expression = doc.get_expression(FIRST).unwrap().clone();
+        let doc = document();
+        let mut expression = doc.expression(FIRST).unwrap().clone();
         expression.entries = vec![ExpressionEntry {
             id: uuid::Uuid::new_v4().to_string(),
             target: ExpressionTarget::Resolved {
@@ -185,7 +183,9 @@ fn expression_clamps_target_before_fade_weight_like_framework() {
             blend: Some(blend),
             extensions: Default::default(),
         }];
-        assert!(doc.replace_expression(expression).status.is_ok());
+        let mut builder = doc.builder();
+        builder.replace_expression(expression).unwrap();
+        let doc = builder.freeze().unwrap().state;
         let mut preview = ExpressionPreview::new(&doc);
         preview.set_base_parameter(X, base).unwrap();
         preview.schedule_expression(FIRST, 0.0).unwrap();

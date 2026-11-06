@@ -64,24 +64,27 @@ mod hint_tests {
             uuid::Uuid::new_v4().to_string(),
             uuid::Uuid::new_v4().to_string(),
         ];
-        let mut session = zipzi_sdk::AuthoringSession::new(
+        let mut session = crate::test_sdk::fixture_session(
             &uuid::Uuid::new_v4().to_string(),
             Canvas::new(256., 256., Default::default(), 1.),
         )?;
-        session.edit("Hint parameters", None, |edit| {
+        crate::test_sdk::publish_fixture(&mut session, "Hint parameters", |edit| {
             for (id, name, runtime) in [
                 (&ids[0], "Angle X", "ParamAngleX"),
                 (&ids[1], "", "ParamAngleY"),
             ] {
-                edit.create_parameter(Parameter {
-                    id: id.clone(),
-                    name: name.into(),
-                    runtime_id: runtime.into(),
-                    minimum: 0.,
-                    maximum: 1.,
-                    default_value: 0.,
-                    ..Default::default()
-                })?;
+                crate::test_sdk::insert_fixture_parameter(
+                    edit,
+                    Parameter {
+                        id: id.clone(),
+                        name: name.into(),
+                        runtime_id: runtime.into(),
+                        minimum: 0.,
+                        maximum: 1.,
+                        default_value: 0.,
+                        ..Default::default()
+                    },
+                )?;
             }
             Ok(())
         })?;
@@ -102,16 +105,16 @@ mod hint_tests {
             })
             .collect();
         parameters[0].value = 0.5;
-        let hint = keyform_edit_hint(session.document(), &parameters, &axes);
+        let hint = keyform_edit_hint(session.snapshot().document(), &parameters, &axes);
         assert!(hint.contains("\"Angle X\" (0.5)"));
         assert!(!hint.contains("ParamAngleY"));
         parameters[1].value = 0.25;
-        let hint = keyform_edit_hint(session.document(), &parameters, &axes);
+        let hint = keyform_edit_hint(session.snapshot().document(), &parameters, &axes);
         assert!(hint.contains("\"Angle X\" (0.5)"));
         assert!(hint.contains("\"ParamAngleY\" (0.25)"));
         parameters[0].value = 0.;
         parameters[1].value = 0.;
-        let hint = keyform_edit_hint(session.document(), &parameters, &axes);
+        let hint = keyform_edit_hint(session.snapshot().document(), &parameters, &axes);
         assert!(hint.contains("Angle X") && hint.contains("ParamAngleY"));
         Ok(())
     }

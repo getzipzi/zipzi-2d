@@ -1,12 +1,11 @@
 use std::fs;
 use std::path::PathBuf;
 
+use zipzi_core::state::*;
 use zipzi_core::types::{
     BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, BlendShapeTargetKind, Canvas,
-    DeltaGlueKeyform, DeltaKeyforms, Glue, GlueVertexPair, ImageAsset, Mesh, Parameter,
-    ParameterKind, Vec2,
+    DeltaGlueKeyform, DeltaKeyforms, Glue, GlueVertexPair, Mesh, Parameter, ParameterKind, Vec2,
 };
-use zipzi_core::Document;
 use zipzi_moc3::encode_moc3;
 
 fn id(n: i32) -> String {
@@ -23,31 +22,30 @@ fn main() {
     let out_dir = root.join("fixtures/external_v50_bs_glue");
     fs::create_dir_all(&out_dir).unwrap();
 
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas {
-                width: 640.0,
-                height: 480.0,
-                origin: Vec2::new(320.0, 240.0),
-                pixels_per_unit: 100.0,
-                flag: 1,
-            }
-        )
-        .is_ok());
+    let mut doc = DocumentState::new(
+        id(1),
+        Canvas {
+            width: 640.0,
+            height: 480.0,
+            origin: Vec2::new(320.0, 240.0),
+            pixels_per_unit: 100.0,
+            flag: 1,
+        }
+        .into(),
+    )
+    .unwrap()
+    .builder();
 
-    let _ = doc.add_asset(ImageAsset {
-        unresolved_source: None,
+    doc.create_asset(AssetRecord {
         id: id(2),
         name: "Texture0".to_string(),
-        content: Some(zipzi_core::ImageContent {
-            source: "textures/0.png".to_string(),
+        content: AssetContent::Image {
+            resource: Default::default(),
             width: 64,
             height: 64,
-            sha256: "0".repeat(64),
-        }),
-    });
+        },
+    })
+    .unwrap();
 
     let param_norm = Parameter {
         id: id(3),
@@ -60,7 +58,7 @@ fn main() {
         kind: ParameterKind::Normal,
         repeat: false,
     };
-    assert!(doc.create_parameter(param_norm).status.is_ok());
+    doc.create_parameter(param_norm).unwrap();
 
     let param_bs = Parameter {
         id: id(4),
@@ -73,7 +71,7 @@ fn main() {
         kind: ParameterKind::BlendShape,
         repeat: false,
     };
-    assert!(doc.create_parameter(param_bs).status.is_ok());
+    doc.create_parameter(param_bs).unwrap();
 
     let mesh_a = Mesh {
         id: id(5),
@@ -96,7 +94,7 @@ fn main() {
         triangles: vec![[1, 2, 3], [2, 4, 3]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(mesh_a).status.is_ok());
+    doc.create_mesh(mesh_a).unwrap();
 
     let mesh_b = Mesh {
         id: id(6),
@@ -119,7 +117,7 @@ fn main() {
         triangles: vec![[10, 20, 30], [20, 40, 30]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(mesh_b).status.is_ok());
+    doc.create_mesh(mesh_b).unwrap();
 
     let glue = Glue {
         id: id(7),
@@ -137,7 +135,7 @@ fn main() {
         intensity: 0.2, // base intensity 0.2
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    doc.create_glue(glue).unwrap();
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -147,7 +145,7 @@ fn main() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    doc.create_blend_key_table(bkt).unwrap();
 
     let constraint = BlendShapeConstraint {
         samples: Default::default(),
@@ -156,7 +154,7 @@ fn main() {
         keys: vec![0.0, 1.0],
         weights: vec![1.0, 0.5],
     };
-    assert!(doc.create_blend_constraint(constraint).status.is_ok());
+    doc.create_blend_constraint(constraint).unwrap();
 
     let binding = BlendShapeBinding {
         id: id(10),
@@ -175,8 +173,9 @@ fn main() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    doc.create_blend_binding(binding).unwrap();
 
+    let doc = doc.freeze().unwrap().state;
     let artifact = encode_moc3(&doc).expect("encode_moc3 failed");
     fs::write(out_dir.join("model.moc3"), &artifact.bytes).unwrap();
 

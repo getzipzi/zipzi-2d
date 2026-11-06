@@ -32,15 +32,14 @@ including ordinary/BlendShape bindings and hidden ancestors. Imported numeric
 axes are normalized before initialization. Existing display preferences remain
 stable through later edits and reopening.
 
-Focused checks:
+The unit and integration tests exercise Builder validation, snapshot isolation,
+parameter and keyform evaluation, Glue and Offscreen behavior, and warmed
+evaluation storage.
 
 ```sh
-cargo test --locked -p zipzi-core --lib
-cargo test --locked -p zipzi-core --test preview_state_tests
+cargo test --locked -p zipzi-core
+cargo check --locked -p zipzi-core --all-targets
 ```
-
-Host consumers and remaining legacy integration targets are being migrated in
-later stages; see the [implementation status](../../docs/plans/authoring-architecture.md).
 
 `image::decode_png_bounded` checks encoded bytes, expected header dimensions and
 conservative decoder/conversion workspace before allocating output. Its decoder

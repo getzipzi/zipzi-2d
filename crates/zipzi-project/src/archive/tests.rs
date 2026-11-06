@@ -294,7 +294,7 @@ fn fingerprints_cover_resource_bytes_and_finalized_headers() {
     let path = root.path().join("changed.zipzi");
     fs::write(&path, changed).unwrap();
     assert!(
-        !open_archive(&path, root.path(), PrototypeLimits::default(), || true)
+        !open_archive(&path, root.path(), ArchiveIoLimits::default(), || true)
             .unwrap()
             .diagnostics
             .is_empty()
@@ -390,19 +390,19 @@ fn archive_limits_and_failed_open_remove_private_candidates() {
     let count = || fs::read_dir(root.path()).unwrap().count();
     let before = count();
     for limits in [
-        PrototypeLimits {
+        ArchiveIoLimits {
             archive_bytes: 4,
             ..Default::default()
         },
-        PrototypeLimits {
+        ArchiveIoLimits {
             entries: 2,
             ..Default::default()
         },
-        PrototypeLimits {
+        ArchiveIoLimits {
             document_bytes: 4,
             ..Default::default()
         },
-        PrototypeLimits {
+        ArchiveIoLimits {
             expanded_bytes: 4,
             ..Default::default()
         },
@@ -411,7 +411,7 @@ fn archive_limits_and_failed_open_remove_private_candidates() {
         assert_eq!(count(), before);
     }
     fs::write(&path, &bytes[..bytes.len() - 12]).unwrap();
-    assert!(open_archive(&path, root.path(), PrototypeLimits::default(), || true).is_err());
+    assert!(open_archive(&path, root.path(), ArchiveIoLimits::default(), || true).is_err());
     assert_eq!(count(), before);
 }
 
@@ -422,7 +422,7 @@ fn native_archive_store_publishes_with_fingerprint_conflict_and_lease() {
     let source = write(&document, root.path()).0;
     let input = root.path().join("input.zipzi");
     fs::write(&input, source).unwrap();
-    let opened = open_archive(&input, root.path(), PrototypeLimits::default(), || true).unwrap();
+    let opened = open_archive(&input, root.path(), ArchiveIoLimits::default(), || true).unwrap();
     assert_eq!(
         opened.document.package_attachments()[0].path,
         "userdata/example.bin"
@@ -481,7 +481,7 @@ fn unknown_and_escaping_entries_are_rejected_without_extracting_them() {
         zip.finish().unwrap();
         let path = root.path().join("unknown.zipzi");
         fs::write(&path, output.into_inner()).unwrap();
-        assert!(open_archive(&path, root.path(), PrototypeLimits::default(), || true).is_err());
+        assert!(open_archive(&path, root.path(), ArchiveIoLimits::default(), || true).is_err());
     }
 }
 
@@ -489,7 +489,7 @@ pub(super) fn native_bytes(input: &crate::ImportedProject, root: &Path) -> Vec<u
     write(input, root).0
 }
 
-fn admit(bytes: &[u8], limits: PrototypeLimits) -> Result<()> {
+fn admit(bytes: &[u8], limits: ArchiveIoLimits) -> Result<()> {
     structure::validate(
         &mut Cursor::new(bytes),
         bytes.len() as u64,
@@ -529,14 +529,14 @@ fn preflight_rejects_local_central_mismatches_boundaries_and_metadata_bombs() {
         let mut bad = bytes.clone();
         bad[offset] = value;
         assert!(
-            admit(&bad, PrototypeLimits::default()).is_err(),
+            admit(&bad, ArchiveIoLimits::default()).is_err(),
             "accepted mutation at {offset}"
         );
     }
     assert!(matches!(
         admit(
             &bytes,
-            PrototypeLimits {
+            ArchiveIoLimits {
                 directory_bytes: 16,
                 ..Default::default()
             }
@@ -545,15 +545,15 @@ fn preflight_rejects_local_central_mismatches_boundaries_and_metadata_bombs() {
     ));
     let mut huge = bytes.clone();
     huge[e + 8..e + 12].fill(255);
-    assert!(admit(&huge, PrototypeLimits::default()).is_err()); // missing ZIP64 end
+    assert!(admit(&huge, ArchiveIoLimits::default()).is_err()); // missing ZIP64 end
     let mut prefix = vec![0];
     prefix.extend_from_slice(&bytes);
-    assert!(admit(&prefix, PrototypeLimits::default()).is_err());
+    assert!(admit(&prefix, ArchiveIoLimits::default()).is_err());
     let mut trailing = bytes.clone();
     trailing.push(0);
-    assert!(admit(&trailing, PrototypeLimits::default()).is_err());
+    assert!(admit(&trailing, ArchiveIoLimits::default()).is_err());
     for n in [0, 21, c, bytes.len() - 1] {
-        assert!(admit(&bytes[..n], PrototypeLimits::default()).is_err());
+        assert!(admit(&bytes[..n], ArchiveIoLimits::default()).is_err());
     }
 }
 
@@ -579,7 +579,7 @@ fn preflight_handles_streaming_descriptors_and_zip64_end_records() {
             std::io::copy(&mut entry, &mut writer).unwrap();
         }
         writer.finish().unwrap();
-        admit(&stream, PrototypeLimits::default()).unwrap();
+        admit(&stream, ArchiveIoLimits::default()).unwrap();
         let path = root.path().join("stream.zipzi");
         fs::write(&path, &stream).unwrap();
         assert!(io(root.path()).load(&path, || true).is_ok());
@@ -589,7 +589,7 @@ fn preflight_handles_streaming_descriptors_and_zip64_end_records() {
             (entry.data_start().unwrap() + entry.compressed_size()) as usize
         };
         stream[descriptor] ^= 1;
-        assert!(admit(&stream, PrototypeLimits::default()).is_err());
+        assert!(admit(&stream, ArchiveIoLimits::default()).is_err());
     }
     // Small valid ZIP with explicit ZIP64 EOCD/locator and classic sentinels.
     let e = original.len() - 22;
@@ -612,10 +612,10 @@ fn preflight_handles_streaming_descriptors_and_zip64_end_records() {
     z.extend_from_slice(&original[e..]);
     let n = z.len();
     z[n - 14..n - 2].fill(255);
-    admit(&z, PrototypeLimits::default()).unwrap();
+    admit(&z, ArchiveIoLimits::default()).unwrap();
     let n = z.len();
     z[n - 22 - 20 + 16] = 2;
-    assert!(admit(&z, PrototypeLimits::default()).is_err());
+    assert!(admit(&z, ArchiveIoLimits::default()).is_err());
 }
 
 #[test]
@@ -641,7 +641,7 @@ fn duplicate_paths_and_case_aliases_never_reach_extraction() {
                 bytes[chunk + 10] = b'n';
             }
         }
-        assert!(admit(&bytes, PrototypeLimits::default()).is_err());
+        assert!(admit(&bytes, ArchiveIoLimits::default()).is_err());
     }
 }
 
@@ -893,7 +893,7 @@ fn versions_features_and_duplicate_json_keys_have_distinct_failures() {
     let experimental = repack(&bytes, |name, data| {
         if name == "format.json" {
             let mut f: serde_json::Value = serde_json::from_slice(&data).unwrap();
-            f["required_features"] = serde_json::json!([EXPERIMENT]);
+            f["required_features"] = serde_json::json!(["prototype-directory-document-v21"]);
             Some(serde_json::to_vec(&f).unwrap())
         } else {
             Some(data)

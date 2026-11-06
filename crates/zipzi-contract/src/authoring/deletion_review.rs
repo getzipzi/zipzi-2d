@@ -85,25 +85,3 @@ pub struct DeletionSummary {
     pub export_analysis_complete: bool,
 }
 }
-
-crate::api_record! {
-#[derive(Debug, Clone, Serialize)]
-#[derive(zipzi_api_derive::BinaryOutput)]
-/// Frozen summary of a planned modeling operation, including predicted effects and losses.
-pub struct ModelingPlanReport {
-    /// Exact SDK version captured for this value; not a best-effort latest-version marker.
-    pub version: Version,
-    /// Stable IDs conservatively affected by the planned operation.
-    pub affected_ids: Vec<String>,
-    /// Mapping from original object IDs to the new IDs allocated for copied objects.
-    pub copied_ids: std::collections::BTreeMap<String, String>,
-    /// Native plan cost estimates; inspect losses separately before applying the plan.
-    pub cost: Option<crate::document::ConversionCost>,
-    /// Explicit semantic losses predicted by conversion; empty means no losses were reported.
-    pub losses: Vec<String>,
-    /// Whether applying the plan would leave the document unchanged.
-    pub no_op: Option<bool>,
-    /// Bounded deletion readiness/count summary; detailed rows use frozen report pages.
-    pub deletion: Option<DeletionSummary>,
-}
-}

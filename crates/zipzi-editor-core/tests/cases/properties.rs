@@ -712,29 +712,29 @@ fn animation_property_candidates_are_detached_and_disappear_on_cancel() -> anyho
         preview
             .source
             .document()
-            .get_motion(&object.id)
+            .motion(&object.id)
             .unwrap()
             .fade_in,
         Some(3.)
     );
     assert_ne!(
-        before.document().get_motion(&object.id).unwrap().fade_in,
+        before.document().motion(&object.id).unwrap().fade_in,
         Some(3.)
     );
     AnimationEvaluator::default().evaluate(&preview, |_, _| true)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     editor.cancel_property_edit(&token);
     let after = editor.animation_request().unwrap().source;
-    assert!(after.properties.is_none());
+    assert!(after.candidate.is_none());
     assert_eq!(
-        after.document().get_motion(&object.id).unwrap().fade_in,
-        before.document().get_motion(&object.id).unwrap().fade_in
+        after.document().motion(&object.id).unwrap().fade_in,
+        before.document().motion(&object.id).unwrap().fade_in
     );
     assert_eq!(
         preview
             .source
             .document()
-            .get_motion(&object.id)
+            .motion(&object.id)
             .unwrap()
             .fade_in,
         Some(3.)

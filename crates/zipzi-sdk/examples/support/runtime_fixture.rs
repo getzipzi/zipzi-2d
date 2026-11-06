@@ -3,25 +3,30 @@
 use std::sync::Arc;
 use zipzi_core::{BindingAxis, Canvas, MeshBinding, MeshKeyform, Parameter, Vec2};
 use zipzi_sdk::{
-    rectangle_grid_geometry, rectangle_mesh, AuthoringSession, MeshGeometry, SdkError,
+    rectangle_grid_geometry, rectangle_mesh, AuthoringSession, MeshGeometry, ResourceStore,
+    ResourceView, Snapshot, Status,
 };
 
 pub fn id(n: usize) -> String {
     format!("70000000-0000-4000-8000-{n:012x}")
 }
 
-pub fn build(
-    meshes: usize,
-    divisions: usize,
-    image_side: u32,
-) -> Result<AuthoringSession, SdkError> {
-    let mut sdk = AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;
+pub fn build(meshes: usize, divisions: usize, image_side: u32) -> Result<AuthoringSession, Status> {
+    let state = zipzi_core::state::DocumentState::new(
+        &id(1),
+        Canvas::new(100., 100., Vec2::default(), 1.).into(),
+    )?;
+    let mut sdk = AuthoringSession::new(Snapshot::new(state, ResourceView::default())?);
     let rgba: Arc<[u8]> = (0..image_side as usize * image_side as usize * 4)
         .map(|i| ((i * 37 + i / 11) % 256) as u8)
         .collect();
-    let image = sdk.prepare_rgba_image(image_side, image_side, rgba)?;
-    sdk.edit("R0 synthetic fixture", None, |edit| {
-        edit.create_prepared_image(id(2), "R0 memory texture".into(), &image)?;
+    let image = ResourceStore::default()
+        .prepare_rgba(image_side, image_side, rgba)
+        .map_err(Status::from)?;
+    let mut draft = sdk.begin_draft();
+    draft.batch(draft.source(), |edit| {
+        edit.create_empty_asset(id(2), "R0 memory texture".into())?;
+        edit.replace_image(&id(2), image)?;
         edit.create_parameter(Parameter {
             id: id(3),
             runtime_id: "ParamR0".into(),
@@ -77,9 +82,11 @@ pub fn build(
                 edit.create_binding(binding)?;
             }
         }
-        edit.import_motion3(&id(10), "R0 motion", r#"{"Version":3,"Meta":{"Duration":1,"Fps":30,"Loop":false,"AreBeziersRestricted":true,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[{"Target":"Parameter","Id":"ParamR0","Segments":[0,-1,0,1,1]}],"UserData":[]}"#)?;
+        let imported = zipzi_project::import_motion3(&edit.read_document()?, &id(10), "R0 motion", r#"{"Version":3,"Meta":{"Duration":1,"Fps":30,"Loop":false,"AreBeziersRestricted":true,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[{"Target":"Parameter","Id":"ParamR0","Segments":[0,-1,0,1,1]}],"UserData":[]}"#).map_err(|error| Status::error(error.code.clone(), format!("{error:?}")))?;
+        edit.create_motion(imported.candidate.motion(&id(10)).unwrap().clone())?;
         Ok(())
     })?;
-    sdk.drain_events();
+    sdk.publish(draft.prepare("Synthetic fixture")?)?;
+    sdk.take_events();
     Ok(sdk)
 }

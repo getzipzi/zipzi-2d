@@ -21,7 +21,7 @@ fn mesh_content_receipt_refreshes_canvas_and_keeps_retained_snapshot() -> anyhow
     )?;
     let plan = d.plan_scene_content_patch(&address, V::Point(zipzi_core::Vec2::new(17., 31.)))?;
     let r = d.execute_scene_content(&plan)?;
-    assert!(r.receipt.changed);
+    assert!(r.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
     assert!(r.suggested_selection.is_empty());
     assert_eq!(d.context().selections, selections);
     let after = d.snapshot()?;
@@ -30,7 +30,7 @@ fn mesh_content_receipt_refreshes_canvas_and_keeps_retained_snapshot() -> anyhow
         after.viewport_frame.drawables
     );
     assert_eq!(
-        *match d
+        match d
             .scene_content_address(
                 &mesh,
                 T::VertexPosition {
@@ -38,7 +38,8 @@ fn mesh_content_receipt_refreshes_canvas_and_keeps_retained_snapshot() -> anyhow
                     shape: ShapeTarget::Base
                 }
             )?
-            .expected()
+            .value
+            .1
         {
             V::Point(point) => point,
             _ => unreachable!(),
@@ -60,7 +61,7 @@ fn mesh_content_receipt_refreshes_canvas_and_keeps_retained_snapshot() -> anyhow
         before.viewport_frame.drawables
     );
     assert!(
-        d.plan_scene_content_patch(&address, address.expected().clone())
+        d.plan_scene_content_patch(&address, address.value.1.clone())
             .is_err()
     );
     Ok(())
@@ -107,10 +108,7 @@ fn pair_child_projection_and_history_share_the_native_lifecycle() -> anyhow::Res
     assert!(d.object_index().get(&object).is_none());
     d.undo()?;
     assert!(d.object_index().get(&object).is_some());
-    assert!(
-        d.plan_scene_content_patch(&a, a.expected().clone())
-            .is_err()
-    );
+    assert!(d.plan_scene_content_patch(&a, a.value.1.clone()).is_err());
     let root = tempfile::tempdir()?;
     let saved = d.save(&root.path().join("pairs.zipzi"))?;
     let reopened = Document::open(&saved.path)?;

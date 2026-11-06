@@ -127,7 +127,10 @@ fn fixed_review_reports_native_proof_and_commits_once_with_selection_and_undo(
                 .as_ref()
                 .unwrap()
                 .scene()
-                .conversion_report()
+                .outcome
+                .conversion
+                .as_ref()
+                .map(|outcome| &outcome.report)
                 .unwrap()
                 .reparent_guarantee
                 .as_ref()
@@ -230,7 +233,10 @@ fn full_domain_failure_requires_explicit_scope_change_before_submit(cx: &mut Tes
                 .as_ref()
                 .unwrap()
                 .scene()
-                .conversion_report()
+                .outcome
+                .conversion
+                .as_ref()
+                .map(|outcome| &outcome.report)
                 .unwrap()
                 .reparent_guarantee
                 .as_ref()

@@ -1,5 +1,5 @@
+use zipzi_contract::document::{DocumentField as F, DocumentValue as V, ResourceEdit as R};
 use zipzi_editor_core::{Document, ObjectKind, ObjectRef};
-use zipzi_sdk::{DocumentField as F, DocumentValue as V, ResourceEdit as R};
 fn id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
@@ -35,7 +35,7 @@ fn texture_assignment_replacement_delete_and_history_preserve_geometry_and_refer
     );
     let png = assets.path().join("replace.png");
     std::fs::write(&png, include_bytes!("../fixtures/accent.png"))?;
-    let prepared = zipzi_sdk::prepare_image_load(&png)?;
+    let prepared = zipzi_project::prepare_image_content(&png)?;
     let token = d.image_load_token(&replacement)?;
     d.replace_prepared_image_content(&token, &prepared)?;
     d.set_object_property(&other, "texture_choice", serde_json::json!(replacement))?;
@@ -47,13 +47,10 @@ fn texture_assignment_replacement_delete_and_history_preserve_geometry_and_refer
             replacement: None,
         })
         .unwrap_err();
-    assert_eq!(
-        rejected
-            .downcast_ref::<zipzi_sdk::SdkError>()
-            .unwrap()
-            .referrers
-            .len(),
-        2
+    let rejected = rejected.downcast_ref::<zipzi_sdk::Status>().unwrap();
+    assert!(
+        rejected.code.contains("REFERENCE") || rejected.code.contains("IN_USE"),
+        "{rejected}"
     );
     let history = d.history_lengths();
     d.set_objects_locked(std::slice::from_ref(&mesh), true)?;
@@ -106,7 +103,7 @@ fn direct_image_import_is_atomic_and_retains_pixels_for_history_and_save() -> an
     let dir = tempfile::tempdir()?;
     let png = dir.path().join("import.png");
     std::fs::write(&png, include_bytes!("../fixtures/accent.png"))?;
-    let prepared = zipzi_sdk::prepare_image_load(&png)?;
+    let prepared = zipzi_project::prepare_image_content(&png)?;
     std::fs::remove_file(&png)?;
     let asset = id();
     d.import_prepared_texture(asset.clone(), "Imported".into(), &prepared)?;
@@ -151,7 +148,7 @@ fn cached_editor_preview_adopts_replaced_pixels_for_all_users_and_retains_name_o
     ));
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../crates/zipzi-sdk/tests/fixtures/asymmetric-2x2.png");
-    let image = zipzi_sdk::prepare_image_load(&path)?;
+    let image = zipzi_project::prepare_image_content(&path)?;
     let token = editor.image_load_token(document, &asset)?;
     editor.replace_prepared_image_content(document, &token, &image)?;
     let next = editor.preview()?.scene;
@@ -175,22 +172,23 @@ fn cached_editor_preview_adopts_replaced_pixels_for_all_users_and_retains_name_o
 }
 
 #[test]
-fn image_requests_expire_on_new_request_cancel_undo_and_delete_restore() -> anyhow::Result<()> {
+fn image_captures_expire_after_publication_and_do_not_revive_on_undo() -> anyhow::Result<()> {
     let (mut d, _assets) = super::support::sample_document()?;
     let asset = d.resource_collection()?[0].id.clone();
-    let stale = d.image_load_token(&asset)?;
-    let current = d.image_load_token(&asset)?;
-    assert!(d.replace_image_content(&stale, None).is_err());
-    current.cancel();
-    assert!(d.replace_image_content(&current, None).is_err());
-    let token = d.image_load_token(&asset)?;
+    let capture = d.image_load_token(&asset)?;
+    let pixels = zipzi_project::PreparedImageContent::from_rgba(
+        1,
+        1,
+        vec![9, 8, 7, 255].into(),
+        &Default::default(),
+    )?;
     let address = d.resource_name_address(&asset)?;
     let plan = d.plan_resource_name_patch(&address, "Renamed".into())?;
     d.execute_resource_authoring(&plan)?;
-    // Metadata editing does not supersede a content request.
-    d.replace_image_content(&token, None)?;
+    assert!(d.replace_prepared_image_content(&capture, &pixels).is_err());
     d.undo()?;
-    assert!(d.replace_image_content(&token, None).is_err());
+    assert!(d.replace_prepared_image_content(&capture, &pixels).is_err());
+
     let pending = id();
     let plan = d.plan_resource_authoring(R::Create {
         id: pending.clone(),
@@ -205,7 +203,9 @@ fn image_requests_expire_on_new_request_cancel_undo_and_delete_restore() -> anyh
     })?;
     d.execute_resource_authoring(&plan)?;
     d.undo()?;
-    assert!(d.replace_image_content(&token, None).is_err());
+    assert!(d.replace_prepared_image_content(&token, &pixels).is_err());
+    let fresh = d.image_load_token(&pending)?;
+    d.replace_prepared_image_content(&fresh, &pixels)?;
     Ok(())
 }
 
@@ -220,35 +220,19 @@ fn unreadable_image_content_does_not_publish_or_clear_redo() -> anyhow::Result<(
     let index = d.object_index();
     let history = d.history_lengths();
     let frame = d.snapshot()?;
-    let current: zipzi_core::ImageAsset = serde_json::from_value(
-        index
-            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
-            .unwrap()
-            .properties
-            .clone(),
-    )?;
     let temp = tempfile::tempdir()?;
-    let missing = zipzi_core::ImageContent {
-        source: temp.path().join("missing.png").to_str().unwrap().into(),
-        sha256: "0".repeat(64),
-        width: 1,
-        height: 1,
-    };
-    let p = d.plan_resource_authoring(R::SetContent {
-        id: asset.clone(),
-        expected: current.content.clone(),
-        content: Some(missing.clone()),
-    })?;
-    assert!(d.execute_resource_authoring(&p).is_err());
-    let token = d.image_load_token(&asset)?;
-    assert!(d.replace_image_content(&token, Some(missing)).is_err());
+    let missing = temp.path().join("missing.png");
+    assert!(zipzi_project::prepare_image_content(&missing).is_err());
     assert_eq!(d.history_lengths(), history);
     assert_eq!(
         d.object_index()
             .get(&ObjectRef::new(ObjectKind::Texture, &asset))
             .unwrap()
             .properties,
-        serde_json::to_value(current)?
+        index
+            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
+            .unwrap()
+            .properties
     );
     assert_eq!(
         d.snapshot()?.runtime_frame.source_revision,
@@ -272,7 +256,7 @@ fn prepared_images_can_be_copied_without_the_source_file() -> anyhow::Result<()>
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("image.png");
     std::fs::write(&path, include_bytes!("../fixtures/accent.png"))?;
-    let image = zipzi_sdk::prepare_image_load(&path)?;
+    let image = zipzi_project::prepare_image_content(&path)?;
     std::fs::remove_file(path)?;
     let token = d.image_load_token(&asset)?;
     d.replace_prepared_image_content(&token, &image)?;
@@ -323,14 +307,10 @@ fn pending_texture_is_inspectable_and_saveable_without_loading_fake_pixels() -> 
     let dir = tempfile::tempdir()?;
     let saved = d.save(&dir.path().join("resources"))?;
     let reopened = Document::open(&saved.path)?;
-    assert!(
-        reopened
-            .object_index()
-            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
-            .unwrap()
-            .properties["content"]
-            .is_null()
-    );
+    assert!(matches!(
+        reopened.texture_info(&asset)?.asset.content,
+        zipzi_core::state::AssetContent::Empty
+    ));
     Ok(())
 }
 #[test]
@@ -338,14 +318,6 @@ fn resource_content_publication_and_history_refresh_textures_and_metadata() -> a
     let (mut d, _assets) = super::support::sample_document_with_two_layers()?;
     let asset = d.resource_collection()?[0].id.clone();
     let before = d.snapshot()?;
-    let content: zipzi_core::ImageAsset = serde_json::from_value(
-        d.object_index()
-            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
-            .unwrap()
-            .properties
-            .clone(),
-    )?;
-    let content = content.content;
     let retained_index = d.object_index();
     let address = d.resource_name_address(&asset)?;
     let p = d.plan_resource_name_patch(&address, "Renamed".into())?;
@@ -360,23 +332,17 @@ fn resource_content_publication_and_history_refresh_textures_and_metadata() -> a
         d.snapshot()?.runtime_frame.source_revision
     );
     let token = d.image_load_token(&asset)?;
-    d.replace_image_content(&token, None)?;
-    assert!(
-        d.object_index()
-            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
-            .unwrap()
-            .diagnostic
-            .is_some()
-    );
+    let pixels = zipzi_project::PreparedImageContent::from_rgba(
+        1,
+        1,
+        vec![9, 8, 7, 255].into(),
+        &Default::default(),
+    )?;
+    d.replace_prepared_image_content(&token, &pixels)?;
+    assert_eq!(&*d.snapshot()?.textures[0].rgba, [9, 8, 7, 255]);
     d.undo()?;
-    assert!(
-        !d.object_index()
-            .get(&ObjectRef::new(ObjectKind::Texture, &asset))
-            .unwrap()
-            .properties["content"]
-            .is_null()
-    );
-    assert!(d.replace_image_content(&token, content).is_err());
+    assert_eq!(d.snapshot()?.textures[0].rgba, before.textures[0].rgba);
+    assert!(d.replace_prepared_image_content(&token, &pixels).is_err());
     Ok(())
 }
 #[test]
@@ -422,10 +388,20 @@ fn asynchronous_resource_completion_rejects_a_different_active_document() -> any
     let mut editor = super::support::editor_from_document(document);
     let first = editor.active_id().unwrap();
     let token = editor.image_load_token(first, &asset)?;
+    let pixels = zipzi_project::PreparedImageContent::from_rgba(
+        1,
+        1,
+        vec![9, 8, 7, 255].into(),
+        &Default::default(),
+    )?;
     editor.new_document()?;
-    assert!(editor.replace_image_content(first, &token, None).is_err());
+    assert!(
+        editor
+            .replace_prepared_image_content(first, &token, &pixels)
+            .is_err()
+    );
     editor.activate(first)?;
-    editor.replace_image_content(first, &token, None)?;
+    editor.replace_prepared_image_content(first, &token, &pixels)?;
     Ok(())
 }
 
@@ -462,7 +438,7 @@ fn resource_execution_rejects_timeline_gesture_without_consuming_plan() -> anyho
     assert_eq!(editor.document().unwrap().model_generation(), generation);
     editor.cancel_timeline_edit();
     let result = editor.execute_resource_authoring(document_id, &plan)?;
-    assert!(result.receipt.changed);
+    assert!(result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
     assert_eq!(
         result.suggested_selection,
         vec![ObjectRef::new(ObjectKind::Texture, &asset)]

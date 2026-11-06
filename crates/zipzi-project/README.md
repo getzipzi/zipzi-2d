@@ -6,7 +6,7 @@ The `resource_store` module prepares immutable image versions independently
 of any document/session. `ResourceView` retains those versions and checks the new
 Core `DocumentState` image references before snapshot pairing. Files are captured
 into owned, budgeted image content; retaining an external path is insufficient.
-Views survive their originating store, and the last pixel/resource holder controls
+Views survive their originating store. The final pixel or resource holder controls
 reclamation. `ProjectIo` is the native SDK load/save entrypoint: load returns
 DocumentState, ResourceView, project metadata and diagnostics; save accepts frozen
 state/resources and returns an atomic-publication receipt. It owns no live model,
@@ -24,10 +24,18 @@ Focused checks:
 ```sh
 cargo test --locked -p zipzi-project --lib
 cargo test --locked -p zipzi-project --test authoring_formats
+cargo test --locked -p zipzi-project --test cdi_tests --test expression_tests --test motion_tests --test pose_tests --test physics_tests
+cargo test --locked -p zipzi-project --test cmo3_tests --test cubism_tests
 ```
 
-Legacy session integration targets/examples remain migration inputs; they are
-not part of the passing gate above.
+Sidecar tests exercise native ZIP save/reopen, stable identities, reference
+validation, opaque metadata and failed package imports. Cubism tests cover
+captured resources, native-project equivalence and grouped output replacement.
+The optional `--test mao_cubism -- --nocapture` gate uses the local licensed Mao
+sample; it reports a skip when the model is absent.
+
+The legacy `project_tests` and `sequence_tests` targets remain stage-five migration
+inputs; the focused gates above do not establish a full Project regression pass.
 
 ## Filesystem guarantees
 
@@ -74,9 +82,7 @@ expanded JSON/codec workspace and PNG decode against the supplied memory budget.
 ProjectSaveProgress reports preparation, actual uncompressed payload bytes,
 finalization and publication independently of cancellation results.
 
-Native load/save does not relocate historical resources or rewrite model paths.
-The previous experimental archive prototype and its examples await final source
-cleanup; they are not production entrypoints.
+Native load and save project resource keys into archive entries at the file boundary.
 
 ## Import artwork
 
@@ -104,10 +110,10 @@ use the same filesystem rules as publication. SDK/Runtime task wiring belongs to
 the host migration stage.
 
 Native projects use ordinary `.zipzi` ZIP files. Directory projects and bare JSON
-are not user entrypoints. Bare JSON and experimental CBOR remain codec and
-benchmark tools only; they do not add another production format.
+are not user entrypoints. JSON encoding is private to the native archive boundary;
+the experimental directory and CBOR codecs have been removed.
 
-Both native codecs retain optional Warp/Rotation original-shape snapshots,
+The native codec retains optional Warp/Rotation original-shape snapshots,
 their canvas coordinates, capture source, automatic-update policy and first-key
 marker. Missing records remain missing when older projects are opened. Copies
 and undo retain these records; exchange formats such as CMO3 report their loss.

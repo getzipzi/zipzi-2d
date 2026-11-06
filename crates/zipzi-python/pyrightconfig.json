@@ -1,5 +1,5 @@
 {
-  "include": ["client/python/zipzi", "tests/type_valid.py"],
+  "include": ["client/python/zipzi", "tests/type_kernel.py"],
   "extraPaths": ["client/python"],
   "pythonVersion": "3.14",
   "typeCheckingMode": "strict",

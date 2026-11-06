@@ -6,7 +6,7 @@ use zipzi_core::types::{
 
 #[test]
 fn blend_bindings_share_sample_identities_but_new_tables_refresh_them() {
-    let mut doc = create_base_document();
+    let doc = create_base_document();
     let table = BlendShapeKeyTable {
         id: KEY_TABLE.into(),
         parameter_id: PARAM_BS.into(),
@@ -15,7 +15,9 @@ fn blend_bindings_share_sample_identities_but_new_tables_refresh_them() {
         samples: Default::default(),
         base_sample_id: Default::default(),
     };
-    assert!(doc.create_blend_key_table(table.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_key_table(table.clone()))
+        .unwrap()
+        .state;
     let identities = doc.binding_identities();
     let before = doc.clone(); // Retain the previous index, ruling out address reuse.
     let mut binding = BlendShapeBinding {
@@ -35,43 +37,47 @@ fn blend_bindings_share_sample_identities_but_new_tables_refresh_them() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_binding(binding.clone()))
+        .unwrap()
+        .state;
     assert_eq!(doc.binding_identities(), identities);
-    assert!(before
-        .binding_identities_iter()
-        .zip(doc.binding_identities_iter())
-        .all(|(old, new)| std::ptr::eq(old, new)));
     if let DeltaKeyforms::Mesh(forms) = &mut binding.keyforms {
         forms[1].positions[0].x = 2.;
     }
-    assert!(doc.replace_blend_binding(binding.clone()).status.is_ok());
-    assert!(before
-        .binding_identities_iter()
-        .zip(doc.binding_identities_iter())
-        .all(|(old, new)| std::ptr::eq(old, new)));
+    let doc = prepare(&doc, |b| b.replace_blend_binding(binding.clone()))
+        .unwrap()
+        .state;
+    assert_eq!(doc.binding_identities(), identities);
     binding.id = identities[0].id.clone();
     assert_eq!(
-        doc.create_blend_binding(binding.clone()).status.code,
+        prepare(&doc, |b| b.create_blend_binding(binding.clone()))
+            .unwrap_err()
+            .code,
         "DUPLICATE_ID"
     );
 
     let mut another_table = table;
     another_table.id = uuid::Uuid::new_v4().to_string();
-    assert!(doc
-        .create_blend_key_table(another_table.clone())
-        .status
-        .is_ok());
-    let sample = doc.get_blend_key_table(&another_table.id).unwrap().samples[0]
+    let doc = prepare(&doc, |b| b.create_blend_key_table(another_table.clone()))
+        .unwrap()
+        .state;
+    let sample = doc.blend_key_table(&another_table.id).unwrap().samples[0]
         .id
         .clone();
     assert_eq!(
-        doc.binding_identity(&sample).unwrap().owner,
+        doc.binding_identities()
+            .into_iter()
+            .find(|value| value.id == sample)
+            .unwrap()
+            .owner,
         another_table.id
     );
     assert_eq!(doc.binding_identities().len(), identities.len() + 2);
     binding.id = sample;
     assert_eq!(
-        doc.create_blend_binding(binding).status.code,
+        prepare(&doc, |b| b.create_blend_binding(binding))
+            .unwrap_err()
+            .code,
         "DUPLICATE_ID"
     );
     assert_eq!(before.binding_identities(), identities);
@@ -79,7 +85,7 @@ fn blend_bindings_share_sample_identities_but_new_tables_refresh_them() {
 
 #[test]
 fn test_blendshape_key_table_and_constraint_crud() {
-    let mut doc = create_base_document();
+    let doc = create_base_document();
 
     // Key table targeting normal parameter should fail
     let bad_table = BlendShapeKeyTable {
@@ -90,7 +96,7 @@ fn test_blendshape_key_table_and_constraint_crud() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(!doc.create_blend_key_table(bad_table).status.is_ok());
+    assert!(prepare(&doc, |b| b.create_blend_key_table(bad_table)).is_err());
 
     // Valid key table
     let table = BlendShapeKeyTable {
@@ -101,9 +107,11 @@ fn test_blendshape_key_table_and_constraint_crud() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(table.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_key_table(table.clone()))
+        .unwrap()
+        .state;
     assert_eq!(doc.blend_key_table_order(), &[KEY_TABLE]);
-    let stored = doc.get_blend_key_table(KEY_TABLE).unwrap();
+    let stored = doc.blend_key_table(KEY_TABLE).unwrap();
     assert_eq!(stored.keys, table.keys);
     assert_eq!(stored.base_sample_id, stored.samples[table.base_key_idx].id);
     assert_ne!(stored.samples[0].id, stored.samples[1].id);
@@ -116,26 +124,30 @@ fn test_blendshape_key_table_and_constraint_crud() {
         keys: vec![0.0, 1.0],
         weights: vec![0.0, 1.0],
     };
-    assert!(doc
-        .create_blend_constraint(constraint.clone())
-        .status
-        .is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_constraint(constraint.clone()))
+        .unwrap()
+        .state;
     assert_eq!(doc.blend_constraint_order(), &[CONSTRAINT]);
-    let stored = doc.get_blend_constraint(CONSTRAINT).unwrap();
+    let stored = doc.blend_constraint(CONSTRAINT).unwrap();
     assert_eq!(stored.keys, constraint.keys);
     assert_eq!(stored.weights, constraint.weights);
     assert_ne!(stored.samples[0].id, stored.samples[1].id);
 
     // Erase parameter should fail because it's referenced by key table and constraint
-    let erase_res = doc.erase_object(PARAM_BS);
-    assert!(!erase_res.status.is_ok());
-    assert!(erase_res.referrers.contains(&KEY_TABLE.to_string()));
-    assert!(erase_res.referrers.contains(&CONSTRAINT.to_string()));
+    assert!(prepare(&doc, |b| b.remove_parameter(PARAM_BS)).is_err());
+    assert_eq!(
+        doc.blend_key_table(KEY_TABLE).unwrap().parameter_id,
+        PARAM_BS
+    );
+    assert_eq!(
+        doc.blend_constraint(CONSTRAINT).unwrap().parameter_id,
+        PARAM_BS
+    );
 }
 
 #[test]
 fn test_blendshape_binding_and_mesh_topology_guard() {
-    let mut doc = create_base_document();
+    let doc = create_base_document();
 
     let table = BlendShapeKeyTable {
         samples: Default::default(),
@@ -145,7 +157,9 @@ fn test_blendshape_binding_and_mesh_topology_guard() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(table).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_key_table(table))
+        .unwrap()
+        .state;
 
     let constraint = BlendShapeConstraint {
         samples: Default::default(),
@@ -154,7 +168,9 @@ fn test_blendshape_binding_and_mesh_topology_guard() {
         keys: vec![0.0, 1.0],
         weights: vec![0.0, 1.0],
     };
-    assert!(doc.create_blend_constraint(constraint).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_constraint(constraint))
+        .unwrap()
+        .state;
 
     let mut binding = BlendShapeBinding {
         id: BINDING_BS.to_string(),
@@ -184,29 +200,34 @@ fn test_blendshape_binding_and_mesh_topology_guard() {
     if let DeltaKeyforms::Mesh(forms) = &mut binding.keyforms {
         for (form, sample) in forms
             .iter_mut()
-            .zip(&doc.get_blend_key_table(KEY_TABLE).unwrap().samples)
+            .zip(&doc.blend_key_table(KEY_TABLE).unwrap().samples)
         {
             form.sample_id = sample.id.clone();
         }
     }
-    assert!(doc.create_blend_binding(binding.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_binding(binding.clone()))
+        .unwrap()
+        .state;
     assert_eq!(doc.blend_binding_order(), &[BINDING_BS]);
-    assert_eq!(doc.get_blend_binding(BINDING_BS), Some(&binding));
+    assert_eq!(doc.blend_binding(BINDING_BS), Some(&binding));
 
     // Trying to replace mesh with different vertex count without updating keyforms must be rejected
-    let mut modified_mesh = doc.get_mesh(MESH_A).unwrap().clone();
+    let mut modified_mesh = doc.mesh(MESH_A).unwrap().clone();
     modified_mesh.vertex_ids = vec![1, 2, 3, 4];
     modified_mesh.base_positions.push(Vec2::new(5.0, 5.0));
     modified_mesh.uvs.push(Vec2::new(0.5, 0.5));
     modified_mesh.triangles = vec![[1, 2, 3], [2, 3, 4]];
-    let replace_res = doc.replace_mesh(modified_mesh);
-    assert!(!replace_res.status.is_ok());
-    assert_eq!(replace_res.status.code, "KEYFORMS_REQUIRED");
+    assert_eq!(
+        prepare(&doc, |b| b.replace_mesh(modified_mesh))
+            .unwrap_err()
+            .code,
+        "INVALID_LENGTH"
+    );
 }
 
 #[test]
 fn test_glue_crud_and_references() {
-    let mut doc = create_base_document();
+    let doc = create_base_document();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -233,18 +254,19 @@ fn test_glue_crud_and_references() {
         intensity: 1.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_glue(glue.clone()))
+        .unwrap()
+        .state;
     assert_eq!(doc.glue_order(), &[GLUE_ID]);
-    assert_eq!(doc.get_glue(GLUE_ID), Some(&glue));
+    assert_eq!(doc.glue(GLUE_ID), Some(&glue));
     assert_eq!(doc.glues_for_mesh(MESH_A).len(), 1);
 
     // References: MESH_A cannot be erased while glued
-    let erase_res = doc.erase_object(MESH_A);
-    assert!(!erase_res.status.is_ok());
-    assert!(erase_res.referrers.contains(&GLUE_ID.to_string()));
+    assert!(prepare(&doc, |b| b.remove_mesh(MESH_A)).is_err());
+    assert_eq!(doc.glues_for_mesh(MESH_A)[0].id, GLUE_ID);
 
     // Mesh topology change that drops a glued vertex must be rejected
-    let mut modified_mesh = doc.get_mesh(MESH_A).unwrap().clone();
+    let mut modified_mesh = doc.mesh(MESH_A).unwrap().clone();
     modified_mesh.vertex_ids = vec![2, 3, 4]; // vertex 1 dropped!
     modified_mesh.base_positions = vec![
         Vec2::new(10.0, 0.0),
@@ -257,17 +279,19 @@ fn test_glue_crud_and_references() {
         Vec2::new(0.5, 0.5),
     ];
     modified_mesh.triangles = vec![[2, 3, 4]];
-    let replace_res = doc.replace_mesh(modified_mesh);
-    assert!(!replace_res.status.is_ok());
-    assert_eq!(replace_res.status.code, "GLUE_CONFLICT");
+    assert_eq!(
+        prepare(&doc, |b| b.replace_mesh(modified_mesh))
+            .unwrap_err()
+            .code,
+        "MISSING_VERTEX"
+    );
 
-    // Clean erase of glue
-    assert!(doc.erase_object(GLUE_ID).status.is_ok());
-    assert_eq!(doc.glue_order().len(), 0);
-    assert_eq!(doc.get_glue(GLUE_ID), None);
+    let doc = prepare(&doc, |b| b.remove_glue(GLUE_ID)).unwrap().state;
+    assert!(doc.glue_order().is_empty());
+    assert!(doc.glue(GLUE_ID).is_none());
 
-    // Now mesh can be erased
-    assert!(doc.erase_object(MESH_A).status.is_ok());
+    let doc = prepare(&doc, |b| b.remove_mesh(MESH_A)).unwrap().state;
+    assert!(doc.mesh(MESH_A).is_none());
 }
 
 #[test]
@@ -275,10 +299,10 @@ fn test_blendshape_evaluation() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
     let param_bs2 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-    assert!(doc
+    builder
         .create_parameter(Parameter {
             id: param_bs2.to_string(),
             runtime_id: "ParamBS2".to_string(),
@@ -290,8 +314,7 @@ fn test_blendshape_evaluation() {
             kind: ParameterKind::BlendShape,
             repeat: false,
         })
-        .status
-        .is_ok());
+        .unwrap();
 
     // Create blend key table on PARAM_BS (range 0.0..1.0, keys [0.0, 1.0], base_key = 0)
     let bkt = BlendShapeKeyTable {
@@ -302,7 +325,7 @@ fn test_blendshape_evaluation() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     // Create a constraint on param_bs2 (range 0.0..1.0):
     // at 0.0 weight is 1.0, at 1.0 weight is 0.0
@@ -313,7 +336,7 @@ fn test_blendshape_evaluation() {
         keys: vec![0.0, 1.0],
         weights: vec![1.0, 0.0],
     };
-    assert!(doc.create_blend_constraint(bsc).status.is_ok());
+    builder.create_blend_constraint(bsc).unwrap();
 
     // Create blend binding for MESH_A:
     // base key (0.0): delta is zero
@@ -343,12 +366,13 @@ fn test_blendshape_evaluation() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    builder.create_blend_binding(binding).unwrap();
 
     // Case 1: PARAM_BS = 0.0 (base key) -> no delta
     let mut preview: PreviewValues = HashMap::new();
     preview.insert(PARAM_BS.to_string(), 0.0);
     preview.insert(param_bs2.to_string(), 0.0); // constraint weight = 1.0
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let mesh_a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
@@ -397,11 +421,11 @@ fn test_glue_evaluation() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
-    let mut mesh_b_mod = doc.get_mesh(MESH_B).unwrap().clone();
+    let mut mesh_b_mod = builder.mesh(MESH_B).unwrap().clone();
     mesh_b_mod.base_positions[0] = Vec2::new(10.0, 20.0);
-    assert!(doc.replace_mesh(mesh_b_mod).status.is_ok());
+    builder.replace_mesh(mesh_b_mod).unwrap();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -419,8 +443,9 @@ fn test_glue_evaluation() {
         intensity: 1.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    builder.create_glue(glue).unwrap();
 
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
     let preview = HashMap::new();
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
@@ -435,9 +460,9 @@ fn test_glue_evaluation() {
     assert_eq!(mesh_b.positions[0], Vec2::new(5.0, 10.0));
 
     // Test with intensity 0.5
-    let mut glue_half = doc.get_glue(GLUE_ID).unwrap().clone();
+    let mut glue_half = doc.glue(GLUE_ID).unwrap().clone();
     glue_half.intensity = 0.5;
-    assert!(doc.replace_glue(glue_half).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_glue(glue_half)).unwrap().state;
 
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let mesh_a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();

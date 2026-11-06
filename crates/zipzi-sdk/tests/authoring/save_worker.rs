@@ -17,9 +17,13 @@ fn session() -> AuthoringSession {
 fn change(s: &AuthoringSession) -> zipzi_sdk::PreparedChange {
     let mut d = s.begin_draft();
     d.batch(d.source(), |c| {
-        c.create_parameter(Parameter {
-            id: "00000000-0000-4000-8000-000000000002".into(),
-            ..Default::default()
+        c.create_parameter({
+            let mut value = Parameter {
+                id: "00000000-0000-4000-8000-000000000002".into(),
+                ..Default::default()
+            };
+            value.runtime_id = value.id.clone();
+            value
         })
     })
     .unwrap();

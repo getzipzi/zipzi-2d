@@ -1,5 +1,6 @@
+use zipzi_core::document::{DocumentAuthoringEdit, DocumentValue};
 use zipzi_core::{Canvas, PreviewValues, Vec2};
-use zipzi_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, GeometrySpace};
+use zipzi_sdk::{rectangle_mesh, AuthoringSession};
 
 const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000001";
 const ASSET_ID: &str = "00000000-0000-4000-8000-000000000002";
@@ -10,39 +11,45 @@ fn fixture_png() -> std::path::PathBuf {
 
 fn session() -> AuthoringSession {
     AuthoringSession::new(
-        DOCUMENT_ID,
-        Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0),
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                DOCUMENT_ID,
+                (Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
     )
-    .unwrap()
 }
 
 #[test]
-fn owned_workspace_isolated_until_publication_and_checks_source_version() {
+fn draft_isolated_until_publication_and_checks_source_version() {
     let mut sdk = session();
-    let original = sdk.source_canvas().unwrap();
-    let mut workspace = sdk.begin_owned_edit("resize", None).unwrap();
-    let resized = Canvas::new(120.0, 100.0, Vec2::new(50.0, 50.0), 10.0);
-    workspace.replace_model_setup(resized).unwrap();
-    assert_eq!(
-        workspace.candidate_document().source_canvas().unwrap(),
-        resized
-    );
-    assert_eq!(sdk.source_canvas().unwrap(), original);
-    workspace.commit_to(&mut sdk).unwrap();
-    assert_eq!(sdk.source_canvas().unwrap(), resized);
-    assert_eq!(sdk.history_lengths(), (1, 0));
-
-    let mut stale = sdk.begin_owned_edit("stale", None).unwrap();
-    stale.replace_model_setup(original).unwrap();
-    sdk.edit("another resize", None, |edit| {
-        edit.replace_model_setup(original)
-    })
-    .unwrap();
-    assert_eq!(
-        stale.commit_to(&mut sdk).unwrap_err().code.as_ref(),
-        "STALE_VERSION"
-    );
-    assert_eq!(sdk.source_canvas().unwrap(), original);
+    let original = sdk.snapshot().document().setup().export;
+    let resized = zipzi_core::ExportSettings {
+        pixels_per_unit: 20.,
+        ..original
+    };
+    let prepare = |s: &AuthoringSession, expected, value| {
+        crate::support::prepared(s, |c| {
+            c.edit_document(DocumentAuthoringEdit::Patch {
+                expected: DocumentValue::ExportSettings(expected),
+                value: DocumentValue::ExportSettings(value),
+            })
+        })
+        .unwrap()
+        .1
+    };
+    let draft = prepare(&sdk, original, resized);
+    assert_eq!(draft.snapshot().document().setup().export, resized);
+    assert_eq!(sdk.snapshot().document().setup().export, original);
+    sdk.publish(draft).unwrap();
+    assert_eq!(sdk.history_state().undo_steps, 1);
+    let stale = prepare(&sdk, resized, original);
+    sdk.undo(sdk.version()).unwrap();
+    assert_eq!(sdk.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    assert_eq!(sdk.snapshot().document().setup().export, original);
 }
 
 #[test]
@@ -57,10 +64,16 @@ fn shared_authoring_contract_matches_expected_results() {
         )
     };
     let mut sdk = AuthoringSession::new(
-        text("document_id"),
-        Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0),
-    )
-    .unwrap();
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                text("document_id"),
+                (Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    );
     let invalid = rectangle_mesh(
         text("mesh_id"),
         text("initial_name"),
@@ -70,14 +83,27 @@ fn shared_authoring_contract_matches_expected_results() {
     )
     .unwrap();
     let before = sdk.version();
-    let failure = sdk
-        .edit("invalid", None, |edit| edit.create_mesh(invalid))
-        .unwrap_err();
-    assert_eq!(failure.code.as_ref(), text("invalid_create_code"));
+    let failure = {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| edit.create_mesh(invalid))
+            .and_then(|value| {
+                let prepared = draft.prepare("invalid")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap_err();
+    assert_eq!(failure.code.as_str(), text("invalid_create_code"));
     assert_eq!(sdk.version(), before);
-    assert_eq!(sdk.history_lengths(), (0, 0));
+    assert_eq!(
+        {
+            let history = sdk.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        (0, 0)
+    );
 
-    let asset = prepare_png_asset(text("asset_id"), "texture", &fixture_png()).unwrap();
+    let asset = crate::support::image_fixture(text("asset_id"), "texture", &fixture_png()).unwrap();
     let mesh = rectangle_mesh(
         text("mesh_id"),
         text("initial_name"),
@@ -86,32 +112,66 @@ fn shared_authoring_contract_matches_expected_results() {
         point("maximum"),
     )
     .unwrap();
-    sdk.edit("create", None, |edit| {
-        edit.create_asset(asset)?;
-        edit.create_mesh(mesh)
-    })
+    {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                crate::support::insert_image(edit, asset)?;
+                edit.create_mesh(mesh)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("create")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let frame = sdk.evaluate(&PreviewValues::new()).unwrap();
+    let frame = crate::support::frame(sdk.snapshot(), &PreviewValues::new()).unwrap();
     assert_eq!(
         frame.drawables[0].positions[0],
         point("evaluated_first_position")
     );
-    sdk.edit("rename", None, |edit| {
-        edit.rename_mesh(text("mesh_id"), text("updated_name"))
-    })
+    {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                edit.rename(
+                    zipzi_sdk::NameTarget::Mesh(text("mesh_id")),
+                    text("updated_name").into(),
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("rename")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     assert_eq!(
-        sdk.mesh(text("mesh_id")).unwrap().name,
+        sdk.snapshot()
+            .document()
+            .mesh(text("mesh_id"))
+            .cloned()
+            .unwrap()
+            .name,
         text("updated_name")
     );
-    sdk.undo().unwrap();
+    sdk.undo(sdk.version()).unwrap();
     assert_eq!(
-        sdk.mesh(text("mesh_id")).unwrap().name,
+        sdk.snapshot()
+            .document()
+            .mesh(text("mesh_id"))
+            .cloned()
+            .unwrap()
+            .name,
         text("initial_name")
     );
-    sdk.redo().unwrap();
+    sdk.redo(sdk.version()).unwrap();
     assert_eq!(
-        sdk.mesh(text("mesh_id")).unwrap().name,
+        sdk.snapshot()
+            .document()
+            .mesh(text("mesh_id"))
+            .cloned()
+            .unwrap()
+            .name,
         text("updated_name")
     );
 }
@@ -119,15 +179,9 @@ fn shared_authoring_contract_matches_expected_results() {
 #[test]
 fn creates_png_rectangle_evaluates_and_undoes_all_content() {
     let path = fixture_png();
-    let asset = prepare_png_asset(ASSET_ID, "asymmetric", &path).unwrap();
-    assert_eq!(
-        (
-            asset.content.as_ref().unwrap().width,
-            asset.content.as_ref().unwrap().height
-        ),
-        (2, 2)
-    );
-    assert_eq!(asset.content.as_ref().unwrap().sha256.len(), 64);
+    let asset = crate::support::image_fixture(ASSET_ID, "asymmetric", &path).unwrap();
+    assert_eq!((asset.image.width(), asset.image.height()), (2, 2));
+    let key = asset.image.key();
     let mesh = rectangle_mesh(
         MESH_ID,
         "face",
@@ -138,66 +192,101 @@ fn creates_png_rectangle_evaluates_and_undoes_all_content() {
     .unwrap();
     let mut sdk = session();
     let before = sdk.version();
-    let (_, receipt) = sdk
-        .edit("create", Some(before), |edit| {
-            edit.create_asset(asset)?;
-            edit.create_mesh(mesh)?;
-            Ok(())
-        })
-        .unwrap();
-    assert!(receipt.changed);
-    assert_eq!(receipt.after.revision, before.revision + 1);
-    assert_eq!(sdk.asset_ids(), &[ASSET_ID]);
-    assert_eq!(
-        sdk.asset(ASSET_ID)
-            .unwrap()
-            .content
-            .as_ref()
-            .unwrap()
-            .sha256
-            .len(),
-        64
+    let (_, prepared) = crate::support::prepared(&sdk, |c| {
+        crate::support::insert_image(c, asset)?;
+        c.create_mesh(mesh)
+    })
+    .unwrap();
+    let receipt = sdk.publish(prepared).unwrap();
+    assert_eq!(receipt.version.revision, before.revision + 1);
+    assert_eq!(sdk.snapshot().document().asset_order(), &[ASSET_ID]);
+    assert!(
+        matches!(sdk.snapshot().document().asset(ASSET_ID).unwrap().content, zipzi_core::state::AssetContent::Image { resource, .. } if resource == key)
     );
-    assert_eq!(sdk.mesh_ids(), &[MESH_ID]);
+    assert_eq!(sdk.snapshot().document().mesh_order(), &[MESH_ID]);
     assert_eq!(
-        sdk.mesh(MESH_ID).unwrap().triangles,
+        sdk.snapshot()
+            .document()
+            .mesh(MESH_ID)
+            .cloned()
+            .unwrap()
+            .triangles,
         vec![[0, 1, 2], [0, 2, 3]]
     );
-    let source = sdk.geometry(MESH_ID).unwrap();
-    assert_eq!(source.space, GeometrySpace::Model);
-    assert_eq!(source.vertex_ids, vec![0, 1, 2, 3]);
-    let frame = sdk.evaluate(&PreviewValues::new()).unwrap();
+    assert_eq!(
+        sdk.snapshot().document().mesh(MESH_ID).unwrap().vertex_ids,
+        [0, 1, 2, 3]
+    );
+    let frame = crate::support::frame(sdk.snapshot(), &PreviewValues::new()).unwrap();
     assert_eq!(frame.drawables.len(), 1);
     assert_eq!(frame.drawables[0].positions[0], Vec2::new(40.0, 40.0));
     assert_eq!(frame.drawables[0].positions[2], Vec2::new(60.0, 60.0));
 
-    let geometry = sdk.mesh(MESH_ID).unwrap();
+    let geometry = sdk.snapshot().document().mesh(MESH_ID).cloned().unwrap();
     let moved: Vec<_> = geometry
         .base_positions
         .iter()
         .map(|p| Vec2::new(p.x + 10.0, p.y))
         .collect();
-    sdk.edit("move", None, |edit| {
-        edit.update_positions(MESH_ID, &geometry.vertex_ids, &moved)
-    })
+    {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                edit.set_vertex_positions(
+                    MESH_ID,
+                    &geometry
+                        .vertex_ids
+                        .iter()
+                        .copied()
+                        .zip(moved.iter().copied())
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("move")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     assert_eq!(
-        sdk.evaluate(&PreviewValues::new()).unwrap().drawables[0].positions[0],
+        crate::support::frame(sdk.snapshot(), &PreviewValues::new())
+            .unwrap()
+            .drawables[0]
+            .positions[0],
         Vec2::new(50.0, 40.0)
     );
-    assert_eq!(sdk.history_lengths(), (2, 0));
-    sdk.undo().unwrap();
     assert_eq!(
-        sdk.mesh(MESH_ID).unwrap().base_positions,
+        {
+            let history = sdk.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        (2, 0)
+    );
+    sdk.undo(sdk.version()).unwrap();
+    assert_eq!(
+        sdk.snapshot()
+            .document()
+            .mesh(MESH_ID)
+            .cloned()
+            .unwrap()
+            .base_positions,
         geometry.base_positions
     );
-    sdk.undo().unwrap();
-    assert!(sdk.mesh_ids().is_empty());
-    assert!(sdk.asset_ids().is_empty());
-    sdk.redo().unwrap();
-    sdk.redo().unwrap();
-    assert_eq!(sdk.mesh(MESH_ID).unwrap().base_positions, moved);
-    assert_eq!(sdk.drain_events().len(), 6);
+    sdk.undo(sdk.version()).unwrap();
+    assert!(sdk.snapshot().document().mesh_order().is_empty());
+    assert!(sdk.snapshot().document().asset_order().is_empty());
+    sdk.redo(sdk.version()).unwrap();
+    sdk.redo(sdk.version()).unwrap();
+    assert_eq!(
+        sdk.snapshot()
+            .document()
+            .mesh(MESH_ID)
+            .cloned()
+            .unwrap()
+            .base_positions,
+        moved
+    );
+    assert_eq!(sdk.take_events().len(), 6);
 }
 
 #[test]
@@ -212,41 +301,79 @@ fn failed_or_abandoned_edit_never_publishes_or_clears_redo() {
         Vec2::new(1.0, 1.0),
     )
     .unwrap();
-    {
-        let mut edit = sdk.begin_edit("broken", Some(before)).unwrap();
-        assert_eq!(
-            edit.create_mesh(invalid).unwrap_err().code.as_ref(),
-            "MISSING_ASSET"
-        );
-        assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
-    }
+    let mut draft = sdk.begin_draft();
+    assert_eq!(
+        draft
+            .batch(draft.source(), |c| c.create_mesh(invalid))
+            .unwrap_err()
+            .code,
+        "MISSING_ASSET"
+    );
+    assert!(!draft.is_active());
     assert_eq!(sdk.version(), before);
-    assert_eq!(sdk.history_lengths(), (0, 0));
-    assert!(sdk.drain_events().is_empty());
+    assert_eq!(
+        {
+            let history = sdk.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        (0, 0)
+    );
+    assert!(sdk.take_events().is_empty());
 
     let path = fixture_png();
-    let asset = prepare_png_asset(ASSET_ID, "fixture", &path).unwrap();
-    {
-        let mut edit = sdk.begin_edit("abandoned", None).unwrap();
-        edit.create_asset(asset.clone()).unwrap();
-    }
-    assert!(sdk.asset_ids().is_empty());
-    sdk.edit("asset", None, |edit| edit.create_asset(asset))
+    let asset = crate::support::image_fixture(ASSET_ID, "fixture", &path).unwrap();
+    let mut draft = sdk.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            crate::support::insert_image(
+                c,
+                crate::support::image_fixture(ASSET_ID, "abandoned", &path)?,
+            )
+        })
         .unwrap();
-    sdk.undo().unwrap();
+    draft.cancel();
+    assert!(sdk.snapshot().document().asset_order().is_empty());
+    {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                crate::support::insert_image(edit, asset)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("asset")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    sdk.undo(sdk.version()).unwrap();
     let redo_version = sdk.version();
-    let (_, noop) = sdk.edit("noop", None, |_edit| Ok(())).unwrap();
-    assert!(!noop.changed);
+    let (_, noop) = {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |_edit| Ok(()))
+            .and_then(|value| {
+                let prepared = draft.prepare("noop")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    assert!(noop.writes.is_empty());
     assert_eq!(sdk.version(), redo_version);
-    assert_eq!(sdk.history_lengths(), (0, 1));
-    sdk.redo().unwrap();
-    assert_eq!(sdk.asset_ids(), &[ASSET_ID]);
+    assert_eq!(
+        {
+            let history = sdk.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        (0, 1)
+    );
+    sdk.redo(sdk.version()).unwrap();
+    assert_eq!(sdk.snapshot().document().asset_order(), &[ASSET_ID]);
 }
 
 #[test]
 fn stale_version_and_invalid_position_are_rejected_without_partial_write() {
     let path = fixture_png();
-    let asset = prepare_png_asset(ASSET_ID, "fixture", &path).unwrap();
+    let asset = crate::support::image_fixture(ASSET_ID, "fixture", &path).unwrap();
     let mesh = rectangle_mesh(
         MESH_ID,
         "face",
@@ -256,27 +383,47 @@ fn stale_version_and_invalid_position_are_rejected_without_partial_write() {
     )
     .unwrap();
     let mut sdk = session();
-    let stale = sdk.version();
-    sdk.edit("create", None, |edit| {
-        edit.create_asset(asset)?;
-        edit.create_mesh(mesh)
-    })
+    let stale = sdk.begin_draft().prepare("stale").unwrap();
+    {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                crate::support::insert_image(edit, asset)?;
+                edit.create_mesh(mesh)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("create")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let error = sdk.begin_edit("stale", Some(stale)).err().unwrap();
-    assert_eq!(error.code.as_ref(), "STALE_VERSION");
-    assert_eq!(error.expected_version.as_deref(), Some(&stale));
-    assert_eq!(error.actual_version.as_deref(), Some(&sdk.version()));
+    assert_eq!(sdk.publish(stale).unwrap_err().code, "STALE_SOURCE");
     let version = sdk.version();
-    let original = sdk.mesh(MESH_ID).unwrap().base_positions;
-    let mut edit = sdk.begin_edit("bad", None).unwrap();
+    let original = sdk
+        .snapshot()
+        .document()
+        .mesh(MESH_ID)
+        .unwrap()
+        .base_positions
+        .clone();
+    let mut draft = sdk.begin_draft();
     assert_eq!(
-        edit.update_positions(MESH_ID, &[0], &[Vec2::new(f32::NAN, 0.0)])
+        draft
+            .batch(draft.source(), |c| c
+                .set_vertex_positions(MESH_ID, &[(0, Vec2::new(f32::NAN, 0.))]))
             .unwrap_err()
-            .code
-            .as_ref(),
-        "NON_FINITE"
+            .code,
+        "INVALID_POSITION"
     );
-    assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
+    assert!(!draft.is_active());
     assert_eq!(sdk.version(), version);
-    assert_eq!(sdk.mesh(MESH_ID).unwrap().base_positions, original);
+    assert_eq!(
+        sdk.snapshot()
+            .document()
+            .mesh(MESH_ID)
+            .cloned()
+            .unwrap()
+            .base_positions,
+        original
+    );
 }

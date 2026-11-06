@@ -1,132 +1,143 @@
-use std::collections::VecDeque;
-use zipzi_runtime::authoring::ModelingSampleQuery;
 use zipzi_runtime::*;
-use zipzi_sdk::*;
-#[derive(Default)]
-struct Manual(VecDeque<Work>);
-impl Executor for Manual {
-    fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
-        self.0.push_back(work);
-        Ok(())
-    }
-}
-fn fixture() -> (Runtime, ClientId, SessionId) {
-    let mut rt = Runtime::default();
-    let c = rt.register_client().unwrap();
-    let s = rt
+
+fn fixture() -> (Runtime, ClientId, Version) {
+    let mut rt = Runtime::new(RuntimeLimits {
+        running_jobs: 2,
+        ..Default::default()
+    });
+    let client = rt.register_client().unwrap();
+    let session = rt
         .create_session(
-            c,
+            client,
             &uuid::Uuid::new_v4().to_string(),
-            zipzi_core::Canvas::default(),
+            Default::default(),
         )
         .unwrap();
-    (rt, c, s)
+    let QuerySource::Published(version) = rt.read_snapshot(client, session).unwrap().source else {
+        panic!("expected published source")
+    };
+    (rt, client, version)
 }
-fn input(session: SessionId) -> ModelingSampleQuery {
-    ModelingSampleQuery {
-        session,
-        edit: None,
-        parameters: vec![Default::default()],
-        checks: Default::default(),
-        expected: None,
+
+fn budget() -> TaskBudget {
+    TaskBudget {
+        workspace_bytes: 1024,
+        result_bytes: 1024,
     }
 }
+
 #[test]
-fn frozen_reads_keep_the_formal_ready_and_keep_one_worker_for_publication() {
-    let (mut rt, c, s) = fixture();
-    let before = rt.session_info(s).unwrap();
-    let first = rt.request_modeling_samples(c, input(s)).unwrap();
-    let second = rt.request_modeling_samples(c, input(s)).unwrap();
-    let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    assert_eq!(workers.0.len(), 1);
-    assert_eq!(rt.job_info(c, first).unwrap().state, JobState::Running);
-    assert_eq!(rt.job_info(c, second).unwrap().state, JobState::Queued);
-    assert_eq!(rt.session_info(s).unwrap().version, before.version);
-    assert_eq!(rt.session_info(s).unwrap().state, SessionState::Ready);
-    let edit = rt.begin_edit(c, s, "new content", None).unwrap();
-    let id = uuid::Uuid::new_v4().to_string();
-    rt.apply_edit(c, edit, |e| {
-        e.create_part(zipzi_core::Part {
-            id: id.clone(),
-            name: "Part".into(),
-            ..Default::default()
+fn frozen_reads_remain_available_and_late_results_keep_their_original_source() {
+    let (mut rt, client, before) = fixture();
+    let source = QuerySource::Published(before);
+    let first = rt
+        .request_read(client, source, budget(), |snapshot, _| {
+            Ok(vec![snapshot.snapshot.document().part_order().len() as u8])
         })
-    })
-    .unwrap();
-    let publish = rt.request_commit(c, edit).unwrap();
-    rt.dispatch(&mut workers);
-    assert_eq!(workers.0.len(), 2);
-    assert_eq!(rt.job_info(c, publish).unwrap().state, JobState::Running);
-    // Publish first, then deliver the earlier fixed read. Its old source is
-    // intentional and cannot replace or lock the newer formal state.
-    rt.complete(workers.0.pop_back().unwrap().run());
-    let after = rt.session_info(s).unwrap();
-    assert_ne!(after.version, before.version);
-    assert!(rt.complete(workers.0.pop_front().unwrap().run()));
-    let info = rt.job_info(c, first).unwrap();
-    let JobValue::Sampled(batch) = info.result.unwrap().unwrap() else {
-        panic!("sample result")
-    };
-    assert_eq!(batch.source.version(), before.version);
-    assert_eq!(rt.session_info(s).unwrap().version, after.version);
-    assert_eq!(rt.session_info(s).unwrap().history_lengths, (1, 0));
-    rt.cancel_job(c, second).unwrap();
-    assert_eq!(rt.job_info(c, second).unwrap().state, JobState::Cancelled);
-    assert_eq!(rt.session_info(s).unwrap().state, SessionState::Ready);
-    rt.release_job(c, first).unwrap();
-    rt.release_job(c, second).unwrap();
-    rt.release_job(c, publish).unwrap();
-}
-#[test]
-fn cancelled_plan_jobs_release_the_snapshot_and_do_not_register_plans() {
-    let (mut rt, c, s) = fixture();
-    let base = rt.accounted_bytes();
-    let job = rt
-        .request_modeling_plan(
-            c,
-            s,
-            None,
-            ModelingIntent::Document(DocumentAuthoringEdit::Patch {
-                expected: DocumentValue::Layout(None),
-                value: DocumentValue::Layout(Some(Default::default())),
-            }),
-        )
         .unwrap();
-    assert!(rt.accounted_bytes() > base);
-    rt.cancel_job(c, job).unwrap();
-    assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelled);
-    assert_eq!(rt.modeling_plan_count(), 0);
-    rt.release_job(c, job).unwrap();
-    assert_eq!(rt.accounted_bytes(), base);
-}
-#[test]
-fn plan_completion_retains_the_original_candidate_sequence() {
-    let (mut rt, c, s) = fixture();
-    let edit = rt.begin_edit(c, s, "candidate", None).unwrap();
-    let job = rt
-        .request_modeling_plan(
-            c,
-            s,
-            Some(edit),
-            ModelingIntent::Document(DocumentAuthoringEdit::Patch {
-                expected: DocumentValue::Layout(None),
-                value: DocumentValue::Layout(Some(Default::default())),
-            }),
-        )
+    let second = rt
+        .request_read(client, source, budget(), |_, _| Ok(vec![]))
         .unwrap();
-    rt.apply_edit(c, edit, |_| Ok(())).unwrap();
-    let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    rt.complete(workers.0.pop_front().unwrap().run());
-    let JobValue::Planned(result) = rt.job_info(c, job).unwrap().result.unwrap().unwrap() else {
-        panic!("plan result")
-    };
-    assert!(matches!(result.source, SourceRef::Edit { sequence: 0, .. }));
-    assert!(
-        matches!(rt.apply_modeling_plan(c,edit,result.plan),Err(RuntimeError::Sdk(e)) if e.code.as_ref()=="STALE_PLAN")
+    let read = rt.take_work(first).unwrap();
+    assert_eq!(rt.job(client, first).unwrap().state, JobState::Running);
+    assert_eq!(rt.job(client, second).unwrap().state, JobState::Queued);
+    assert_eq!(
+        rt.read_snapshot(client, before.session).unwrap().source,
+        source
     );
-    assert_eq!(rt.session_info(s).unwrap().history_lengths, (0, 0));
-    rt.release_modeling_plan(c, result.plan).unwrap();
-    rt.release_job(c, job).unwrap();
+    let draft = rt.begin_draft(client, before).unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let (draft, _) = rt
+        .batch(client, draft, |c| {
+            c.create_part(zipzi_core::Part {
+                runtime_id: id.clone(),
+                id,
+                name: "Part".into(),
+                ..Default::default()
+            })
+        })
+        .unwrap();
+    let publish = rt
+        .request_publish(client, draft, "New content", Default::default())
+        .unwrap();
+    let completion = rt.take_work(publish).unwrap().run();
+    rt.complete(completion).unwrap();
+    let after = rt.subscribe(client, before.session).unwrap();
+    assert_ne!(after.snapshot.source, source);
+    assert_eq!(after.history.undo_steps, 1);
+    rt.complete(read.run()).unwrap();
+    let Some(Ok(JobValue::Read(result))) = &rt.job(client, first).unwrap().result else {
+        panic!("expected read result")
+    };
+    assert_eq!(result.source, source);
+    assert_eq!(result.bytes(), &[0]);
+    assert_eq!(
+        rt.read_snapshot(client, before.session).unwrap().source,
+        after.snapshot.source
+    );
+    rt.cancel_job(client, second).unwrap();
+    let completion = rt.take_work(second).unwrap().run();
+    rt.complete(completion).unwrap();
+    assert_eq!(rt.job(client, second).unwrap().state, JobState::Cancelled);
+    for job in [first, second, publish] {
+        rt.release_job(client, job).unwrap();
+    }
+}
+
+#[test]
+fn cancelled_reads_keep_their_reservations_until_completion() {
+    let (mut rt, client, version) = fixture();
+    let before = rt.task_bytes();
+    let job = rt
+        .request_read(client, QuerySource::Published(version), budget(), |_, _| {
+            panic!("cancelled read entered computation")
+        })
+        .unwrap();
+    let reserved = rt.task_bytes();
+    assert!(reserved > before);
+    rt.cancel_job(client, job).unwrap();
+    assert_eq!(rt.task_bytes(), reserved);
+    assert_eq!(rt.release_job(client, job).unwrap_err().code, "JOB_BUSY");
+    let completion = rt.take_work(job).unwrap().run();
+    rt.complete(completion).unwrap();
+    assert_eq!(rt.job(client, job).unwrap().state, JobState::Cancelled);
+    rt.release_job(client, job).unwrap();
+    assert_eq!(rt.task_bytes(), before);
+}
+
+#[test]
+fn draft_read_completion_keeps_the_captured_sequence_after_another_batch() {
+    let (mut rt, client, version) = fixture();
+    let source = rt.begin_draft(client, version).unwrap();
+    let job = rt
+        .request_read(
+            client,
+            QuerySource::Draft(source),
+            budget(),
+            |snapshot, _| Ok(snapshot.snapshot.document().id().as_bytes().to_vec()),
+        )
+        .unwrap();
+    let (current, _) = rt.batch(client, source, |_| Ok(())).unwrap();
+    let completion = rt.take_work(job).unwrap().run();
+    rt.complete(completion).unwrap();
+    let Some(Ok(JobValue::Read(result))) = &rt.job(client, job).unwrap().result else {
+        panic!("expected read result")
+    };
+    assert_eq!(result.source, QuerySource::Draft(source));
+    assert_eq!(
+        rt.read_draft(client, source).unwrap_err().code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        rt.read_draft(client, current).unwrap().source,
+        QuerySource::Draft(current)
+    );
+    assert_eq!(
+        rt.subscribe(client, version.session)
+            .unwrap()
+            .history
+            .undo_steps,
+        0
+    );
+    rt.release_job(client, job).unwrap();
 }

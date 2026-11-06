@@ -13,29 +13,31 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
     // Exercise initial authoring independently of the host's separate archive
     // workspace limits and the adjacent animation project's absolute links.
     let imported = zipzi_cmo3::import_model(&std::fs::read(&source)?)?;
-    let mut project = zipzi_project::DocumentSession::from_authoring_document(imported.document);
-    let status_error = |s: zipzi_core::Status| anyhow::anyhow!("{}: {}", s.code, s.message);
-    for id in project.document().asset_order().to_vec() {
-        let mut asset = project.document().get_asset(&id).unwrap().clone();
-        let bytes = imported
-            .images
-            .get(&asset.content.as_ref().unwrap().source)
-            .unwrap();
-        let image = zipzi_project::store::prepare_png_content(
-            bytes.clone().into(),
-            project.image_memory_budget(),
-        )
-        .map_err(status_error)?;
-        asset.content = Some(image.content().clone());
-        asset.unresolved_source = None;
-        let result = project.document_mut().replace_asset(asset);
-        anyhow::ensure!(result.status.is_ok(), "{}", result.status.message);
-        project.retain_prepared_image(&image);
+    let store = zipzi_sdk::ResourceStore::default();
+    let mut builder = imported.document.builder();
+    let mut images = Vec::new();
+    for id in imported.document.asset_order() {
+        let mut asset = imported.document.asset(id).unwrap().clone();
+        let zipzi_core::state::AssetContent::Unresolved { source } = &asset.content else {
+            continue;
+        };
+        let image = store.adopt_image(zipzi_project::prepare_png_content(
+            imported.images[source.as_str()].clone().into(),
+            store.budget(),
+        )?)?;
+        asset.content = zipzi_core::state::AssetContent::Image {
+            resource: image.key(),
+            width: image.width(),
+            height: image.height(),
+        };
+        builder.replace_asset(asset)?;
+        images.push(image);
     }
     let fixture = tempfile::tempdir()?;
     let path = fixture.path().join("mao.zipzi");
-    let saved = project.save(&path);
-    anyhow::ensure!(saved.status.is_ok(), "{}", saved.status.message);
+    let resources = zipzi_sdk::ResourceView::default().with_images(images);
+    let io = zipzi_sdk::ProjectIo::new(fixture.path(), store);
+    io.save(&builder.freeze()?.state, &resources, &path, None, || true)?;
     let mut doc = Document::open(&path)?;
     let initial = doc.snapshot()?;
     let mesh = initial
@@ -47,16 +49,16 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
     let object = ObjectRef::new(ObjectKind::Mesh, &mesh.id);
     let (original_mesh, original_blends, parameter, binding) = {
         let host = doc.runtime_host();
-        let runtime = host.read();
-        let model = runtime.session(doc.runtime_session_id())?.document();
+        let snapshot = super::support::published_snapshot(&host, doc.runtime_session_id())?;
+        let model = snapshot.document();
         let parameter = model
             .parameter_order()
             .iter()
-            .filter_map(|id| model.get_parameter(id))
+            .filter_map(|id| model.parameter(id))
             .find(|p| p.runtime_id == "ParamMouthUp")
             .unwrap();
         assert_eq!(parameter.default_value, 1.);
-        let original_mesh = model.get_mesh(&object.id).unwrap().clone();
+        let original_mesh = model.mesh(&object.id).unwrap().clone();
         let original_blends = model
             .blend_bindings_for_target(&object.id)
             .into_iter()
@@ -64,13 +66,7 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
             .collect::<Vec<_>>();
         let binding = original_blends
             .iter()
-            .find(|b| {
-                model
-                    .get_blend_key_table(&b.key_table_id)
-                    .unwrap()
-                    .parameter_id
-                    == parameter.id
-            })
+            .find(|b| model.blend_key_table(&b.key_table_id).unwrap().parameter_id == parameter.id)
             .unwrap()
             .id
             .clone();
@@ -134,11 +130,11 @@ fn mao_artmesh266_is_editable_at_its_initial_parameter_values() -> anyhow::Resul
     {
         let doc = editor.document().unwrap();
         let host = doc.runtime_host();
-        let runtime = host.read();
-        let model = runtime.session(doc.runtime_session_id())?.document();
-        assert_eq!(model.get_mesh(&object.id), Some(&original_mesh));
+        let snapshot = super::support::published_snapshot(&host, doc.runtime_session_id())?;
+        let model = snapshot.document();
+        assert_eq!(model.mesh(&object.id), Some(&original_mesh));
         for original in &original_blends {
-            let changed = model.get_blend_binding(&original.id).unwrap();
+            let changed = model.blend_binding(&original.id).unwrap();
             if original.id == binding {
                 assert_ne!(changed, original);
                 let (

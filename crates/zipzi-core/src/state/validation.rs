@@ -289,6 +289,32 @@ fn checked(status: Status) -> Result<(), Status> {
 }
 impl DocumentBuilder {
     pub(super) fn normalize_touched(&mut self) -> Result<(), Status> {
+        // Rotation display preferences are owned by that transform's type.
+        // A replacement or removal must not leave them pointing at a Warp.
+        let retired_rotations: Vec<_> = self
+            .touched
+            .get(&RecordDomain::Transform)
+            .into_iter()
+            .flatten()
+            .filter(|id| {
+                self.base
+                    .transform(id)
+                    .is_some_and(|t| t.rotation().is_some())
+                    && !self.transform(id).is_some_and(|t| t.rotation().is_some())
+            })
+            .cloned()
+            .collect();
+        if !retired_rotations.is_empty() {
+            let mut editor = self.editor_state().clone();
+            for id in retired_rotations {
+                editor.rotation_bone_lengths.remove(&id);
+                editor.rotation_bone_reference_scales.remove(&id);
+                editor.rotation_bone_angle_offsets.remove(&id);
+            }
+            if &editor != self.editor_state() {
+                self.set_editor_state(editor)?;
+            }
+        }
         if let Some(ids) = self.touched.get(&RecordDomain::BlendKeyTable) {
             let mut normalized = Vec::new();
             {

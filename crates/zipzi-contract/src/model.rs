@@ -11,4 +11,3 @@ include!("model/scene_keyforms_meshes.rs");
 include!("model/blendshapes.rs");
 include!("model/glue_bindings.rs");
 include!("model/offscreens_scene_bindings.rs");
-include!("model/changes.rs");

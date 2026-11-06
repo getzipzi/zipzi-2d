@@ -39,7 +39,8 @@ class Runtime:
 
     @property
     def connection(self) -> WireMap | None:
-        return self._backend.connection_info
+        info = self._backend.connection_info
+        return None if info is None else _freeze({key: value for key, value in info.items() if key != "secret"})
 
     def __enter__(self) -> Self:
         return self
@@ -79,6 +80,23 @@ class Runtime:
                 raise
             return project(result)
         return resolve(lambda: self._backend.binary_request(encode(operation), payload))
+
+    def generate_editor_mesh(
+        self, width: int, height: int, *, alpha: bytes = b'',
+        stage: Literal['edges', 'interior', 'full'] = 'full',
+        settings: Mapping[str, object] | None = None, geometry: v.MeshGeometry | None = None,
+    ) -> v.MeshGeometry:
+        """Generate detached geometry with the connected Editor's bounded service."""
+        if not 0 < width <= 16384 or not 0 < height <= 16384 or width * height > 4194304:
+            raise ValueError('Editor mesh generation supports at most 4194304 source pixels')
+        if stage == 'interior':
+            if geometry is None or alpha:
+                raise ValueError('Interior generation requires geometry and no alpha bytes')
+        elif geometry is not None or len(alpha) != width * height:
+            raise ValueError('Edge and full generation require one alpha byte per pixel')
+        value = dict(width=width, height=height, stage=stage, settings=dict(settings or {}),
+                     alpha_hex=alpha.hex(), geometry=None if geometry is None else geometry.to_wire())
+        return self._call(v.OperationEditorMeshGenerate(input=value), v.MeshGeometry.from_wire)
 
     def blob(self, length: int) -> Blob:
         return self._call(v.OperationCreateBlob(length=length), lambda id: Blob(self, id, length))
@@ -163,6 +181,10 @@ class Session:
 
     def image_blob(self, id: str, *, source: v.QuerySource | None = None) -> Blob:
         return self.runtime._call(v.OperationReadImageBlob(source=source or self.source, id=id), lambda info: Blob(self.runtime, info['blob'], info['length'], info))
+
+    def show_window(self) -> None:
+        """Ask the connected desktop host to show this resident Session."""
+        self.runtime._call(v.OperationShowWindow(session=self.id))
 
     def editor_context(self) -> WireMap | None:
         return self.runtime._call(v.OperationEditorContext(expected=self.version), _freeze)

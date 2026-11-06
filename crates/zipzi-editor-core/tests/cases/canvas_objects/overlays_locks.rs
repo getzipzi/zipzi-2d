@@ -132,9 +132,10 @@ fn fine_point_edits_keep_base_and_keyform_controllers_and_later_delta_retains_de
     let shape = |editor: &Editor, object: &ObjectRef| {
         let document = editor.document().unwrap();
         let host = document.runtime_host();
-        let runtime = host.read();
-        let model = runtime.document(document.runtime_session_id()).unwrap();
-        let transform = model.get_transform(&object.id).unwrap();
+        let captured =
+            crate::support::published_snapshot(&host, document.runtime_session_id()).unwrap();
+        let model = captured.document();
+        let transform = model.transform(&object.id).unwrap();
         if let Some(binding) = model.binding_for_scene(&object.id) {
             let zipzi_core::SceneTrack::Warp { keyforms, .. } = &binding.track else {
                 unreachable!()
@@ -415,42 +416,43 @@ fn overlay_keeps_control_identity_and_reference_deformers_quiet() -> anyhow::Res
 #[test]
 fn glue_overlay_retains_pairs_and_mesh_context_without_editable_vertices() -> anyhow::Result<()> {
     use zipzi_core::{Canvas, Glue, GlueVertexPair};
-    use zipzi_sdk::AuthoringSession;
     for intensity in [0., 1.] {
         let (mut source, dir) = support::sample_document_with_two_layers()?;
         let receipt = source.save(&dir.path().join("glue-source"))?;
         let id = uuid::Uuid::new_v4().to_string();
-        let mut sdk = AuthoringSession::new(&id, Canvas::new(256., 256., Vec2::new(0., 0.), 1.))?;
-        sdk.open_project(&receipt.path, None)?;
-        let meshes = sdk.mesh_ids().to_vec();
-        sdk.edit("Glue fixture", None, |edit| {
-            edit.create_glue(Glue {
-                id: id.clone(),
-                runtime_id: id.clone(),
-                name: "Seam".into(),
-                mesh_a_id: (meshes[0].clone()).into(),
-                mesh_b_id: (meshes[1].clone()).into(),
-                intensity,
-                pairs: vec![
-                    GlueVertexPair {
-                        vertex_a: Some(0),
-                        vertex_b: Some(0),
-                        weight_a: 0.,
-                        weight_b: 1.,
-                        ..Default::default()
-                    },
-                    GlueVertexPair {
-                        vertex_a: Some(1),
-                        vertex_b: Some(2),
-                        weight_a: 0.25,
-                        weight_b: 0.75,
-                        ..Default::default()
-                    },
-                ],
-                binding: None,
-            })
+        let mut sdk = crate::support::open_fixture(&receipt.path)?;
+        let meshes = sdk.snapshot().document().mesh_order().to_vec();
+        crate::support::publish_fixture(&mut sdk, "Glue fixture", |edit| {
+            crate::support::insert_glue(
+                edit,
+                Glue {
+                    id: id.clone(),
+                    runtime_id: id.clone(),
+                    name: "Seam".into(),
+                    mesh_a_id: (meshes[0].clone()).into(),
+                    mesh_b_id: (meshes[1].clone()).into(),
+                    intensity,
+                    pairs: vec![
+                        GlueVertexPair {
+                            vertex_a: Some(0),
+                            vertex_b: Some(0),
+                            weight_a: 0.,
+                            weight_b: 1.,
+                            ..Default::default()
+                        },
+                        GlueVertexPair {
+                            vertex_a: Some(1),
+                            vertex_b: Some(2),
+                            weight_a: 0.25,
+                            weight_b: 0.75,
+                            ..Default::default()
+                        },
+                    ],
+                    binding: None,
+                },
+            )
         })?;
-        sdk.save_project(&receipt.path, None)?;
+        crate::support::save_fixture(&mut sdk, &receipt.path)?;
         let mut editor = crate::support::editor_from_document(Document::open(&receipt.path)?);
         editor.set_canvas_metrics(ViewportMetrics {
             width: 512.,

@@ -2,38 +2,44 @@ use super::CanvasScene;
 use crate::{Document, ModelPoint};
 use std::sync::Arc;
 use zipzi_core::{Canvas, Mesh, Vec2};
-use zipzi_sdk::{AuthoringSession, prepare_png_asset};
 
 fn fixture() -> anyhow::Result<(Document, tempfile::TempDir)> {
     let directory = tempfile::tempdir()?;
     let path = directory.path().join("texture.png");
     std::fs::write(&path, include_bytes!("../../tests/fixtures/accent.png"))?;
     let asset = uuid::Uuid::from_u128(1).to_string();
-    let mut session = AuthoringSession::new(
+    let mut session = crate::test_sdk::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )?;
-    session.edit("Create meshes", None, |edit| {
-        edit.create_asset(prepare_png_asset(&asset, "Texture", &path)?)?;
+    crate::test_sdk::publish_fixture(&mut session, "Create meshes", |edit| {
+        crate::test_sdk::insert_image(
+            edit,
+            crate::test_sdk::image_fixture(&asset, "Texture", &path)?,
+        )?;
         for index in 2..=3 {
-            edit.create_mesh(Mesh {
-                id: uuid::Uuid::from_u128(index).to_string(),
-                name: format!("Mesh {index}"),
-                texture_asset_id: asset.clone().into(),
-                vertex_ids: vec![0, 1, 2],
-                base_positions: vec![
-                    Vec2::new(24., 24.),
-                    Vec2::new(232., 24.),
-                    Vec2::new(128., 232.),
-                ],
-                uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0.5, 1.)],
-                triangles: vec![[0, 1, 2]],
-                ..Default::default()
-            })?;
+            crate::test_sdk::insert_fixture_mesh(
+                edit,
+                Mesh {
+                    id: uuid::Uuid::from_u128(index).to_string(),
+                    name: format!("Mesh {index}"),
+                    texture_asset_id: asset.clone().into(),
+                    vertex_ids: vec![0, 1, 2],
+                    base_positions: vec![
+                        Vec2::new(24., 24.),
+                        Vec2::new(232., 24.),
+                        Vec2::new(128., 232.),
+                    ],
+                    uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0.5, 1.)],
+                    triangles: vec![[0, 1, 2]],
+                    ..Default::default()
+                },
+            )?;
         }
         Ok(())
     })?;
-    let receipt = session.save_project(&directory.path().join("fixture.zipzi"), None)?;
+    let receipt =
+        crate::test_sdk::save_fixture(&mut session, &directory.path().join("fixture.zipzi"))?;
     Ok((Document::open(&receipt.path)?, directory))
 }
 
@@ -197,7 +203,7 @@ fn geometry_reuse_respects_canvas_coordinates_drawable_order_and_topology() -> a
             .meshes
             .iter()
             .zip(renamed.meshes.iter())
-            .all(|(a, b)| !Arc::ptr_eq(a, b))
+            .all(|(a, b)| a.vertices == b.vertices)
     );
     assert!(
         renamed

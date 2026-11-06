@@ -65,21 +65,27 @@ fn parameter_visuals_include_scene_binding_keyforms() -> anyhow::Result<()> {
     let directory = tempfile::tempdir()?;
     let parameter_id = Uuid::new_v4().to_string();
     let part_id = Uuid::new_v4().to_string();
-    let mut session = AuthoringSession::new(
+    let mut session = crate::support::fixture_session(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )?;
-    session.edit("Scene keys", None, |edit| {
-        edit.create_parameter(Parameter {
-            id: parameter_id.clone(),
-            minimum: 0.,
-            maximum: 1.,
-            ..Default::default()
-        })?;
-        edit.create_part(Part {
-            id: part_id.clone(),
-            ..Default::default()
-        })?;
+    crate::support::publish_fixture(&mut session, "Scene keys", |edit| {
+        crate::support::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: parameter_id.clone(),
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_fixture_part(
+            edit,
+            Part {
+                id: part_id.clone(),
+                ..Default::default()
+            },
+        )?;
         edit.create_scene_binding(SceneBinding {
             id: Uuid::new_v4().to_string(),
             axes: vec![BindingAxis {
@@ -106,7 +112,8 @@ fn parameter_visuals_include_scene_binding_keyforms() -> anyhow::Result<()> {
         })?;
         Ok(())
     })?;
-    let receipt = session.save_project(&directory.path().join("scene.zipzi"), None)?;
+    let receipt =
+        crate::support::save_fixture(&mut session, &directory.path().join("scene.zipzi"))?;
     let document = Document::open(&receipt.path)?;
     let visual = &document.parameter_visuals()[&parameter_id];
     assert_eq!(
@@ -358,22 +365,20 @@ fn opening_multiple_layers_edits_only_the_selected_mesh() -> anyhow::Result<()> 
     let output = tempfile::tempdir()?;
     let (mut source_document, _source) = sample_document()?;
     let receipt = source_document.save(&output.path().join("multiple"))?;
-    let mut session = AuthoringSession::new(
-        &Uuid::new_v4().to_string(),
-        Canvas::new(512., 256., Vec2::new(128., 128.), 2.),
-    )?;
-    session.open_project(&receipt.path, None)?;
-    let first = session.mesh_ids()[0].clone();
+    let mut session = crate::support::open_fixture(&receipt.path)?;
+    let first = session.snapshot().document().mesh_order()[0].clone();
     let second = Uuid::new_v4().to_string();
     let mesh = rectangle_mesh(
         &second,
         "Second",
-        &session.asset_ids()[0],
+        &session.snapshot().document().asset_order()[0],
         Vec2::new(20., 20.),
         Vec2::new(80., 80.),
     )?;
-    session.edit("second layer", None, |edit| edit.create_mesh(mesh))?;
-    session.save_project(&receipt.path, None)?;
+    crate::support::publish_fixture(&mut session, "second layer", |edit| {
+        crate::support::insert_fixture_mesh(edit, mesh)
+    })?;
+    crate::support::save_fixture(&mut session, &receipt.path)?;
 
     let mut document = Document::open(&receipt.path)?;
     assert_eq!(document.layers().len(), 2);
@@ -423,60 +428,68 @@ fn parts_and_deformer_trees_follow_their_distinct_parent_links() -> anyhow::Resu
     let output = tempfile::tempdir()?;
     let (mut source, _texture) = support::sample_document_with_two_layers()?;
     let receipt = source.save(&output.path().join("trees"))?;
-    let mut session = AuthoringSession::new(
-        &Uuid::new_v4().to_string(),
-        Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
-    )?;
-    session.open_project(&receipt.path, None)?;
-    let mesh = session.mesh_ids()[0].clone();
-    let unassigned_mesh = session.mesh_ids()[1].clone();
+    let mut session = crate::support::open_fixture(&receipt.path)?;
+    let mesh = session.snapshot().document().mesh_order()[0].clone();
+    let unassigned_mesh = session.snapshot().document().mesh_order()[1].clone();
     let root_part = Uuid::new_v4().to_string();
     let child_part = Uuid::new_v4().to_string();
     let rotation = Uuid::new_v4().to_string();
     let warp = Uuid::new_v4().to_string();
-    session.edit("tree relationships", None, |edit| {
-        edit.create_part(Part {
-            id: root_part.clone(),
-            name: "Head".into(),
-            ..Default::default()
-        })?;
-        edit.create_part(Part {
-            id: child_part.clone(),
-            name: "Eye".into(),
-            ..Default::default()
-        })?;
-        edit.set_organization_parent(&child_part, &root_part)?;
-        edit.create_transform(Transform {
-            id: rotation.clone(),
-            name: "Head turn".into(),
-            part_id: Some(root_part.clone().into()),
-            data: TransformData::Rotation(RotationTransform::default()),
-            ..Default::default()
-        })?;
-        edit.create_transform(Transform {
-            id: warp.clone(),
-            name: "Eye bend".into(),
-            part_id: Some(child_part.clone().into()),
-            parent_id: Some(rotation.clone().into()),
-            data: TransformData::Warp(WarpTransform {
-                bezier: None,
-                rows: 1,
-                columns: 1,
-                quad: true,
-                points: vec![
-                    Vec2::new(0., 0.),
-                    Vec2::new(1., 0.),
-                    Vec2::new(0., 1.),
-                    Vec2::new(1., 1.),
-                ],
-            }),
-            ..Default::default()
-        })?;
-        edit.set_mesh_part(&mesh, &child_part)?;
-        edit.set_deform_parent(&mesh, &warp)?;
+    crate::support::publish_fixture(&mut session, "tree relationships", |edit| {
+        crate::support::insert_fixture_part(
+            edit,
+            Part {
+                id: root_part.clone(),
+                name: "Head".into(),
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_fixture_part(
+            edit,
+            Part {
+                id: child_part.clone(),
+                parent_id: root_part.clone(),
+                name: "Eye".into(),
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_transform(
+            edit,
+            Transform {
+                id: rotation.clone(),
+                name: "Head turn".into(),
+                part_id: Some(root_part.clone().into()),
+                data: TransformData::Rotation(RotationTransform::default()),
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_transform(
+            edit,
+            Transform {
+                id: warp.clone(),
+                name: "Eye bend".into(),
+                part_id: Some(child_part.clone().into()),
+                parent_id: Some(rotation.clone().into()),
+                data: TransformData::Warp(WarpTransform {
+                    bezier: None,
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    points: vec![
+                        Vec2::new(0., 0.),
+                        Vec2::new(1., 0.),
+                        Vec2::new(0., 1.),
+                        Vec2::new(1., 1.),
+                    ],
+                }),
+                ..Default::default()
+            },
+        )?;
+        crate::support::organize_mesh(edit, &mesh, &child_part)?;
+        crate::support::reparent_local(edit, &mesh, &warp)?;
         Ok(())
     })?;
-    session.save_project(&receipt.path, None)?;
+    crate::support::save_fixture(&mut session, &receipt.path)?;
 
     let document = Document::open(&receipt.path)?;
     let parts = document.part_tree();
@@ -543,30 +556,36 @@ fn unused_blend_key_table_does_not_claim_bound_keyforms() -> anyhow::Result<()> 
     use zipzi_sdk::AuthoringSession;
     let assets = tempfile::tempdir()?;
     let parameter_id = Uuid::new_v4().to_string();
-    let mut session = AuthoringSession::new(
+    let mut session = crate::support::fixture_session(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )?;
-    session.edit("Unused blend table", None, |edit| {
-        edit.create_parameter(Parameter {
-            id: parameter_id.clone(),
-            kind: ParameterKind::BlendShape,
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.,
-            ..Default::default()
-        })?;
-        edit.create_blend_key_table(BlendShapeKeyTable {
-            samples: Default::default(),
-            base_sample_id: Default::default(),
-            id: Uuid::new_v4().to_string(),
-            parameter_id: parameter_id.clone(),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-        })?;
+    crate::support::publish_fixture(&mut session, "Unused blend table", |edit| {
+        crate::support::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: parameter_id.clone(),
+                kind: ParameterKind::BlendShape,
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_blend_table(
+            edit,
+            BlendShapeKeyTable {
+                samples: Default::default(),
+                base_sample_id: Default::default(),
+                id: Uuid::new_v4().to_string(),
+                parameter_id: parameter_id.clone(),
+                keys: vec![0., 1.],
+                base_key_idx: 0,
+            },
+        )?;
         Ok(())
     })?;
-    let saved = session.save_project(&assets.path().join("unused.zipzi"), None)?;
+    let saved = crate::support::save_fixture(&mut session, &assets.path().join("unused.zipzi"))?;
     let doc = Document::open(&saved.path)?;
     assert!(doc.parameter_visuals()[&parameter_id].keys.is_empty());
     Ok(())

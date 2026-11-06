@@ -30,8 +30,8 @@ import zipzi
 
 with zipzi.connect() as runtime:
     for info in runtime.sessions.list():
-        print(info.id, info.path)
-        # session = runtime.sessions.attach(info.id)
+        print(info["session"], info["path"])
+        # session = runtime.sessions.attach(info["session"])
 ```
 
 Attach a session by ID to read and edit its document. Edits share the Editor's
@@ -40,7 +40,6 @@ without an Editor window.
 
 For examples and API details, see the [package README](python/zipzi/README.md),
 [usage guide](python/zipzi/docs/guide.md),
-[API reference](python/zipzi/docs/reference.md)
 and [recipes](python/zipzi/docs/recipes.py).
 These documents are also included in the installed package. Locate the local
 README without a host or network connection:
@@ -51,10 +50,9 @@ from importlib.resources import files
 print(files("zipzi").joinpath("README.md").read_text(encoding="utf-8"))
 ```
 
-For offline API discovery, use `zipzi.describe("zipzi").format()`.
+Generated commands and queries are available in `zipzi.values`.
 
-If a response is lost, recover the original call with `OutcomeUnknown.recover()`
-or `zipzi.recover_call()` rather than sending it again. A timed-out `job.wait()`
+If a response is lost, recover the original call with `zipzi.recover_call(error)` using the caught exception. A timed-out `job.wait()`
 does not cancel the job. The guide covers recovery and resource ownership.
 
 The client is [MIT licensed](LICENSE-MIT). See the

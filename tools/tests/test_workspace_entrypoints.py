@@ -27,6 +27,17 @@ class PackagingPaths(unittest.TestCase):
         for name in ['workspace/workspace.sh', 'workspace/workspace_tools.py', 'build-editor-app.sh', 'packaging/release.py']:
             (self.root / "tools" / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(SCRIPTS / name, self.root / 'tools' / name)
+        # This gate uses a fake app artifact. Native Quick Look compilation has
+        # its own packaging tests and needs the production static library.
+        (self.root / 'tools/packaging/build_project_preview.py').write_text(
+            'import argparse, pathlib\n'
+            'p=argparse.ArgumentParser()\n'
+            'p.add_argument("--app",type=pathlib.Path,required=True)\n'
+            'p.add_argument("--profile",choices=("debug","release"),required=True)\n'
+            'a=p.parse_args()\n'
+            'assert (a.app/"Contents/Info.plist").is_file()\n'
+            '(a.app/"Contents/Resources/preview-fixture-profile").write_text(a.profile)\n'
+        )
         (self.root / 'LICENSE-GPL-3.0').write_text('Editor GPL fixture')
         (self.root / 'LICENSE-MIT').write_text('SDK MIT fixture')
         for name in ['LICENSING.md', 'THIRD_PARTY_NOTICES.md']:
@@ -74,6 +85,7 @@ print(json.dumps({'reason':'compiler-artifact','target':{'name':'zipzi-editor','
                     self.assertEqual((bundle/'Contents/MacOS/zipzi-editor').read_bytes(), b'actual artifact')
                     self.assertEqual((bundle/'Contents/Resources/LICENSE').read_text(), 'Editor GPL fixture')
                     self.assertEqual((bundle/'Contents/Resources/AppIcon.icns').read_bytes(), b'icon')
+                    self.assertEqual((bundle/'Contents/Resources/preview-fixture-profile').read_text(), profile)
                     self.assertEqual((bundle/'Contents/Resources/LICENSE-MIT').read_text(), 'SDK MIT fixture')
                     self.assertEqual((bundle/'Contents/Resources/THIRD_PARTY_NOTICES.md').read_text(), 'THIRD_PARTY_NOTICES.md')
                     self.assertEqual((bundle/'Contents/Resources/vendor-notices/library/LICENSE').read_text(), 'third-party license')

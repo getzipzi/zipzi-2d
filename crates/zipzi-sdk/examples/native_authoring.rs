@@ -1,4 +1,4 @@
-//! The stage-two native workflow: frozen input, isolated Draft, one publication,
+//! Native authoring workflow: frozen input, isolated Draft, one publication,
 //! snapshot history and a save projection. Existing files are never overwritten.
 use zipzi_sdk::{AuthoringSession, NameTarget, ProjectIo, ResourceStore};
 

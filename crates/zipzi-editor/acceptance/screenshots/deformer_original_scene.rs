@@ -129,29 +129,28 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         let (mut document, assets, _) = fixture(zipzi_core::WarpBezierEditMode::Local)?;
         let saved = document.save(&assets.path().join("rotation-original"))?;
         drop(document);
-        let mut sdk = zipzi_sdk::AuthoringSession::new(
-            &uuid::Uuid::new_v4().to_string(),
-            zipzi_core::Canvas::new(256., 256., Default::default(), 1.),
-        )?;
-        sdk.open_project(&saved.path, None)?;
+        let mut sdk = crate::test_fixture::open_fixture(&saved.path)?;
         let rotation = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::from_u128(503).to_string());
-        sdk.edit("Rotation original", None, |edit| {
-            edit.create_transform(zipzi_core::Transform {
-                id: rotation.id.clone(),
-                name: "Rotation".into(),
-                data: zipzi_core::TransformData::Rotation(zipzi_core::RotationTransform {
-                    base_angle: 0.,
-                    pose: zipzi_core::RotationPose {
-                        origin: zipzi_core::PreciseVec2::new(128.123456789, 128.),
-                        angle: 20.,
-                        scale: 0.8,
-                        ..Default::default()
-                    },
-                }),
-                ..Default::default()
-            })
+        crate::test_fixture::publish_fixture(&mut sdk, "Rotation original", |edit| {
+            crate::test_fixture::insert_transform(
+                edit,
+                zipzi_core::Transform {
+                    id: rotation.id.clone(),
+                    name: "Rotation".into(),
+                    data: zipzi_core::TransformData::Rotation(zipzi_core::RotationTransform {
+                        base_angle: 0.,
+                        pose: zipzi_core::RotationPose {
+                            origin: zipzi_core::PreciseVec2::new(128.123456789, 128.),
+                            angle: 20.,
+                            scale: 0.8,
+                            ..Default::default()
+                        },
+                    }),
+                    ..Default::default()
+                },
+            )
         })?;
-        sdk.save_project(&saved.path, None)?;
+        crate::test_fixture::save_fixture(&mut sdk, &saved.path)?;
         let document = Document::open(&saved.path)?;
         let mut h = Harness::new()?;
         crate::i18n::activate(Some(locale));

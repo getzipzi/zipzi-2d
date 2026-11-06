@@ -39,65 +39,74 @@ pub(super) fn fixture_with_density(
     .save(&path)?;
     let id = |n| uuid::Uuid::from_u128(n).to_string();
     let object = ObjectRef::new(ObjectKind::Deformer, id(502));
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
+    let mut sdk = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    sdk.edit("Warp editing fixture", None, |edit| {
-        edit.create_asset(zipzi_sdk::prepare_png_asset(&id(2), "Checker", &path)?)?;
-        edit.create_transform(Transform {
-            id: object.id.clone(),
-            name: "Warp".into(),
-            warp_authoring: Some(WarpAuthoringSettings {
-                bezier_grid: Some(WarpBezierGrid {
-                    rows: bezier,
-                    columns: bezier,
+    crate::test_fixture::publish_fixture(&mut sdk, "Warp editing fixture", |edit| {
+        crate::test_fixture::insert_image(
+            edit,
+            crate::test_fixture::image_fixture(&id(2), "Checker", &path)?,
+        )?;
+        crate::test_fixture::insert_transform(
+            edit,
+            Transform {
+                id: object.id.clone(),
+                name: "Warp".into(),
+                warp_authoring: Some(WarpAuthoringSettings {
+                    bezier_grid: Some(WarpBezierGrid {
+                        rows: bezier,
+                        columns: bezier,
+                    }),
+                    edit_mode: mode,
+                    ..Default::default()
                 }),
-                edit_mode: mode,
+                data: TransformData::Warp(WarpTransform {
+                    rows: grid,
+                    columns: grid,
+                    quad: true,
+                    bezier: None,
+                    points: (0..=grid)
+                        .flat_map(|y| {
+                            (0..=grid).map(move |x| {
+                                Vec2::new(
+                                    32. + 192. * x as f32 / grid as f32,
+                                    32. + 192. * y as f32 / grid as f32,
+                                )
+                            })
+                        })
+                        .collect(),
+                }),
                 ..Default::default()
-            }),
-            data: TransformData::Warp(WarpTransform {
-                rows: grid,
-                columns: grid,
-                quad: true,
-                bezier: None,
-                points: (0..=grid)
+            },
+        )?;
+        crate::test_fixture::insert_fixture_mesh(
+            edit,
+            Mesh {
+                id: id(3),
+                name: "Checker".into(),
+                texture_asset_id: id(2).into(),
+                deformer_id: object.id.clone(),
+                vertex_ids: (1..=81).collect(),
+                base_positions: (0..=8)
+                    .flat_map(|y| (0..=8).map(move |x| Vec2::new(x as f32 / 8., y as f32 / 8.)))
+                    .collect(),
+                uvs: (0..=8)
+                    .flat_map(|y| (0..=8).map(move |x| Vec2::new(x as f32 / 8., y as f32 / 8.)))
+                    .collect(),
+                triangles: (0..8)
                     .flat_map(|y| {
-                        (0..=grid).map(move |x| {
-                            Vec2::new(
-                                32. + 192. * x as f32 / grid as f32,
-                                32. + 192. * y as f32 / grid as f32,
-                            )
+                        (0..8).flat_map(move |x| {
+                            let i = y * 9 + x + 1;
+                            [[i, i + 1, i + 10], [i, i + 10, i + 9]]
                         })
                     })
                     .collect(),
-            }),
-            ..Default::default()
-        })?;
-        edit.create_mesh(Mesh {
-            id: id(3),
-            name: "Checker".into(),
-            texture_asset_id: id(2).into(),
-            deformer_id: object.id.clone(),
-            vertex_ids: (1..=81).collect(),
-            base_positions: (0..=8)
-                .flat_map(|y| (0..=8).map(move |x| Vec2::new(x as f32 / 8., y as f32 / 8.)))
-                .collect(),
-            uvs: (0..=8)
-                .flat_map(|y| (0..=8).map(move |x| Vec2::new(x as f32 / 8., y as f32 / 8.)))
-                .collect(),
-            triangles: (0..8)
-                .flat_map(|y| {
-                    (0..8).flat_map(move |x| {
-                        let i = y * 9 + x + 1;
-                        [[i, i + 1, i + 10], [i, i + 10, i + 9]]
-                    })
-                })
-                .collect(),
-            ..Default::default()
-        })
+                ..Default::default()
+            },
+        )
     })?;
-    let saved = sdk.save_project(&assets.path().join("authoring"), None)?;
+    let saved = crate::test_fixture::save_fixture(&mut sdk, &assets.path().join("authoring"))?;
     Ok((Document::open(&saved.path)?, assets, object))
 }
 

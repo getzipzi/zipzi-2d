@@ -282,6 +282,23 @@ impl Runtime {
         expected: DraftSource,
         run: impl FnOnce(&mut Commands<'_>) -> Result<T>,
     ) -> Result<(DraftSource, T)> {
+        self.preview_with(client, expected, false, run)
+    }
+    pub fn preview_from_baseline<T>(
+        &mut self,
+        client: ClientId,
+        expected: DraftSource,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T>,
+    ) -> Result<(DraftSource, T)> {
+        self.preview_with(client, expected, true, run)
+    }
+    fn preview_with<T>(
+        &mut self,
+        client: ClientId,
+        expected: DraftSource,
+        use_baseline: bool,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T>,
+    ) -> Result<(DraftSource, T)> {
         self.admit_draft(client, expected.draft)?;
         self.source(client, expected.base)?;
         let entry = self.drafts.get_mut(&expected.draft).unwrap();
@@ -289,7 +306,11 @@ impl Runtime {
             unreachable!()
         };
         let (prepared, value) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            draft.prepare_preview(expected, run)
+            if use_baseline {
+                draft.prepare_baseline_preview(expected, run)
+            } else {
+                draft.prepare_preview(expected, run)
+            }
         }))
         .unwrap_or_else(|_| Err(error("PREVIEW_PANIC", "Preview preparation panicked")))?;
         entry.source = draft.install_preview(prepared)?;

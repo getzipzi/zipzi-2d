@@ -1,24 +1,41 @@
 //! Synthetic authoring fixture shared by SDK, Runtime and Editor tests.
 use zipzi_core::*;
-use zipzi_sdk::{EditSession, SdkError};
+use zipzi_sdk::Commands;
 pub fn id(n: u32) -> String {
     format!("a8210000-0000-4000-8000-{n:012x}")
 }
 #[allow(dead_code)]
-pub fn install(e: &mut EditSession<'_>) -> Result<(), SdkError> {
-    e.create_transform(Transform {
-        id: id(3),
-        data: TransformData::Rotation(RotationTransform {
-            pose: RotationPose {
-                origin: Vec2::new(11., 7.).into(),
-                angle: 27.,
-                scale: 1.3,
+pub fn install(e: &mut Commands<'_>) -> Result<(), Status> {
+    {
+        let mut value = Transform {
+            id: id(3),
+            data: TransformData::Rotation(RotationTransform {
+                pose: RotationPose {
+                    origin: Vec2::new(11., 7.).into(),
+                    angle: 27.,
+                    scale: 1.3,
+                    ..Default::default()
+                },
                 ..Default::default()
-            },
+            }),
             ..Default::default()
-        }),
-        ..Default::default()
-    })?;
+        };
+        value.runtime_id = value.id.clone();
+        e.edit_scene(
+            document::SceneEdit::Create {
+                id: value.id.clone(),
+                name: value.name.clone(),
+                object: document::SceneCreate::Rotation { origin: None },
+                part_id: None,
+                parent_id: None,
+                before: None,
+                deformation_before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        e.replace_transform(value)
+    }?;
     let mut mesh =
         zipzi_sdk::rectangle_mesh(&id(2), "Mixed mesh", "", Vec2::default(), Vec2::new(1., 1.))?;
     mesh.vertex_ids = vec![10, 30, 70, 90, 120];
@@ -44,15 +61,19 @@ pub fn install(e: &mut EditSession<'_>) -> Result<(), SdkError> {
     mesh.runtime_id = id(4);
     mesh.deformer_id.clear();
     e.create_mesh(mesh)?;
-    e.create_parameter(Parameter {
-        id: id(5),
-        minimum: 0.,
-        maximum: 1.,
-        ..Default::default()
+    e.create_parameter({
+        let mut value = Parameter {
+            id: id(5),
+            minimum: 0.,
+            maximum: 1.,
+            ..Default::default()
+        };
+        value.runtime_id = value.id.clone();
+        value
     })?;
     let base = e
-        .candidate_document()
-        .get_mesh(&id(2))
+        .read_document()?
+        .mesh(&id(2))
         .unwrap()
         .base_positions
         .clone();
@@ -82,57 +103,100 @@ pub fn install(e: &mut EditSession<'_>) -> Result<(), SdkError> {
         ],
     })?;
     for n in [10, 20] {
-        e.create_parameter(Parameter {
-            id: id(n),
-            kind: ParameterKind::BlendShape,
-            minimum: 0.,
-            maximum: 1.,
-            ..Default::default()
+        e.create_parameter({
+            let mut value = Parameter {
+                id: id(n),
+                kind: ParameterKind::BlendShape,
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            };
+            value.runtime_id = value.id.clone();
+            value
         })?;
-        e.create_blend_key_table(BlendShapeKeyTable {
-            id: id(n + 1),
-            parameter_id: id(n),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-            samples: vec![],
-            base_sample_id: String::new(),
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(n + 2),
-            target_id: id(2),
-            target_kind: BlendShapeTargetKind::Mesh,
-            key_table_id: id(n + 1),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Mesh(vec![
-                DeltaMeshKeyform {
-                    positions: vec![Vec2::default(); 5],
-                    ..Default::default()
+        e.edit_blend_shape(
+            document::BlendAuthoringEdit::CreateTable {
+                table: BlendShapeKeyTable {
+                    id: id(n + 1),
+                    parameter_id: id(n),
+                    keys: vec![0., 1.],
+                    base_key_idx: 0,
+                    samples: vec![],
+                    base_sample_id: String::new(),
                 },
-                DeltaMeshKeyform {
-                    positions: (0..5)
-                        .map(|i| Vec2::new(i as f32 + n as f32, (i * i) as f32))
-                        .collect(),
-                    opacity: Some(0.2),
-                    ..Default::default()
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        {
+            let binding = BlendShapeBinding {
+                id: id(n + 2),
+                target_id: id(2),
+                target_kind: BlendShapeTargetKind::Mesh,
+                key_table_id: id(n + 1),
+                constraint_ids: vec![],
+                keyforms: DeltaKeyforms::Mesh(vec![
+                    DeltaMeshKeyform {
+                        positions: vec![Vec2::default(); 5],
+                        ..Default::default()
+                    },
+                    DeltaMeshKeyform {
+                        positions: (0..5)
+                            .map(|i| Vec2::new(i as f32 + n as f32, (i * i) as f32))
+                            .collect(),
+                        opacity: Some(0.2),
+                        ..Default::default()
+                    },
+                ]),
+            };
+            e.edit_blend_shape(
+                document::BlendAuthoringEdit::CreateBinding {
+                    id: binding.id.clone(),
+                    target_id: binding.target_id.clone(),
+                    target_kind: binding.target_kind,
+                    key_table_id: binding.key_table_id.clone(),
                 },
-            ]),
-        })?;
+                Default::default(),
+                &Default::default(),
+            )?;
+            e.replace_blend_binding(binding)
+        }?;
     }
     for (n, other, a, b) in [(30, 4, Some(10), Some(10)), (32, 2, Some(70), None)] {
-        e.create_glue(Glue {
-            id: id(n),
-            mesh_a_id: id(2).into(),
-            mesh_b_id: id(other).into(),
-            intensity: 0.,
-            pairs: vec![GlueVertexPair {
-                id: id(n + 1),
-                vertex_a: a,
-                vertex_b: b,
-                weight_a: 0.3,
-                weight_b: 0.7,
-            }],
-            ..Default::default()
-        })?;
+        {
+            let mut value = Glue {
+                id: id(n),
+                mesh_a_id: id(2).into(),
+                mesh_b_id: id(other).into(),
+                intensity: 0.,
+                pairs: vec![GlueVertexPair {
+                    id: id(n + 1),
+                    vertex_a: a,
+                    vertex_b: b,
+                    weight_a: 0.3,
+                    weight_b: 0.7,
+                }],
+                ..Default::default()
+            };
+            value.runtime_id = value.id.clone();
+            e.edit_scene(
+                document::SceneEdit::Create {
+                    id: value.id.clone(),
+                    name: value.name.clone(),
+                    object: document::SceneCreate::Glue {
+                        a: value.mesh_a_id.clone(),
+                        b: value.mesh_b_id.clone(),
+                    },
+                    part_id: None,
+                    parent_id: None,
+                    before: None,
+                    deformation_before: None,
+                },
+                Default::default(),
+                &Default::default(),
+            )?;
+            e.replace_glue(value)
+        }?;
     }
     Ok(())
 }

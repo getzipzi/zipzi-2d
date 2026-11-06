@@ -1,8 +1,10 @@
 use zipzi_core::document::ObjectEditorState;
+use zipzi_core::document::SceneCollection as C;
+use zipzi_core::document::SceneCreate as New;
+use zipzi_core::document::SceneEdit as E;
+use zipzi_core::state::{RecordDomain, RootDomain};
 use zipzi_core::{Canvas, Part, Vec2};
-use zipzi_sdk::{
-    AuthoringSession, CollectionRef, SceneCollection as C, SceneCreate as New, SceneEdit as E,
-};
+use zipzi_sdk::AuthoringSession;
 
 fn id() -> String {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
@@ -12,16 +14,38 @@ fn id() -> String {
     )
 }
 fn session() -> AuthoringSession {
-    AuthoringSession::new(&id(), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
+    AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(),
+                (Canvas::new(100., 100., Vec2::default(), 1.)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    )
 }
 fn part(s: &mut AuthoringSession) -> String {
     let id = id();
-    s.edit("Part", None, |e| {
-        e.create_part(Part {
-            id: id.clone(),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_part({
+                    let mut value = Part {
+                        id: id.clone(),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Part")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     id
 }
@@ -50,17 +74,31 @@ fn create(
     parent: Option<&str>,
 ) -> String {
     let id = id();
-    s.edit("Create", None, |e| {
-        e.edit_scene(intent(&id, object, part, parent, None, None))
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.edit_scene(
+                    intent(&id, object, part, parent, None, None),
+                    Default::default(),
+                    &Default::default(),
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Create")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     id
 }
 fn members(s: &AuthoringSession, c: C) -> Vec<String> {
-    s.scene_collection(&c)
+    s.snapshot()
+        .document()
+        .scene_collection(&c)
         .unwrap()
         .iter()
-        .map(|h| h.id().to_owned())
+        .cloned()
         .collect()
 }
 
@@ -94,31 +132,32 @@ fn independent_creation_anchors_publish_one_history_and_survive_save_and_undo() 
     };
     let history = s.history_state();
     let new = id();
-    let plan = s
-        .plan_scene_edit(intent(
-            &new,
-            New::Mesh {
-                texture: Default::default(),
-            },
-            Some(&q),
-            Some(&parent),
-            Some(&b),
-            Some(&a),
-        ))
-        .unwrap();
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            intent(
+                &new,
+                New::Mesh {
+                    texture: Default::default(),
+                },
+                Some(&q),
+                Some(&parent),
+                Some(&b),
+                Some(&a),
+            ),
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
     assert_eq!(s.history_state(), history);
-    assert!(s.document().get_mesh(&new).is_none());
-    let receipt = s.execute_scene_plan(&plan).unwrap();
-    assert!(receipt.changed);
-    assert_eq!(receipt.changes.created.len(), 1);
-    assert!(receipt.changes.collections.iter().any(|c| matches!(c,
-        CollectionRef::Organization { collection: zipzi_sdk::OrganizationCollection::PartMembers { part_id: Some(owner) }, .. }
-            if owner == &q)));
+    assert!(s.snapshot().document().mesh(&new).is_none());
+    let receipt = s.publish(plan.1).unwrap();
     assert!(receipt
-        .changes
-        .collections
+        .writes
+        .records()
         .iter()
-        .any(|c| matches!(c, CollectionRef::Scene { collection, .. } if *collection == deform)));
+        .any(|record| record.domain == RecordDomain::Mesh && record.id == new));
+    assert!(receipt.writes.root_changed(RootDomain::HierarchyOrder));
     assert_eq!(
         members(&s, org.clone()),
         [a.clone(), new.clone(), b.clone()]
@@ -127,26 +166,20 @@ fn independent_creation_anchors_publish_one_history_and_survive_save_and_undo() 
         members(&s, deform.clone()),
         [new.clone(), a.clone(), b.clone()]
     );
-    assert_eq!(s.document().get_mesh(&new).unwrap().part_id, q);
-    assert_eq!(s.document().get_mesh(&new).unwrap().deformer_id, parent);
+    assert_eq!(s.snapshot().document().mesh(&new).unwrap().part_id, q);
+    assert_eq!(
+        s.snapshot().document().mesh(&new).unwrap().deformer_id,
+        parent
+    );
     assert_eq!(s.history_state().undo_steps, history.undo_steps + 1);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_eq!(members(&s, org.clone()), [a.clone(), b.clone()]);
-    assert!(s.document().get_mesh(&new).is_none());
-    s.redo().unwrap();
+    assert!(s.snapshot().document().mesh(&new).is_none());
+    s.redo(s.version()).unwrap();
     assert_eq!(members(&s, deform.clone()), [new, a, b]);
-    let dir = std::env::temp_dir().join(format!(
-        "zipzi-scene-placement-{}-{}",
-        std::process::id(),
-        id()
-    ));
-    std::fs::create_dir_all(&dir).unwrap();
-    let saved = s.save_project(&dir.join("positions.zipzi"), None).unwrap();
-    let mut reopened = session();
-    reopened.open_project(&saved.path, None).unwrap();
+    let reopened = AuthoringSession::new(crate::support::roundtrip(s.snapshot()));
     assert_eq!(members(&reopened, deform.clone()), members(&s, deform));
     assert_eq!(members(&reopened, org.clone()), members(&s, org));
-    std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]
@@ -161,9 +194,21 @@ fn every_deformable_default_supports_typed_root_placement_via_direct_edits() {
         New::Rotation { origin: None },
     ] {
         let new = id();
-        s.edit("Create before", None, |e| {
-            e.edit_scene(intent(&new, object, None, None, None, Some(&anchor)))
-        })
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| {
+                    e.edit_scene(
+                        intent(&new, object, None, None, None, Some(&anchor)),
+                        Default::default(),
+                        &Default::default(),
+                    )
+                })
+                .and_then(|value| {
+                    let prepared = draft.prepare("Create before")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
         .unwrap();
         let order = members(&s, C::Deformation { parent_id: None });
         let at = order.iter().position(|id| id == &anchor).unwrap();
@@ -179,45 +224,60 @@ fn wrong_collection_missing_and_self_anchors_reject_without_consuming_redo() {
     let parent = create(&mut s, New::Rotation { origin: None }, None, None);
     let child = create(&mut s, New::Rotation { origin: None }, None, Some(&parent));
     create(&mut s, New::Rotation { origin: None }, None, None);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let version = s.version();
     for anchor in [p, child.clone(), id()] {
         let new = id();
-        let error = s
-            .plan_scene_edit(intent(
+        let error = crate::support::prepared(&s, |candidate_commands| {
+            candidate_commands.edit_scene(
+                intent(
+                    &new,
+                    New::Rotation { origin: None },
+                    None,
+                    None,
+                    None,
+                    Some(&anchor),
+                ),
+                Default::default(),
+                &Default::default(),
+            )
+        })
+        .unwrap_err();
+        assert_eq!(error.code.as_str(), "INVALID_DEFORMATION_PLACEMENT");
+        assert!(s.snapshot().document().transform(&new).is_none());
+    }
+    let new = id();
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            intent(
                 &new,
                 New::Rotation { origin: None },
                 None,
                 None,
                 None,
-                Some(&anchor),
-            ))
-            .unwrap_err();
-        assert_eq!(error.code.as_ref(), "INVALID_DEFORMATION_PLACEMENT");
-        assert!(s.document().get_transform(&new).is_none());
-    }
-    let new = id();
-    assert!(s
-        .plan_scene_edit(intent(
-            &new,
-            New::Rotation { origin: None },
-            None,
-            None,
-            None,
-            Some(&new)
+                Some(&new)
+            ),
+            Default::default(),
+            &Default::default()
         ))
-        .is_err());
-    assert!(s
-        .plan_scene_edit(intent(
-            &id(),
-            New::Rotation { origin: None },
-            None,
-            None,
-            Some(&owned),
-            Some(&parent)
+        .is_err()
+    );
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            intent(
+                &id(),
+                New::Rotation { origin: None },
+                None,
+                None,
+                Some(&owned),
+                Some(&parent)
+            ),
+            Default::default(),
+            &Default::default()
         ))
-        .is_err());
+        .is_err()
+    );
     assert_eq!(s.history_state(), history);
     assert_eq!(s.version(), version);
 }
@@ -229,7 +289,7 @@ fn both_destination_locks_reject_creation_and_invalid_second_edit_rolls_back() {
     let q = part(&mut s);
     let parent = create(&mut s, New::Rotation { origin: None }, Some(&p), None);
     for lock in [&q, &parent] {
-        let mut state = s.document().editor_state().clone();
+        let mut state = s.snapshot().document().editor_state().clone();
         state.objects.insert(
             lock.to_string(),
             ObjectEditorState {
@@ -237,47 +297,75 @@ fn both_destination_locks_reject_creation_and_invalid_second_edit_rolls_back() {
                 ..Default::default()
             },
         );
-        s.edit("Lock", None, |e| e.replace_editor_state(state))
-            .unwrap();
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_editor_state(state))
+                .and_then(|value| {
+                    let prepared = draft.prepare("Lock")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap();
         let history = s.history_state();
-        let error = s
-            .plan_scene_edit(intent(
-                &id(),
-                New::Rotation { origin: None },
-                Some(&q),
-                Some(&parent),
-                None,
-                None,
-            ))
-            .unwrap_err();
-        assert_eq!(error.code.as_ref(), "OBJECT_LOCKED");
+        let error = crate::support::prepared(&s, |candidate_commands| {
+            candidate_commands.edit_scene(
+                intent(
+                    &id(),
+                    New::Rotation { origin: None },
+                    Some(&q),
+                    Some(&parent),
+                    None,
+                    None,
+                ),
+                Default::default(),
+                &Default::default(),
+            )
+        })
+        .unwrap_err();
+        assert_eq!(error.code.as_str(), "OBJECT_LOCKED");
         assert_eq!(s.history_state(), history);
-        s.undo().unwrap();
+        s.undo(s.version()).unwrap();
     }
     let new = id();
     let history = s.history_state();
     let version = s.version();
-    assert!(s
-        .edit("Atomic", None, |e| {
-            e.edit_scene(intent(
-                &new,
-                New::Rotation { origin: None },
-                Some(&q),
-                Some(&parent),
-                None,
-                None,
-            ))?;
-            e.edit_scene(intent(
-                &id(),
-                New::Rotation { origin: None },
-                Some(&q),
-                Some(&parent),
-                None,
-                Some(&p),
-            ))
-        })
-        .is_err());
-    assert!(s.document().get_transform(&new).is_none());
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.edit_scene(
+                    intent(
+                        &new,
+                        New::Rotation { origin: None },
+                        Some(&q),
+                        Some(&parent),
+                        None,
+                        None,
+                    ),
+                    Default::default(),
+                    &Default::default(),
+                )?;
+                e.edit_scene(
+                    intent(
+                        &id(),
+                        New::Rotation { origin: None },
+                        Some(&q),
+                        Some(&parent),
+                        None,
+                        Some(&p),
+                    ),
+                    Default::default(),
+                    &Default::default(),
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Atomic")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
+    assert!(s.snapshot().document().transform(&new).is_none());
     assert_eq!(s.history_state(), history);
     assert_eq!(s.version(), version);
 }
@@ -296,10 +384,14 @@ fn offscreen_and_glue_cannot_acquire_a_deformation_position() {
     ] {
         let part = matches!(object, New::Offscreen).then_some(p.as_str());
         assert_eq!(
-            s.plan_scene_edit(intent(&id(), object, part, None, None, Some(&anchor)))
-                .unwrap_err()
-                .code
-                .as_ref(),
+            crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+                intent(&id(), object, part, None, None, Some(&anchor)),
+                Default::default(),
+                &Default::default()
+            ))
+            .unwrap_err()
+            .code
+            .as_str(),
             "NO_DEFORMATION_COLLECTION"
         );
     }
@@ -311,13 +403,18 @@ fn serialized_placement_and_stale_plan_preserve_native_version_guards() {
     let anchor = create(&mut s, New::Rotation { origin: None }, None, None);
     let new = id();
     let json = serde_json::json!({"operation":"create", "id":new, "name":"JSON", "object":{"kind":"rotation"}, "deformation_before":anchor});
-    let plan = s
-        .plan_scene_edit(serde_json::from_value(json).unwrap())
-        .unwrap();
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            serde_json::from_value(json).unwrap(),
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
     create(&mut s, New::Rotation { origin: None }, None, None);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
-    assert!(s.execute_scene_plan(&plan).is_err());
-    assert!(s.document().get_transform(&new).is_none());
+    assert!(s.publish(plan.1).is_err());
+    assert!(s.snapshot().document().transform(&new).is_none());
     assert_eq!(s.history_state(), history);
 }

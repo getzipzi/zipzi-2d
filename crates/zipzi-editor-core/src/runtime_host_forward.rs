@@ -53,19 +53,7 @@ impl HostedSession {
         self.document().parameter_order().to_vec()
     }
 
-    pub fn prepare_rgba_image(
-        &self,
-        width: u32,
-        height: u32,
-        rgba: std::sync::Arc<[u8]>,
-    ) -> Result<zipzi_project::PreparedImageContent, Status> {
-        zipzi_project::PreparedImageContent::from_rgba(
-            width,
-            height,
-            rgba,
-            self.host.read().resources().budget(),
-        )
-    }
+    #[cfg(test)]
     pub fn read_snapshot(&self) -> Snapshot {
         self.read().snapshot().clone()
     }
@@ -109,9 +97,6 @@ impl HostedSession {
     }
 }
 impl HostedDraft {
-    pub fn edit_motion(&mut self, intent: MotionEdit) -> zipzi_runtime::Result<()> {
-        self.batch(|edit| edit.edit_motion(intent))
-    }
     pub fn edit_organization(&mut self, intent: OrganizationEdit) -> zipzi_runtime::Result<()> {
         self.batch(|edit| edit.edit_organization(intent).map(|_| ()))
     }

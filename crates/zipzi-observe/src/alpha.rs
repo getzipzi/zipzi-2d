@@ -1,7 +1,7 @@
 //! Source-coordinate alpha samples, shared across all poses in one capture.
 use crate::{check_capture, ObservationError};
 use std::sync::Arc;
-use zipzi_contract::runtime::ObservationTextureSize;
+use zipzi_contract::observation::ObservationTextureSize;
 
 pub const SOURCE_ALPHA_SAMPLING_VERSION: u32 = 1;
 

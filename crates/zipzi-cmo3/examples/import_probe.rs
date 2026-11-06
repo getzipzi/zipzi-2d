@@ -3,8 +3,9 @@ fn main() {
     let path = std::env::args().nth(1).unwrap();
     let mut imported = zipzi_cmo3::import_model(&std::fs::read(path).unwrap()).unwrap();
     if let Some(animation) = std::env::args().nth(2) {
-        zipzi_cmo3::import_animation(&std::fs::read(animation).unwrap(), &mut imported.document)
-            .unwrap();
+        imported.document =
+            zipzi_cmo3::import_animation(&std::fs::read(animation).unwrap(), &imported.document)
+                .unwrap();
     }
     println!(
         "blend {} motions {} expressions {} physics {}",
@@ -14,6 +15,7 @@ fn main() {
         imported
             .document
             .physics()
+            .as_ref()
             .map_or(0, |p| p.data.settings.len())
     );
     println!(
@@ -27,7 +29,7 @@ fn main() {
 
     if let Some(output) = std::env::args().nth(3) {
         let doc = &imported.document;
-        let canvas = doc.source_canvas().unwrap();
+        let canvas = doc.setup().source_canvas.unwrap();
         let mut cases = Vec::new();
         for (name, value) in [
             ("", 0.),
@@ -41,7 +43,7 @@ fn main() {
                 if let Some(p) = doc
                     .parameter_order()
                     .iter()
-                    .map(|id| doc.get_parameter(id).unwrap())
+                    .map(|id| doc.parameter(id).unwrap())
                     .find(|p| p.runtime_id == name)
                 {
                     preview.insert(p.id.clone(), value);
@@ -56,7 +58,7 @@ fn main() {
                 .drawables
                 .iter()
                 .map(|d| {
-                    let m = doc.get_mesh(&d.id).unwrap();
+                    let m = doc.mesh(&d.id).unwrap();
                     (
                         m.runtime_id.clone(),
                         d.positions

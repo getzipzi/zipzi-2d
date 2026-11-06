@@ -99,6 +99,19 @@ impl DocumentBuilder {
                 .model()
                 .initial_rotation_bone_scales(&ids, &editor);
             editor.rotation_bone_reference_scales.extend(scales);
+            for id in &ids {
+                if this.transform(id).is_some_and(|t| t.rotation().is_some()) {
+                    editor
+                        .rotation_bone_angle_offsets
+                        .entry(id.clone())
+                        .or_insert(90.);
+                }
+            }
+            editor.rotation_bone_lengths.extend(
+                this.content
+                    .model()
+                    .initial_rotation_bone_lengths(&ids, &editor),
+            );
             this.set_editor_state(editor)
         })
     }

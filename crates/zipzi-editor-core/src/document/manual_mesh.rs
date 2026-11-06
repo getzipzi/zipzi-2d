@@ -227,7 +227,7 @@ impl Document {
             self.pristine_blank = None;
             self.after_history(true);
         }
-        Ok((receipt.kind != zipzi_sdk::PublicationKind::Unchanged))
+        Ok(receipt.kind != zipzi_sdk::PublicationKind::Unchanged)
     }
 
     pub fn preview_manual_mesh(
@@ -384,7 +384,7 @@ impl Document {
             if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                 self.pristine_blank = None;
             }
-            self.consume_authoring_receipt(&receipt, false);
+            self.consume_authoring_receipt(&receipt, None);
         }
         self.invalidate_projection(false);
         Ok(())

@@ -83,7 +83,7 @@ def main() -> int:
             moc = OUT / f"{name}.moc3"
             run(["cargo", "run", "-q", "-p", "zipzi-moc3", "--example",
                  "create_animation_offscreen_fixture", "--",
-                 str(variants["plain"]), str(moc), *flag])
+                 str(variants["plain"]), str(moc), str(TEXTURE), *flag])
             variants[name] = moc
         for variant, moc in variants.items():
             for time in (0.25, 0.5, 0.75):

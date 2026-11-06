@@ -4,8 +4,8 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+use zipzi_animation::{CompiledCurve, CompiledSegment, sample_motion_curve};
 use zipzi_core::document::MotionPoint;
-use zipzi_sdk::{CompiledCurve, CompiledSegment, sample_motion_curve};
 
 fn numeric(v: &Value) -> f32 {
     v.as_f64().unwrap() as f32

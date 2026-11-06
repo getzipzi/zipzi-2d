@@ -5,7 +5,10 @@ use zipzi_core::{
     Canvas, PreciseVec2, RotationPose, RotationTransform, Transform, TransformData, Vec2,
     WarpTransform,
 };
-use zipzi_sdk::{rectangle_grid_geometry, rectangle_mesh, AuthoringSession, MeshGeometry};
+use zipzi_sdk::{
+    rectangle_grid_geometry, rectangle_mesh, MeshGeometry, ProjectIo, ResourceStore, ResourceView,
+    Snapshot,
+};
 
 fn id(n: usize) -> String {
     format!("71000000-0000-4000-8000-{n:012x}")
@@ -21,8 +24,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("output must be absolute and must not exist".into());
     }
     // Match the editor's 540-model-unit rotation axis so its tip remains in view.
-    let mut sdk = AuthoringSession::new(&id(1), Canvas::new(4000., 3000., Vec2::default(), 1.))?;
-    let image = sdk.prepare_rgba_image(
+    let state = zipzi_core::state::DocumentState::new(
+        &id(1),
+        Canvas::new(4000., 3000., Vec2::default(), 1.).into(),
+    )?;
+    let mut builder = state.builder();
+    let store = ResourceStore::default();
+    let image = store.prepare_rgba(
         2,
         2,
         vec![
@@ -30,10 +38,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]
         .into(),
     )?;
-    sdk.edit("Native control fixture", None, |edit| {
-        edit.create_prepared_image(id(2), "asymmetric control texture".into(), &image)?;
+    {
+        let edit = &mut builder;
+        edit.create_asset(zipzi_core::state::AssetRecord {
+            id: id(2),
+            name: "asymmetric control texture".into(),
+            content: zipzi_core::state::AssetContent::Image {
+                resource: image.key(),
+                width: image.width(),
+                height: image.height(),
+            },
+        })?;
         edit.create_transform(Transform {
             id: id(3),
+            runtime_id: id(3),
             name: "Root Warp".into(),
             data: TransformData::Warp(WarpTransform {
                 bezier: None,
@@ -52,6 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?;
         edit.create_transform(Transform {
             id: id(4),
+            runtime_id: id(4),
             name: "Root Rotation".into(),
             data: TransformData::Rotation(RotationTransform {
                 pose: RotationPose {
@@ -97,18 +116,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?;
         bounds.appearance.opacity = 0.03;
         edit.create_mesh(bounds)?;
-        Ok(())
-    })?;
-    assert!(sdk.validate_structure().is_empty());
-    let before = sdk.evaluate(&Default::default())?;
+    }
+    let snapshot = Snapshot::new(
+        builder.freeze()?.state,
+        ResourceView::default().with_images([image]),
+    )?;
+    let before = evaluate(snapshot.document())?;
     assert_eq!(before.drawables.len(), 3);
     assert_eq!(before.drawables[0].positions[0], Vec2::new(-1600., -1600.));
     let rotated = before.drawables[1].positions[0];
     assert!((rotated.x - 1500.).abs() < 0.001 && (rotated.y - 500.).abs() < 0.001);
-    let saved = sdk.save_project(&output, None)?;
-    let mut reopened = AuthoringSession::new(&id(99), zipzi_core::ModelSetup::default())?;
-    reopened.open_project(&saved.path, None)?;
-    assert_eq!(reopened.evaluate(&Default::default())?, before);
-    println!("{}", saved.path.display());
+    let io = ProjectIo::new(output.parent().unwrap(), store);
+    io.save(
+        snapshot.document(),
+        snapshot.resources(),
+        &output,
+        None,
+        || true,
+    )?;
+    let reopened = io.load(&output, || true)?;
+    assert_eq!(evaluate(&reopened.document)?, before);
+    println!("{}", output.display());
     Ok(())
+}
+
+fn evaluate(
+    document: &zipzi_core::state::DocumentState,
+) -> Result<zipzi_core::DrawableFrame, zipzi_sdk::Status> {
+    let mut frame = zipzi_core::DrawableFrame::default();
+    let status = zipzi_core::evaluation::evaluate_frame(document, &Default::default(), &mut frame);
+    if status.is_ok() {
+        Ok(frame)
+    } else {
+        Err(status)
+    }
 }

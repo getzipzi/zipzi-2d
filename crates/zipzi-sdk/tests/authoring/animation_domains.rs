@@ -184,12 +184,13 @@ fn physics_patches_share_untouched_rigs_and_reject_invalid_nodes_atomically() {
     assert_eq!(next.data.settings[0].inputs[0].weight, 25.);
     let mut d = s.begin_draft();
     assert!(d
-        .batch(d.source(), |c| c.edit_physics(PhysicsEdit::CreateOutput {
-            group_id: id(11),
-            id: id(14),
-            node_id: id(999),
-            before: None
-        }))
+        .batch(d.source(), |candidate_commands| candidate_commands
+            .edit_physics(PhysicsEdit::CreateOutput {
+                group_id: id(11),
+                id: id(14),
+                node_id: id(999),
+                before: None
+            }))
         .is_err());
     assert!(!d.is_active());
     assert_eq!(
@@ -232,10 +233,11 @@ fn physics_output_node_references_and_inherited_locks_are_enforced() {
     });
     let mut d = s.begin_draft();
     assert!(d
-        .batch(d.source(), |c| c.edit_physics(PhysicsEdit::Delete {
-            ids: vec![node],
-            node_replacements: Default::default()
-        }))
+        .batch(d.source(), |candidate_commands| candidate_commands
+            .edit_physics(PhysicsEdit::Delete {
+                ids: vec![node],
+                node_replacements: Default::default()
+            }))
         .is_err());
     let mut b = s.snapshot().document().builder();
     let mut editor = b.editor_state().clone();

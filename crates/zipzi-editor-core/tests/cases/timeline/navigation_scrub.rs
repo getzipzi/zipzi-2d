@@ -1,7 +1,7 @@
 use super::common::*;
 use std::sync::Arc;
+use zipzi_animation::MotionPreview;
 use zipzi_editor_core::*;
-use zipzi_sdk::MotionPreview;
 
 #[test]
 fn navigation_and_selection_share_rows_but_visibility_changes_rebuild_them() -> anyhow::Result<()> {
@@ -73,7 +73,7 @@ fn channel_value_scrubs_share_model_rows_and_unchanged_tracks_without_mutating_o
     for (request, value) in requests.iter().zip([0.7, 1.1, 0.2]) {
         assert!(Arc::ptr_eq(
             &requests[0].source.snapshot,
-            &request.source.snapshot.snapshot
+            &request.source.snapshot
         ));
         let evaluated = evaluator.evaluate(request, |_, _| true)?;
         assert_eq!(evaluated.snapshot.parameters[&id(2)], value);
@@ -81,8 +81,9 @@ fn channel_value_scrubs_share_model_rows_and_unchanged_tracks_without_mutating_o
             request
                 .source
                 .snapshot
+                .snapshot
                 .document()
-                .get_motion(&id(4))
+                .motion(&id(4))
                 .unwrap()
                 .tracks[0]
                 .segments[0]

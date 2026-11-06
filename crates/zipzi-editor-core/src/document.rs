@@ -242,6 +242,7 @@ impl Document {
         let receipts = match self.session.receipts() {
             Ok(receipts) => receipts,
             Err(error) if error.code == "EVENT_GAP" => {
+                self.cancel_edit();
                 self.refresh_textures()?;
                 self.reconcile_parameter_preview()?;
                 self.after_history(true);
@@ -255,11 +256,12 @@ impl Document {
             .iter()
             .any(|r| r.kind != zipzi_sdk::PublicationKind::Unchanged);
         if changed {
+            self.cancel_edit();
             self.refresh_textures()?;
             self.reconcile_parameter_preview()?;
             self.pristine_blank = None;
             for receipt in receipts {
-                self.consume_authoring_receipt(&receipt, true);
+                self.consume_authoring_receipt(&receipt, None);
             }
         }
         self.session.refresh_metadata()?;

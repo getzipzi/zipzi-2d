@@ -12,12 +12,13 @@ fn fixture() -> (Runtime, Protocol, Auth) {
     };
     (rt, protocol, auth)
 }
-fn header(auth: Auth, id: u64, operation: Value) -> Value {
-    json!({"protocol": CONTRACT, "runtime":auth.client.runtime_instance(),"client":auth.client,"request_id":id,"operation":operation})
+fn header(runtime: RuntimeInstanceId, auth: Auth, id: u64, operation: Value) -> Value {
+    json!({"protocol": CONTRACT, "runtime":runtime,"client":auth.client,"request_id":id,"operation":operation})
 }
 #[test]
 fn binary_upload_replay_binds_payload_and_frozen_download_survives_blob_release() {
     let (mut rt, mut p, auth) = fixture();
+    let instance = rt.instance_id();
     let blob = rt.create_blob(auth.client, 8).unwrap();
     let data = b"pixels\0\xff".to_vec();
     let hash: String = Sha256::digest(&data)
@@ -25,6 +26,7 @@ fn binary_upload_replay_binds_payload_and_frozen_download_survives_blob_release(
         .map(|v| format!("{v:02x}"))
         .collect();
     let input = header(
+        instance,
         auth,
         1,
         json!({"op":"append_blob_binary", "blob":blob,"offset":0,"length":8,"payload_sha256":hash}),
@@ -43,6 +45,7 @@ fn binary_upload_replay_binds_payload_and_frozen_download_survives_blob_release(
     );
     rt.seal_blob(auth.client, blob).unwrap();
     let read = header(
+        instance,
         auth,
         2,
         json!({"op":"read_blob_binary","blob":blob,"offset":1,"length":5}),
@@ -50,7 +53,10 @@ fn binary_upload_replay_binds_payload_and_frozen_download_survives_blob_release(
     let output = p.receive_binary(&mut rt, auth, read.clone(), vec![], Instant::now());
     assert_eq!(output.payload.as_ref().unwrap().bytes(), b"ixels");
     rt.release_blob(auth.client, blob).unwrap();
-    assert_eq!(rt.blob_count(), 0);
+    assert_eq!(
+        rt.blob(auth.client, blob).err().unwrap().code,
+        "BLOB_NOT_FOUND"
+    );
     assert_eq!(
         p.receive_binary(&mut rt, auth, read, vec![], Instant::now())
             .payload
@@ -58,14 +64,15 @@ fn binary_upload_replay_binds_payload_and_frozen_download_survives_blob_release(
             .bytes(),
         b"ixels"
     );
-    assert_eq!(rt.image_memory_usage().blob_bytes, 8);
-    drop(output);
     drop(p);
-    assert_eq!(rt.image_memory_usage().total_bytes(), 0);
+    assert_eq!(rt.task_bytes(), 5);
+    drop(output);
+    assert_eq!(rt.task_bytes(), 0);
 }
 #[test]
 fn binary_controls_cannot_be_smuggled_through_json_or_another_owner() {
     let (mut rt, mut p, auth) = fixture();
+    let instance = rt.instance_id();
     let blob = rt.create_blob(auth.client, 4).unwrap();
     let data = b"rgba".to_vec();
     let hash: String = Sha256::digest(&data)
@@ -73,6 +80,7 @@ fn binary_controls_cannot_be_smuggled_through_json_or_another_owner() {
         .map(|v| format!("{v:02x}"))
         .collect();
     let request = header(
+        instance,
         auth,
         1,
         json!({"op":"append_blob_binary", "blob":blob,"offset":0,"length":4,"payload_sha256":hash}),
@@ -88,118 +96,123 @@ fn binary_controls_cannot_be_smuggled_through_json_or_another_owner() {
             .value["error"]["code"],
         "WRONG_OWNER"
     );
+    let mut binary_request = request;
+    binary_request["request_id"] = json!(2);
     assert_eq!(
-        p.receive_binary(&mut rt, auth, request, data, Instant::now())
+        p.receive_binary(&mut rt, auth, binary_request, data, Instant::now())
             .value["ok"],
         4
     );
 }
 
 #[test]
-fn seal_peak_refusal_keeps_the_upload_and_releases_temporary_reservations() {
+fn sealing_requires_complete_upload_and_reuses_the_reserved_buffer() {
     let mut rt = Runtime::new(RuntimeLimits {
-        image_bytes: 8,
+        task_bytes: 4,
         ..Default::default()
     });
     let client = rt.register_client().unwrap();
     let blob = rt.create_blob(client, 4).unwrap();
-    rt.append_blob(client, blob, 0, b"rgba").unwrap();
-    let filler = rt.create_blob(client, 1).unwrap();
-    assert!(rt.seal_blob(client, blob).is_err());
-    assert_eq!(rt.image_memory_usage().preparing_bytes, 5);
-    assert!(matches!(rt.blob(client, blob), Err(RuntimeError::Busy)));
-    rt.release_blob(client, filler).unwrap();
+    rt.append_blob(client, blob, 0, b"rg").unwrap();
+    assert_eq!(
+        rt.seal_blob(client, blob).unwrap_err().code,
+        "INCOMPLETE_BLOB"
+    );
+    assert_eq!(rt.task_bytes(), 4);
+    assert_eq!(
+        rt.create_blob(client, 1).unwrap_err().code,
+        "BUDGET_EXCEEDED"
+    );
+    rt.append_blob(client, blob, 2, b"ba").unwrap();
     rt.seal_blob(client, blob).unwrap();
-    assert_eq!(&*rt.blob(client, blob).unwrap(), b"rgba");
-    assert_eq!(rt.image_memory_usage().total_bytes(), 4);
+    assert_eq!(rt.blob(client, blob).unwrap().bytes(), b"rgba");
+    assert_eq!(rt.task_bytes(), 4);
     rt.release_blob(client, blob).unwrap();
-    assert_eq!(rt.image_memory_usage().total_bytes(), 0);
+    assert_eq!(rt.task_bytes(), 0);
 }
 
 #[test]
-fn attached_hash_failure_aborts_only_the_authenticated_owner_without_client_cleanup() {
-    for attack in ["owner", "foreign", "header"] {
+fn invalid_binary_identity_cannot_mutate_the_upload_or_a_draft() {
+    for attack in ["hash", "foreign", "runtime"] {
         let (mut rt, mut p, auth) = fixture();
+        let instance = rt.instance_id();
         let session = rt
             .create_session(
                 auth.client,
                 &uuid::Uuid::new_v4().to_string(),
-                zipzi_core::ModelSetup::default(),
+                Default::default(),
             )
             .unwrap();
-        let edit = rt.begin_edit(auth.client, session, "upload", None).unwrap();
-        let before = rt.session_info(session).unwrap();
-        let blob = rt.start_authoring_upload(auth.client, edit, 4).unwrap();
-        let request = header(
+        let before = rt.subscribe(auth.client, session).unwrap();
+        let draft = rt.begin_draft(auth.client, before.cursor).unwrap();
+        let blob = rt.create_blob(auth.client, 4).unwrap();
+        let data = b"rgba";
+        let hash: String = Sha256::digest(data)
+            .iter()
+            .map(|v| format!("{v:02x}"))
+            .collect();
+        let mut request = header(
+            instance,
             auth,
             1,
-            json!({"op":"append_blob_binary","blob":blob,"offset":0,"length":4,"payload_sha256":"wrong"}),
+            json!({"op":"append_blob_binary","blob":blob,"offset":0,"length":4,"payload_sha256":hash}),
         );
         let mut supplied = auth;
-        let mut request = request;
-        if attack == "foreign" {
-            let hello = p.hello(&mut rt, json!({"protocol":CONTRACT}), Instant::now());
-            supplied = Auth {
-                client: serde_json::from_value(hello["ok"]["client"].clone()).unwrap(),
-                connection: hello["ok"]["connection"].as_u64().unwrap(),
-            };
-            request["client"] = json!(supplied.client);
+        match attack {
+            "foreign" => {
+                let hello = p.hello(&mut rt, json!({"protocol":CONTRACT}), Instant::now());
+                supplied = Auth {
+                    client: serde_json::from_value(hello["ok"]["client"].clone()).unwrap(),
+                    connection: hello["ok"]["connection"].as_u64().unwrap(),
+                };
+                request["client"] = json!(supplied.client);
+            }
+            "runtime" => request["runtime"] = json!(Runtime::default().instance_id()),
+            _ => request["operation"]["payload_sha256"] = json!("wrong"),
         }
-        if attack == "header" {
-            request["runtime"] = json!(Runtime::default().instance_id());
-        }
-        let value = p.receive_binary(&mut rt, supplied, request, b"rgba".to_vec(), Instant::now());
-        assert!(value.value.get("error").is_some());
-        if attack == "owner" {
-            assert_eq!(
-                rt.edit_state(auth.client, edit).unwrap(),
-                EditState::Aborted
-            );
-            assert_eq!(rt.blob_count(), 0);
-            assert_eq!(rt.image_memory_usage().total_bytes(), 0);
-        } else {
-            assert_eq!(
-                rt.edit_state(auth.client, edit).unwrap(),
-                EditState::Editing
-            );
-            assert_eq!(rt.blob_count(), 1);
-        }
-        assert_eq!(rt.session_info(session).unwrap().version, before.version);
-        assert_eq!(rt.session_info(session).unwrap().history_lengths, (0, 0));
+        let reply = p.receive_binary(&mut rt, supplied, request, data.to_vec(), Instant::now());
+        assert!(reply.value.get("error").is_some());
+        assert_eq!(
+            rt.seal_blob(auth.client, blob).unwrap_err().code,
+            "INCOMPLETE_BLOB"
+        );
+        assert_eq!(
+            rt.read_draft(auth.client, draft).unwrap().source,
+            QuerySource::Draft(draft)
+        );
+        let after = rt.subscribe(auth.client, session).unwrap();
+        assert_eq!(after.cursor, before.cursor);
+        assert_eq!(after.history, before.history);
     }
 }
 
 #[test]
 fn output_arc_remains_charged_after_protocol_eviction_until_the_socket_releases_it() {
     let (mut rt, mut p, auth) = fixture();
+    let instance = rt.instance_id();
     let response = p
         .receive_encoded(
             &mut rt,
             Some(auth),
-            header(auth, 1, json!({"op":"list_sessions"})),
+            header(instance, auth, 1, json!({"op":"list_sessions"})),
             Instant::now(),
         )
         .unwrap();
-    assert_eq!(
-        rt.image_memory_usage().transfer_bytes,
-        response.bytes.len() * 2
-    );
+    let retained = rt.task_bytes();
+    assert!(retained >= response.bytes.len());
     p.expire(
         &mut rt,
         Instant::now() + std::time::Duration::from_secs(600),
     );
-    assert_eq!(
-        rt.image_memory_usage().transfer_bytes,
-        response.bytes.len() * 2
-    );
+    assert!(rt.task_bytes() >= response.bytes.len());
     drop(response);
-    assert_eq!(rt.image_memory_usage().transfer_bytes, 0);
+    assert_eq!(rt.task_bytes(), 0);
 }
 
 #[test]
 fn failed_output_admission_does_not_report_an_executed_write_as_a_known_refusal() {
     let mut rt = Runtime::new(RuntimeLimits {
-        image_bytes: 8,
+        task_bytes: 4096,
         ..Default::default()
     });
     let mut p = Protocol::default();
@@ -209,27 +222,28 @@ fn failed_output_admission_does_not_report_an_executed_write_as_a_known_refusal(
         connection: hello["ok"]["connection"].as_u64().unwrap(),
     };
     let request = header(
+        rt.instance_id(),
         auth,
         1,
-        json!({"op":"create_session","document_id":uuid::Uuid::new_v4().to_string(),"setup":zipzi_core::ModelSetup::default()}),
+        json!({"op":"create_session","document_id":uuid::Uuid::new_v4().to_string()}),
     );
     assert!(p
         .receive(&mut rt, Some(auth), request.clone(), Instant::now())
         .get("ok")
         .is_some());
-    rt.refresh_memory_budget();
     let competing = rt
-        .reserve_transfer(RuntimeLimits::default().accounted_bytes - rt.accounted_bytes())
+        .reserve_transfer(rt.limits().task_bytes - rt.task_bytes())
         .unwrap();
     assert!(p
         .receive_encoded(&mut rt, Some(auth), request.clone(), Instant::now())
         .is_none());
     drop(competing);
-    assert_eq!(rt.list_sessions().len(), 1);
+    assert_eq!(rt.list_sessions(auth.client).unwrap().len(), 1);
     assert!(p
         .receive(&mut rt, Some(auth), request, Instant::now())
         .get("ok")
         .is_some());
-    assert_eq!(rt.list_sessions().len(), 1);
-    assert_eq!(rt.image_memory_usage().total_bytes(), 0);
+    assert_eq!(rt.list_sessions(auth.client).unwrap().len(), 1);
+    drop(p);
+    assert_eq!(rt.task_bytes(), 0);
 }

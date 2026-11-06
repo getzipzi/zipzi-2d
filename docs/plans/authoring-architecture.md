@@ -1,6 +1,6 @@
 # Authoring 新内核重写方案
 
-状态：第一至第四阶段已完成；Editor、Observe、Runtime、Python Local/Connected 与生成契约直接接入新内核。下一阶段为旧实现删除、遗留测试/示例迁移与正确性回归。日期：2026-11-06。
+状态：第一至第五阶段已完成。Editor、Observe、Runtime、Python Local/Connected 与生成契约直接使用新内核。第六阶段开始集中对照。日期：2026-11-07。
 代码审计基线：`main@44111d1c`；实施起点：`main@0262b010`；实施分支：`codex/authoring-kernel`。
 
 重新实现 authoring 的状态与执行内核。新内核以不可变模型、隔离 Draft、唯一发布入口、
@@ -36,7 +36,7 @@
 第一阶段已可独立构造、修改、冻结和读取完整持久模型。第二阶段接通原生文件解码/保存及
 SDK 根入口，正式状态改由新 AuthoringSession 直接持有 Snapshot。
 细粒度几何通道分离及各领域 authoring 算法迁入仍按后续阶段推进。
-领域与格式转换现已迁入；宿主和遗留测试/示例源仍按阶段四、五切换与清理，D1–D13 尚未全部完成。
+领域与格式转换随后迁入，宿主和客户端在第四阶段切换，遗留测试与示例在第五阶段清理。
 
 持久字段迁入时的归属清单（对应旧 DocumentContent 的全部字段）：
 
@@ -304,6 +304,149 @@ Python Local/Connected 的 10 项端到端测试通过，覆盖创建/竞争候�
 也不宣称 full workspace tests / 完整桌面交互验收通过。Windows 与 WGPU 运行验收未执行；
 Runtime all-features 编译检查通过不等于其运行验收。两项预先存在的应用图标删除不纳入阶段提交。
 
+第五阶段首批实施（进行中）：
+
+- 删除未接线的 SDK 事务、checkpoint 历史、旧保存路径，以及 Runtime 的 Session 搬运、
+  字段注册和旧准入模块。清理 Core 的旧事务返回值、Contract 的旧地址与 wire 操作、
+  Python 的旧手写代理和未编译的原生桥接。
+- 保留正在使用的观察输入和纹理报告，放入 Contract 的 observation 模块并重新生成 Python
+  schema。Project 移除目录版/CBOR 归档原型，原生 v22 路径继续使用同一 ZIP 校验、预算与
+  文件发布流程。
+- SDK Runtime 门禁使用常驻宿主、CPU 观察拒绝、传输和来源身份用例。Python 源码及隔离
+  wheel 门禁切换为 v4 用例，覆盖分页来源、detach/close、批次和丢失回执的恢复。
+- 迁移空图片原生往返测试与周期参数求值测试。空图片重开后保留空记录并报告
+  `MISSING_IMAGE_CONTENT`，没有为它创建 PNG。
+
+2026-11-06 首批验证（macOS）：
+
+| Gate | 结果 |
+| --- | --- |
+| Workspace 产品库和可执行入口检查、本批四个迁移示例编译 | 通过 |
+| Contract 全 crate | 16 项通过 |
+| Core lib、周期参数、PreviewState | 50 / 8 / 4 项通过 |
+| Project lib、原生和格式往返 | 70 / 4 项通过 |
+| SDK lib、authoring、alpha mesh | 72 / 32 / 39 项通过 |
+| Runtime CPU 库与指定集成目标、Metal 观察库 | 50 / 44 项通过 |
+| EditorCore `authoring_kernel` | 6 项通过 |
+| Python 源码门禁、生成和类型、隔离 wheel Connected | 23 / 9 / 13 项通过 |
+| 包域、改动文件 Rust 格式、`git diff --check` | 通过 |
+
+迁移范围：本批先清理执行源码与当前工具入口。旧聚合测试及若干基准仍引用已删除的接口，
+主要涉及 Core 领域夹具、SDK 与 Runtime 集成、Project/格式、Editor 和旧 Python 用例。
+全工作区 `--all-targets` 检查仍失败，聚合目标继续保留供后续逐项迁移。Windows、WGPU
+运行与完整桌面验收尚未执行。第五阶段尚未结束。
+
+第五阶段第二批实施（进行中）：
+
+- Core 领域及求值夹具直接使用 DocumentBuilder 和冻结模型。保留 Mesh/顶点、普通绑定、
+  BlendShape、Glue、Offscreen、Warp/Rotation、CDI 和求值失败边界。旧事务测试改为
+  检查候选失败隔离、净 WriteSet、稳定身份和快照保活。
+- 预览缓存用例以 ContentId 为边界，继续检查同一快照的缓存复用和热求值的分配行为。
+  持久 appearance 保留大于 1 的有限 opacity 值，以支持格式往返。
+- Animation 集成套件使用冻结模型与格式导入值，保留官方 CPU 轨迹、循环、淡入淡出、
+  Physics/Pose 组合、seek cache、原始曲线采样及轨道共享断言。Core 和 Animation
+  的现有基准入口改用快照构造，集中对照仍属于第六阶段。
+- Model3 包装与附件回归改用 ProjectImporter、ProjectIo 与 TransferSnapshot。
+  MOC3 的 v6 损坏输入检查使用带真实纹理捕获的导入夹具。
+
+2026-11-06 第二批验证（macOS）：
+
+| Gate | 结果 |
+| --- | --- |
+| `cargo test --locked -p zipzi-core -p zipzi-animation --no-fail-fast` | Core 112 项、Animation 42 项通过 |
+| 两个 crate 的 `cargo check --locked --all-targets` | 通过，包括 Core 两个基准目标和 Animation 示例 |
+| Animation `storage_benchmark` | 冒烟运行通过 |
+| MOC3 `--no-default-features --test safety_tests`，强制关闭原生 Core 验证 | 6 项通过 |
+| Project `--test model3_tests` | 4 项通过，包括源文件删除后的附件导出 |
+| 包域、改动文件 Rust 格式、`git diff --check` | 通过 |
+
+剩余工作主要涉及 Project/格式的其他旧用例、SDK/Runtime 聚合目标、Editor 用例及旧客户端用例。
+本批验证范围为上述目标，Workspace 聚合门禁和平台验收仍待收尾。
+
+第五阶段第三批实施（进行中）：
+
+- CMO3/CAN3 全部集成用例和两个公开示例改用 DocumentState/Builder；保留独立 CAFF
+  校验、无界画布、纹理 padding/原始 UV、普通/BlendShape 插值、Rotation 单位、
+  曲线量化/烘焙、Expression 语义和格式损失断言。动画导入显式接收返回的冻结状态。
+- 低层 CMO3 解码的图片保持未解析描述；重新导出的测试先解码并验证其自有 PNG，
+  建立解析后的资源描述，再交给 AssetResolver。没有放宽缺图或严格导出检查。
+- Project 的 CDI、Expression、Motion、Pose、Physics、CMO3/Cubism 发布测试移除
+  DocumentSession/DocumentStore 和旧公开 JSON codec 调用，改走 ProjectImporter、
+  ProjectIo、ResourceView 与 TransferSnapshot。持久化断言实际保存/重开 v22 ZIP；
+  损坏文档测试重新计算容器 hash，确保检查到文档准入而非提前失败于 ZIP 完整性。
+- 保留引用保护、opaque 命名空间/内容限制、关键帧稳定身份、损坏附件导入不返回半成品、
+  成组发布保留无关文件等断言。旧 checkpoint/modified 检查改为冻结来源身份和内容检查；
+  CDI 的已退役 CBOR 原型用例随实现删除。更新两个 crate README 的门禁和迁移边界。
+- 本地 Mao 用例直接使用捕获资源，实际验证 260 Mesh、175 Transform、124 BlendShape
+  binding、7 Motion、8 Expression 和 15 个求值姿态；保存后 CMO3/CAN3 与直接导出一致。
+
+2026-11-06 第三批验证（macOS）：
+
+| Gate | 结果 |
+| --- | --- |
+| CMO3 lib 与全部集成目标 | 47 项通过；首轮失败的 export/import 目标修正夹具后分别 11 项通过 |
+| `cargo check --locked -p zipzi-cmo3 --all-targets --features test-support` | 通过，含两个公开示例 |
+| Project `cdi_tests` / `expression_tests` / `motion_tests` / `pose_tests` / `physics_tests` | 9 / 3 / 6 / 3 / 3 项通过 |
+| Project `cmo3_tests` / `cubism_tests` | 3 / 3 项通过，含三个入库模型的原生保存与导出一致性 |
+| Project `mao_cubism -- --nocapture` | 本地素材实际执行 1 项通过；不是缺素材跳过 |
+| 包域、改动文件 Rust 格式、`git diff --check` | 通过 |
+
+本批验证 78 项格式/Project 回归。第五阶段仍未完成：Project 的 `project_tests`、
+`sequence_tests`，其余 MOC3/SDK/Runtime/Editor 遗留聚合目标及旧客户端用例继续迁移。
+本批开始时的 workspace `--all-targets` 检查仍失败；不将 focused 结果表述为工作区通过。
+未运行 Windows、WGPU、外部 Cubism Editor 或完整桌面交互验收。第六阶段集中性能对照尚未开始。
+
+第五阶段后续迁移（进行中）：
+
+- Project 和 MOC3 的集成测试、示例及基准改用冻结文档、捕获的资源版本和
+  原生 ZIP 接口。两 crate 的 `--all-targets` 编译通过，集成及库测试共 212 项通过。
+- SDK 的场景、绑定、动画、资源、历史和删除回归迁到 Draft 与稳定 ID。
+  删除评审保留转换完成后发现的类型化锁阻塞项。SDK 全目标编译通过，
+  库与集成测试共 610 项通过、2 项忽略。
+- 手工网格拖动重新从固定手势快照采样。每次预览仍检查当前候选来源，
+  使用上一有效位置检查移动路径，拒绝后可继续拖动。
+- Runtime 的默认全目标测试通过 143 项，启用 GPU 观察并执行忽略用例后通过 147 项。
+  回归覆盖 v4 读取和预览、客户端归属、迟到结果、任务取消、真实归档的跨会话路径锁、
+  指纹冲突和解压预算。超长命令在占用 Draft 前拒绝，动画事件和发布事件在展开前检查输出预算。
+- EditorCore 的聚合测试与真实工程验收目标已迁到冻结快照、捕获资源和 Runtime Draft，
+  库测试 104 项通过。迁移期间修复了属性命令在 Runtime 写锁中重新读宿主导致的卡死，
+  以及结束失败手势时读取已终止 Draft 的问题。聚合行为、真实工程与桌面验收仍在验证。
+- 阶段完成需重跑工作区、客户端及相关行为门禁。阶段六基线已从固定提交
+  `0262b010` 在独立工作树构建 Release 探针，并完成本地 Mao 工程的基线冒烟
+  和保存后重开检查。
+
+第五阶段完成（2026-11-07）：
+
+- Editor 用发布的净 WriteSet 驱动投影。已知原始快照时只更新受影响的对象或关系；
+  遇到结构变化时重建相关投影。Undo/Redo 同样使用准确的变更前快照。
+- 桌面原生测试、Metal 夹具、跨进程 Python 脚本和工作区基准入口已迁移。
+  IPC 用例覆盖候选采样、真实 UI 更新、路径占用、人工手势与外部发布竞争、
+  两客户端接力、共享历史，以及保存后重开和动画音频导出。
+- 旧 Python 门面和协议夹具退出当前测试入口。领域数值与故障回归保留在 Core、
+  Project、SDK、Runtime 和 Editor。Python 覆盖生成类型、Local/Connected 源值、
+  mesh/资源版本、客户端启动、历史、回执恢复、真实 Editor 和原生扩展版本切换。
+- 当前 API inventory 和源归档使用 v4 生成契约。R0/P3A 等历史证据仍按原始提交和输入复核。
+
+| Gate | macOS 实测 |
+| --- | --- |
+| 工作区 `--all-targets`，以及 `--all-targets --all-features` | 通过 |
+| EditorCore `--lib` / `authoring_kernel` / `integration` | 104 / 6 / 640 项通过 |
+| EditorCore 真实工程 `acceptance` | 默认 19 项通过，另跑 heijiao PSD 导入、裁剪及保存重开 1 项通过 |
+| 桌面 UI 与 EditorRender 库 | 桌面 704 项、EditorRender 10 项通过，4 项 opt-in 忽略 |
+| 桌面 Metal `native_render` 与 WGPU | Metal 28 项通过、2 项忽略，WGPU 20 项通过 |
+| 桌面截图、动画、Timeline、Python IPC 与接力 | 默认截图集、三个本地动画模型、真实 Mao Timeline 和两个桌面 IPC 入口通过 |
+| Python 源码、扩展版本切换、codegen/类型 | 29 / 1 / 10 项通过 |
+| 隔离 wheel、端点启动、生产宿主、宿主网格服务 | 17 / 15 / 11 / 1 项通过 |
+| 从源归档构建的 Local/Connected wheel | 源码生成重放、安装及 Metal 观察配方均通过 |
+| 编译契约隔离 | 源码副本中更改 Core/SDK/Runtime 实现，生成产物逐字节一致；更改字段、枚举与操作输入可检测漂移 |
+| 工具回归、包域、Editor 所有权检查、`git diff --check` | 283 项及检查通过 |
+
+D1–D13 已核对。生产源码没有旧事务、checkpoint、活文档 Project 会话、
+worker Session 搬运、字段句柄注册和 v3 门面。保留历史报告及其原始输入，
+格式编解码和领域验证继续通过新内核调用。Windows 与外部 Cubism 应用未运行。
+全仓 Rust 格式检查仅剩原有的桌面 `settings.rs` 和 `headless_tests/mod.rs` 差异。
+两项已有图标删除未计入阶段提交。
+
 ## 1 新内核的边界
 
 新内核包括持久数据表示、受控写入、事务发布、历史、来源版本与资源引用协议。
@@ -554,18 +697,18 @@ Runtime 管理并发、候选/结果数量和专项资源责任，消费同一�
 
 | 编号 | 当前位置与删除对象 | 新机制 | 主要收尾阶段 |
 | --- | --- | --- | --- |
-| D1 | [Core Document](../../crates/zipzi-core/src/document.rs) 的可变总对象，以及 `transaction_active`、`staged_edits`、`batch_build_active`、`saved_content` 和 saved-match 缓存 | DocumentState / Builder / Session / SavedMarker 分别持有状态 | 三 |
-| D2 | [transactions.rs](../../crates/zipzi-core/src/document/transactions.rs) 的 `begin/stage/commit/cancel_transaction` 独立事务协议 | Draft 批量构造与唯一提交 | 三 |
-| D3 | [checkpoint.rs](../../crates/zipzi-core/src/document/checkpoint.rs) 的旧 DocumentCheckpoint、fork/publish/exchange 和恢复时重建无关索引的路径 | 直接共享 Snapshot，恢复其状态根 | 二至三 |
-| D4 | [tracking.rs](../../crates/zipzi-core/src/document/tracking.rs) 的 TrackingState、fork_tracked_candidate、逐入口覆盖 allowlist 和失去覆盖后的特殊回退 | Builder 写入口天然产生 WriteSet | 三 |
-| D5 | [publication.rs](../../crates/zipzi-core/src/document/publication.rs)、[SDK changes](../../crates/zipzi-sdk/src/changes.rs) 中为提交分类而进行的全领域前后扫描执行路径 | 受影响记录的净变化与摘要；完整比较可留作测试 oracle，不留运行时兼容回退 | 三 |
-| D6 | [Project DocumentSession](../../crates/zipzi-project/src/store/session.rs) 的 `document` 所有权、reset/publish/swap authoring 方法及依赖它的旧会话 API | Project load/save 输入输出值；正式状态由 SDK Session 直接持有 | 二至三 |
-| D7 | [SDK EditSession](../../crates/zipzi-sdk/src/edit.rs)、[AuthoringSession](../../crates/zipzi-sdk/src/session.rs) 的旧实现、`candidate: Option<Document>` 与多层 staged/commit 接线 | 新 Draft、PreparedChange 与 Session 发布协议；同名类型也必须替换内部实现 | 二至四 |
-| D8 | [SDK 历史类型](../../crates/zipzi-sdk/src/types.rs) 的完整 checkpoint 累加、begin-edit 的历史容量拒绝与转换器独立历史限额 | 线性 Snapshot 历史与 WriteSet 步骤软估计 | 二 |
-| D9 | [Runtime](../../crates/zipzi-runtime/src/runtime.rs)、[jobs.rs](../../crates/zipzi-runtime/src/jobs.rs) 中派发时 `sdk.take()`、Work/Completion 持有 Session、归还 Session 和为此保存 frozen 副本的路径 | Session 常驻；Worker 仅持有输入快照/候选与任务资源 | 四 |
-| D10 | [addressing.rs](../../crates/zipzi-runtime/src/addressing.rs)、[addresses.rs](../../crates/zipzi-runtime/src/runtime/addresses.rs) 的 CapturedAddress、FieldAddressId 注册、capture/patch 协议；SDK 跨版本 ObjectHandle/incarnation 与各领域 address/context epoch 表 | 稳定对象地址与带版本的查询/Draft 来源；保留模型引用索引和任务所有权句柄 | 四 |
-| D11 | [SDK project_io](../../crates/zipzi-sdk/src/project_io.rs) 的历史资源遍历、bind/relocate checkpoint、历史 root 路径改写和完整 saved baseline | ResourceKey + ResourceView + 保存投影 + SavedMarker | 二至四 |
-| D12 | [AuthoringLimits](../../crates/zipzi-core/src/document/binding_authoring.rs) 的通用 retained 倍率与 history 字段，以及 Runtime authoring/modeling/addresses/publication 的重复文档倍率准入 | 有规模依据的大分配保护、任务准入和独立历史策略 | 三至四 |
+| D1 | `Core Document` 的可变总对象，以及 `transaction_active`、`staged_edits`、`batch_build_active`、`saved_content` 和 saved-match 缓存 | DocumentState / Builder / Session / SavedMarker 分别持有状态 | 三 |
+| D2 | `transactions.rs` 的 `begin/stage/commit/cancel_transaction` 独立事务协议 | Draft 批量构造与唯一提交 | 三 |
+| D3 | `checkpoint.rs` 的旧 DocumentCheckpoint、fork/publish/exchange 和恢复时重建无关索引的路径 | 直接共享 Snapshot，恢复其状态根 | 二至三 |
+| D4 | `tracking.rs` 的 TrackingState、fork_tracked_candidate、逐入口覆盖 allowlist 和失去覆盖后的特殊回退 | Builder 写入口天然产生 WriteSet | 三 |
+| D5 | `publication.rs`、`SDK changes` 中为提交分类而进行的全领域前后扫描执行路径 | 受影响记录的净变化与摘要；完整比较可留作测试 oracle，不留运行时兼容回退 | 三 |
+| D6 | `Project DocumentSession` 的 `document` 所有权、reset/publish/swap authoring 方法及依赖它的旧会话 API | Project load/save 输入输出值；正式状态由 SDK Session 直接持有 | 二至三 |
+| D7 | `SDK EditSession`、`AuthoringSession` 的旧实现、`candidate: Option<Document>` 与多层 staged/commit 接线 | 新 Draft、PreparedChange 与 Session 发布协议；同名类型也必须替换内部实现 | 二至四 |
+| D8 | `SDK 历史类型` 的完整 checkpoint 累加、begin-edit 的历史容量拒绝与转换器独立历史限额 | 线性 Snapshot 历史与 WriteSet 步骤软估计 | 二 |
+| D9 | `Runtime`、`jobs.rs` 中派发时 `sdk.take()`、Work/Completion 持有 Session、归还 Session 和为此保存 frozen 副本的路径 | Session 常驻；Worker 仅持有输入快照/候选与任务资源 | 四 |
+| D10 | `addressing.rs`、`addresses.rs` 的 CapturedAddress、FieldAddressId 注册、capture/patch 协议；SDK 跨版本 ObjectHandle/incarnation 与各领域 address/context epoch 表 | 稳定对象地址与带版本的查询/Draft 来源；保留模型引用索引和任务所有权句柄 | 四 |
+| D11 | `SDK project_io` 的历史资源遍历、bind/relocate checkpoint、历史 root 路径改写和完整 saved baseline | ResourceKey + ResourceView + 保存投影 + SavedMarker | 二至四 |
+| D12 | `AuthoringLimits` 的通用 retained 倍率与 history 字段，以及 Runtime authoring/modeling/addresses/publication 的重复文档倍率准入 | 有规模依据的大分配保护、任务准入和独立历史策略 | 三至四 |
 | D13 | 旧 Rust 导出、Runtime wire/schema 操作、Python 生成与手写代理、Editor/Observe 的旧调用和迁移适配 | 新契约直接更新全部消费者；移除旧别名、转换 facade 与未使用代码 | 四至五 |
 
 删除 D9 不意味着删除保存排他状态、任务取消、外部资源租约或调用恢复。

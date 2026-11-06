@@ -133,6 +133,39 @@ impl crate::OperationResult {
                 created.push(ObjectRef::new(kind, id));
             }
         };
+        if writes.root_changed(R::DisplayInfo) {
+            let display = after.display_info();
+            for group in display.parameter_groups.iter().flatten() {
+                add(K::ParameterGroup, &group.id);
+                if let Some(parent) = &group.parent_id {
+                    if before
+                        .parameter_group(&group.id)
+                        .is_some_and(|old| old.parent_id != group.parent_id)
+                    {
+                        self.locations
+                            .push(ObjectRef::new(K::ParameterGroup, parent));
+                    }
+                }
+            }
+            for set in display.combined_parameters.iter().flatten() {
+                add(K::CdiCombinedSet, &set.id);
+                for member in &set.members {
+                    add(K::CdiCombinedMember, &member.id);
+                }
+            }
+        }
+        if writes.root_changed(R::Model3Settings) {
+            let settings = after.model3_settings();
+            for group in settings.groups.iter().flatten() {
+                add(K::ModelParameterGroup, &group.id);
+                for member in &group.parameters {
+                    add(K::ModelParameterMember, &member.id);
+                }
+            }
+            for area in settings.hit_areas.iter().flatten() {
+                add(K::ModelHitArea, &area.id);
+            }
+        }
         if writes.root_changed(R::Pose) {
             if let Some(pose) = after.pose() {
                 add(K::Pose, &pose.id);
@@ -202,6 +235,8 @@ impl crate::OperationResult {
                 _ => {}
             }
         }
+        let mut seen = std::collections::HashSet::new();
+        self.locations.retain(|object| seen.insert(object.clone()));
         for object in created {
             if !self.suggested_selection.contains(&object) {
                 self.suggested_selection.push(object.clone());

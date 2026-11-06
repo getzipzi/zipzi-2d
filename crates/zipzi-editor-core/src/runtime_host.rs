@@ -589,9 +589,6 @@ impl HostedDraft {
     pub(crate) fn candidate_document(&self) -> ModelRead {
         ModelRead(self.read_snapshot().expect("active Editor Draft").snapshot)
     }
-    pub(crate) fn source_ref(&self) -> QuerySource {
-        QuerySource::Draft(self.source)
-    }
     pub(crate) fn base_version(&self) -> Version {
         self.source.base
     }
@@ -648,11 +645,35 @@ impl HostedDraft {
             })
         })?)
     }
+    fn preview_manual<T>(
+        &mut self,
+        use_baseline: bool,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
+    ) -> zipzi_runtime::Result<T> {
+        if !use_baseline {
+            return self.preview(run);
+        }
+        let (source, value) =
+            self.host
+                .write()
+                .preview_from_baseline(self.client, self.source, run)?;
+        self.source = source;
+        Ok(value)
+    }
     pub(crate) fn apply_manual_mesh_batch(
         &mut self,
         operations: Vec<(String, zipzi_contract::authoring::ManualMeshOperation)>,
     ) -> zipzi_runtime::Result<()> {
-        self.preview(|commands| {
+        let gesture = operations.iter().all(|(_, operation)| {
+            matches!(
+                operation,
+                zipzi_contract::authoring::ManualMeshOperation::MoveVertices {
+                    motion_from: Some(_),
+                    ..
+                }
+            )
+        });
+        self.preview_manual(gesture, |commands| {
             for (mesh, operation) in operations {
                 commands.edit_manual_mesh(
                     &mesh,
@@ -669,7 +690,14 @@ impl HostedDraft {
         mesh: &str,
         operation: zipzi_contract::authoring::ManualMeshOperation,
     ) -> zipzi_runtime::Result<zipzi_sdk::ManualMeshTransferReport> {
-        self.preview(|commands| {
+        let gesture = matches!(
+            &operation,
+            zipzi_contract::authoring::ManualMeshOperation::MoveVertices {
+                motion_from: Some(_),
+                ..
+            }
+        );
+        self.preview_manual(gesture, |commands| {
             commands
                 .edit_manual_mesh(mesh, operation, Default::default(), &Default::default())
                 .map(|outcome| outcome.report)

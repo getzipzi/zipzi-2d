@@ -1,46 +1,38 @@
+#[path = "../tests/support/mod.rs"]
+mod support;
+
 use std::collections::HashMap;
 use std::hint::black_box;
 use std::time::Instant;
+use support::image;
+use zipzi_core::document::{SceneContentEdit, ShapeTarget, VertexContentPatch};
+use zipzi_core::state::DocumentState;
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 
 use zipzi_core::{
-    BindingAxis, Canvas, Document, DrawableFrame, FrameEvaluator, ImageAsset, Mesh, MeshBinding,
-    MeshKeyform, Parameter, Part, RotationPose, Transform, Vec2, VertexId, VertexPositionUpdate,
+    BindingAxis, Canvas, DrawableFrame, FrameEvaluator, Mesh, MeshBinding, MeshKeyform, Parameter,
+    Part, RotationPose, Transform, Vec2, VertexId,
 };
 
 fn make_id(kind: u32, n: u32) -> String {
     format!("{:04x}{:04x}-4111-4111-8111-111111111111", kind, n)
 }
 
-fn build_production_model(out_params: &mut Vec<String>) -> Document {
-    let mut doc = Document::new();
-    let doc_id = make_id(0x0001, 1);
-    assert!(doc
-        .initialize(
-            doc_id,
-            Canvas::new(3840.0, 2160.0, Vec2::new(1920.0, 1080.0), 100.0)
-        )
-        .is_ok());
+fn build_production_model(out_params: &mut Vec<String>) -> DocumentState {
+    let base = DocumentState::new(
+        make_id(0x0001, 1),
+        Canvas::new(3840.0, 2160.0, Vec2::new(1920.0, 1080.0), 100.0).into(),
+    )
+    .unwrap();
+    let mut doc = base.builder();
 
     // 4 Assets
     let mut asset_ids = Vec::new();
     for a in 0..4 {
         let aid = make_id(0x0002, a + 1);
         asset_ids.push(aid.clone());
-        assert!(doc
-            .add_asset(ImageAsset {
-                unresolved_source: None,
-                id: aid,
-                name: format!("texture_{a}"),
-                content: Some(zipzi_core::ImageContent {
-                    source: format!("assets/{a}.png"),
-                    width: 2048,
-                    height: 2048,
-                    sha256: String::new(),
-                }),
-            })
-            .status
-            .is_ok());
+        doc.create_asset(image(aid, &format!("texture_{a}"), 2048, 2048))
+            .unwrap();
     }
 
     // 8 Parameters (covering angles, eye tracking, breathing, physics)
@@ -48,34 +40,30 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
     for i in 0..8 {
         let pid = make_id(0x0003, i + 1);
         out_params.push(pid.clone());
-        assert!(doc
-            .create_parameter(Parameter {
-                id: pid,
-                runtime_id: format!("Param_{i}"),
-                name: format!("Parameter {i}"),
-                minimum: -1.0,
-                maximum: 1.0,
-                default_value: 0.0,
-                decimal_places: 4,
-                ..Default::default()
-            })
-            .status
-            .is_ok());
+        doc.create_parameter(Parameter {
+            id: pid,
+            runtime_id: format!("Param_{i}"),
+            name: format!("Parameter {i}"),
+            minimum: -1.0,
+            maximum: 1.0,
+            default_value: 0.0,
+            decimal_places: 4,
+            ..Default::default()
+        })
+        .unwrap();
     }
 
     // Root Part
     let root_part = make_id(0x0004, 1);
-    assert!(doc
-        .create_part(Part {
-            id: root_part.clone(),
-            runtime_id: "RootPart".to_string(),
-            name: "Root Part".to_string(),
-            parent_id: String::new(),
-            enabled: true,
-            draw_order: 0.0,
-        })
-        .status
-        .is_ok());
+    doc.create_part(Part {
+        id: root_part.clone(),
+        runtime_id: "RootPart".to_string(),
+        name: "Root Part".to_string(),
+        parent_id: String::new(),
+        enabled: true,
+        draw_order: 0.0,
+    })
+    .unwrap();
 
     // 5 Levels of Nested Deformers:
     // L1: Root Rotation
@@ -84,27 +72,25 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
     // L4: Mid Warp (3x3 grid)
     // L5: Child Warp (3x3 grid)
     let rot_l1 = make_id(0x0005, 1);
-    assert!(doc
-        .create_transform(Transform {
-            id: rot_l1.clone(),
-            runtime_id: "Rot_L1".to_string(),
-            name: "L1 Root Rotation".to_string(),
-            part_id: zipzi_core::PartId::optional(root_part.clone()),
-            parent_id: zipzi_core::TransformId::optional(String::new()),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 0.0,
-                pose: RotationPose {
-                    origin: Vec2::new(1920.0, 1080.0).into(),
-                    angle: 0.0,
-                    scale: 1.0,
-                    reflect_x: false,
-                    reflect_y: false,
-                }
-            }),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_transform(Transform {
+        id: rot_l1.clone(),
+        runtime_id: "Rot_L1".to_string(),
+        name: "L1 Root Rotation".to_string(),
+        part_id: zipzi_core::PartId::optional(root_part.clone()),
+        parent_id: zipzi_core::TransformId::optional(String::new()),
+        data: TransformData::Rotation(RotationTransform {
+            base_angle: 0.0,
+            pose: RotationPose {
+                origin: Vec2::new(1920.0, 1080.0).into(),
+                angle: 0.0,
+                scale: 1.0,
+                reflect_x: false,
+                reflect_y: false,
+            },
+        }),
+        ..Default::default()
+    })
+    .unwrap();
 
     let warp_l2 = make_id(0x0005, 2);
     let mut tfm_warp_l2 = Transform {
@@ -130,30 +116,28 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
             ));
         }
     }
-    assert!(doc.create_transform(tfm_warp_l2).status.is_ok());
+    doc.create_transform(tfm_warp_l2).unwrap();
 
     let rot_l3 = make_id(0x0005, 3);
-    assert!(doc
-        .create_transform(Transform {
-            id: rot_l3.clone(),
-            runtime_id: "Rot_L3".to_string(),
-            name: "L3 Mid Rotation".to_string(),
-            part_id: zipzi_core::PartId::optional(root_part.clone()),
-            parent_id: zipzi_core::TransformId::optional(warp_l2.clone()),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 0.0,
-                pose: RotationPose {
-                    origin: Vec2::new(1920.0, 1080.0).into(),
-                    angle: 0.0,
-                    scale: 1.0,
-                    reflect_x: false,
-                    reflect_y: false,
-                }
-            }),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_transform(Transform {
+        id: rot_l3.clone(),
+        runtime_id: "Rot_L3".to_string(),
+        name: "L3 Mid Rotation".to_string(),
+        part_id: zipzi_core::PartId::optional(root_part.clone()),
+        parent_id: zipzi_core::TransformId::optional(warp_l2.clone()),
+        data: TransformData::Rotation(RotationTransform {
+            base_angle: 0.0,
+            pose: RotationPose {
+                origin: Vec2::new(1920.0, 1080.0).into(),
+                angle: 0.0,
+                scale: 1.0,
+                reflect_x: false,
+                reflect_y: false,
+            },
+        }),
+        ..Default::default()
+    })
+    .unwrap();
 
     let warp_l4 = make_id(0x0005, 4);
     let mut tfm_warp_l4 = Transform {
@@ -180,7 +164,7 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
                 .push(Vec2::new(c as f32 * 80.0 - 120.0, r as f32 * 80.0 - 120.0));
         }
     }
-    assert!(doc.create_transform(tfm_warp_l4).status.is_ok());
+    doc.create_transform(tfm_warp_l4).unwrap();
 
     let warp_l5 = make_id(0x0005, 5);
     let mut tfm_warp_l5 = Transform {
@@ -207,7 +191,7 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
                 .push(Vec2::new(c as f32 * 60.0 - 90.0, r as f32 * 60.0 - 90.0));
         }
     }
-    assert!(doc.create_transform(tfm_warp_l5).status.is_ok());
+    doc.create_transform(tfm_warp_l5).unwrap();
 
     // 80 Meshes: Each with a 10x10 vertex grid = 100 vertices, 162 triangles.
     // Total = 80 * 100 = 8,000 vertices, 12,960 triangles!
@@ -252,7 +236,7 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
                 mesh.triangles.push([v1, v3, v2]);
             }
         }
-        assert!(doc.create_mesh(mesh.clone()).status.is_ok());
+        doc.create_mesh(mesh.clone()).unwrap();
 
         // Multi-axis 2D keyforms on mesh (Params 0 and 1)
         if m % 2 == 0 {
@@ -290,11 +274,11 @@ fn build_production_model(out_params: &mut Vec<String>) -> Document {
                     mb.keyforms.push(kf);
                 }
             }
-            assert!(doc.create_binding(mb).status.is_ok());
+            doc.create_binding(mb).unwrap();
         }
     }
 
-    doc
+    doc.freeze().unwrap().state
 }
 
 fn percentile(sorted: &[f64], pct: f64) -> f64 {
@@ -313,12 +297,12 @@ fn main() {
     let total_vertices: usize = doc
         .mesh_order()
         .iter()
-        .map(|id| doc.get_mesh(id).unwrap().base_positions.len())
+        .map(|id| doc.mesh(id).unwrap().base_positions.len())
         .sum();
     let total_triangles: usize = doc
         .mesh_order()
         .iter()
-        .map(|id| doc.get_mesh(id).unwrap().triangles.len())
+        .map(|id| doc.mesh(id).unwrap().triangles.len())
         .sum();
 
     println!("Model Scale:");
@@ -410,20 +394,30 @@ fn main() {
     );
 
     let target_mesh_id = doc.mesh_order()[0].clone();
-    let mesh_vids = doc.get_mesh(&target_mesh_id).unwrap().vertex_ids.clone();
+    let vertex = doc.mesh(&target_mesh_id).unwrap().vertex_ids[0];
     let mut scrub_latencies_us = Vec::with_capacity(scrub_frames);
     let scrub_start = Instant::now();
 
     for f in 0..scrub_frames {
         let delta = (f as f32 * 0.1).sin() * 2.0;
-        let update = VertexPositionUpdate {
-            mesh_id: target_mesh_id.clone(),
-            vertex_ids: vec![mesh_vids[0]],
-            positions: vec![Vec2::new(delta, delta)],
-        };
-
         let t0 = Instant::now();
-        assert!(doc.apply_vertex_position_updates(&[update]).status.is_ok());
+        let mut builder = doc.builder();
+        builder
+            .edit_scene_content(
+                SceneContentEdit::MeshVertices {
+                    mesh_id: target_mesh_id.clone(),
+                    target: ShapeTarget::Base,
+                    updates: vec![VertexContentPatch {
+                        vertex_id: vertex,
+                        position: Some(Vec2::new(delta, delta)),
+                        uv: None,
+                    }],
+                },
+                Default::default(),
+                &Default::default(),
+            )
+            .unwrap();
+        doc = builder.freeze().unwrap().state;
         preview.insert(param_ids[0].clone(), (f as f32 * 0.05).sin());
         assert!(evaluator
             .evaluate(black_box(&doc), black_box(&preview), &mut frame)

@@ -901,20 +901,18 @@ fn warp_numeric_selection_spans_independent_objects_and_whole_mode_keeps_selecti
 -> anyhow::Result<()> {
     let (mut document, dir, warp, _, _) = rich_document()?;
     let saved = document.save(&dir.path().join("independent.zipzi"))?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let mut copy = sdk.transform(&warp).unwrap();
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    let mut copy = sdk.snapshot().document().transform(&warp).unwrap().clone();
     copy.id = uuid::Uuid::new_v4().to_string();
     copy.runtime_id = "SecondWarp".into();
     for point in &mut copy.warp_mut().unwrap().points {
         point.x += 300.;
     }
     let second = ObjectRef::new(ObjectKind::Deformer, &copy.id);
-    sdk.edit("Second Warp", None, |edit| edit.create_transform(copy))?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::publish_fixture(&mut sdk, "Second Warp", |edit| {
+        crate::support::insert_transform(edit, copy)
+    })?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     let first = ObjectRef::new(ObjectKind::Deformer, &warp);
     let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {
@@ -1215,8 +1213,9 @@ fn rotation_gizmo_scales_from_a_small_initial_size_with_matching_pick_geometry()
 
 #[test]
 fn undriven_warp_binding_keeps_identity_during_control_drag() -> anyhow::Result<()> {
-    use zipzi_sdk::{
-        BindingAuthoringEdit as E, BindingGridEdit as G, BindingGridTarget as T, GridOperation as O,
+    use zipzi_contract::authoring::BindingAuthoringEdit as E;
+    use zipzi_contract::document::{
+        BindingGridEdit as G, BindingGridTarget as T, GridOperation as O,
     };
     for pending_axis in [false, true] {
         let (mut editor, _dir, object) = deformer_editor(false)?;

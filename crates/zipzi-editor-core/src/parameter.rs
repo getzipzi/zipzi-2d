@@ -366,7 +366,18 @@ impl Document {
     /// Display membership is owned by the parameter. All other references block deletion.
     pub fn parameter_delete_references(&self, id: &str) -> Result<Vec<String>> {
         self.parameter_draft(id)?;
-        Ok(self.model().references_to(id))
+        let model = self.model();
+        let mut references = model.references_to(id);
+        // The parameter owns its resolved display entry. Deleting the parameter
+        // removes that entry in the same organization operation.
+        for (index, entry) in model.display_info().parameters.iter().flatten().enumerate() {
+            if matches!(entry, zipzi_core::document::CdiParameterEntry::Resolved { parameter_id, .. } if parameter_id == id)
+            {
+                let owned = format!("display_info.Parameters[{index}]");
+                references.retain(|reference| reference != &owned);
+            }
+        }
+        Ok(references)
     }
 
     pub fn delete_parameter(&mut self, id: &str, expected: u64) -> Result<()> {

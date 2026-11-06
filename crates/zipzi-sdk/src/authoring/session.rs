@@ -208,7 +208,11 @@ impl AuthoringSession {
             step.before.clone()
         };
         let description = step.description.clone();
-        let writes = step.writes.clone();
+        let writes = if redo {
+            step.writes.clone()
+        } else {
+            Arc::new(step.writes.reversed())
+        };
         let version = self
             .version
             .next_publication()

@@ -49,7 +49,7 @@ fn invalid_replacement_recipe_preserves_the_running_evaluator() -> anyhow::Resul
     request.expressions.push(ExpressionTrigger {
         expression_id: "missing".into(),
         time: 0.,
-        transition: zipzi_sdk::ExpressionTransition::Fade,
+        transition: zipzi_animation::ExpressionTransition::Fade,
     });
     assert!(evaluator.evaluate(&request, |_, _| true).is_err());
     assert_eq!(evaluator.seek_cache_stats(), stats);

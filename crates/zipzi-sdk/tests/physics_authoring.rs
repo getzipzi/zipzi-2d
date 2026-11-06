@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
+use zipzi_contract::authoring::CapabilityState;
 use zipzi_core::document::PhysicsDefinitionWire;
+use zipzi_core::state::RootDomain;
 use zipzi_core::{
     document::*,
     physics::{PhysicsAxis, PhysicsVector},
     Canvas, Parameter, Vec2,
 };
-use zipzi_sdk::{AuthoringSession, CapabilityState, ChangeCategory, ObjectKind};
+use zipzi_sdk::{AuthoringSession, PreparedChange, Publication, Status};
 fn id() -> String {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     format!(
@@ -14,23 +16,41 @@ fn id() -> String {
     )
 }
 fn setup() -> (AuthoringSession, String, String, String, String) {
-    let mut s = AuthoringSession::new(&id(), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap();
+    let mut s = AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(),
+                (Canvas::new(100., 100., Vec2::default(), 1.)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    );
     let a = id();
     let g = id();
     let x = id();
     let y = id();
-    s.edit("parameters", None, |e| {
-        for (id, runtime) in [(&x, "X"), (&y, "Y")] {
-            e.create_parameter(Parameter {
-                id: id.clone(),
-                runtime_id: runtime.into(),
-                minimum: -1.,
-                maximum: 1.,
-                ..Default::default()
-            })?;
-        }
-        Ok(())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                for (id, runtime) in [(&x, "X"), (&y, "Y")] {
+                    e.create_parameter(Parameter {
+                        id: id.clone(),
+                        runtime_id: runtime.into(),
+                        minimum: -1.,
+                        maximum: 1.,
+                        ..Default::default()
+                    })?;
+                }
+                Ok(())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("parameters")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     run(
         &mut s,
@@ -43,9 +63,30 @@ fn setup() -> (AuthoringSession, String, String, String, String) {
     );
     (s, a, g, x, y)
 }
-fn run(s: &mut AuthoringSession, intent: PhysicsEdit) -> zipzi_sdk::EditReceipt {
-    let p = s.plan_physics_edit(intent).unwrap();
-    s.execute_physics_plan(&p).unwrap()
+pub(super) fn prepare(s: &AuthoringSession, intent: PhysicsEdit) -> Result<PreparedChange, Status> {
+    let mut draft = s.begin_draft();
+    draft.batch(draft.source(), |candidate_commands| {
+        candidate_commands.edit_physics(intent)
+    })?;
+    draft.prepare("Physics")
+}
+fn run(s: &mut AuthoringSession, intent: PhysicsEdit) -> Publication {
+    let prepared = prepare(s, intent).unwrap();
+    s.publish(prepared).unwrap()
+}
+pub(super) fn roundtrip(s: &AuthoringSession) -> zipzi_core::state::DocumentState {
+    let dir = tempfile::tempdir().unwrap();
+    let io = zipzi_project::ProjectIo::new(dir.path(), Default::default());
+    let path = dir.path().join("physics.zipzi");
+    io.save(
+        s.snapshot().document(),
+        s.snapshot().resources(),
+        &path,
+        None,
+        || true,
+    )
+    .unwrap();
+    io.load(&path, || true).unwrap().document
 }
 fn input(s: &mut AuthoringSession, g: &str) -> String {
     let v = id();
@@ -72,12 +113,7 @@ fn output(s: &mut AuthoringSession, g: &str, node: &str) -> String {
     );
     v
 }
-fn patch(
-    s: &mut AuthoringSession,
-    a: &str,
-    g: &str,
-    changes: Vec<PhysicsProperty>,
-) -> zipzi_sdk::EditReceipt {
+fn patch(s: &mut AuthoringSession, a: &str, g: &str, changes: Vec<PhysicsProperty>) -> Publication {
     run(
         s,
         PhysicsEdit::Patch {
@@ -94,7 +130,17 @@ fn patch(
 }
 #[test]
 fn root_and_group_are_one_transaction_and_ids_survive_native_save() {
-    let mut s = AuthoringSession::new(&id(), Canvas::new(1., 1., Vec2::default(), 1.)).unwrap();
+    let mut s = AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(),
+                (Canvas::new(1., 1., Vec2::default(), 1.)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    );
     let a = id();
     let g = id();
     let r = run(
@@ -106,27 +152,41 @@ fn root_and_group_are_one_transaction_and_ids_survive_native_save() {
             before: None,
         },
     );
-    assert_eq!(s.history_lengths(), (1, 0));
-    assert_eq!(r.changes.created.len(), 4);
-    let group = s.document().get_physics_group(&g).unwrap();
+    assert_eq!(
+        {
+            let history = s.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        (1, 0)
+    );
+    assert!(r.writes.root_changed(RootDomain::Physics));
+    let group = s.snapshot().document().physics_group(&g).unwrap();
     assert_eq!(group.vertices.len(), 2);
     assert!(group.inputs.is_empty() && group.outputs.is_empty());
-    let restored =
-        zipzi_project::decode_project(&zipzi_project::encode_project(s.document()).unwrap())
-            .unwrap();
-    assert_eq!(restored.physics(), s.document().physics());
-    let h = s.handle(ObjectKind::PhysicsGroup, &g).unwrap();
-    s.undo().unwrap();
-    assert!(s.document().physics().is_none());
-    s.redo().unwrap();
-    assert!(s.resolve_handle(&h).is_err());
+    let restored = roundtrip(&s);
+    assert_eq!(restored.physics(), s.snapshot().document().physics());
+    let stale = prepare(
+        &s,
+        PhysicsEdit::Patch {
+            patch: PhysicsPatch {
+                asset_id: a.clone(),
+                asset_changes: vec![],
+                rig: None,
+            },
+        },
+    )
+    .unwrap();
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().physics().is_none());
+    s.redo(s.version()).unwrap();
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
 }
 #[test]
 fn pending_channels_filter_individually_and_map_back_to_native_ids() {
     let (mut s, a, g, x, y) = setup();
     let missing = input(&mut s, &g);
     let active = input(&mut s, &g);
-    let node = s.document().get_physics_group(&g).unwrap().vertices[1]
+    let node = s.snapshot().document().physics_group(&g).unwrap().vertices[1]
         .id
         .clone();
     let off = output(&mut s, &g, &node);
@@ -154,23 +214,34 @@ fn pending_channels_filter_individually_and_map_back_to_native_ids() {
             },
         ],
     );
-    let p = s.document().physics_projection().unwrap().unwrap();
+    let p = s
+        .snapshot()
+        .document()
+        .physics_projection()
+        .unwrap()
+        .unwrap();
     assert_eq!(p.groups[0].inputs.native_to_runtime[&missing], None);
     assert_eq!(p.groups[0].inputs.runtime_to_native, vec![active.clone()]);
     assert_eq!(p.groups[0].outputs.native_to_runtime[&off], None);
     assert_eq!(p.groups[0].outputs.runtime_to_native, vec![on.clone()]);
     assert_eq!(p.executable.data.settings[0].inputs[0].weight, 25.);
     assert_eq!(
-        s.export_physics3().unwrap_err().code.as_ref(),
+        zipzi_project::export_physics3(s.snapshot().document())
+            .unwrap_err()
+            .code
+            .as_str(),
         "NEEDS_CONFIGURATION"
     );
-    let plan = s.plan_available_physics_export().unwrap();
-    assert_eq!(plan.omitted.len(), 2);
-    let exported = s.export_physics_plan(&plan).unwrap().unwrap();
+    let captured = s.read_snapshot();
+    let stale = s.begin_draft();
+    assert_eq!(p.disabled.len(), 2);
+    let exported = zipzi_project::export_available_physics3(captured.snapshot.document())
+        .unwrap()
+        .unwrap();
     assert!(!exported.contains(&on));
     assert!(!exported.contains(&node));
     assert!(!exported.contains(&g));
-    let mut preview = s.motion_preview();
+    let mut preview = zipzi_animation::MotionPreview::new(s.snapshot().document());
     preview.stabilize_physics();
     let trace = preview.physics_snapshot();
     assert_eq!(trace[0].id, g);
@@ -187,18 +258,32 @@ fn pending_channels_filter_individually_and_map_back_to_native_ids() {
             target: PhysicsTarget::Resolved { parameter_id: x },
         }],
     );
-    assert!(s.export_physics_plan(&plan).is_err());
-    let p = s.document().physics_projection().unwrap().unwrap();
+    assert_eq!(
+        s.publish(stale.prepare("stale export acceptance").unwrap())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        zipzi_project::export_available_physics3(captured.snapshot.document())
+            .unwrap()
+            .unwrap(),
+        exported
+    );
+    let p = s
+        .snapshot()
+        .document()
+        .physics_projection()
+        .unwrap()
+        .unwrap();
     assert_eq!(p.groups[0].inputs.native_to_runtime[&missing], Some(0));
-    let restored =
-        zipzi_project::decode_project(&zipzi_project::encode_project(s.document()).unwrap())
-            .unwrap();
-    assert_eq!(restored.physics(), s.document().physics());
+    let restored = roundtrip(&s);
+    assert_eq!(restored.physics(), s.snapshot().document().physics());
 }
 #[test]
 fn node_insertion_and_joint_replacement_do_not_retarget_output_by_index() {
     let (mut s, a, g, _, y) = setup();
-    let node = s.document().get_physics_group(&g).unwrap().vertices[1]
+    let node = s.snapshot().document().physics_group(&g).unwrap().vertices[1]
         .id
         .clone();
     let o = output(&mut s, &g, &node);
@@ -228,18 +313,41 @@ fn node_insertion_and_joint_replacement_do_not_retarget_output_by_index() {
             before: Some(node.clone()),
         },
     );
-    let p = s.document().physics_projection().unwrap().unwrap();
+    let p = s
+        .snapshot()
+        .document()
+        .physics_projection()
+        .unwrap()
+        .unwrap();
     assert_eq!(p.executable.data.settings[0].outputs[0].vertex_index, 2);
-    assert_eq!(s.document().get_physics_output(&o).unwrap().1.node_id, node);
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics_output(&o)
+            .unwrap()
+            .1
+            .node_id,
+        node
+    );
     let before = s.version();
-    let error = s
-        .plan_physics_edit(PhysicsEdit::Delete {
+    let error = prepare(
+        &s,
+        PhysicsEdit::Delete {
             ids: vec![node.clone()],
             node_replacements: BTreeMap::new(),
-        })
-        .unwrap_err();
-    assert_eq!(error.code.as_ref(), "PHYSICS_NODE_IN_USE");
-    assert_eq!(error.referrers.as_ref(), [o.clone()]);
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.code.as_str(), "PHYSICS_NODE_IN_USE");
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics_output(&o)
+            .unwrap()
+            .1
+            .node_id,
+        node
+    );
     assert_eq!(s.version(), before);
     let r = run(
         &mut s,
@@ -248,20 +356,58 @@ fn node_insertion_and_joint_replacement_do_not_retarget_output_by_index() {
             node_replacements: BTreeMap::from([(node.clone(), new.clone())]),
         },
     );
-    assert_eq!(s.document().get_physics_output(&o).unwrap().1.node_id, new);
-    assert!(!r.changes.physics_references.is_empty());
-    s.undo().unwrap();
-    assert_eq!(s.document().get_physics_output(&o).unwrap().1.node_id, node);
-    s.redo().unwrap();
-    assert_eq!(s.document().get_physics_output(&o).unwrap().1.node_id, new);
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics_output(&o)
+            .unwrap()
+            .1
+            .node_id,
+        new
+    );
+    assert!(r.writes.root_changed(RootDomain::Physics));
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics_output(&o)
+            .unwrap()
+            .1
+            .node_id,
+        node
+    );
+    s.redo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics_output(&o)
+            .unwrap()
+            .1
+            .node_id,
+        new
+    );
 }
 #[test]
 fn field_address_survives_reorder_but_not_owner_move_and_undo() {
     let (mut s, a, g, _, _) = setup();
     let i = input(&mut s, &g);
     let j = input(&mut s, &g);
-    let address = s.physics_field_address(&i).unwrap();
-    let h = s.handle(ObjectKind::PhysicsInput, &i).unwrap();
+    let mut stale = s.begin_draft();
+    stale
+        .batch(stale.source(), |c| {
+            c.patch_physics(&PhysicsPatch {
+                asset_id: a.clone(),
+                asset_changes: vec![],
+                rig: Some(PhysicsRigPatch {
+                    group_id: g.clone(),
+                    changes: vec![PhysicsProperty::InputWeight {
+                        id: i.clone(),
+                        value: 80.,
+                    }],
+                }),
+            })
+        })
+        .unwrap();
     run(
         &mut s,
         PhysicsEdit::MoveInputs {
@@ -270,18 +416,19 @@ fn field_address_survives_reorder_but_not_owner_move_and_undo() {
             before: Some(i.clone()),
         },
     );
-    let p = s
-        .plan_physics_field_patch(
-            &address,
-            vec![PhysicsProperty::InputWeight {
-                id: i.clone(),
-                value: 35.,
-            }],
-        )
-        .unwrap();
-    s.execute_physics_plan(&p).unwrap();
-    assert_eq!(s.document().get_physics_input(&i).unwrap().1.weight, 35.);
-    let address = s.physics_field_address(&i).unwrap();
+    patch(
+        &mut s,
+        &a,
+        &g,
+        vec![PhysicsProperty::InputWeight {
+            id: i.clone(),
+            value: 35.,
+        }],
+    );
+    assert_eq!(
+        s.snapshot().document().physics_input(&i).unwrap().1.weight,
+        35.
+    );
     let g2 = id();
     run(
         &mut s,
@@ -296,19 +443,21 @@ fn field_address_survives_reorder_but_not_owner_move_and_undo() {
         &mut s,
         PhysicsEdit::MoveInputs {
             ids: vec![i.clone()],
-            group_id: g2,
+            group_id: g2.clone(),
             before: None,
         },
     );
-    assert!(s.resolve_handle(&h).is_ok());
-    s.undo().unwrap();
-    assert!(s
-        .plan_physics_field_patch(
-            &address,
-            vec![PhysicsProperty::InputWeight { id: i, value: 80. }]
-        )
-        .is_err());
+    assert_eq!(s.snapshot().document().physics_input(&i).unwrap().0.id, g2);
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().physics_input(&i).unwrap().0.id, g);
+    assert_eq!(
+        s.publish(stale.prepare("stale field").unwrap())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
 }
+
 #[test]
 fn cross_group_output_moves_require_explicit_node_and_are_atomic() {
     let (mut s, a, g, _, _) = setup();
@@ -322,26 +471,37 @@ fn cross_group_output_moves_require_explicit_node_and_are_atomic() {
             before: None,
         },
     );
-    let n = s.document().get_physics_group(&g).unwrap().vertices[1]
+    let n = s.snapshot().document().physics_group(&g).unwrap().vertices[1]
         .id
         .clone();
-    let n2 = s.document().get_physics_group(&g2).unwrap().vertices[1]
+    let n2 = s.snapshot().document().physics_group(&g2).unwrap().vertices[1]
         .id
         .clone();
     let o = output(&mut s, &g, &n);
-    let address = s.physics_field_address(&o).unwrap();
+    let stale = s.begin_draft();
     let version = s.version();
-    let history = s.history_lengths();
-    assert!(s
-        .plan_physics_edit(PhysicsEdit::MoveOutputs {
+    let history = {
+        let history = s.history_state();
+        (history.undo_steps, history.redo_steps)
+    };
+    assert!(prepare(
+        &s,
+        PhysicsEdit::MoveOutputs {
             ids: vec![o.clone()],
             group_id: g2.clone(),
             before: None,
             node_replacements: BTreeMap::new()
-        })
-        .is_err());
+        }
+    )
+    .is_err());
     assert_eq!(s.version(), version);
-    assert_eq!(s.history_lengths(), history);
+    assert_eq!(
+        {
+            let history = s.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        history
+    );
     run(
         &mut s,
         PhysicsEdit::MoveOutputs {
@@ -351,8 +511,13 @@ fn cross_group_output_moves_require_explicit_node_and_are_atomic() {
             node_replacements: BTreeMap::from([(o.clone(), n2)]),
         },
     );
-    assert!(s.plan_physics_field_patch(&address, vec![]).is_err());
-    assert_eq!(s.document().get_physics_output(&o).unwrap().1.id, o);
+    assert_eq!(
+        s.publish(stale.prepare("stale move").unwrap())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(s.snapshot().document().physics_output(&o).unwrap().1.id, o);
 }
 #[test]
 fn duplicate_group_remaps_owned_identity_and_preserves_external_targets() {
@@ -369,7 +534,7 @@ fn duplicate_group_remaps_owned_identity_and_preserves_external_targets() {
             },
         }],
     );
-    let n = s.document().get_physics_group(&g).unwrap().vertices[1]
+    let n = s.snapshot().document().physics_group(&g).unwrap().vertices[1]
         .id
         .clone();
     output(&mut s, &g, &n);
@@ -381,7 +546,14 @@ fn duplicate_group_remaps_owned_identity_and_preserves_external_targets() {
             before: None,
         },
     );
-    let groups = &s.document().physics().unwrap().data.settings;
+    let groups = &s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings;
     let original = &groups[0];
     let copy = &groups[1];
     let old: std::collections::HashSet<_> = original.entity_ids().collect();
@@ -389,9 +561,7 @@ fn duplicate_group_remaps_owned_identity_and_preserves_external_targets() {
     assert_eq!(copy.inputs[0].source.parameter_id(), Some(x.as_str()));
     assert_eq!(copy.outputs[0].node_id, copy.vertices[1].id);
     assert_ne!(copy.external_id, original.external_id);
-    let h = s
-        .handle(ObjectKind::PhysicsInput, &copy.inputs[0].id)
-        .unwrap();
+    let stale = s.begin_draft();
     let id = copy.id.clone();
     run(
         &mut s,
@@ -400,52 +570,90 @@ fn duplicate_group_remaps_owned_identity_and_preserves_external_targets() {
             node_replacements: Default::default(),
         },
     );
-    s.undo().unwrap();
-    assert!(s.resolve_handle(&h).is_err());
-    assert_eq!(s.document().physics().unwrap().data.settings.len(), 2);
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.publish(stale.prepare("old copy").unwrap())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics()
+            .as_ref()
+            .unwrap()
+            .data
+            .settings
+            .len(),
+        2
+    );
 }
 #[test]
 fn root_node_and_invalid_references_are_rejected_without_history() {
     let (mut s, _, g, _, _) = setup();
-    let n = s.document().get_physics_group(&g).unwrap().vertices[0]
+    let n = s.snapshot().document().physics_group(&g).unwrap().vertices[0]
         .id
         .clone();
-    let h = s.handle(ObjectKind::PhysicsNode, &n).unwrap();
+
     assert!(matches!(
-        s.physics_capabilities(&h).unwrap().delete,
+        s.snapshot()
+            .document()
+            .physics_capabilities(&n)
+            .unwrap()
+            .delete,
         CapabilityState::Available
     ));
     let before = s.version();
-    assert!(s
-        .plan_physics_edit(PhysicsEdit::Delete {
+    assert!(prepare(
+        &s,
+        PhysicsEdit::Delete {
             ids: vec![n],
             node_replacements: Default::default()
-        })
-        .is_err());
+        }
+    )
+    .is_err());
     assert_eq!(s.version(), before);
     let i = input(&mut s, &g);
-    let address = s.physics_field_address(&i).unwrap();
-    assert!(s
-        .plan_physics_field_patch(
-            &address,
-            vec![PhysicsProperty::InputParameter {
-                id: i,
-                target: PhysicsTarget::Resolved { parameter_id: id() }
-            }]
-        )
-        .is_err());
+
+    assert!(prepare(
+        &s,
+        PhysicsEdit::Patch {
+            patch: PhysicsPatch {
+                asset_id: s
+                    .snapshot()
+                    .document()
+                    .physics()
+                    .as_ref()
+                    .unwrap()
+                    .id
+                    .clone(),
+                asset_changes: vec![],
+                rig: Some(PhysicsRigPatch {
+                    group_id: g.clone(),
+                    changes: vec![PhysicsProperty::InputParameter {
+                        id: i,
+                        target: PhysicsTarget::Resolved { parameter_id: id() }
+                    }]
+                })
+            }
+        }
+    )
+    .is_err());
 }
 #[test]
 fn stale_and_forked_plans_cannot_publish_and_noop_preserves_redo() {
     let (mut s, a, g, _, _) = setup();
     let i = input(&mut s, &g);
-    let plan = s
-        .plan_physics_edit(PhysicsEdit::CreateInput {
+    let plan = prepare(
+        &s,
+        PhysicsEdit::CreateInput {
             group_id: g.clone(),
             id: id(),
             before: None,
-        })
-        .unwrap();
+        },
+    )
+    .unwrap();
     patch(
         &mut s,
         &a,
@@ -455,47 +663,66 @@ fn stale_and_forked_plans_cannot_publish_and_noop_preserves_redo() {
             value: 20.,
         }],
     );
-    assert!(s.execute_physics_plan(&plan).is_err());
-    s.undo().unwrap();
-    let history = s.history_lengths();
+    assert!(s.publish(plan).is_err());
+    s.undo(s.version()).unwrap();
+    let history = {
+        let history = s.history_state();
+        (history.undo_steps, history.redo_steps)
+    };
     let r = patch(
         &mut s,
         &a,
         &g,
         vec![PhysicsProperty::InputWeight { id: i, value: 100. }],
     );
-    assert!(!r.changed);
-    assert_eq!(s.history_lengths(), history);
-    let doc = s.document();
-    let p = doc
-        .plan_physics_edit(PhysicsEdit::CreateInput {
-            group_id: g.clone(),
+    assert!(r.writes.is_empty());
+    assert_eq!(
+        {
+            let history = s.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        history
+    );
+    let foreign = AuthoringSession::new(s.snapshot().clone());
+    let prepared = prepare(
+        &foreign,
+        PhysicsEdit::CreateInput {
+            group_id: g,
             id: id(),
             before: None,
-        })
-        .unwrap();
-    let mut fork = doc.fork_candidate();
-    let mut asset = fork.physics().unwrap().clone();
-    asset.data.meta.fps = Some(60.);
-    assert!(fork.set_physics(asset).status.is_ok());
-    assert_eq!(fork.apply_physics_plan(&p).status.code, "STALE_PLAN");
+        },
+    )
+    .unwrap();
+    assert_eq!(s.publish(prepared).unwrap_err().code, "STALE_SOURCE");
 }
 #[test]
 fn changesets_label_order_and_history_direction_are_precise() {
     let (mut s, a, g, _, _) = setup();
     let i = input(&mut s, &g);
+    let before = s.snapshot().content_id();
     let r = patch(
         &mut s,
         &a,
         &g,
         vec![PhysicsProperty::Name("Renamed".into())],
     );
-    assert!(r.changes.categories.contains(&ChangeCategory::Labels));
-    assert!(!r
-        .changes
-        .categories
-        .contains(&ChangeCategory::EvaluationInputs));
-    assert!(!r.changes.full_invalidation);
+    assert!(r.writes.root_changed(RootDomain::Physics));
+    assert_ne!(s.snapshot().content_id(), before);
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics()
+            .as_ref()
+            .unwrap()
+            .data
+            .meta
+            .dictionary
+            .iter()
+            .find(|entry| entry.id == g)
+            .unwrap()
+            .name,
+        "Renamed"
+    );
     let r = run(
         &mut s,
         PhysicsEdit::Delete {
@@ -503,13 +730,15 @@ fn changesets_label_order_and_history_direction_are_precise() {
             node_replacements: Default::default(),
         },
     );
-    assert!(r.changes.deleted.iter().any(|e| e.id == i));
-    s.drain_events();
-    s.undo().unwrap();
-    let r = s.drain_events().pop().unwrap();
-    assert!(r.changes.created.iter().any(|e| e.id == i));
-    assert!(r.changes.deleted.iter().all(|e| e.id != i));
+    assert!(r.writes.root_changed(RootDomain::Physics));
+    assert!(s.snapshot().document().physics_input(&i).is_none());
+    s.take_events();
+    s.undo(s.version()).unwrap();
+    let r = s.take_events().pop_back().unwrap();
+    assert!(r.writes.root_changed(RootDomain::Physics));
+    assert!(s.snapshot().document().physics_input(&i).is_some());
 }
+
 #[test]
 fn unresolved_import_keeps_usable_channels_and_external_group_ids() {
     let (mut s, a, _, x, y) = setup();
@@ -517,20 +746,57 @@ fn unresolved_import_keeps_usable_channels_and_external_group_ids() {
     let mut value: serde_json::Value = serde_json::from_str(source).unwrap();
     value["PhysicsSettings"][0]["Input"][0]["Source"]["Id"] = "Missing".into();
     value["PhysicsSettings"][0]["Output"][0]["Destination"]["Id"] = "Y".into();
-    s.edit("import", None, |e| {
-        e.import_physics3(&a, &value.to_string())?;
-        Ok(())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                {
+                    let imported =
+                        zipzi_project::import_physics3(&e.read_document()?, &a, &value.to_string())
+                            .map_err(|error| Status::error(error.code, error.message))?;
+                    e.replace_physics(Some(
+                        imported
+                            .candidate
+                            .physics()
+                            .as_ref()
+                            .unwrap()
+                            .as_ref()
+                            .clone(),
+                    ))
+                }?;
+                Ok(())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("import")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let p = s.document().physics_projection().unwrap().unwrap();
+    let p = s
+        .snapshot()
+        .document()
+        .physics_projection()
+        .unwrap()
+        .unwrap();
     assert_eq!(p.disabled.len(), 1);
     assert_eq!(p.executable.data.settings[0].outputs.len(), 1);
     assert_eq!(p.executable.data.settings[0].inputs.len(), 0);
     assert_eq!(
-        s.export_physics3().unwrap_err().code.as_ref(),
+        zipzi_project::export_physics3(s.snapshot().document())
+            .unwrap_err()
+            .code
+            .as_str(),
         "UNRESOLVED_PARAMETER"
     );
-    let g = s.document().physics().unwrap().data.settings[0].clone();
+    let g = s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings[0]
+        .clone();
     assert_eq!(
         g.external_id,
         value["PhysicsSettings"][0]["Id"].as_str().unwrap()
@@ -551,20 +817,30 @@ fn unresolved_import_keeps_usable_channels_and_external_group_ids() {
             },
         ],
     );
-    let encoded = s.export_physics3().unwrap().unwrap();
+    let encoded = zipzi_project::export_physics3(s.snapshot().document())
+        .unwrap()
+        .unwrap();
     assert!(!encoded.contains(&g.id));
     assert!(encoded.contains(&g.external_id));
-    assert!(s.document().get_parameter(&y).is_some());
+    assert!(s.snapshot().document().parameter(&y).is_some());
 }
 #[test]
 fn locks_guard_planning_field_patches_replacement_and_generic_deletion() {
     let (mut s, a, g, _, _) = setup();
     let i = input(&mut s, &g);
-    s.edit("Lock", None, |e| {
-        let mut state = e.candidate_document().editor_state().clone();
-        state.objects.entry(i.clone()).or_default().locked = true;
-        e.replace_editor_state(state)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let mut state = e.read_document().unwrap().editor_state().clone();
+                state.objects.entry(i.clone()).or_default().locked = true;
+                e.replace_editor_state(state)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Lock")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let other = id();
     run(
@@ -576,34 +852,47 @@ fn locks_guard_planning_field_patches_replacement_and_generic_deletion() {
             before: None,
         },
     );
-    let group_handle = s.handle(ObjectKind::PhysicsGroup, &g).unwrap();
+
     assert!(matches!(
-        s.physics_capabilities(&group_handle).unwrap().reorder,
+        s.snapshot()
+            .document()
+            .physics_capabilities(&g)
+            .unwrap()
+            .reorder,
         CapabilityState::Unavailable {
             code: "OBJECT_LOCKED"
         }
     ));
-    assert!(s
-        .plan_physics_edit(PhysicsEdit::ReorderGroups {
+    assert!(prepare(
+        &s,
+        PhysicsEdit::ReorderGroups {
             ids: vec![other],
             before: Some(g.clone()),
-        })
-        .is_err());
-    let h = s.handle(ObjectKind::PhysicsInput, &i).unwrap();
+        }
+    )
+    .is_err());
+
     assert!(matches!(
-        s.physics_capabilities(&h).unwrap().patch,
+        s.snapshot()
+            .document()
+            .physics_capabilities(&i)
+            .unwrap()
+            .patch,
         CapabilityState::Unavailable {
             code: "OBJECT_LOCKED"
         }
     ));
     assert_eq!(
-        s.plan_physics_edit(PhysicsEdit::Delete {
-            ids: vec![g.clone()],
-            node_replacements: Default::default()
-        })
+        prepare(
+            &s,
+            PhysicsEdit::Delete {
+                ids: vec![g.clone()],
+                node_replacements: Default::default()
+            }
+        )
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "OBJECT_LOCKED"
     );
     let patch = PhysicsPatch {
@@ -617,21 +906,64 @@ fn locks_guard_planning_field_patches_replacement_and_generic_deletion() {
             }],
         }),
     };
-    let history = s.history_lengths();
-    assert!(s.edit("Patch", None, |e| e.patch_physics(&patch)).is_err());
-    let mut asset = s.document().physics().unwrap().clone();
+    let history = {
+        let history = s.history_state();
+        (history.undo_steps, history.redo_steps)
+    };
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.patch_physics(&patch))
+            .and_then(|value| {
+                let prepared = draft.prepare("Patch")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
+    let mut asset = s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .clone();
     std::sync::Arc::make_mut(&mut asset.data.settings[0])
         .inputs
         .clear();
     asset.reconcile_counts();
-    assert!(s.edit("Replace", None, |e| e.set_physics(asset)).is_err());
-    assert!(s.edit("Erase", None, |e| e.erase_object(&a)).is_err());
-    assert_eq!(s.history_lengths(), history);
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_physics(Some(asset)))
+            .and_then(|value| {
+                let prepared = draft.prepare("Replace")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_physics(None))
+            .and_then(|value| {
+                let prepared = draft.prepare("Erase")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
+    assert_eq!(
+        {
+            let history = s.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        history
+    );
 }
 #[test]
 fn node_reorder_and_copy_preserve_logical_output_and_renew_copy_identity() {
     let (mut s, _, g, _, _) = setup();
-    let n = s.document().get_physics_group(&g).unwrap().vertices[1]
+    let n = s.snapshot().document().physics_group(&g).unwrap().vertices[1]
         .id
         .clone();
     let o = output(&mut s, &g, &n);
@@ -642,7 +974,7 @@ fn node_reorder_and_copy_preserve_logical_output_and_renew_copy_identity() {
             before: Some(n.clone()),
         },
     );
-    let group = s.document().get_physics_group(&g).unwrap();
+    let group = s.snapshot().document().physics_group(&g).unwrap();
     assert_eq!(group.vertices.len(), 3);
     let copy = group.vertices[1].id.clone();
     assert_ne!(copy, n);
@@ -654,48 +986,59 @@ fn node_reorder_and_copy_preserve_logical_output_and_renew_copy_identity() {
         },
     );
     assert_eq!(
-        s.document().get_physics_group(&g).unwrap().node_index(&n),
+        s.snapshot()
+            .document()
+            .physics_group(&g)
+            .unwrap()
+            .node_index(&n),
         Some(1)
     );
-    assert_eq!(s.document().get_physics_output(&o).unwrap().1.node_id, n);
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .physics_output(&o)
+            .unwrap()
+            .1
+            .node_id,
+        n
+    );
 }
 #[test]
 fn deleted_and_recreated_child_in_one_transaction_retires_old_handle() {
     let (mut s, _, g, _, _) = setup();
     let i = input(&mut s, &g);
-    let old = s.handle(ObjectKind::PhysicsInput, &i).unwrap();
-    s.edit("Recreate", None, |e| {
-        e.edit_physics(PhysicsEdit::Delete {
-            ids: vec![i.clone()],
-            node_replacements: Default::default(),
-        })?;
-        e.edit_physics(PhysicsEdit::CreateInput {
-            group_id: g.clone(),
-            id: i.clone(),
-            before: None,
+    let before = s.read_snapshot();
+    let mut draft = s.begin_draft();
+    draft
+        .batch(draft.source(), |e| {
+            e.edit_physics(PhysicsEdit::Delete {
+                ids: vec![i.clone()],
+                node_replacements: Default::default(),
+            })?;
+            e.edit_physics(PhysicsEdit::CreateInput {
+                group_id: g.clone(),
+                id: i.clone(),
+                before: None,
+            })
         })
-    })
-    .unwrap();
-    assert!(s.resolve_handle(&old).is_err());
-    assert!(s.handle(ObjectKind::PhysicsInput, &i).is_ok());
+        .unwrap();
+    let receipt = s.publish(draft.prepare("Recreate").unwrap()).unwrap();
+    assert!(receipt.writes.is_empty());
+    assert_eq!(s.read_snapshot().source, before.source);
+    assert_eq!(s.snapshot().document().physics_input(&i).unwrap().1.id, i);
 }
 
 #[test]
 fn reopened_field_address_survives_first_reorder_and_is_retired_by_reload() {
-    let (mut source, _, group, _, _) = setup();
+    let (mut source, a, group, _, _) = setup();
     let first = input(&mut source, &group);
     let second = input(&mut source, &group);
-    let path = std::env::temp_dir().join(format!(
-        "zipzi-physics-address-{}-{}",
-        std::process::id(),
-        id()
-    ));
-    source.save_project(&path, None).unwrap();
-    drop(source);
-    let mut session =
-        AuthoringSession::new(&id(), Canvas::new(1., 1., Vec2::default(), 1.)).unwrap();
-    session.open_project(&path, None).unwrap();
-    let address = session.physics_field_address(&first).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("physics.zipzi");
+    let io = zipzi_project::ProjectIo::new(dir.path(), Default::default());
+    source.save_as(&io, &path, None, || true).unwrap();
+    let (mut session, _) = AuthoringSession::open(&io, &path, || true).unwrap();
+    let stale = session.begin_draft();
     run(
         &mut session,
         PhysicsEdit::MoveInputs {
@@ -704,50 +1047,105 @@ fn reopened_field_address_survives_first_reorder_and_is_retired_by_reload() {
             before: Some(first.clone()),
         },
     );
-    let plan = session
-        .plan_physics_field_patch(
-            &address,
-            vec![PhysicsProperty::InputWeight {
-                id: first.clone(),
-                value: 40.,
-            }],
-        )
-        .unwrap();
-    session.execute_physics_plan(&plan).unwrap();
+    patch(
+        &mut session,
+        &a,
+        &group,
+        vec![PhysicsProperty::InputWeight {
+            id: first.clone(),
+            value: 40.,
+        }],
+    );
     assert_eq!(
         session
+            .snapshot()
             .document()
-            .get_physics_input(&first)
+            .physics_input(&first)
             .unwrap()
             .1
             .weight,
         40.
     );
-    let address = session.physics_field_address(&first).unwrap();
-    session.open_project(&path, None).unwrap();
-    assert!(session.plan_physics_field_patch(&address, vec![]).is_err());
-    drop(session);
-    std::fs::remove_dir_all(path).unwrap();
+    let loaded = io.load(&path, || true).unwrap();
+    session
+        .replace(
+            session.version(),
+            zipzi_sdk::Snapshot::new(loaded.document, loaded.resources).unwrap(),
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .publish(stale.prepare("old source").unwrap())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        session
+            .snapshot()
+            .document()
+            .physics_input(&first)
+            .unwrap()
+            .1
+            .weight,
+        100.
+    );
 }
 
 #[test]
 fn deleting_channels_from_a_root_only_import_preserves_the_chain() {
     let (mut s, a, g, _, _) = setup();
-    let mut asset = s.document().physics().unwrap().clone();
+    let mut asset = s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .clone();
     std::sync::Arc::make_mut(&mut asset.data.settings[0])
         .vertices
         .truncate(1);
     let source = asset.data.to_wire(|_| unreachable!());
     let text = serde_json::to_string(&source).unwrap();
-    s.edit("Import root-only rig", None, |e| {
-        e.import_physics3(&a, &text).map(|_| ())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                {
+                    let imported = zipzi_project::import_physics3(&e.read_document()?, &a, &text)
+                        .map_err(|error| Status::error(error.code, error.message))?;
+                    e.replace_physics(Some(
+                        imported
+                            .candidate
+                            .physics()
+                            .as_ref()
+                            .unwrap()
+                            .as_ref()
+                            .clone(),
+                    ))
+                }
+                .map(|_| ())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Import root-only rig")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let rig = s.document().physics().unwrap().data.settings[0].clone();
+    let rig = s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings[0]
+        .clone();
     assert_ne!(rig.id, g);
     let input = input(&mut s, &rig.id);
     let output = output(&mut s, &rig.id, &rig.vertices[0].id);
-    let before = s.document().physics().unwrap().clone();
+    let before = s.snapshot().document().physics().as_ref().unwrap().clone();
     run(
         &mut s,
         PhysicsEdit::Delete {
@@ -755,11 +1153,11 @@ fn deleting_channels_from_a_root_only_import_preserves_the_chain() {
             node_replacements: Default::default(),
         },
     );
-    let current = s.document().get_physics_group(&rig.id).unwrap();
+    let current = s.snapshot().document().physics_group(&rig.id).unwrap();
     assert_eq!(current.vertices, rig.vertices);
     assert!(current.inputs.is_empty() && current.outputs.is_empty());
-    s.undo().unwrap();
-    assert_eq!(s.document().physics(), Some(&before));
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().physics(), &Some(before));
 }
 
 #[test]
@@ -773,17 +1171,28 @@ fn root_creation_plan_rejects_ids_owned_by_other_object_kinds() {
         },
     );
     let version = s.version();
-    let history = s.history_lengths();
-    let error = s
-        .plan_physics_edit(PhysicsEdit::CreateGroup {
+    let history = {
+        let history = s.history_state();
+        (history.undo_steps, history.redo_steps)
+    };
+    let error = prepare(
+        &s,
+        PhysicsEdit::CreateGroup {
             asset_id: parameter,
             id: id(),
             name: "Rig".into(),
             before: None,
-        })
-        .unwrap_err();
-    assert_eq!(error.code.as_ref(), "DUPLICATE_ID");
+        },
+    )
+    .unwrap_err();
+    assert_eq!(error.code.as_str(), "DUPLICATE_ID");
     assert_eq!(s.version(), version);
-    assert_eq!(s.history_lengths(), history);
-    assert!(s.document().physics().is_none());
+    assert_eq!(
+        {
+            let history = s.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        history
+    );
+    assert!(s.snapshot().document().physics().is_none());
 }

@@ -12,7 +12,7 @@ import cargo_domain
 HELP = '''Usage: python tools/dev.py COMMAND [arguments...]
 
   test sdk MODE       fast, runtime, mesh, regression, stress, python,
-                      python-connected, python2, python2-connected, full
+                      python-connected, full
   test editor MODE    fast, ui, regression, acceptance, tools, full
   test tools ARGS     unittest discovery arguments (-p, -k, -v)
   python ARGS         source SDK Python
@@ -30,12 +30,12 @@ def test_commands(domain, mode, args):
     def cargo(operation, *flags):
         return cargo_domain.command(groups, domain, operation, list(flags))
     if domain == 'sdk':
-        if mode in {'python', 'python2', 'python-connected', 'python2-connected'}:
-            name = 'test.py' if mode in {'python', 'python2'} else 'connected.py'
+        if mode in {'python', 'python-connected'}:
+            name = 'test.py' if mode == 'python' else 'connected.py'
             return [[python, str(ROOT / 'crates/zipzi-python/tools' / name), *args]]
         selectors = {
             'fast': ['-p', 'zipzi-sdk', '--lib', '--test', 'authoring'],
-            'runtime': ['-p', 'zipzi-runtime'],
+            'runtime': ['-p', 'zipzi-runtime', '--lib', '--tests'],
             'mesh': ['-p', 'zipzi-sdk', '--test', 'alpha_mesh'],
             'stress': ['-p', 'zipzi-sdk', '--test', 'alpha_mesh'],
         }
@@ -57,7 +57,8 @@ def test_commands(domain, mode, args):
     if mode == 'tools':
         return [[python, str(ROOT / 'tools/test_tools.py'), *args]]
     if mode == 'fast':
-        return [['cargo', 'test', '--locked', '-p', 'zipzi-editor-core', '--lib', '--test', 'integration', *args]]
+        return [['cargo', 'test', '--locked', '-p', 'zipzi-editor-core', '--lib',
+                 '--test', 'integration', '--test', 'authoring_kernel', *args]]
     flags = ['--locked', '--features', 'zipzi-editor/test-support']
     if mode == 'ui':
         flags += ['--lib']

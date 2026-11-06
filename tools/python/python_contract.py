@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Freeze and inspect the Python P3A contract without claiming acceptance.
-
-inventory imports only the pure client and lists exports, reachable facades,
-fields, inherited SDK methods and signature/type-hint defects. freeze records
-source/artifact identities without rebuilding or overwriting evidence. baseline
-runs strict target regressions on existing native/host fixtures and writes every
-result, including failures. Use test-sdk.sh python first to refresh fixtures.
-"""
+"""Inventory the v4 public Python contract and capture source test evidence."""
 from __future__ import annotations
 
 import argparse
@@ -131,13 +124,6 @@ def inventory() -> dict:
         if not path.name.startswith("_"):
             name = f"zipzi.{path.stem}"
             modules[name] = importlib.import_module(name)
-    modeling = SOURCE / "zipzi/modeling"
-    if modeling.is_dir():
-        modules["zipzi.modeling"] = importlib.import_module("zipzi.modeling")
-        for path in sorted(modeling.glob("*.py")):
-            if not path.name.startswith("_"):
-                name = f"zipzi.modeling.{path.stem}"
-                modules[name] = importlib.import_module(name)
     aliases = {}
     for name, module in sorted(modules.items(), key=lambda item: -len(item[0])):
         for key, value in vars(module).items():
@@ -201,16 +187,8 @@ def inventory() -> dict:
             add(path, value, "export", explicit_all=declared is not None and key in declared)
             members(path, value)
 
-    lifecycle = importlib.import_module("zipzi._lifecycle")
-    resources = importlib.import_module("zipzi.resources")
-    facades = {"Runtime.sessions": lifecycle.Sessions, "Runtime.resources": resources.Resources,
-               "Session.project": lifecycle.Project}
-    for owner, editable in (("Session", False), ("Edit", True)):
-        for domain, cls in (("meshes", "Meshes"), ("resources", "Images"),
-                            ("parameters", "Parameters"), ("bindings", "Bindings"),
-                            ("scene", "Scene"), ("modeling", "Modeling")):
-            name = "Editable" + cls if editable and cls not in {"Scene", "Modeling"} else cls
-            facades[f"{owner}.{domain}"] = getattr(lifecycle, name)
+    kernel = importlib.import_module("zipzi._kernel")
+    facades = {"Runtime.sessions": kernel.Sessions}
     for path, cls in facades.items():
         add(f"zipzi.{path}", cls, "facade")
         members(f"zipzi.{path}", cls)
@@ -265,13 +243,15 @@ def baseline(output: Path, native: Path, host: Path, names: list[str]) -> bool:
     native_files = list((native / "zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
     if len(native_files) != 1 or not host.is_file():
         raise ValueError("Refresh fixtures with ./tools/test-sdk.sh python before running the baseline")
-    os.environ.update(ZIPZI_PYTHON_NATIVE=str(native), ZIPZI_PYTHON_HOST=str(host),
-                      ZIPZI_PYTHON2_NATIVE=str(native), ZIPZI_PYTHON2_HOST=str(host))
+    os.environ.update(ZIPZI_KERNEL_NATIVE=str(native), ZIPZI_KERNEL_HOST=str(host),
+                      ZIPZI_KERNEL_SOURCE_CLIENT=str(SOURCE))
     os.environ.pop("ZIPZI_DEV_SESSION_DIR", None)
+    os.environ.pop("ZIPZI_KERNEL_EDITOR_HOST", None)
     sys.path.insert(0, str(PACKAGE / "tests"))
-    module = importlib.import_module("test_p3a_contract")
+    module = importlib.import_module("test_kernel")
     loader = unittest.TestLoader()
-    suite = loader.loadTestsFromNames(names, module) if names else loader.loadTestsFromTestCase(module.P3AContract)
+    names = names or ["Values", "LocalLifecycle", "ConnectedLifecycle", "Recovery"]
+    suite = loader.loadTestsFromNames(names, module)
     before = source_identity()
     runner_sha = sha256(Path(__file__))
     artifacts = {"native": artifact_identity(native_files[0]), "host": artifact_identity(host)}
@@ -281,7 +261,7 @@ def baseline(output: Path, native: Path, host: Path, names: list[str]) -> bool:
     passed = accepted(result, unchanged)
     write_json(output, {"schema": 1, "status": "passed" if passed else "failed",
         "scope": "source_target_regressions_only", "started_source": before,
-        "runner_sha256": runner_sha, "selected_tests": names or ["P3AContract"],
+        "runner_sha256": runner_sha, "selected_tests": names,
         "inputs_unchanged": unchanged, "artifacts": artifacts,
         "tests_run": result.testsRun, "results": result.records})
     return passed
@@ -290,56 +270,6 @@ def baseline(output: Path, native: Path, host: Path, names: list[str]) -> bool:
 def accepted(result: unittest.TestResult, unchanged: bool) -> bool:
     return (result.wasSuccessful() and result.testsRun > 0 and not result.skipped
             and not result.expectedFailures and unchanged)
-
-
-def check_freeze(catalogue: Path, configuration: Path, performance: Path, artifacts: Path,
-                 verify_current: bool = False) -> dict:
-    import python_targets
-    import python_acceptance
-    api = json.loads(catalogue.read_text())
-    agent = json.loads(configuration.read_text())
-    p0 = json.loads(performance.read_text())
-    python_targets.validate(api)
-    python_acceptance.validate(agent)
-    sys.path.insert(0, str(PACKAGE / "tools"))
-    import baseline as measurements
-    if (p0.get("schema") != 2 or p0.get("runs", 0) < 5 or p0.get("samples") != 32
-            or p0.get("warmup") != 4 or not p0["thresholds"].get("frozen") or p0.get("noise_rejections")):
-        raise ValueError("P3A-0 needs a frozen Release P0 baseline, including noise checks")
-    for role in ("timing", "probe"):
-        build = p0["builds"][role]
-        files = list((artifacts / role / "native/zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
-        if (build["profile"]["debug_assertions"] or build["host_profile"] != "release"
-                or build["instrumented"] != (role == "probe") or len(files) != 1
-                or sha256(files[0]) != build["artifact_sha256"]
-                or sha256(artifacts / role / ('local_host_fixture.exe' if sys.platform == 'win32' else 'local_host_fixture')) != build["host_sha256"]):
-            raise ValueError(f"P0 {role} artifact/profile drift")
-    cases = {"small_query", "single_edit", "batch_100", "large_array", "image", "plan"}
-    if set(p0["measurements"]) != {"local", "connected"}:
-        raise ValueError("P0 must measure both backends")
-    for mode, measured in p0["measurements"].items():
-        if set(measured) != cases or any(len(case["probes"]) != p0["runs"] for case in measured.values()):
-            raise ValueError(f"Incomplete P0 timing/probe matrix: {mode}")
-        for case in measured.values():
-            if (case["p50_ns"] <= 0 or case["p95_ns"] < case["p50_ns"]
-                    or not 0 <= case["relative_p50_range"] <= p0["thresholds"]["max_process_p50_range"]):
-                raise ValueError("Invalid/noisy P0 timing summary")
-            for probe in case["probes"]:
-                measurements.validate_probe(mode, probe)
-    if verify_current:
-        if p0["client_sha256"] != measurements.client_hash() or p0["measurement_sha256"] != sha256(PACKAGE / "tools/baseline.py"):
-            raise ValueError("Current client/workloads changed before P3A-0 approval")
-    initial = json.loads((python_targets.DIRECTORY / "p3a-start-evidence.json").read_text())
-    failures = initial["target_regressions"]
-    if failures["tests_run"] != 11 or not failures["inputs_unchanged"] or len(failures["results"]) != 13:
-        raise ValueError("Original independent failure baseline is incomplete")
-    return {"schema": 1, "stage": "P3A-0", "status": "passed", "symbols": len(api["mapping"]),
-        "decisions": api["decisions"], "explicit_target_paths": len(api["new_and_changed_targets"]),
-        "inputs": {"catalogue_sha256": sha256(catalogue), "acceptance_sha256": sha256(configuration),
-            "performance_sha256": sha256(performance)}, "verified_current_before_refactor": verify_current,
-        "artifacts_directory": str(artifacts), "original_failure_methods": failures["tests_run"],
-        "configuration": {"task_environments": 14, "planned_runs": 42, "executed_runs": 0},
-        "meaning": "contract, failure and performance baseline plus experiment inputs frozen; target implementation and D/C/G execution are later gates"}
 
 
 def main() -> None:
@@ -355,35 +285,12 @@ def main() -> None:
             command.add_argument("--editor", type=Path, default=ROOT / "target/debug/zipzi-editor")
             command.add_argument("--wheel", type=Path, action="append", default=[], help="Exact installed/build wheel to hash; repeatable")
         if name == "baseline":
-            command.add_argument("tests", nargs="*", help="Optional P3AContract.test_name selectors")
-    targets = commands.add_parser("targets", help="Build the reviewed per-symbol P3A target catalogue")
-    targets.add_argument("--output", required=True, type=Path)
-    configure = commands.add_parser("configure", help="Freeze G01-G08 model, prompts, budgets and fixture seeds; does not run agents")
-    configure.add_argument("--output", required=True, type=Path)
-    gate = commands.add_parser("check-freeze", help="Validate all P3A-0 exit inputs before starting implementation")
-    gate.add_argument("--catalogue", type=Path, required=True)
-    gate.add_argument("--configuration", type=Path, required=True)
-    gate.add_argument("--performance", type=Path, required=True)
-    gate.add_argument("--artifacts", type=Path, required=True)
-    gate.add_argument("--verify-current", action="store_true", help="Require current pre-refactor client/workload identity; use when approving P3A-0")
-    gate.add_argument("--output", type=Path, required=True)
+            command.add_argument("tests", nargs="*", help="Optional v4 test selectors such as Recovery")
     args = parser.parse_args()
     if args.output.exists():
         parser.error("Output already exists; select a new evidence path")
     if args.command == "inventory":
         write_json(args.output, inventory())
-    elif args.command == "targets":
-        import python_targets
-        catalogue = python_targets.build()
-        python_targets.validate(catalogue)
-        write_json(args.output, catalogue)
-    elif args.command == "configure":
-        import python_acceptance
-        configuration = python_acceptance.configuration()
-        python_acceptance.validate(configuration)
-        write_json(args.output, configuration)
-    elif args.command == "check-freeze":
-        write_json(args.output, check_freeze(args.catalogue, args.configuration, args.performance, args.artifacts, args.verify_current))
     elif args.command == "freeze":
         native_files = sorted((args.native / "zipzi_native").glob('_native' + sysconfig.get_config_var('EXT_SUFFIX')))
         write_json(args.output, {"schema": 1, "status": "frozen_not_accepted",
@@ -394,7 +301,7 @@ def main() -> None:
                 "wheels": [artifact_identity(path) for path in args.wheel]},
             "capability_evidence": {"path": "crates/zipzi-python/CAPABILITIES.md",
                 "sha256": sha256(PACKAGE / "CAPABILITIES.md"),
-                "meaning": "existing claims, not new P3A acceptance"},
+                "meaning": "current documented capabilities"},
             "inventory": inventory()})
     else:
         if not baseline(args.output, args.native.resolve(), args.host.resolve(), args.tests):

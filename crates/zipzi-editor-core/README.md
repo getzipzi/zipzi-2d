@@ -1,8 +1,9 @@
 # zipzi-editor-core
 
-UI-independent Editor coordination built on `zipzi-sdk`, `zipzi-core` and
-`zipzi-project`. This crate owns open documents, editing sessions, previews,
-selection, tools and workspace state. It has no GPUI or Metal dependency.
+UI-independent Editor coordination built on the resident `zipzi-runtime`
+host. This crate owns document views, previews, selection, tools and workspace
+state. Runtime owns the formal SDK sessions and their history. EditorCore has
+no GPUI or Metal dependency.
 
 The public `Editor` coordinates documents and load/save work. `Document` exposes
 Editor authoring operations backed by SDK sessions. `SceneSnapshot`, `ViewState`
@@ -57,19 +58,17 @@ consumption pass through Runtime. `Editor::with_runtime` attaches a workspace to
 an application host. `detach_document` retains resident content/history, while
 explicit close releases it after save/discard coordination.
 
-The stage-four adapter uses immutable snapshots for view reads and Runtime
-DraftSource for candidates. Editor gesture exclusion is local to the view;
-another client can publish and invalidate a captured candidate. Busy publication
-retains the gesture for retry. Texture reads resolve captured ResourceKeys rather
-than reopening files. Confirmation views hold the exact Draft snapshot they display and publish it
-once. Field captures contain stable IDs, expected values and the full Version;
-there is no address registry. Conversion/deletion/mesh workers return prepared
-candidates, and publication invalidates projections from WriteSet.
+View reads capture immutable snapshots. Gestures use Runtime `DraftSource`
+values, and another client can publish and invalidate a captured candidate.
+Save admission can hold a gesture for retry. Textures come from the captured
+resource version. A confirmation owns the Draft snapshot it displays, and
+field captures contain stable IDs, expected values and the full Version.
+Conversion, deletion and mesh workers prepare candidates, and publication
+invalidates projections through the WriteSet.
 
-Production libraries and the desktop application compile against these APIs.
-The independent `authoring_kernel` target covers native confirmation and resource
-workflows. Legacy aggregate test targets still reference removed APIs and need
-stage-five migration; they are not covered by the focused pass.
+The `authoring_kernel` target covers native confirmation and resource workflows.
+The `integration` target covers synthetic Editor workflows. The `acceptance`
+target adds import, export, and licensed-model cases.
 
 Background load/save tasks carry Runtime Work, never Editor view state. Publish
 a Completion into Runtime before attempting a weak view callback.

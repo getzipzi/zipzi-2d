@@ -1,3 +1,4 @@
+use zipzi_core::state::*;
 mod common;
 use common::*;
 use std::sync::Arc;
@@ -49,18 +50,18 @@ fn automatic_time_grid_preserves_millisecond_rounded_beziers_at_sixty_fps() {
         fade_out: None,
         extensions: Default::default(),
     });
-    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip.clone()));
     let mut second = make_clip();
     second.id = uuid(200);
     second.name = "Same declared FPS".into();
     second.events.clear();
-    assert!(doc.create_motion(second).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(second));
     let mut other_rate = make_clip();
     other_rate.id = uuid(300);
     other_rate.name = "Independent 24 FPS group".into();
     other_rate.fps = 24.;
     other_rate.events.clear();
-    assert!(doc.create_motion(other_rate).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(other_rate));
     let options = Can3Options {
         auto_frame_rate: true,
         bake_animation: true,
@@ -74,11 +75,11 @@ fn automatic_time_grid_preserves_millisecond_rounded_beziers_at_sixty_fps() {
         .iter()
         .any(|d| d.code == "CAN3_BAKED_TRACK"));
     let mut returned = fixture().0;
-    import_animation(&artifact.bytes, &mut returned).unwrap();
-    let after = returned.get_motion(&clip.id).unwrap();
+    returned = import_animation(&artifact.bytes, &returned).unwrap();
+    let after = returned.motion(&clip.id).unwrap();
     assert_eq!(after.fps, 60.);
-    assert_eq!(returned.get_motion(&uuid(200)).unwrap().fps, 60.);
-    assert_eq!(returned.get_motion(&uuid(300)).unwrap().fps, 24.);
+    assert_eq!(returned.motion(&uuid(200)).unwrap().fps, 60.);
+    assert_eq!(returned.motion(&uuid(300)).unwrap().fps, 24.);
     let track = &after.tracks[0];
     assert_eq!(track.keys().count(), 4);
     assert_eq!(track.segments.len(), clip.tracks[0].segments.len());
@@ -134,7 +135,7 @@ fn automatic_grid_keeps_unrestricted_bezier_time_handles() {
         fade_out: None,
         extensions: Default::default(),
     });
-    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip.clone()));
     let artifact = encode_can3(
         &doc,
         &Can3Options {
@@ -146,8 +147,8 @@ fn automatic_grid_keeps_unrestricted_bezier_time_handles() {
     .unwrap();
     assert!(!artifact.report.has_loss());
     let mut returned = fixture().0;
-    import_animation(&artifact.bytes, &mut returned).unwrap();
-    let after = returned.get_motion(&clip.id).unwrap();
+    returned = import_animation(&artifact.bytes, &returned).unwrap();
+    let after = returned.motion(&clip.id).unwrap();
     assert_eq!(after.fps, 60.);
     assert!(!after.restricted_beziers);
     assert_eq!(after.tracks[0].keys().count(), 2);
@@ -196,7 +197,7 @@ fn automatic_time_grid_repairs_only_inverse_step_boundaries() {
         fade_out: None,
         extensions: Default::default(),
     });
-    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip.clone()));
     let artifact = encode_can3(
         &doc,
         &Can3Options {
@@ -218,8 +219,8 @@ fn automatic_time_grid_repairs_only_inverse_step_boundaries() {
         .iter()
         .any(|d| d.code == "CAN3_BAKED_TRACK"));
     let mut returned = fixture().0;
-    import_animation(&artifact.bytes, &mut returned).unwrap();
-    let after = returned.get_motion(&clip.id).unwrap();
+    returned = import_animation(&artifact.bytes, &returned).unwrap();
+    let after = returned.motion(&clip.id).unwrap();
     assert_eq!(after.fps, 60.);
     assert_eq!(after.tracks[0].keys().count(), 5);
     assert!(matches!(
@@ -263,7 +264,7 @@ fn unsupported_precision_uses_only_explicit_baking_fallback() {
         fade_out: None,
         extensions: Default::default(),
     });
-    assert!(doc.create_motion(clip).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip));
     assert!(matches!(
         encode_can3(
             &doc,
@@ -320,17 +321,16 @@ fn make_clip() -> MotionClip {
         opaque_source_content_hash: None,
     }
 }
-fn fixture_motion() -> (zipzi_core::Document, Vec<u8>) {
+fn fixture_motion() -> (zipzi_core::state::DocumentState, Vec<u8>) {
     let (mut doc, png) = fixture();
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: uuid(1),
             runtime_id: "PartArm".into(),
             name: "Arm".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let mut clip = make_clip();
     clip.tracks.push(MotionTrack {
         id: uuid(10),
@@ -385,7 +385,7 @@ fn fixture_motion() -> (zipzi_core::Document, Vec<u8>) {
             extensions: Default::default(),
         });
     }
-    assert!(doc.create_motion(clip).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip));
     let mut other = make_clip();
     other.id = uuid(200);
     other.name = "仅事件".into();
@@ -394,7 +394,7 @@ fn fixture_motion() -> (zipzi_core::Document, Vec<u8>) {
     other.duration = 2.;
     other.looping = false;
     other.restricted_beziers = false;
-    assert!(doc.create_motion(other).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(other));
     (doc, png)
 }
 fn xml(bytes: &[u8]) -> String {
@@ -440,7 +440,7 @@ fn linked_animation_preserves_scenes_curves_ids_and_metadata() {
     let before = doc.clone();
     assert!(encode_cmo3(
         &doc,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &Cmo3Options::default()
     )
     .is_err());
@@ -453,7 +453,7 @@ fn linked_animation_preserves_scenes_curves_ids_and_metadata() {
             ..Default::default()
         },
     };
-    let pair = encode_cubism(&doc, &|_: &ImageAsset| Ok(png.clone()), &opts).unwrap();
+    let pair = encode_cubism(&doc, &|_: &AssetRecord| Ok(png.clone()), &opts).unwrap();
     assert_eq!(pair.can3.report.diagnostics.len(), 1);
     assert_eq!(
         pair.can3.report.diagnostics[0].code,
@@ -584,11 +584,11 @@ fn linked_animation_preserves_scenes_curves_ids_and_metadata() {
             );
         }
     }
-    assert!(doc.same_content(&before));
-    assert_eq!(doc.revision(), before.revision());
+    assert_eq!(doc.content_id(), before.content_id());
+    assert_eq!(doc.content_id(), before.content_id());
     assert_eq!(
         pair.can3.bytes,
-        encode_cubism(&doc, &|_: &ImageAsset| Ok(png.clone()), &opts)
+        encode_cubism(&doc, &|_: &AssetRecord| Ok(png.clone()), &opts)
             .unwrap()
             .can3
             .bytes
@@ -622,7 +622,7 @@ fn empty_document_produces_an_editable_linked_scene_and_signed_keys_work() {
             std::fs::write(&path, artifact.bytes).unwrap();
             let model = encode_cmo3(
                 &doc,
-                &|_: &ImageAsset| Ok(png.clone()),
+                &|_: &AssetRecord| Ok(png.clone()),
                 &Cmo3Options::default(),
             )
             .unwrap();
@@ -662,7 +662,7 @@ fn quantization_and_collisions_are_reported_before_asset_io() {
             extensions: Default::default(),
         },
     ];
-    assert!(doc.create_motion(clip).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip));
     let report = inspect_can3(&doc).unwrap();
     for code in [
         "CAN3_FRAME_QUANTIZATION",
@@ -673,7 +673,7 @@ fn quantization_and_collisions_are_reported_before_asset_io() {
         assert!(report.diagnostics.iter().any(|d| d.code == code), "{code}");
     }
     let resolver =
-        |_: &ImageAsset| -> Result<Vec<u8>, Cmo3Error> { panic!("losses must precede image I/O") };
+        |_: &AssetRecord| -> Result<Vec<u8>, Cmo3Error> { panic!("losses must precede image I/O") };
     assert!(matches!(
         encode_cubism(&doc, &resolver, &CubismOptions::default()),
         Err(Cmo3Error::Unsupported(_))
@@ -738,9 +738,9 @@ fn unsupported_effects_registrations_and_duplicate_tracks_are_explicit() {
             extensions: Default::default(),
         });
     }
-    assert!(doc.create_motion(clip).status.is_ok());
-    assert!(doc
-        .set_motion_groups(vec![MotionGroup {
+    doc = prepare(&doc, |builder| builder.create_motion(clip));
+    doc = prepare(&doc, |builder| {
+        builder.set_motion_groups(vec![MotionGroup {
             id: uuid::Uuid::new_v4().to_string(),
             name: "Idle".into(),
             entries: vec![MotionRegistration {
@@ -749,11 +749,10 @@ fn unsupported_effects_registrations_and_duplicate_tracks_are_explicit() {
                 fade_in: None,
                 fade_out: None,
                 sound: Some("voice.wav".into()),
-                extensions: Default::default()
-            }]
+                extensions: Default::default(),
+            }],
         }])
-        .status
-        .is_ok());
+    });
     let report = inspect_can3(&doc).unwrap();
     for code in [
         "CAN3_UNSUPPORTED_TARGET",
@@ -785,7 +784,7 @@ fn invalid_names_frame_overflows_and_xml_characters_fail_without_artifacts() {
     }
     assert!(encode_cubism(
         &doc,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &CubismOptions {
             base_name: "../bad".into(),
             ..Default::default()
@@ -803,16 +802,16 @@ fn invalid_names_frame_overflows_and_xml_characters_fail_without_artifacts() {
     let mut short = make_clip();
     short.events.clear();
     short.duration = 0.000001;
-    assert!(doc.create_motion(short).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(short));
     assert!(inspect_can3(&doc)
         .unwrap()
         .diagnostics
         .iter()
         .any(|d| d.code == "CAN3_MINIMUM_DURATION"));
-    assert!(doc.erase_object(&uuid(100)).status.is_ok());
+    doc = prepare(&doc, |builder| builder.remove_motion(&uuid(100)));
     let mut clip = make_clip();
     clip.duration = f32::MAX;
-    assert!(doc.create_motion(clip).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip));
     assert!(matches!(
         inspect_can3(&doc),
         Err(Cmo3Error::InvalidDocument(_))
@@ -864,11 +863,11 @@ fn delayed_bezier_tracks_retain_absolute_frames() {
         },
         end: key(23, 1.5, 1.),
     }]);
-    assert!(doc.create_motion(clip).status.is_ok());
-    assert!(doc.create_motion(unrestricted).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip));
+    doc = prepare(&doc, |builder| builder.create_motion(unrestricted));
     let artifact = encode_cubism(
         &doc,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &CubismOptions::default(),
     )
     .unwrap();
@@ -905,9 +904,9 @@ fn delayed_bezier_tracks_retain_absolute_frames() {
 #[test]
 fn baked_expression_blends_keep_default_model_poses_and_source_data() {
     let (mut doc, png) = fixture();
-    let mut parameter = doc.get_parameter(PARAM).unwrap().clone();
+    let mut parameter = doc.parameter(PARAM).unwrap().clone();
     parameter.default_value = 0.5;
-    assert!(doc.replace_parameter(parameter).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_parameter(parameter));
     for (index, blend, value) in [
         (300, ExpressionBlend::Add, 0.25),
         (301, ExpressionBlend::Multiply, 0.2),
@@ -915,8 +914,8 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
         (303, ExpressionBlend::Multiply, -5.),
         (304, ExpressionBlend::Overwrite, 5.),
     ] {
-        assert!(doc
-            .create_expression(ExpressionAsset {
+        doc = prepare(&doc, |builder| {
+            builder.create_expression(ExpressionAsset {
                 id: uuid(index),
                 name: format!("{blend:?}_{index}"),
                 file_type: Some("Live2D Expression".into()),
@@ -925,7 +924,7 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
                 entries: vec![ExpressionEntry {
                     id: uuid::Uuid::new_v4().to_string(),
                     target: ExpressionTarget::Resolved {
-                        parameter_id: PARAM.into()
+                        parameter_id: PARAM.into(),
                     },
                     blend: Some(blend),
                     value,
@@ -935,8 +934,7 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
                 opaque_source_ids: None,
                 opaque_source_content_hash: None,
             })
-            .status
-            .is_ok());
+        });
     }
     let before = doc.clone();
     assert!(!encode_can3(&doc, &Can3Options::default())
@@ -947,7 +945,7 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
         bake_animation: true,
         ..Default::default()
     };
-    let pair = encode_cubism(&doc, &|_: &ImageAsset| Ok(png.clone()), &options).unwrap();
+    let pair = encode_cubism(&doc, &|_: &AssetRecord| Ok(png.clone()), &options).unwrap();
     assert!(!pair.report.has_loss());
     assert_eq!(
         pair.report
@@ -958,16 +956,16 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
         4
     );
     let mut returned = import_model(&pair.cmo3.bytes).unwrap().document;
-    import_animation(&pair.can3.bytes, &mut returned).unwrap();
+    returned = import_animation(&pair.can3.bytes, &returned).unwrap();
     for (index, pose) in [(300, 0.75), (301, 0.1), (302, -0.7), (303, -1.), (304, 1.)] {
-        let expression = returned.get_expression(&uuid(index)).unwrap();
+        let expression = returned.expression(&uuid(index)).unwrap();
         assert_eq!(expression.entries.len(), 1);
         assert_eq!(expression.fade_in, Some(0.3));
         assert_eq!(expression.fade_out, Some(0.5));
         assert_eq!(
             zipzi_core::document::ExpressionEntryFields::from(&expression.entries[0]),
             zipzi_core::document::ExpressionEntryFields::from(
-                &doc.get_expression(&uuid(index)).unwrap().entries[0]
+                &doc.expression(&uuid(index)).unwrap().entries[0]
             )
         );
         assert!(
@@ -990,7 +988,7 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
             }
         }
     }
-    assert!(doc.same_content(&before));
+    assert_eq!(doc.content_id(), before.content_id());
     // Exercise a moving baseline, fades and expression cross-fades together.
     let mut clip = make_clip();
     clip.looping = false;
@@ -1008,8 +1006,8 @@ fn baked_expression_blends_keep_default_model_poses_and_source_data() {
         fade_out: Some(0.),
         extensions: Default::default(),
     });
-    assert!(doc.create_motion(clip.clone()).status.is_ok());
-    assert!(returned.create_motion(clip.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip.clone()));
+    returned = prepare(&returned, |builder| builder.create_motion(clip.clone()));
     let mut expected = zipzi_animation::MotionPreview::new(&doc);
     let mut actual = zipzi_animation::MotionPreview::new(&returned);
     for preview in [&mut expected, &mut actual] {
@@ -1073,7 +1071,7 @@ fn baking_retains_frame_samples_when_keys_collide_and_inverse_steps_jump() {
         fade_out: None,
         extensions: Default::default(),
     });
-    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip.clone()));
     let artifact = encode_can3(
         &doc,
         &Can3Options {
@@ -1089,8 +1087,8 @@ fn baking_retains_frame_samples_when_keys_collide_and_inverse_steps_jump() {
         .iter()
         .any(|d| d.code == "CAN3_BAKED_TRACK"));
     let mut returned = fixture().0;
-    import_animation(&artifact.bytes, &mut returned).unwrap();
-    let after = returned.get_motion(&clip.id).unwrap();
+    returned = import_animation(&artifact.bytes, &returned).unwrap();
+    let after = returned.motion(&clip.id).unwrap();
     let curve = zipzi_animation::CompiledCurve::from(&clip.tracks[0]);
     let actual = zipzi_animation::CompiledCurve::from(&after.tracks[0]);
     for frame in 0..=31 {
@@ -1124,7 +1122,7 @@ fn baking_keeps_exact_curves_and_still_rejects_unsupported_targets() {
         fade_out: None,
         extensions: Default::default(),
     });
-    assert!(doc.create_motion(clip.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_motion(clip.clone()));
     let strict = encode_can3(&doc, &Can3Options::default()).unwrap();
     let baked = encode_can3(
         &doc,
@@ -1138,7 +1136,7 @@ fn baking_keeps_exact_curves_and_still_rejects_unsupported_targets() {
     clip.tracks[0].target = MotionTrackTarget::Model {
         runtime_id: "EyeBlink".into(),
     };
-    assert!(doc.replace_motion(clip).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_motion(clip));
     assert!(matches!(
         encode_can3(
             &doc,

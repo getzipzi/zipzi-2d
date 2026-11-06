@@ -41,18 +41,16 @@ pub(super) fn run() -> anyhow::Result<()> {
             d.parameters()[0].id.clone(),
         )
     });
-    let asset = host
-        .runtime
-        .read()
-        .document(session)?
-        .get_mesh(&mesh)
+    let source = crate::test_fixture::published_snapshot(&host.runtime, session)?;
+    let asset = source
+        .document()
+        .mesh(&mesh)
         .unwrap()
         .texture_asset_id
         .clone();
     ensure!(history(&h) == (0, 0), "fixture has unexpected history");
     let mut args = vec![
-        session.runtime_instance().to_string(),
-        session.serial().to_string(),
+        session.to_string(),
         mesh.clone(),
         asset.to_string(),
         clip.clone(),
@@ -71,32 +69,28 @@ pub(super) fn run() -> anyhow::Result<()> {
         python,
         endpoint.path(),
         r#"
-import sys,zipzi
 from dataclasses import replace
 from importlib.util import find_spec
-from zipzi import events,modeling as m
 assert '/site-packages/zipzi/' in zipzi.__file__ and find_spec('zipzi_native') is None
 with zipzi.connect() as runtime:
- s=runtime.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- before=s.info(); stream=s.subscribe()
- assert s.editor_context().value is not None
- with runtime.resources.prepare_image(1,1,bytes((240,40,50,255))) as image:
-  with s.edit('Agent draft for Editor') as edit:
-   edit.meshes.rename(sys.argv[3],'Agent draft')
-   edit.resources.replace_image(sys.argv[4],image)
-   clip=edit.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
-   track=clip.tracks[0]
-   end=replace(track.segments[0].end,value=.8)
-   track=replace(track,segments=(replace(track.segments[0],end=end),))
-   edit.apply(m.commands.ModelingCommandReplaceMotion(clip=replace(clip,name='Agent motion',tracks=(track,))))
-   receipt=edit.commit().wait()
-   assert receipt.changed and receipt.before==before.version
-  assert edit.receipt==receipt
- assert s.info().history==(1,0)
- assert s.meshes.get(sys.argv[3]).value.name=='Agent draft'
- assert s.resources.get(sys.argv[4]).value.pixels.rgba==bytes((240,40,50,255))
- published=[event for event in stream.poll() if isinstance(event,events.Published)]
- assert len(published)==1 and published[0].receipt.after==s.info().version
+    s=runtime.sessions.attach(sys.argv[1])
+    mesh, asset, motion=sys.argv[2:5]
+    cursor=s.version
+    assert s.editor_context() is not None
+    with s.draft('Agent draft for Editor') as e:
+        e.apply(rename(mesh,'Agent draft'))
+        replace_image(runtime,e,asset,bytes((240,40,50,255)))
+        clip=v.MotionClip.from_wire(record(e,v.ObjectKind.MOTION,motion))
+        track=clip.tracks[0]
+        segment=replace(track.segments[0],end=replace(track.segments[0].end,value=.8))
+        e.apply(v.CommandPutMotion(value=replace(clip,name='Agent motion',tracks=(replace(track,segments=(segment,)),))))
+        receipt=e.publish()
+        assert receipt['kind']=='commit' and receipt['version']['revision']==cursor.revision+1
+    assert history(s)==(1,0)
+    assert mesh_record(s,mesh).name=='Agent draft'
+    assert read_pixels(s,asset)==bytes((240,40,50,255))
+    events=s.events(cursor)
+    assert len(events)==1 and events[0]['version']==s.info()['version']
 "#,
         &args,
     )?;
@@ -210,37 +204,37 @@ with zipzi.connect() as runtime:
         (human_value - 0.8).abs() > 1e-4,
         "Timeline drag did not change the authored key"
     );
-    let refined = host.runtime.read().session_info(session)?;
+    let refined = host
+        .runtime
+        .read()
+        .session_read(host.runtime.client_id(), session)?
+        .version();
     args.push(human_value.to_string());
-    args.push(refined.version.revision.to_string());
+    args.push(refined.revision.to_string());
     client(
         &mut h,
         python,
         endpoint.path(),
         r#"
-import sys,zipzi
 from dataclasses import replace
-from zipzi import modeling as m
 with zipzi.connect() as runtime:
- s=runtime.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- assert s.info().history==(3,0) and s.info().version.revision==int(sys.argv[8])
- assert s.meshes.get(sys.argv[3]).value.name=='Human polish'
- clip=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
- assert abs(clip.tracks[0].segments[0].end.value-float(sys.argv[7]))<1e-5
- assert s.resources.get(sys.argv[4]).value.pixels.rgba==bytes((240,40,50,255))
- before=s.info().version
- with s.edit('Agent continues human refinement') as edit:
-  edit.meshes.rename(sys.argv[3],'Agent continued',expected_name='Human polish')
-  current=edit.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
-  track=current.tracks[0]
-  track=replace(track,initial=replace(track.initial,value=.2))
-  edit.apply(m.commands.ModelingCommandReplaceMotion(clip=replace(current,tracks=(track,))))
-  receipt=edit.commit().wait()
-  assert receipt.before==before and receipt.changed
- assert s.info().history==(4,0)
- after=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
- assert abs(after.tracks[0].initial.value-.2)<1e-5
- assert abs(after.tracks[0].segments[0].end.value-float(sys.argv[7]))<1e-5
+    s=runtime.sessions.attach(sys.argv[1])
+    mesh, asset, motion=sys.argv[2:5]
+    assert history(s)==(3,0) and s.version.revision==int(sys.argv[7])
+    assert mesh_record(s,mesh).name=='Human polish'
+    clip=v.MotionClip.from_wire(record(s,v.ObjectKind.MOTION,motion))
+    assert abs(clip.tracks[0].segments[0].end.value-float(sys.argv[6]))<1e-5
+    assert read_pixels(s,asset)==bytes((240,40,50,255))
+    before=s.version
+    with s.draft('Agent continues human refinement') as e:
+        assert mesh_record(e,mesh).name=='Human polish'
+        track=clip.tracks[0]
+        track=replace(track,initial=replace(track.initial,value=.2))
+        e.apply(rename(mesh,'Agent continued'),v.CommandPutMotion(value=replace(clip,tracks=(track,))))
+    assert s.version.revision==before.revision+1 and history(s)==(4,0)
+    after=v.MotionClip.from_wire(record(s,v.ObjectKind.MOTION,motion))
+    assert abs(after.tracks[0].initial.value-.2)<1e-5
+    assert abs(after.tracks[0].segments[0].end.value-float(sys.argv[6]))<1e-5
 "#,
         &args,
     )?;
@@ -251,32 +245,31 @@ with zipzi.connect() as runtime:
     // One Undo rolls back the whole second batch, preserving both human edits.
     command(&mut h, CommandId::Undo)?;
     ensure!(history(&h) == (3, 1), "continuation Undo was not atomic");
-    let image_usage = host.runtime.read().image_memory_usage();
-    let image_entries = host.runtime.read().session(session)?.memory_image_entries();
+    let image_usage = host.runtime.read().transfer_budget().usage();
     client(
         &mut h,
         python,
         endpoint.path(),
         r#"
-import sys,zipzi
-from zipzi import modeling as m
-from zipzi.docs.editor_handoff import rename_mesh
 with zipzi.connect() as runtime:
- s=runtime.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- assert s.info().history==(3,1)
- assert s.meshes.get(sys.argv[3]).value.name=='Human polish'
- clip=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
- assert clip.tracks[0].initial.value==0.
- assert abs(clip.tracks[0].segments[0].end.value-float(sys.argv[7]))<1e-5
- receipt=rename_mesh(s,sys.argv[3],'Human polish')
- assert not receipt.changed and s.info().history==(3,1)
- before=s.info()
- with runtime.resources.prepare_image(1,1,bytes((0,0,255,255))) as unused:
-  edit=s.edit('cancel temporary resources')
-  edit.resources.replace_image(sys.argv[4],unused)
-  edit.cancel()
- assert s.info()==before
- assert s.resources.get(sys.argv[4]).value.pixels.rgba==bytes((240,40,50,255))
+    s=runtime.sessions.attach(sys.argv[1])
+    mesh, asset, motion=sys.argv[2:5]
+    assert history(s)==(3,1)
+    assert mesh_record(s,mesh).name=='Human polish'
+    clip=v.MotionClip.from_wire(record(s,v.ObjectKind.MOTION,motion))
+    assert clip.tracks[0].initial.value==0.
+    assert abs(clip.tracks[0].segments[0].end.value-float(sys.argv[6]))<1e-5
+    before=s.info()
+    with s.draft('Same mesh name') as e:
+        e.apply(rename(mesh,'Human polish'))
+        assert e.publish()['kind']=='unchanged'
+    e=s.draft('cancel temporary resources')
+    try:
+        replace_image(runtime,e,asset,bytes((0,0,255,255)))
+    finally:
+        e.cancel()
+    assert s.info()==before
+    assert read_pixels(s,asset)==bytes((240,40,50,255))
 "#,
         &args,
     )?;
@@ -289,27 +282,23 @@ with zipzi.connect() as runtime:
         python,
         endpoint.path(),
         r#"
-import runpy,sys
-runtime,serial,mesh=sys.argv[1:4]
-sys.argv=['editor_handoff','rename','--runtime',runtime,'--session',serial,'--mesh',mesh,'--name','Recipe continued']
-runpy.run_module('zipzi.docs.editor_handoff',run_name='__main__')
+with zipzi.connect() as runtime:
+    s=runtime.sessions.attach(sys.argv[1])
+    with s.draft('Continue the Editor project') as e:
+        e.apply(rename(sys.argv[2],'Recipe continued'))
 "#,
         &args,
     )?;
     ensure!(
         history(&h) == (4, 0),
-        "installed handoff example did not continue shared history"
+        "second client did not continue shared history"
     );
-    let after_images = host.runtime.read().image_memory_usage();
-    // Binary read replies remain in the bounded protocol recovery cache. Check
-    // actual image buffers/registry roots, independently of cached blob replies.
+    let after_images = host.runtime.read().transfer_budget().usage();
     ensure!(
         after_images.rgba_bytes == image_usage.rgba_bytes
             && after_images.png_bytes == image_usage.png_bytes
-            && after_images.preparing_bytes == 0
-            && host.runtime.read().session(session)?.memory_image_entries() == image_entries
-            && host.runtime.read().prepared_image_count() == 0,
-        "cancelled image survived: before={image_usage:?}, after={after_images:?}"
+            && after_images.preparing_bytes == 0,
+        "cancelled image survived"
     );
     update(&mut h, |v, _, cx| {
         let document = v.editor.active_id().unwrap();
@@ -357,30 +346,32 @@ runpy.run_module('zipzi.docs.editor_handoff',run_name='__main__')
         python,
         endpoint.path(),
         r#"
-import json,sys,wave,zipzi
-from pathlib import Path
-from zipzi import modeling as m
+import wave
 with zipzi.connect() as runtime:
- s=runtime.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- folder=Path(sys.argv[9]); identity=s.id
- before=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
- saved=s.project.save(folder/'project').wait()
- assert saved.durable and not s.info().modified
- reopened=s.project.open(saved.path).wait()
- assert reopened.after.generation>reopened.before.generation and s.id==identity
- assert s.meshes.get(sys.argv[3]).value.name=='Recipe continued'
- assert s.resources.get(sys.argv[4]).value.pixels.rgba==bytes((240,40,50,255))
- after=s.modeling.records(m.ModelingQuery(motions=(sys.argv[5],))).value.motions[0]
- assert after==before and abs(after.tracks[0].segments[0].end.value-float(sys.argv[7]))<1e-5
- assert s.info().history==(0,0)
- exported=s.project.export(folder/'clip.motion3.json',m.project.ExportFormat.MOTION3,object_id=sys.argv[5]).wait()
- assert exported.published
- motion=json.loads((folder/'clip.motion3.json').read_text())
- assert abs(motion['Curves'][0]['Segments'][-1]-float(sys.argv[7]))<1e-5
- package=s.project.export(folder/'package',m.project.ExportFormat.PACKAGE,allow_loss=True).wait()
- assert package.published and (folder/'package/model.model3.json').is_file()
- with wave.open(str(folder/'package/test.wav'),'rb') as sound:
-  assert sound.getframerate()==8000 and sound.readframes(800)==bytes(1600)
+    s=runtime.sessions.attach(sys.argv[1])
+    mesh, asset, motion=sys.argv[2:5]
+    folder=Path(sys.argv[8])
+    before=record(s,v.ObjectKind.MOTION,motion)
+    previous=s.version
+    with s.save(folder/'project.zipzi') as job:
+        saved=job.wait()
+    assert saved['durable'] and not s.info()['dirty']
+    with s.open(Path(saved['path'])) as job:
+        reopened=job.wait()
+    assert reopened['receipt']['version']['generation']>previous.generation and s.id==sys.argv[1]
+    assert mesh_record(s,mesh).name=='Recipe continued'
+    assert read_pixels(s,asset)==bytes((240,40,50,255))
+    after=record(s,v.ObjectKind.MOTION,motion)
+    assert after==before and history(s)==(0,0)
+    with s.export(folder/'package',v.ExportFormat.RUNTIME,allow_loss=True) as job:
+        assert job.wait()['receipt']['published']
+    package=folder/'package'
+    model=json.loads((package/'model.model3.json').read_text())
+    registrations=[row for rows in model['FileReferences']['Motions'].values() for row in rows]
+    assert any(abs(json.loads((package/row['File']).read_text())['Curves'][0]['Segments'][-1]
+        -float(sys.argv[6]))<1e-5 for row in registrations)
+    with wave.open(str(package/'test.wav'),'rb') as sound:
+        assert sound.getframerate()==8000 and sound.readframes(800)==bytes(1600)
 "#,
         &args,
     )?;
@@ -397,7 +388,7 @@ with zipzi.connect() as runtime:
         "saved/reopened human refinement did not return to the Editor"
     );
     println!(
-        "R6/R7 A19/A20: installed Python mixed batch -> resident memory texture/Metal -> human property input/Undo/Redo/Timeline drag -> fresh Python continuation -> atomic Undo/no-op/cancel cleanup -> native animation -> durable save/reopen -> motion/runtime-package export passed"
+        "R6/R7 A19/A20: installed Python mixed batch -> resident memory texture/Metal -> human property input/Undo/Redo/Timeline drag -> fresh Python continuation -> atomic Undo/no-op/cancel cleanup -> native animation -> durable save/reopen -> motion and audio in runtime-package export passed"
     );
     Ok(())
 }

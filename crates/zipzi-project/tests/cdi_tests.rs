@@ -1,41 +1,38 @@
+mod support;
 use serde_json::{json, Value};
-use zipzi_core::document::{CdiParameterEntry, DisplayInfo};
-use zipzi_core::ChangeKind;
-use zipzi_core::{Canvas, Document, Parameter, Part, Vec2};
-use zipzi_project::{
-    decode_project, encode_project, export_cdi3, import_cdi3, DocumentSession, DocumentStore,
-};
+use support::*;
+use zipzi_core::document::CdiParameterEntry;
+use zipzi_core::state::DocumentState;
+use zipzi_core::{Canvas, Parameter, Part, Vec2};
+use zipzi_project::{export_cdi3, import_cdi3};
+use zipzi_project::{ProjectImporter, TransferFormat, TransferSnapshot};
 
 const DOC: &str = "00000000-0000-4000-8000-000000000901";
 const PARAM_X: &str = "00000000-0000-4000-8000-000000000902";
 const PARAM_Y: &str = "00000000-0000-4000-8000-000000000903";
 const PART: &str = "00000000-0000-4000-8000-000000000904";
 
-fn document() -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0))
-        .is_ok());
+fn document() -> DocumentState {
+    let mut doc =
+        DocumentState::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into()).unwrap();
     for (id, runtime_id) in [(PARAM_X, "ParamX"), (PARAM_Y, "ParamY")] {
-        assert!(doc
-            .create_parameter(Parameter {
+        doc = prepare(&doc, |builder| {
+            builder.create_parameter(Parameter {
                 id: id.into(),
                 runtime_id: runtime_id.into(),
                 name: runtime_id.into(),
                 ..Default::default()
             })
-            .status
-            .is_ok());
+        });
     }
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: PART.into(),
             runtime_id: "PartA".into(),
             name: "Part A".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     doc
 }
 
@@ -47,13 +44,14 @@ fn model3_package_carries_cdi_and_failed_cdi_import_keeps_session() {
         .parent()
         .unwrap();
     let source = root.join("fixtures/external_v50/model.model3.json");
-    let mut session = DocumentSession::new();
-    let (result, _) = session.import_model3(&source);
+    let importer = ProjectImporter::default();
+    let (result, session, _) = importer.import_model3(&source);
     assert!(result.status.is_ok(), "{result:?}");
-    let parameter_id = session.document().parameter_order()[0].clone();
+    let session = session.unwrap();
+    let parameter_id = session.document.parameter_order()[0].clone();
     let runtime_id = session
-        .document()
-        .get_parameter(&parameter_id)
+        .document
+        .parameter(&parameter_id)
         .unwrap()
         .runtime_id
         .clone();
@@ -61,59 +59,48 @@ fn model3_package_carries_cdi_and_failed_cdi_import_keeps_session() {
         "Id":runtime_id,"GroupId":"","Name":"眉の角度"
     }]})
     .to_string();
-    let mut imported = import_cdi3(session.document(), &cdi).unwrap();
-    assert!(imported
-        .candidate
-        .set_missing_attachments(Vec::new())
-        .status
-        .is_ok());
-    assert!(session
-        .publish_authoring_candidate(imported.candidate, ChangeKind::Metadata, false)
-        .unwrap());
+    let mut imported = import_cdi3(&session.document, &cdi).unwrap();
+    imported.candidate = prepare(&imported.candidate, |builder| {
+        builder.set_missing_attachments(Vec::new())
+    });
+    let exported_state = imported.candidate;
     let temporary =
         std::env::temp_dir().join(format!("zipzi-cdi-model3-package-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&temporary);
     std::fs::create_dir_all(&temporary).unwrap();
     let package = temporary.join("package");
-    let result = session.export_package(&package);
-    assert!(result.status.is_ok(), "{result:?}");
+    TransferSnapshot::new(exported_state, session.resources, session.protected_paths)
+        .unwrap()
+        .publish(TransferFormat::Runtime, &package)
+        .unwrap();
     let model3: Value =
         serde_json::from_slice(&std::fs::read(package.join("model.model3.json")).unwrap()).unwrap();
     assert_eq!(model3["FileReferences"]["DisplayInfo"], "model.cdi3.json");
     let exported: Value =
         serde_json::from_slice(&std::fs::read(package.join("model.cdi3.json")).unwrap()).unwrap();
     assert_eq!(exported["Parameters"][0]["Name"], "眉の角度");
-    let mut reopened = DocumentSession::new();
-    let (result, report) = reopened.import_model3(&package.join("model.model3.json"));
+
+    let (result, reopened, report) = importer.import_model3(&package.join("model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
+    let reopened = reopened.unwrap();
     assert!(!report
         .unwrap()
         .unimported_attachments
         .iter()
         .any(|entry| entry.starts_with("DisplayInfo:")));
     assert_eq!(
-        reopened
-            .document()
-            .get_parameter(&parameter_id)
-            .unwrap()
-            .name,
+        reopened.document.parameter(&parameter_id).unwrap().name,
         "眉の角度"
     );
 
     std::fs::write(package.join("model.cdi3.json"), "{broken").unwrap();
-    let before = reopened.document().checkpoint();
-    let (result, _) = reopened.import_model3(&package.join("model.model3.json"));
+    let before = reopened.document.content_id();
+    let (result, failed, _) = importer.import_model3(&package.join("model.model3.json"));
     assert!(!result.status.is_ok());
+    assert!(failed.is_none());
+    assert_eq!(reopened.document.content_id(), before);
     assert_eq!(
-        reopened.document().checkpoint().estimated_bytes(),
-        before.estimated_bytes()
-    );
-    assert_eq!(
-        reopened
-            .document()
-            .get_parameter(&parameter_id)
-            .unwrap()
-            .name,
+        reopened.document.parameter(&parameter_id).unwrap().name,
         "眉の角度"
     );
     std::fs::remove_dir_all(temporary).unwrap();
@@ -136,22 +123,28 @@ fn candidate_import_export_and_reimport_preserve_identity_and_extensions() {
     let source = document();
     let imported = import_cdi3(&source, CDI).unwrap();
     assert!(imported.diagnostics.is_empty());
-    assert_eq!(source.get_parameter(PARAM_X).unwrap().name, "ParamX");
+    assert_eq!(source.parameter(PARAM_X).unwrap().name, "ParamX");
     assert_eq!(
-        imported.candidate.get_parameter(PARAM_X).unwrap().name,
+        imported.candidate.parameter(PARAM_X).unwrap().name,
         "角度 X"
     );
     assert_eq!(
-        imported.candidate.get_parameter(PARAM_Y).unwrap().name,
+        imported.candidate.parameter(PARAM_Y).unwrap().name,
         "角度 X"
     );
-    let reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
-    assert!(reopened.same_content(&imported.candidate));
+    let reopened = roundtrip(&imported.candidate);
+    assert_eq!(
+        project_json(&native_bytes(&reopened)),
+        project_json(&native_bytes(&imported.candidate))
+    );
     let wire: Value = serde_json::from_str(&export_cdi3(&reopened).unwrap()).unwrap();
     let expected: Value = serde_json::from_str(CDI).unwrap();
     assert_eq!(wire, expected);
     let again = import_cdi3(&reopened, CDI).unwrap();
-    assert!(again.candidate.same_content(&reopened));
+    assert_eq!(
+        project_json(&native_bytes(&again.candidate)),
+        project_json(&native_bytes(&reopened))
+    );
     assert_eq!(
         again
             .candidate
@@ -180,29 +173,19 @@ fn candidate_import_export_and_reimport_preserve_identity_and_extensions() {
 }
 
 #[test]
-fn nonempty_cdi_survives_store_save_and_session_open() {
+fn nonempty_cdi_survives_native_save_and_reopen() {
     let candidate = import_cdi3(&document(), CDI).unwrap().candidate;
-    let root = std::env::temp_dir().join(format!("zipzi-cdi-p1b-store-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&root);
-    std::fs::create_dir_all(&root).unwrap();
-    let target = root.join("project");
-    let (result, snapshot) = DocumentStore::new().save(&candidate, &root, &target, None);
-    assert!(result.status.is_ok(), "{result:?}");
-    let manifest = snapshot.unwrap().path.unwrap();
-    let mut archive = zip::ZipArchive::new(std::fs::File::open(&manifest).unwrap()).unwrap();
-    let saved: Value = serde_json::from_reader(archive.by_name("project.json").unwrap()).unwrap();
+    let bytes = native_bytes(&candidate);
+    let saved = project_json(&bytes);
     assert_eq!(saved["format"], "zipzi-project");
     assert_eq!(saved["format_version"], 22);
     assert!(saved["document"]["display_info"]["extensions"]["Future"].is_object());
-    let mut session = DocumentSession::new();
-    let opened = session.open(&manifest);
-    assert!(opened.status.is_ok(), "{opened:?}");
-    assert!(session.document().same_content(&candidate));
+    let reopened = load_native(&bytes).unwrap();
+    assert_eq!(project_json(&native_bytes(&reopened)), saved);
     assert_eq!(
-        serde_json::from_str::<Value>(&export_cdi3(session.document()).unwrap()).unwrap(),
+        serde_json::from_str::<Value>(&export_cdi3(&reopened).unwrap()).unwrap(),
         serde_json::from_str::<Value>(CDI).unwrap()
     );
-    std::fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -220,7 +203,7 @@ fn unresolved_targets_survive_project_save_but_block_strict_cdi_export() {
             .unwrap()[0],
         CdiParameterEntry::Unresolved { .. }
     ));
-    let reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
+    let reopened = roundtrip(&imported.candidate);
     assert_eq!(reopened.display_info(), imported.candidate.display_info());
     let error = export_cdi3(&reopened).unwrap_err();
     assert_eq!(error.code, "UNRESOLVED_PARAMETER");
@@ -230,29 +213,29 @@ fn unresolved_targets_survive_project_save_but_block_strict_cdi_export() {
 #[test]
 fn opaque_extensions_keep_full_namespace_provenance_and_writer_diagnostics() {
     let mut source = document();
-    assert!(source
-        .create_parameter(Parameter {
+    source = prepare(&source, |builder| {
+        builder.create_parameter(Parameter {
             id: "00000000-0000-4000-8000-000000000905".into(),
             runtime_id: "ParamExtra".into(),
             name: "extra".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let imported = import_cdi3(&source, CDI).unwrap();
     let mut candidate = imported.candidate;
-    assert!(candidate
-        .set_parameter_display_name(PARAM_X, "新名".into())
-        .status
-        .is_ok());
+    candidate = prepare(&candidate, |builder| {
+        let mut parameter = builder.parameter(PARAM_X).unwrap().clone();
+        parameter.name = "新名".into();
+        builder.replace_parameter(parameter)
+    });
     assert!(export_cdi3(&candidate).is_ok());
-    let mut parameter = candidate.get_parameter(PARAM_X).unwrap().clone();
+    let mut parameter = candidate.parameter(PARAM_X).unwrap().clone();
     parameter.runtime_id = "RenamedX".into();
-    assert!(candidate.replace_parameter(parameter).status.is_ok());
+    candidate = prepare(&candidate, |builder| builder.replace_parameter(parameter));
     let error = export_cdi3(&candidate).unwrap_err();
     assert_eq!(error.code, "OPAQUE_NAMESPACE_CHANGED");
     assert_eq!(error.path, "$.Future");
-    let restored = decode_project(&encode_project(&candidate).unwrap()).unwrap();
+    let restored = roundtrip(&candidate);
     assert_eq!(
         export_cdi3(&restored).unwrap_err().code,
         "OPAQUE_NAMESPACE_CHANGED"
@@ -264,30 +247,28 @@ fn opaque_extensions_keep_full_namespace_provenance_and_writer_diagnostics() {
         .diagnostics
         .iter()
         .any(|d| d.code == "UnsupportedExtensionNumber" && d.path == "$.Future.Gain"));
-    let reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
+    let reopened = roundtrip(&imported.candidate);
     let error = export_cdi3(&reopened).unwrap_err();
     assert_eq!(error.code, "UnsupportedExtensionNumber");
     assert_eq!(error.path, "$.Future.Gain");
 
     let mut added = import_cdi3(&source, CDI).unwrap().candidate;
-    assert!(added
-        .create_parameter(Parameter {
+    added = prepare(&added, |builder| {
+        builder.create_parameter(Parameter {
             id: "00000000-0000-4000-8000-000000000906".into(),
             runtime_id: "AddedOutsideCdi".into(),
             name: "new".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     assert_eq!(
         export_cdi3(&added).unwrap_err().code,
         "OPAQUE_NAMESPACE_CHANGED"
     );
     let mut deleted = import_cdi3(&source, CDI).unwrap().candidate;
-    assert!(deleted
-        .erase_object("00000000-0000-4000-8000-000000000905")
-        .status
-        .is_ok());
+    deleted = prepare(&deleted, |builder| {
+        builder.remove_parameter("00000000-0000-4000-8000-000000000905")
+    });
     assert_eq!(
         export_cdi3(&deleted).unwrap_err().code,
         "OPAQUE_NAMESPACE_CHANGED"
@@ -297,9 +278,9 @@ fn opaque_extensions_keep_full_namespace_provenance_and_writer_diagnostics() {
 #[test]
 fn runtime_id_not_display_name_is_export_identity_without_opaque_extensions() {
     let mut source = document();
-    let mut part = source.get_part(PART).unwrap().clone();
+    let mut part = source.part(PART).unwrap().clone();
     part.runtime_id = "ParamX".into();
-    assert!(source.replace_part(part).status.is_ok());
+    source = prepare(&source, |builder| builder.replace_part(part));
     let cdi = r#"{
       "Version":3,
       "Parameters":[{"Id":"ParamX","GroupId":"","Name":"同名"},{"Id":"ParamY","GroupId":"","Name":"同名"}],
@@ -307,9 +288,9 @@ fn runtime_id_not_display_name_is_export_identity_without_opaque_extensions() {
       "CombinedParameters":[["ParamX","ParamY"]]
     }"#;
     let mut candidate = import_cdi3(&source, cdi).unwrap().candidate;
-    let mut param = candidate.get_parameter(PARAM_X).unwrap().clone();
+    let mut param = candidate.parameter(PARAM_X).unwrap().clone();
     param.runtime_id = "RenamedX".into();
-    assert!(candidate.replace_parameter(param).status.is_ok());
+    candidate = prepare(&candidate, |builder| builder.replace_parameter(param));
     let output: Value = serde_json::from_str(&export_cdi3(&candidate).unwrap()).unwrap();
     assert_eq!(output["Parameters"][0]["Id"], "RenamedX");
     assert_eq!(output["CombinedParameters"][0][0], "RenamedX");
@@ -353,7 +334,7 @@ fn optional_collections_unresolved_parts_and_duplicate_members_are_distinct() {
 #[test]
 fn invalid_or_unpersistable_cdi_fails_without_changing_source() {
     let source = document();
-    let before = source.checkpoint().estimated_bytes();
+    let before = source.content_id();
     let bad_group = r#"{"Version":3,"ParameterGroups":[{"Id":"A","GroupId":"B","Name":"a"}]}"#;
     assert_eq!(
         import_cdi3(&source, bad_group).unwrap_err().path,
@@ -368,16 +349,16 @@ fn invalid_or_unpersistable_cdi_fails_without_changing_source() {
         import_cdi3(&source, nul_extension).unwrap_err().path,
         "$.Future.Deep.Name"
     );
-    assert_eq!(source.checkpoint().estimated_bytes(), before);
-    assert_eq!(source.get_part(PART).unwrap().name, "Part A");
+    assert_eq!(source.content_id(), before);
+    assert_eq!(source.part(PART).unwrap().name, "Part A");
 
     let control = r#"{"Version":3,"Parts":[{"Id":"PartA","Name":"bad\u0001"}]}"#;
     let imported = import_cdi3(&source, control).unwrap();
     assert!(imported.diagnostics.iter().any(|diagnostic| {
         diagnostic.code == "UnsupportedControlCharacter" && diagnostic.path == "$.Parts[0].Name"
     }));
-    let reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
-    assert_eq!(reopened.get_part(PART).unwrap().name, "bad\u{1}");
+    let reopened = roundtrip(&imported.candidate);
+    assert_eq!(reopened.part(PART).unwrap().name, "bad\u{1}");
     let error = export_cdi3(&reopened).unwrap_err();
     assert_eq!(error.code, "UnsupportedControlCharacter");
     assert_eq!(error.path, "$.Parts[0].Name");
@@ -386,8 +367,9 @@ fn invalid_or_unpersistable_cdi_fails_without_changing_source() {
 #[test]
 fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
     let source = document();
-    let mut wire: Value = serde_json::from_str(&encode_project(&source).unwrap()).unwrap();
-    assert_eq!(wire["format_version"], 21);
+    let bytes = native_bytes(&source);
+    let mut wire = project_json(&bytes);
+    assert_eq!(wire["format_version"], 22);
     assert!(wire["document"]["display_info"].is_object());
     for (value, expected_code) in [
         (Value::Null, "UNSUPPORTED_VERSION"),
@@ -402,7 +384,9 @@ fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
             .remove("animation_assets");
         old["document"]["display_info"] = value;
         assert_eq!(
-            decode_project(&old.to_string()).unwrap_err().code,
+            load_native(&replace_project_json(&bytes, &old))
+                .unwrap_err()
+                .code,
             expected_code
         );
     }
@@ -414,7 +398,9 @@ fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
         .remove("display_info");
     old["document"]["animation_assets"] = Value::Null;
     assert_eq!(
-        decode_project(&old.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&bytes, &old))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
     let mut old = wire.clone();
@@ -428,25 +414,33 @@ fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
         .unwrap()
         .remove("animation_assets");
     assert_eq!(
-        decode_project(&old.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&bytes, &old))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
     old["document"]["legacy_extra"] = json!({"still_accepted":false});
     assert_eq!(
-        decode_project(&old.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&bytes, &old))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
 
     let mut future_root = wire.clone();
     future_root["future_root"] = json!(true);
     assert_eq!(
-        decode_project(&future_root.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&bytes, &future_root))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
 
     wire["document"]["future_field"] = json!([]);
     assert_eq!(
-        decode_project(&wire.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&bytes, &wire))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
     wire["document"]
@@ -455,36 +449,9 @@ fn current_format_is_strict_and_legacy_versions_cannot_smuggle_display_info() {
         .remove("future_field");
     wire["document"]["display_info"]["future_field"] = json!(true);
     assert_eq!(
-        decode_project(&wire.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&bytes, &wire))
+            .unwrap_err()
+            .code,
         "INVALID_PROJECT"
-    );
-}
-
-#[cfg(feature = "binary-prototype")]
-#[test]
-fn cbor_v4_cannot_smuggle_v5_container() {
-    use zipzi_project::{decode_project_cbor, encode_project_cbor};
-    let source = document();
-    let bytes = encode_project_cbor(&source).unwrap();
-    assert!(decode_project_cbor(&bytes).unwrap().same_content(&source));
-    let imported = import_cdi3(&source, CDI).unwrap().candidate;
-    let bytes = encode_project_cbor(&imported).unwrap();
-    let reopened = decode_project_cbor(&bytes).unwrap();
-    assert!(reopened.same_content(&imported));
-    assert_eq!(
-        serde_json::from_str::<Value>(&export_cdi3(&reopened).unwrap()).unwrap(),
-        serde_json::from_str::<Value>(CDI).unwrap()
-    );
-    let mut wire: Value = serde_json::from_str(&encode_project(&source).unwrap()).unwrap();
-    wire["format_version"] = json!(4);
-    wire["document"]["display_info"] = Value::Null;
-    let mut payload = Vec::new();
-    ciborium::into_writer(&wire, &mut payload).unwrap();
-    let mut bad = b"ZIPCBOR1".to_vec();
-    bad.extend_from_slice(&(payload.len() as u64).to_le_bytes());
-    bad.extend_from_slice(&payload);
-    assert_eq!(
-        decode_project_cbor(&bad).unwrap_err().code,
-        "UNSUPPORTED_VERSION"
     );
 }

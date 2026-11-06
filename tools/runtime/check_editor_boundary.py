@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard R2's ownership boundary; behavioral tests remain the publication proof."""
+"""Guard the Editor ownership boundary; behavioral tests remain the publication proof."""
 from __future__ import annotations
 
 import re
@@ -42,13 +42,13 @@ def violations(sources: dict[str, str]) -> list[str]:
                 if publish < 0 or callback is None or publish > callback.start():
                     errors.append(f'{name}: IO publication depends on a weak view')
     document = mask_rust(sources['crates/zipzi-editor-core/src/document.rs'])
-    for field, target in [('session', 'HostedSession'), ('edit', 'HostedEdit')]:
+    for field, target in [('session', 'HostedSession'), ('edit', 'HostedDraft')]:
         if not re.search(rf'\b{field}\s*:\s*(?:crate::runtime_host::)?{target}\b', document):
             errors.append(f'Document must refer to {target}')
     native = mask_rust(sources['crates/zipzi-editor/src/lib.rs'])
     if 'on_window_closed' in native:
         errors.append('last-window lifecycle must not implicitly terminate the host')
-    if '--no-window' not in sources['crates/zipzi-editor/src/lib.rs']:
+    if '--no-window' not in sources['crates/zipzi-editor/src/launch.rs']:
         errors.append('missing no-window launch path')
     return errors
 
@@ -58,7 +58,7 @@ def main() -> int:
     for error in errors:
         print(error)
     if not errors:
-        print('R2 Editor ownership boundary: passed (source guard + separate behavioral gates)')
+        print('Editor ownership boundary: passed (source guard + separate behavioral gates)')
     return bool(errors)
 
 

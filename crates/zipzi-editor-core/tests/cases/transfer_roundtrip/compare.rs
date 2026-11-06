@@ -2,8 +2,8 @@ use anyhow::{Result, anyhow};
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
-use zipzi_core::{Document, DrawableFrame, Vec2};
-use zipzi_project::{content_sha256, encode_project};
+use zipzi_core::{DrawableFrame, Vec2, state::DocumentState};
+use zipzi_project::content_sha256;
 use zipzi_sdk::AuthoringSession;
 
 #[derive(Default, Serialize)]
@@ -79,10 +79,14 @@ pub(super) fn difference(before: &Value, after: &Value, tolerance: f64) -> Diffe
 /// Compare all persisted fields. Only generated identities, asset locations,
 /// PNG encoding and schema envelope are normalized, never authoring content.
 pub(super) fn canonical_document(session: &AuthoringSession) -> Result<Value> {
-    let document = session.document();
-    let mut wire: Value = serde_json::from_str(
-        &encode_project(document).map_err(|s| anyhow!("{}: {}", s.code, s.message))?,
-    )?;
+    let snapshot = session.snapshot();
+    let document = snapshot.document();
+    let directory = tempfile::tempdir()?;
+    let path = directory.path().join("capture.zipzi");
+    let io = zipzi_sdk::ProjectIo::new(directory.path(), Default::default());
+    io.save(document, snapshot.resources(), &path, None, || true)?;
+    let mut archive = zip::ZipArchive::new(std::fs::File::open(path)?)?;
+    let mut wire: Value = serde_json::from_reader(archive.by_name("project.json")?)?;
     let wire = wire.get_mut("document").unwrap();
     let mut ids = BTreeMap::from([(document.id().to_owned(), "@document".to_owned())]);
     for field in ["parameters", "parts", "transforms", "meshes", "offscreens"] {
@@ -107,7 +111,9 @@ pub(super) fn canonical_document(session: &AuthoringSession) -> Result<Value> {
     }
     for asset in wire["assets"].as_array_mut().unwrap() {
         let id = asset["id"].as_str().unwrap();
-        let pixels = session.read_texture(id)?;
+        let pixels = snapshot
+            .resources()
+            .read_texture(document.asset(id).unwrap())?;
         let hash = content_sha256(&pixels.rgba);
         ids.insert(id.into(), format!("@texture/{hash}"));
         asset["source"] = json!(format!("@pixels/{hash}"));
@@ -220,13 +226,13 @@ pub(super) struct Pose {
     pub values: BTreeMap<String, f32>,
 }
 
-pub(super) fn poses(document: &Document) -> Vec<Pose> {
+pub(super) fn poses(document: &DocumentState) -> Vec<Pose> {
     let mut result = vec![Pose {
         name: "default".into(),
         values: BTreeMap::new(),
     }];
     for id in document.parameter_order() {
-        let p = document.get_parameter(id).unwrap();
+        let p = document.parameter(id).unwrap();
         for (label, value) in [("min", p.minimum), ("max", p.maximum)] {
             result.push(Pose {
                 name: format!("{}/{label}", p.runtime_id),
@@ -248,7 +254,7 @@ pub(super) fn poses(document: &Document) -> Vec<Pose> {
             document
                 .parameter_order()
                 .iter()
-                .any(|id| document.get_parameter(id).unwrap().runtime_id == *name)
+                .any(|id| document.parameter(id).unwrap().runtime_id == *name)
         })
         .collect(),
     });
@@ -260,7 +266,7 @@ pub(super) struct Geometry {
     pub metadata: Value,
 }
 
-pub(super) fn geometry(document: &Document, poses: &[Pose]) -> Result<Geometry> {
+pub(super) fn geometry(document: &DocumentState, poses: &[Pose]) -> Result<Geometry> {
     let mut positions = BTreeMap::new();
     let mut metadata = serde_json::Map::new();
     let parameters: BTreeMap<_, _> = document
@@ -268,7 +274,7 @@ pub(super) fn geometry(document: &Document, poses: &[Pose]) -> Result<Geometry> 
         .iter()
         .map(|id| {
             (
-                document.get_parameter(id).unwrap().runtime_id.as_str(),
+                document.parameter(id).unwrap().runtime_id.as_str(),
                 id.as_str(),
             )
         })
@@ -307,7 +313,7 @@ pub(super) fn geometry(document: &Document, poses: &[Pose]) -> Result<Geometry> 
                     .masks
                     .iter()
                     .map(|id| document
-                        .get_mesh(id)
+                        .mesh(id)
                         .map(|m| m.runtime_id.clone())
                         .unwrap_or_else(|| format!("missing:{id}")))
                     .collect::<Vec<_>>()

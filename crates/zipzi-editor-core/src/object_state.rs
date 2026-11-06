@@ -241,7 +241,9 @@ impl Document {
 
     pub(crate) fn invalidate_editor_state_projection(&mut self) {
         let previous = self.projection_revision;
+        let animation_revision = self.animation_input_revision;
         self.invalidate_projection(false);
+        self.animation_input_revision = animation_revision;
         // ObjectIndex contains authoring data and relationships, not editor
         // visibility or locks. Keep it shared while the state/tree revisions advance.
         if let Some((revision, _)) = self.object_index.get_mut().unwrap().as_mut() {

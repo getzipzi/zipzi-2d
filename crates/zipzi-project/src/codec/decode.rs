@@ -97,7 +97,7 @@ pub(super) fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh
     })
 }
 
-pub(super) fn parse_wire(text: &str, expected: Option<(&str, u64)>) -> Result<ProjectWire, Status> {
+pub(super) fn parse_wire(text: &str) -> Result<ProjectWire, Status> {
     validate_json_syntax(text)?;
 
     #[derive(serde::Deserialize)]
@@ -109,32 +109,13 @@ pub(super) fn parse_wire(text: &str, expected: Option<(&str, u64)>) -> Result<Pr
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
     let format = header.format.as_deref();
     let version = header.format_version;
-    if let Some((identifier, expected_version)) = expected {
-        if format != Some(identifier) {
-            return Err(Status::error(
-                "INVALID_PROJECT",
-                "Unknown project document identifier",
-            ));
-        }
-        if version != Some(expected_version) {
-            return Err(Status::error(
-                "UNSUPPORTED_VERSION",
-                "Unsupported project document version",
-            ));
-        }
-    }
-    if format == Some("zipzi-project") && version.is_some_and(|v| v < 21) {
+    if format != Some("zipzi-project") {
         return Err(Status::error(
-            "LEGACY_PROJECT",
-            "Experimental project version is unsupported; reimport the source asset",
+            "INVALID_PROJECT",
+            "Unknown project document identifier",
         ));
     }
-    if matches!(format, Some("zipzi-directory-project" | "zipzi-project"))
-        && !matches!(
-            (format, version),
-            (Some("zipzi-directory-project"), Some(21)) | (Some("zipzi-project"), Some(22))
-        )
-    {
+    if version != Some(22) {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",
             "Unsupported project document version",
@@ -156,23 +137,6 @@ pub(super) fn admit_wire(
     ),
     Status,
 > {
-    if root.format != "zipzi-directory-project" && root.format != "zipzi-project" {
-        return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
-    }
-
-    if !matches!(
-        (root.format.as_str(), root.format_version),
-        ("zipzi-directory-project", 21) | ("zipzi-project", 22)
-    ) {
-        return Err(Status::error(
-            "UNSUPPORTED_VERSION",
-            format!(
-                "Unsupported directory-project version: {}",
-                root.format_version
-            ),
-        ));
-    }
-
     if !root.extra.is_empty() || !root.document.extra.is_empty() {
         return Err(Status::error(
             "UNSUPPORTED_VERSION",

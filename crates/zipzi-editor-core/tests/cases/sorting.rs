@@ -198,22 +198,24 @@ fn sorting_imported_cdi_keeps_unresolved_entries_extensions_and_omitted_paramete
         Canvas, Parameter, Vec2,
         document::{CdiParameterEntry, DisplayInfo, DisplayInfoOrigin},
     };
-    use zipzi_sdk::AuthoringSession;
     let mut session =
-        AuthoringSession::new(&id(900), Canvas::new(100., 100., Vec2::default(), 1.))?;
+        crate::support::fixture_session(&id(900), Canvas::new(100., 100., Vec2::default(), 1.))?;
     let unresolved = CdiParameterEntry::Unresolved {
         runtime_id: "Missing".into(),
         name: "Missing".into(),
         group_id: None,
         extensions: [("note".into(), serde_json::json!({"preserved": true}))].into(),
     };
-    session.edit("Fixture", None, |edit| {
+    crate::support::publish_fixture(&mut session, "Fixture", |edit| {
         for index in 1..=3 {
-            edit.create_parameter(Parameter {
-                id: id(index),
-                runtime_id: format!("Param{index}"),
-                ..Default::default()
-            })?;
+            crate::support::insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: id(index),
+                    runtime_id: format!("Param{index}"),
+                    ..Default::default()
+                },
+            )?;
         }
         edit.replace_display_info(DisplayInfo {
             origin: DisplayInfoOrigin::Imported,
@@ -234,7 +236,7 @@ fn sorting_imported_cdi_keeps_unresolved_entries_extensions_and_omitted_paramete
         })
     })?;
     let output = tempfile::tempdir()?;
-    let saved = session.save_project(&output.path().join("imported.zipzi"), None)?;
+    let saved = crate::support::save_fixture(&mut session, &output.path().join("imported.zipzi"))?;
     let mut document = Document::open(&saved.path)?;
     assert_eq!(members(&document, None), vec![id(2), id(1), id(3)]);
     document.move_parameter(
@@ -246,8 +248,8 @@ fn sorting_imported_cdi_keeps_unresolved_entries_extensions_and_omitted_paramete
     )?;
     assert_eq!(members(&document, None), vec![id(3), id(2), id(1)]);
     let saved = document.save(&saved.path)?;
-    session.open_project(&saved.path, None)?;
-    let info = session.document().display_info();
+    session = crate::support::open_fixture(&saved.path)?;
+    let info = session.snapshot().document().display_info();
     assert_eq!(info.origin, DisplayInfoOrigin::Imported);
     assert_eq!(info.parameters.as_ref().unwrap()[1], unresolved);
     assert!(info.parameters.as_ref().unwrap().iter().any(|entry| matches!(entry, CdiParameterEntry::Resolved { parameter_id, extensions, .. } if parameter_id == &id(2) && extensions["entryNote"] == "kept")));
@@ -363,41 +365,45 @@ fn invalid_part_destinations_and_noops_do_not_discard_redo() -> anyhow::Result<(
 
 fn drawing_fixture(explicit: bool) -> anyhow::Result<(Document, tempfile::TempDir, Vec<String>)> {
     use zipzi_core::{BindingAxis, Canvas, MeshBinding, MeshKeyform, Parameter, Part, Vec2};
-    use zipzi_sdk::AuthoringSession;
     let (mut document, assets) = support::sample_document_with_two_layers()?;
     let saved = document.save(&assets.path().join("drawing.zipzi"))?;
-    let mut session =
-        AuthoringSession::new(&id(900), Canvas::new(256., 256., Vec2::default(), 1.))?;
-    session.open_project(&saved.path, None)?;
+    let mut session = crate::support::open_fixture(&saved.path)?;
     let mut meshes: Vec<_> = session
+        .snapshot()
         .document()
         .mesh_order()
         .iter()
-        .map(|id| session.document().get_mesh(id).unwrap().clone())
+        .map(|id| session.snapshot().document().mesh(id).unwrap().clone())
         .collect();
     let ids: Vec<_> = meshes.iter().map(|mesh| mesh.id.clone()).collect();
     meshes[0].part_id = id(101);
     meshes[0].draw_order = Some(900.);
     meshes[1].part_id = id(102);
     meshes[1].draw_order = Some(10.);
-    session.edit("Drawing fixture", None, |edit| {
+    crate::support::publish_fixture(&mut session, "Drawing fixture", |edit| {
         for (value, order) in [(101, 100.), (102, 200.)] {
-            edit.create_part(Part {
-                id: id(value),
-                draw_order: order,
-                ..Default::default()
-            })?;
+            crate::support::insert_fixture_part(
+                edit,
+                Part {
+                    id: id(value),
+                    draw_order: order,
+                    ..Default::default()
+                },
+            )?;
         }
         for mesh in &meshes {
             edit.replace_mesh(mesh.clone())?;
         }
-        edit.create_parameter(Parameter {
-            id: id(201),
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.,
-            ..Default::default()
-        })?;
+        crate::support::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: id(201),
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                ..Default::default()
+            },
+        )?;
         edit.create_binding(MeshBinding {
             id: id(202),
             mesh_id: ids[0].clone(),
@@ -420,16 +426,33 @@ fn drawing_fixture(explicit: bool) -> anyhow::Result<(Document, tempfile::TempDi
         })?;
         if explicit {
             // An imported drawing layout can differ completely from organization Parts.
-            edit.replace_draw_order_groups(vec![zipzi_core::draw_order::DrawOrderGroup {
-                owner: String::new(),
-                items: vec![ids[1].clone(), ids[0].clone()],
-                min_order: 0,
-                max_order: 1000,
-            }])?;
+            use zipzi_contract::document::{SceneCollection, SceneEdit};
+            edit.edit_scene(
+                SceneEdit::Move {
+                    ids: vec![ids[1].clone(), ids[0].clone()],
+                    destination: SceneCollection::Drawing {
+                        owner: String::new(),
+                    },
+                    before: None,
+                },
+                Default::default(),
+                &Default::default(),
+            )?;
+            let owner = String::new();
+            let expected = edit.read_document()?.drawing_group_range(&owner)?;
+            edit.edit_scene(
+                SceneEdit::SetDrawingRange {
+                    owner,
+                    expected,
+                    range: [0, 1000],
+                },
+                Default::default(),
+                &Default::default(),
+            )?;
         }
         Ok(())
     })?;
-    let saved = session.save_project(&saved.path, None)?;
+    let saved = crate::support::save_fixture(&mut session, &saved.path)?;
     Ok((Document::open(&saved.path)?, assets, ids))
 }
 

@@ -213,12 +213,12 @@ fn load_status_tracks_concurrent_jobs_and_status_priority_without_blocking_edito
 fn save_as_replaces_existing_project_after_a_failed_save(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let destination = harness._config_dir.path().join("existing.zipzi");
-    let mut existing = zipzi_sdk::AuthoringSession::new(
+    let mut existing = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
     )
     .unwrap();
-    existing.save_project(&destination, None).unwrap();
+    crate::test_fixture::save_fixture(&mut existing, &destination).unwrap();
     let manifest = destination.clone();
     let before = std::fs::read(&manifest).unwrap();
     let document = harness
@@ -259,13 +259,15 @@ fn save_as_replaces_existing_project_after_a_failed_save(cx: &mut TestAppContext
         );
     });
     assert_ne!(std::fs::read(&manifest).unwrap(), before);
-    assert!(
-        existing
-            .open_project(&manifest, None)
-            .unwrap()
-            .resources_complete()
-    );
-    assert_eq!(existing.mesh_ids().len(), 2);
+    let existing = crate::test_fixture::open_fixture(&manifest).unwrap();
+    let model = existing.snapshot().document();
+    assert!(model.asset_order().iter().all(|id| {
+        !matches!(
+            &model.asset(id).unwrap().content,
+            zipzi_core::state::AssetContent::Unresolved { .. }
+        )
+    }));
+    assert_eq!(existing.snapshot().document().mesh_order().len(), 2);
 }
 
 #[gpui_kit::test]
@@ -278,12 +280,12 @@ fn open_picker_queues_multiple_files_and_keeps_valid_projects_after_failure(
     let bad = harness._config_dir.path().join("broken.zipzi");
     std::fs::write(&bad, b"not a project").unwrap();
     for path in [&first, &second] {
-        let mut session = zipzi_sdk::AuthoringSession::new(
+        let mut session = crate::test_fixture::fixture_session(
             &uuid::Uuid::new_v4().to_string(),
             zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
         )
         .unwrap();
-        session.save_project(path, None).unwrap();
+        crate::test_fixture::save_fixture(&mut session, path).unwrap();
     }
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| view.open(window, cx))

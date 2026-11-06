@@ -20,16 +20,14 @@ fn unsupported(code: &str, message: &str) -> ArchiveError {
     Status::error(code, message).into()
 }
 
-pub(super) fn open_content<T: ImageDescriptors>(
+pub(super) fn open_content(
     path: &Path,
     workspace_parent: &Path,
     limits: ArchiveIoLimits,
     disk_budget: ProjectDiskBudget,
-    allow_prototype: bool,
     memory: Option<&crate::TransferReservation>,
-    decode: impl FnOnce(&str, &str, u64) -> std::result::Result<T, Status>,
     mut keep_going: impl FnMut() -> bool,
-) -> Result<OpenedContent<T>> {
+) -> Result<OpenedContent> {
     check(&mut keep_going)?;
     if let Some(memory) = memory {
         memory.ensure_at_least(2 << 20)?;
@@ -101,8 +99,7 @@ pub(super) fn open_content<T: ImageDescriptors>(
             "Unsupported project container version",
         ));
     }
-    let prototype = allow_prototype && format.required_features == [EXPERIMENT];
-    if !format.required_features.is_empty() && !prototype {
+    if !format.required_features.is_empty() {
         return Err(unsupported(
             "UNSUPPORTED_PROJECT_FEATURE",
             "Unsupported required project feature",
@@ -122,21 +119,14 @@ pub(super) fn open_content<T: ImageDescriptors>(
     if content_sha256(&bytes) != format.document_sha256 {
         return Err(invalid("Document hash mismatch"));
     }
-    let (identifier, version) = if prototype {
-        ("zipzi-directory-project", 21)
-    } else {
-        (NATIVE_FORMAT, NATIVE_DOCUMENT_VERSION)
-    };
-    let document = decode(
+    let document = crate::codec::decode_state(
         std::str::from_utf8(&bytes).map_err(|_| invalid("Invalid UTF-8 document"))?,
-        identifier,
-        version,
     )?;
     drop(bytes);
     check(&mut keep_going)?;
     let mut assets = BTreeMap::<String, Vec<&zipzi_core::ImageAsset>>::new();
     let mut diagnostics = Vec::new();
-    for asset in document.images() {
+    for asset in &document.images {
         let id = &asset.id;
         let Some(content) = &asset.content else {
             diagnostics.push(crate::ResourceDiagnostic {
@@ -297,16 +287,8 @@ pub(super) fn open_content<T: ImageDescriptors>(
     })
 }
 
-pub(super) trait ImageDescriptors {
-    fn images(&self) -> Vec<&zipzi_core::ImageAsset>;
-}
-impl ImageDescriptors for crate::codec::DecodedState {
-    fn images(&self) -> Vec<&zipzi_core::ImageAsset> {
-        self.images.iter().collect()
-    }
-}
-pub(super) struct OpenedContent<T> {
-    pub document: T,
+pub(super) struct OpenedContent {
+    pub document: crate::codec::DecodedState,
     pub fingerprint: ProjectFingerprint,
     pub counts: IoCounts,
     pub unique_assets: usize,

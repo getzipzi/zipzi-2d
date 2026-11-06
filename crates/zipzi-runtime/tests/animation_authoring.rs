@@ -1,178 +1,191 @@
+use zipzi_contract::{
+    authoring::ObjectKind,
+    kernel_commands::{Command, ObjectAddress},
+    kernel_wire::Query,
+};
 use zipzi_core::document::{ExpressionEdit, MotionContainer, MotionEdit, PhysicsEdit, PoseEdit};
-use zipzi_runtime::{modeling::ModelingCommand, Runtime, SourceRef};
-use zipzi_sdk::{ModelingIntent, ModelingQuery};
+use zipzi_runtime::{QuerySource, Runtime};
 
 fn id(n: u32) -> String {
     format!("79610000-0000-4000-8000-{n:012x}")
 }
 
+fn address(kind: ObjectKind, n: u32) -> ObjectAddress {
+    ObjectAddress { kind, id: id(n) }
+}
+
 #[test]
-fn animation_domains_share_candidate_publication_plans_and_selected_reads() {
+fn animation_commands_share_candidate_publication_and_source_bound_reads() {
     let mut rt = Runtime::default();
     let client = rt.register_client().unwrap();
     let session = rt
-        .create_session(client, &id(1), zipzi_core::ModelSetup::default())
+        .create_session(client, &id(1), Default::default())
         .unwrap();
-    let before = rt.session_info(session).unwrap();
-    let edit = rt.begin_edit(client, session, "animation", None).unwrap();
-    rt.apply_modeling(
-        client,
-        edit,
-        vec![
-            ModelingCommand::Motion {
-                intent: MotionEdit::Create {
-                    id: id(2),
-                    name: "Motion".into(),
-                    registration_id: id(3),
-                    destination: MotionContainer::Root,
-                },
-            },
-            ModelingCommand::Expression {
-                intent: ExpressionEdit::Create {
-                    id: id(4),
-                    name: "Expression".into(),
-                },
-            },
-            ModelingCommand::Physics {
-                intent: PhysicsEdit::CreateGroup {
-                    asset_id: id(5),
-                    id: id(6),
-                    name: "Physics".into(),
-                    before: None,
-                },
-            },
-            ModelingCommand::Pose {
-                intent: PoseEdit::CreateGroup {
-                    pose_id: id(7),
-                    id: id(8),
-                    name: "Pose".into(),
-                    before: None,
-                },
-            },
-        ],
-    )
-    .unwrap();
-    let query = ModelingQuery {
-        motions: vec![id(2), id(99), id(2)],
-        motion_registrations: vec![id(3)],
-        expressions: vec![id(4)],
-        physics: true,
-        pose: true,
-        ..Default::default()
+    let before = rt.subscribe(client, session).unwrap();
+    let QuerySource::Published(version) = before.snapshot.source else {
+        panic!("expected published source")
     };
-    let selected = rt
-        .modeling_snapshot(client, session, Some(edit), query.clone())
-        .unwrap();
-    assert!(matches!(
-        selected.source,
-        SourceRef::Edit { sequence: 1, .. }
-    ));
-    assert_eq!(selected.records.motions[0].as_ref().unwrap().name, "Motion");
-    assert!(selected.records.motions[1].is_none());
-    assert_eq!(selected.records.motions[0], selected.records.motions[2]);
-    assert_eq!(
-        selected.records.motion_registrations[0]
-            .as_ref()
-            .unwrap()
-            .clip_id,
-        id(2)
-    );
-    assert_eq!(selected.records.physics.as_ref().unwrap().id, id(5));
-    assert_eq!(selected.records.pose.as_ref().unwrap().id, id(7));
-    assert_eq!(rt.session_info(session).unwrap().version, before.version);
-    assert!(rt
-        .modeling_snapshot(client, session, None, query.clone())
-        .unwrap()
-        .records
-        .motions[0]
-        .is_none());
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(rt.session_info(session).unwrap().history_lengths, (1, 0));
-    let snapshot = rt.source_snapshot(session).unwrap();
-    let plan = snapshot
-        .snapshot
-        .plan_modeling(
-            ModelingIntent::Expression(ExpressionEdit::CreateEntry {
-                owner: id(4),
-                id: id(9),
-                before: None,
-            }),
-            Default::default(),
-            &Default::default(),
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![
+                Command::Motion {
+                    edit: MotionEdit::Create {
+                        id: id(2),
+                        name: "Motion".into(),
+                        registration_id: id(3),
+                        destination: MotionContainer::Root,
+                    },
+                },
+                Command::Expression {
+                    edit: ExpressionEdit::Create {
+                        id: id(4),
+                        name: "Expression".into(),
+                    },
+                },
+                Command::Physics {
+                    edit: PhysicsEdit::CreateGroup {
+                        asset_id: id(5),
+                        id: id(6),
+                        name: "Physics".into(),
+                        before: None,
+                    },
+                },
+                Command::Pose {
+                    edit: PoseEdit::CreateGroup {
+                        pose_id: id(7),
+                        id: id(8),
+                        name: "Pose".into(),
+                        before: None,
+                    },
+                },
+            ],
         )
         .unwrap();
-    assert!(plan.report().affected_ids.contains(&id(4)));
-    let candidate = rt
-        .begin_edit(client, session, "expression plan", None)
-        .unwrap();
-    rt.apply_edit(client, candidate, |edit| plan.apply(edit))
-        .unwrap();
-    rt.commit_edit(client, candidate).unwrap();
-    let populated = rt
-        .modeling_snapshot(client, session, None, query.clone())
+    let query = Query::Objects {
+        addresses: vec![
+            address(ObjectKind::Motion, 2),
+            address(ObjectKind::MotionRegistration, 3),
+            address(ObjectKind::Expression, 4),
+            address(ObjectKind::Physics, 5),
+            address(ObjectKind::Pose, 7),
+            address(ObjectKind::Motion, 2),
+        ],
+    };
+    let selected = rt
+        .query(client, QuerySource::Draft(draft), query.clone())
         .unwrap();
     assert_eq!(
-        populated.records.expressions[0].as_ref().unwrap().entries[0].id,
-        id(9)
+        selected["source"],
+        serde_json::to_value(QuerySource::Draft(draft)).unwrap()
     );
-    rt.undo(client, session).unwrap();
-    assert!(rt
-        .modeling_snapshot(client, session, None, query.clone())
-        .unwrap()
-        .records
-        .expressions[0]
-        .as_ref()
-        .unwrap()
-        .entries
-        .is_empty());
-    rt.redo(client, session).unwrap();
+    assert_eq!(draft.sequence, 1);
+    let records = selected["value"]["records"].as_array().unwrap();
+    assert_eq!(records[0]["value"]["name"], "Motion");
+    assert_eq!(records[1]["value"]["clip_id"], id(2));
+    assert_eq!(records[3]["value"]["id"], id(5));
+    assert_eq!(records[4]["value"]["id"], id(7));
+    assert_eq!(records[0], records[5]);
     assert_eq!(
-        rt.modeling_snapshot(client, session, None, query)
-            .unwrap()
-            .records
-            .expressions[0]
-            .as_ref()
-            .unwrap()
-            .entries[0]
-            .id,
-        id(9)
+        rt.query(
+            client,
+            QuerySource::Draft(draft),
+            Query::Objects {
+                addresses: vec![address(ObjectKind::Motion, 99)]
+            }
+        )
+        .unwrap_err()
+        .code,
+        "MISSING_OBJECT"
     );
-    // Selected snapshots own their old content after publication/Undo/Redo.
-    assert!(selected.records.expressions[0]
-        .as_ref()
+    assert_eq!(
+        rt.query(client, QuerySource::Published(version), query)
+            .unwrap_err()
+            .code,
+        "MISSING_OBJECT"
+    );
+    let frozen = rt.read_draft(client, draft).unwrap();
+    let first = rt.publish(client, draft, "Animation").unwrap();
+    assert_eq!(first.history.undo_steps, 1);
+    let draft = rt.begin_draft(client, first.version).unwrap();
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![Command::Expression {
+                edit: ExpressionEdit::CreateEntry {
+                    owner: id(4),
+                    id: id(9),
+                    before: None,
+                },
+            }],
+        )
+        .unwrap();
+    let second = rt.publish(client, draft, "Expression entry").unwrap();
+    let entries = |host: &Runtime, version| {
+        host.query(
+            client,
+            QuerySource::Published(version),
+            Query::Objects {
+                addresses: vec![address(ObjectKind::Expression, 4)],
+            },
+        )
+        .unwrap()["value"]["records"][0]["value"]["entries"]
+            .clone()
+    };
+    assert_eq!(entries(&rt, second.version)[0]["id"], id(9));
+    let undo = rt.undo(client, second.version).unwrap();
+    assert_eq!(entries(&rt, undo.version), serde_json::json!([]));
+    let redo = rt.redo(client, undo.version).unwrap();
+    assert_eq!(entries(&rt, redo.version)[0]["id"], id(9));
+    assert!(frozen
+        .snapshot
+        .document()
+        .expression(&id(4))
         .unwrap()
         .entries
         .is_empty());
 }
 
 #[test]
-fn animation_selection_budget_refuses_before_expansion_without_poisoning_edit() {
+fn animation_query_limit_refuses_before_expansion_and_preserves_draft() {
     let mut rt = Runtime::default();
     let client = rt.register_client().unwrap();
     let session = rt
-        .create_session(client, &id(1), zipzi_core::ModelSetup::default())
+        .create_session(client, &id(1), Default::default())
         .unwrap();
-    let edit = rt
-        .begin_edit(client, session, "bounded animation read", None)
-        .unwrap();
-    let query = ModelingQuery {
-        motions: vec![id(2); 4097],
-        ..Default::default()
+    let QuerySource::Published(version) = rt.read_snapshot(client, session).unwrap().source else {
+        panic!("expected published source")
     };
-    assert!(rt
-        .modeling_snapshot(client, session, Some(edit), query)
-        .is_err());
-    rt.apply_modeling(
-        client,
-        edit,
-        vec![ModelingCommand::Expression {
-            intent: ExpressionEdit::Create {
-                id: id(4),
-                name: "Still usable".into(),
-            },
-        }],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(rt.session_info(session).unwrap().history_lengths, (1, 0));
+    let draft = rt.begin_draft(client, version).unwrap();
+    let query = Query::Objects {
+        addresses: (0..257).map(|_| address(ObjectKind::Motion, 2)).collect(),
+    };
+    assert_eq!(
+        rt.query(client, QuerySource::Draft(draft), query)
+            .unwrap_err()
+            .code,
+        "RESOURCE_LIMIT"
+    );
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![Command::Expression {
+                edit: ExpressionEdit::Create {
+                    id: id(4),
+                    name: "Still usable".into(),
+                },
+            }],
+        )
+        .unwrap();
+    assert_eq!(
+        rt.publish(client, draft, "Expression")
+            .unwrap()
+            .history
+            .undo_steps,
+        1
+    );
 }

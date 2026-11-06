@@ -433,30 +433,33 @@ fn frame_commands_cannot_capture_geometry_from_a_cancelled_model_candidate() -> 
 fn ambiguous_warp_direction_is_rejected_without_changing_the_frame_or_history() -> anyhow::Result<()>
 {
     let dir = tempfile::tempdir()?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
+    let mut sdk = crate::support::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(256., 256., Default::default(), 1.),
     )?;
     let object = ObjectRef::new(ObjectKind::Deformer, uuid::Uuid::new_v4().to_string());
-    sdk.edit("Ambiguous Warp", None, |edit| {
-        edit.create_transform(zipzi_core::Transform {
-            id: object.id.clone(),
-            data: zipzi_core::TransformData::Warp(zipzi_core::WarpTransform {
-                rows: 1,
-                columns: 1,
-                quad: false,
-                bezier: None,
-                points: vec![
-                    zipzi_core::Vec2::new(32., 32.),
-                    zipzi_core::Vec2::new(224., 32.),
-                    zipzi_core::Vec2::new(224., 224.),
-                    zipzi_core::Vec2::new(32., 224.),
-                ],
-            }),
-            ..Default::default()
-        })
+    crate::support::publish_fixture(&mut sdk, "Ambiguous Warp", |edit| {
+        crate::support::insert_transform(
+            edit,
+            zipzi_core::Transform {
+                id: object.id.clone(),
+                data: zipzi_core::TransformData::Warp(zipzi_core::WarpTransform {
+                    rows: 1,
+                    columns: 1,
+                    quad: false,
+                    bezier: None,
+                    points: vec![
+                        zipzi_core::Vec2::new(32., 32.),
+                        zipzi_core::Vec2::new(224., 32.),
+                        zipzi_core::Vec2::new(224., 224.),
+                        zipzi_core::Vec2::new(32., 224.),
+                    ],
+                }),
+                ..Default::default()
+            },
+        )
     })?;
-    let saved = sdk.save_project(&dir.path().join("ambiguous"), None)?;
+    let saved = crate::support::save_fixture(&mut sdk, &dir.path().join("ambiguous"))?;
     let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,
@@ -477,20 +480,18 @@ fn ambiguous_warp_direction_is_rejected_without_changing_the_frame_or_history() 
 fn selected_points_across_warps_share_frame_state_and_numeric_pivot() -> anyhow::Result<()> {
     let (mut document, dir, warp, _, _) = rich_document()?;
     let saved = document.save(&dir.path().join("independent.zipzi"))?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let mut copy = sdk.transform(&warp).unwrap();
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    let mut copy = sdk.snapshot().document().transform(&warp).unwrap().clone();
     copy.id = uuid::Uuid::new_v4().to_string();
     copy.runtime_id = "SecondWarp".into();
     for point in &mut copy.warp_mut().unwrap().points {
         point.x += 300.;
     }
     let second = ObjectRef::new(ObjectKind::Deformer, &copy.id);
-    sdk.edit("Second Warp", None, |edit| edit.create_transform(copy))?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::publish_fixture(&mut sdk, "Second Warp", |edit| {
+        crate::support::insert_transform(edit, copy)
+    })?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     let first = ObjectRef::new(ObjectKind::Deformer, &warp);
     let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {

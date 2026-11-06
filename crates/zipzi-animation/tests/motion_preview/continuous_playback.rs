@@ -1,11 +1,11 @@
 use super::common::*;
 
 fn manual_previews() -> (MotionPreview, MotionPreview, Vec<String>) {
-    let mut doc = document();
+    let mut builder = document().builder();
     let mut inputs = vec![PARAM.to_owned()];
     for i in 0..4 {
         let id = format!("00000000-0000-4000-8000-000000000f0{i}");
-        assert!(doc
+        builder
             .create_parameter(Parameter {
                 id: id.clone(),
                 runtime_id: if i == 0 {
@@ -18,8 +18,7 @@ fn manual_previews() -> (MotionPreview, MotionPreview, Vec<String>) {
                 maximum: 1.,
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
         if i > 0 {
             inputs.push(id);
         }
@@ -32,6 +31,7 @@ fn manual_previews() -> (MotionPreview, MotionPreview, Vec<String>) {
             "Weight": 25, "Type": "X", "Reflect": false})
         })
         .into();
+    let doc = builder.freeze().unwrap().state;
     let doc = import_physics3(
         &doc,
         "00000000-0000-4000-8000-000000000f10",

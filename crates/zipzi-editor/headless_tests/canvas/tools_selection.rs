@@ -992,14 +992,15 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
     use zipzi_editor_core::{Document, EditorCommand, ObjectKind, ObjectRef, ToolId};
     let assets = tempfile::tempdir().unwrap();
     let id = uuid::Uuid::new_v4().to_string();
-    let mut session = zipzi_sdk::AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )
     .unwrap();
-    session
-        .edit("fixture", None, |edit| {
-            edit.create_transform(Transform {
+    crate::test_fixture::publish_fixture(&mut session, "fixture", |edit| {
+        crate::test_fixture::insert_transform(
+            edit,
+            Transform {
                 id: id.clone(),
                 name: "Warp".into(),
                 data: TransformData::Warp(WarpTransform {
@@ -1015,12 +1016,12 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                     ],
                 }),
                 ..Default::default()
-            })
-        })
-        .unwrap();
-    let saved = session
-        .save_project(&assets.path().join("model"), None)
-        .unwrap();
+            },
+        )
+    })
+    .unwrap();
+    let saved =
+        crate::test_fixture::save_fixture(&mut session, &assets.path().join("model")).unwrap();
     let harness =
         super::super::setup_with_document(cx, Document::open(&saved.path).unwrap(), assets);
     harness.view.update(cx, |view, cx| {

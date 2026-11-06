@@ -5,34 +5,63 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import sys
 import time
 import unittest
 from uuid import uuid4
+
+ROOT = Path(__file__).resolve().parents[3]
+if source_client := os.environ.get('ZIPZI_KERNEL_SOURCE_CLIENT'):
+    sys.path.insert(0, source_client)
+if native := os.environ.get('ZIPZI_KERNEL_NATIVE'):
+    sys.path.insert(0, native)
+
 import zipzi
 from zipzi import values as v
 
-ROOT = Path(__file__).resolve().parents[3]
-FIXTURE = ROOT / 'target/debug/examples/local_host_fixture'
+FIXTURE = ROOT / 'target/debug/examples' / ('local_host_fixture.exe' if os.name == 'nt' else 'local_host_fixture')
+
 
 @contextmanager
 def connected(drop='', **settings):
-    with tempfile.TemporaryDirectory(prefix='zipzi-v4-', dir='/tmp') as directory:
-        env = dict(os.environ, ZIPZI_RUNTIME_DIR=directory, ZIPZI_RUNTIME_PROFILE='test', ZIPZI_TEST_DROP_RESPONSE=drop, **settings)
-        command = [os.environ['ZIPZI_KERNEL_EDITOR_HOST'], '--no-window'] if os.environ.get('ZIPZI_KERNEL_EDITOR_HOST') else [str(FIXTURE)]
+    with tempfile.TemporaryDirectory(prefix='zipzi-v4-', dir=None if os.name == 'nt' else '/tmp') as directory:
+        profile = 'test'
+        env = dict(os.environ, ZIPZI_RUNTIME_DIR=directory, ZIPZI_RUNTIME_PROFILE=profile,
+                   ZIPZI_TEST_DROP_RESPONSE=drop, **settings)
+        for key in ('ZIPZI_DEV_SESSION_DIR', 'ZIPZI_DEV_PID_FILE', 'ZIPZI_DEV_READY_FILE', 'ZIPZI_RUNTIME_OWNER_FD'):
+            env.pop(key, None)
+        if editor := os.environ.get('ZIPZI_KERNEL_EDITOR_HOST'):
+            command = [editor, '--no-window']
+        else:
+            command = [os.environ.get('ZIPZI_KERNEL_HOST', str(FIXTURE))]
+        if os.name == 'nt':
+            from zipzi._windows_pipe import endpoint_name
+            endpoint = endpoint_name(Path(directory), profile)
+        else:
+            endpoint = Path(directory) / f'{profile}.sock'
         process = subprocess.Popen(command, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         try:
-            endpoint = Path(directory) / 'test.sock'
-            deadline = time.monotonic()+30
-            while not endpoint.exists():
-                if process.poll() is not None: raise AssertionError(process.stderr.read().decode())
-                if time.monotonic()>deadline: raise TimeoutError('Fixture startup')
-                time.sleep(.01)
-            with zipzi.connect(endpoint=endpoint, timeout=2) as runtime:
+            deadline = time.monotonic() + 30
+            while True:
+                if process.poll() is not None:
+                    raise AssertionError(process.stderr.read().decode())
+                try:
+                    runtime = zipzi.connect(endpoint=endpoint, timeout=2)
+                    break
+                except (FileNotFoundError, ConnectionRefusedError):
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError('Host startup')
+                    time.sleep(.01)
+            with runtime:
                 yield runtime
         finally:
-            process.terminate()
-            try: process.wait(timeout=5)
-            except subprocess.TimeoutExpired: process.kill(); process.wait()
+            if process.poll() is None:
+                process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
             process.stderr.close()
 
 
@@ -90,6 +119,65 @@ class Lifecycle:
                     value = json.loads(blob.read(0, blob.length))
                 self.assertEqual(len(value['frames']), 2)
                 self.assertIsNotNone(value['frames'][1]['animation'])
+
+    def test_mesh_records_candidate_samples_and_history(self):
+        import json
+
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            mesh, asset = str(uuid4()), str(uuid4())
+            vertices = (42, 7, 99)
+            positions = (v.Vec2(x=0, y=0), v.Vec2(x=1, y=0), v.Vec2(x=0, y=1))
+            geometry = v.MeshGeometry(vertex_ids=vertices, positions=positions, uvs=positions,
+                                      triangles=(vertices,))
+            selection = v.QueryObjects(addresses=(v.ObjectAddress(kind=v.ObjectKind.MESH, id=mesh),))
+            with session.draft('Create textured mesh') as draft:
+                draft.apply(v.CommandCreateAsset(id=asset, name='pixel'),
+                    v.CommandReplaceImage(id=asset, input=v.ImageInputRgba(width=1,height=1,bytes=(255,0,0,255))),
+                    v.CommandCreateMesh(spec=v.MeshCreateSpec(id=mesh, name='Triangle',
+                        geometry=geometry, texture_asset_id=asset)))
+            original = session.query(selection)
+            self.assertEqual(v.Mesh.from_wire(original.value['records'][0]['value']).vertex_ids, vertices)
+            with session.image_blob(asset) as previous, session.draft('Vertex and pixels') as draft:
+                draft.apply(v.CommandVertexPositions(mesh=mesh, updates=((7, v.Vec2(x=2,y=0)),)),
+                    v.CommandReplaceImage(id=asset, input=v.ImageInputRgba(width=1,height=1,bytes=(0,0,255,255))))
+                self.assertEqual(session.query(selection), original)
+                candidate = v.QuerySourceDraft(value=draft.source)
+                request = v.SampleRequest(input=v.SampleInputParameters(values=({},)), quality=True)
+                with session.samples(request, source=candidate) as job:
+                    job.wait(timeout=10)
+                    with job.blob() as blob:
+                        report = json.loads(blob.read(0, blob.length))
+                frame = report['frames'][0]
+                self.assertEqual(report['source'], candidate.to_wire())
+                self.assertEqual(frame['geometry']['drawables'][0]['positions'][1]['x'], 2)
+                self.assertIsNotNone(frame['quality'])
+                self.assertEqual(previous.read(0,4), bytes((255,0,0,255)))
+            self.assertEqual(session.info()['history']['undo_steps'], 2)
+            session.undo()
+            self.assertEqual(session.query(selection).content, original.content)
+            with session.image_blob(asset) as restored:
+                self.assertEqual(restored.read(0,4), bytes((255,0,0,255)))
+            session.redo()
+            with session.image_blob(asset) as restored:
+                self.assertEqual(restored.read(0,4), bytes((0,0,255,255)))
+
+    def test_event_cursors_are_independent_and_reads_do_not_publish(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            first = v.Version.from_wire(session.subscribe()['cursor'])
+            id = str(uuid4())
+            with session.draft() as draft:
+                draft.apply(create(id))
+            second = v.Version.from_wire(session.subscribe()['cursor'])
+            session.query(query(id))
+            self.assertEqual(session.events(second), ())
+            session.undo()
+            session.redo()
+            first_read = session.events(first)
+            self.assertEqual([event['kind'] for event in first_read], ['commit','undo','redo'])
+            self.assertEqual([event['kind'] for event in session.events(second)], ['undo','redo'])
+            self.assertEqual(session.events(first), first_read)
 
     def test_observation_uses_explicit_view_and_bulk_png(self):
         import json
@@ -180,6 +268,42 @@ class Lifecycle:
             self.assertEqual(draft.state,'ended')
             self.assertEqual(session.info()['history']['undo_steps'],0)
 
+    def test_pagination_rejects_an_old_source_after_publication(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            ids = [str(uuid4()) for _ in range(3)]
+            with session.draft() as draft:
+                draft.apply(*(create(id) for id in ids))
+            page = session.query(v.QueryCollection(kind=v.ObjectKind.PARAMETER, offset=0, limit=2))
+            self.assertEqual([item['address']['id'] for item in page.value['records']], ids[:2])
+            continuation = v.QueryCollection(kind=v.ObjectKind.PARAMETER,
+                                             offset=page.value['next_offset'], limit=2)
+            last = session.query(continuation, source=page.source)
+            self.assertEqual([item['address']['id'] for item in last.value['records']], ids[2:])
+            self.assertIsNone(last.value['next_offset'])
+            session.undo()
+            with self.assertRaises(zipzi.SdkFailure) as failure:
+                session.query(continuation, source=page.source)
+            self.assertEqual(failure.exception.code, 'STALE_SOURCE')
+
+    def test_detach_preserves_dirty_session_until_explicit_close(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            with session.draft() as draft:
+                draft.apply(create())
+            source = session.source
+            session.detach()
+            with self.assertRaises(zipzi.SdkFailure):
+                session.query(v.QuerySummary(), source=source)
+            reattached = runtime.sessions.attach(session.id)
+            self.assertEqual(reattached.source, source)
+            self.assertTrue(reattached.info()['dirty'])
+            with self.assertRaises(zipzi.SdkFailure) as failure:
+                reattached.close()
+            self.assertEqual(failure.exception.code, 'UNSAVED_CHANGES')
+            reattached.close(discard_modified=True)
+            self.assertFalse(runtime.sessions.list())
+
     def test_async_mutation_save_open_and_captured_pixels(self):
         with self.factory() as runtime, tempfile.TemporaryDirectory(prefix='zipzi-project-') as directory:
             session=runtime.sessions.create(); draft=session.draft(); id=str(uuid4())
@@ -203,6 +327,34 @@ class ConnectedLifecycle(Lifecycle,unittest.TestCase): factory=staticmethod(conn
 
 
 class Recovery(unittest.TestCase):
+    def test_batch_recovery_updates_one_candidate_sequence_and_publishes_once(self):
+        with connected('batch') as runtime:
+            session = runtime.sessions.create()
+            id = str(uuid4())
+            cursor = session.version
+            draft = session.draft()
+            with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                draft.apply(create(id))
+            self.assertEqual(draft.source.sequence, 0)
+            zipzi.recover_call(lost.exception)
+            self.assertEqual(draft.source.sequence, 1)
+            self.assertEqual(draft.query(query(id)).value['records'][0]['value']['name'], 'p')
+            draft.publish()
+            self.assertEqual(len(session.events(cursor)), 1)
+            self.assertEqual(session.info()['history']['undo_steps'], 1)
+
+    def test_event_gap_requires_resubscription(self):
+        with connected(ZIPZI_TEST_EVENT_COUNT='1') as runtime:
+            session = runtime.sessions.create()
+            cursor = session.version
+            for _ in range(3):
+                with session.draft() as draft:
+                    draft.apply(create())
+            with self.assertRaises(zipzi.SdkFailure) as error:
+                session.events(cursor)
+            self.assertEqual(error.exception.code, 'EVENT_GAP')
+            self.assertEqual(session.events(v.Version.from_wire(session.subscribe()['cursor'])), ())
+
     def test_binary_upload_and_read_recovery_keep_original_projection(self):
         for operation in ('append_blob_binary', 'read_blob_binary'):
             with self.subTest(operation=operation), connected(operation) as runtime:

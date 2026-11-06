@@ -1493,7 +1493,7 @@ fn exported_files_report_success_after_late_cancellation_without_changing_save_m
 fn observation_worker_returns_png_and_exact_frozen_source() {
     let (mut rt, client, session) = setup();
     let source = QuerySource::Published(version(&rt, client, session));
-    let view = zipzi_contract::runtime::ObservationView {
+    let view = zipzi_contract::observation::ObservationView {
         texture_policy: Default::default(),
         width: 32,
         height: 32,

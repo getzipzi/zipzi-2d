@@ -12,67 +12,57 @@ fn normalized_rotation_edits_use_converted_limits_for_base_and_keyforms() -> any
         for keyed in [false, true] {
             let dir = tempfile::tempdir()?;
             let id = |n| uuid::Uuid::from_u128(n).to_string();
-            let mut model = zipzi_core::Document::new();
-            assert!(
-                model
-                    .initialize(id(1), Canvas::new(400., 400., Default::default(), 5800.))
-                    .is_ok()
-            );
-            assert!(
-                model
-                    .create_imported_transform(Transform {
-                        id: id(2),
-                        rotation_scale_unit: Some(unit),
-                        data: TransformData::Rotation(RotationTransform {
-                            pose: RotationPose {
-                                scale: unit,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        }),
+            let mut model = zipzi_core::state::DocumentState::new(
+                &id(1),
+                (Canvas::new(400., 400., Default::default(), 5800.)).into(),
+            )?
+            .builder();
+            model.create_transform(Transform {
+                id: id(2),
+                runtime_id: id(2),
+                rotation_scale_unit: Some(unit),
+                data: TransformData::Rotation(RotationTransform {
+                    pose: RotationPose {
+                        scale: unit,
                         ..Default::default()
-                    })
-                    .status
-                    .is_ok()
-            );
+                    },
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })?;
             if keyed {
-                assert!(
-                    model
-                        .create_parameter(Parameter {
-                            id: id(3),
-                            runtime_id: "Scale".into(),
-                            ..Default::default()
-                        })
-                        .status
-                        .is_ok()
-                );
-                assert!(
-                    model
-                        .create_scene_binding(SceneBinding {
-                            id: id(4),
-                            axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
-                            track: SceneTrack::Rotation {
-                                target_id: id(2).into(),
-                                keyforms: [0., 1.]
-                                    .into_iter()
-                                    .map(|key| RotationKeyform {
-                                        keys: vec![key],
-                                        rotation: RotationPose {
-                                            scale: unit * (1. + key),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    })
-                                    .collect()
-                            }
-                        })
-                        .status
-                        .is_ok()
-                );
+                model.create_parameter(Parameter {
+                    id: id(3),
+                    runtime_id: "Scale".into(),
+                    ..Default::default()
+                })?;
+                model.create_scene_binding(SceneBinding {
+                    id: id(4),
+                    axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
+                    track: SceneTrack::Rotation {
+                        target_id: id(2).into(),
+                        keyforms: [0., 1.]
+                            .into_iter()
+                            .map(|key| RotationKeyform {
+                                keys: vec![key],
+                                rotation: RotationPose {
+                                    scale: unit * (1. + key),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            })
+                            .collect(),
+                    },
+                })?;
             }
-            let mut project = zipzi_project::DocumentSession::from_authoring_document(model);
-            let path = dir.path().join("normalized.zipzi.json");
-            assert!(project.save(&path).status.is_ok());
+            let path = dir.path().join("normalized.zipzi");
+            zipzi_sdk::ProjectIo::new(dir.path(), Default::default()).save(
+                &model.freeze()?.state,
+                &Default::default(),
+                &path,
+                None,
+                || true,
+            )?;
             let mut editor = crate::support::editor_from_document(Document::open(&path)?);
             let object = ObjectRef::new(ObjectKind::Deformer, id(2));
             editor.execute(EditorCommand::SelectObject(object.clone()))?;
@@ -87,8 +77,10 @@ fn normalized_rotation_edits_use_converted_limits_for_base_and_keyforms() -> any
             let pose = |editor: &Editor| {
                 let document = editor.document().unwrap();
                 let host = document.runtime_host();
-                let runtime = host.read();
-                let doc = runtime.document(document.runtime_session_id()).unwrap();
+                let captured =
+                    crate::support::published_snapshot(&host, document.runtime_session_id())
+                        .unwrap();
+                let doc = captured.document();
                 if keyed {
                     let SceneTrack::Rotation { keyforms, .. } =
                         &doc.binding_for_scene(&object.id).unwrap().track
@@ -97,11 +89,7 @@ fn normalized_rotation_edits_use_converted_limits_for_base_and_keyforms() -> any
                     };
                     keyforms[0].rotation
                 } else {
-                    doc.get_transform(&object.id)
-                        .unwrap()
-                        .rotation()
-                        .unwrap()
-                        .pose
+                    doc.transform(&object.id).unwrap().rotation().unwrap().pose
                 }
             };
             editor.execute(adjust(10., 1.))?;
@@ -121,15 +109,16 @@ fn normalized_rotation_edits_use_converted_limits_for_base_and_keyforms() -> any
             assert_eq!(pose(&editor).scale, unit * 2.);
             let document = editor.document().unwrap();
             let host = document.runtime_host();
-            let runtime = host.read();
-            let doc = runtime.document(document.runtime_session_id()).unwrap();
+            let captured =
+                crate::support::published_snapshot(&host, document.runtime_session_id()).unwrap();
+            let doc = captured.document();
             assert_eq!(
-                doc.get_transform(&object.id).unwrap().rotation_scale_unit,
+                doc.transform(&object.id).unwrap().rotation_scale_unit,
                 Some(unit)
             );
             if keyed {
                 assert_eq!(
-                    doc.get_transform(&object.id)
+                    doc.transform(&object.id)
                         .unwrap()
                         .rotation()
                         .unwrap()
@@ -204,15 +193,11 @@ fn imported_rotation_editor_in_space(
     };
     let dir = tempfile::tempdir()?;
     let id = |n| uuid::Uuid::from_u128(n).to_string();
-    let mut model = zipzi_core::Document::new();
-    assert!(
-        model
-            .initialize(
-                &id(1),
-                zipzi_core::Canvas::new(400., 400., Vec2::default(), 3749.)
-            )
-            .is_ok()
-    );
+    let mut model = zipzi_core::state::DocumentState::new(
+        &id(1),
+        zipzi_core::Canvas::new(400., 400., Vec2::default(), 3749.).into(),
+    )?
+    .builder();
     let y = if reflected_warp { -1. } else { 1. };
     for (n, parent, data) in [
         (
@@ -272,18 +257,19 @@ fn imported_rotation_editor_in_space(
             }),
         ),
     ] {
-        let result = model.create_imported_transform(Transform {
+        model.create_transform(Transform {
             id: id(n),
+            runtime_id: id(n),
             parent_id: parent.map(id).map(Into::into),
             data,
             ..Default::default()
-        });
-        assert!(result.status.is_ok(), "{:?}", result.status);
+        })?;
     }
     if with_meshes {
         for (n, x, enabled) in [(6, 0., true), (7, -374900., false)] {
-            let result = model.create_mesh(zipzi_core::Mesh {
+            model.create_mesh(zipzi_core::Mesh {
                 id: id(n),
+                runtime_id: id(n),
                 deformer_id: id(5),
                 enabled,
                 vertex_ids: vec![0, 1, 2],
@@ -295,14 +281,18 @@ fn imported_rotation_editor_in_space(
                 uvs: vec![Vec2::default(), Vec2::new(1., 0.), Vec2::new(0., 1.)],
                 triangles: vec![[0, 1, 2]],
                 ..Default::default()
-            });
-            assert!(result.status.is_ok(), "{:?}", result.status);
+            })?;
         }
     }
-    let mut project = zipzi_project::DocumentSession::from_authoring_document(model);
-    let path = dir.path().join("imported.zipzi.json");
-    let saved = project.save(&path);
-    assert!(saved.status.is_ok(), "{:?}", saved.status);
+    model.initialize_rotation_bone_reference_scales()?;
+    let path = dir.path().join("imported.zipzi");
+    zipzi_sdk::ProjectIo::new(dir.path(), Default::default()).save(
+        &model.freeze()?.state,
+        &Default::default(),
+        &path,
+        None,
+        || true,
+    )?;
     let document = Document::open(&path)?;
     assert!(!document.modified());
     let mut editor = crate::support::editor_from_document(document);

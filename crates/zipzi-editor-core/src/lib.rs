@@ -111,3 +111,7 @@ pub use runtime_host::RuntimeHost;
 pub use zipzi_runtime::JobInfo as RuntimeJobInfo;
 
 pub use zipzi_project::archive::{ProjectSaveProgress, ProjectSaveStage, ProjectSaveState};
+
+#[cfg(test)]
+#[path = "../tests/support/sdk.rs"]
+mod test_sdk;

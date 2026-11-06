@@ -21,14 +21,15 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("tests", nargs="*", help="Optional unittest names, e.g. PythonSdk.test_shared_recipe")
+    parser.add_argument("tests", nargs="*", help="Optional unittest names, e.g. LocalLifecycle.test_competing_drafts_history_and_exact_query_source")
     parser.add_argument("--release", action="store_true", help="Build the native adapter in Release for P0 measurements")
     parser.add_argument("--instrumented", action="store_true", help="Build separate P0 allocator/codec/copy probes; never use for latency")
     parser.add_argument("--build-only", action="store_true", help="Copy paired native/CPU artifacts and metadata without running previously accepted tests")
     parser.add_argument("--output", type=Path, help="Separate artifact directory (requires --build-only)")
-    parser.add_argument("--observation", action="store_true", help="Run explicit GPU observation/inspection acceptance; requires a usable device")
-    parser.add_argument("--recovery", action="store_true", help="Run focused P3A-1 complete-call/Edit/Job recovery tests; optional P3ARecovery.test_name selectors")
-    parser.add_argument("--discovery", action="store_true", help="Run focused collection/Session/offline-catalog regressions; optional P3ADiscovery.test_name selectors")
+    focus = parser.add_mutually_exclusive_group()
+    focus.add_argument("--observation", action="store_true", help="Run explicit GPU observation/inspection acceptance; requires a usable device")
+    focus.add_argument("--recovery", action="store_true", help="Run same-request recovery tests")
+    focus.add_argument("--discovery", action="store_true", help="Run source-bound pagination and Session lifecycle tests")
     args = parser.parse_args()
     if args.output is not None and not args.build_only:
         parser.error('--output requires --build-only')
@@ -84,40 +85,32 @@ def main() -> None:
         if args.build_only:
             print(f'zipzi-python: copied paired build artifacts to {output}')
             return
-        env.update(ZIPZI_PYTHON_NATIVE=str(native.parent), ZIPZI_PYTHON_HOST=str(host),
-                   ZIPZI_PYTHON2_NATIVE=str(native.parent), ZIPZI_PYTHON2_HOST=str(host))
-        module = "test_observation.py" if args.observation else "test_p3a_discovery.py" if args.discovery else "test_p3a_recovery.py" if args.recovery else "test_api.py"
-        subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python/tests" / module), "-v", *args.tests], cwd=tempfile.gettempdir(), env=env, check=True)
-        if not args.tests and not args.recovery and not args.discovery and not args.observation:
-            subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python/tests/test_p3a_recovery.py"), "-v"], cwd=tempfile.gettempdir(), env=env, check=True)
-        if not args.tests and not args.recovery and not args.discovery and not args.observation:
-            subprocess.run([sys.executable, "-I", str(ROOT / "crates/zipzi-python/tests/test_mesh_generation.py"), "-v"], cwd=tempfile.gettempdir(), env=env, check=True)
-        subprocess.run(["uv", "run", "--locked", "pyright", "--project", str(ROOT / "crates/zipzi-python/pyrightconfig.json")], cwd=ROOT, check=True)
-        invalid = subprocess.run(["uv", "run", "--locked", "--project", str(ROOT), "pyright",
-            "--project", str(ROOT / "crates/zipzi-python/pyrightconfig.json"), "--outputjson", "--pythonpath", sys.executable,
-            str(ROOT / "crates/zipzi-python/tests/type_invalid.py")], cwd=ROOT, capture_output=True, text=True, encoding='utf-8')
-        if not invalid.stdout:
-            raise RuntimeError(f"Static checker failed before producing diagnostics: {invalid.stderr}")
-        diagnostics = json.loads(invalid.stdout)
-        actual = {(Path(d["file"]).name, d["range"]["start"]["line"], d.get("rule"))
-            for d in diagnostics["generalDiagnostics"] if d["severity"] == "error"}
-        expected = {("type_invalid.py", line, rule.strip()) for line, value in
-            enumerate((ROOT / "crates/zipzi-python/tests/type_invalid.py").read_text(encoding='utf-8').splitlines()) if "# error: " in value
-            for rule in value.split("# error: ", 1)[1].split(",")}
-        if invalid.returncode != 1 or diagnostics["summary"]["errorCount"] != 28 or actual != expected:
-            raise RuntimeError(f"Expected twenty-eight precise public typing diagnostics: {invalid.stdout}\n{invalid.stderr}")
-        recovery_types = ROOT / "crates/zipzi-python/tests/type_recovery_invalid.py"
-        invalid = subprocess.run(["uv", "run", "--locked", "pyright", "--project",
-            str(ROOT / "crates/zipzi-python/pyrightconfig.json"), "--outputjson", str(recovery_types)],
-            cwd=ROOT, capture_output=True, text=True, encoding='utf-8')
-        diagnostics = json.loads(invalid.stdout)
-        expected = {(line, value.split("# error: ", 1)[1].strip()) for line, value in
-            enumerate(recovery_types.read_text(encoding='utf-8').splitlines()) if "# error: " in value}
-        actual = {(d["range"]["start"]["line"], d.get("rule")) for d in diagnostics["generalDiagnostics"]
-                  if d["severity"] == "error"}
-        if invalid.returncode != 1 or not expected or actual != expected or diagnostics["summary"]["errorCount"] != len(expected):
-            raise RuntimeError(f"Expected precise recovery/result typing failures: {invalid.stdout}\n{invalid.stderr}")
-        print("zipzi-python: Local/Connected behavior and positive/negative static types passed")
+        env.update(
+            ZIPZI_KERNEL_SOURCE_CLIENT=str(ROOT / 'crates/zipzi-python/client/python'),
+            ZIPZI_KERNEL_NATIVE=str(native.parent),
+            ZIPZI_KERNEL_HOST=str(host),
+        )
+        env.pop('ZIPZI_KERNEL_EDITOR_HOST', None)
+        tests = args.tests
+        if not tests:
+            if args.recovery:
+                tests = ['Recovery']
+            elif args.observation:
+                tests = [f'{backend}.test_observation_uses_explicit_view_and_bulk_png'
+                         for backend in ('LocalLifecycle', 'ConnectedLifecycle')]
+            elif args.discovery:
+                tests = [f'{backend}.{case}'
+                         for backend in ('LocalLifecycle', 'ConnectedLifecycle')
+                         for case in ('test_pagination_rejects_an_old_source_after_publication',
+                                      'test_detach_preserves_dirty_session_until_explicit_close')]
+        subprocess.run([sys.executable, '-I', str(ROOT / 'crates/zipzi-python/tests/test_kernel.py'),
+                        '-v', *tests], cwd=tempfile.gettempdir(), env=env, check=True)
+        if not tests:
+            subprocess.run([sys.executable, '-I', str(ROOT / 'crates/zipzi-python/tests/test_native_publication.py'), '-v'],
+                           cwd=tempfile.gettempdir(), env=env, check=True)
+            subprocess.run([sys.executable, str(ROOT / 'tools/test_tools.py'),
+                            '-p', 'test_python_codegen.py'], cwd=ROOT, check=True)
+
 
 if __name__ == "__main__":
     main()

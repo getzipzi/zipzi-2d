@@ -39,35 +39,6 @@ impl super::ObjectIndex {
         true
     }
 
-    pub(crate) fn refresh_physics_properties(
-        &mut self,
-        model: &zipzi_core::state::DocumentState,
-        owners: &[String],
-    ) -> bool {
-        let Some(asset) = model.physics() else {
-            return false;
-        };
-        let root = super::ObjectRef::new(ObjectKind::Physics, &asset.id);
-        let Some(&slot) = self.structure.slots.get(&root) else {
-            return false;
-        };
-        let payload = json!({"meta":asset.data.meta,"extensions":asset.data.extensions});
-        let fps_changed =
-            self.objects[slot].properties["meta"].get("Fps") != payload["meta"].get("Fps");
-        if self.objects[slot].properties != payload {
-            self.objects[slot].properties = payload;
-        }
-        if fps_changed {
-            self.refresh_physics_fps(asset);
-        }
-        owners.iter().all(|id| {
-            self.refresh_physics_preview(
-                model,
-                &super::ObjectRef::new(ObjectKind::PhysicsGroup, id),
-            )
-        })
-    }
-
     // FPS belongs to the asset even though each group exposes it in Properties.
     // Asset-only receipts have no modified group, so synchronize it independently.
     fn refresh_physics_fps(&mut self, asset: &zipzi_core::document::PhysicsAsset) {

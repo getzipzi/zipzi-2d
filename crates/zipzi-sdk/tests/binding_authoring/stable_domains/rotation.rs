@@ -9,12 +9,23 @@ fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {
     let binding = id(1602);
     let pending = BindingAxis::new("", vec![0., 1.]);
     let axis = pending.id.clone();
-    s.edit("rotation", None, |e| {
-        e.create_transform(Transform {
-            id: target.clone(),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: target.clone(),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("rotation")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     apply(
         &mut s,
@@ -25,15 +36,24 @@ fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {
     );
     op(&mut s, &binding, O::AddAxis { axis: pending });
     assert!(s
+        .snapshot()
         .document()
-        .get_scene_binding(&binding)
+        .scene_binding(&binding)
         .unwrap()
         .track
         .is_empty());
-    let mut t = s.document().get_transform(&target).unwrap().clone();
+    let mut t = s.snapshot().document().transform(&target).unwrap().clone();
     t.rotation_mut().unwrap().pose.angle = 42.;
-    s.edit("latest base", None, |e| e.replace_transform(t))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_transform(t))
+            .and_then(|value| {
+                let prepared = draft.prepare("latest base")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     op(
         &mut s,
         &binding,
@@ -43,7 +63,7 @@ fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {
             reduction: None,
         },
     );
-    let b = s.document().get_scene_binding(&binding).unwrap();
+    let b = s.snapshot().document().scene_binding(&binding).unwrap();
     assert_eq!(b.axes[0].id, axis);
     assert!(b.track.samples().all(|s| s.rotation.angle == 42.));
     let mut f = match &b.track {
@@ -51,9 +71,17 @@ fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {
         _ => panic!(),
     };
     f.rotation.angle = 62.;
-    s.edit("pose", None, |e| {
-        e.set_scene_keyform(&binding, SceneKeyform::Rotation(f))
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.set_scene_keyform(&binding, SceneKeyform::Rotation(f))
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("pose")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     op(
         &mut s,
@@ -65,8 +93,9 @@ fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_transform(&target)
+        s.snapshot()
+            .document()
+            .transform(&target)
             .unwrap()
             .rotation()
             .unwrap()
@@ -75,8 +104,9 @@ fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {
         47.
     );
     assert!(s
+        .snapshot()
         .document()
-        .get_scene_binding(&binding)
+        .scene_binding(&binding)
         .unwrap()
         .track
         .is_empty());
@@ -91,8 +121,9 @@ fn pending_axis_activation_reads_current_rotation_base_and_keeps_identity() {
         },
     );
     assert!(s
+        .snapshot()
         .document()
-        .get_scene_binding(&binding)
+        .scene_binding(&binding)
         .unwrap()
         .track
         .samples()
@@ -104,12 +135,23 @@ fn rotation_reflection_resampling_rejects_atomically() {
     let mut s = base();
     let t = id(1610);
     let b = id(1611);
-    s.edit("rotation", None, |e| {
-        e.create_transform(Transform {
-            id: t.clone(),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: t.clone(),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("rotation")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     apply(
         &mut s,
@@ -125,30 +167,40 @@ fn rotation_reflection_resampling_rejects_atomically() {
             axis: BindingAxis::new(PARAMETER_ID, vec![0., 1.]),
         },
     );
-    let binding = s.document().get_scene_binding(&b).unwrap();
+    let binding = s.snapshot().document().scene_binding(&b).unwrap();
     let axis = binding.axes[0].id.clone();
     let mut f = match &binding.track {
         SceneTrack::Rotation { keyforms, .. } => keyforms[1].clone(),
         _ => panic!(),
     };
     f.rotation.reflect_x = true;
-    s.edit("reflect", None, |e| {
-        e.set_scene_keyform(&b, SceneKeyform::Rotation(f))
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.set_scene_keyform(&b, SceneKeyform::Rotation(f))
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("reflect")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let v = s.version();
     let h = s.history_state();
-    let error = s
-        .plan_binding_authoring(E::Grid(G::Edit {
+    let error = crate::support::binding(
+        &s,
+        E::Grid(G::Edit {
             owner: b,
             operation: O::InsertSample {
                 axis_id: axis,
                 id: id(1612),
                 value: 0.5,
             },
-        }))
-        .unwrap_err();
-    assert_eq!(error.code.as_ref(), "DISCRETE_ROTATION_NOT_REPRESENTABLE");
+        }),
+    )
+    .unwrap_err();
+    assert_eq!(error.code.as_str(), "DISCRETE_ROTATION_NOT_REPRESENTABLE");
     assert_eq!(s.version(), v);
     assert_eq!(s.history_state(), h);
 }

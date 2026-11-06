@@ -1,14 +1,16 @@
+mod support;
 use std::collections::{HashMap, HashSet};
+use support::{prepare, project_json};
+use zipzi_core::state::*;
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
+use zipzi_project::{ProjectIo, ResourceStore, ResourceView};
 
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
 use zipzi_core::types::{
-    BindingAxis, Canvas, ImageAsset, Mesh, MeshBinding, MeshKeyform, Parameter, Part, RotationPose,
-    Transform, Vec2, VertexPositionUpdate,
+    BindingAxis, Canvas, Mesh, MeshBinding, MeshKeyform, Parameter, Part, RotationPose, Transform,
+    Vec2,
 };
-use zipzi_core::Document;
 use zipzi_moc3::encode_moc3;
-use zipzi_project::codec::{decode_project, encode_project};
 
 struct Rng {
     state: u64,
@@ -55,55 +57,40 @@ fn make_uuid(kind: u16, id: u32) -> String {
     format!("{kind:04x}{id:04x}-4111-4111-8111-111111111111")
 }
 
-fn build_initial_document() -> (Document, Vec<String>) {
-    let mut doc = Document::new();
-    let doc_id = make_uuid(0x0001, 1);
-    assert!(doc
-        .initialize(
-            doc_id,
-            Canvas::new(1280.0, 720.0, Vec2::new(640.0, 360.0), 100.0),
-        )
-        .is_ok());
-
+fn build_initial_document() -> (DocumentState, ResourceView) {
+    let mut doc = DocumentState::new(
+        make_uuid(0x0001, 1),
+        Canvas::new(1280., 720., Vec2::new(640., 360.), 100.).into(),
+    )
+    .unwrap();
+    let store = ResourceStore::default();
+    let image = store
+        .prepare_rgba(512, 512, vec![255; 512 * 512 * 4].into())
+        .unwrap();
+    let resources = ResourceView::default().with_images([image.clone()]);
     let asset1 = make_uuid(0x0002, 1);
     let asset2 = make_uuid(0x0002, 2);
-    let fake_sha256 =
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string();
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: asset1.clone(),
-            name: "texture_0".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/0.png".to_string(),
-                sha256: fake_sha256.clone(),
-                width: 512,
-                height: 512,
-            }),
-        })
-        .status
-        .is_ok());
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: asset2.clone(),
-            name: "texture_1".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/1.png".to_string(),
-                sha256: fake_sha256,
-                width: 512,
-                height: 512,
-            }),
-        })
-        .status
-        .is_ok());
+    doc = prepare(&doc, |builder| {
+        for id in [&asset1, &asset2] {
+            builder.create_asset(AssetRecord {
+                id: id.clone(),
+                name: id.clone(),
+                content: AssetContent::Image {
+                    resource: image.key(),
+                    width: 512,
+                    height: 512,
+                },
+            })?;
+        }
+        Ok(())
+    });
 
     let mut param_ids = Vec::new();
     for i in 0..2 {
         let pid = make_uuid(0x0003, i + 1);
         param_ids.push(pid.clone());
-        assert!(doc
-            .create_parameter(Parameter {
+        doc = prepare(&doc, |builder| {
+            builder.create_parameter(Parameter {
                 id: pid.clone(),
                 runtime_id: format!("Param_{i}"),
                 name: format!("Parameter {i}"),
@@ -113,13 +100,12 @@ fn build_initial_document() -> (Document, Vec<String>) {
                 decimal_places: 4,
                 ..Default::default()
             })
-            .status
-            .is_ok());
+        });
     }
 
     let root_part = make_uuid(0x0004, 1);
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: root_part.clone(),
             runtime_id: "RootPart".to_string(),
             name: "Root Part".to_string(),
@@ -127,12 +113,11 @@ fn build_initial_document() -> (Document, Vec<String>) {
             enabled: true,
             draw_order: 0.0,
         })
-        .status
-        .is_ok());
+    });
 
     let rot_id = make_uuid(0x0005, 1);
-    assert!(doc
-        .create_transform(Transform {
+    doc = prepare(&doc, |builder| {
+        builder.create_transform(Transform {
             id: rot_id.clone(),
             runtime_id: "RotTransform".to_string(),
             name: "Rot Transform".to_string(),
@@ -146,12 +131,11 @@ fn build_initial_document() -> (Document, Vec<String>) {
                     scale: 1.0,
                     reflect_x: false,
                     reflect_y: false,
-                }
+                },
             }),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
 
     let warp_id = make_uuid(0x0005, 2);
     let mut warp = Transform {
@@ -177,7 +161,7 @@ fn build_initial_document() -> (Document, Vec<String>) {
                 .push(Vec2::new(c as f32 * 50.0 - 50.0, r as f32 * 50.0 - 50.0));
         }
     }
-    assert!(doc.create_transform(warp).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_transform(warp));
 
     let mesh_id = make_uuid(0x0006, 1);
     let mesh = Mesh {
@@ -204,7 +188,7 @@ fn build_initial_document() -> (Document, Vec<String>) {
         draw_order: Some(1.0),
         ..Default::default()
     };
-    assert!(doc.create_mesh(mesh).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(mesh));
 
     let binding_id = make_uuid(0x0007, 1);
     let binding = MeshBinding {
@@ -249,19 +233,18 @@ fn build_initial_document() -> (Document, Vec<String>) {
             },
         ],
     };
-    assert!(doc.create_binding(binding).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_binding(binding));
 
-    doc.mark_saved();
-    (doc, param_ids)
+    (doc, resources)
 }
 
-fn verify_invariants(doc: &Document, label: &str) {
+fn verify_invariants(doc: &DocumentState, resources: &ResourceView, label: &str) {
     // Invariant 1: Parts hierarchy is a valid DAG (no cycles, no dangling parent)
     for p_id in doc.part_order() {
-        let p = doc.get_part(p_id).expect("part in order must exist");
+        let p = doc.part(p_id).expect("part in order must exist");
         if !p.parent_id.is_empty() {
             assert!(
-                doc.get_part(&p.parent_id).is_some(),
+                doc.part(&p.parent_id).is_some(),
                 "Dangling part parent: {p_id} -> {}",
                 p.parent_id
             );
@@ -275,7 +258,7 @@ fn verify_invariants(doc: &Document, label: &str) {
                 "Cycle detected in part hierarchy starting from {p_id} at {label}"
             );
             curr = doc
-                .get_part(&curr)
+                .part(&curr)
                 .expect("ancestor must exist")
                 .parent_id
                 .clone();
@@ -284,17 +267,15 @@ fn verify_invariants(doc: &Document, label: &str) {
 
     // Invariant 2: Transform hierarchy is a valid DAG
     for t_id in doc.transform_order() {
-        let t = doc
-            .get_transform(t_id)
-            .expect("transform in order must exist");
+        let t = doc.transform(t_id).expect("transform in order must exist");
         assert!(
-            doc.get_part(t.part()).is_some(),
+            doc.part(t.part()).is_some(),
             "Transform {t_id} points to missing part {}",
             t.part()
         );
         if !t.parent_id.is_none() {
             assert!(
-                doc.get_transform(t.parent()).is_some(),
+                doc.transform(t.parent()).is_some(),
                 "Transform {t_id} points to missing transform parent {}",
                 t.parent()
             );
@@ -308,7 +289,7 @@ fn verify_invariants(doc: &Document, label: &str) {
                 "Cycle in transform hierarchy at {label}"
             );
             curr = doc
-                .get_transform(curr)
+                .transform(curr)
                 .expect("transform ancestor must exist")
                 .parent();
         }
@@ -316,27 +297,27 @@ fn verify_invariants(doc: &Document, label: &str) {
 
     // Invariant 3: Mesh integrity
     for m_id in doc.mesh_order() {
-        let m = doc.get_mesh(m_id).expect("mesh in order must exist");
+        let m = doc.mesh(m_id).expect("mesh in order must exist");
         assert!(
-            doc.get_asset(&m.texture_asset_id).is_some(),
+            doc.asset(&m.texture_asset_id).is_some(),
             "Mesh {m_id} has invalid asset {}",
             m.texture_asset_id
         );
         assert!(
-            doc.get_part(&m.part_id).is_some(),
+            doc.part(&m.part_id).is_some(),
             "Mesh {m_id} has invalid part {}",
             m.part_id
         );
         if !m.deformer_id.is_empty() {
             assert!(
-                doc.get_transform(&m.deformer_id).is_some(),
+                doc.transform(&m.deformer_id).is_some(),
                 "Mesh {m_id} has invalid deformer {}",
                 m.deformer_id
             );
         }
         for mask_id in &m.masks {
             assert!(
-                doc.get_mesh(mask_id).is_some(),
+                doc.mesh(mask_id).is_some(),
                 "Mesh {m_id} has invalid mask {mask_id}"
             );
         }
@@ -354,14 +335,14 @@ fn verify_invariants(doc: &Document, label: &str) {
 
     // Invariant 4: Parameter & Bindings integrity
     for b_id in doc.binding_order() {
-        let b = doc.get_binding(b_id).expect("binding in order must exist");
+        let b = doc.binding(b_id).expect("binding in order must exist");
         let mesh = doc
-            .get_mesh(&b.mesh_id)
+            .mesh(&b.mesh_id)
             .expect("binding target mesh must exist");
         let mut total_keys = 1usize;
         for axis in &b.axes {
             let param = doc
-                .get_parameter(&axis.parameter_id)
+                .parameter(&axis.parameter_id)
                 .expect("binding axis param must exist");
             total_keys *= axis.keys.len();
             for &k in &axis.keys {
@@ -390,17 +371,17 @@ fn verify_invariants(doc: &Document, label: &str) {
     // Invariant 5: Scene Bindings integrity
     for sb_id in doc.scene_binding_order() {
         let sb = doc
-            .get_scene_binding(sb_id)
+            .scene_binding(sb_id)
             .expect("scene binding in order must exist");
         assert!(
-            doc.get_transform(sb.target_id()).is_some() || doc.get_part(sb.target_id()).is_some(),
+            doc.transform(sb.target_id()).is_some() || doc.part(sb.target_id()).is_some(),
             "Scene binding target {} missing",
             sb.target_id()
         );
         let mut total_keys = 1usize;
         for axis in &sb.axes {
             let param = doc
-                .get_parameter(&axis.parameter_id)
+                .parameter(&axis.parameter_id)
                 .expect("scene binding axis param must exist");
             total_keys *= axis.keys.len();
             for &k in &axis.keys {
@@ -418,16 +399,25 @@ fn verify_invariants(doc: &Document, label: &str) {
     }
 
     // Invariant 6: Persistence roundtrip
-    let encoded = encode_project(doc).expect("encode_project must succeed on valid document");
-    let decoded = decode_project(&encoded).expect("decode_project must succeed on encoded project");
-    assert!(
-        doc.same_content(&decoded),
-        "Persistence roundtrip decoded document does not match source content at {label}"
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("sequence.zipzi");
+    let io = ProjectIo::new(root.path(), ResourceStore::default());
+    io.save(doc, resources, &path, None, || true).unwrap();
+    let encoded = std::fs::read(&path).unwrap();
+    let decoded = io.load(&path, || true).unwrap();
+    let second = root.path().join("reopened.zipzi");
+    io.save(&decoded.document, &decoded.resources, &second, None, || {
+        true
+    })
+    .unwrap();
+    assert_eq!(
+        project_json(&encoded),
+        project_json(&std::fs::read(second).unwrap()),
+        "roundtrip at {label}"
     );
 
     // Invariant 7: Preview isolation
-    let rev_before = doc.revision();
-    let mod_before = doc.modified();
+    let rev_before = doc.content_id();
     let mut preview_vals = HashMap::new();
     for pid in doc.parameter_order() {
         preview_vals.insert(pid.clone(), 0.5);
@@ -440,14 +430,9 @@ fn verify_invariants(doc: &Document, label: &str) {
         eval_status
     );
     assert_eq!(
-        doc.revision(),
+        doc.content_id(),
         rev_before,
         "evaluate_frame must not alter revision at {label}"
-    );
-    assert_eq!(
-        doc.modified(),
-        mod_before,
-        "evaluate_frame must not alter modified flag at {label}"
     );
 
     // Invariant 8: MOC3 exportability
@@ -470,18 +455,18 @@ fn verify_invariants(doc: &Document, label: &str) {
 fn test_random_operation_sequences_and_invariants() {
     for seed in [0x1234_5678_u64, 0x9ABC_DEF0_u64, 0xCAFE_BABE_u64] {
         let mut rng = Rng::new(seed);
-        let (mut doc, _) = build_initial_document();
+        let (mut doc, resources) = build_initial_document();
         let mut id_counter = 100u32;
 
-        let mut tx_snapshot: Option<Document> = None;
+        let mut pending: Option<(DocumentState, DocumentBuilder)> = None;
 
         for step in 0..150 {
             let label = format!("seed={seed:#x}, step={step}");
             let doc_before = doc.clone();
-            let rev_before = doc.revision();
-            let mod_before = doc.modified();
+            let rev_before = doc.content_id();
 
-            let was_transaction_active = doc.transaction_active();
+            let mut builder = doc.builder();
+            let mut special = false;
             let op_type = rng.next_range(0, 17);
             let mut edit_result = None;
 
@@ -495,7 +480,7 @@ fn test_random_operation_sequences_and_invariants() {
                     } else {
                         String::new()
                     };
-                    let res = doc.create_part(Part {
+                    let res = builder.create_part(Part {
                         id: new_id,
                         runtime_id: format!("Part_{id_counter}"),
                         name: format!("Part {id_counter}"),
@@ -503,20 +488,20 @@ fn test_random_operation_sequences_and_invariants() {
                         enabled: true,
                         draw_order: rng.next_f32(-10.0, 10.0),
                     });
-                    edit_result = Some(res.status);
+                    edit_result = Some(res);
                 }
                 1 => {
                     // Reparent Part
                     if !doc.part_order().is_empty() {
                         let part_id = rng.choose(doc.part_order()).cloned().unwrap();
-                        let mut p = doc.get_part(&part_id).unwrap().clone();
+                        let mut p = doc.part(&part_id).unwrap().clone();
                         p.parent_id = if rng.next_bool() && doc.part_order().len() > 1 {
                             rng.choose(doc.part_order()).cloned().unwrap()
                         } else {
                             String::new()
                         };
-                        let res = doc.replace_part(p);
-                        edit_result = Some(res.status);
+                        let res = builder.replace_part(p);
+                        edit_result = Some(res);
                     }
                 }
                 2 => {
@@ -529,7 +514,7 @@ fn test_random_operation_sequences_and_invariants() {
                     } else {
                         String::new()
                     };
-                    let res = doc.create_transform(Transform {
+                    let res = builder.create_transform(Transform {
                         id: new_id,
                         runtime_id: format!("Rot_{id_counter}"),
                         name: format!("Rot {id_counter}"),
@@ -551,20 +536,20 @@ fn test_random_operation_sequences_and_invariants() {
                         }),
                         ..Default::default()
                     });
-                    edit_result = Some(res.status);
+                    edit_result = Some(res);
                 }
                 3 => {
                     // Reparent Transform (including cyclic check)
                     if !doc.transform_order().is_empty() {
                         let t_id = rng.choose(doc.transform_order()).cloned().unwrap();
-                        let mut t = doc.get_transform(&t_id).unwrap().clone();
+                        let mut t = doc.transform(&t_id).unwrap().clone();
                         t.parent_id = if rng.next_bool() && doc.transform_order().len() > 1 {
                             Some(rng.choose(doc.transform_order()).cloned().unwrap().into())
                         } else {
                             None
                         };
-                        let res = doc.replace_transform(t);
-                        edit_result = Some(res.status);
+                        let res = builder.replace_transform(t);
+                        edit_result = Some(res);
                     }
                 }
                 4 => {
@@ -573,7 +558,7 @@ fn test_random_operation_sequences_and_invariants() {
                     let new_id = make_uuid(0x0003, id_counter);
                     let min = rng.next_f32(-2.0, 0.0);
                     let max = rng.next_f32(0.0, 2.0);
-                    let res = doc.create_parameter(Parameter {
+                    let res = builder.create_parameter(Parameter {
                         id: new_id,
                         runtime_id: format!("Param_{id_counter}"),
                         name: format!("Parameter {id_counter}"),
@@ -583,13 +568,13 @@ fn test_random_operation_sequences_and_invariants() {
                         decimal_places: 4,
                         ..Default::default()
                     });
-                    edit_result = Some(res.status);
+                    edit_result = Some(res);
                 }
                 5 => {
                     // Modify Parameter Range
                     if !doc.parameter_order().is_empty() {
                         let pid = rng.choose(doc.parameter_order()).cloned().unwrap();
-                        let mut p = doc.get_parameter(&pid).unwrap().clone();
+                        let mut p = doc.parameter(&pid).unwrap().clone();
                         if rng.next_bool() {
                             // Expand
                             p.minimum -= 0.5;
@@ -599,8 +584,8 @@ fn test_random_operation_sequences_and_invariants() {
                             p.minimum += 0.2;
                             p.maximum -= 0.2;
                         }
-                        let res = doc.replace_parameter(p);
-                        edit_result = Some(res.status);
+                        let res = builder.replace_parameter(p);
+                        edit_result = Some(res);
                     }
                 }
                 6 => {
@@ -614,7 +599,7 @@ fn test_random_operation_sequences_and_invariants() {
                     } else {
                         String::new()
                     };
-                    let res = doc.create_mesh(Mesh {
+                    let res = builder.create_mesh(Mesh {
                         id: new_id,
                         runtime_id: format!("Mesh_{id_counter}"),
                         name: format!("Mesh {id_counter}"),
@@ -636,56 +621,48 @@ fn test_random_operation_sequences_and_invariants() {
                         draw_order: Some(rng.next_f32(0.0, 10.0)),
                         ..Default::default()
                     });
-                    edit_result = Some(res.status);
+                    edit_result = Some(res);
                 }
                 7 => {
                     // Reparent Mesh
                     if !doc.mesh_order().is_empty() {
                         let m_id = rng.choose(doc.mesh_order()).cloned().unwrap();
-                        let mut m = doc.get_mesh(&m_id).unwrap().clone();
+                        let mut m = doc.mesh(&m_id).unwrap().clone();
                         m.part_id = rng.choose(doc.part_order()).cloned().unwrap();
                         m.deformer_id = if rng.next_bool() && !doc.transform_order().is_empty() {
                             rng.choose(doc.transform_order()).cloned().unwrap()
                         } else {
                             String::new()
                         };
-                        let res = doc.replace_mesh(m);
-                        edit_result = Some(res.status);
+                        let res = builder.replace_mesh(m);
+                        edit_result = Some(res);
                     }
                 }
                 8 => {
                     // Update Mesh Vertex Positions
-                    if !doc.mesh_order().is_empty() && !doc.transaction_active() {
+                    if !doc.mesh_order().is_empty() {
                         let m_id = rng.choose(doc.mesh_order()).cloned().unwrap();
-                        let m = doc.get_mesh(&m_id).unwrap();
-                        let updates: Vec<VertexPositionUpdate> = m
-                            .vertex_ids
-                            .iter()
-                            .enumerate()
-                            .map(|(idx, &vid)| VertexPositionUpdate {
-                                mesh_id: m_id.clone(),
-                                vertex_ids: vec![vid],
-                                positions: vec![Vec2::new(
-                                    m.base_positions[idx].x + rng.next_f32(-2.0, 2.0),
-                                    m.base_positions[idx].y + rng.next_f32(-2.0, 2.0),
-                                )],
-                            })
-                            .collect();
-                        let res = doc.apply_vertex_position_updates(&updates);
-                        edit_result = Some(res.status);
+                        let m = doc.mesh(&m_id).unwrap();
+                        let mut mesh = m.clone();
+                        for point in &mut mesh.base_positions {
+                            point.x += rng.next_f32(-2., 2.);
+                            point.y += rng.next_f32(-2., 2.);
+                        }
+                        let res = builder.replace_mesh(mesh);
+                        edit_result = Some(res);
                     }
                 }
                 9 => {
                     // Modify Mesh Keyform
                     if !doc.binding_order().is_empty() {
                         let b_id = rng.choose(doc.binding_order()).cloned().unwrap();
-                        let b = doc.get_binding(&b_id).unwrap();
+                        let b = doc.binding(&b_id).unwrap();
                         let mut form = b.keyforms[0].clone();
                         for pt in &mut form.positions {
                             pt.x += rng.next_f32(-1.0, 1.0);
                         }
-                        let res = doc.set_mesh_keyform(&b_id, form);
-                        edit_result = Some(res.status);
+                        let res = builder.set_mesh_keyform(&b_id, form);
+                        edit_result = Some(res);
                     }
                 }
                 10 => {
@@ -703,86 +680,86 @@ fn test_random_operation_sequences_and_invariants() {
                         _ => None,
                     };
                     if let Some(id) = to_erase {
-                        let res = doc.erase_object(&id);
-                        edit_result = Some(res.status);
+                        let res = match kind {
+                            0 => builder.remove_part(&id),
+                            1 => builder.remove_transform(&id),
+                            2 => builder.remove_mesh(&id),
+                            3 => builder.remove_parameter(&id),
+                            _ => unreachable!(),
+                        };
+                        edit_result = Some(res);
                     }
                 }
                 11 => {
-                    // Transaction: Begin
-                    if !doc.transaction_active() {
-                        tx_snapshot = Some(doc.clone());
-                        let s = doc.begin_transaction();
-                        edit_result = Some(s);
+                    special = true;
+                    if pending.is_none() {
+                        pending = Some((doc.clone(), doc.builder()));
                     }
                 }
                 12 => {
-                    // Transaction: Stage vertex position
-                    if doc.transaction_active() && !doc.mesh_order().is_empty() {
-                        let m_id = rng.choose(doc.mesh_order()).cloned().unwrap();
-                        let m = doc.get_mesh(&m_id).unwrap();
-                        let vid = m.vertex_ids[0];
-                        let s = doc.stage_vertex_positions(VertexPositionUpdate {
-                            mesh_id: m_id,
-                            vertex_ids: vec![vid],
-                            positions: vec![Vec2::new(
-                                m.base_positions[0].x + rng.next_f32(-1.0, 1.0),
-                                m.base_positions[0].y + rng.next_f32(-1.0, 1.0),
-                            )],
-                        });
-                        edit_result = Some(s);
+                    special = true;
+                    if let Some((_, candidate)) = &mut pending {
+                        if let Some(id) = candidate.mesh_order().first().cloned() {
+                            let mut mesh = candidate.mesh(&id).unwrap().clone();
+                            mesh.base_positions[0].x += rng.next_f32(-1., 1.);
+                            candidate.replace_mesh(mesh).unwrap();
+                        }
                     }
+                    assert_eq!(
+                        doc.content_id(),
+                        doc_before.content_id(),
+                        "candidate isolation at {label}"
+                    );
                 }
                 13 => {
-                    // Transaction: Commit
-                    if doc.transaction_active() {
-                        let res = doc.commit_transaction();
-                        tx_snapshot = None;
-                        edit_result = Some(res.status);
+                    special = true;
+                    if let Some((base, candidate)) = pending.take() {
+                        // A competing publication makes this source stale.
+                        if base.content_id() == doc.content_id() {
+                            match candidate.freeze() {
+                                Ok(frozen) => doc = frozen.state,
+                                Err(_) => assert_eq!(doc.content_id(), doc_before.content_id()),
+                            }
+                        } else {
+                            assert_eq!(doc.content_id(), doc_before.content_id());
+                        }
                     }
                 }
                 14 => {
-                    // Transaction: Cancel
-                    if doc.transaction_active() {
-                        let s = doc.cancel_transaction();
-                        assert!(s.is_ok(), "cancel_transaction must succeed");
-                        if let Some(snap) = tx_snapshot.take() {
-                            assert!(
-                                doc.same_content(&snap),
-                                "cancel_transaction did not restore exact document content at {label}"
-                            );
-                        }
-                        edit_result = Some(s);
-                    }
+                    special = true;
+                    drop(pending.take());
+                    assert_eq!(
+                        doc.content_id(),
+                        doc_before.content_id(),
+                        "discard cannot overwrite a newer snapshot at {label}"
+                    );
                 }
                 15 => {
                     // Negative check: Attempt cyclic transform parent
                     if doc.transform_order().len() >= 2 {
                         let t0 = doc.transform_order()[0].clone();
                         let _t1 = doc.transform_order()[1].clone();
-                        let mut t = doc.get_transform(&t0).unwrap().clone();
+                        let mut t = doc.transform(&t0).unwrap().clone();
                         t.parent_id = Some(t0.clone().into()); // self-cycle
-                        let res = doc.replace_transform(t);
-                        assert!(
-                            !res.status.is_ok(),
-                            "Self-cycle must be rejected at {label}"
-                        );
-                        edit_result = Some(res.status);
+                        let res = builder.replace_transform(t);
+
+                        edit_result = Some(res);
                     }
                 }
                 16 => {
                     // Negative check: Add invalid opacity
                     if !doc.scene_binding_order().is_empty() {
                         let sb_id = rng.choose(doc.scene_binding_order()).cloned().unwrap();
-                        let sb = doc.get_scene_binding(&sb_id).unwrap();
+                        let sb = doc.scene_binding(&sb_id).unwrap();
                         let f = match &sb.track {
                             zipzi_core::SceneTrack::Warp { keyforms, .. } => {
                                 let mut f = keyforms[0].clone();
-                                f.appearance.opacity = 2.5;
+                                f.appearance.opacity = f32::NAN;
                                 zipzi_core::SceneKeyform::Warp(f)
                             }
                             zipzi_core::SceneTrack::Rotation { keyforms, .. } => {
                                 let mut f = keyforms[0].clone();
-                                f.appearance.opacity = 2.5;
+                                f.appearance.opacity = f32::NAN;
                                 zipzi_core::SceneKeyform::Rotation(f)
                             }
                             zipzi_core::SceneTrack::Part { keyforms, .. } => {
@@ -791,69 +768,52 @@ fn test_random_operation_sequences_and_invariants() {
                                 zipzi_core::SceneKeyform::Part(f)
                             }
                         };
-                        let res = doc.set_scene_keyform(&sb_id, f);
-                        assert!(
-                            !res.status.is_ok(),
-                            "Invalid keyform must be rejected at {label}"
-                        );
-                        edit_result = Some(res.status);
+                        let res = builder.set_scene_keyform(&sb_id, f);
+
+                        edit_result = Some(res);
                     }
                 }
                 17 => {
-                    // Mark saved checkpoint
-                    doc.mark_saved();
-                    assert!(
-                        !doc.modified(),
-                        "Document must not be modified after mark_saved"
-                    );
+                    // A no-op freeze reuses identity and has no write set.
+                    let frozen = doc.builder().freeze().unwrap();
+                    assert_eq!(frozen.state.content_id(), doc.content_id());
                 }
                 _ => {}
             }
 
-            // Failure Atomicity Invariant:
-            if let Some(status) = edit_result {
-                // These generated operations have valid IDs, references and values.
-                let must_succeed = matches!(op_type, 0 | 2 | 4 | 6 | 7 | 8 | 9 | 11)
-                    && !was_transaction_active
-                    || matches!(op_type, 12..=14) && was_transaction_active;
-                if must_succeed {
-                    assert!(
-                        status.is_ok(),
-                        "Valid operation {op_type} rejected at {label}: {status:?}"
-                    );
-                    if matches!(op_type, 0 | 2 | 4 | 6 | 8 | 9) {
+            if !special {
+                if let Some(result) = edit_result {
+                    let frozen = result.and_then(|()| builder.freeze());
+                    let must_succeed = matches!(op_type, 0 | 2 | 4 | 6 | 7 | 8 | 9);
+                    if must_succeed {
                         assert!(
-                            !doc.same_content(&doc_before),
-                            "Successful edit {op_type} had no effect at {label}"
-                        );
-                        assert!(
-                            doc.revision() > rev_before,
-                            "Successful edit must advance revision at {label}"
+                            frozen.is_ok(),
+                            "valid operation {op_type} at {label}: {frozen:?}"
                         );
                     }
-                }
-                if !status.is_ok() {
-                    assert_eq!(
-                        doc.revision(),
-                        rev_before,
-                        "Failed operation must not advance revision at {label}"
-                    );
-                    assert_eq!(
-                        doc.modified(),
-                        mod_before,
-                        "Failed operation must not change modified state at {label}"
-                    );
-                    assert!(
-                        doc.same_content(&doc_before),
-                        "Failed operation must not mutate document content at {label}"
-                    );
+                    if matches!(op_type, 15 | 16) {
+                        assert!(frozen.is_err(), "invalid operation {op_type} at {label}");
+                    }
+                    match frozen {
+                        Ok(frozen) => {
+                            if matches!(op_type, 0 | 2 | 4 | 6 | 8 | 9) {
+                                assert_ne!(
+                                    frozen.state.content_id(),
+                                    rev_before,
+                                    "edit had no effect at {label}"
+                                );
+                            }
+                            doc = frozen.state;
+                        }
+                        Err(_) => assert_eq!(
+                            doc.content_id(),
+                            doc_before.content_id(),
+                            "failure isolation at {label}"
+                        ),
+                    }
                 }
             }
-
-            // Verify full invariants after every step (if outside of active transaction stage)
-            if !doc.transaction_active() {
-                verify_invariants(&doc, &label);
-            }
+            verify_invariants(&doc, &resources, &label);
         }
     }
 }

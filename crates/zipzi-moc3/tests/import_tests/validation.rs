@@ -16,12 +16,12 @@ fn import_preserves_keys_outside_declared_parameter_range() {
 
     let imported = import_from_bare_moc3(&bytes, &HashMap::new()).unwrap();
     let param_id = &imported.report.id_mapping.parameter_by_index[0];
-    let parameter = imported.document.get_parameter(param_id).unwrap();
+    let parameter = imported.document.parameter(param_id).unwrap();
     assert_eq!(parameter.maximum, 1.0);
     assert!(imported.document.binding_order().iter().any(|id| {
         imported
             .document
-            .get_binding(id)
+            .binding(id)
             .unwrap()
             .axes
             .iter()
@@ -36,10 +36,10 @@ fn import_document_accepts_self_mask_from_source() {
         .unwrap()
         .document;
     let mesh_id = document.mesh_order()[0].clone();
-    let mut mesh = document.get_mesh(&mesh_id).unwrap().clone();
+    let mut mesh = document.mesh(&mesh_id).unwrap().clone();
     mesh.masks.push(mesh_id.clone());
-    assert!(document.replace_mesh(mesh).status.is_ok());
-    assert_eq!(document.get_mesh(&mesh_id).unwrap().masks, [mesh_id]);
+    document = prepare(&document, |builder| builder.replace_mesh(mesh));
+    assert_eq!(document.mesh(&mesh_id).unwrap().masks, [mesh_id]);
 }
 
 #[test]
@@ -50,18 +50,32 @@ fn import_document_accepts_mutual_masks_from_source() {
         .document;
     let first = document.mesh_order()[0].clone();
     let second = id(987);
-    let mut second_mesh = document.get_mesh(&first).unwrap().clone();
+    let mut second_mesh = document.mesh(&first).unwrap().clone();
     second_mesh.id = second.clone();
     second_mesh.runtime_id = "MutualMaskSource".into();
     second_mesh.name = "MutualMaskSource".into();
     second_mesh.masks.clear();
-    assert!(document.create_mesh(second_mesh).status.is_ok());
-    let mut first_mesh = document.get_mesh(&first).unwrap().clone();
+    document = prepare(&document, |builder| {
+        builder.create_mesh(second_mesh)?;
+        if let Some(mut groups) = builder.draw_order_groups().clone() {
+            groups
+                .iter_mut()
+                .find(|group| group.owner.is_empty())
+                .unwrap()
+                .items
+                .push(second.clone());
+            builder.set_draw_order_groups(Some(groups))?;
+        }
+        Ok(())
+    });
+    let mut first_mesh = document.mesh(&first).unwrap().clone();
     first_mesh.masks = vec![second.clone()];
-    assert!(document.replace_mesh(first_mesh).status.is_ok());
-    let mut second_mesh = document.get_mesh(&second).unwrap().clone();
-    second_mesh.masks = vec![first];
-    assert!(document.replace_mesh(second_mesh).status.is_ok());
+    document = prepare(&document, |builder| builder.replace_mesh(first_mesh));
+    let mut second_mesh = document.mesh(&second).unwrap().clone();
+    second_mesh.masks = vec![first.clone()];
+    document = prepare(&document, |builder| builder.replace_mesh(second_mesh));
+    assert_eq!(document.mesh(&first).unwrap().masks, [second.clone()]);
+    assert_eq!(document.mesh(&second).unwrap().masks, [first]);
 }
 
 #[test]
@@ -73,7 +87,7 @@ fn import_normalizes_empty_drawing_group_sentinel() {
     import_cases::set_i32(&mut bytes, 84, 1, -i32::MAX);
 
     let imported = import_from_bare_moc3(&bytes, &HashMap::new()).unwrap();
-    let groups = imported.document.draw_order_groups().unwrap();
+    let groups = imported.document.draw_order_groups().as_ref().unwrap();
     assert!(groups
         .iter()
         .any(|group| { group.items.is_empty() && group.min_order == 0 && group.max_order == 0 }));
@@ -99,14 +113,16 @@ fn test_unsupported_features_rejected() {
 
     // 2. Unknown version rejection
     let bad_ver_bytes = create_m1_fixture_doc();
-    let mut bytes = encode_moc3(&bad_ver_bytes).unwrap().bytes;
+    let mut bytes = encode_moc3(&capture_images(&bad_ver_bytes).0)
+        .unwrap()
+        .bytes;
     bytes[4] = 99; // unknown version
     let err = inspect_moc3(&bytes).expect_err("Version 99 must be rejected");
     assert_eq!(err.code, "UNSUPPORTED_VERSION");
 
     // 3. Cyclic parameter acceptance in S3
     let doc = create_m1_fixture_doc();
-    let encoded = encode_moc3(&doc).unwrap();
+    let encoded = encode_moc3(&capture_images(&doc).0).unwrap();
     let offsets = &inspect_moc3(&encoded.bytes).unwrap().section_offsets;
     let counts_off = offsets[0] as usize;
     let rep_off = offsets[54] as usize;
@@ -120,7 +136,7 @@ fn test_unsupported_features_rejected() {
     let decoded = &imported.document;
     assert!(
         decoded
-            .get_parameter(decoded.parameter_order()[0].as_str())
+            .parameter(decoded.parameter_order()[0].as_str())
             .unwrap()
             .repeat
     );
@@ -170,7 +186,7 @@ fn test_malformed_and_corrupt_files() {
 #[test]
 fn test_resource_mapping() {
     let doc = create_m1_fixture_doc();
-    let encoded = encode_moc3(&doc).unwrap();
+    let encoded = encode_moc3(&capture_images(&doc).0).unwrap();
 
     // Bare moc3 with empty texture map: should succeed with unmapped texture warning
     let empty_map = HashMap::new();
@@ -231,8 +247,8 @@ fn safety_inspection_does_not_skip_corruption_for_unsupported_features() {
 fn repeated_blend_target_groups_are_not_silently_merged() {
     use zipzi_core::types::*;
     let mut doc = create_m1_fixture_doc();
-    assert!(doc
-        .create_parameter(Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: id(420),
             runtime_id: "SharedBlend".into(),
             minimum: 0.0,
@@ -241,10 +257,9 @@ fn repeated_blend_target_groups_are_not_silently_merged() {
             kind: ParameterKind::BlendShape,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_blend_key_table(BlendShapeKeyTable {
+    });
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
             id: id(421),
@@ -252,16 +267,15 @@ fn repeated_blend_target_groups_are_not_silently_merged() {
             keys: vec![0.0, 1.0],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
-    let original = doc.get_mesh(&doc.mesh_order()[0]).unwrap().clone();
+    });
+    let original = doc.mesh(&doc.mesh_order()[0]).unwrap().clone();
     let mut other = original.clone();
     other.id = id(422);
     other.runtime_id = "SecondBlendTarget".into();
-    assert!(doc.create_mesh(other.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(other.clone()));
     for (n, mesh) in [original, other].iter().enumerate() {
-        assert!(doc
-            .create_blend_binding(BlendShapeBinding {
+        doc = prepare(&doc, |builder| {
+            builder.create_blend_binding(BlendShapeBinding {
                 id: id(423 + n as i32),
                 target_id: mesh.id.clone(),
                 target_kind: BlendShapeTargetKind::Mesh,
@@ -275,10 +289,9 @@ fn repeated_blend_target_groups_are_not_silently_merged() {
                     2
                 ]),
             })
-            .status
-            .is_ok());
+        });
     }
-    let mut bytes = encode_moc3(&doc).unwrap().bytes;
+    let mut bytes = encode_moc3(&capture_images(&doc).0).unwrap().bytes;
     let inspection = inspect_moc3(&bytes).unwrap();
     let offset = inspection.section_offsets[128] as usize;
     let first = i32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap());
@@ -292,7 +305,7 @@ fn repeated_blend_target_groups_are_not_silently_merged() {
 #[test]
 fn test_decoder_strict_index_validation() {
     let doc = create_m1_fixture_doc();
-    let encoded = encode_moc3(&doc).unwrap();
+    let encoded = encode_moc3(&capture_images(&doc).0).unwrap();
     let inspection = inspect_moc3(&encoded.bytes).unwrap();
     let idx_len_off = inspection.section_offsets[46] as usize; // art_mesh_src.idx_len
     let idx_off_val = inspection.section_offsets[45] as usize; // art_mesh_src.idx_off
@@ -324,7 +337,7 @@ fn test_decoder_strict_index_validation() {
 #[test]
 fn test_s1_layout_safety_and_version_gating() {
     let doc = create_m1_fixture_doc();
-    let encoded = encode_moc3(&doc).unwrap();
+    let encoded = encode_moc3(&capture_images(&doc).0).unwrap();
 
     // 1. Version 4 MOC3: inspect_moc3_safety succeeds and inspect_moc3 succeeds (enabled in S2)
     let mut v4_bytes = encoded.bytes.clone();
@@ -356,7 +369,7 @@ fn test_s1_layout_safety_and_version_gating() {
             zipzi_moc3::inspect_moc3(&ren_bytes).expect("Ren inspection should succeed in S5");
         assert_eq!(ins_ren.version, Moc3Version::Version53);
         let decoded = zipzi_moc3::decode_moc3(&ren_bytes, &ins_ren, &[]).expect("decode Ren in S5");
-        assert_eq!(decoded.document.offscreen_count(), 24);
+        assert_eq!(decoded.document.offscreen_order().len(), 24);
         assert_eq!(decoded.document.part_order().len(), 51);
         assert_eq!(decoded.document.mesh_order().len(), 198);
     }
@@ -423,10 +436,14 @@ fn unavailable_image_sources_are_preserved_without_fabricated_dimensions() {
         assert!(result.diagnostics.iter().any(|d| d.code == code));
         let asset = result
             .document
-            .get_asset(&result.document.asset_order()[0])
+            .asset(&result.document.asset_order()[0])
             .unwrap();
-        assert!(asset.content.is_none());
-        assert_eq!(asset.unresolved_source.as_deref(), path.to_str());
-        assert!(encode_moc3(&result.document).is_err());
+        assert_eq!(
+            asset.content,
+            zipzi_core::state::AssetContent::Unresolved {
+                source: path.to_str().unwrap().into()
+            }
+        );
+        assert!(encode_moc3(&capture_images(&result.document).0).is_err());
     }
 }

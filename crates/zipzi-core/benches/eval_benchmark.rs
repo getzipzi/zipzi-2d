@@ -1,103 +1,76 @@
+#[path = "../tests/support/mod.rs"]
+mod support;
+
 use std::collections::HashMap;
 use std::hint::black_box;
 use std::time::Instant;
+use support::image;
+use zipzi_core::state::DocumentState;
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 
 use zipzi_core::{
-    BindingAxis, Canvas, Document, DrawableFrame, FrameEvaluator, ImageAsset, Mesh, MeshBinding,
-    MeshKeyform, Parameter, Part, RotationPose, SceneBinding, Transform, Vec2, VertexId,
+    BindingAxis, Canvas, DrawableFrame, FrameEvaluator, Mesh, MeshBinding, MeshKeyform, Parameter,
+    Part, RotationPose, SceneBinding, Transform, Vec2, VertexId,
 };
 
 fn make_id(kind: u32, n: u32) -> String {
     format!("{:04x}{:04x}-1111-4111-8111-111111111111", kind, n)
 }
 
-fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
-    let mut doc = Document::new();
-    let doc_id = make_id(0x0001, 1);
-    assert!(doc
-        .initialize(
-            doc_id,
-            Canvas::new(1280.0, 720.0, Vec2::new(640.0, 360.0), 100.0)
-        )
-        .is_ok());
+fn build_benchmark_document(out_params: &mut Vec<String>) -> DocumentState {
+    let base = DocumentState::new(
+        make_id(0x0001, 1),
+        Canvas::new(1280.0, 720.0, Vec2::new(640.0, 360.0), 100.0).into(),
+    )
+    .unwrap();
+    let mut doc = base.builder();
 
     let asset1 = make_id(0x0002, 1);
     let asset2 = make_id(0x0002, 2);
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: asset1.clone(),
-            name: "texture_0".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/0.png".to_string(),
-                width: 512,
-                height: 512,
-                ..Default::default()
-            }),
-        })
-        .status
-        .is_ok());
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: asset2.clone(),
-            name: "texture_1".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/1.png".to_string(),
-                width: 512,
-                height: 512,
-                ..Default::default()
-            }),
-        })
-        .status
-        .is_ok());
+    doc.create_asset(image(asset1.clone(), "texture_0", 512, 512))
+        .unwrap();
+    doc.create_asset(image(asset2.clone(), "texture_1", 512, 512))
+        .unwrap();
 
     // 4 Parameters
     out_params.clear();
     for i in 0..4 {
         let pid = make_id(0x0003, i + 1);
         out_params.push(pid.clone());
-        assert!(doc
-            .create_parameter(Parameter {
-                id: pid.clone(),
-                runtime_id: format!("Param_{}", i),
-                name: format!("Parameter {}", i),
-                minimum: -1.0,
-                maximum: 1.0,
-                default_value: 0.0,
-                decimal_places: 6,
-                ..Default::default()
-            })
-            .status
-            .is_ok());
+        doc.create_parameter(Parameter {
+            id: pid.clone(),
+            runtime_id: format!("Param_{}", i),
+            name: format!("Parameter {}", i),
+            minimum: -1.0,
+            maximum: 1.0,
+            default_value: 0.0,
+            decimal_places: 6,
+            ..Default::default()
+        })
+        .unwrap();
     }
 
     // 2 Parts
     let part_root = make_id(0x0004, 1);
     let part_child = make_id(0x0004, 2);
-    assert!(doc
-        .create_part(Part {
-            id: part_root.clone(),
-            runtime_id: "PartRoot".to_string(),
-            name: "Root Part".to_string(),
-            parent_id: String::new(),
-            enabled: true,
-            draw_order: 0.0,
-        })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_part(Part {
-            id: part_child.clone(),
-            runtime_id: "PartChild".to_string(),
-            name: "Child Part".to_string(),
-            parent_id: part_root,
-            enabled: true,
-            draw_order: 1.0,
-        })
-        .status
-        .is_ok());
+    doc.create_part(Part {
+        id: part_root.clone(),
+        runtime_id: "PartRoot".to_string(),
+        name: "Root Part".to_string(),
+        parent_id: String::new(),
+        enabled: true,
+        draw_order: 0.0,
+    })
+    .unwrap();
+    doc.create_part(Part {
+        id: part_child.clone(),
+        runtime_id: "PartChild".to_string(),
+        name: "Child Part".to_string(),
+        parent_id: part_root,
+        enabled: true,
+        draw_order: 1.0,
+    })
+    .unwrap();
 
     // Transform 1: Root Rotation
     let rot_root = make_id(0x0005, 1);
@@ -119,7 +92,7 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(tfm_rot.clone()).status.is_ok());
+    doc.create_transform(tfm_rot.clone()).unwrap();
 
     // Transform 2: Child Warp (3x3 grid = 16 points)
     let warp_child = make_id(0x0005, 2);
@@ -147,7 +120,7 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
                 .push(Vec2::new(c as f32 * 50.0 - 75.0, r as f32 * 50.0 - 75.0));
         }
     }
-    assert!(doc.create_transform(tfm_warp.clone()).status.is_ok());
+    doc.create_transform(tfm_warp.clone()).unwrap();
 
     // Bindings for transforms
     for t in 1..=2 {
@@ -203,7 +176,7 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
             }],
             track,
         };
-        assert!(doc.create_scene_binding(sb).status.is_ok());
+        doc.create_scene_binding(sb).unwrap();
     }
 
     // 10 Meshes (each with 4x4 vertex grid = 16 vertices, 18 triangles)
@@ -245,7 +218,7 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
             }
         }
 
-        assert!(doc.create_mesh(mesh.clone()).status.is_ok());
+        doc.create_mesh(mesh.clone()).unwrap();
 
         let mut mb = MeshBinding {
             id: make_id(0x0008, m + 1),
@@ -270,10 +243,10 @@ fn build_benchmark_document(out_params: &mut Vec<String>) -> Document {
             }
             mb.keyforms.push(mkf);
         }
-        assert!(doc.create_binding(mb).status.is_ok());
+        doc.create_binding(mb).unwrap();
     }
 
-    doc
+    doc.freeze().unwrap().state
 }
 
 fn main() {
@@ -284,7 +257,7 @@ fn main() {
     let total_vertices: usize = doc
         .mesh_order()
         .iter()
-        .map(|id| doc.get_mesh(id).unwrap().base_positions.len())
+        .map(|id| doc.mesh(id).unwrap().base_positions.len())
         .sum();
     println!(
         "Document: {} meshes, {} transforms, {} total vertices",

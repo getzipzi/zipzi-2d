@@ -376,29 +376,32 @@ mod tests {
         setup: impl FnOnce(&mut zipzi_sdk::Commands<'_>) -> Result<(), zipzi_core::Status>,
     ) -> anyhow::Result<(Document, tempfile::TempDir)> {
         let dir = tempfile::tempdir()?;
-        let mut s = zipzi_sdk::AuthoringSession::new(
+        let mut s = crate::test_sdk::fixture_session(
             &id(90),
             Canvas::new(256., 256., Vec2::default(), 1.),
         )?;
-        s.edit("fixture", None, |e| {
+        crate::test_sdk::publish_fixture(&mut s, "fixture", |e| {
             if parent {
-                e.create_transform(Transform {
-                    id: id(12),
-                    name: "Parent".into(),
-                    data: TransformData::Warp(WarpTransform {
-                        rows: 1,
-                        columns: 1,
-                        quad: false,
-                        bezier: None,
-                        points: vec![
-                            Vec2::new(0., 0.),
-                            Vec2::new(200., 0.),
-                            Vec2::new(0., 100.),
-                            Vec2::new(250., 220.),
-                        ],
-                    }),
-                    ..Default::default()
-                })?;
+                crate::test_sdk::insert_transform(
+                    e,
+                    Transform {
+                        id: id(12),
+                        name: "Parent".into(),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 1,
+                            columns: 1,
+                            quad: false,
+                            bezier: None,
+                            points: vec![
+                                Vec2::new(0., 0.),
+                                Vec2::new(200., 0.),
+                                Vec2::new(0., 100.),
+                                Vec2::new(250., 220.),
+                            ],
+                        }),
+                        ..Default::default()
+                    },
+                )?;
             }
             let positions = vec![
                 Vec2::new(10., 10.),
@@ -406,60 +409,69 @@ mod tests {
                 Vec2::new(10., 110.),
             ];
             for n in [1, 2] {
-                e.create_mesh(Mesh {
-                    id: id(n),
-                    name: format!("Mesh {n}"),
-                    runtime_id: format!("mesh{n}"),
-                    vertex_ids: vec![10, 20, 30],
-                    base_positions: if parent && n == 1 {
-                        vec![
-                            Vec2::new(0.1, 0.1),
-                            Vec2::new(0.8, 0.1),
-                            Vec2::new(0.1, 0.8),
-                        ]
-                    } else {
-                        positions.clone()
+                crate::test_sdk::insert_fixture_mesh(
+                    e,
+                    Mesh {
+                        id: id(n),
+                        name: format!("Mesh {n}"),
+                        runtime_id: format!("mesh{n}"),
+                        vertex_ids: vec![10, 20, 30],
+                        base_positions: if parent && n == 1 {
+                            vec![
+                                Vec2::new(0.1, 0.1),
+                                Vec2::new(0.8, 0.1),
+                                Vec2::new(0.1, 0.8),
+                            ]
+                        } else {
+                            positions.clone()
+                        },
+                        deformer_id: if parent && n == 1 {
+                            id(12)
+                        } else {
+                            String::new()
+                        },
+                        uvs: vec![Vec2::default(); 3],
+                        triangles: vec![[10, 20, 30]],
+                        ..Default::default()
                     },
-                    deformer_id: if parent && n == 1 {
-                        id(12)
-                    } else {
-                        String::new()
-                    },
-                    uvs: vec![Vec2::default(); 3],
-                    triangles: vec![[10, 20, 30]],
-                    ..Default::default()
-                })?;
+                )?;
             }
-            e.create_glue(Glue {
-                id: id(3),
-                runtime_id: "seam".into(),
-                name: "Seam".into(),
-                mesh_a_id: id(1).into(),
-                mesh_b_id: id(2).into(),
-                intensity: 1.,
-                binding: None,
-                pairs: vec![GlueVertexPair {
-                    vertex_a: Some(10),
-                    vertex_b: Some(10),
-                    weight_a: amount,
-                    weight_b: 0.,
-                    ..Default::default()
-                }],
-            })?;
+            crate::test_sdk::insert_glue(
+                e,
+                Glue {
+                    id: id(3),
+                    runtime_id: "seam".into(),
+                    name: "Seam".into(),
+                    mesh_a_id: id(1).into(),
+                    mesh_b_id: id(2).into(),
+                    intensity: 1.,
+                    binding: None,
+                    pairs: vec![GlueVertexPair {
+                        vertex_a: Some(10),
+                        vertex_b: Some(10),
+                        weight_a: amount,
+                        weight_b: 0.,
+                        ..Default::default()
+                    }],
+                },
+            )?;
             if blend {
                 for (n, name, kind) in [
                     (4, "Pose", ParameterKind::Normal),
                     (5, "Smile", ParameterKind::BlendShape),
                     (8, "Constraint", ParameterKind::Normal),
                 ] {
-                    e.create_parameter(Parameter {
-                        id: id(n),
-                        name: name.into(),
-                        minimum: 0.,
-                        maximum: 1.,
-                        kind,
-                        ..Default::default()
-                    })?;
+                    crate::test_sdk::insert_fixture_parameter(
+                        e,
+                        Parameter {
+                            id: id(n),
+                            name: name.into(),
+                            minimum: 0.,
+                            maximum: 1.,
+                            kind,
+                            ..Default::default()
+                        },
+                    )?;
                 }
                 e.create_binding(MeshBinding {
                     id: id(9),
@@ -485,42 +497,55 @@ mod tests {
                         },
                     ],
                 })?;
-                e.create_blend_key_table(BlendShapeKeyTable {
-                    id: id(6),
-                    parameter_id: id(5),
-                    keys: vec![0., 1.],
-                    base_key_idx: 0,
-                    samples: Default::default(),
-                    base_sample_id: Default::default(),
-                })?;
-                e.create_blend_constraint(BlendShapeConstraint {
-                    id: id(11),
-                    parameter_id: id(8),
-                    keys: vec![0., 1.],
-                    weights: vec![1., 0.],
-                    samples: vec![],
-                })?;
-                e.create_blend_binding(BlendShapeBinding {
-                    id: id(7),
-                    target_id: id(1),
-                    target_kind: BlendShapeTargetKind::Mesh,
-                    key_table_id: id(6),
-                    constraint_ids: vec![id(11)],
-                    keyforms: DeltaKeyforms::Mesh(vec![
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::default(); 3],
-                            ..Default::default()
+                crate::test_sdk::insert_blend_table(
+                    e,
+                    BlendShapeKeyTable {
+                        id: id(6),
+                        parameter_id: id(5),
+                        keys: vec![0., 1.],
+                        base_key_idx: 0,
+                        samples: Default::default(),
+                        base_sample_id: Default::default(),
+                    },
+                )?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateConstraint {
+                        constraint: BlendShapeConstraint {
+                            id: id(11),
+                            parameter_id: id(8),
+                            keys: vec![0., 1.],
+                            weights: vec![1., 0.],
+                            samples: vec![],
                         },
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::new(2., 3.); 3],
-                            ..Default::default()
-                        },
-                    ]),
-                })?;
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                crate::test_sdk::insert_blend_binding(
+                    e,
+                    BlendShapeBinding {
+                        id: id(7),
+                        target_id: id(1),
+                        target_kind: BlendShapeTargetKind::Mesh,
+                        key_table_id: id(6),
+                        constraint_ids: vec![id(11)],
+                        keyforms: DeltaKeyforms::Mesh(vec![
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::default(); 3],
+                                ..Default::default()
+                            },
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::new(2., 3.); 3],
+                                ..Default::default()
+                            },
+                        ]),
+                    },
+                )?;
             }
             setup(e)
         })?;
-        let receipt = s.save_project(&dir.path().join("fixture.zipzi"), None)?;
+        let receipt = crate::test_sdk::save_fixture(&mut s, &dir.path().join("fixture.zipzi"))?;
         let mut doc = Document::open(&receipt.path)?;
         doc.select(&id(1))?;
         Ok((doc, dir))
@@ -751,39 +776,48 @@ mod tests {
     fn blend_zero_base_keyform_edits_with_other_blends_and_glue() -> anyhow::Result<()> {
         for through_binding in [false, true] {
             let (mut doc, _dir) = fixture_with_setup(0.5, true, false, |e| {
-                e.create_parameter(Parameter {
-                    id: id(14),
-                    name: "Other blend".into(),
-                    minimum: 0.,
-                    maximum: 1.,
-                    kind: ParameterKind::BlendShape,
-                    ..Default::default()
-                })?;
-                e.create_blend_key_table(BlendShapeKeyTable {
-                    id: id(15),
-                    parameter_id: id(14),
-                    keys: vec![0., 1.],
-                    base_key_idx: 0,
-                    samples: vec![],
-                    base_sample_id: String::new(),
-                })?;
-                e.create_blend_binding(BlendShapeBinding {
-                    id: id(16),
-                    target_id: id(1),
-                    target_kind: BlendShapeTargetKind::Mesh,
-                    key_table_id: id(15),
-                    constraint_ids: vec![],
-                    keyforms: DeltaKeyforms::Mesh(vec![
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::default(); 3],
-                            ..Default::default()
-                        },
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::new(6., 8.); 3],
-                            ..Default::default()
-                        },
-                    ]),
-                })
+                crate::test_sdk::insert_fixture_parameter(
+                    e,
+                    Parameter {
+                        id: id(14),
+                        name: "Other blend".into(),
+                        minimum: 0.,
+                        maximum: 1.,
+                        kind: ParameterKind::BlendShape,
+                        ..Default::default()
+                    },
+                )?;
+                crate::test_sdk::insert_blend_table(
+                    e,
+                    BlendShapeKeyTable {
+                        id: id(15),
+                        parameter_id: id(14),
+                        keys: vec![0., 1.],
+                        base_key_idx: 0,
+                        samples: vec![],
+                        base_sample_id: String::new(),
+                    },
+                )?;
+                crate::test_sdk::insert_blend_binding(
+                    e,
+                    BlendShapeBinding {
+                        id: id(16),
+                        target_id: id(1),
+                        target_kind: BlendShapeTargetKind::Mesh,
+                        key_table_id: id(15),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Mesh(vec![
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::default(); 3],
+                                ..Default::default()
+                            },
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::new(6., 8.); 3],
+                                ..Default::default()
+                            },
+                        ]),
+                    },
+                )
             })?;
             if through_binding {
                 let binding = ObjectRef::new(ObjectKind::BlendBinding, id(7));
@@ -856,53 +890,59 @@ mod tests {
                     Vec2::new(10., 110.),
                     Vec2::new(110., 110.),
                 ];
-                e.create_transform(Transform {
-                    id: id(20),
-                    name: "Blend deformer".into(),
-                    data: if rotation {
-                        TransformData::Rotation(RotationTransform::default())
-                    } else {
-                        TransformData::Warp(WarpTransform {
-                            rows: 1,
-                            columns: 1,
-                            quad: true,
-                            bezier: None,
-                            points: points.clone(),
-                        })
+                crate::test_sdk::insert_transform(
+                    e,
+                    Transform {
+                        id: id(20),
+                        name: "Blend deformer".into(),
+                        data: if rotation {
+                            TransformData::Rotation(RotationTransform::default())
+                        } else {
+                            TransformData::Warp(WarpTransform {
+                                rows: 1,
+                                columns: 1,
+                                quad: true,
+                                bezier: None,
+                                points: points.clone(),
+                            })
+                        },
+                        ..Default::default()
                     },
-                    ..Default::default()
-                })?;
-                e.create_blend_binding(BlendShapeBinding {
-                    id: id(21),
-                    target_id: id(20),
-                    key_table_id: id(6),
-                    constraint_ids: vec![],
-                    target_kind: if rotation {
-                        BlendShapeTargetKind::Rotation
-                    } else {
-                        BlendShapeTargetKind::Warp
+                )?;
+                crate::test_sdk::insert_blend_binding(
+                    e,
+                    BlendShapeBinding {
+                        id: id(21),
+                        target_id: id(20),
+                        key_table_id: id(6),
+                        constraint_ids: vec![],
+                        target_kind: if rotation {
+                            BlendShapeTargetKind::Rotation
+                        } else {
+                            BlendShapeTargetKind::Warp
+                        },
+                        keyforms: if rotation {
+                            DeltaKeyforms::Rotation(vec![
+                                DeltaRotationKeyform::default(),
+                                DeltaRotationKeyform {
+                                    origin: Some(Vec2::new(2., 3.)),
+                                    ..Default::default()
+                                },
+                            ])
+                        } else {
+                            DeltaKeyforms::Warp(vec![
+                                DeltaWarpKeyform {
+                                    points: vec![Vec2::default(); 4],
+                                    ..Default::default()
+                                },
+                                DeltaWarpKeyform {
+                                    points: vec![Vec2::new(2., 3.); 4],
+                                    ..Default::default()
+                                },
+                            ])
+                        },
                     },
-                    keyforms: if rotation {
-                        DeltaKeyforms::Rotation(vec![
-                            DeltaRotationKeyform::default(),
-                            DeltaRotationKeyform {
-                                origin: Some(Vec2::new(2., 3.)),
-                                ..Default::default()
-                            },
-                        ])
-                    } else {
-                        DeltaKeyforms::Warp(vec![
-                            DeltaWarpKeyform {
-                                points: vec![Vec2::default(); 4],
-                                ..Default::default()
-                            },
-                            DeltaWarpKeyform {
-                                points: vec![Vec2::new(2., 3.); 4],
-                                ..Default::default()
-                            },
-                        ])
-                    },
-                })
+                )
             })?;
             let object = ObjectRef::new(ObjectKind::Deformer, id(20));
             doc.select_object(object.clone())?;
@@ -975,49 +1015,58 @@ mod tests {
     fn blend_initial_target_uses_only_an_unambiguous_stored_keyform() -> anyhow::Result<()> {
         for state in ["stored", "between_keys", "ambiguous", "constrained"] {
             let (mut doc, _dir) = fixture_with_setup(0.5, true, false, |e| {
-                let mut p = e.candidate_document().parameter(&id(5)).unwrap().clone();
+                let mut p = e.read_document()?.parameter(&id(5)).unwrap().clone();
                 p.default_value = if state == "between_keys" { 0.5 } else { 1. };
                 e.replace_parameter(p)?;
                 if state == "constrained" {
-                    let mut p = e.candidate_document().parameter(&id(8)).unwrap().clone();
+                    let mut p = e.read_document()?.parameter(&id(8)).unwrap().clone();
                     p.default_value = 0.99;
                     e.replace_parameter(p)?;
                 }
                 if state == "ambiguous" {
-                    e.create_parameter(Parameter {
-                        id: id(14),
-                        name: "Other blend".into(),
-                        minimum: 0.,
-                        maximum: 1.,
-                        default_value: 1.,
-                        kind: ParameterKind::BlendShape,
-                        ..Default::default()
-                    })?;
-                    e.create_blend_key_table(BlendShapeKeyTable {
-                        id: id(15),
-                        parameter_id: id(14),
-                        keys: vec![0., 1.],
-                        base_key_idx: 0,
-                        samples: vec![],
-                        base_sample_id: String::new(),
-                    })?;
-                    e.create_blend_binding(BlendShapeBinding {
-                        id: id(16),
-                        target_id: id(1),
-                        target_kind: BlendShapeTargetKind::Mesh,
-                        key_table_id: id(15),
-                        constraint_ids: vec![],
-                        keyforms: DeltaKeyforms::Mesh(vec![
-                            DeltaMeshKeyform {
-                                positions: vec![Vec2::default(); 3],
-                                ..Default::default()
-                            },
-                            DeltaMeshKeyform {
-                                positions: vec![Vec2::new(6., 8.); 3],
-                                ..Default::default()
-                            },
-                        ]),
-                    })?;
+                    crate::test_sdk::insert_fixture_parameter(
+                        e,
+                        Parameter {
+                            id: id(14),
+                            name: "Other blend".into(),
+                            minimum: 0.,
+                            maximum: 1.,
+                            default_value: 1.,
+                            kind: ParameterKind::BlendShape,
+                            ..Default::default()
+                        },
+                    )?;
+                    crate::test_sdk::insert_blend_table(
+                        e,
+                        BlendShapeKeyTable {
+                            id: id(15),
+                            parameter_id: id(14),
+                            keys: vec![0., 1.],
+                            base_key_idx: 0,
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                        },
+                    )?;
+                    crate::test_sdk::insert_blend_binding(
+                        e,
+                        BlendShapeBinding {
+                            id: id(16),
+                            target_id: id(1),
+                            target_kind: BlendShapeTargetKind::Mesh,
+                            key_table_id: id(15),
+                            constraint_ids: vec![],
+                            keyforms: DeltaKeyforms::Mesh(vec![
+                                DeltaMeshKeyform {
+                                    positions: vec![Vec2::default(); 3],
+                                    ..Default::default()
+                                },
+                                DeltaMeshKeyform {
+                                    positions: vec![Vec2::new(6., 8.); 3],
+                                    ..Default::default()
+                                },
+                            ]),
+                        },
+                    )?;
                 }
                 Ok(())
             })?;

@@ -75,7 +75,7 @@ fn nested_organization_and_copy_project_stable_ids_through_save_and_history() ->
         destination: C::ParameterGroups { parent_id: Some(a) },
         before: None,
     })?;
-    let copied = p.copied_ids()[&parameter].clone();
+    let copied = p.outcome.copied_ids[&parameter].clone();
     d.execute_organization_authoring(&p)?;
     assert!(
         d.object_index()
@@ -160,7 +160,7 @@ fn copied_and_deleted_parts_refresh_canvas_geometry_through_history() -> anyhow:
         destination: C::PartMembers { part_id: None },
         before: None,
     })?;
-    let copied: Vec<_> = p.copied_ids().values().cloned().collect();
+    let copied: Vec<_> = p.outcome.copied_ids.values().cloned().collect();
     d.execute_organization_authoring(&p)?;
     let after = d.snapshot()?;
     assert_eq!(after.viewport_frame.drawables.len(), count * 2);

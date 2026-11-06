@@ -1,6 +1,6 @@
 //! Thin Editor adapter; Pose ownership and execution rules stay in SDK/core.
 use super::*;
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use zipzi_contract::authoring::PoseCapabilities;
 use zipzi_contract::document::PoseEdit;
 use zipzi_contract::document::PoseFields;
@@ -15,13 +15,16 @@ impl Document {
         &self,
         object: &ObjectRef,
     ) -> Result<PoseAuthoringCapabilities> {
-        let kind = match object.kind {
-            ObjectKind::Pose => zipzi_contract::authoring::ObjectKind::Pose,
-            ObjectKind::PoseGroup => zipzi_contract::authoring::ObjectKind::PoseGroup,
-            ObjectKind::PoseEntry => zipzi_contract::authoring::ObjectKind::PoseEntry,
-            ObjectKind::PoseLink => zipzi_contract::authoring::ObjectKind::PoseLink,
-            _ => anyhow::bail!("Expected a Pose object"),
-        };
+        ensure!(
+            matches!(
+                object.kind,
+                ObjectKind::Pose
+                    | ObjectKind::PoseGroup
+                    | ObjectKind::PoseEntry
+                    | ObjectKind::PoseLink
+            ),
+            "Expected an authorable pose object"
+        );
 
         Ok(PoseAuthoringCapabilities {
             domain: self.model().pose_capabilities(&object.id)?,
@@ -48,7 +51,7 @@ impl Document {
         let receipt = plan.publish(&mut self.session)?;
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, false);
+            self.consume_authoring_receipt(&receipt, Some(plan.baseline().document()));
         }
         Ok(self.authoring_result(receipt).with_preview(plan))
     }

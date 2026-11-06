@@ -1,11 +1,8 @@
-use std::sync::Arc;
 use zipzi_core::DrawableFrameBounds;
 
-use zipzi_core::{draw_order::DrawOrderGroup, Canvas, Vec2};
-use zipzi_sdk::{
-    prepare_png_asset, rectangle_mesh, AuthoringSession, GeometryBounds, GeometryChecks,
-    GeometryDiagnosticKind, ObjectKind,
-};
+use zipzi_contract::authoring::ObjectKind;
+use zipzi_core::{Canvas, Vec2};
+use zipzi_sdk::{rectangle_mesh, AuthoringSession, Snapshot};
 
 fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
@@ -13,13 +10,19 @@ fn id(n: u32) -> String {
 
 fn session() -> AuthoringSession {
     let mut sdk = AuthoringSession::new(
-        &id(1),
-        Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0),
-    )
-    .unwrap();
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(1),
+                (Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    );
     let path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
-    let asset = prepare_png_asset(&id(2), "texture", &path).unwrap();
+    let asset = crate::support::image_fixture(&id(2), "texture", &path).unwrap();
     let mesh = rectangle_mesh(
         &id(3),
         "mesh",
@@ -28,396 +31,351 @@ fn session() -> AuthoringSession {
         Vec2::new(60.0, 60.0),
     )
     .unwrap();
-    sdk.edit("fixture", None, |edit| {
-        edit.create_asset(asset)?;
-        edit.create_mesh(mesh)
-    })
+    {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                crate::support::insert_image(edit, asset)?;
+                crate::support::insert_mesh(edit, mesh)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("fixture")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     sdk
 }
 
+use zipzi_core::document::{DocumentAuthoringEdit, DocumentValue, ResourceEdit, SceneEdit};
+fn patch(c: &mut zipzi_sdk::Commands<'_>, value: DocumentValue) -> Result<(), zipzi_sdk::Status> {
+    let expected = c.read_document()?.document_value(value.field())?;
+    c.edit_document(DocumentAuthoringEdit::Patch { expected, value })?;
+    Ok(())
+}
+fn publish<T>(
+    s: &mut AuthoringSession,
+    f: impl FnOnce(&mut zipzi_sdk::Commands<'_>) -> Result<T, zipzi_sdk::Status>,
+) -> Result<zipzi_sdk::Publication, zipzi_sdk::Status> {
+    let (_, p) = crate::support::prepared(s, f)?;
+    s.publish(p)
+}
 #[test]
 fn boundless_canvas_supports_history_and_rejects_invalid_coordinates() {
-    let mut sdk = AuthoringSession::new(&id(1), zipzi_core::ModelSetup::default()).unwrap();
-    assert!(sdk.source_canvas().is_none());
-    let partial = zipzi_core::ExportSettings {
+    let mut s = AuthoringSession::new(
+        Snapshot::new(
+            zipzi_core::state::DocumentState::new(&id(1), Default::default()).unwrap(),
+            Default::default(),
+        )
+        .unwrap(),
+    );
+    assert!(s.snapshot().document().setup().source_canvas.is_none());
+    let settings = zipzi_core::ExportSettings {
         pixels_per_unit: 17.,
         ..Default::default()
     };
-    let revision = sdk.evaluation_revision();
-    sdk.edit("output units", None, |edit| {
-        edit.replace_export_settings(partial)
+    let before = s.snapshot().content_id();
+    publish(&mut s, |c| {
+        patch(c, DocumentValue::ExportSettings(settings))
     })
     .unwrap();
-    assert_eq!(sdk.export_settings(), partial);
-    assert_eq!(sdk.evaluation_revision(), revision);
-    sdk.undo().unwrap();
-    assert_eq!(sdk.export_settings(), zipzi_core::ExportSettings::default());
-    sdk.redo().unwrap();
+    assert_ne!(s.snapshot().content_id(), before);
+    assert_eq!(s.snapshot().document().setup().export, settings);
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().setup().export, Default::default());
+    s.redo(s.version()).unwrap();
     for invalid in [
-        Canvas::new(-1.0, 0.0, Vec2::default(), 1.0),
-        Canvas::new(0.0, f32::INFINITY, Vec2::default(), 1.0),
-        Canvas::new(0.0, 0.0, Vec2::new(f32::NAN, 0.0), 1.0),
-        Canvas::new(0.0, 0.0, Vec2::default(), 0.0),
+        Canvas::new(-1., 0., Vec2::default(), 1.),
+        Canvas::new(0., f32::INFINITY, Vec2::default(), 1.),
+        Canvas::new(0., 0., Vec2::new(f32::NAN, 0.), 1.),
+        Canvas::new(0., 0., Vec2::default(), 0.),
     ] {
-        assert!(AuthoringSession::new(&id(3), invalid).is_err());
+        assert!(zipzi_core::state::DocumentState::new(&id(3), invalid.into()).is_err());
     }
 }
-
 #[test]
-fn canvas_and_draw_order_publish_together_and_reject_invalid_groups() {
-    let mut sdk = session();
-    let mut canvas = sdk.source_canvas().unwrap();
-    canvas.pixels_per_unit = 20.0;
-    let groups = vec![DrawOrderGroup {
-        owner: String::new(),
-        items: vec![id(3)],
-        min_order: -100,
-        max_order: 100,
-    }];
-    let before = sdk.version();
-    sdk.edit("drawing", Some(before), |edit| {
-        edit.replace_model_setup(canvas)?;
-        edit.replace_draw_order_groups(groups.clone())
+fn canvas_and_draw_order_publish_together_and_reject_invalid_ranges() {
+    let mut s = session();
+    let mut settings = s.snapshot().document().setup().export;
+    settings.pixels_per_unit = 20.;
+    let version = s.version();
+    let groups = s.snapshot().document().draw_order_groups().clone();
+    publish(&mut s, |c| {
+        patch(c, DocumentValue::ExportSettings(settings))?;
+        c.edit_scene(
+            SceneEdit::SetDrawingRange {
+                owner: String::new(),
+                expected: [0, 0],
+                range: [-100, 100],
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        Ok(())
     })
     .unwrap();
-    assert_eq!(sdk.version().revision, before.revision + 1);
-    assert!(sdk.validate_structure().is_empty());
-    assert_eq!(sdk.source_canvas().unwrap().pixels_per_unit, 20.0);
-    assert_eq!(sdk.draw_order_groups(), Some(groups));
+    assert_eq!(s.version().revision, version.revision + 1);
+    assert_eq!(s.snapshot().document().setup().export, settings);
+    assert!(s.snapshot().document().draw_order_groups().is_some());
     assert_eq!(
-        sdk.evaluate(&Default::default()).unwrap().drawables[0].positions[0].x,
+        crate::support::frame(s.snapshot(), &Default::default())
+            .unwrap()
+            .drawables[0]
+            .positions[0]
+            .x,
         40.
     );
-
-    let version = sdk.version();
-    let mut edit = sdk.begin_edit("bad groups", None).unwrap();
-    assert_eq!(
-        edit.replace_draw_order_groups(vec![DrawOrderGroup {
+    let group = s
+        .snapshot()
+        .document()
+        .draw_order_groups()
+        .as_ref()
+        .unwrap()[0]
+        .clone();
+    let version = s.version();
+    assert!(publish(&mut s, |c| c.edit_scene(
+        SceneEdit::SetDrawingRange {
             owner: String::new(),
-            items: vec![],
-            min_order: 0,
-            max_order: 0,
-        }])
-        .unwrap_err()
-        .code
-        .as_ref(),
-        "INVALID_DRAW_GROUP"
+            expected: [group.min_order, group.max_order],
+            range: [10, -10]
+        },
+        Default::default(),
+        &Default::default()
+    ))
+    .is_err());
+    assert_eq!(s.version(), version);
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .setup()
+            .source_canvas
+            .unwrap()
+            .pixels_per_unit,
+        10.
     );
-    assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
-    assert_eq!(sdk.version(), version);
-    sdk.undo().unwrap();
-    assert_eq!(sdk.source_canvas().unwrap().pixels_per_unit, 10.0);
-    assert!(sdk.draw_order_groups().is_none());
+    assert_eq!(s.snapshot().document().draw_order_groups(), &groups);
 }
-
 #[test]
-fn referenced_delete_is_rejected_and_recreated_id_does_not_revive_handle() {
-    let mut sdk = session();
-    let mesh = sdk.mesh(&id(3)).unwrap();
-    let old_handle = sdk.handle(ObjectKind::Mesh, &id(3)).unwrap();
-    assert_eq!(sdk.references_to(&id(2)), vec![id(3)]);
-    let version = sdk.version();
-    let mut edit = sdk.begin_edit("bad erase", None).unwrap();
-    let error = edit.erase_object(&id(2)).unwrap_err();
-    assert_eq!(error.code.as_ref(), "OBJECT_REFERENCED");
-    assert_eq!(&*error.referrers, &[id(3)]);
-    assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
-    assert_eq!(sdk.version(), version);
-
-    sdk.edit("erase", None, |edit| edit.erase_object(&id(3)))
-        .unwrap();
-    assert!(sdk.mesh(&id(3)).is_none());
+fn referenced_delete_rejects_and_recreated_id_does_not_revive_a_source() {
+    let mut s = session();
+    let mesh = s.snapshot().document().mesh(&id(3)).unwrap().clone();
+    let stale = s.begin_draft();
+    assert_eq!(s.snapshot().document().references_to(&id(2)), vec![id(3)]);
+    let before = s.read_snapshot().source;
+    assert!(publish(&mut s, |c| c.edit_resource(ResourceEdit::Delete {
+        id: id(2),
+        replacement: None
+    }))
+    .is_err());
+    assert_eq!(s.read_snapshot().source, before);
+    publish(&mut s, |c| {
+        c.edit_scene(
+            SceneEdit::Delete {
+                ids: vec![id(3)],
+                scope: Default::default(),
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    assert!(s.snapshot().document().mesh(&id(3)).is_none());
+    publish(&mut s, |c| crate::support::insert_mesh(c, mesh)).unwrap();
+    assert!(s
+        .snapshot()
+        .document()
+        .contains_object(ObjectKind::Mesh, &id(3)));
     assert_eq!(
-        sdk.resolve_handle(&old_handle).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
+        s.publish(stale.prepare("old source").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
     );
-    sdk.edit("recreate", None, |edit| edit.create_mesh(mesh))
-        .unwrap();
-    assert_eq!(sdk.mesh_ids(), &[id(3)]);
-    assert_eq!(
-        sdk.resolve_handle(&old_handle).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
-    );
-    let current = sdk.handle(ObjectKind::Mesh, &id(3)).unwrap();
-    assert_ne!(current, old_handle);
-    sdk.undo().unwrap();
-    assert!(sdk.mesh(&id(3)).is_none());
-    sdk.undo().unwrap();
-    assert!(sdk.mesh(&id(3)).is_some());
-    assert_eq!(
-        sdk.resolve_handle(&old_handle).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
-    );
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().mesh(&id(3)).is_none());
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().mesh(&id(3)).is_some());
 }
-
 #[test]
-fn identical_same_batch_recreation_is_an_identity_change() {
-    let mut sdk = session();
-    let old = sdk.handle(ObjectKind::Mesh, &id(3)).unwrap();
-    let mesh = sdk.mesh(&id(3)).unwrap();
-    let before = sdk.version();
-    let (_, receipt) = sdk
-        .edit("recreate", Some(before), |edit| {
-            edit.erase_object(&id(3))?;
-            edit.create_mesh(mesh)
-        })
-        .unwrap();
-    assert!(receipt.changed);
-    assert_eq!(receipt.after.revision, before.revision + 1);
-    assert_eq!(sdk.mesh_ids(), &[id(3)]);
-    assert_eq!(
-        sdk.resolve_handle(&old).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
-    );
-    let current = sdk.handle(ObjectKind::Mesh, &id(3)).unwrap();
-    sdk.undo().unwrap();
-    assert_eq!(
-        sdk.resolve_handle(&current).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
-    );
-    assert_eq!(
-        sdk.resolve_handle(&old).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
-    );
-    sdk.redo().unwrap();
-    assert_eq!(
-        sdk.resolve_handle(&current).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
-    );
+fn same_batch_recreation_preserves_records_and_materializes_drawing_order() {
+    let mut s = session();
+    let mesh = s.snapshot().document().mesh(&id(3)).unwrap().clone();
+    let before = s.read_snapshot().source;
+    let history = s.history_state();
+    let receipt = publish(&mut s, |c| {
+        c.edit_scene(
+            SceneEdit::Delete {
+                ids: vec![id(3)],
+                scope: Default::default(),
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        crate::support::insert_mesh(c, mesh)
+    })
+    .unwrap();
+    assert!(receipt.writes.records().is_empty());
+    assert!(receipt
+        .writes
+        .root_changed(zipzi_core::state::RootDomain::DrawOrderGroups));
+    assert_ne!(s.read_snapshot().source, before);
+    assert_eq!(s.history_state().undo_steps, history.undo_steps + 1);
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().draw_order_groups().is_none());
 }
-
 #[test]
-fn geometry_warnings_are_separate_from_structural_validity() {
-    let mut sdk = session();
-    let mut mesh = sdk.mesh(&id(3)).unwrap();
-    mesh.triangles[1] = [0, 3, 2];
-    sdk.edit("flip triangle", None, |edit| edit.replace_mesh(mesh))
-        .unwrap();
-    assert!(sdk.validate_structure().is_empty());
-    let version = sdk.version();
-    let warnings = sdk.diagnose_geometry(GeometryChecks::default()).unwrap();
-    assert_eq!(warnings.len(), 1);
-    assert_eq!(
-        warnings[0].kind,
-        GeometryDiagnosticKind::InconsistentWinding
-    );
-    assert_eq!(warnings[0].triangle_index, Some(1));
-
-    let warnings = sdk
-        .diagnose_geometry(GeometryChecks {
-            min_triangle_area: 201.0,
-            quality: false,
-            model_bounds: Some(GeometryBounds {
-                min: Vec2::new(0.0, 0.0),
-                max: Vec2::new(50.0, 50.0),
-            }),
-        })
-        .unwrap();
-    assert_eq!(
-        warnings
-            .iter()
-            .filter(|issue| issue.kind == GeometryDiagnosticKind::SmallTriangle)
-            .count(),
-        2
-    );
-    assert!(warnings
-        .iter()
-        .any(|issue| issue.kind == GeometryDiagnosticKind::OutsideModelBounds));
-    assert_eq!(
-        sdk.diagnose_geometry(GeometryChecks {
-            min_triangle_area: -1.0,
-            quality: false,
-            model_bounds: None,
-        })
-        .unwrap_err()
-        .code
-        .as_ref(),
-        "INVALID_DIAGNOSTIC_OPTIONS"
-    );
-    assert_eq!(sdk.version(), version);
+fn quality_warnings_are_separate_from_structural_validity() {
+    let s = session();
+    let reference = s.snapshot().quality_reference().unwrap();
+    let mut deformed = reference.clone();
+    deformed.drawables[0].positions.swap(1, 2);
+    let before = s.read_snapshot().source;
+    let quality = zipzi_sdk::mesh_quality(&deformed, &reference, &Default::default()).unwrap();
+    assert!(quality[0].flipped_triangles > 0);
+    assert!(s.snapshot().document().builder().freeze().is_ok());
+    assert_eq!(s.read_snapshot().source, before);
+    let mut options = zipzi_sdk::TopologyOverlay::default();
+    options.heat_opacity = -1.;
+    assert!(zipzi_sdk::TopologyOverlayValidation::validate(&options).is_err());
 }
-
 #[test]
 fn quality_sampling_evaluates_disabled_meshes_and_parent_parts() {
-    for disable_parent in [false, true] {
-        let mut sdk = session();
-        let checks = GeometryChecks {
-            quality: true,
-            ..Default::default()
-        };
-        let visible = sdk
-            .read_snapshot()
-            .sample_modeling(vec![Default::default()], checks)
-            .unwrap();
-        let mut mesh = sdk.mesh(&id(3)).unwrap();
-        sdk.edit("disable geometry", None, |edit| {
-            if disable_parent {
-                edit.create_part(zipzi_core::Part {
+    for parent in [false, true] {
+        let mut s = session();
+        let visible = s.snapshot().quality_reference().unwrap();
+        let mut mesh = s.snapshot().document().mesh(&id(3)).unwrap().clone();
+        publish(&mut s, |c| {
+            if parent {
+                c.create_part(zipzi_core::Part {
                     id: id(4),
+                    runtime_id: id(4),
                     enabled: false,
                     ..Default::default()
                 })?;
-                edit.set_mesh_part(&id(3), &id(4))
+                mesh.part_id = id(4);
             } else {
                 mesh.enabled = false;
-                edit.replace_mesh(mesh)
             }
+            c.replace_mesh(mesh)
         })
         .unwrap();
-        let source = sdk.read_snapshot();
-        let sampled = source
-            .sample_modeling(vec![Default::default(), Default::default()], checks)
-            .unwrap();
-        for (frame, quality) in sampled.frames.iter().zip(&sampled.quality) {
-            assert_eq!(
-                frame.drawables[0].positions,
-                visible.frames[0].drawables[0].positions
-            );
-            assert!(!quality[0].visible);
-            assert_eq!(quality[0].triangles, visible.quality[0][0].triangles);
-            assert_eq!(quality[0].degenerate_triangles, 0);
-            assert_eq!(quality[0].flipped_triangles, 0);
-            assert_eq!(quality[0].max_edge_stretch, Some(1.));
-        }
-        let ordinary = source
-            .sample_modeling(vec![Default::default()], GeometryChecks::default())
-            .unwrap();
-        assert!(ordinary.quality.is_empty());
-        assert!(ordinary.frames[0].drawables[0]
+        let sampled = s.snapshot().quality_reference().unwrap();
+        let q = zipzi_sdk::mesh_quality(&sampled, &visible, &Default::default()).unwrap();
+        assert_eq!(
+            sampled.drawables[0].positions,
+            visible.drawables[0].positions
+        );
+        assert!(!q[0].visible);
+        assert_eq!(q[0].degenerate_triangles, 0);
+        assert_eq!(q[0].flipped_triangles, 0);
+        assert_eq!(q[0].max_edge_stretch, Some(1.));
+        assert!(crate::support::frame(s.snapshot(), &Default::default())
+            .unwrap()
+            .drawables[0]
             .positions
             .iter()
             .all(|p| *p == Vec2::default()));
     }
 }
-
 #[test]
-fn new_project_failure_preserves_session_and_success_changes_generation() {
-    let mut sdk = session();
-    let old = sdk.handle(ObjectKind::Mesh, &id(3)).unwrap();
-    let frame = sdk.preview_frame().unwrap();
-    let current = sdk.version();
-    let mut invalid_canvas = sdk.source_canvas().unwrap();
-    invalid_canvas.pixels_per_unit = 0.0;
+fn replacement_failure_preserves_session_and_success_changes_generation() {
+    let mut s = session();
+    let old = s.read_snapshot();
+    let mut version = s.version();
+    version.revision += 1;
+    let new = Snapshot::new(
+        zipzi_core::state::DocumentState::new(&id(1), Default::default()).unwrap(),
+        Default::default(),
+    )
+    .unwrap();
+    assert!(s.replace(version, new.clone()).is_err());
+    assert_eq!(s.read_snapshot().source, old.source);
+    s.take_events();
+    let before = s.version();
+    let next = s.replace(before, new).unwrap();
+    assert_eq!(next.version.session, before.session);
+    assert_eq!(next.version.generation, before.generation + 1);
+    assert!(s.snapshot().document().mesh_order().is_empty());
+    assert_eq!(s.history_state().undo_steps, 0);
+    assert_eq!(s.history_state().redo_steps, 0);
+    assert_eq!(s.take_events().len(), 1);
     assert_eq!(
-        sdk.new_project(&id(1), invalid_canvas, Some(current))
-            .unwrap_err()
-            .code
-            .as_ref(),
-        "INVALID_MODEL_SETUP"
-    );
-    let mut stale = current;
-    stale.revision += 1;
-    assert_eq!(
-        sdk.new_project(&id(1), sdk.source_canvas().unwrap(), Some(stale))
-            .unwrap_err()
-            .code
-            .as_ref(),
-        "STALE_VERSION"
-    );
-    assert_eq!(sdk.version(), current);
-    sdk.resolve_handle(&old).unwrap();
-    assert!(Arc::ptr_eq(&frame, &sdk.preview_frame().unwrap()));
-    assert_eq!(sdk.history_lengths(), (1, 0));
-
-    let next = sdk
-        .new_project(&id(1), sdk.source_canvas().unwrap(), Some(current))
-        .unwrap();
-    assert_eq!(next.session_id, current.session_id);
-    assert_eq!(next.generation, current.generation + 1);
-    assert!(sdk.asset_ids().is_empty());
-    assert!(sdk.mesh_ids().is_empty());
-    assert_eq!(sdk.history_lengths(), (0, 0));
-    assert!(sdk.preview_values().is_empty());
-    let events = sdk.drain_events();
-    assert_eq!(events.len(), 1);
-    assert!(events[0].changes.full_invalidation);
-    assert_eq!(
-        sdk.resolve_handle(&old).unwrap_err().code.as_ref(),
-        "STALE_HANDLE"
+        crate::support::frame(&old.snapshot, &Default::default())
+            .unwrap()
+            .drawables
+            .len(),
+        1
     );
 }
-
 #[test]
 fn source_framing_is_metadata_and_never_changes_model_bounds_or_evaluation() {
-    let mut sdk = session();
-    let before = sdk.preview_frame().unwrap().clone();
-    let revision = sdk.evaluation_revision();
-    let space = sdk.export_settings();
-    assert_eq!(before.model_bounds(false), Some([40., 40., 60., 60.]));
-    sdk.edit("Source framing", None, |edit| {
-        edit.replace_source_canvas(Some(Canvas::new(
-            4000.,
-            3000.,
-            Vec2::new(-800., 700.),
-            123.,
-        )))
-    })
-    .unwrap();
-    assert_eq!(sdk.export_settings(), space);
-    assert_eq!(sdk.evaluation_revision(), revision);
-    assert!(Arc::ptr_eq(&sdk.preview_frame().unwrap(), &before));
-    let source = sdk.source_canvas().unwrap();
-    sdk.edit("Cubism units metadata", None, |edit| {
-        edit.replace_source_canvas(Some(Canvas {
-            pixels_per_unit: 20.,
-            ..source
-        }))
-    })
-    .unwrap();
-    assert_eq!(sdk.evaluation_revision(), revision);
-    assert!(Arc::ptr_eq(&sdk.preview_frame().unwrap(), &before));
-    assert_eq!(
-        sdk.preview_frame().unwrap().model_bounds(false),
-        before.model_bounds(false)
-    );
-    sdk.undo().unwrap();
-    assert_eq!(sdk.source_canvas(), Some(source));
-    assert_eq!(sdk.evaluation_revision(), revision);
-    sdk.edit("Remove source reference", None, |edit| {
-        edit.replace_source_canvas(None)
-    })
-    .unwrap();
-    assert!(sdk.source_canvas().is_none());
-    assert_eq!(
-        sdk.preview_frame().unwrap().model_bounds(false),
-        before.model_bounds(false)
-    );
-    sdk.undo().unwrap();
-    assert_eq!(sdk.source_canvas(), Some(source));
+    let mut s = session();
+    let source = s.read_snapshot();
+    let before = crate::support::frame(s.snapshot(), &Default::default()).unwrap();
+    let export = s.snapshot().document().setup().export;
+    for canvas in [
+        Some(Canvas::new(4000., 3000., Vec2::new(-800., 700.), 123.)),
+        Some(Canvas::new(4000., 3000., Vec2::new(-800., 700.), 20.)),
+        None,
+    ] {
+        assert_eq!(
+            publish(&mut s, |c| patch(c, DocumentValue::SourceCanvas(canvas)))
+                .unwrap_err()
+                .code
+                .as_str(),
+            "SOURCE_METADATA_READ_ONLY"
+        );
+        assert_eq!(s.read_snapshot().source, source.source);
+        let mut builder = source.snapshot.document().builder();
+        let mut setup = builder.setup();
+        setup.source_canvas = canvas;
+        builder.set_setup(setup).unwrap();
+        let snapshot = Snapshot::new(
+            builder.freeze().unwrap().state,
+            source.snapshot.resources().clone(),
+        )
+        .unwrap();
+        assert_eq!(snapshot.document().setup().export, export);
+        let frame = crate::support::frame(&snapshot, &Default::default()).unwrap();
+        assert_eq!(frame.model_bounds(false), Some([40., 40., 60., 60.]));
+        assert_eq!(frame.drawables[0].positions, before.drawables[0].positions);
+    }
 }
 
 #[test]
 fn model_space_and_source_reference_are_separate_project_fields() {
-    let mut sdk =
-        AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
-    sdk.edit("Export", None, |edit| {
-        edit.replace_export_settings(zipzi_core::ExportSettings {
-            pixels_per_unit: 20.,
-            ..Default::default()
-        })
+    let mut s = session();
+    publish(&mut s, |c| {
+        patch(
+            c,
+            DocumentValue::ExportSettings(zipzi_core::ExportSettings {
+                pixels_per_unit: 20.,
+                ..Default::default()
+            }),
+        )
     })
     .unwrap();
-    let before = sdk.read_snapshot();
-    let json = zipzi_project::encode_project(before.document()).unwrap();
-    let wire: serde_json::Value = serde_json::from_str(&json).unwrap();
-    assert_eq!(wire["format_version"], 21);
+    let bytes = crate::support::archive::native_bytes_with_resources(
+        s.snapshot().document(),
+        s.snapshot().resources(),
+    );
+    let wire = crate::support::archive::project_json(&bytes);
     assert!(wire["document"].get("canvas").is_none());
     assert!(wire["document"].get("model_space").is_none());
     assert_eq!(wire["document"]["export_settings"]["pixels_per_unit"], 20.);
     assert_eq!(wire["document"]["source_canvas"]["pixels_per_unit"], 10.);
     assert_eq!(wire["document"]["source_canvas"]["origin"]["x"], 50.);
-    let reopened = zipzi_project::decode_project(&json).unwrap();
-    assert!(reopened.same_content(before.document()));
+    let loaded = crate::support::roundtrip(s.snapshot());
+    assert_eq!(loaded.document().setup(), s.snapshot().document().setup());
 }
-
 #[test]
 fn scalar_preview_rejections_preserve_candidate_frame_and_transaction() {
-    use zipzi_core::{document::PropertyPatch, preview::PreviewState, Parameter};
-    let mut sdk = AuthoringSession::new(&id(1), zipzi_core::ModelSetup::default()).unwrap();
-    sdk.edit("parameter", None, |edit| {
-        edit.create_parameter(Parameter {
-            id: id(2),
+    let mut s = session();
+    publish(&mut s, |c| {
+        c.create_parameter(zipzi_core::Parameter {
+            id: id(8),
             runtime_id: "P".into(),
             minimum: -1.,
             maximum: 1.,
@@ -425,56 +383,55 @@ fn scalar_preview_rejections_preserve_candidate_frame_and_transaction() {
         })
     })
     .unwrap();
-    let before = sdk.version();
-    let mut edit = sdk.begin_owned_edit("drag", None).unwrap();
-    let patch = |value| PropertyPatch::Parameter {
-        id: id(2),
+    let before = s.version();
+    let mut draft = s.begin_draft();
+    let patch = |value| zipzi_core::state::PropertyPatch::Parameter {
+        id: id(8),
         minimum: -1.,
         maximum: 1.,
         default_value: value,
         decimal_places: 6,
     };
-    let mut preview = PreviewState::default();
-    edit.preview_property(&patch(0.25), &mut preview, Default::default())
+    let (p, _) = draft
+        .prepare_preview(draft.source(), |c| c.patch_property(patch(0.25)))
         .unwrap();
-    let frame = preview.frame(edit.candidate_document(), 0).unwrap();
-    let revision = edit.candidate_document().revision();
-    // Mutation succeeds, evaluation fails: undo just this update, including its revision.
-    assert!(edit
-        .preview_property(&patch(0.5), &mut preview, [(id(99), 0.)].into())
-        .is_err());
-    assert_eq!(edit.candidate_document().revision(), revision);
-    assert_eq!(
-        edit.candidate_document()
-            .get_parameter(&id(2))
-            .unwrap()
-            .default_value,
-        0.25
+    draft.install_preview(p).unwrap();
+    let first = draft.read_snapshot().unwrap();
+    let first_frame = crate::support::frame(&first.snapshot, &Default::default()).unwrap();
+    let (rejected, _) = draft
+        .prepare_preview(draft.source(), |c| c.patch_property(patch(0.5)))
+        .unwrap();
+    assert!(
+        crate::support::frame(&rejected.read_snapshot().unwrap(), &[(id(99), 0.)].into()).is_err()
     );
-    assert!(Arc::ptr_eq(
-        &frame,
-        &preview.frame(edit.candidate_document(), 0).unwrap()
-    ));
-    // A validation failure must also keep this same transaction usable.
-    assert!(edit
-        .preview_property(&patch(2.), &mut preview, Default::default())
+    assert_eq!(draft.read_snapshot().unwrap().source, first.source);
+    assert!(draft
+        .prepare_preview(draft.source(), |c| c.patch_property(patch(2.)))
         .is_err());
-    edit.preview_property(&patch(0.75), &mut preview, Default::default())
+    let (p, _) = draft
+        .prepare_preview(draft.source(), |c| c.patch_property(patch(0.75)))
         .unwrap();
-    assert_eq!(frame.parameters[0].value, 0.25);
+    draft.install_preview(p).unwrap();
+    assert_eq!(first_frame.parameters[0].value, 0.25);
     assert_eq!(
-        preview
-            .frame(edit.candidate_document(), 0)
-            .unwrap()
-            .parameters[0]
+        crate::support::frame(
+            &draft.read_snapshot().unwrap().snapshot,
+            &Default::default()
+        )
+        .unwrap()
+        .parameters[0]
             .value,
         0.75
     );
-    edit.commit_to(&mut sdk).unwrap();
-    assert_eq!(sdk.version().revision, before.revision + 1);
-    sdk.undo().unwrap();
+    s.publish(draft.prepare("drag").unwrap()).unwrap();
+    assert_eq!(s.version().revision, before.revision + 1);
+    s.undo(s.version()).unwrap();
     assert_eq!(
-        sdk.document().get_parameter(&id(2)).unwrap().default_value,
+        s.snapshot()
+            .document()
+            .parameter(&id(8))
+            .unwrap()
+            .default_value,
         0.
     );
 }

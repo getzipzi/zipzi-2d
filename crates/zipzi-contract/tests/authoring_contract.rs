@@ -1,30 +1,28 @@
 use zipzi_contract::{
     api_shape::ApiShape,
-    authoring::{GeometryChecks, MeshCreateSpec, MeshGeometry, MeshOperation},
+    authoring::{MeshCreateSpec, MeshGeometry},
     binary_wire::{Reader, WireRead, WireWrite},
-    operations::MESH_QUERY,
-    runtime::{MeshQuery, MeshSnapshot},
+    kernel_commands::Command,
 };
 
 #[test]
 fn authoring_defaults_tags_and_field_order_survive_export_and_serde() {
-    let defaults = serde_json::from_str::<GeometryChecks>("{}").unwrap();
-    assert_eq!(defaults.min_triangle_area, 0.0);
-    assert_eq!(defaults.model_bounds, None);
-    assert!(!defaults.quality);
-    let operation: MeshOperation = serde_json::from_value(serde_json::json!({
-        "op": "create", "spec": {
+    let operation: Command = serde_json::from_value(serde_json::json!({
+        "command": "create_mesh", "spec": {
             "name": "mesh", "id": null,
             "geometry": {"vertex_ids": [], "positions": [], "uvs": [], "triangles": []}
         }
     }))
     .unwrap();
-    let MeshOperation::Create { spec } = &operation else {
+    let Command::CreateMesh { spec } = &operation else {
         panic!("create tag changed")
     };
     assert_eq!(spec.texture_asset_id, "");
     assert_eq!(spec.geometry.meshing, None);
-    assert_eq!(serde_json::to_value(operation).unwrap()["op"], "create");
+    assert_eq!(
+        serde_json::to_value(operation).unwrap()["command"],
+        "create_mesh"
+    );
     let shape = serde_json::to_value(MeshCreateSpec::api_shape()).unwrap();
     let fields: Vec<_> = shape["fields"]
         .as_array()
@@ -33,15 +31,6 @@ fn authoring_defaults_tags_and_field_order_survive_export_and_serde() {
         .map(|f| f["name"].as_str().unwrap())
         .collect();
     assert_eq!(fields, ["name", "geometry", "texture_asset_id", "id"]);
-    let (input, output) = MESH_QUERY.shapes();
-    assert_eq!(
-        serde_json::to_value(input).unwrap(),
-        serde_json::to_value(MeshQuery::api_shape()).unwrap()
-    );
-    assert_eq!(
-        serde_json::to_value(output).unwrap(),
-        serde_json::to_value(MeshSnapshot::api_shape()).unwrap()
-    );
 }
 
 #[test]

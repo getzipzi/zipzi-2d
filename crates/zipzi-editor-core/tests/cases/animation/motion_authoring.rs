@@ -36,7 +36,7 @@ fn library_organization_keeps_registration_selection_clock_and_playback_run() ->
     ] {
         let plan = editor.plan_motion_authoring(document, intent)?;
         let r = editor.execute_motion_authoring(document, &plan)?;
-        assert!(r.receipt.changed);
+        assert!(r.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
         assert_eq!(
             editor.animation().unwrap().motion.as_ref(),
             Some(&selection)
@@ -90,11 +90,9 @@ fn shared_registration_changes_keep_playback_and_new_entries_can_be_selected() -
     )?;
     let result = editor.execute_motion_authoring(document, &plan)?;
     let new_entry = result
-        .receipt
-        .changes
-        .created
+        .suggested_selection
         .iter()
-        .find(|e| e.kind == zipzi_sdk::ObjectKind::MotionRegistration)
+        .find(|entry| entry.kind == ObjectKind::MotionRegistration)
         .unwrap()
         .id
         .clone();

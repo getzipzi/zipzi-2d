@@ -1,40 +1,39 @@
 use std::collections::HashMap;
 
+use zipzi_contract::kernel::ResourceKey;
+use zipzi_core::state::{AssetContent, AssetRecord, DocumentState};
 use zipzi_core::types::{
     BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, BlendShapeTargetKind,
 };
 use zipzi_core::{
-    evaluate_frame, BindingAxis, Canvas, DeltaKeyforms, DeltaMeshKeyform, Document, DrawableFrame,
-    ImageAsset, Mesh, MeshBinding, MeshKeyform, Parameter, ParameterKind, Vec2,
+    evaluate_frame, BindingAxis, Canvas, DeltaKeyforms, DeltaMeshKeyform, DrawableFrame, Mesh,
+    MeshBinding, MeshKeyform, Parameter, ParameterKind, Vec2,
 };
 
 fn id(n: i32) -> String {
     format!("{:08x}-1111-4111-8111-111111111111", n)
 }
 
-fn create_cyclic_fixture() -> (Document, String, String) {
-    let mut d = Document::new();
-    assert!(d
-        .initialize(
-            id(1),
-            Canvas::new(200.0, 200.0, Vec2::new(100.0, 100.0), 100.0)
-        )
-        .is_ok());
+fn fixture_state() -> DocumentState {
+    DocumentState::new(
+        id(1),
+        Canvas::new(200.0, 200.0, Vec2::new(100.0, 100.0), 100.0).into(),
+    )
+    .unwrap()
+}
 
-    assert!(d
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: id(2),
-            name: "asset".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "memory://unloaded".to_string(),
-                width: 8,
-                height: 8,
-                ..Default::default()
-            }),
-        })
-        .status
-        .is_ok());
+fn create_cyclic_fixture() -> (DocumentState, String, String) {
+    let mut d = fixture_state().builder();
+    d.create_asset(AssetRecord {
+        id: id(2),
+        name: "asset".into(),
+        content: AssetContent::Image {
+            resource: ResourceKey::new(),
+            width: 8,
+            height: 8,
+        },
+    })
+    .unwrap();
 
     let mesh_id = id(3);
     let m = Mesh {
@@ -56,7 +55,7 @@ fn create_cyclic_fixture() -> (Document, String, String) {
         runtime_id: "CyclicMesh".to_string(),
         ..Default::default()
     };
-    assert!(d.create_mesh(m).status.is_ok());
+    d.create_mesh(m).unwrap();
 
     let param_id = id(4);
     let p = Parameter {
@@ -70,7 +69,7 @@ fn create_cyclic_fixture() -> (Document, String, String) {
         kind: ParameterKind::Normal,
         repeat: true,
     };
-    assert!(d.create_parameter(p).status.is_ok());
+    d.create_parameter(p).unwrap();
 
     // Binding with 3 keys: [-1.0, 0.0, 1.0]
     let binding_id = id(5);
@@ -113,9 +112,9 @@ fn create_cyclic_fixture() -> (Document, String, String) {
             },
         ],
     };
-    assert!(d.create_binding(b).status.is_ok());
+    d.create_binding(b).unwrap();
 
-    (d, mesh_id, param_id)
+    (d.freeze().unwrap().state, mesh_id, param_id)
 }
 
 #[test]
@@ -290,90 +289,85 @@ fn test_cyclic_seam_a_b_a() {
 
 #[test]
 fn test_cyclic_constraint_and_blendshape_combination() {
-    let (mut d, mesh_id, cyclic_param_id) = create_cyclic_fixture();
+    let (state, mesh_id, cyclic_param_id) = create_cyclic_fixture();
+    let mut d = state.builder();
 
     // Add BlendShape parameter
     let bs_param_id = id(10);
-    assert!(d
-        .create_parameter(Parameter {
-            id: bs_param_id.clone(),
-            runtime_id: "ParamMouthOpen".to_string(),
-            name: "Mouth Open".to_string(),
-            minimum: 0.0,
-            maximum: 1.0,
-            default_value: 0.0,
-            decimal_places: 2,
-            kind: ParameterKind::BlendShape,
-            repeat: false,
-        })
-        .status
-        .is_ok());
+    d.create_parameter(Parameter {
+        id: bs_param_id.clone(),
+        runtime_id: "ParamMouthOpen".to_string(),
+        name: "Mouth Open".to_string(),
+        minimum: 0.0,
+        maximum: 1.0,
+        default_value: 0.0,
+        decimal_places: 2,
+        kind: ParameterKind::BlendShape,
+        repeat: false,
+    })
+    .unwrap();
 
     // BlendShapeKeyTable on bs_param_id
     let kt_id = id(11);
-    assert!(d
-        .create_blend_key_table(BlendShapeKeyTable {
-            samples: Default::default(),
-            base_sample_id: Default::default(),
-            id: kt_id.clone(),
-            parameter_id: bs_param_id.clone(),
-            keys: vec![0.0, 1.0],
-            base_key_idx: 0,
-        })
-        .status
-        .is_ok());
+    d.create_blend_key_table(BlendShapeKeyTable {
+        samples: Default::default(),
+        base_sample_id: Default::default(),
+        id: kt_id.clone(),
+        parameter_id: bs_param_id.clone(),
+        keys: vec![0.0, 1.0],
+        base_key_idx: 0,
+    })
+    .unwrap();
 
     // Constraint driven by the CYCLIC parameter!
     let c_id = id(12);
-    assert!(d
-        .create_blend_constraint(BlendShapeConstraint {
-            samples: Default::default(),
-            id: c_id.clone(),
-            parameter_id: cyclic_param_id.clone(),
-            keys: vec![-1.0, 0.0, 1.0],
-            weights: vec![0.0, 1.0, 0.0],
-        })
-        .status
-        .is_ok());
+    d.create_blend_constraint(BlendShapeConstraint {
+        samples: Default::default(),
+        id: c_id.clone(),
+        parameter_id: cyclic_param_id.clone(),
+        keys: vec![-1.0, 0.0, 1.0],
+        weights: vec![0.0, 1.0, 0.0],
+    })
+    .unwrap();
 
     // BlendShapeBinding on the mesh constrained by the cyclic parameter
     let bb_id = id(13);
-    assert!(d
-        .create_blend_binding(BlendShapeBinding {
-            id: bb_id,
-            target_id: mesh_id,
-            target_kind: BlendShapeTargetKind::Mesh,
-            key_table_id: kt_id,
-            constraint_ids: vec![c_id],
-            keyforms: DeltaKeyforms::Mesh(vec![
-                DeltaMeshKeyform {
-                    sample_id: Default::default(),
-                    positions: vec![
-                        Vec2::new(10.0, 10.0),
-                        Vec2::new(10.0, 10.0),
-                        Vec2::new(10.0, 10.0)
-                    ],
-                    opacity: None,
-                    draw_order: None,
-                    multiply: None,
-                    screen: None,
-                },
-                DeltaMeshKeyform {
-                    sample_id: Default::default(),
-                    positions: vec![
-                        Vec2::new(50.0, 50.0),
-                        Vec2::new(50.0, 50.0),
-                        Vec2::new(50.0, 50.0)
-                    ],
-                    opacity: None,
-                    draw_order: None,
-                    multiply: None,
-                    screen: None,
-                },
-            ]),
-        })
-        .status
-        .is_ok());
+    d.create_blend_binding(BlendShapeBinding {
+        id: bb_id,
+        target_id: mesh_id,
+        target_kind: BlendShapeTargetKind::Mesh,
+        key_table_id: kt_id,
+        constraint_ids: vec![c_id],
+        keyforms: DeltaKeyforms::Mesh(vec![
+            DeltaMeshKeyform {
+                sample_id: Default::default(),
+                positions: vec![
+                    Vec2::new(10.0, 10.0),
+                    Vec2::new(10.0, 10.0),
+                    Vec2::new(10.0, 10.0),
+                ],
+                opacity: None,
+                draw_order: None,
+                multiply: None,
+                screen: None,
+            },
+            DeltaMeshKeyform {
+                sample_id: Default::default(),
+                positions: vec![
+                    Vec2::new(50.0, 50.0),
+                    Vec2::new(50.0, 50.0),
+                    Vec2::new(50.0, 50.0),
+                ],
+                opacity: None,
+                draw_order: None,
+                multiply: None,
+                screen: None,
+            },
+        ]),
+    })
+    .unwrap();
+
+    let d = d.freeze().unwrap().state;
 
     // When cyclic parameter is at 0.0 (weight 1.0 in constraint), delta applies at full strength
     let mut preview = HashMap::new();
@@ -425,25 +419,18 @@ fn finite_extreme_cyclic_inputs_never_produce_nan() {
         (0.0, 1.0e-20, f32::MAX),
         (0.0, 1.0e-20, -f32::MAX),
     ] {
-        let mut doc = Document::new();
-        assert!(doc
-            .initialize(
-                id(1),
-                Canvas::new(200.0, 200.0, Vec2::new(100.0, 100.0), 100.0)
-            )
-            .is_ok());
-        assert!(doc
-            .create_parameter(Parameter {
-                id: id(2),
-                runtime_id: "Repeat".into(),
-                minimum,
-                maximum,
-                default_value: minimum,
-                repeat: true,
-                ..Default::default()
-            })
-            .status
-            .is_ok());
+        let mut doc = fixture_state().builder();
+        doc.create_parameter(Parameter {
+            id: id(2),
+            runtime_id: "Repeat".into(),
+            minimum,
+            maximum,
+            default_value: minimum,
+            repeat: true,
+            ..Default::default()
+        })
+        .unwrap();
+        let doc = doc.freeze().unwrap().state;
         let mut frame = DrawableFrame::default();
         assert!(evaluate_frame(&doc, &HashMap::from([(id(2), requested)]), &mut frame).is_ok());
         let value = frame.parameters[0].value;

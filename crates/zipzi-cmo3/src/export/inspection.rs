@@ -1,5 +1,4 @@
 use super::*;
-use zipzi_core::evaluation::EvaluationModel;
 use zipzi_core::state::PhysicsTargetProjection;
 use zipzi_core::SceneTrackEvaluation;
 

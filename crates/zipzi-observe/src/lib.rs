@@ -35,7 +35,7 @@ mod view;
 #[cfg(feature = "gpu")]
 pub use gpu::{DrawableBounds, ObservedFrame, ObservedTexture, Observer, ObserverConfig};
 pub use view::{ModelRoi, RenderRequest, ViewMapping};
-pub use zipzi_contract::runtime::{ObservationTextureReport, ObservationTextureReportEntry};
+pub use zipzi_contract::observation::{ObservationTextureReport, ObservationTextureReportEntry};
 
 #[derive(Clone, Debug)]
 pub struct ObservationInput {
@@ -155,14 +155,10 @@ pub struct ObservationCaptureLimits {
 }
 impl Default for ObservationCaptureLimits {
     fn default() -> Self {
-        let limits = zipzi_contract::runtime::RuntimeLimits::default();
         Self {
-            max_frames: limits.observation_frames,
-            max_rgba_bytes: limits.observation_texture_rgba_bytes,
-            png: zipzi_core::image::PngDecodeLimits {
-                max_encoded_bytes: limits.observation_encoded_bytes,
-                max_workspace_bytes: limits.observation_workspace_bytes,
-            },
+            max_frames: 64,
+            max_rgba_bytes: zipzi_contract::observation::DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,
+            png: Default::default(),
         }
     }
 }

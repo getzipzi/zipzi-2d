@@ -356,7 +356,10 @@ impl DocumentBuilder {
                 &mut report,
                 control,
             )?;
-            ready(&report)?;
+            if ready(&report).is_err() {
+                outcome = Some(DeletionOutcome { report, work: cost });
+                return Ok(());
+            }
             candidate.validate_candidate()?;
             let retained = candidate.content.model().deletion_index(control)?;
             for removal in &report.removed {

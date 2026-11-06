@@ -1,7 +1,7 @@
 use super::*;
 
-pub(super) struct PreparedArchive<D = ()> {
-    result: WrittenArchive<D>,
+pub(super) struct PreparedArchive {
+    result: WrittenArchive,
     resources: BTreeMap<String, Resource>,
     json: Vec<u8>,
     format: Vec<u8>,
@@ -9,7 +9,7 @@ pub(super) struct PreparedArchive<D = ()> {
     preview: Option<ProjectPreview>,
 }
 
-impl<D> PreparedArchive<D> {
+impl PreparedArchive {
     pub fn preview_format(&self) -> Vec<u8> {
         self.format.clone()
     }
@@ -57,15 +57,12 @@ impl<D> PreparedArchive<D> {
     }
 }
 
-fn prepare_encoded<D>(
-    document: D,
+fn prepare_encoded(
     resources: BTreeMap<String, Resource>,
     json: Vec<u8>,
     asset_bytes: u64,
-    read_bytes: u64,
     limits: ArchiveIoLimits,
-    format_kind: ArchiveDocumentFormat,
-) -> Result<PreparedArchive<D>> {
+) -> Result<PreparedArchive> {
     if resources
         .len()
         .checked_add(2)
@@ -81,9 +78,7 @@ fn prepare_encoded<D>(
         container_version: 1,
         document: "project.json".into(),
         document_sha256: content_sha256(&json),
-        required_features: match format_kind {
-            ArchiveDocumentFormat::NativeV22 => Vec::new(),
-        },
+        required_features: Vec::new(),
         preview: None,
     })?;
     if format.len() as u64 > limits.format_bytes {
@@ -103,11 +98,10 @@ fn prepare_encoded<D>(
         .min(limits.archive_bytes);
     Ok(PreparedArchive {
         result: WrittenArchive {
-            document,
+            #[cfg(test)]
             unique_assets: resources.len(),
             asset_bytes,
             document_bytes: json.len() as u64,
-            resource_read_bytes: read_bytes,
         },
         resources,
         json,
@@ -117,17 +111,17 @@ fn prepare_encoded<D>(
     })
 }
 
-pub(super) fn write<W: Write + Seek, D>(
-    prepared: PreparedArchive<D>,
+pub(super) fn write<W: Write + Seek>(
+    prepared: PreparedArchive,
     output: &mut W,
     mut keep_going: impl FnMut() -> bool,
     progress: Option<&ProjectSaveProgress>,
-) -> Result<WrittenArchive<D>> {
+) -> Result<WrittenArchive> {
     if output.stream_position()? != 0 {
         return Err(invalid("Writer must start at offset zero"));
     }
     let PreparedArchive {
-        mut result,
+        result,
         resources,
         json,
         format,
@@ -186,7 +180,6 @@ pub(super) fn write<W: Write + Seek, D>(
             resource.fingerprint.length,
             &mut keep_going,
         )?;
-        result.resource_read_bytes += actual.length;
         if actual != resource.fingerprint {
             return Err(invalid("Resource changed while writing"));
         }
@@ -209,7 +202,7 @@ pub(super) fn prepare_state(
     view: &crate::ResourceView,
     limits: ArchiveIoLimits,
     mut keep_going: impl FnMut() -> bool,
-) -> Result<PreparedArchive<()>> {
+) -> Result<PreparedArchive> {
     use zipzi_core::{state::AssetContent, ImageAsset, ImageContent};
     let view = view.for_state(state)?;
     let mut images = Vec::new();
@@ -259,13 +252,5 @@ pub(super) fn prepare_state(
         images.push(image);
     }
     let json = crate::codec::encode_state(state, images)?;
-    prepare_encoded(
-        (),
-        resources,
-        json,
-        asset_bytes,
-        0,
-        limits,
-        ArchiveDocumentFormat::NativeV22,
-    )
+    prepare_encoded(resources, json, asset_bytes, limits)
 }

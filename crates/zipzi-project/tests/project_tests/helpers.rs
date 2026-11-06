@@ -3,12 +3,13 @@ use std::path::Path;
 use zipzi_core::{RotationKeyform, SceneTrack, WarpKeyform};
 use zipzi_core::{RotationTransform, TransformData};
 
+pub use crate::support::{load_native, prepare, project_json, replace_project_json};
+use zipzi_core::state::*;
 use zipzi_core::types::{
-    Appearance, BindingAxis, Canvas, ImageAsset, Mesh, MeshBinding, MeshKeyform, Parameter, Part,
-    RotationPose, Transform, Vec2,
+    Appearance, BindingAxis, Canvas, Mesh, MeshBinding, MeshKeyform, Parameter, Part, RotationPose,
+    Transform, Vec2,
 };
-use zipzi_core::Document;
-use zipzi_project::{content_sha256, DocumentSession, DocumentStore};
+use zipzi_project::{content_sha256, ProjectIo, ResourceStore, ResourceView};
 
 pub(crate) fn id(n: i32) -> String {
     format!("{n:08x}-1111-4111-8111-111111111111")
@@ -36,53 +37,46 @@ pub(crate) fn create_test_png(path: &Path) -> (Vec<u8>, String) {
     (buf, sha)
 }
 
-pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas {
-                width: 640.0,
-                height: 480.0,
-                origin: Vec2::new(271.0, 193.0),
-                pixels_per_unit: 100.0,
-                flag: 1,
-            }
-        )
-        .is_ok());
+pub(crate) fn fixture_doc() -> DocumentState {
+    let mut doc = DocumentState::new(
+        id(1),
+        Canvas {
+            width: 640.0,
+            height: 480.0,
+            origin: Vec2::new(271.0, 193.0),
+            pixels_per_unit: 100.0,
+            flag: 1,
+        }
+        .into(),
+    )
+    .unwrap();
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+    doc = prepare(&doc, |builder| {
+        builder.create_asset(AssetRecord {
             id: id(2),
             name: "A".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/0.png".to_string(),
+            content: AssetContent::Image {
+                resource: fixture_image().key(),
                 width: 8,
                 height: 8,
-                sha256: sha1.to_string(),
-            }),
+            },
         })
-        .status
-        .is_ok());
+    });
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+    doc = prepare(&doc, |builder| {
+        builder.create_asset(AssetRecord {
             id: id(3),
             name: "B".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/1.png".to_string(),
+            content: AssetContent::Image {
+                resource: fixture_image().key(),
                 width: 8,
                 height: 8,
-                sha256: sha2.to_string(),
-            }),
+            },
         })
-        .status
-        .is_ok());
+    });
 
-    assert!(doc
-        .create_parameter(Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: id(6),
             runtime_id: "ParamAngle".to_string(),
             name: "Angle".to_string(),
@@ -92,11 +86,10 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
             decimal_places: 2,
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
 
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: sid(1),
             runtime_id: "PartRoot".to_string(),
             name: "Root Part".to_string(),
@@ -104,8 +97,7 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
             enabled: true,
             draw_order: 10.0,
         })
-        .status
-        .is_ok());
+    });
 
     let rot = Transform {
         id: sid(2),
@@ -124,7 +116,7 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(rot).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_transform(rot));
 
     let m1 = Mesh {
         id: id(4),
@@ -149,7 +141,7 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
         triangles: vec![[1, 2, 3], [1, 3, 4]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(m1).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(m1));
 
     let mut b = MeshBinding {
         id: id(7),
@@ -166,20 +158,20 @@ pub(crate) fn fixture_doc(sha1: &str, sha2: &str) -> Document {
         let mut kf = MeshKeyform {
             samples: Default::default(),
             keys: vec![k],
-            positions: doc.get_mesh(&id(4)).unwrap().base_positions.clone(),
+            positions: doc.mesh(&id(4)).unwrap().base_positions.clone(),
             appearance: Appearance::default(),
             draw_order: None,
         };
         kf.positions[0].x += k * 5.0;
         b.keyforms.push(kf);
     }
-    assert!(doc.create_binding(b).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_binding(b));
 
     doc
 }
 
-pub(crate) fn scene_binding(doc: &mut Document) {
-    let transform = doc.get_transform(&sid(2)).unwrap();
+pub(crate) fn scene_binding(doc: &mut DocumentState) {
+    let transform = doc.transform(&sid(2)).unwrap();
     let track = match &transform.data {
         TransformData::Warp(w) => SceneTrack::Warp {
             target_id: sid(2).into(),
@@ -217,7 +209,7 @@ pub(crate) fn scene_binding(doc: &mut Document) {
         }],
         track,
     };
-    assert!(doc.create_scene_binding(binding).status.is_ok());
+    *doc = prepare(doc, |builder| builder.create_scene_binding(binding));
 }
 
 #[derive(Clone)]
@@ -293,20 +285,13 @@ impl TestDirectory {
         fs::create_dir(&path).unwrap();
         Self(path)
     }
-    pub(crate) fn fixture(&self) -> (Document, std::path::PathBuf) {
-        let input = self.0.join("input");
-        let (_, sha1) = create_test_png(&input.join("assets/0.png"));
-        let (_, sha2) = create_test_png(&input.join("assets/1.png"));
-        (fixture_doc(&sha1, &sha2), input)
+    pub(crate) fn fixture(&self) -> (DocumentState, ResourceView) {
+        create_test_png(&self.0.join("input/assets/0.png"));
+        create_test_png(&self.0.join("input/assets/1.png"));
+        (fixture_doc(), fixture_resources())
     }
-    pub(crate) fn saved_session(&self) -> DocumentSession {
-        let (doc, input) = self.fixture();
-        let path = self.0.join("project");
-        let result = DocumentStore::new().save(&doc, &input, &path, None).0;
-        assert!(result.status.is_ok(), "{:?}", result);
-        let mut session = DocumentSession::new();
-        assert!(session.open(&path).status.is_ok());
-        session
+    pub(crate) fn io(&self) -> ProjectIo {
+        ProjectIo::new(&self.0, ResourceStore::default())
     }
 }
 impl Drop for TestDirectory {
@@ -315,14 +300,6 @@ impl Drop for TestDirectory {
     }
 }
 
-pub(crate) fn archive_session(filesystem: std::sync::Arc<FailingFileSystem>) -> DocumentSession {
-    let mut session = DocumentSession::new();
-    session.set_archive_store(
-        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
-            .with_filesystem(filesystem),
-    );
-    session
-}
 impl zipzi_project::archive::ArchiveFileSystem for FailingFileSystem {
     fn create_staging(
         &self,
@@ -361,4 +338,29 @@ impl zipzi_project::archive::ArchiveFileSystem for FailingFileSystem {
     fn sync_directory(&self, path: &Path) -> std::io::Result<()> {
         zipzi_project::FileSystem::sync_directory(self, path)
     }
+}
+
+pub(crate) fn fixture_image() -> zipzi_project::ImageResource {
+    static IMAGE: std::sync::OnceLock<zipzi_project::ImageResource> = std::sync::OnceLock::new();
+    IMAGE
+        .get_or_init(|| {
+            ResourceStore::default()
+                .prepare_rgba(8, 8, vec![123; 8 * 8 * 4].into())
+                .unwrap()
+        })
+        .clone()
+}
+pub(crate) fn fixture_resources() -> ResourceView {
+    ResourceView::default().with_images([fixture_image()])
+}
+pub(crate) fn fixture_bytes(state: &DocumentState) -> Vec<u8> {
+    crate::support::native_bytes_with_resources(state, &fixture_resources())
+}
+
+pub(crate) fn resaved_native(bytes: &[u8]) -> Vec<u8> {
+    let tmp = TestDirectory::new();
+    let path = tmp.0.join("roundtrip.zipzi");
+    fs::write(&path, bytes).unwrap();
+    let loaded = tmp.io().load(&path, || true).unwrap();
+    crate::support::native_bytes_with_resources(&loaded.document, &loaded.resources)
 }

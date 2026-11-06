@@ -2,7 +2,7 @@ use super::support;
 use zipzi_core::DrawableFrameBounds;
 use zipzi_core::{ModelSetup, Vec2};
 use zipzi_editor_core::*;
-use zipzi_sdk::{AuthoringSession, prepare_png_asset, rectangle_mesh};
+use zipzi_sdk::rectangle_mesh;
 
 fn fixture() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     fixture_with_source(None)
@@ -22,24 +22,30 @@ fn fixture_with_source(
         Vec2::new(73., -42.),
         1.,
     ));
-    let mut session = AuthoringSession::new(
+    let mut session = crate::support::fixture_session(
         &id(1),
         zipzi_core::ModelSetup {
             source_canvas,
             ..canvas
         },
     )?;
-    session.edit("Artwork", None, |edit| {
-        edit.create_asset(prepare_png_asset(&id(2), "Artwork", &texture)?)?;
-        edit.create_mesh(rectangle_mesh(
-            &id(3),
-            "Offset artwork",
-            &id(2),
-            Vec2::new(1000., -600.),
-            Vec2::new(1200., -500.),
-        )?)
+    crate::support::publish_fixture(&mut session, "Artwork", |edit| {
+        crate::support::insert_image(
+            edit,
+            crate::support::image_fixture(&id(2), "Artwork", &texture)?,
+        )?;
+        crate::support::insert_fixture_mesh(
+            edit,
+            rectangle_mesh(
+                &id(3),
+                "Offset artwork",
+                &id(2),
+                Vec2::new(1000., -600.),
+                Vec2::new(1200., -500.),
+            )?,
+        )
     })?;
-    let saved = session.save_project(&dir.path().join("boundless.zipzi"), None)?;
+    let saved = crate::support::save_fixture(&mut session, &dir.path().join("boundless.zipzi"))?;
     let document = Document::open(&saved.path)?;
     assert_eq!(document.source_canvas(), source_canvas);
     Ok((support::editor_from_document(document), dir))

@@ -326,12 +326,19 @@ mod tests {
 
     #[test]
     fn missing_files_are_visible_without_starting_a_preview() {
-        let mut model = zipzi_core::state::DocumentState::new();
-        model.set_missing_attachments(vec![
-            "motions/missing.motion3.json".into(),
-            "textures/missing.png".into(),
-        ]);
-        let catalog = AnimationCatalog::from_model(&model);
+        let mut model = zipzi_core::state::DocumentState::new(
+            &uuid::Uuid::new_v4().to_string(),
+            Default::default(),
+        )
+        .unwrap()
+        .builder();
+        model
+            .set_missing_attachments(vec![
+                "motions/missing.motion3.json".into(),
+                "textures/missing.png".into(),
+            ])
+            .unwrap();
+        let catalog = AnimationCatalog::from_model(&model.freeze().unwrap().state);
         assert_eq!(
             catalog.diagnostics_for(None),
             vec![

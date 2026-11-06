@@ -28,12 +28,17 @@ fn hosted_view_borrows_original_sdk_instance_and_observes_shared_publication() {
     assert_eq!(view.read(&runtime).unwrap().version(), version);
     runtime.attach(agent, id).unwrap();
     let draft = runtime.begin_draft(agent, version).unwrap();
-    let changed = Canvas::new(200., 100., Vec2::default(), 1.);
+    let changed = zipzi_core::ExportSettings {
+        padding_pixels: 200.,
+        ..Default::default()
+    };
     let (draft, _) = runtime
         .batch(agent, draft, |c| {
             c.edit_document(zipzi_contract::document::DocumentAuthoringEdit::Patch {
-                expected: zipzi_contract::document::DocumentValue::SourceCanvas(None),
-                value: zipzi_contract::document::DocumentValue::SourceCanvas(Some(changed)),
+                expected: zipzi_contract::document::DocumentValue::ExportSettings(
+                    Default::default(),
+                ),
+                value: zipzi_contract::document::DocumentValue::ExportSettings(changed),
             })
         })
         .unwrap();
@@ -44,8 +49,8 @@ fn hosted_view_borrows_original_sdk_instance_and_observes_shared_publication() {
             .snapshot()
             .document()
             .setup()
-            .source_canvas,
-        Some(changed)
+            .export,
+        changed
     );
     assert_eq!(view.read(&runtime).unwrap().history_state().undo_steps, 1);
     runtime.detach(editor, id).unwrap();
@@ -61,21 +66,75 @@ fn hosted_view_borrows_original_sdk_instance_and_observes_shared_publication() {
 }
 
 use std::{path::Path, sync::Arc};
+use zipzi_contract::document::{DocumentAuthoringEdit, DocumentValue};
+use zipzi_core::Status;
 use zipzi_editor_core::{Editor, EditorCommand, RuntimeHost};
-use zipzi_runtime::{JobState, RuntimeError, SessionId, SessionState};
+use zipzi_runtime::{ClientId, JobState, SessionKey, Version};
 
 fn canvas(width: f32) -> Canvas {
     Canvas::new(width, 100., Vec2::default(), 1.)
 }
-fn resize(host: &RuntimeHost, client: zipzi_runtime::ClientId, session: SessionId, width: f32) {
-    let edit = host
-        .write()
-        .begin_edit(client, session, "External resize", None)
-        .unwrap();
+fn version(host: &RuntimeHost, session: SessionKey) -> Version {
+    host.read()
+        .session_read(host.client_id(), session)
+        .unwrap()
+        .version()
+}
+
+fn resize_draft(
+    host: &RuntimeHost,
+    client: ClientId,
+    session: SessionKey,
+    padding: f32,
+) -> anyhow::Result<zipzi_sdk::DraftSource> {
+    let expected = version(host, session);
+    let old = host
+        .read()
+        .session_read(host.client_id(), session)?
+        .snapshot()
+        .document()
+        .setup()
+        .export;
+    let mut runtime = host.write();
+    runtime.attach(client, session)?;
+    let draft = runtime.begin_draft(client, expected)?;
+    let (draft, ()) = runtime.batch(client, draft, |commands| {
+        commands
+            .edit_document(DocumentAuthoringEdit::Patch {
+                expected: DocumentValue::ExportSettings(old),
+                value: DocumentValue::ExportSettings(zipzi_core::ExportSettings {
+                    padding_pixels: padding,
+                    ..old
+                }),
+            })
+            .map(|_| ())
+    })?;
+    Ok(draft)
+}
+
+fn resize(host: &RuntimeHost, client: ClientId, session: SessionKey, width: f32) {
+    let draft = resize_draft(host, client, session, width).unwrap();
     host.write()
-        .apply_edit(client, edit, |e| e.replace_model_setup(canvas(width)))
+        .publish(client, draft, "External resize")
         .unwrap();
-    host.write().commit_edit(client, edit).unwrap();
+}
+
+fn request_save(
+    host: &RuntimeHost,
+    client: ClientId,
+    session: SessionKey,
+    path: &Path,
+) -> anyhow::Result<zipzi_runtime::JobId> {
+    let expected = version(host, session);
+    let io = host.read().project_io().clone();
+    let mut runtime = host.write();
+    runtime.attach(client, session)?;
+    Ok(runtime.request_save_as(client, expected, &io, path, None, Default::default())?)
+}
+
+fn history(host: &RuntimeHost, session: SessionKey) -> (usize, usize) {
+    let snapshot = host.read().subscribe(host.client_id(), session).unwrap();
+    (snapshot.history.undo_steps, snapshot.history.redo_steps)
 }
 
 #[test]
@@ -90,34 +149,38 @@ fn r2_external_publication_updates_projection_and_shares_editor_history_once() -
     assert!(editor.sync_runtime()?);
     assert_eq!(editor.inspection_context_token(), Some(inspection));
     assert_eq!(
-        editor.document().unwrap().source_canvas(),
-        Some(canvas(200.))
+        editor.document().unwrap().export_settings().padding_pixels,
+        200.
     );
     let revision = editor.document().unwrap().properties_revision();
     assert!(!editor.sync_runtime()?);
     assert_eq!(editor.document().unwrap().properties_revision(), revision);
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.execute(EditorCommand::Undo)?;
-    assert_eq!(host.read().session(session)?.history_lengths(), (0, 1));
+    assert_eq!(history(&host, session), (0, 1));
     assert!(!editor.sync_runtime()?); // local receipt already reached its projection
     editor.execute(EditorCommand::Redo)?;
     assert_eq!(
-        host.read().session(session)?.source_canvas(),
-        Some(canvas(200.))
+        host.read()
+            .session_read(host.client_id(), session)?
+            .snapshot()
+            .document()
+            .setup()
+            .export
+            .padding_pixels,
+        200.
     );
     Ok(())
 }
 
 #[test]
-fn r2_human_interaction_blocks_another_clients_commit_without_consuming_it() -> anyhow::Result<()> {
+fn external_publication_invalidates_a_local_property_gesture() -> anyhow::Result<()> {
     use zipzi_editor_core::{PropertyPatch, PropertyValue, property as schema};
     let mut editor = Editor::new()?;
     let host = editor.runtime_host();
     let session = editor.document().unwrap().runtime_session_id();
     let agent = host.write().register_client()?;
-    let candidate = host.write().begin_edit(agent, session, "agent", None)?;
-    host.write()
-        .apply_edit(agent, candidate, |e| e.replace_model_setup(canvas(200.)))?;
+    let candidate = resize_draft(&host, agent, session, 200.)?;
     let document = editor.document().unwrap();
     let object = document.object_index().objects[0].reference.clone();
     let values = document.property_values(&object)?;
@@ -130,20 +193,12 @@ fn r2_human_interaction_blocks_another_clients_commit_without_consuming_it() -> 
     let context = editor.editing_context_token().unwrap();
     let token = editor.begin_property_edit(context, object, &patch)?;
     editor.update_property_edit(&token, &patch)?;
+    host.write().publish(agent, candidate, "External resize")?;
+    assert!(editor.sync_runtime()?);
+    assert!(editor.update_property_edit(&token, &patch).is_err());
     assert_eq!(
-        host.write().commit_edit(agent, candidate),
-        Err(RuntimeError::Busy)
-    );
-    assert_eq!(
-        host.read().edit_state(agent, candidate)?,
-        zipzi_runtime::EditState::Editing
-    );
-    editor.cancel_property_edit(&token);
-    host.write().commit_edit(agent, candidate)?;
-    editor.sync_runtime()?;
-    assert_eq!(
-        editor.document().unwrap().source_canvas(),
-        Some(canvas(200.))
+        editor.document().unwrap().export_settings().padding_pixels,
+        200.
     );
     Ok(())
 }
@@ -155,7 +210,10 @@ fn r2_save_completes_after_all_views_drop_then_same_session_history_reopens() ->
     let host = editor.runtime_host();
     let id = editor.active_id().unwrap();
     let session = editor.document().unwrap().runtime_session_id();
-    let version = host.read().session(session)?.version();
+    let version = host
+        .read()
+        .session_read(host.client_id(), session)?
+        .version();
     resize(&host, host.client_id(), session, 200.);
     editor.sync_runtime()?;
     let directory = tempfile::tempdir()?;
@@ -173,24 +231,32 @@ fn r2_save_completes_after_all_views_drop_then_same_session_history_reopens() ->
     assert_eq!(state.completed_bytes, state.total_bytes);
     assert!(state.total_bytes > 0);
     completion.publish(&host); // no Editor, Entity, WeakEntity or Window exists
-    assert_eq!(
-        host.read().session_info(session)?.state,
-        SessionState::Ready
+    assert!(host.read().saving_job(host.client_id(), session)?.is_none());
+    assert!(
+        !host
+            .read()
+            .session_read(host.client_id(), session)?
+            .is_dirty()
     );
-    assert!(!host.read().session(session)?.modified());
     let mut reopened = Editor::with_runtime(host.clone());
     reopened.attach_resident_sessions()?;
     assert_eq!(reopened.document_count(), 1);
     let document = reopened.document().unwrap();
     assert_eq!(document.runtime_session_id(), session);
-    assert_eq!(document.source_canvas(), Some(canvas(200.)));
+    assert_eq!(document.export_settings().padding_pixels, 200.);
     assert_eq!(document.history_lengths(), (1, 0));
     assert_eq!(
-        host.read().session(session)?.version().session_id,
-        version.session_id
+        host.read()
+            .session_read(host.client_id(), session)?
+            .version()
+            .session,
+        version.session
     );
     reopened.execute(EditorCommand::Undo)?;
-    assert!(reopened.document().unwrap().source_canvas().is_none());
+    assert_eq!(
+        reopened.document().unwrap().export_settings(),
+        Default::default()
+    );
     Ok(())
 }
 
@@ -220,15 +286,15 @@ impl zipzi_project::archive::ArchiveFileSystem for BrokenFilesystem {
         zipzi_project::archive::NativeArchiveFileSystem.acquire_lock(path)
     }
 }
-fn broken_editor(panic: bool) -> anyhow::Result<(Editor, RuntimeHost, SessionId)> {
+fn broken_editor(panic: bool) -> anyhow::Result<(Editor, RuntimeHost, SessionKey)> {
     let host = RuntimeHost::new();
-    host.write().configure_project_io(
-        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
-            .with_filesystem(Arc::new(BrokenFilesystem { panic })),
-    )?;
-    let mut sdk = AuthoringSession::new("62000000-0000-4000-8000-000000000001", canvas(100.))?;
-    sdk.edit("unsaved", None, |e| e.replace_model_setup(canvas(200.)))?;
-    let session = host.write().adopt_session(host.client_id(), sdk)?;
+    let io = host.read().project_io().clone();
+    host.write()
+        .configure_project_io(io.with_filesystem(Arc::new(BrokenFilesystem { panic })));
+    let session =
+        host.write()
+            .create_session(host.client_id(), &budget_id(1), canvas(100.).into())?;
+    resize(&host, host.client_id(), session, 200.);
     let mut editor = Editor::with_runtime(host.clone());
     editor.attach_resident_sessions()?;
     Ok((editor, host, session))
@@ -250,20 +316,18 @@ fn r2_failed_save_without_window_preserves_dirty_history_and_queryable_failure()
     let job = completion.job_id();
     completion.publish(&host);
     assert_eq!(
-        host.read().job_info(host.client_id(), job)?.state,
+        host.read().job(host.client_id(), job)?.state,
         JobState::Failed
     );
     assert!(
         host.read()
-            .job_info(host.client_id(), job)?
+            .job(host.client_id(), job)?
             .result
+            .as_ref()
             .unwrap()
             .is_err()
     );
-    assert_eq!(
-        host.read().session_info(session)?.state,
-        SessionState::Ready
-    );
+    assert!(host.read().saving_job(host.client_id(), session)?.is_none());
     let mut reopened = Editor::with_runtime(host.clone());
     reopened.attach_resident_sessions()?;
     assert!(reopened.document().unwrap().modified());
@@ -271,8 +335,12 @@ fn r2_failed_save_without_window_preserves_dirty_history_and_queryable_failure()
     assert!(reopened.document().unwrap().path().is_none());
     reopened.execute(EditorCommand::Undo)?;
     assert_eq!(
-        reopened.document().unwrap().source_canvas(),
-        Some(canvas(100.))
+        reopened
+            .document()
+            .unwrap()
+            .export_settings()
+            .padding_pixels,
+        zipzi_core::ExportSettings::default().padding_pixels
     );
     Ok(())
 }
@@ -286,25 +354,29 @@ fn r2_worker_panic_keeps_frozen_view_and_never_leaves_editor_busy() -> anyhow::R
     editor.suspend_window()?;
     let mut completion = task.run();
     completion.publish(&host);
+    assert_eq!(
+        host.read()
+            .job(host.client_id(), completion.job_id())?
+            .result
+            .as_ref()
+            .unwrap()
+            .as_ref()
+            .unwrap_err()
+            .code,
+        "WORKER_PANIC"
+    );
     assert!(editor.finish_save(&mut completion).is_err());
     assert!(!editor.is_busy());
     assert_eq!(editor.document_count(), 1);
-    assert!(editor.document().is_none()); // frozen view only; no fake Ready SDK
-    assert!(matches!(
-        host.read().session_info(session)?.state,
-        SessionState::Faulted(_)
-    ));
+    assert!(host.read().saving_job(host.client_id(), session)?.is_none());
+    editor.attach_resident_sessions()?;
     assert_eq!(
-        host.read()
-            .source_snapshot(session)?
-            .snapshot
-            .document()
-            .source_canvas(),
-        Some(canvas(200.))
+        editor.document().unwrap().export_settings().padding_pixels,
+        200.
     );
-    assert!(host.read().session_info(session)?.fault.is_some());
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     editor.close_document(id, true)?;
-    assert!(host.read().list_sessions().is_empty());
+    assert!(host.read().session_catalog(host.client_id())?.is_empty());
     Ok(())
 }
 
@@ -334,9 +406,7 @@ fn external_save_scene_creation_queries_before_workspace_sync_return_busy() -> a
     let session = document.runtime_session_id();
     let agent = host.write().register_client()?;
     let target = tempfile::tempdir()?;
-    let job = host
-        .write()
-        .request_save(agent, session, &target.path().join("project.zipzi"))?;
+    let job = request_save(&host, agent, session, &target.path().join("project.zipzi"))?;
 
     // Retain the UI's Document after external admission, without syncing it.
     // A selection reaches handle(); an empty selection reaches collection capabilities.
@@ -356,17 +426,13 @@ fn external_save_scene_creation_queries_before_workspace_sync_return_busy() -> a
                 .validate_scene_object_creation_in(projection, kind, selection)
                 .unwrap_err();
             assert_eq!(
-                error
-                    .downcast_ref::<zipzi_sdk::SdkError>()
-                    .unwrap()
-                    .code
-                    .as_ref(),
-                "BUSY"
+                error.downcast_ref::<Status>().unwrap().code.as_str(),
+                "PROJECT_BUSY"
             );
         }
     }
     let work = host.write().take_work(job)?;
-    assert!(host.write().complete(work.run()));
+    host.write().complete(work.run()).unwrap();
     host.write().release_job(agent, job)?;
     for selection in &selections {
         document.validate_scene_object_creation_context(SceneObjectType::Part, selection)?;
@@ -386,9 +452,7 @@ fn external_busy_command_queries_do_not_require_a_workspace_sync() -> anyhow::Re
     let command = editor.command(CommandId::CreateParameter);
     assert!(editor.command_state(command).enabled);
     let target = tempfile::tempdir()?;
-    let job = host
-        .write()
-        .request_save(agent, session, &target.path().join("project.zipzi"))?;
+    let job = request_save(&host, agent, session, &target.path().join("project.zipzi"))?;
 
     // Keep the Job queued and skip sync_runtime: this is the interval between
     // socket admission and the workspace's asynchronous change notification.
@@ -400,20 +464,19 @@ fn external_busy_command_queries_do_not_require_a_workspace_sync() -> anyhow::Re
     let error = editor
         .authoring_command_capability(CommandId::CreateParameter)
         .unwrap_err();
-    assert!(matches!(
-        error.downcast_ref::<zipzi_runtime::RuntimeError>(),
-        Some(zipzi_runtime::RuntimeError::Busy)
-    ));
+    assert_eq!(error.downcast_ref::<Status>().unwrap().code, "PROJECT_BUSY");
 
-    host.write().cancel_queued_job(agent, job)?;
+    host.write().cancel_job(agent, job)?;
+    let work = host.write().take_work(job)?;
+    host.write().complete(work.run()).unwrap();
     host.write().release_job(agent, job)?;
     assert!(!editor.is_busy());
     assert!(editor.command_state(command).enabled);
     assert_eq!(
         editor.authoring_command_capability(CommandId::CreateParameter)?,
-        zipzi_sdk::CapabilityState::Available
+        zipzi_contract::authoring::CapabilityState::Available
     );
-    assert!(editor.sync_runtime()?);
+    assert!(!editor.sync_runtime()?);
     assert!(editor.document().is_some());
     Ok(())
 }
@@ -428,24 +491,22 @@ fn r2_external_busy_operation_freezes_then_restores_the_editor_projection() -> a
     resize(&host, agent, session, 200.);
     editor.sync_runtime()?;
     let target = tempfile::tempdir()?;
-    let job = host
-        .write()
-        .request_save(agent, session, &target.path().join("project.zipzi"))?;
+    let job = request_save(&host, agent, session, &target.path().join("project.zipzi"))?;
     let work = host.write().take_work(job)?;
     assert!(editor.sync_runtime()?);
     assert!(editor.is_busy());
     assert!(editor.document().is_none());
     assert_eq!(editor.inspection_context_token(), Some(inspection));
-    assert!(host.write().complete(work.run()));
+    host.write().complete(work.run()).unwrap();
     assert!(editor.sync_runtime()?);
     assert!(!editor.is_busy());
     assert_eq!(editor.inspection_context_token(), Some(inspection));
     assert_eq!(
-        editor.document().unwrap().source_canvas(),
-        Some(canvas(200.))
+        editor.document().unwrap().export_settings().padding_pixels,
+        200.
     );
     assert!(!editor.document().unwrap().modified());
-    assert_eq!(host.read().job_info(agent, job)?.state, JobState::Succeeded);
+    assert_eq!(host.read().job(agent, job)?.state, JobState::Succeeded);
     Ok(())
 }
 
@@ -459,7 +520,7 @@ fn r2_tab_detach_retains_unsaved_session_and_history_as_a_resident() -> anyhow::
     let id = editor.active_id().unwrap();
     editor.detach_document(id)?;
     assert_eq!(editor.document_count(), 0);
-    assert_eq!(host.read().list_sessions().len(), 1);
+    assert_eq!(host.read().session_catalog(host.client_id())?.len(), 1);
     editor.attach_resident_sessions()?;
     assert_eq!(editor.document().unwrap().runtime_session_id(), session);
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
@@ -483,8 +544,8 @@ fn r2_load_without_window_registers_resident_and_does_not_require_the_initiating
     drop(editor);
     let mut completion = task.run();
     completion.publish(&host);
-    assert_eq!(host.read().list_sessions().len(), 1);
-    let session = host.read().list_sessions()[0].id;
+    assert_eq!(host.read().session_catalog(host.client_id())?.len(), 1);
+    let session = host.read().session_catalog(host.client_id())?[0].session;
     let mut reopened = Editor::with_runtime(host);
     reopened.attach_resident_sessions()?;
     assert_eq!(reopened.document().unwrap().runtime_session_id(), session);
@@ -498,20 +559,30 @@ fn r2_load_dispatch_rejection_releases_provisional_job_and_path() -> anyhow::Res
     let mut editor = Editor::empty();
     let host = editor.runtime_host();
     let request = |name: &str| zipzi_editor_core::LoadRequest::Open(directory.path().join(name));
-    let first = editor.prepare_load(request("first"))?.unwrap();
-    let second = editor.prepare_load(request("second"))?.unwrap();
+    let mut loads = Vec::new();
+    for index in 0..zipzi_runtime::RuntimeLimits::default().running_jobs {
+        loads.push(
+            editor
+                .prepare_load(request(&format!("loading{index}")))?
+                .unwrap(),
+        );
+    }
     assert!(editor.prepare_load(request("third")).is_err());
-    assert_eq!(host.read().list_jobs(host.client_id())?.len(), 2);
+    assert_eq!(
+        host.read().client_jobs(host.client_id())?.len(),
+        loads.len()
+    );
     assert!(
         host.read()
-            .find_project(&directory.path().join("third"))?
+            .project_session(host.client_id(), &directory.path().join("third"))?
             .is_none()
     );
-    assert!(editor.finish_load(first.run()).is_err());
-    assert!(editor.finish_load(second.run()).is_err());
+    for load in loads {
+        assert!(editor.finish_load(load.run()).is_err());
+    }
     assert_eq!(editor.pending_io_count(), 0);
-    assert!(host.read().list_jobs(host.client_id())?.is_empty());
-    assert!(host.read().list_sessions().is_empty());
+    assert!(host.read().client_jobs(host.client_id())?.is_empty());
+    assert!(host.read().session_catalog(host.client_id())?.is_empty());
     // The rejected target can be requested again, rather than staying reserved.
     let retry = editor.prepare_load(request("third"))?.unwrap();
     assert!(editor.finish_load(retry.run()).is_err());
@@ -574,11 +645,14 @@ fn r2_fast_external_save_still_requests_a_redraw_after_metadata_changes() -> any
     resize(&host, client, session, 150.);
     editor.sync_runtime()?;
     let directory = tempfile::tempdir()?;
-    let job =
-        host.write()
-            .request_save(client, session, &directory.path().join("project.zipzi"))?;
+    let job = request_save(
+        &host,
+        client,
+        session,
+        &directory.path().join("project.zipzi"),
+    )?;
     let work = host.write().take_work(job)?;
-    host.write().complete(work.run()); // Busy starts and ends between UI polls.
+    host.write().complete(work.run()).unwrap(); // Busy starts and ends between UI polls.
     assert!(editor.sync_runtime()?);
     assert_eq!(editor.inspection_context_token(), Some(inspection));
     assert!(!editor.document().unwrap().modified());
@@ -589,7 +663,7 @@ fn r2_fast_external_save_still_requests_a_redraw_after_metadata_changes() -> any
 
 use zipzi_editor_core::{EditingContext, TimelineCommand};
 #[test]
-fn r2_timeline_interaction_blocks_foreign_commit() -> anyhow::Result<()> {
+fn external_publication_invalidates_a_local_timeline_gesture() -> anyhow::Result<()> {
     let mut editor = Editor::new()?;
     let host = editor.runtime_host();
     let id = editor.active_id().unwrap();
@@ -597,63 +671,45 @@ fn r2_timeline_interaction_blocks_foreign_commit() -> anyhow::Result<()> {
     editor.set_editing_context(EditingContext::Animation)?;
     editor.create_timeline_motion(id)?;
     let agent = host.write().register_client()?;
-    let external = host.write().begin_edit(agent, session, "foreign", None)?;
-    host.write()
-        .apply_edit(agent, external, |e| e.replace_model_setup(canvas(200.)))?;
+    let external = resize_draft(&host, agent, session, 200.)?;
     let token = editor.begin_timeline_edit(id, "drag")?;
     editor.update_timeline_edit(id, token, TimelineCommand::ScaleTime(2.))?;
-    let result = host.write().commit_edit(agent, external);
+    host.write().publish(agent, external, "External resize")?;
     editor.sync_runtime()?;
-    assert_eq!(result, Err(RuntimeError::Busy));
-    assert_eq!(
-        host.write().request_undo(agent, session),
-        Err(RuntimeError::Busy)
-    );
-    assert!(editor.timeline_edit().is_some());
-    editor.cancel_timeline_edit();
-    host.write().commit_edit(agent, external)?;
-    editor.sync_runtime()?;
-    let external = host
-        .write()
-        .begin_edit(agent, session, "stale after gesture", None)?;
+    assert!(editor.timeline_edit().is_none());
+
+    let expected = version(&host, session);
+    let obsolete = host.write().begin_draft(agent, expected)?;
     let token = editor.begin_timeline_edit(id, "commit drag")?;
     editor.update_timeline_edit(id, token, TimelineCommand::ScaleTime(3.))?;
     editor.finish_timeline_edit(id, token)?;
-    let stale = host.write().commit_edit(agent, external);
-    assert!(matches!(stale, Err(RuntimeError::Sdk(_))), "{stale:?}");
-    host.write().begin_interaction(agent, session)?;
-    host.write().end_interaction(agent, session)?;
+    assert_eq!(
+        host.write()
+            .publish(agent, obsolete, "Stale")
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
     Ok(())
 }
 #[test]
-fn r2_external_fault_before_first_poll_is_safe() -> anyhow::Result<()> {
-    let host = RuntimeHost::new();
-    host.write().configure_project_io(
-        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
-            .with_filesystem(Arc::new(BrokenFilesystem { panic: true })),
-    )?;
-    let sdk = AuthoringSession::new("65000000-0000-4000-8000-000000000001", canvas(100.))?;
-    let session = host.write().adopt_session(host.client_id(), sdk)?;
-    let mut editor = Editor::with_runtime(host.clone());
-    editor.attach_resident_sessions()?;
-    let inspection = editor.inspection_context_token().unwrap();
+fn external_worker_failure_before_the_first_view_poll_preserves_the_document() -> anyhow::Result<()>
+{
+    let (mut editor, host, session) = broken_editor(true)?;
+    let inspection = editor.inspection_context_token();
     let agent = host.write().register_client()?;
     let dir = tempfile::tempdir()?;
-    let job = host
-        .write()
-        .request_save(agent, session, &dir.path().join("project.zipzi"))?;
+    let job = request_save(&host, agent, session, &dir.path().join("project.zipzi"))?;
     let work = host.write().take_work(job)?;
-    host.write().complete(work.run());
-    assert!(matches!(
-        host.read().session_info(session)?.state,
-        SessionState::Faulted(_)
-    ));
-    assert!(editor.sync_runtime().is_err());
-    assert_ne!(editor.inspection_context_token(), Some(inspection));
-    assert!(editor.document().is_none());
-    assert!(!editor.sync_runtime()?);
-    assert_eq!(editor.documents().len(), 1);
-    editor.close_document(editor.active_id().unwrap(), true)?;
+    host.write().complete(work.run()).unwrap();
+    assert_eq!(host.read().job(agent, job)?.state, JobState::Failed);
+    editor.sync_runtime()?;
+    assert_eq!(editor.inspection_context_token(), inspection);
+    assert_eq!(
+        editor.document().unwrap().export_settings().padding_pixels,
+        200.
+    );
+    assert!(!editor.is_busy());
     Ok(())
 }
 #[test]
@@ -669,7 +725,7 @@ fn r2_quit_cannot_finish_with_detached_save_running() -> anyhow::Result<()> {
     eprintln!(
         "request_exit={exit:?}, next_close={:?}, state={:?}",
         editor.next_close(),
-        host.read().session_info(session)?.state
+        host.read().saving_job(host.client_id(), session)?
     );
     assert!(
         exit.is_err() || editor.next_close().is_some(),
@@ -679,70 +735,62 @@ fn r2_quit_cannot_finish_with_detached_save_running() -> anyhow::Result<()> {
 }
 
 use zipzi_editor_core::Document;
-use zipzi_runtime::RuntimeLimits;
-use zipzi_sdk::{prepare_png_asset, rectangle_mesh};
+use zipzi_sdk::rectangle_mesh;
 fn budget_id(n: u32) -> String {
     format!("66000000-0000-4000-8000-{n:012x}")
 }
 #[test]
-fn r2_typed_remesh_respects_runtime_history_budget() -> anyhow::Result<()> {
-    let mut sdk = AuthoringSession::new(&budget_id(1), canvas(100.))?;
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../zipzi-sdk/tests/fixtures/asymmetric-2x2.png");
-    let asset = prepare_png_asset(&budget_id(2), "fixture", &path)?;
+fn typed_remesh_respects_the_resident_sdk_history_policy() -> anyhow::Result<()> {
+    let mut sdk = crate::support::fixture_session(&budget_id(1), canvas(100.))?;
     let mesh = rectangle_mesh(
         &budget_id(3),
         "mesh",
-        &budget_id(2),
+        "",
         Vec2::default(),
         Vec2::new(10., 10.),
     )?;
-    sdk.edit("setup", None, |edit| {
-        edit.create_asset(asset)?;
-        edit.create_mesh(mesh)
+    crate::support::publish_fixture(&mut sdk, "Fixture", |commands| {
+        crate::support::insert_fixture_mesh(commands, mesh)
     })?;
-    let limit = sdk.history_state().estimated_bytes + 1;
-    let mut runtime = Runtime::new(RuntimeLimits {
-        history_bytes: limit,
-        ..Default::default()
+    sdk.set_history_limits(zipzi_sdk::HistoryLimits {
+        max_steps: 1,
+        target_bytes: 1,
     });
-    let client = runtime.register_client()?;
-    let session = runtime.adopt_session(client, sdk)?;
-    let version = runtime.session(session)?.version();
-    let result = runtime.remesh_rectangle_grid(client, session, &budget_id(3), 32, 32, None);
-    let history = runtime.session(session)?.history_state().estimated_bytes;
-    eprintln!("remesh result={result:?}; runtime history budget={limit}; actual history={history}");
-    assert!(
-        matches!(result, Err(RuntimeError::Budget(_))),
-        "typed write bypassed Runtime budget"
-    );
-    assert_eq!(runtime.session(session)?.version(), version);
-    assert_eq!(
-        runtime.session(session)?.history_state().estimated_bytes,
-        limit - 1
-    );
-    // Rejection must release its temporary candidate slot.
-    let edit = runtime.begin_edit(client, session, "retry", None)?;
-    runtime.release_edit(client, edit)?;
+    let host = RuntimeHost::new();
+    let session = host.write().adopt_session(host.client_id(), sdk)?;
+    let mut document = Document::attach_runtime(host.clone(), session)?;
+    let mesh = zipzi_editor_core::ObjectRef::new(zipzi_editor_core::ObjectKind::Mesh, budget_id(3));
+    document.generate_mesh_grid(
+        &mesh,
+        zipzi_editor_core::MeshGridOptions {
+            columns: 8,
+            rows: 8,
+        },
+        document.mesh_generation_revision(),
+    )?;
+    assert_eq!(history(&host, session), (1, 0));
+    document.undo()?;
+    assert_eq!(history(&host, session), (0, 1));
     Ok(())
 }
-
 #[test]
 fn r2_sync_save_dispatch_failure_returns_ownership() -> anyhow::Result<()> {
     let host = RuntimeHost::new();
     let mut sessions = Vec::new();
-    for n in 1..=3 {
+    let workers = zipzi_runtime::RuntimeLimits::default().running_jobs;
+    for n in 1..=workers + 1 {
         sessions.push(host.write().create_session(
             host.client_id(),
-            &budget_id(n),
-            canvas(100.),
+            &budget_id(n as u32),
+            canvas(100.).into(),
         )?);
     }
-    let mut document = Document::attach_runtime(host.clone(), sessions[2])?;
+    let mut document = Document::attach_runtime(host.clone(), sessions[workers])?;
     let dir = tempfile::tempdir()?;
     let mut running = Vec::new();
-    for (i, session) in sessions[..2].iter().enumerate() {
-        let job = host.write().request_save(
+    for (i, session) in sessions[..workers].iter().enumerate() {
+        let job = request_save(
+            &host,
             host.client_id(),
             *session,
             &dir.path().join(format!("running{i}")),
@@ -750,17 +798,18 @@ fn r2_sync_save_dispatch_failure_returns_ownership() -> anyhow::Result<()> {
         running.push(host.write().take_work(job)?);
     }
     let result = document.save(&dir.path().join("rejected"));
-    let state = host.read().session_info(sessions[2])?.state;
+    let state = host
+        .read()
+        .saving_job(host.client_id(), sessions[workers])?;
     eprintln!("synchronous save result={result:?}; session state={state:?}");
     assert!(result.is_err());
     assert_eq!(
-        state,
-        SessionState::Ready,
+        state, None,
         "failed dispatch left an unreachable queued save"
     );
-    assert_eq!(host.read().list_jobs(host.client_id())?.len(), 2);
+    assert_eq!(host.read().client_jobs(host.client_id())?.len(), workers);
     for work in running {
-        host.write().complete(work.run());
+        host.write().complete(work.run()).unwrap();
     }
     document.save(&dir.path().join("rejected"))?;
     Ok(())
@@ -772,16 +821,21 @@ fn r2_quit_waits_for_foreign_provisional_loads() -> anyhow::Result<()> {
     let host = editor.runtime_host();
     let agent = host.write().register_client()?;
     let directory = tempfile::tempdir()?;
+    let session = editor.document().unwrap().runtime_session_id();
+    let source = version(&host, session);
+    host.write().attach(agent, session)?;
     let job = host.write().request_import(
         agent,
-        zipzi_runtime::ImportSource::Psd(directory.path().join("missing.psd")),
+        source,
+        &directory.path().join("missing.psd"),
+        zipzi_contract::kernel_wire::ImportFormat::Psd,
+        Default::default(),
     )?;
-    assert_eq!(host.read().list_sessions().len(), 1); // provisional load is hidden
     assert!(editor.request_exit().is_err());
     assert!(!editor.exiting());
     host.write().cancel_job(agent, job)?;
     let work = host.write().take_work(job)?;
-    host.write().complete(work.run());
+    host.write().complete(work.run()).unwrap();
     host.write().release_job(agent, job)?;
     editor.request_exit()?;
     assert!(editor.next_close().is_some());
@@ -800,6 +854,7 @@ fn r6_direct_batches_share_human_refinement_history_and_reject_old_candidates() 
     let host = editor.runtime_host();
     let session = editor.document().unwrap().runtime_session_id();
     let agent = host.write().register_client()?;
+    host.write().attach(agent, session)?;
     let mesh = editor.document().unwrap().layers()[0].id.clone();
     let motion = editor.document().unwrap().motion_resources()[0]
         .selection
@@ -813,34 +868,33 @@ fn r6_direct_batches_share_human_refinement_history_and_reject_old_candidates() 
     let parameter = editor.document().unwrap().parameters()[0].id.clone();
     let endpoint_key = track.segments[0].end().id.clone();
 
-    let edit = host
-        .write()
-        .begin_edit(agent, session, "Agent batch", None)?;
-    host.write().apply_edit(agent, edit, |e| {
-        e.rename_mesh(&mesh, "Agent draft")?;
-        let mut clip = e
-            .candidate_document()
-            .get_motion(&motion.clip_id)
-            .unwrap()
-            .clone();
+    let expected = version(&host, session);
+    let edit = host.write().begin_draft(agent, expected)?;
+    let (edit, ()) = host.write().batch(agent, edit, |e| {
+        e.rename(zipzi_sdk::NameTarget::Mesh(&mesh), "Agent draft".into())?;
+        let mut clip = e.read_document()?.motion(&motion.clip_id).unwrap().clone();
         Arc::make_mut(&mut clip.tracks[0].segments)[0]
             .end_mut()
             .value = 0.8;
         e.replace_motion(clip)
     })?;
-    let job = host.write().request_commit(agent, edit)?;
+    let job = host
+        .write()
+        .request_publish(agent, edit, "Agent batch", Default::default())?;
     let completion = host.write().take_work(job)?.run();
-    assert!(host.write().complete(completion));
+    host.write().complete(completion).unwrap();
     host.write().release_job(agent, job)?;
     assert!(editor.sync_runtime()?);
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
     assert_eq!(editor.document().unwrap().layers()[0].name, "Agent draft");
 
-    let obsolete = host
-        .write()
-        .begin_edit(agent, session, "Old candidate", None)?;
-    host.write().apply_edit(agent, obsolete, |e| {
-        e.rename_mesh(&mesh, "Must not overwrite")
+    let expected = version(&host, session);
+    let obsolete = host.write().begin_draft(agent, expected)?;
+    let (obsolete, ()) = host.write().batch(agent, obsolete, |e| {
+        e.rename(
+            zipzi_sdk::NameTarget::Mesh(&mesh),
+            "Must not overwrite".into(),
+        )
     })?;
     editor.execute(EditorCommand::Select(mesh.clone()))?;
     editor.execute(EditorCommand::PreviewName("Human polish".into()))?;
@@ -870,37 +924,28 @@ fn r6_direct_batches_share_human_refinement_history_and_reject_old_candidates() 
         },
     )?;
     assert_eq!(editor.document().unwrap().history_lengths(), (3, 0));
-    let error = host.write().commit_edit(agent, obsolete).unwrap_err();
-    assert!(
-        matches!(error, RuntimeError::Sdk(ref error) if error.code.as_ref() == "STALE_VERSION")
-    );
-    host.write().release_edit(agent, obsolete)?;
+    let error = host
+        .write()
+        .publish(agent, obsolete, "Old candidate")
+        .unwrap_err();
+    assert_eq!(error.code, "STALE_SOURCE");
     assert_eq!(editor.document().unwrap().layers()[0].name, "Human polish");
     editor.execute(EditorCommand::Undo)?;
     assert_eq!(editor.document().unwrap().history_lengths(), (2, 1));
     editor.execute(EditorCommand::Redo)?;
-    let refined = host.read().session_info(session)?.version;
 
-    let next = host
-        .write()
-        .begin_edit(agent, session, "Continue human work", Some(refined))?;
-    host.write().apply_edit(agent, next, |e| {
-        assert_eq!(
-            e.candidate_document().get_mesh(&mesh).unwrap().name,
-            "Human polish"
-        );
-        let mut clip = e
-            .candidate_document()
-            .get_motion(&motion.clip_id)
-            .unwrap()
-            .clone();
+    let expected = version(&host, session);
+    let next = host.write().begin_draft(agent, expected)?;
+    let (next, ()) = host.write().batch(agent, next, |e| {
+        assert_eq!(e.read_document()?.mesh(&mesh).unwrap().name, "Human polish");
+        let mut clip = e.read_document()?.motion(&motion.clip_id).unwrap().clone();
         assert_eq!(clip.tracks[0].segments[0].end().id, endpoint_key);
         assert_eq!(clip.tracks[0].segments[0].end().value, 0.45);
-        e.rename_mesh(&mesh, "Agent continued")?;
+        e.rename(zipzi_sdk::NameTarget::Mesh(&mesh), "Agent continued".into())?;
         clip.tracks[0].initial.value = 0.2;
         e.replace_motion(clip)
     })?;
-    host.write().commit_edit(agent, next)?;
+    host.write().publish(agent, next, "Continue human work")?;
     host.write().release_client(agent);
     assert!(editor.sync_runtime()?);
     assert_eq!(editor.document().unwrap().history_lengths(), (4, 0));

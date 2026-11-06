@@ -88,6 +88,14 @@ class PythonCodegen(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Unsupported public shape'):
             gen.render(contract)
 
+    def test_export_replay_rejects_duplicate_keys_and_unresolved_references(self):
+        with self.assertRaisesRegex(ValueError, 'Duplicate schema key'):
+            gen.read_export('{"protocol":"zipzi-runtime-v4","protocol":"zipzi-runtime-v3"}')
+        contract = fixture()
+        contract['record']['fields'][0]['shape'] = {'kind':'ref', 'name':'Missing'}
+        with self.assertRaisesRegex(ValueError, 'Unresolved public type'):
+            gen.render(contract)
+
     def test_check_never_changes_files_and_manifest_tracks_outputs(self):
         output = gen.render(fixture())
         with tempfile.TemporaryDirectory() as directory:

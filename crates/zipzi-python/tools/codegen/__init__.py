@@ -1,1 +1,1 @@
-"""Static authoring-code generation model and output support."""
+"""Output ownership for generated authoring values."""

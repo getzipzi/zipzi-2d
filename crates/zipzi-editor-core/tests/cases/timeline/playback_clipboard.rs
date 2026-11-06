@@ -1,8 +1,9 @@
 use super::common::*;
 use std::sync::Arc;
+use zipzi_animation::{CompiledCurve, MotionPreview, sample_motion_curve};
+use zipzi_contract::kernel_commands::MotionInterpolation;
 use zipzi_core::document::MotionSegment;
 use zipzi_editor_core::*;
-use zipzi_sdk::{CompiledCurve, MotionInterpolation, MotionPreview, sample_motion_curve};
 
 #[test]
 fn multi_key_moves_snap_only_anchor_keep_rhythm_and_reject_collisions_atomically()
@@ -23,7 +24,7 @@ fn multi_key_moves_snap_only_anchor_keep_rhythm_and_reject_collisions_atomically
         },
     )?;
     let legal = e.timeline_edit().unwrap().candidate.clone();
-    let track = &legal.clip().tracks[0];
+    let track = &legal.tracks[0];
     assert!((track.initial.time - 7. / 30.).abs() < 1e-6);
     assert!(((track.segments[0].end().time - track.initial.time) - (0.6 - 0.1137)).abs() < 1e-6);
     assert!(

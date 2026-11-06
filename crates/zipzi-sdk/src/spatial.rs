@@ -64,6 +64,7 @@ pub fn query_spatial_frame(
     queries: &[SpatialQuery],
     control: &ConversionControl,
 ) -> Result<Vec<SpatialResult>, Status> {
+    cancelled(control).map_err(spatial_error)?;
     let meshes = document
         .mesh_order()
         .iter()
@@ -117,6 +118,7 @@ pub fn validate_spatial_queries(
     queries: &[SpatialQuery],
     control: &ConversionControl,
 ) -> Result<(), Status> {
+    cancelled(control).map_err(spatial_error)?;
     for query in queries {
         cancelled(control).map_err(spatial_error)?;
         match query {

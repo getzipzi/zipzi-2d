@@ -28,7 +28,7 @@ struct SceneContent {
 #[serde(deny_unknown_fields)]
 struct TextureContent {
     asset: CapturedAsset,
-    source_content_identity: zipzi_contract::runtime::ObservationContentIdentity,
+    source_content_identity: zipzi_contract::observation::ObservationContentIdentity,
 }
 
 fn failure(code: &'static str, message: impl Into<String>) -> ObservationError {

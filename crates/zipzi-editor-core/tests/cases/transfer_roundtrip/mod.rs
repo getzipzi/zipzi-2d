@@ -10,52 +10,47 @@ use std::{
     path::{Path, PathBuf},
     time::SystemTime,
 };
-use zipzi_core::{Canvas, Document, Vec2, document::MotionTrackTarget};
+use zipzi_animation::{CompiledCurve, ExpressionPreview, sample_motion_curve};
+use zipzi_core::{document::MotionTrackTarget, state::DocumentState};
 use zipzi_project::{TransferFormat, content_sha256};
-use zipzi_sdk::{AuthoringSession, CompiledCurve, ExpressionPreview, sample_motion_curve};
-
-fn session() -> Result<AuthoringSession> {
-    Ok(AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        Canvas::new(1., 1., Vec2::default(), 1.),
-    )?)
-}
+use zipzi_sdk::{AuthoringSession, Snapshot};
 
 fn load(path: &Path, format: &str) -> Result<AuthoringSession> {
     load_with_diagnostics(path, format).map(|(session, _)| session)
 }
+
 fn load_with_diagnostics(path: &Path, format: &str) -> Result<(AuthoringSession, Vec<Value>)> {
-    let mut result = session()?;
-    let mut diagnostics = Vec::new();
-    match format {
+    let (project, diagnostics) = match format {
         "K" => {
-            result.open_project(path, None)?;
+            let io = zipzi_sdk::ProjectIo::new(
+                path.parent().unwrap().join("audit-cache"),
+                Default::default(),
+            );
+            let (session, diagnostics) = AuthoringSession::open(&io, path, || true)?;
+            ensure!(
+                diagnostics.is_empty(),
+                "Missing imported resources: {diagnostics:?}"
+            );
+            return Ok((session, vec![]));
         }
         "C" => {
-            result.import_cubism(path, None)?;
+            let importer = zipzi_project::ProjectImporter {
+                resources: Default::default(),
+            };
+            (importer.import_cubism_authoring(path)?, vec![])
         }
         "R" => {
-            let path = zipzi_project::resolve_model3_entry(path)
-                .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-            let receipt = result.import_model3(&path, None)?;
-            diagnostics = receipt
-                .project
-                .diagnostics
-                .iter()
-                .map(|d| json!({"asset":d.asset_id,"code":d.code,"message":d.message}))
-                .collect();
+            let path = zipzi_project::resolve_model3_entry(path)?;
+            crate::support::import_model3_fixture(&path)?
         }
         _ => unreachable!(),
-    }
+    };
     ensure!(
-        result.document().validate_structure().is_empty(),
-        "Invalid imported structure"
+        diagnostics.is_empty(),
+        "Missing imported resources: {diagnostics:?}"
     );
-    ensure!(
-        result.diagnose_resources().is_empty(),
-        "Missing imported resources"
-    );
-    Ok((result, diagnostics))
+    let snapshot = Snapshot::new(project.document, project.resources)?;
+    Ok((AuthoringSession::new(snapshot), vec![]))
 }
 
 fn transfer(
@@ -65,11 +60,19 @@ fn transfer(
 ) -> Result<AuthoringSession> {
     match format {
         "K" => {
-            let saved = current.save_project(destination, None).context("save")?;
+            let saved = crate::support::save_fixture(current, destination).context("save")?;
             load(&saved.path, "K").context("reimport")
         }
         "C" | "R" => {
-            let snapshot = current.transfer_snapshot().context("capture")?;
+            let snapshot = crate::support::transfer_fixture(
+                current.snapshot(),
+                current
+                    .project()
+                    .map(|project| project.path().to_owned())
+                    .into_iter()
+                    .collect(),
+            )
+            .context("capture")?;
             snapshot
                 .publish(
                     if format == "C" {
@@ -92,24 +95,24 @@ fn transfer(
     }
 }
 
-fn target(document: &Document, target: &MotionTrackTarget) -> String {
+fn target(document: &DocumentState, target: &MotionTrackTarget) -> String {
     match target {
         MotionTrackTarget::Parameter { parameter_id } => format!(
             "parameter/{}",
-            document.get_parameter(parameter_id).unwrap().runtime_id
+            document.parameter(parameter_id).unwrap().runtime_id
         ),
         MotionTrackTarget::PartOpacity { part_id } => {
-            format!("part/{}", document.get_part(part_id).unwrap().runtime_id)
+            format!("part/{}", document.part(part_id).unwrap().runtime_id)
         }
         MotionTrackTarget::Model { runtime_id } => format!("model/{runtime_id}"),
         _ => format!("unresolved/{target:?}"),
     }
 }
 
-fn behavior(document: &Document) -> Result<Value> {
+fn behavior(document: &DocumentState) -> Result<Value> {
     let mut motions = BTreeMap::new();
     for id in document.motion_order() {
-        let clip = document.get_motion(id).unwrap();
+        let clip = document.motion(id).unwrap();
         let mut tracks = BTreeMap::new();
         for track in &clip.tracks {
             let curve = CompiledCurve::from(track);
@@ -132,13 +135,13 @@ fn behavior(document: &Document) -> Result<Value> {
     }
     let mut expressions = BTreeMap::new();
     for id in document.expression_order() {
-        let expression = document.get_expression(id).unwrap();
+        let expression = document.expression(id).unwrap();
         let mut cases = BTreeMap::new();
         for baseline in ["min", "default", "max"] {
             let mut preview = ExpressionPreview::new(document);
             if baseline != "default" {
                 for id in document.parameter_order() {
-                    let parameter = document.get_parameter(id).unwrap();
+                    let parameter = document.parameter(id).unwrap();
                     preview.set_base_parameter(
                         id,
                         if baseline == "min" {
@@ -156,12 +159,7 @@ fn behavior(document: &Document) -> Result<Value> {
                 .snapshot()
                 .parameters
                 .iter()
-                .map(|(id, value)| {
-                    (
-                        document.get_parameter(id).unwrap().runtime_id.clone(),
-                        *value,
-                    )
-                })
+                .map(|(id, value)| (document.parameter(id).unwrap().runtime_id.clone(), *value))
                 .collect();
             cases.insert(baseline, values);
         }
@@ -178,8 +176,8 @@ struct Capture {
 fn capture(session: &AuthoringSession, cases: &[Pose]) -> Result<Capture> {
     Ok(Capture {
         document: canonical_document(session)?,
-        behavior: behavior(session.document())?,
-        geometry: geometry(session.document(), cases)?,
+        behavior: behavior(session.snapshot().document())?,
+        geometry: geometry(session.snapshot().document(), cases)?,
     })
 }
 fn changes(before: &Capture, after: &Capture) -> Value {
@@ -365,7 +363,7 @@ fn mao_repeated_format_transfers_report_document_loss() -> Result<()> {
             .as_array_mut()
             .unwrap()
             .push(json!({"seed":seed,"diagnostics":diagnostics}));
-        let cases = poses(baseline_session.document());
+        let cases = poses(baseline_session.snapshot().document());
         let baseline = capture(&baseline_session, &cases)?;
         fs::write(
             output.join(format!("{seed}-baseline.json")),
@@ -397,20 +395,13 @@ fn mao_repeated_format_transfers_report_document_loss() -> Result<()> {
                     let step_name = format!("{seed}-{route_name}-{round}-{index}-{format}");
                     eprintln!("Mao audit: {step_name}");
                     let destination = work.join(&step_name);
-                    let before = zipzi_project::encode_project(current.document())
-                        .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
+                    let before = current.snapshot().content_id();
                     match transfer(&mut current, format, &destination) {
                         Ok(next) => {
-                            // Export operations must not mutate their source document;
-                            // saving may relocate asset sources and hashes by design.
-                            if *format != "K" {
-                                let after = zipzi_project::encode_project(current.document())
-                                    .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-                                ensure!(
-                                    before == after,
-                                    "{step_name}: exporter mutated its source"
-                                );
-                            }
+                            ensure!(
+                                before == current.snapshot().content_id(),
+                                "{step_name}: transfer mutated its source"
+                            );
                             let snapshot =
                                 capture(&next, &cases).with_context(|| step_name.clone())?;
                             let delta = changes(previous.as_ref().unwrap_or(&baseline), &snapshot);

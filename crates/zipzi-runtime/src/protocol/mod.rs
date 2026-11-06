@@ -548,11 +548,10 @@ impl Protocol {
                 let sub = rt.subscribe(client, session)?;
                 json!({"info":values::session(rt, client, session)?,"cursor":sub.cursor})
             }
-            Events { cursor } => json!(rt
-                .publications_since(client, cursor)?
-                .iter()
-                .map(values::publication)
-                .collect::<Vec<_>>()),
+            Events { cursor } => values::publications(
+                &rt.publications_since(client, cursor)?,
+                rt.limits().result_bytes.min(MAX_FRAME),
+            )?,
             ReleaseClient => {
                 rt.release_client(client);
                 if let Some(remote) = self.clients.get_mut(&client) {

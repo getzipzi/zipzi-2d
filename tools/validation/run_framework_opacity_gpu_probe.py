@@ -66,7 +66,7 @@ def main() -> int:
         report["checks"]["part_opacity_spatial_scope"] = "passed"
         offscreen_moc = OUTPUT / "model_offscreen.moc3"
         run(["cargo", "run", "-q", "-p", "zipzi-moc3", "--example",
-             "create_animation_offscreen_fixture", "--", str(MOC), str(offscreen_moc)])
+             "create_animation_offscreen_fixture", "--", str(MOC), str(offscreen_moc), str(TEXTURE)])
         offscreen_scenarios = {
             "offscreen_base": [],
             "offscreen_model_half": ["--model-opacity", "0.5"],

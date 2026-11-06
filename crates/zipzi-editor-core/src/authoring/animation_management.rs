@@ -269,7 +269,7 @@ impl Document {
         // content and registration overrides are unchanged. Native receipts may
         // mark sibling anchors modified, and copied tracks as evaluation inputs.
         let previous_input = self.animation_input_revision;
-        self.consume_authoring_receipt(&receipt, false);
+        self.consume_authoring_receipt(&receipt, None);
         self.animation_input_revision = previous_input;
         Ok(self.authoring_result(receipt).with_preview(&plan.native))
     }
@@ -465,7 +465,7 @@ impl Document {
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
-        self.consume_authoring_receipt(&receipt, false);
+        self.consume_authoring_receipt(&receipt, None);
         Ok(self.authoring_result(receipt).with_preview(&plan.preview))
     }
 }

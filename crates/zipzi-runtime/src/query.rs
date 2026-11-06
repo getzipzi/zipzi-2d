@@ -12,7 +12,7 @@ trait Record {
     fn id(&self) -> &str;
     fn value(&self, remaining: &mut usize) -> Result<Value, Status>;
 }
-fn bounded(value: &impl Serialize, remaining: &mut usize) -> Result<Value, Status> {
+pub(crate) fn bounded(value: &impl Serialize, remaining: &mut usize) -> Result<Value, Status> {
     struct Count(usize, usize);
     impl std::io::Write for Count {
         fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
@@ -28,12 +28,8 @@ fn bounded(value: &impl Serialize, remaining: &mut usize) -> Result<Value, Statu
         }
     }
     let mut count = Count(0, *remaining);
-    serde_json::to_writer(&mut count, value).map_err(|_| {
-        error(
-            "RESOURCE_LIMIT",
-            "Query output exceeds bound; select fewer records",
-        )
-    })?;
+    serde_json::to_writer(&mut count, value)
+        .map_err(|_| error("RESOURCE_LIMIT", "Response exceeds its result bound"))?;
     *remaining -= count.0;
     serde_json::to_value(value).map_err(|e| Status::error("QUERY_ENCODING", e.to_string()))
 }

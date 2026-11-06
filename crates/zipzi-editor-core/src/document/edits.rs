@@ -255,19 +255,32 @@ impl Document {
         {
             return true;
         }
-        self.pending.as_ref().is_some_and(|pending| {
-            *pending.changed.get_or_init(|| {
-                !pending
-                    .original
-                    .unchanged(&pending.edit.candidate_document())
+        self.pending
+            .as_ref()
+            .filter(|pending| pending.edit.is_active())
+            .is_some_and(|pending| {
+                *pending.changed.get_or_init(|| {
+                    !pending
+                        .original
+                        .unchanged(&pending.edit.candidate_document())
+                })
             })
-        })
     }
 
     pub fn finish_edit(&mut self) -> Result<()> {
         self.clear_mesh_generation_preview();
         if self.manual_pending.is_some() {
             self.finish_manual_mesh_gesture()?;
+        }
+        if self
+            .pending
+            .as_ref()
+            .is_some_and(|pending| !pending.edit.is_active())
+        {
+            self.cancel_edit();
+            return Err(
+                zipzi_core::Status::error("DRAFT_ENDED", "Edit candidate has ended").into(),
+            );
         }
         if let Some(token) = self.expression_edit_token() {
             self.commit_expression_entry_edit(token)?;
@@ -281,9 +294,7 @@ impl Document {
                 && property.as_ref().is_some_and(|p| {
                     matches!(
                         p.kind,
-                        crate::ObjectKind::PhysicsGroup
-                            | crate::ObjectKind::ExpressionEntry
-                            | crate::ObjectKind::MotionRegistration
+                        crate::ObjectKind::ExpressionEntry | crate::ObjectKind::MotionRegistration
                     )
                 })
             {
@@ -309,7 +320,7 @@ impl Document {
                 if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                     self.pristine_blank = None;
                 }
-                self.consume_authoring_receipt(&receipt, false);
+                self.consume_authoring_receipt(&receipt, None);
                 return Ok(());
             }
             self.invalidate_projection(
@@ -364,12 +375,16 @@ impl Document {
             if let PendingOriginal::ExpressionEntry(address) = &pending.original {
                 let references_changed = pending
                     .edit
-                    .candidate_document()
-                    .expression_entry(&address.id)
-                    .unwrap()
-                    .1
-                    .target
-                    != address.value.target;
+                    .read_snapshot()
+                    .ok()
+                    .and_then(|snapshot| {
+                        snapshot
+                            .snapshot
+                            .document()
+                            .expression_entry(&address.id)
+                            .map(|(_, entry)| entry.target != address.value.target)
+                    })
+                    .unwrap_or(true);
                 let previous_revision = self.projection_revision;
                 self.invalidate_expression_projection();
                 if !references_changed {
@@ -414,8 +429,7 @@ impl Document {
 
     fn apply_history(&mut self, redo: bool) -> Result<()> {
         self.finish_edit()?;
-        let before = self.evaluation_revision();
-        let state = self.model().editor_state().clone();
+        let before = self.model();
         let receipt = if redo {
             self.session.redo()?
         } else {
@@ -423,13 +437,11 @@ impl Document {
         };
         self.refresh_textures()?;
         self.reconcile_parameter_preview()?;
-        self.consume_authoring_receipt(
-            &receipt,
-            before != self.evaluation_revision() || state == *self.model().editor_state(),
-        );
+        self.consume_authoring_receipt(&receipt, Some(&before));
         // Visibility affects Editor preview even though it is not a runtime
         // evaluation input. Lock-only history keeps the current playback source.
-        if !state
+        if !before
+            .editor_state()
             .hidden_objects()
             .eq(self.model().editor_state().hidden_objects())
         {
@@ -467,20 +479,23 @@ mod tests {
             let peer = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::new_v4().to_string());
             doc.session.edit("Fixture", None, |edit| {
                 for object in [&mesh, &peer] {
-                    edit.create_mesh(zipzi_core::Mesh {
-                        id: object.id.clone(),
-                        runtime_id: object.id.clone(),
-                        name: "Mesh".into(),
-                        vertex_ids: vec![0, 1, 2],
-                        base_positions: vec![
-                            Vec2::new(0., 0.),
-                            Vec2::new(1., 0.),
-                            Vec2::new(0., 1.),
-                        ],
-                        uvs: vec![Vec2::default(); 3],
-                        triangles: vec![[0, 1, 2]],
-                        ..Default::default()
-                    })?;
+                    crate::test_sdk::insert_fixture_mesh(
+                        edit,
+                        zipzi_core::Mesh {
+                            id: object.id.clone(),
+                            runtime_id: object.id.clone(),
+                            name: "Mesh".into(),
+                            vertex_ids: vec![0, 1, 2],
+                            base_positions: vec![
+                                Vec2::new(0., 0.),
+                                Vec2::new(1., 0.),
+                                Vec2::new(0., 1.),
+                            ],
+                            uvs: vec![Vec2::default(); 3],
+                            triangles: vec![[0, 1, 2]],
+                            ..Default::default()
+                        },
+                    )?;
                 }
                 Ok(())
             })?;

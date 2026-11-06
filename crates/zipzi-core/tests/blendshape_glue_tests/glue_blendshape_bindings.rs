@@ -6,7 +6,7 @@ use zipzi_core::types::{
 
 #[test]
 fn test_glue_blendshape_binding_crud_and_erase_references() {
-    let mut doc = create_base_document();
+    let doc = create_base_document();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -24,7 +24,7 @@ fn test_glue_blendshape_binding_crud_and_erase_references() {
         intensity: 0.5,
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_glue(glue)).unwrap().state;
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -34,7 +34,9 @@ fn test_glue_blendshape_binding_crud_and_erase_references() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_blend_key_table(bkt))
+        .unwrap()
+        .state;
 
     let mut binding = BlendShapeBinding {
         id: BINDING_BS.to_string(),
@@ -56,25 +58,26 @@ fn test_glue_blendshape_binding_crud_and_erase_references() {
     if let DeltaKeyforms::Glue(forms) = &mut binding.keyforms {
         for (form, sample) in forms
             .iter_mut()
-            .zip(&doc.get_blend_key_table(KEY_TABLE).unwrap().samples)
+            .zip(&doc.blend_key_table(KEY_TABLE).unwrap().samples)
         {
             form.sample_id = sample.id.clone();
         }
     }
-    assert!(doc.create_blend_binding(binding.clone()).status.is_ok());
-    assert_eq!(doc.blend_bindings_for_target(GLUE_ID), vec![&binding]);
+    let doc = prepare(&doc, |b| b.create_blend_binding(binding.clone()))
+        .unwrap()
+        .state;
+    assert_eq!(
+        doc.blend_bindings_for_target(GLUE_ID).collect::<Vec<_>>(),
+        vec![&binding]
+    );
 
-    // Glue cannot be erased while referenced by BlendShapeBinding
-    let erase_res = doc.erase_object(GLUE_ID);
-    assert!(!erase_res.status.is_ok());
-    assert!(erase_res.referrers.contains(&BINDING_BS.to_string()));
-
-    // Erasing the BlendShapeBinding succeeds
-    assert!(doc.erase_object(BINDING_BS).status.is_ok());
-    assert!(doc.blend_bindings_for_target(GLUE_ID).is_empty());
-
-    // Now erasing the glue succeeds
-    assert!(doc.erase_object(GLUE_ID).status.is_ok());
+    assert!(prepare(&doc, |b| b.remove_glue(GLUE_ID)).is_err());
+    let doc = prepare(&doc, |b| b.remove_blend_binding(BINDING_BS))
+        .unwrap()
+        .state;
+    assert!(doc.blend_bindings_for_target(GLUE_ID).next().is_none());
+    let doc = prepare(&doc, |b| b.remove_glue(GLUE_ID)).unwrap().state;
+    assert!(doc.glue(GLUE_ID).is_none());
 }
 
 #[test]
@@ -82,14 +85,14 @@ fn test_glue_blendshape_and_ordinary_coexistence() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
     // Base positions:
     // Mesh A v1: (0, 0)
     // Mesh B v10: (10, 20)
-    let mut mesh_b = doc.get_mesh(MESH_B).unwrap().clone();
+    let mut mesh_b = builder.mesh(MESH_B).unwrap().clone();
     mesh_b.base_positions[0] = Vec2::new(10.0, 20.0);
-    assert!(doc.replace_mesh(mesh_b).status.is_ok());
+    builder.replace_mesh(mesh_b).unwrap();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -107,7 +110,7 @@ fn test_glue_blendshape_and_ordinary_coexistence() {
         intensity: 0.3, // base intensity
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    builder.create_glue(glue).unwrap();
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -117,7 +120,7 @@ fn test_glue_blendshape_and_ordinary_coexistence() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     let binding = BlendShapeBinding {
         id: BINDING_BS.to_string(),
@@ -136,11 +139,12 @@ fn test_glue_blendshape_and_ordinary_coexistence() {
             }, // delta +0.4 -> total 0.7
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    builder.create_blend_binding(binding).unwrap();
 
     // Case 1: PARAM_BS = 0.0 -> intensity = 0.3
     let mut preview: PreviewValues = HashMap::new();
     preview.insert(PARAM_BS.to_string(), 0.0);
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let a = frame.drawables.iter().find(|d| d.id == MESH_A).unwrap();
@@ -167,10 +171,10 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
     let param_bs2 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-    assert!(doc
+    builder
         .create_parameter(Parameter {
             id: param_bs2.to_string(),
             runtime_id: "ParamBS2".to_string(),
@@ -182,12 +186,11 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
             kind: ParameterKind::BlendShape,
             repeat: false,
         })
-        .status
-        .is_ok());
+        .unwrap();
 
-    let mut mesh_b = doc.get_mesh(MESH_B).unwrap().clone();
+    let mut mesh_b = builder.mesh(MESH_B).unwrap().clone();
     mesh_b.base_positions[0] = Vec2::new(10.0, 20.0);
-    assert!(doc.replace_mesh(mesh_b).status.is_ok());
+    builder.replace_mesh(mesh_b).unwrap();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -205,7 +208,7 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
         intensity: 0.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    builder.create_glue(glue).unwrap();
 
     let kt1 = BlendShapeKeyTable {
         samples: Default::default(),
@@ -215,7 +218,7 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(kt1).status.is_ok());
+    builder.create_blend_key_table(kt1).unwrap();
 
     let kt2_id = "77777777-7777-4777-8777-777777777778";
     let kt2 = BlendShapeKeyTable {
@@ -226,7 +229,7 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(kt2).status.is_ok());
+    builder.create_blend_key_table(kt2).unwrap();
 
     // Constraint on PARAM_NORM (minimum: -1.0, maximum: 1.0): weight 1.0 at 0.0, 0.5 at 1.0
     let constraint = BlendShapeConstraint {
@@ -236,7 +239,7 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
         keys: vec![0.0, 1.0],
         weights: vec![1.0, 0.5],
     };
-    assert!(doc.create_blend_constraint(constraint).status.is_ok());
+    builder.create_blend_constraint(constraint).unwrap();
 
     // Binding 1: delta +0.2
     let b1 = BlendShapeBinding {
@@ -256,7 +259,7 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(b1).status.is_ok());
+    builder.create_blend_binding(b1).unwrap();
 
     // Binding 2: delta +0.4
     let b2_id = "99999999-9999-4999-8999-999999999998";
@@ -277,9 +280,10 @@ fn test_glue_blendshape_multi_binding_and_shared_constraint() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(b2).status.is_ok());
+    builder.create_blend_binding(b2).unwrap();
 
     let mut preview: PreviewValues = HashMap::new();
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
 
     // PARAM_BS = 1.0, param_bs2 = 1.0, PARAM_NORM = 0.0 (constraint weight = 1.0)
@@ -306,11 +310,11 @@ fn test_glue_blendshape_negative_and_excess_delta_clamping() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
-    let mut mesh_b = doc.get_mesh(MESH_B).unwrap().clone();
+    let mut mesh_b = builder.mesh(MESH_B).unwrap().clone();
     mesh_b.base_positions[0] = Vec2::new(10.0, 20.0);
-    assert!(doc.replace_mesh(mesh_b).status.is_ok());
+    builder.replace_mesh(mesh_b).unwrap();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -328,7 +332,7 @@ fn test_glue_blendshape_negative_and_excess_delta_clamping() {
         intensity: 0.2, // base intensity 0.2
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    builder.create_glue(glue).unwrap();
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -338,7 +342,7 @@ fn test_glue_blendshape_negative_and_excess_delta_clamping() {
         keys: vec![0.0, 0.5, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     // Delta keyforms: at 0.5 delta is -0.5 (raw 0.2 - 0.5 = -0.3, should clamp to 0.0)
     // At 1.0 delta is +1.2 (raw 0.2 + 1.2 = 1.4, should clamp to 1.0)
@@ -363,9 +367,10 @@ fn test_glue_blendshape_negative_and_excess_delta_clamping() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    builder.create_blend_binding(binding).unwrap();
 
     let mut preview: PreviewValues = HashMap::new();
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
 
     // At 0.5: intensity clamped to 0.0 -> no displacement at all!

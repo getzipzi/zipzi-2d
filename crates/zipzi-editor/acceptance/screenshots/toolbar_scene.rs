@@ -11,30 +11,33 @@ use zipzi_editor_core::{CommandId, Document, Editor, EditorCommand, ObjectKind, 
 
 pub(super) fn toolbar_document() -> anyhow::Result<(Document, tempfile::TempDir)> {
     let assets = tempfile::tempdir()?;
-    let mut session = zipzi_sdk::AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.edit("Toolbar fixture", None, |edit| {
-        edit.create_transform(Transform {
-            id: uuid::Uuid::from_u128(502).to_string(),
-            name: "Warp".into(),
-            data: TransformData::Warp(WarpTransform {
-                bezier: None,
-                rows: 1,
-                columns: 1,
-                quad: false,
-                points: vec![
-                    Vec2::new(32., 32.),
-                    Vec2::new(224., 32.),
-                    Vec2::new(32., 224.),
-                    Vec2::new(224., 224.),
-                ],
-            }),
-            ..Default::default()
-        })
+    crate::test_fixture::publish_fixture(&mut session, "Toolbar fixture", |edit| {
+        crate::test_fixture::insert_transform(
+            edit,
+            Transform {
+                id: uuid::Uuid::from_u128(502).to_string(),
+                name: "Warp".into(),
+                data: TransformData::Warp(WarpTransform {
+                    bezier: None,
+                    rows: 1,
+                    columns: 1,
+                    quad: false,
+                    points: vec![
+                        Vec2::new(32., 32.),
+                        Vec2::new(224., 32.),
+                        Vec2::new(32., 224.),
+                        Vec2::new(224., 224.),
+                    ],
+                }),
+                ..Default::default()
+            },
+        )
     })?;
-    let saved = session.save_project(&assets.path().join("toolbar"), None)?;
+    let saved = crate::test_fixture::save_fixture(&mut session, &assets.path().join("toolbar"))?;
     Ok((Document::open(&saved.path)?, assets))
 }
 

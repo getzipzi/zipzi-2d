@@ -1,468 +1,372 @@
-use std::collections::VecDeque;
-use zipzi_runtime::{preview::PreviewCommand as C, *};
+use serde_json::Value;
+use zipzi_contract::kernel_tasks::{ParameterActivation, SampleInput, SampleRequest};
+use zipzi_runtime::*;
 
-#[derive(Default)]
-struct Manual(VecDeque<Work>);
-impl Executor for Manual {
-    fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
-        self.0.push_back(work);
-        Ok(())
-    }
-}
 fn id(n: u32) -> String {
     format!("79630000-0000-4000-8000-{n:012x}")
 }
-fn fixture() -> (Runtime, ClientId, SessionId) {
-    let mut rt = Runtime::default();
+
+fn fixture(limits: RuntimeLimits) -> (Runtime, ClientId, Version) {
+    let mut rt = Runtime::new(limits);
     let client = rt.register_client().unwrap();
     let session = rt
-        .create_session(client, &id(1), zipzi_core::ModelSetup::default())
+        .create_session(client, &id(1), Default::default())
         .unwrap();
-    let edit = rt.begin_edit(client, session, "parameter", None).unwrap();
-    rt.apply_edit(client, edit, |e| {
-        e.create_parameter_spec(zipzi_sdk::ParameterCreateSpec {
-            id: Some(id(2)),
-            name: "P".into(),
-            minimum: -1.,
-            maximum: 1.,
-            default_value: 0.,
-            runtime_id: None,
-            kind: None,
-            decimal_places: None,
-            repeat: None,
-        })
-        .map(|_| ())
-    })
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    (rt, client, session)
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, ()) = rt
+        .batch(client, draft, |c| c.create_parameter(parameter(2, 0.)))
+        .unwrap();
+    let version = rt.publish(client, draft, "Parameter").unwrap().version;
+    (rt, client, version)
 }
-fn finish(
-    rt: &mut Runtime,
-    c: ClientId,
-    job: JobId,
-) -> std::sync::Arc<preview::PreviewSampleBatch> {
-    let mut workers = Manual::default();
-    while !rt.job_info(c, job).unwrap().state.is_terminal() {
-        rt.dispatch(&mut workers);
-        assert!(rt.complete(workers.0.pop_front().unwrap().run_quantum()));
+
+fn parameter(n: u32, default_value: f32) -> zipzi_core::Parameter {
+    zipzi_core::Parameter {
+        id: id(n),
+        runtime_id: id(n),
+        name: "P".into(),
+        minimum: -1.,
+        maximum: 1.,
+        default_value,
+        ..Default::default()
     }
-    let JobValue::Previewed(value) = rt.job_info(c, job).unwrap().result.unwrap().unwrap() else {
-        panic!("preview result")
+}
+
+fn animation(times: Vec<f32>, value: Option<f32>, motions: usize) -> SampleRequest {
+    SampleRequest {
+        input: SampleInput::Animation {
+            times,
+            motions: vec![(id(2), 0.); motions],
+            expressions: vec![],
+            inputs: value
+                .into_iter()
+                .map(|value| ParameterActivation {
+                    id: id(2),
+                    time: 0.,
+                    value,
+                })
+                .collect(),
+            physics: false,
+            stabilized_start: false,
+        },
+        queries: vec![],
+        quality: false,
+    }
+}
+
+fn complete(rt: &mut Runtime, job: JobId) {
+    let work = rt.take_work(job).unwrap();
+    rt.complete(work.run()).unwrap();
+}
+
+fn finish(rt: &mut Runtime, client: ClientId, job: JobId) -> Result<ReadResult> {
+    while !rt.job(client, job).unwrap().state.is_terminal() {
+        complete(rt, job);
+    }
+    let value = rt.job(client, job).unwrap().result.clone().unwrap();
+    rt.release_job(client, job).unwrap();
+    let JobValue::Read(value) = value? else {
+        panic!("expected sample result")
     };
-    rt.release_job(c, job).unwrap();
-    value
+    Ok(value)
 }
+
+fn frames(result: &ReadResult) -> Vec<Value> {
+    let value: Value = serde_json::from_slice(result.bytes()).unwrap();
+    value["frames"].as_array().unwrap().clone()
+}
+
 #[test]
-fn clients_views_frozen_sources_and_formal_history_are_independent() {
-    let (mut rt, c, s) = fixture();
-    let other = rt.register_client().unwrap();
-    rt.attach_session(other, s).unwrap();
-    let before = rt.session_info(s).unwrap();
-    let (a, source) = rt.create_preview(c, s, None, None).unwrap();
-    let (b, _) = rt.create_preview(c, s, None, None).unwrap();
-    let (remote, _) = rt.create_preview(other, s, None, None).unwrap();
-    rt.apply_preview(
-        c,
-        a,
-        C::SetParameter {
-            id: id(2),
-            value: 0.75,
-        },
-    )
-    .unwrap();
-    rt.apply_preview(
-        c,
-        b,
-        C::SetParameter {
-            id: id(2),
-            value: -0.5,
-        },
-    )
-    .unwrap();
-    assert!(matches!(
-        rt.apply_preview(other, a, C::Reset),
-        Err(RuntimeError::WrongOwner)
-    ));
-    assert!(matches!(
-        rt.release_preview(other, a),
-        Err(RuntimeError::WrongOwner)
-    ));
-    let job = rt
-        .request_preview_samples(c, a, vec![0., 0.5, 0.25, 0.5], true, false)
+fn independent_animation_requests_keep_frozen_inputs_and_formal_history() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let peer = rt.register_client().unwrap();
+    rt.attach(peer, version.session).unwrap();
+    let source = QuerySource::Published(version);
+    let a = rt
+        .request_samples(
+            client,
+            source,
+            animation(vec![0., 0.5, 0.25, 0.5], Some(0.75), 0),
+        )
         .unwrap();
-    assert!(matches!(
-        rt.apply_preview(c, a, C::Reset),
-        Err(RuntimeError::Busy)
-    ));
-    rt.apply_preview(
-        other,
-        remote,
-        C::SetParameter {
-            id: id(2),
-            value: 0.25,
-        },
-    )
-    .unwrap();
-    let result = finish(&mut rt, c, job);
-    assert_eq!(result.source, source);
+    let b = rt
+        .request_samples(client, source, animation(vec![0.5], Some(-0.5), 0))
+        .unwrap();
+    let remote = rt
+        .request_samples(peer, source, animation(vec![0.5], Some(0.25), 0))
+        .unwrap();
+    assert_eq!(rt.cancel_job(peer, a).unwrap_err().code, "NOT_OWNER");
+    complete(&mut rt, a);
+    assert_eq!(rt.job(client, a).unwrap().state, JobState::Queued);
     assert_eq!(
-        result
-            .samples
-            .frames
-            .iter()
-            .map(|f| f.motion.time)
-            .collect::<Vec<_>>(),
-        vec![0., 0.5, 0.25, 0.5]
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
     );
-    for frame in &result.samples.frames {
-        assert_eq!(frame.preview_id, a.serial());
-        assert_eq!(frame.motion.parameters[&id(2)], 0.75);
-        assert!(frame.geometry.is_some());
-    }
-    let job = rt
-        .request_preview_samples(c, b, vec![0.5], false, false)
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, ()) = rt
+        .batch(client, draft, |c| c.create_parameter(parameter(3, 0.5)))
         .unwrap();
+    let after = rt.publish(client, draft, "New parameter").unwrap();
+    let result = finish(&mut rt, client, a).unwrap();
+    assert_eq!(result.source, source);
+    let sampled = frames(&result);
+    let times: Vec<_> = sampled
+        .iter()
+        .map(|f| f["animation"]["time"].as_f64().unwrap())
+        .collect();
+    assert_eq!(times, [0., 0.5, 0.25, 0.5]);
+    for frame in &sampled {
+        assert_eq!(frame["animation"]["parameters"][id(2)], 0.75);
+        assert!(frame["animation"]["parameters"].get(id(3)).is_none());
+        assert!(frame["geometry"].is_object());
+    }
     assert_eq!(
-        finish(&mut rt, c, job).samples.frames[0].motion.parameters[&id(2)],
+        frames(&finish(&mut rt, client, b).unwrap())[0]["animation"]["parameters"][id(2)],
         -0.5
     );
-    let job = rt
-        .request_preview_samples(other, remote, vec![0.5], false, false)
-        .unwrap();
     assert_eq!(
-        finish(&mut rt, other, job).samples.frames[0]
-            .motion
-            .parameters[&id(2)],
+        frames(&finish(&mut rt, peer, remote).unwrap())[0]["animation"]["parameters"][id(2)],
         0.25
     );
-    assert_eq!(rt.session_info(s).unwrap(), before);
-    let edit = rt.begin_edit(c, s, "new parameter", None).unwrap();
-    rt.apply_edit(c, edit, |e| {
-        e.create_parameter_spec(zipzi_sdk::ParameterCreateSpec {
-            id: Some(id(3)),
-            name: "new".into(),
-            minimum: -1.,
-            maximum: 1.,
-            default_value: 0.5,
-            runtime_id: None,
-            kind: None,
-            decimal_places: None,
-            repeat: None,
-        })
-        .map(|_| ())
-    })
-    .unwrap();
-    rt.commit_edit(c, edit).unwrap();
-    let job = rt
-        .request_preview_samples(c, a, vec![0.], false, false)
-        .unwrap();
-    let old = finish(&mut rt, c, job);
-    assert_eq!(old.source, source);
-    assert!(!old.samples.frames[0].motion.parameters.contains_key(&id(3)));
-    let (fresh, _) = rt.create_preview(c, s, None, None).unwrap();
-    let job = rt
-        .request_preview_samples(c, fresh, vec![0.], false, false)
+    let fresh = rt
+        .request_samples(
+            client,
+            QuerySource::Published(after.version),
+            animation(vec![0.], None, 0),
+        )
         .unwrap();
     assert_eq!(
-        finish(&mut rt, c, job).samples.frames[0].motion.parameters[&id(3)],
+        frames(&finish(&mut rt, client, fresh).unwrap())[0]["animation"]["parameters"][id(3)],
         0.5
     );
+    assert_eq!(
+        rt.subscribe(client, version.session)
+            .unwrap()
+            .history
+            .undo_steps,
+        2
+    );
 }
+
 #[test]
-fn cancelled_queued_work_release_and_budgets_leave_no_preview_roots() {
-    let (mut rt, c, s) = fixture();
-    let base = rt.accounted_bytes();
+fn cancelled_and_invalid_samples_release_all_task_bytes() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let source = QuerySource::Published(version);
+    let before = rt.task_bytes();
+    assert_eq!(
+        rt.request_samples(client, source, animation(vec![0.; 65], None, 0))
+            .unwrap_err()
+            .code,
+        "RESOURCE_LIMIT"
+    );
     for _ in 0..100 {
-        let (p, _) = rt.create_preview(c, s, None, None).unwrap();
         let job = rt
-            .request_preview_samples(c, p, vec![100.], true, false)
+            .request_samples(client, source, animation(vec![100.], None, 0))
             .unwrap();
-        rt.cancel_job(c, job).unwrap();
-        assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelled);
-        rt.apply_preview(
-            c,
-            p,
-            C::SetParameter {
-                id: id(2),
-                value: 0.5,
-            },
-        )
-        .unwrap();
-        assert_eq!(rt.preview_state(c, p).unwrap().1.time, 0.);
-        rt.release_job(c, job).unwrap();
-        rt.release_preview(c, p).unwrap();
+        rt.cancel_job(client, job).unwrap();
+        assert_eq!(finish(&mut rt, client, job).unwrap_err().code, "CANCELLED");
+        assert_eq!(rt.task_bytes(), before);
     }
-    assert_eq!(rt.preview_count(), 0);
-    assert_eq!(rt.accounted_bytes(), base);
-    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
-    assert!(rt
-        .request_preview_samples(c, p, vec![0.; 65], false, false)
-        .is_err());
-    assert!(rt
-        .apply_preview(
-            c,
-            p,
-            C::SetParameter {
-                id: id(99),
-                value: 0.5
-            }
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
+}
+
+#[test]
+fn jobs_capture_drafts_across_sequence_changes_and_release_on_client_expiry() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, ()) = rt
+        .batch(client, draft, |c| c.create_parameter(parameter(3, 0.5)))
+        .unwrap();
+    let source = QuerySource::Draft(draft);
+    let job = rt
+        .request_samples(client, source, animation(vec![0.5], None, 0))
+        .unwrap();
+    let cleanup = rt
+        .request_samples(client, source, animation(vec![1., 2.], None, 0))
+        .unwrap();
+    let (current, ()) = rt.batch(client, draft, |_| Ok(())).unwrap();
+    rt.cancel_draft(client, current.draft).unwrap();
+    let result = finish(&mut rt, client, job).unwrap();
+    assert_eq!(result.source, source);
+    assert_eq!(frames(&result)[0]["animation"]["parameters"][id(3)], 0.5);
+    drop(result);
+    let entered = rt.take_work(cleanup).unwrap();
+    rt.release_client(client);
+    rt.complete(entered.run()).unwrap();
+    assert!(rt.outstanding_job_ids().is_empty());
+    assert_eq!(rt.task_bytes(), 0);
+    let peer = rt.register_client().unwrap();
+    rt.attach(peer, version.session).unwrap();
+    let formal = rt.subscribe(peer, version.session).unwrap();
+    assert_eq!(formal.cursor, version);
+    assert!(formal
+        .snapshot
+        .snapshot
+        .document()
+        .parameter(&id(3))
+        .is_none());
+}
+
+#[test]
+fn cancellation_before_result_installation_discards_a_completed_read() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let job = rt
+        .request_samples(
+            client,
+            QuerySource::Published(version),
+            animation(vec![0.5], None, 0),
         )
-        .is_err());
-    assert_eq!(rt.preview_state(c, p).unwrap().1.sequence, 0);
-    let job = rt
-        .request_preview_samples(c, p, vec![0.5], false, false)
         .unwrap();
-    rt.release_preview(c, p).unwrap();
-    rt.release_preview(c, p).unwrap();
-    assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelled);
-    rt.release_job(c, job).unwrap();
-    assert_eq!(rt.accounted_bytes(), base);
-    let mut limited = Runtime::new(RuntimeLimits {
-        preview_bytes: 0,
-        ..Default::default()
-    });
-    let c = limited.register_client().unwrap();
-    let s = limited
-        .create_session(c, &id(1), zipzi_core::ModelSetup::default())
-        .unwrap();
-    assert!(matches!(
-        limited.create_preview(c, s, None, None),
-        Err(RuntimeError::Budget(_))
-    ));
-    assert_eq!(limited.preview_count(), 0);
-}
-#[test]
-fn candidate_capture_cancel_expiry_and_late_completion_keep_exact_source() {
-    let (mut rt, c, s) = fixture();
-    let edit = rt.begin_edit(c, s, "candidate", None).unwrap();
-    let (p, source) = rt.create_preview(c, s, Some(edit), None).unwrap();
-    rt.apply_edit(c, edit, |_| Ok(())).unwrap();
-    rt.release_edit(c, edit).unwrap();
-    let job = rt
-        .request_preview_samples(c, p, vec![0.5], true, false)
-        .unwrap();
-    let value = finish(&mut rt, c, job);
-    assert_eq!(value.source, source);
-    assert!(matches!(source, SourceRef::Edit { sequence: 0, .. }));
-    let job = rt
-        .request_preview_samples(c, p, vec![100.], false, false)
-        .unwrap();
-    let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    assert_eq!(workers.0.len(), 1);
-    rt.release_client(c);
-    assert_eq!(rt.preview_count(), 0);
-    assert!(rt.complete(workers.0.pop_front().unwrap().run()));
-    assert_eq!(rt.session_info(s).unwrap().state, SessionState::Ready);
-    assert_eq!(rt.session_info(s).unwrap().history_lengths, (1, 0));
-    let _ = job;
+    let completion = rt.take_work(job).unwrap().run();
+    rt.cancel_job(client, job).unwrap();
+    rt.complete(completion).unwrap();
+    assert_eq!(rt.job(client, job).unwrap().state, JobState::Cancelled);
+    rt.release_job(client, job).unwrap();
+    assert_eq!(rt.task_bytes(), 0);
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
 }
 
-#[test]
-fn cancellation_after_sdk_completion_reports_the_completed_state() {
-    let (mut rt, c, s) = fixture();
-    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
-    let job = rt
-        .request_preview_samples(c, p, vec![0.5], false, false)
-        .unwrap();
-    let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    let completed = workers.0.pop_front().unwrap().run();
-    rt.cancel_job(c, job).unwrap();
-    assert!(rt.complete(completed));
-    assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Succeeded);
-    assert_eq!(rt.preview_state(c, p).unwrap().1.time, 0.5);
-}
-
-fn event_fixture(limits: RuntimeLimits, payload: usize) -> (Runtime, ClientId, SessionId) {
+fn event_fixture(limits: RuntimeLimits, payload: usize) -> (Runtime, ClientId, Version) {
     use zipzi_core::document::{MotionClip, MotionEvent};
     let mut rt = Runtime::new(limits);
     let c = rt.register_client().unwrap();
     let s = rt
         .create_session(c, &id(1), zipzi_core::ModelSetup::default())
         .unwrap();
-    let e = rt.begin_edit(c, s, "events", None).unwrap();
-    rt.apply_edit(c, e, |edit| {
-        edit.create_motion(MotionClip {
-            id: id(2),
-            name: "Events".into(),
-            duration: 1.,
-            fps: 60.,
-            looping: false,
-            restricted_beziers: false,
-            fade_in: Some(1.),
-            fade_out: Some(1.),
-            track_order: vec![],
-            tracks: vec![].into(),
-            events: vec![MotionEvent {
-                id: id(3),
-                time: 0.01,
-                value: "x".repeat(payload),
+    let draft = rt
+        .begin_draft(c, rt.subscribe(c, s).unwrap().cursor)
+        .unwrap();
+    let (draft, ()) = rt
+        .batch(c, draft, |edit| {
+            edit.create_motion(MotionClip {
+                id: id(2),
+                name: "Events".into(),
+                duration: 1.,
+                fps: 60.,
+                looping: false,
+                restricted_beziers: false,
+                fade_in: Some(1.),
+                fade_out: Some(1.),
+                track_order: vec![],
+                tracks: vec![].into(),
+                events: vec![MotionEvent {
+                    id: id(3),
+                    time: 0.01,
+                    value: "x".repeat(payload),
+                    extensions: Default::default(),
+                }]
+                .into(),
                 extensions: Default::default(),
-            }]
-            .into(),
-            extensions: Default::default(),
-            meta_extensions: Default::default(),
-            opaque_source_ids: None,
-            opaque_source_content_hash: None,
+                meta_extensions: Default::default(),
+                opaque_source_ids: None,
+                opaque_source_content_hash: None,
+            })
         })
-    })
-    .unwrap();
-    rt.commit_edit(c, e).unwrap();
-    (rt, c, s)
+        .unwrap();
+    let version = rt.publish(c, draft, "Events").unwrap().version;
+    (rt, c, version)
 }
 
 #[test]
-fn repeated_motion_events_are_admitted_before_advancing_or_allocating_results() {
-    let ceiling = 20 << 20;
-    let (mut rt, c, s) = event_fixture(
+fn repeated_motion_event_expansion_is_bounded_before_advancing() {
+    let (mut rt, client, version) = event_fixture(
         RuntimeLimits {
-            accounted_bytes: ceiling,
+            result_bytes: 1 << 20,
             ..Default::default()
         },
         64 << 10,
     );
-    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
-    for _ in 0..512 {
-        rt.apply_preview(
-            c,
-            p,
-            C::ScheduleMotion {
-                id: id(2),
-                time: 0.,
-            },
-        )
-        .unwrap();
-    }
-    let before = rt.preview_state(c, p).unwrap();
-    let accounted = rt.accounted_bytes();
-    for view in [
-        None,
-        Some(observation::ObservationView {
-            texture_policy: Default::default(),
-            width: 8,
-            height: 8,
-            roi: [0., 0., 1., 1.],
-            padding_model: 0.,
-            topology: None,
-            quality: false,
-        }),
-    ] {
-        for incremental in [false, true] {
-            assert!(matches!(
-                rt.request_preview_frames(
-                    c,
-                    p,
-                    vec![2. / 60.],
-                    false,
-                    incremental,
-                    vec![],
-                    view.clone()
-                ),
-                Err(RuntimeError::Budget(_))
-            ));
-            assert_eq!(
-                rt.preview_state(c, p).unwrap().1.sequence,
-                before.1.sequence
-            );
-            assert_eq!(rt.preview_state(c, p).unwrap().1.time, 0.);
-            assert_eq!(rt.accounted_bytes(), accounted);
-        }
-    }
-    let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    assert!(workers.0.is_empty());
-    rt.apply_preview(c, p, C::Reset).unwrap();
-}
-
-#[test]
-fn sampled_events_remain_charged_until_the_preview_is_released() {
-    let (mut rt, c, s) = event_fixture(RuntimeLimits::default(), 16 << 10);
-    let base = rt.accounted_bytes();
-    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
-    for _ in 0..4 {
-        rt.apply_preview(
-            c,
-            p,
-            C::ScheduleMotion {
-                id: id(2),
-                time: 0.,
-            },
-        )
-        .unwrap();
-    }
-    let before = rt.accounted_bytes();
+    let source = QuerySource::Published(version);
+    assert_eq!(
+        rt.request_samples(client, source, animation(vec![2. / 60.], None, 512))
+            .unwrap_err()
+            .code,
+        "INVALID_SAMPLES"
+    );
+    assert!(rt.next_work().is_none());
     let job = rt
-        .request_preview_samples(c, p, vec![2. / 60., 2. / 60.], false, false)
+        .request_samples(client, source, animation(vec![2. / 60.], None, 128))
         .unwrap();
-    let admitted = rt.accounted_bytes();
-    let result = finish(&mut rt, c, job);
-    for frame in &result.samples.frames {
-        assert_eq!(frame.motion.fired_events.len(), 4);
-        assert!(frame
-            .motion
-            .fired_events
+    assert_eq!(
+        finish(&mut rt, client, job).unwrap_err().code,
+        "RESOURCE_LIMIT"
+    );
+    assert_eq!(rt.task_bytes(), 0);
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
+}
+
+#[test]
+fn sampled_events_remain_charged_until_the_last_result_reader_drops() {
+    let (mut rt, client, version) = event_fixture(Default::default(), 16 << 10);
+    let source = QuerySource::Published(version);
+    let before = rt.task_bytes();
+    let job = rt
+        .request_samples(client, source, animation(vec![2. / 60., 2. / 60.], None, 4))
+        .unwrap();
+    let admitted = rt.task_bytes();
+    let result = finish(&mut rt, client, job).unwrap();
+    let sampled = frames(&result);
+    assert_eq!(sampled.len(), 2);
+    for frame in sampled {
+        let events = frame["animation"]["fired_events"].as_array().unwrap();
+        assert_eq!(events.len(), 4);
+        assert!(events
             .iter()
-            .all(|e| e.value.len() == 16 << 10));
+            .all(|e| e["value"].as_str().unwrap().len() == 16 << 10));
     }
-    assert!(rt.accounted_bytes() > before);
-    assert!(rt.accounted_bytes() < admitted);
+    assert!(rt.task_bytes() > before);
+    assert!(rt.task_bytes() < admitted);
     drop(result);
-    rt.release_preview(c, p).unwrap();
-    assert_eq!(rt.accounted_bytes(), base);
+    assert_eq!(rt.task_bytes(), before);
 }
 
 #[test]
-fn snapshot_only_batches_reserve_their_retained_output() {
-    for incremental in [false, true] {
-        let (mut rt, c, s) = fixture();
-        let base = rt.accounted_bytes();
-        let (p, _) = rt.create_preview(c, s, None, None).unwrap();
-        let before = rt.accounted_bytes();
-        let job = rt
-            .request_preview_samples(c, p, vec![0.; 64], false, incremental)
-            .unwrap();
-        let admitted = rt.accounted_bytes();
-        let result = finish(&mut rt, c, job);
-        assert_eq!(result.samples.frames.len(), 64);
-        for frame in &result.samples.frames {
-            assert!(frame.geometry.is_none());
-            assert_eq!(frame.motion.parameters[&id(2)], 0.);
-        }
-        assert!(rt.accounted_bytes() > before);
-        assert!(rt.accounted_bytes() <= admitted);
-        drop(result);
-        rt.release_preview(c, p).unwrap();
-        assert_eq!(rt.accounted_bytes(), base);
-    }
-}
-
-#[test]
-fn snapshot_only_batches_reject_insufficient_budget_before_advancing() {
-    let mut rt = Runtime::default();
-    let c = rt.register_client().unwrap();
-    let s = rt
-        .create_session(c, &id(1), zipzi_core::ModelSetup::default())
+fn maximum_sample_batch_retains_bounded_output_after_job_release() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let source = QuerySource::Published(version);
+    let job = rt
+        .request_samples(client, source, animation(vec![0.; 64], None, 0))
         .unwrap();
-    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
-    // This fits the old frame-independent reservation, but cannot retain even
-    // an empty model's 64 snapshots. Rejection must happen before any playback.
-    rt.set_external_bytes(RuntimeLimits::default().accounted_bytes - rt.accounted_bytes() - 70_000);
-    let before = rt.preview_state(c, p).unwrap();
-    let accounted = rt.accounted_bytes();
-    for incremental in [false, true] {
-        assert!(matches!(
-            rt.request_preview_samples(c, p, vec![1.; 64], false, incremental),
-            Err(RuntimeError::Budget(_))
-        ));
-        let after = rt.preview_state(c, p).unwrap();
-        assert_eq!(after.0, before.0);
-        assert_eq!(after.1.sequence, before.1.sequence);
-        assert_eq!(after.1.time, before.1.time);
-        assert_eq!(rt.accounted_bytes(), accounted);
-    }
-    let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    assert!(workers.0.is_empty());
+    let admitted = rt.task_bytes();
+    let result = finish(&mut rt, client, job).unwrap();
+    let sampled = frames(&result);
+    assert_eq!(sampled.len(), 64);
+    assert!(sampled
+        .iter()
+        .all(|f| f["animation"]["parameters"][id(2)] == 0.));
+    assert!(rt.task_bytes() >= result.bytes().len());
+    assert!(rt.task_bytes() < admitted);
+    drop(result);
+    assert_eq!(rt.task_bytes(), 0);
+}
+
+#[test]
+fn low_workspace_budget_rejects_before_sampling_or_reserving_work() {
+    let (mut rt, client, version) = fixture(RuntimeLimits {
+        task_bytes: 70_000,
+        ..Default::default()
+    });
+    let source = QuerySource::Published(version);
+    assert_eq!(
+        rt.request_samples(client, source, animation(vec![1.; 64], None, 0))
+            .unwrap_err()
+            .code,
+        "BUDGET_EXCEEDED"
+    );
+    assert!(rt.next_work().is_none());
+    assert_eq!(rt.task_bytes(), 0);
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
 }

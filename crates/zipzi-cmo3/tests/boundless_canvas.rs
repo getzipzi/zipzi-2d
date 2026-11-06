@@ -1,7 +1,7 @@
 mod common;
 use common::*;
 use zipzi_cmo3::*;
-use zipzi_core::{types::*, Document, DrawableFrame};
+use zipzi_core::{state::*, types::*, DrawableFrame};
 
 fn field<'a, 'b>(n: roxmltree::Node<'a, 'b>, name: &str) -> roxmltree::Node<'a, 'b> {
     n.children()
@@ -35,7 +35,7 @@ fn canvas(bytes: &[u8]) -> Canvas {
     }
     result
 }
-fn frame(doc: &Document, value: f32) -> DrawableFrame {
+fn frame(doc: &DocumentState, value: f32) -> DrawableFrame {
     let mut result = DrawableFrame::default();
     let pose = std::collections::HashMap::from([(PARAM.into(), value)]);
     assert!(
@@ -43,13 +43,13 @@ fn frame(doc: &Document, value: f32) -> DrawableFrame {
     );
     result
 }
-fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
+fn fixture_with_hierarchy(kind: u8, flag: u8) -> (DocumentState, Vec<u8>) {
     let (mut doc, png) = fixture();
     let c = Canvas::with_flag(100., 100., Vec2::new(130.25, -77.5), 100., flag);
-    assert!(doc.replace_model_setup(c).status.is_ok());
-    let mut parameter = doc.get_parameter(PARAM).unwrap().clone();
+    doc = prepare(&doc, |builder| builder.set_setup((c).into()));
+    let mut parameter = doc.parameter(PARAM).unwrap().clone();
     parameter.repeat = false;
-    assert!(doc.replace_parameter(parameter).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_parameter(parameter));
     if kind != 0 {
         let root = "00000000-0000-4000-8000-000000000020";
         let child = "00000000-0000-4000-8000-000000000021";
@@ -77,17 +77,16 @@ fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
                 ],
             })
         };
-        assert!(doc
-            .create_transform(Transform {
+        doc = prepare(&doc, |builder| {
+            builder.create_transform(Transform {
                 id: root.into(),
                 runtime_id: "Root".into(),
                 data,
                 ..Default::default()
             })
-            .status
-            .is_ok());
-        assert!(doc
-            .create_transform(Transform {
+        });
+        doc = prepare(&doc, |builder| {
+            builder.create_transform(Transform {
                 id: child.into(),
                 runtime_id: "Child".into(),
                 parent_id: Some(root.into()),
@@ -102,16 +101,15 @@ fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
                 }),
                 ..Default::default()
             })
-            .status
-            .is_ok());
-        let mut mesh = doc.get_mesh(MESH).unwrap().clone();
+        });
+        let mut mesh = doc.mesh(MESH).unwrap().clone();
         mesh.deformer_id = child.into();
         mesh.base_positions = vec![
             Vec2::new(-0.2, -0.2),
             Vec2::new(0.2, -0.2),
             Vec2::new(-0.2, 0.2),
         ];
-        assert!(doc.replace_mesh(mesh.clone()).status.is_ok());
+        doc = prepare(&doc, |builder| builder.replace_mesh(mesh.clone()));
         let mut binding = doc.binding_for_mesh(MESH).unwrap().clone();
         for form in &mut binding.keyforms {
             form.positions = mesh
@@ -120,12 +118,12 @@ fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
                 .map(|p| Vec2::new(p.x + form.keys[0] * 0.05, p.y))
                 .collect();
         }
-        assert!(doc.replace_binding(binding).status.is_ok());
+        doc = prepare(&doc, |builder| builder.replace_binding(binding));
     }
     let driver = "00000000-0000-4000-8000-000000000030";
     let table = "00000000-0000-4000-8000-000000000031";
-    assert!(doc
-        .create_parameter(Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: driver.into(),
             runtime_id: "Blend".into(),
             kind: ParameterKind::BlendShape,
@@ -134,10 +132,9 @@ fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
             default_value: 0.5,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_blend_key_table(BlendShapeKeyTable {
+    });
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
             id: table.into(),
@@ -145,10 +142,9 @@ fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
             keys: vec![0., 1.],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
-    assert!(doc
-        .create_blend_binding(BlendShapeBinding {
+    });
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_binding(BlendShapeBinding {
             id: "00000000-0000-4000-8000-000000000032".into(),
             target_id: MESH.into(),
             target_kind: BlendShapeTargetKind::Mesh,
@@ -165,8 +161,7 @@ fn fixture_with_hierarchy(kind: u8, flag: u8) -> (Document, Vec<u8>) {
                 },
             ]),
         })
-        .status
-        .is_ok());
+    });
     (doc, png)
 }
 
@@ -177,14 +172,16 @@ fn boundless_pair_preserves_root_and_nested_geometry_for_both_canvas_directions(
             let (doc, png) = fixture_with_hierarchy(kind, flag);
             let mut doc = doc;
             // Imported reference dimensions must not determine the export rectangle.
-            assert!(doc
-                .replace_source_canvas(Some(Canvas::new(8192., 4096., Vec2::new(500., 300.), 100.)))
-                .status
-                .is_ok());
+            doc = prepare(&doc, |builder| {
+                builder.set_setup(ModelSetup {
+                    source_canvas: Some(Canvas::new(8192., 4096., Vec2::new(500., 300.), 100.)),
+                    ..builder.setup()
+                })
+            });
             let before = doc.clone();
             let pair = encode_cubism(
                 &doc,
-                &|_: &ImageAsset| Ok(png.clone()),
+                &|_: &AssetRecord| Ok(png.clone()),
                 &CubismOptions::default(),
             )
             .unwrap();
@@ -195,7 +192,7 @@ fn boundless_pair_preserves_root_and_nested_geometry_for_both_canvas_directions(
             assert!(c.width >= 256. && c.height >= 256.);
             assert_eq!(
                 c.pixels_per_unit,
-                doc.source_canvas().map_or(1., |c| c.pixels_per_unit)
+                doc.setup().source_canvas.map_or(1., |c| c.pixels_per_unit)
             );
             let bounds = frame(&doc, 0.);
             for p in &bounds.drawables[0].positions {
@@ -216,26 +213,26 @@ fn boundless_pair_preserves_root_and_nested_geometry_for_both_canvas_directions(
             assert_eq!(
                 encode_cmo3(
                     &doc,
-                    &|_: &ImageAsset| Ok(png.clone()),
+                    &|_: &AssetRecord| Ok(png.clone()),
                     &Cmo3Options::default()
                 )
                 .unwrap()
                 .bytes,
                 pair.cmo3.bytes
             );
-            assert_eq!(doc.revision(), before.revision());
-            assert!(doc.same_content(&before));
+            assert_eq!(doc.content_id(), before.content_id());
+            assert_eq!(doc.content_id(), before.content_id());
 
             // Changing only imported framing must not move any exported forms.
             let mut finite = doc.clone();
-            let _space = doc.export_settings();
+            let _space = doc.setup().export;
             let old =
                 Canvas::with_flag(1024., 1024., Vec2::new(130.25, -77.5), c.pixels_per_unit, 1);
             // Fractional authored origins are valid; generated export origins are integral.
-            assert!(finite.replace_model_setup(old).status.is_ok());
+            finite = prepare(&finite, |builder| builder.set_setup((old).into()));
             let fixed = encode_cmo3(
                 &finite,
-                &|_: &ImageAsset| Ok(png.clone()),
+                &|_: &AssetRecord| Ok(png.clone()),
                 &Cmo3Options::default(),
             )
             .unwrap();
@@ -313,13 +310,10 @@ fn boundless_pair_preserves_root_and_nested_geometry_for_both_canvas_directions(
 #[test]
 fn empty_model_spaces_and_invisible_meshes_get_finite_export_bounds() {
     for origin in [Vec2::default(), Vec2::new(17., -23.)] {
-        let mut empty = Document::new();
-        assert!(empty
-            .initialize(DOC, Canvas::new(100., 100., origin, 1.))
-            .is_ok());
+        let empty = DocumentState::new(DOC, Canvas::new(100., 100., origin, 1.).into()).unwrap();
         let pair = encode_cubism(
             &empty,
-            &|_: &ImageAsset| panic!("empty document read an asset"),
+            &|_: &AssetRecord| panic!("empty document read an asset"),
             &CubismOptions::default(),
         )
         .unwrap();
@@ -332,7 +326,7 @@ fn empty_model_spaces_and_invisible_meshes_get_finite_export_bounds() {
         );
     }
     let (mut doc, png) = fixture_with_hierarchy(0, 1);
-    let mut hidden = doc.get_mesh(MESH).unwrap().clone();
+    let mut hidden = doc.mesh(MESH).unwrap().clone();
     hidden.id = "00000000-0000-4000-8000-000000000025".into();
     hidden.runtime_id = "Hidden".into();
     hidden.enabled = false;
@@ -341,10 +335,10 @@ fn empty_model_spaces_and_invisible_meshes_get_finite_export_bounds() {
         .iter()
         .map(|p| Vec2::new(p.x + 2000., p.y + 1000.))
         .collect();
-    assert!(doc.create_mesh(hidden).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(hidden));
     let pair = encode_cubism(
         &doc,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &CubismOptions::default(),
     )
     .unwrap();
@@ -356,13 +350,18 @@ fn empty_model_spaces_and_invisible_meshes_get_finite_export_bounds() {
 #[test]
 fn overflowing_canvas_is_rejected_before_reading_assets() {
     let (mut doc, _) = fixture_with_hierarchy(0, 1);
-    let mut c = doc.export_settings();
+    let mut c = doc.setup().export;
     c.bounds = Some([-f32::MAX, 0., f32::MAX, 100.]);
-    assert!(doc.replace_export_settings(c).status.is_ok());
+    doc = prepare(&doc, |builder| {
+        builder.set_setup(ModelSetup {
+            export: c,
+            ..builder.setup()
+        })
+    });
     assert!(inspect_cubism(&doc).is_err());
     assert!(encode_cubism(
         &doc,
-        &|_: &ImageAsset| panic!("invalid canvas read an asset"),
+        &|_: &AssetRecord| panic!("invalid canvas read an asset"),
         &CubismOptions::default()
     )
     .is_err());

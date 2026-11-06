@@ -107,6 +107,15 @@ impl Document {
                     .filter(|r| r.kind == crate::RelationKind::Contains)
                     .map(|r| r.source.clone()),
             );
+            locations.extend(index.outgoing(&object).filter_map(|relation| {
+                matches!(
+                    relation.kind,
+                    crate::RelationKind::PartOwner
+                        | crate::RelationKind::DeformParent
+                        | crate::RelationKind::ParameterGroup
+                )
+                .then(|| relation.target.clone())
+            }));
         }
         let model = self.model();
         if receipt.writes.root_changed(RootDomain::Pose) {

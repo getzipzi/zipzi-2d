@@ -4,15 +4,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::{BlendMode, Parameter};
-use zipzi_core::Document;
-use zipzi_moc3::{encode_moc3, import_from_bare_moc3};
+use zipzi_moc3::encode_moc3;
 
-fn sample_parameters_mao(doc: &Document) -> Vec<Vec<f32>> {
+fn sample_parameters_mao(doc: &DocumentState) -> Vec<Vec<f32>> {
     let params: Vec<_> = doc
         .parameter_order()
         .iter()
-        .map(|id| doc.get_parameter(id).unwrap())
+        .map(|id| doc.parameter(id).unwrap())
         .collect();
     let param_map: HashMap<String, usize> = params
         .iter()
@@ -98,27 +98,27 @@ fn sample_parameters_mao(doc: &Document) -> Vec<Vec<f32>> {
     for (index, p) in params.iter().enumerate() {
         let mut keys = vec![p.minimum, p.maximum, p.default_value];
         for id in doc.binding_order() {
-            for axis in &doc.get_binding(id).unwrap().axes {
+            for axis in &doc.binding(id).unwrap().axes {
                 if axis.parameter_id == p.id {
                     keys.extend(&axis.keys);
                 }
             }
         }
         for id in doc.scene_binding_order() {
-            for axis in &doc.get_scene_binding(id).unwrap().axes {
+            for axis in &doc.scene_binding(id).unwrap().axes {
                 if axis.parameter_id == p.id {
                     keys.extend(&axis.keys);
                 }
             }
         }
         for id in doc.blend_key_table_order() {
-            let table = doc.get_blend_key_table(id).unwrap();
+            let table = doc.blend_key_table(id).unwrap();
             if table.parameter_id == p.id {
                 keys.extend(&table.keys);
             }
         }
         for id in doc.blend_constraint_order() {
-            let constraint = doc.get_blend_constraint(id).unwrap();
+            let constraint = doc.blend_constraint(id).unwrap();
             if constraint.parameter_id == p.id {
                 keys.extend(&constraint.keys);
             }
@@ -144,13 +144,13 @@ fn sample_parameters_mao(doc: &Document) -> Vec<Vec<f32>> {
         .map(|(i, p)| (p.id.as_str(), i))
         .collect();
     for id in doc.blend_binding_order() {
-        let binding = doc.get_blend_binding(id).unwrap();
-        let table = doc.get_blend_key_table(&binding.key_table_id).unwrap();
+        let binding = doc.blend_binding(id).unwrap();
+        let table = doc.blend_key_table(&binding.key_table_id).unwrap();
         let driver = internal_index[table.parameter_id.as_str()];
         let mut dependencies = Vec::new();
         for constraint_id in &binding.constraint_ids {
             dependencies.push(
-                doc.get_blend_constraint(constraint_id)
+                doc.blend_constraint(constraint_id)
                     .unwrap()
                     .parameter_id
                     .as_str(),
@@ -158,7 +158,7 @@ fn sample_parameters_mao(doc: &Document) -> Vec<Vec<f32>> {
         }
         for other in doc.blend_bindings_for_target(&binding.target_id) {
             dependencies.push(
-                doc.get_blend_key_table(&other.key_table_id)
+                doc.blend_key_table(&other.key_table_id)
                     .unwrap()
                     .parameter_id
                     .as_str(),
@@ -169,10 +169,10 @@ fn sample_parameters_mao(doc: &Document) -> Vec<Vec<f32>> {
             normal.extend(b.axes.iter().map(|a| a.parameter_id.as_str()));
         }
         let mut target = binding.target_id.as_str();
-        if let Some(mesh) = doc.get_mesh(target) {
+        if let Some(mesh) = doc.mesh(target) {
             target = &mesh.deformer_id;
         }
-        while let Some(transform) = doc.get_transform(target) {
+        while let Some(transform) = doc.transform(target) {
             if let Some(b) = doc.binding_for_scene(target) {
                 normal.extend(b.axes.iter().map(|a| a.parameter_id.as_str()));
             }
@@ -220,11 +220,11 @@ fn sample_parameters_mao(doc: &Document) -> Vec<Vec<f32>> {
     samples
 }
 
-fn document_samples(doc: &Document, samples: &[Vec<f32>]) -> serde_json::Value {
+fn document_samples(doc: &DocumentState, samples: &[Vec<f32>]) -> serde_json::Value {
     let params: Vec<_> = doc
         .parameter_order()
         .iter()
-        .map(|id| doc.get_parameter(id).unwrap())
+        .map(|id| doc.parameter(id).unwrap())
         .collect();
     let mesh_slots: HashMap<&str, usize> = doc
         .mesh_order()
@@ -292,25 +292,44 @@ fn main() {
     let mao_path = root.join("models/local/mao/runtime/mao_pro.moc3");
     assert!(mao_path.exists(), "mao_pro.moc3 not found at {mao_path:?}");
 
-    let mao_bytes = fs::read(&mao_path).expect("Failed to read mao_pro.moc3");
-    let decoded = import_from_bare_moc3(&mao_bytes, &HashMap::new()).expect("Import failed");
-    let orig_doc = &decoded.document;
-
-    // Serialize to Project v3 format
-    let project_json = zipzi_project::encode_project(orig_doc).expect("encode_project failed");
-    if env::args().any(|a| a == "--focus-inkdrop") {
-        fs::write(out_dir.join("project.json"), &project_json).unwrap();
-    }
-
-    // Deserialize to fresh, completely detached Document
-    let detached_doc = zipzi_project::decode_project(&project_json).expect("decode_project failed");
+    let mao_bytes = fs::read(&mao_path).unwrap();
+    let model3 = mao_path.with_extension("model3.json");
+    let (result, imported, _) = zipzi_project::ProjectImporter::default().import_model3(&model3);
+    assert!(
+        result.status.is_ok() && result.resources_complete(),
+        "{result:?}"
+    );
+    let imported = imported.unwrap();
+    let project_path = out_dir.join("model.zipzi");
+    let io = zipzi_project::ProjectIo::new(
+        std::env::temp_dir(),
+        zipzi_project::ResourceStore::default(),
+    );
+    let baseline = if project_path.exists() {
+        Some(io.fingerprint(&project_path, || true).unwrap())
+    } else {
+        None
+    };
+    io.save(
+        &imported.document,
+        &imported.resources,
+        &project_path,
+        baseline.as_ref(),
+        || true,
+    )
+    .unwrap();
+    let detached = io
+        .load(&project_path, || true)
+        .expect("reopen native project");
+    assert!(detached.diagnostics.is_empty());
+    let detached_doc = detached.document;
 
     let all_samples = if env::args().any(|a| a == "--focus-inkdrop") {
         vec![detached_doc
             .parameter_order()
             .iter()
             .map(|id| {
-                let p = detached_doc.get_parameter(id).unwrap();
+                let p = detached_doc.parameter(id).unwrap();
                 if p.runtime_id == "ParamInkDrop" {
                     30.0
                 } else {
@@ -323,12 +342,12 @@ fn main() {
             detached_doc
                 .parameter_order()
                 .iter()
-                .map(|id| detached_doc.get_parameter(id).unwrap().minimum)
+                .map(|id| detached_doc.parameter(id).unwrap().minimum)
                 .collect(),
             detached_doc
                 .parameter_order()
                 .iter()
-                .map(|id| detached_doc.get_parameter(id).unwrap().maximum)
+                .map(|id| detached_doc.parameter(id).unwrap().maximum)
                 .collect(),
         ]
     } else {
@@ -356,7 +375,8 @@ fn main() {
         fs::write(
             case_dir.join("ppu.txt"),
             detached_doc
-                .source_canvas()
+                .setup()
+                .source_canvas
                 .unwrap()
                 .pixels_per_unit
                 .to_string(),
@@ -366,13 +386,13 @@ fn main() {
         let parameters: Vec<Parameter> = detached_doc
             .parameter_order()
             .iter()
-            .map(|id| detached_doc.get_parameter(id).unwrap().clone())
+            .map(|id| detached_doc.parameter(id).unwrap().clone())
             .collect();
 
         fs::write(
             case_dir.join("metadata.json"),
             serde_json::to_vec_pretty(&serde_json::json!({
-                "canvas": detached_doc.source_canvas().unwrap(),
+                "canvas": detached_doc.setup().source_canvas.unwrap(),
                 "parameters": parameters,
                 "meshes_count": detached_doc.mesh_order().len(),
                 "parts_count": detached_doc.part_order().len(),

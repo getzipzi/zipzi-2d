@@ -5,6 +5,7 @@ use super::{
 };
 use crate::authoring::{AuthoringContext, texture::Control};
 use gpui_kit::{AppContext as _, TestAppContext, px, size, test::TestWindowExt};
+use zipzi_core::state::AssetContent;
 use zipzi_editor_core::{EditorCommand, ObjectKind as K, ObjectRef as R, PanelKind};
 
 fn setup(cx: &mut TestAppContext) -> Harness {
@@ -116,7 +117,7 @@ fn new_texture_inspects_immediately_and_cancelled_chooser_keeps_empty_resource(
         let d = v.editor.document().unwrap();
         assert_eq!(d.history_lengths(), (1, 0));
         let info = d.texture_info(&asset.id).unwrap();
-        assert!(info.asset.content.is_none() && info.asset.unresolved_source.is_none());
+        assert!(matches!(info.asset.content, AssetContent::Empty));
         assert!(v.texture_loads.is_empty());
     });
     run(&h, Some(asset.id.clone()), Control::Delete, cx);
@@ -136,16 +137,16 @@ fn new_texture_inspects_immediately_and_cancelled_chooser_keeps_empty_resource(
         );
         assert_eq!(v.editor.document().unwrap().history_lengths(), (2, 0));
         v.editor.execute(EditorCommand::Undo).unwrap();
-        assert!(
+        assert!(matches!(
             v.editor
                 .document()
                 .unwrap()
                 .texture_info(&asset.id)
                 .unwrap()
                 .asset
-                .content
-                .is_none()
-        );
+                .content,
+            AssetContent::Empty
+        ));
     });
 }
 #[gpui_kit::test]
@@ -189,7 +190,10 @@ fn direct_import_cancel_invalid_png_and_success_have_atomic_history(cx: &mut Tes
         assert!(v.edit_error.is_none(), "{:?}", v.edit_error);
         let d = v.editor.document().unwrap();
         assert_eq!(d.history_lengths(), (1, 0));
-        assert!(d.texture_info(&asset.id).unwrap().asset.content.is_some());
+        assert!(matches!(
+            d.texture_info(&asset.id).unwrap().asset.content,
+            AssetContent::Image { .. }
+        ));
         v.editor.execute(EditorCommand::Undo).unwrap();
         assert_eq!(
             v.editor
@@ -201,16 +205,16 @@ fn direct_import_cancel_invalid_png_and_success_have_atomic_history(cx: &mut Tes
             count
         );
         v.editor.execute(EditorCommand::Redo).unwrap();
-        assert!(
+        assert!(matches!(
             v.editor
                 .document()
                 .unwrap()
                 .texture_info(&asset.id)
                 .unwrap()
                 .asset
-                .content
-                .is_some()
-        );
+                .content,
+            zipzi_core::state::AssetContent::Image { .. }
+        ));
     });
 }
 #[gpui_kit::test]
@@ -274,7 +278,10 @@ fn mesh_properties_omit_texture_and_replacement_refreshes_existing_resource_user
         let d = v.editor.document().unwrap();
         assert_eq!(d.texture_info(&asset.id).unwrap().users, [mesh.clone()]);
         assert!(
-            d.texture_info(&asset.id).unwrap().asset.content.is_some(),
+            matches!(
+                d.texture_info(&asset.id).unwrap().asset.content,
+                AssetContent::Image { .. }
+            ),
             "loaded content missing"
         );
         assert!(
@@ -371,7 +378,7 @@ fn delete_reviews_real_users_requires_replacement_and_can_cancel(cx: &mut TestAp
 fn dependency_review_virtualizes_large_lists_and_keeps_the_last_user_reachable(
     cx: &mut TestAppContext,
 ) {
-    use zipzi_sdk::{AuthoringSession, prepare_png_asset, rectangle_mesh};
+    use zipzi_sdk::rectangle_mesh;
     const USERS: usize = 256;
     let assets = tempfile::tempdir().unwrap();
     let path = assets.path().join("texture.png");
@@ -381,30 +388,32 @@ fn dependency_review_virtualizes_large_lists_and_keeps_the_last_user_reachable(
     )
     .unwrap();
     let asset_id = uuid::Uuid::new_v4().to_string();
-    let asset = prepare_png_asset(&asset_id, "Shared", &path).unwrap();
-    let mut session = AuthoringSession::new(
+    let asset = crate::test_fixture::image_fixture(&asset_id, "Shared", &path).unwrap();
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::default(),
     )
     .unwrap();
-    session
-        .edit("Many texture users", None, |edit| {
-            edit.create_asset(asset)?;
-            for i in 0..USERS {
-                edit.create_mesh(rectangle_mesh(
+    crate::test_fixture::publish_fixture(&mut session, "Many texture users", |edit| {
+        crate::test_fixture::insert_image(edit, asset)?;
+        for i in 0..USERS {
+            crate::test_fixture::insert_fixture_mesh(
+                edit,
+                rectangle_mesh(
                     &uuid::Uuid::new_v4().to_string(),
                     &format!("Mesh {i}"),
                     &asset_id,
                     zipzi_core::Vec2::new(0., 0.),
                     zipzi_core::Vec2::new(1., 1.),
-                )?)?;
-            }
-            Ok(())
-        })
-        .unwrap();
-    let saved = session
-        .save_project(&assets.path().join("many-users.zipzi"), None)
-        .unwrap();
+                )?,
+            )?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    let saved =
+        crate::test_fixture::save_fixture(&mut session, &assets.path().join("many-users.zipzi"))
+            .unwrap();
     let document = zipzi_editor_core::Document::open(&saved.path).unwrap();
     let h = setup_with_document(cx, document, assets);
     run(&h, Some(asset_id), Control::Delete, cx);
@@ -449,16 +458,16 @@ fn image_result_after_document_switch_back_is_discarded(cx: &mut TestAppContext)
     cx.simulate_path_prompt_response(|_| Some(vec![path]));
     cx.run_until_parked();
     h.view.read_with(cx, |v, _| {
-        assert!(
+        assert!(matches!(
             v.editor
                 .document()
                 .unwrap()
                 .texture_info(&asset.id)
                 .unwrap()
                 .asset
-                .content
-                .is_none()
-        );
+                .content,
+            AssetContent::Empty
+        ));
         assert_eq!(v.editor.document().unwrap().history_lengths(), (1, 0));
         assert!(v.texture_loads.is_empty());
     });
@@ -477,16 +486,16 @@ fn image_result_after_undo_does_not_publish(cx: &mut TestAppContext) {
     cx.simulate_path_prompt_response(|_| Some(vec![path]));
     cx.run_until_parked();
     h.view.read_with(cx, |v, _| {
-        assert!(
+        assert!(matches!(
             v.editor
                 .document()
                 .unwrap()
                 .texture_info(&asset.id)
                 .unwrap()
                 .asset
-                .content
-                .is_none()
-        );
+                .content,
+            AssetContent::Empty
+        ));
         assert_eq!(v.editor.document().unwrap().history_lengths(), (1, 0));
     });
 }
@@ -500,19 +509,21 @@ fn missing_source_can_be_repaired_without_replacing_the_resource_or_meshes(
     let saved = doc
         .save(&assets.path().join("missing-source.zipzi"))
         .unwrap();
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )
+    let mut session = crate::test_fixture::open_fixture(&saved.path).unwrap();
+    let mut missing = session
+        .snapshot()
+        .document()
+        .asset(&asset.id)
+        .unwrap()
+        .clone();
+    missing.content = AssetContent::Unresolved {
+        source: "lost-image.png".into(),
+    };
+    crate::test_fixture::publish_fixture(&mut session, "Missing source fixture", |e| {
+        e.replace_asset(missing)
+    })
     .unwrap();
-    session.open_project(&saved.path, None).unwrap();
-    let mut missing = session.asset(&asset.id).unwrap();
-    missing.content = None;
-    missing.unresolved_source = Some("lost-image.png".into());
-    session
-        .edit("Missing source fixture", None, |e| e.replace_asset(missing))
-        .unwrap();
-    let saved = session.save_project(&saved.path, None).unwrap();
+    let saved = crate::test_fixture::save_fixture(&mut session, &saved.path).unwrap();
     let mut doc = zipzi_editor_core::Document::open(&saved.path).unwrap();
     doc.navigate(asset.clone()).unwrap();
     let h = setup_with_document(cx, doc, assets);
@@ -529,7 +540,7 @@ fn missing_source_can_be_repaired_without_replacing_the_resource_or_meshes(
             .unwrap()
             .texture_info(&asset.id)
             .unwrap();
-        assert!(info.asset.content.is_some() && info.asset.unresolved_source.is_none());
+        assert!(matches!(info.asset.content, AssetContent::Image { .. }));
         assert_eq!(info.users.len(), 2);
         v.editor.execute(EditorCommand::Undo).unwrap();
         let info = v
@@ -538,10 +549,11 @@ fn missing_source_can_be_repaired_without_replacing_the_resource_or_meshes(
             .unwrap()
             .texture_info(&asset.id)
             .unwrap();
-        assert!(info.asset.content.is_none());
         assert_eq!(
-            info.asset.unresolved_source.as_deref(),
-            Some("lost-image.png")
+            info.asset.content,
+            AssetContent::Unresolved {
+                source: "lost-image.png".into()
+            }
         );
         v.editor.execute(EditorCommand::Redo).unwrap();
         let frame = v.editor.preview().unwrap();

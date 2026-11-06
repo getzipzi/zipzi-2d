@@ -30,3 +30,4 @@ thiserror.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 zipzi-cmo3 = { version = "=0.1.0-alpha.8", path = "../zipzi-cmo3", features = ["test-support"] }
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }

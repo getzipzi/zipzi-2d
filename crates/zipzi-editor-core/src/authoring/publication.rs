@@ -1,6 +1,6 @@
 //! Receipts drive the same projection updates for commands and history.
 use super::*;
-use zipzi_core::state::{RecordDomain, RootDomain};
+use zipzi_core::state::{DocumentState, RecordChange, RecordDomain, RootDomain, WriteSet};
 
 impl Document {
     pub(in crate::document) fn invalidate_expression_projection(&mut self) {
@@ -30,7 +30,7 @@ impl Document {
     pub(in crate::document) fn consume_authoring_receipt(
         &mut self,
         receipt: &Publication,
-        _fallback_topology: bool,
+        before: Option<&DocumentState>,
     ) {
         if receipt.kind == zipzi_sdk::PublicationKind::Unchanged {
             return;
@@ -47,9 +47,7 @@ impl Document {
             && !ALL_RECORD_DOMAINS.iter().any(|d| writes.order_changed(*d))
             && !ALL_CONTENT_ROOTS.iter().any(|d| writes.root_changed(*d));
         if editor_only {
-            let input_revision = self.animation_input_revision;
             self.invalidate_editor_state_projection();
-            self.animation_input_revision = input_revision;
             self.session.acknowledge_receipts();
             return;
         }
@@ -81,7 +79,196 @@ impl Document {
         {
             self.animation_catalog.get_mut().unwrap().take();
         }
+        if let Some(before) = before {
+            let model = self.model();
+            if let Some((revision, index)) = self.object_index.get_mut().unwrap().as_mut() {
+                if *revision == self.projection_revision
+                    && refresh_index(Arc::make_mut(index), writes, before, &model)
+                {
+                    *revision += 1;
+                }
+            }
+        }
+        let animation_revision = self.animation_input_revision;
         self.after_history(false);
+        if !writes.animation_inputs_changed() {
+            self.animation_input_revision = animation_revision;
+        }
+    }
+}
+
+/// Refresh only the rows whose published records changed. Unsupported writes
+/// leave the old cache revision in place, so the next read rebuilds it.
+fn refresh_index(
+    index: &mut crate::ObjectIndex,
+    writes: &WriteSet,
+    before: &DocumentState,
+    after: &DocumentState,
+) -> bool {
+    if ALL_RECORD_DOMAINS
+        .iter()
+        .any(|domain| writes.order_changed(*domain))
+        || writes.root_changed(RootDomain::EditorState)
+    {
+        return false;
+    }
+
+    for root in ALL_CONTENT_ROOTS
+        .iter()
+        .copied()
+        .filter(|root| writes.root_changed(*root))
+    {
+        if !refresh_root(index, root, before, after) {
+            return false;
+        }
+    }
+    if writes.setup_changed() && !index.refresh_document_metadata(after) {
+        return false;
+    }
+
+    macro_rules! scene_label {
+        ($getter:ident, $kind:ident, $id:expr) => {{
+            let (Some(old), Some(new)) = (before.$getter($id), after.$getter($id)) else {
+                return false;
+            };
+            let mut original = old.clone();
+            original.name.clone_from(&new.name);
+            original == *new
+                && index.refresh_scene_label(after, &ObjectRef::new(ObjectKind::$kind, $id))
+        }};
+    }
+    writes.records().iter().all(|record| {
+        if record.change != RecordChange::Replaced {
+            return false;
+        }
+        let id = &record.id;
+        match record.domain {
+            RecordDomain::Asset => {
+                before
+                    .asset(id)
+                    .zip(after.asset(id))
+                    .is_some_and(|(old, new)| old.content == new.content)
+                    && index.refresh_resource_labels(after, std::slice::from_ref(id))
+            }
+            RecordDomain::Expression => {
+                before
+                    .expression(id)
+                    .zip(after.expression(id))
+                    .is_some_and(|(old, new)| {
+                        old.entries.len() == new.entries.len()
+                            && old
+                                .entries
+                                .iter()
+                                .zip(&new.entries)
+                                .all(|(a, b)| a.id == b.id && a.target == b.target)
+                    })
+                    && index.refresh_expression(after, id)
+            }
+            RecordDomain::Part => {
+                let group = ObjectRef::new(ObjectKind::DrawOrderGroup, id);
+                scene_label!(part, Part, id)
+                    && (index.get(&group).is_none() || index.refresh_scene_label(after, &group))
+            }
+            RecordDomain::Mesh => scene_label!(mesh, Mesh, id),
+            RecordDomain::Transform => scene_label!(transform, Deformer, id),
+            RecordDomain::Offscreen => scene_label!(offscreen, Offscreen, id),
+            RecordDomain::Glue => scene_label!(glue, Glue, id),
+            _ => false,
+        }
+    })
+}
+
+fn refresh_root(
+    index: &mut crate::ObjectIndex,
+    root: RootDomain,
+    before: &DocumentState,
+    after: &DocumentState,
+) -> bool {
+    match root {
+        RootDomain::DisplayInfo => {
+            let mut old = before.display_info().clone();
+            let new = after.display_info();
+            for (a, b) in old
+                .parameter_groups
+                .iter_mut()
+                .flatten()
+                .zip(new.parameter_groups.iter().flatten())
+            {
+                if a.name != b.name {
+                    a.name.clone_from(&b.name);
+                    if !index.refresh_organization_properties(
+                        after,
+                        zipzi_contract::authoring::ObjectKind::CdiParameterGroup,
+                        &b.id,
+                    ) {
+                        return false;
+                    }
+                }
+            }
+            old == *new && index.refresh_organization_document(after)
+        }
+        RootDomain::MotionGroups => {
+            let old = before.motion_groups();
+            let new = after.motion_groups();
+            old.len() == new.len()
+                && old.iter().zip(new).all(|(a, b)| {
+                    a.id == b.id
+                        && a.entries == b.entries
+                        && (a.name == b.name
+                            || index.refresh_motion_properties(
+                                after,
+                                &ObjectRef::new(ObjectKind::MotionGroup, &b.id),
+                            ))
+                })
+        }
+        RootDomain::Pose => {
+            let (Some(old), Some(new)) = (before.pose().as_ref(), after.pose().as_ref()) else {
+                return false;
+            };
+            let mut old = old.as_ref().clone();
+            for (a, b) in old.groups.iter_mut().zip(&new.groups) {
+                if a.name != b.name {
+                    a.name.clone_from(&b.name);
+                    if !index.refresh_pose_properties(
+                        after,
+                        &ObjectRef::new(ObjectKind::PoseGroup, &b.id),
+                    ) {
+                        return false;
+                    }
+                }
+            }
+            old == **new
+        }
+        RootDomain::Model3Settings => {
+            let mut old = before.model3_settings().clone();
+            let new = after.model3_settings();
+            let mut labels = Vec::new();
+            for (a, b) in old
+                .groups
+                .iter_mut()
+                .flatten()
+                .zip(new.groups.iter().flatten())
+            {
+                if a.name != b.name {
+                    a.name.clone_from(&b.name);
+                    labels.push(b.id.clone());
+                }
+            }
+            for (a, b) in old
+                .hit_areas
+                .iter_mut()
+                .flatten()
+                .zip(new.hit_areas.iter().flatten())
+            {
+                if a.name != b.name {
+                    a.name.clone_from(&b.name);
+                    labels.push(b.id.clone());
+                }
+            }
+            old.layout.clone_from(&new.layout);
+            old == *new && index.refresh_reference_labels(after, &labels)
+        }
+        _ => false,
     }
 }
 
@@ -145,41 +332,47 @@ mod tests {
         let id = Uuid::new_v4().to_string();
         let other = Uuid::new_v4().to_string();
         document.session.edit("Mesh", None, |edit| {
-            edit.create_mesh(zipzi_core::Mesh {
-                id: id.clone(),
-                vertex_ids: vec![0, 1, 2, 3],
-                base_positions: vec![
-                    Vec2::new(0., 0.),
-                    Vec2::new(1., 0.),
-                    Vec2::new(1., 1.),
-                    Vec2::new(0., 1.),
-                ],
-                uvs: vec![
-                    Vec2::new(0., 0.),
-                    Vec2::new(1., 0.),
-                    Vec2::new(1., 1.),
-                    Vec2::new(0., 1.),
-                ],
-                triangles: vec![[0, 1, 2], [0, 2, 3]],
-                meshing: Some(zipzi_core::MeshMeshing {
-                    boundary: vec![0, 1, 2, 3],
-                    constraints: vec![],
-                }),
-                ..Default::default()
-            })?;
-            edit.create_mesh(zipzi_core::Mesh {
-                id: other.clone(),
-                vertex_ids: vec![10, 11, 12],
-                base_positions: vec![Vec2::new(2., 0.), Vec2::new(3., 0.), Vec2::new(2., 1.)],
-                uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-                triangles: vec![[10, 11, 12]],
-                ..Default::default()
-            })
+            crate::test_sdk::insert_fixture_mesh(
+                edit,
+                zipzi_core::Mesh {
+                    id: id.clone(),
+                    vertex_ids: vec![0, 1, 2, 3],
+                    base_positions: vec![
+                        Vec2::new(0., 0.),
+                        Vec2::new(1., 0.),
+                        Vec2::new(1., 1.),
+                        Vec2::new(0., 1.),
+                    ],
+                    uvs: vec![
+                        Vec2::new(0., 0.),
+                        Vec2::new(1., 0.),
+                        Vec2::new(1., 1.),
+                        Vec2::new(0., 1.),
+                    ],
+                    triangles: vec![[0, 1, 2], [0, 2, 3]],
+                    meshing: Some(zipzi_core::MeshMeshing {
+                        boundary: vec![0, 1, 2, 3],
+                        constraints: vec![],
+                    }),
+                    ..Default::default()
+                },
+            )?;
+            crate::test_sdk::insert_fixture_mesh(
+                edit,
+                zipzi_core::Mesh {
+                    id: other.clone(),
+                    vertex_ids: vec![10, 11, 12],
+                    base_positions: vec![Vec2::new(2., 0.), Vec2::new(3., 0.), Vec2::new(2., 1.)],
+                    uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+                    triangles: vec![[10, 11, 12]],
+                    ..Default::default()
+                },
+            )
         })?;
         document.after_history(true);
         let before = document.canvas_topology();
         assert_eq!(before.meshes[&id].automatic_edges.len(), 1);
-        let evaluation = document.session.evaluation_revision();
+        let before_frame = document.snapshot()?.viewport_frame;
         assert!(
             document
                 .validate_mesh_grid(
@@ -205,7 +398,7 @@ mod tests {
         let (_, receipt) = document
             .session
             .edit("Constrain", None, |edit| edit.replace_mesh(mesh))?;
-        document.consume_authoring_receipt(&receipt, false);
+        document.consume_authoring_receipt(&receipt, None);
         let constrained = document.canvas_topology();
         assert!(!Arc::ptr_eq(&before, &constrained));
         assert!(!Arc::ptr_eq(&before.meshes[&id], &constrained.meshes[&id]));
@@ -215,7 +408,10 @@ mod tests {
         ));
         assert_eq!(constrained.meshes[&id].user_edges.len(), 1);
         assert!(constrained.meshes[&id].automatic_edges.is_empty());
-        assert_eq!(document.session.evaluation_revision(), evaluation);
+        assert_eq!(
+            document.snapshot()?.viewport_frame.drawables,
+            before_frame.drawables
+        );
         document.undo()?;
         assert!(!Arc::ptr_eq(&constrained, &document.canvas_topology()));
         assert!(
@@ -242,13 +438,16 @@ mod tests {
                 .len(),
             1
         );
-        assert_eq!(document.session.evaluation_revision(), evaluation);
+        assert_eq!(
+            document.snapshot()?.viewport_frame.drawables,
+            before_frame.drawables
+        );
         let before_position = document.canvas_topology();
         let before_source = *document.canvas_topology_source.lock().unwrap();
         let (_, receipt) = document.session.edit("Position", None, |edit| {
-            edit.update_positions(&id, &[0], &[Vec2::new(0.05, 0.05)])
+            edit.set_vertex_positions(&id, &[(0, Vec2::new(0.05, 0.05))])
         })?;
-        document.consume_authoring_receipt(&receipt, false);
+        document.consume_authoring_receipt(&receipt, None);
         let after_position = document.canvas_topology();
         assert_ne!(
             before_source,
@@ -266,11 +465,14 @@ mod tests {
         let mut document = Document::new_blank()?;
         let id = Uuid::new_v4().to_string();
         document.session.edit("Mesh", None, |edit| {
-            edit.create_mesh(zipzi_core::Mesh {
-                id: id.clone(),
-                name: "Before".into(),
-                ..Default::default()
-            })
+            crate::test_sdk::insert_fixture_mesh(
+                edit,
+                zipzi_core::Mesh {
+                    id: id.clone(),
+                    name: "Before".into(),
+                    ..Default::default()
+                },
+            )
         })?;
         document.after_history(true);
         let object = ObjectRef::new(ObjectKind::Mesh, &id);
@@ -284,14 +486,19 @@ mod tests {
                     3.,
                 )]))),
             })?;
-            edit.edit_scene(SceneEdit::Patch {
-                id: id.clone(),
-                expected: SceneFieldValue::Label("Before".into()),
-                value: SceneFieldValue::Label("After".into()),
-                clear_glue_pairs: false,
-            })
+            edit.edit_scene(
+                SceneEdit::Patch {
+                    id: id.clone(),
+                    expected: SceneFieldValue::Label("Before".into()),
+                    value: SceneFieldValue::Label("After".into()),
+                    clear_glue_pairs: false,
+                },
+                Default::default(),
+                &Default::default(),
+            )
+            .map(|_| ())
         })?;
-        document.consume_authoring_receipt(&receipt, false);
+        document.consume_authoring_receipt(&receipt, None);
         assert_eq!(document.canvas_topology().index.name(&object), "After");
         assert_eq!(document.object_index().get(&object).unwrap().name, "After");
         assert_eq!(before.index.name(&object), "Before");
@@ -312,14 +519,20 @@ mod tests {
         let mesh = Uuid::new_v4().to_string();
         let part = Uuid::new_v4().to_string();
         document.session.edit("Scene", None, |edit| {
-            edit.create_part(zipzi_core::Part {
-                id: part.clone(),
-                ..Default::default()
-            })?;
-            edit.create_mesh(zipzi_core::Mesh {
-                id: mesh.clone(),
-                ..Default::default()
-            })
+            crate::test_sdk::insert_fixture_part(
+                edit,
+                zipzi_core::Part {
+                    id: part.clone(),
+                    ..Default::default()
+                },
+            )?;
+            crate::test_sdk::insert_fixture_mesh(
+                edit,
+                zipzi_core::Mesh {
+                    id: mesh.clone(),
+                    ..Default::default()
+                },
+            )
         })?;
         document.after_history(true);
         let object = ObjectRef::new(ObjectKind::Mesh, &mesh);
@@ -337,7 +550,7 @@ mod tests {
                 before: None,
             })
         })?;
-        document.consume_authoring_receipt(&receipt, false);
+        document.consume_authoring_receipt(&receipt, None);
         assert_eq!(
             document
                 .canvas_topology()
@@ -383,13 +596,7 @@ mod tests {
                 before: None,
             })?;
         let result = document.execute_physics_authoring(&plan)?;
-        assert!(
-            result
-                .receipt
-                .changes
-                .categories
-                .contains(&ChangeCategory::Topology)
-        );
+        assert!(result.receipt.writes.root_changed(RootDomain::Physics));
         assert!(Arc::ptr_eq(&topology, &document.canvas_topology()));
         document.undo()?;
         assert!(Arc::ptr_eq(&topology, &document.canvas_topology()));

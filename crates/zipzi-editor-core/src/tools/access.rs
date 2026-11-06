@@ -279,7 +279,7 @@ mod tests {
         let png = dir.path().join("texture.png");
         std::fs::write(&png, include_bytes!("../../tests/fixtures/accent.png"))?;
         let mut sdk =
-            zipzi_sdk::AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;
+            crate::test_sdk::fixture_session(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;
         let positions: Vec<_> = (0..100)
             .flat_map(|y| (0..100).map(move |x| Vec2::new(x as f32, y as f32)))
             .collect();
@@ -291,29 +291,38 @@ mod tests {
                 })
             })
             .collect();
-        sdk.edit("Dense bound mesh", None, |edit| {
-            edit.create_asset(zipzi_sdk::prepare_png_asset(&id(2), "Texture", &png)?)?;
-            edit.create_mesh(Mesh {
-                id: id(3),
-                runtime_id: "dense".into(),
-                name: "Dense".into(),
-                texture_asset_id: id(2).into(),
-                vertex_ids: (0..10_000).collect(),
-                base_positions: positions.clone(),
-                uvs: positions
-                    .iter()
-                    .map(|p| Vec2::new(p.x / 99., p.y / 99.))
-                    .collect(),
-                triangles,
-                ..Default::default()
-            })?;
-            edit.create_parameter(Parameter {
-                id: id(4),
-                name: "Pose".into(),
-                minimum: 0.,
-                maximum: 1.,
-                ..Default::default()
-            })?;
+        crate::test_sdk::publish_fixture(&mut sdk, "Dense bound mesh", |edit| {
+            crate::test_sdk::insert_image(
+                edit,
+                crate::test_sdk::image_fixture(&id(2), "Texture", &png)?,
+            )?;
+            crate::test_sdk::insert_fixture_mesh(
+                edit,
+                Mesh {
+                    id: id(3),
+                    runtime_id: "dense".into(),
+                    name: "Dense".into(),
+                    texture_asset_id: id(2).into(),
+                    vertex_ids: (0..10_000).collect(),
+                    base_positions: positions.clone(),
+                    uvs: positions
+                        .iter()
+                        .map(|p| Vec2::new(p.x / 99., p.y / 99.))
+                        .collect(),
+                    triangles,
+                    ..Default::default()
+                },
+            )?;
+            crate::test_sdk::insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: id(4),
+                    name: "Pose".into(),
+                    minimum: 0.,
+                    maximum: 1.,
+                    ..Default::default()
+                },
+            )?;
             edit.create_binding(MeshBinding {
                 id: id(5),
                 mesh_id: id(3),
@@ -337,7 +346,7 @@ mod tests {
             })?;
             Ok(())
         })?;
-        let saved = sdk.save_project(&dir.path().join("dense.zipzi"), None)?;
+        let saved = crate::test_sdk::save_fixture(&mut sdk, &dir.path().join("dense.zipzi"))?;
         let mut document = Document::open(&saved.path)?;
         document.select(&id(3))?;
         let mut editor = Editor::from_document(document);
@@ -448,8 +457,8 @@ mod tests {
     }
 
     #[test]
-    fn dense_mesh_hover_reuses_capabilities_and_updates_on_edit_context_changes(
-    ) -> anyhow::Result<()> {
+    fn dense_mesh_hover_reuses_capabilities_and_updates_on_edit_context_changes()
+    -> anyhow::Result<()> {
         let (mut editor, _dir) = fixture()?;
         let frame = show(&mut editor)?;
         let before = builds(&editor);

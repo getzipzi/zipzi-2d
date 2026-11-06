@@ -9,11 +9,13 @@ impl Document {
         &self,
         object: &ObjectRef,
     ) -> Result<ExpressionAuthoringCapabilities> {
-        let kind = match object.kind {
-            ObjectKind::Expression => zipzi_contract::authoring::ObjectKind::Expression,
-            ObjectKind::ExpressionEntry => zipzi_contract::authoring::ObjectKind::ExpressionEntry,
-            _ => anyhow::bail!("Expected an expression or entry"),
-        };
+        ensure!(
+            matches!(
+                object.kind,
+                ObjectKind::Expression | ObjectKind::ExpressionEntry
+            ),
+            "Expected an authorable expression object"
+        );
 
         Ok(ExpressionAuthoringCapabilities {
             domain: self.model().expression_capabilities(&object.id)?,
@@ -41,7 +43,7 @@ impl Document {
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
         let receipt = plan.publish(&mut self.session)?;
-        self.expression_operation_result(receipt)
+        self.expression_operation_result(receipt, plan.baseline().document())
             .map(|result| result.with_preview(plan))
     }
     pub fn expression_entry_address(
@@ -205,6 +207,7 @@ impl Document {
             .1
             .target
             != address.value.target;
+        let before = self.session.document();
         let result = pending.edit.commit_to(&mut self.session);
         if result.is_err() && pending.edit.is_active() {
             self.pending = Some(pending);
@@ -212,7 +215,7 @@ impl Document {
         }
         if !result
             .as_ref()
-            .is_ok_and(|receipt| (receipt.kind != zipzi_sdk::PublicationKind::Unchanged))
+            .is_ok_and(|receipt| receipt.kind != zipzi_sdk::PublicationKind::Unchanged)
         {
             let previous_revision = self.projection_revision;
             self.invalidate_expression_projection();
@@ -220,16 +223,17 @@ impl Document {
                 self.refresh_expression_index(previous_revision, &[owner]);
             }
         }
-        self.expression_operation_result(result?)
+        self.expression_operation_result(result?, &before)
     }
 
     fn expression_operation_result(
         &mut self,
         receipt: zipzi_sdk::Publication,
+        before: &zipzi_core::state::DocumentState,
     ) -> Result<OperationResult> {
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, false);
+            self.consume_authoring_receipt(&receipt, Some(before));
         }
         Ok(self.authoring_result(receipt))
     }

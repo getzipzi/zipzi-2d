@@ -7,7 +7,16 @@ impl Commands<'_> {
         self.run(|this| {
             this.unlocked(&value.id)?;
             this.unlocked(&value.part_id)?;
-            this.unlocked(&value.deformer_id)?;
+            let previous = this.builder.mesh(&value.id);
+            if previous.is_some_and(|mesh| mesh.deformer_id != value.deformer_id) {
+                this.unlocked(&value.deformer_id)?;
+            }
+            if value.meshing.is_none() && previous.is_some_and(|mesh| mesh.meshing.is_some()) {
+                return Err(Status::error(
+                    "MESH_STRUCTURE_REQUIRES_REMESH",
+                    "Use remesh to remove authored mesh structure",
+                ));
+            }
             this.builder.replace_mesh(value)
         })
     }
@@ -24,8 +33,11 @@ impl Commands<'_> {
             if let Some(id) = &value.part_id {
                 this.unlocked(id.as_str())?;
             }
+            let previous = this.builder.transform(&value.id);
             if let Some(id) = &value.parent_id {
-                this.unlocked(id.as_str())?;
+                if previous.is_some_and(|transform| transform.parent_id != value.parent_id) {
+                    this.unlocked(id.as_str())?;
+                }
             }
             this.builder.replace_transform(value)
         })

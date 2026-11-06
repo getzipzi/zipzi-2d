@@ -6,12 +6,12 @@ use crate::{state::DocumentState, DrawableFrame, FrameEvaluator, PreviewValues, 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct FrameKey {
     generation: u64,
-    content: crate::state::ContentId,
+    inputs: crate::state::ContentId,
     preview_revision: u64,
 }
 
 /// One instance per editing session. Call `reset` when replacing a document,
-/// Content changes invalidate by ContentId; preview requests use a separate revision.
+/// Evaluation inputs and preview values have independent cache keys.
 #[derive(Debug, Default)]
 pub struct PreviewState {
     values: PreviewValues,
@@ -76,7 +76,7 @@ impl PreviewState {
     ) -> Result<Arc<DrawableFrame>, Status> {
         let key = FrameKey {
             generation,
-            content: doc.content_id(),
+            inputs: doc.frame_input_id(),
             preview_revision: self.revision,
         };
         if let Some((cached_key, result)) = &self.cached {
@@ -107,7 +107,7 @@ impl PreviewState {
         if !changed {
             let key = FrameKey {
                 generation,
-                content: doc.content_id(),
+                inputs: doc.frame_input_id(),
                 preview_revision: self.revision,
             };
             if let Some((cached_key, Ok(_))) = &self.cached {
@@ -123,7 +123,7 @@ impl PreviewState {
         self.cached = Some((
             FrameKey {
                 generation,
-                content: doc.content_id(),
+                inputs: doc.frame_input_id(),
                 preview_revision: self.revision,
             },
             Ok(frame),

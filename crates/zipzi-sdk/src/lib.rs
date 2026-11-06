@@ -1,6 +1,6 @@
 //! Immutable authoring snapshots, isolated Drafts, publication and native project I/O.
-//! Domain algorithms use Builder; host/client consumers migrate in the following stage;
-//! the old EditSession/DocumentSession execution path is not exported here.
+//! Domain commands write through Builder. Published snapshots retain frozen model
+//! state and the exact resource versions referenced by that state.
 mod authoring;
 pub use authoring::*;
 pub use zipzi_core::Status;
@@ -31,3 +31,7 @@ pub use spatial::{
     hit_test_geometry, object_bounds, query_spatial_frame, validate_spatial_queries, GeometryHit,
     GeometryQuery, ObjectBounds, SpatialError, SpatialQuery, SpatialResult, TriangleHit,
 };
+
+#[cfg(test)]
+#[path = "../tests/motion_editing.rs"]
+mod motion_curve_regression;

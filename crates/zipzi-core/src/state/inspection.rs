@@ -9,6 +9,30 @@ impl DocumentState {
     pub fn motion_group(&self, id: &str) -> Option<&MotionGroup> {
         self.motion_groups().iter().find(|g| g.id == id)
     }
+    pub fn motion_track(&self, id: &str) -> Option<(&MotionClip, &MotionTrack)> {
+        self.motion_order()
+            .iter()
+            .filter_map(|id| self.motion(id))
+            .find_map(|clip| {
+                clip.tracks
+                    .iter()
+                    .find(|track| track.id == id)
+                    .map(|track| (clip, track))
+            })
+    }
+    pub fn motion_key(&self, id: &str) -> Option<(&MotionClip, &MotionTrack, &MotionKey)> {
+        self.motion_order()
+            .iter()
+            .filter_map(|id| self.motion(id))
+            .find_map(|clip| {
+                clip.tracks.iter().find_map(|track| {
+                    track
+                        .keys()
+                        .find(|key| key.id == id)
+                        .map(|key| (clip, track, key))
+                })
+            })
+    }
     pub fn parameter_group(&self, id: &str) -> Option<&CdiParameterGroup> {
         self.display_info()
             .parameter_groups
@@ -63,6 +87,34 @@ impl DocumentState {
             .find(|group| group.id == id)
             .map(AsRef::as_ref)
     }
+    pub fn physics_input(&self, id: &str) -> Option<(&PhysicsSetting, &PhysicsInput)> {
+        self.physics()
+            .as_deref()?
+            .data
+            .settings
+            .iter()
+            .find_map(|group| {
+                group
+                    .inputs
+                    .iter()
+                    .find(|input| input.id == id)
+                    .map(|input| (group.as_ref(), input))
+            })
+    }
+    pub fn physics_output(&self, id: &str) -> Option<(&PhysicsSetting, &PhysicsOutput)> {
+        self.physics()
+            .as_deref()?
+            .data
+            .settings
+            .iter()
+            .find_map(|group| {
+                group
+                    .outputs
+                    .iter()
+                    .find(|output| output.id == id)
+                    .map(|output| (group.as_ref(), output))
+            })
+    }
     pub fn organization_owner(&self, id: &str) -> Option<&str> {
         let model = self.content.model();
         let owner = model.organization_owner(id)?;
@@ -109,5 +161,22 @@ impl DocumentState {
             .filter_map(|key| self.glue(key))
             .filter(|glue| glue.mesh_a_id == id || glue.mesh_b_id == id)
             .collect()
+    }
+}
+
+impl DocumentState {
+    pub fn glue_pair(&self, id: &str) -> Option<&crate::GlueVertexPair> {
+        self.glue_order()
+            .iter()
+            .filter_map(|owner| self.glue(owner))
+            .flat_map(|g| &g.pairs)
+            .find(|pair| pair.id == id)
+    }
+    pub fn glue_pair_owner(&self, id: &str) -> Option<&str> {
+        self.glue_order()
+            .iter()
+            .filter_map(|owner| self.glue(owner))
+            .find(|g| g.pairs.iter().any(|pair| pair.id == id))
+            .map(|g| g.id.as_str())
     }
 }

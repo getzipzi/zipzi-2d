@@ -613,7 +613,7 @@ impl Document {
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.refresh_textures()?;
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, true);
+            self.consume_authoring_receipt(&receipt, None);
         }
         Ok(())
     }

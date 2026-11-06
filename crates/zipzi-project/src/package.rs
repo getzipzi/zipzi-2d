@@ -282,3 +282,6 @@ mod path_tests {
         assert!(directories.contains("motions/audio"));
     }
 }
+
+#[cfg(test)]
+mod publication_tests;

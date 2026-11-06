@@ -108,26 +108,25 @@ fn mutated_section_values_never_panic() {
 #[test]
 fn v6_references_and_stale_reports_are_checked_without_native_code() {
     use zipzi_core::{Offscreen, OffscreenKeyform, Part};
-    let original = fixture("external_v50_bs_glue");
-    let textures = HashMap::from([(
-        0,
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../fixtures/external_v50_bs_glue/texture_00.png"),
-    )]);
-    let mut doc = import_from_bare_moc3(&original, &textures)
-        .unwrap()
-        .document;
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/external_v50_bs_glue");
+    let textures = HashMap::from([(0, fixture.join("texture_00.png"))]);
+    let (result, imported, _) = zipzi_project::ProjectImporter::default()
+        .import_bare_moc3(&fixture.join("model.moc3"), &textures);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert!(result.diagnostics.is_empty(), "{result:?}");
+    let imported = imported.unwrap();
+    let mut builder = imported.document.builder();
     let part = "12340000-1111-4111-8111-111111111111";
     let os = "12340001-1111-4111-8111-111111111111";
-    assert!(doc
+    builder
         .create_part(Part {
             id: part.into(),
             runtime_id: "SafetyPart".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
+        .unwrap();
+    builder
         .create_offscreen(Offscreen {
             id: os.into(),
             runtime_id: "SafetyOS".into(),
@@ -138,8 +137,8 @@ fn v6_references_and_stale_reports_are_checked_without_native_code() {
             }],
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
     let bytes = zipzi_moc3::encode_moc3(&doc).unwrap().bytes;
     let inspection = inspect_moc3_safety(&bytes).unwrap();
     assert_eq!(inspection.version_number, 6);

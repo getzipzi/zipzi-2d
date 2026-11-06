@@ -1,28 +1,27 @@
+mod support;
 use serde_json::Value;
+use support::*;
 use zipzi_core::document::{MotionGroup, MotionRegistration};
-use zipzi_core::{Canvas, ChangeKind, Document, Parameter, Vec2};
-use zipzi_project::{
-    decode_project, encode_project, export_motion3, import_motion3, DocumentSession,
-};
+use zipzi_core::state::DocumentState;
+use zipzi_core::{Canvas, Parameter, Vec2};
+use zipzi_project::{export_motion3, import_motion3};
+use zipzi_project::{ProjectImporter, TransferFormat, TransferSnapshot};
 
 const DOC: &str = "00000000-0000-4000-8000-000000000c01";
 const PARAM: &str = "00000000-0000-4000-8000-000000000c02";
 const MOTION: &str = "00000000-0000-4000-8000-000000000c03";
 
-fn document() -> Document {
-    let mut document = Document::new();
-    assert!(document
-        .initialize(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0))
-        .is_ok());
-    assert!(document
-        .create_parameter(Parameter {
+fn document() -> DocumentState {
+    let mut document =
+        DocumentState::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into()).unwrap();
+    document = prepare(&document, |builder| {
+        builder.create_parameter(Parameter {
             id: PARAM.into(),
             runtime_id: "ParamX".into(),
             name: "X".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     document
 }
 
@@ -31,9 +30,9 @@ fn motion_import_roundtrips_segments_events_and_project() {
     let source = include_str!("../../../fixtures/animation_cpu/typed.motion3.json");
     let imported = import_motion3(&document(), MOTION, "Idle", source).unwrap();
     assert!(imported.diagnostics.is_empty());
-    let mut reopened = decode_project(&encode_project(&imported.candidate).unwrap()).unwrap();
+    let mut reopened = roundtrip(&imported.candidate);
     assert_eq!(reopened.motion_order(), &[MOTION]);
-    assert!(reopened.validate_structure().is_empty());
+    assert!(reopened.builder().freeze().is_ok());
     let exported = export_motion3(&reopened, MOTION).unwrap();
     let output: Value = serde_json::from_str(&exported).unwrap();
     assert_eq!(output["Meta"]["TotalUserDataSize"], 6);
@@ -47,36 +46,38 @@ fn motion_import_roundtrips_segments_events_and_project() {
         assert!((actual.as_f64().unwrap() - expected.as_f64().unwrap()).abs() < 0.000001);
     }
     assert_eq!(output["UserData"][0]["Value"], "你好");
-    let track_id = reopened.get_motion(MOTION).unwrap().tracks[0].id.clone();
-    let changed = reopened.get_motion(MOTION).unwrap().clone();
+    let track_id = reopened.motion(MOTION).unwrap().tracks[0].id.clone();
+    let changed = reopened.motion(MOTION).unwrap().clone();
     assert_eq!(changed.tracks[0].id, track_id);
-    assert_eq!(
-        reopened.erase_object(PARAM).status.code,
-        "OBJECT_REFERENCED"
-    );
-    assert!(reopened.erase_object(MOTION).status.is_ok());
-    assert!(reopened.erase_object(PARAM).status.is_ok());
+    let mut invalid = reopened.builder();
+    invalid.remove_parameter(PARAM).unwrap();
+    assert!(invalid.freeze().is_err());
+    reopened = prepare(&reopened, |builder| {
+        builder.edit_motion(zipzi_core::document::MotionEdit::DeleteClip { id: MOTION.into() })
+    });
+    reopened = prepare(&reopened, |builder| builder.remove_parameter(PARAM));
+    assert!(reopened.parameter(PARAM).is_none());
 }
 
 #[test]
 fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
     let source = include_str!("../../../fixtures/animation_cpu/typed.motion3.json");
     let imported = import_motion3(&document(), MOTION, "Idle", source).unwrap();
-    let clip = imported.candidate.get_motion(MOTION).unwrap();
+    let clip = imported.candidate.motion(MOTION).unwrap();
     let ids: Vec<_> = clip.tracks[0].keys().map(|key| key.id.clone()).collect();
     assert_eq!(ids.len(), 5);
     assert_eq!(
         ids.iter().collect::<std::collections::HashSet<_>>().len(),
         ids.len()
     );
-    let project = encode_project(&imported.candidate).unwrap();
-    let wire: Value = serde_json::from_str(&project).unwrap();
-    assert_eq!(wire["format_version"], 21);
-    let reopened = decode_project(&project).unwrap();
-    assert_eq!(reopened.get_motion(MOTION), Some(clip));
-    assert_eq!(encode_project(&reopened).unwrap(), project);
+    let project = native_bytes(&imported.candidate);
+    let wire = project_json(&project);
+    assert_eq!(wire["format_version"], 22);
+    let reopened = load_native(&project).unwrap();
+    assert_eq!(reopened.motion(MOTION), Some(clip));
+    assert_eq!(project_json(&native_bytes(&reopened)), wire);
     let again = import_motion3(&reopened, MOTION, "Idle", source).unwrap();
-    assert!(again.candidate.get_motion(MOTION).unwrap().tracks[0]
+    assert!(again.candidate.motion(MOTION).unwrap().tracks[0]
         .keys()
         .all(|key| !ids.contains(&key.id)));
     let original: Value =
@@ -87,7 +88,9 @@ fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
     let mut old = wire.clone();
     old["format_version"] = 10.into();
     assert_eq!(
-        decode_project(&old.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&project, &old))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
     let mut missing_id = wire;
@@ -95,7 +98,7 @@ fn key_ids_persist_in_project_and_reimport_allocates_fresh_identities() {
         .as_object_mut()
         .unwrap()
         .remove("id");
-    assert!(decode_project(&missing_id.to_string()).is_err());
+    assert!(load_native(&replace_project_json(&project, &missing_id)).is_err());
 }
 
 #[test]
@@ -109,15 +112,15 @@ fn key_identity_is_excluded_from_opaque_content_fingerprint() {
         .unwrap()
         .candidate;
     let exported = export_motion3(&document, MOTION).unwrap();
-    let mut clip = document.get_motion(MOTION).unwrap().clone();
+    let mut clip = document.motion(MOTION).unwrap().clone();
     clip.tracks[0].initial.id = "00000000-0000-4000-8000-00000000f001".into();
     std::sync::Arc::make_mut(&mut clip.tracks[0].segments)[0]
         .end_mut()
         .id = "00000000-0000-4000-8000-00000000f002".into();
-    assert!(document.replace_motion(clip.clone()).status.is_ok());
+    document = prepare(&document, |builder| builder.replace_motion(clip.clone()));
     assert_eq!(export_motion3(&document, MOTION).unwrap(), exported);
     clip.tracks[0].initial.value += 0.1;
-    assert!(document.replace_motion(clip).status.is_ok());
+    document = prepare(&document, |builder| builder.replace_motion(clip));
     assert_eq!(
         export_motion3(&document, MOTION).unwrap_err().code,
         "OPAQUE_CONTENT_CHANGED"
@@ -138,9 +141,9 @@ fn virtual_motion_targets_roundtrip_and_opaque_namespace_changes_block_export() 
         .unwrap()
         .candidate;
     assert!(export_motion3(&candidate, MOTION).is_ok());
-    let mut parameter = candidate.get_parameter(PARAM).unwrap().clone();
+    let mut parameter = candidate.parameter(PARAM).unwrap().clone();
     parameter.runtime_id = "Changed".into();
-    assert!(candidate.replace_parameter(parameter).status.is_ok());
+    candidate = prepare(&candidate, |builder| builder.replace_parameter(parameter));
     assert_eq!(
         export_motion3(&candidate, MOTION).unwrap_err().code,
         "OPAQUE_NAMESPACE_CHANGED"
@@ -161,12 +164,12 @@ fn motion_group_registration_is_separate_and_roundtrips() {
         sound: None,
         extensions: Default::default(),
     };
-    assert!(candidate
-        .set_motion_groups(vec![
+    candidate = prepare(&candidate, |builder| {
+        builder.set_motion_groups(vec![
             MotionGroup {
                 id: uuid::Uuid::new_v4().to_string(),
                 name: "Idle".into(),
-                entries: vec![registration.clone()]
+                entries: vec![registration.clone()],
             },
             MotionGroup {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -174,17 +177,16 @@ fn motion_group_registration_is_separate_and_roundtrips() {
                 entries: vec![MotionRegistration {
                     id: uuid::Uuid::new_v4().to_string(),
                     ..registration
-                }]
+                }],
             },
         ])
-        .status
-        .is_ok());
-    let reopened = decode_project(&encode_project(&candidate).unwrap()).unwrap();
+    });
+    let reopened = roundtrip(&candidate);
     assert_eq!(reopened.motion_order().len(), 1);
     assert_eq!(reopened.motion_groups().len(), 2);
     assert_eq!(reopened.motion_groups()[1].name, "");
     assert_eq!(reopened.motion_groups()[1].entries[0].fade_out, Some(0.25));
-    assert!(reopened.validate_structure().is_empty());
+    assert!(reopened.builder().freeze().is_ok());
 }
 
 #[test]
@@ -194,16 +196,18 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
         .unwrap()
         .parent()
         .unwrap();
-    let mut session = DocumentSession::new();
-    let (result, _) = session.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
+    let importer = ProjectImporter::default();
+    let (result, session, _) =
+        importer.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
+    let session = session.unwrap();
     assert!(result
         .diagnostics
         .iter()
         .any(|d| d.code == "MISSING_MOTION_ATTACHMENT"));
     let runtime_id = session
-        .document()
-        .get_parameter(&session.document().parameter_order()[0])
+        .document
+        .parameter(&session.document.parameter_order()[0])
         .unwrap()
         .runtime_id
         .clone();
@@ -212,7 +216,7 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
             "CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"UserDataCount":0,"TotalUserDataSize":0},
         "Curves":[{"Target":"Parameter","Id":runtime_id,"Segments":[0,0,0,1,1]}],"UserData":[]
     }).to_string();
-    let mut candidate = import_motion3(session.document(), MOTION, "Idle", &source)
+    let mut candidate = import_motion3(&session.document, MOTION, "Idle", &source)
         .unwrap()
         .candidate;
     let entry = MotionRegistration {
@@ -223,12 +227,12 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
         sound: None,
         extensions: Default::default(),
     };
-    assert!(candidate
-        .set_motion_groups(vec![
+    candidate = prepare(&candidate, |builder| {
+        builder.set_motion_groups(vec![
             MotionGroup {
                 id: uuid::Uuid::new_v4().to_string(),
                 name: "Idle".into(),
-                entries: vec![entry.clone()]
+                entries: vec![entry.clone()],
             },
             MotionGroup {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -236,26 +240,24 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
                 entries: vec![MotionRegistration {
                     id: uuid::Uuid::new_v4().to_string(),
                     ..entry
-                }]
+                }],
             },
         ])
-        .status
-        .is_ok());
-    assert!(candidate
-        .set_motion_library(candidate.motion_groups().to_vec(), vec![])
-        .status
-        .is_ok());
-    assert!(candidate.set_missing_attachments(Vec::new()).status.is_ok());
-    assert!(session
-        .publish_authoring_candidate(candidate, ChangeKind::Metadata, false)
-        .unwrap());
+    });
+    candidate = prepare(&candidate, |builder| builder.set_motion_roots(vec![]));
+    candidate = prepare(&candidate, |builder| {
+        builder.set_missing_attachments(Vec::new())
+    });
+    let exported_state = candidate;
     let temporary =
         std::env::temp_dir().join(format!("zipzi-motion-model3-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&temporary);
     std::fs::create_dir_all(&temporary).unwrap();
     let package = temporary.join("package");
-    let result = session.export_package(&package);
-    assert!(result.status.is_ok(), "{result:?}");
+    TransferSnapshot::new(exported_state, session.resources, session.protected_paths)
+        .unwrap()
+        .publish(TransferFormat::Runtime, &package)
+        .unwrap();
     let model3: Value =
         serde_json::from_slice(&std::fs::read(package.join("model.model3.json")).unwrap()).unwrap();
     assert!(
@@ -274,15 +276,17 @@ fn model3_motion_package_preserves_shared_file_registrations_and_atomic_import()
         .as_str()
         .unwrap();
     assert_eq!(relative, "motions/Idle.motion3.json");
-    let mut reopened = DocumentSession::new();
-    let (result, _) = reopened.import_model3(&package.join("model.model3.json"));
+
+    let (result, reopened, _) = importer.import_model3(&package.join("model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
-    assert_eq!(reopened.document().motion_order().len(), 1);
-    assert_eq!(reopened.document().motion_groups().len(), 2);
-    let revision = reopened.document().revision();
+    let reopened = reopened.unwrap();
+    assert_eq!(reopened.document.motion_order().len(), 1);
+    assert_eq!(reopened.document.motion_groups().len(), 2);
+    let revision = reopened.document.content_id();
     std::fs::write(package.join(relative), "{broken").unwrap();
-    let (result, _) = reopened.import_model3(&package.join("model.model3.json"));
+    let (result, failed, _) = importer.import_model3(&package.join("model.model3.json"));
     assert!(!result.status.is_ok());
-    assert_eq!(reopened.document().revision(), revision);
+    assert!(failed.is_none());
+    assert_eq!(reopened.document.content_id(), revision);
     std::fs::remove_dir_all(temporary).unwrap();
 }

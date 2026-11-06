@@ -1,25 +1,30 @@
 use super::*;
-use zipzi_sdk::BindingAuthoringEdit;
 
 fn create(s: &mut AuthoringSession, n: u32, parent: Option<u32>) {
-    let plan = s
-        .plan_scene_edit(SceneEdit::Create {
-            id: id(n),
-            name: "Warp".into(),
-            object: SceneCreate::Warp {
-                bounds: Some([4., 6., 44., 36.]),
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Create {
+                id: id(n),
+                name: "Warp".into(),
+                object: SceneCreate::Warp {
+                    bounds: Some([4., 6., 44., 36.]),
+                },
+                part_id: None,
+                parent_id: parent.map(id),
+                before: None,
+                deformation_before: None,
             },
-            part_id: None,
-            parent_id: parent.map(id),
-            before: None,
-            deformation_before: None,
-        })
-        .unwrap();
-    s.execute_scene_plan(&plan).unwrap();
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    s.publish(plan.1).unwrap();
 }
 fn original(s: &AuthoringSession, n: u32) -> DeformerOriginal {
-    s.document()
-        .get_transform(&id(n))
+    s.snapshot()
+        .document()
+        .transform(&id(n))
         .unwrap()
         .original_shape
         .clone()
@@ -37,44 +42,66 @@ fn apply(s: &mut AuthoringSession, n: u32, target: ShapeTarget, action: Deformer
     );
 }
 fn offset(s: &mut AuthoringSession, n: u32, dx: f32) {
-    let mut t = s.document().get_transform(&id(n)).unwrap().clone();
+    let mut t = s.snapshot().document().transform(&id(n)).unwrap().clone();
     for p in &mut t.warp_mut().unwrap().points {
         p.x += dx;
     }
-    s.edit("Move", None, |e| e.replace_transform(t)).unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_transform(t))
+            .and_then(|value| {
+                let prepared = draft.prepare("Move")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
 }
 fn bind(s: &mut AuthoringSession, n: u32, b: u32) {
     let points = s
+        .snapshot()
         .document()
-        .get_transform(&id(n))
+        .transform(&id(n))
         .unwrap()
         .warp()
         .unwrap()
         .points
         .clone();
-    s.edit("First keys", None, |e| {
-        if e.candidate_document().get_parameter(&id(100)).is_none() {
-            e.create_parameter(Parameter {
-                id: id(100),
-                ..Default::default()
-            })?;
-        }
-        e.create_scene_binding(SceneBinding {
-            id: id(b),
-            axes: vec![BindingAxis::new(id(100), vec![-1., 1.])],
-            track: SceneTrack::Warp {
-                target_id: id(n).into(),
-                keyforms: [-1., 1.]
-                    .iter()
-                    .map(|&v| WarpKeyform {
-                        keys: vec![v],
-                        positions: points.iter().map(|p| Vec2::new(p.x + v, p.y)).collect(),
-                        ..Default::default()
-                    })
-                    .collect(),
-            },
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                if e.read_document().unwrap().parameter(&id(100)).is_none() {
+                    e.create_parameter({
+                        let mut value = Parameter {
+                            id: id(100),
+                            ..Default::default()
+                        };
+                        value.runtime_id = value.id.clone();
+                        value
+                    })?;
+                }
+                e.create_scene_binding(SceneBinding {
+                    id: id(b),
+                    axes: vec![BindingAxis::new(id(100), vec![-1., 1.])],
+                    track: SceneTrack::Warp {
+                        target_id: id(n).into(),
+                        keyforms: [-1., 1.]
+                            .iter()
+                            .map(|&v| WarpKeyform {
+                                keys: vec![v],
+                                positions: points.iter().map(|p| Vec2::new(p.x + v, p.y)).collect(),
+                                ..Default::default()
+                            })
+                            .collect(),
+                    },
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("First keys")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 
@@ -88,8 +115,9 @@ fn creation_original_is_independent_of_edits_history_and_current_parameter_defau
         DeformerOriginalSource::Created
     );
     let initial = s
+        .snapshot()
         .document()
-        .get_transform(&id(2))
+        .transform(&id(2))
         .unwrap()
         .warp()
         .unwrap()
@@ -105,18 +133,18 @@ fn creation_original_is_independent_of_edits_history_and_current_parameter_defau
         },
     );
     assert_eq!(
-        s.document().get_transform(&id(2)).unwrap().warp(),
+        s.snapshot().document().transform(&id(2)).unwrap().warp(),
         Some(&initial)
     );
     assert_eq!(original(&s, 2), record);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_ne!(
-        s.document().get_transform(&id(2)).unwrap().warp(),
+        s.snapshot().document().transform(&id(2)).unwrap().warp(),
         Some(&initial)
     );
-    s.redo().unwrap();
+    s.redo(s.version()).unwrap();
     assert_eq!(
-        s.document().get_transform(&id(2)).unwrap().warp(),
+        s.snapshot().document().transform(&id(2)).unwrap().warp(),
         Some(&initial)
     );
 }
@@ -135,14 +163,28 @@ fn first_key_auto_update_happens_once_and_manual_update_disables_it() {
         DeformerOriginalSource::FirstKey
     );
     assert_ne!(first.snapshot, created.snapshot);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_eq!(original(&s, 2), created);
-    s.redo().unwrap();
+    s.redo(s.version()).unwrap();
     assert_eq!(original(&s, 2), first);
     offset(&mut s, 2, 4.);
     assert_eq!(original(&s, 2), first);
-    s.edit("Remove ordinary binding", None, |e| e.erase_object(&id(3)))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.edit_binding_grid(
+                    BindingGridEdit::Delete { owner: id(3) },
+                    Default::default(),
+                    &Default::default(),
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Remove ordinary binding")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     bind(&mut s, 2, 4);
     assert_eq!(original(&s, 2), first);
     create(&mut s, 8, None);
@@ -176,26 +218,54 @@ fn shared_binding_grid_first_axis_updates_the_original_once() {
     let mut s = session();
     create(&mut s, 2, None);
     offset(&mut s, 2, 5.);
-    s.edit("Binding shell", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(100),
-            ..Default::default()
-        })?;
-        e.binding_authoring(BindingAuthoringEdit::Grid(BindingGridEdit::Create {
-            id: id(3),
-            target: BindingGridTarget::Scene(id(2)),
-        }))
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(100),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.edit_binding_grid(
+                    BindingGridEdit::Create {
+                        id: id(3),
+                        target: BindingGridTarget::Scene(id(2)),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Binding shell")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     assert!(!original(&s, 2).first_key_seen);
-    s.edit("First axis", None, |e| {
-        e.binding_authoring(BindingAuthoringEdit::Grid(BindingGridEdit::Edit {
-            owner: id(3),
-            operation: GridOperation::AddAxis {
-                axis: BindingAxis::new(id(100), vec![-1., 1.]),
-            },
-        }))
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.edit_binding_grid(
+                    BindingGridEdit::Edit {
+                        owner: id(3),
+                        operation: GridOperation::AddAxis {
+                            axis: BindingAxis::new(id(100), vec![-1., 1.]),
+                        },
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("First axis")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     assert!(original(&s, 2).first_key_seen);
     assert_eq!(
@@ -209,10 +279,18 @@ fn nonlinear_capture_keeps_baked_canvas_shape_but_refuses_unrepresentable_contro
     for controller in [false, true] {
         let mut s = session();
         create(&mut s, 20, None);
-        let mut parent = s.document().get_transform(&id(20)).unwrap().clone();
+        let mut parent = s.snapshot().document().transform(&id(20)).unwrap().clone();
         parent.warp_mut().unwrap().points[3].x += 7.;
-        s.edit("Nonlinear parent", None, |e| e.replace_transform(parent))
-            .unwrap();
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_transform(parent))
+                .and_then(|value| {
+                    let prepared = draft.prepare("Nonlinear parent")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap();
         let mut warp = WarpTransform {
             rows: 2,
             columns: 2,
@@ -225,14 +303,25 @@ fn nonlinear_capture_keeps_baked_canvas_shape_but_refuses_unrepresentable_contro
         if controller {
             warp.bezier = Some(WarpBezier::from_lattice(2, 2, true, &warp.points));
         }
-        s.edit("Nested Warp", None, |e| {
-            e.create_transform(Transform {
-                id: id(2),
-                parent_id: Some(id(20).into()),
-                data: TransformData::Warp(warp),
-                ..Default::default()
-            })
-        })
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| {
+                    crate::support::insert_transform(
+                        e,
+                        Transform {
+                            id: id(2),
+                            parent_id: Some(id(20).into()),
+                            data: TransformData::Warp(warp),
+                            ..Default::default()
+                        },
+                    )
+                })
+                .and_then(|value| {
+                    let prepared = draft.prepare("Nested Warp")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
         .unwrap();
         let record = original(&s, 2);
         let DeformerOriginalShape::Warp {
@@ -243,27 +332,39 @@ fn nonlinear_capture_keeps_baked_canvas_shape_but_refuses_unrepresentable_contro
             panic!()
         };
         assert!(!controller_canvas_exact);
-        let plan = s
-            .plan_scene_edit(SceneEdit::Reparent {
-                edit: ReparentEdit::keep_local(vec![id(2)], String::new()),
-            })
-            .unwrap();
-        s.execute_scene_plan(&plan).unwrap();
-        let plan = s.plan_scene_content(E::DeformerOriginal {
-            transform_id: id(2),
-            target: ShapeTarget::Base,
-            action: DeformerOriginalAction::Restore {
-                allow_resize: false,
-            },
-            context: Default::default(),
+        let plan = crate::support::prepared(&s, |candidate_commands| {
+            candidate_commands.edit_scene(
+                SceneEdit::Reparent {
+                    edit: ReparentEdit::keep_local(vec![id(2)], String::new()),
+                },
+                Default::default(),
+                &Default::default(),
+            )
+        })
+        .unwrap();
+        s.publish(plan.1).unwrap();
+        let plan = crate::support::prepared(&s, |candidate_commands| {
+            candidate_commands.edit_scene_content(
+                E::DeformerOriginal {
+                    transform_id: id(2),
+                    target: ShapeTarget::Base,
+                    action: DeformerOriginalAction::Restore {
+                        allow_resize: false,
+                    },
+                    context: Default::default(),
+                },
+                Default::default(),
+                &Default::default(),
+            )
         });
         if controller {
             assert!(plan.is_err());
         } else {
-            s.execute_scene_content_plan(&plan.unwrap()).unwrap();
+            s.publish(plan.unwrap().1).unwrap();
             assert_eq!(
-                s.document()
-                    .get_transform(&id(2))
+                s.snapshot()
+                    .document()
+                    .transform(&id(2))
                     .unwrap()
                     .warp()
                     .unwrap()
@@ -283,29 +384,45 @@ fn restore_under_changed_rotation_parent_keeps_its_current_pose_and_uses_canvas_
     else {
         panic!()
     };
-    s.edit("Parent", None, |e| {
-        e.create_transform(Transform {
-            id: id(3),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 11.,
-                pose: RotationPose {
-                    origin: PreciseVec2::new(12., 9.),
-                    angle: 27.,
-                    scale: 1.7,
-                    ..Default::default()
-                },
-            }),
-            ..Default::default()
-        })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: id(3),
+                        data: TransformData::Rotation(RotationTransform {
+                            base_angle: 11.,
+                            pose: RotationPose {
+                                origin: PreciseVec2::new(12., 9.),
+                                angle: 27.,
+                                scale: 1.7,
+                                ..Default::default()
+                            },
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Parent")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Reparent {
+                edit: ReparentEdit::keep_local(vec![id(2)], id(3)),
+            },
+            Default::default(),
+            &Default::default(),
+        )
     })
     .unwrap();
-    let plan = s
-        .plan_scene_edit(SceneEdit::Reparent {
-            edit: ReparentEdit::keep_local(vec![id(2)], id(3)),
-        })
-        .unwrap();
-    s.execute_scene_plan(&plan).unwrap();
-    let parent = s.document().get_transform(&id(3)).unwrap().clone();
+    s.publish(plan.1).unwrap();
+    let parent = s.snapshot().document().transform(&id(3)).unwrap().clone();
     apply(
         &mut s,
         2,
@@ -316,7 +433,7 @@ fn restore_under_changed_rotation_parent_keeps_its_current_pose_and_uses_canvas_
     );
     let mut frame = DrawableFrame::default();
     assert!(zipzi_core::evaluation::evaluate_frame_including_hidden(
-        s.document(),
+        s.snapshot().document(),
         &Default::default(),
         &mut frame
     )
@@ -330,7 +447,7 @@ fn restore_under_changed_rotation_parent_keeps_its_current_pose_and_uses_canvas_
     for (a, b) in canvas.points.iter().zip(restored) {
         assert!((a.x - b.x).hypot(a.y - b.y) < 0.0001);
     }
-    assert_eq!(s.document().get_transform(&id(3)), Some(&parent));
+    assert_eq!(s.snapshot().document().transform(&id(3)), Some(&parent));
     assert_eq!(original(&s, 2), record);
 }
 
@@ -339,8 +456,13 @@ fn ordinary_restore_changes_only_the_explicit_stored_shape() {
     let mut s = session();
     create(&mut s, 2, None);
     bind(&mut s, 2, 3);
-    let base = s.document().get_transform(&id(2)).unwrap().clone();
-    let binding = s.document().get_scene_binding(&id(3)).unwrap().clone();
+    let base = s.snapshot().document().transform(&id(2)).unwrap().clone();
+    let binding = s
+        .snapshot()
+        .document()
+        .scene_binding(&id(3))
+        .unwrap()
+        .clone();
     let SceneTrack::Warp { keyforms, .. } = &binding.track else {
         panic!()
     };
@@ -357,8 +479,9 @@ fn ordinary_restore_changes_only_the_explicit_stored_shape() {
             allow_resize: false,
         },
     );
-    assert_eq!(s.document().get_transform(&id(2)), Some(&base));
-    let SceneTrack::Warp { keyforms, .. } = &s.document().get_scene_binding(&id(3)).unwrap().track
+    assert_eq!(s.snapshot().document().transform(&id(2)), Some(&base));
+    let SceneTrack::Warp { keyforms, .. } =
+        &s.snapshot().document().scene_binding(&id(3)).unwrap().track
     else {
         panic!()
     };
@@ -403,40 +526,72 @@ fn topology_restore_requires_review_and_resamples_every_stored_shape_and_control
     apply(&mut s, 2, ShapeTarget::Base, DeformerOriginalAction::Update);
     let saved = original(&s, 2);
     bind(&mut s, 2, 3);
-    s.edit("Blend", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(101),
-            kind: ParameterKind::BlendShape,
-            minimum: 0.,
-            maximum: 1.,
-            ..Default::default()
-        })?;
-        e.create_blend_key_table(BlendShapeKeyTable {
-            id: id(102),
-            parameter_id: id(101),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-            samples: vec![],
-            base_sample_id: String::new(),
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(103),
-            target_id: id(2),
-            target_kind: BlendShapeTargetKind::Warp,
-            key_table_id: id(102),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Warp(vec![
-                DeltaWarpKeyform {
-                    points: vec![Vec2::default(); 4],
-                    ..Default::default()
-                },
-                DeltaWarpKeyform {
-                    points: vec![Vec2::new(2., 3.); 4],
-                    ..Default::default()
-                },
-            ]),
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(101),
+                        kind: ParameterKind::BlendShape,
+                        minimum: 0.,
+                        maximum: 1.,
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateTable {
+                        table: BlendShapeKeyTable {
+                            id: id(102),
+                            parameter_id: id(101),
+                            keys: vec![0., 1.],
+                            base_key_idx: 0,
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                        },
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                {
+                    let binding = BlendShapeBinding {
+                        id: id(103),
+                        target_id: id(2),
+                        target_kind: BlendShapeTargetKind::Warp,
+                        key_table_id: id(102),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Warp(vec![
+                            DeltaWarpKeyform {
+                                points: vec![Vec2::default(); 4],
+                                ..Default::default()
+                            },
+                            DeltaWarpKeyform {
+                                points: vec![Vec2::new(2., 3.); 4],
+                                ..Default::default()
+                            },
+                        ]),
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Blend")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     run(
         &mut s,
@@ -460,88 +615,134 @@ fn topology_restore_requires_review_and_resamples_every_stored_shape_and_control
             },
         },
     );
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     let version = s.version();
-    assert!(s
-        .plan_scene_content(E::DeformerOriginal {
-            transform_id: id(2),
-            target: ShapeTarget::Base,
-            action: DeformerOriginalAction::Restore {
-                allow_resize: false
-            },
-            context: Default::default()
-        })
-        .is_err());
-    assert!(s.document().same_content(&before));
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::DeformerOriginal {
+                    transform_id: id(2),
+                    target: ShapeTarget::Base,
+                    action: DeformerOriginalAction::Restore {
+                        allow_resize: false
+                    },
+                    context: Default::default()
+                },
+                Default::default(),
+                &Default::default()
+            ))
+        .is_err()
+    );
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     assert_eq!(s.version(), version);
-    let plan = s
-        .plan_scene_content(E::DeformerOriginal {
-            transform_id: id(2),
-            target: ShapeTarget::Base,
-            action: DeformerOriginalAction::Restore { allow_resize: true },
-            context: Default::default(),
-        })
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene_content(
+            E::DeformerOriginal {
+                transform_id: id(2),
+                target: ShapeTarget::Base,
+                action: DeformerOriginalAction::Restore { allow_resize: true },
+                context: Default::default(),
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    assert!(plan.0.report.resampled_shapes >= 5);
+    s.publish(plan.1).unwrap();
+    let warp = s
+        .snapshot()
+        .document()
+        .transform(&id(2))
+        .unwrap()
+        .warp()
         .unwrap();
-    assert!(plan.report().resampled_shapes >= 5);
-    s.execute_scene_content_plan(&plan).unwrap();
-    let warp = s.document().get_transform(&id(2)).unwrap().warp().unwrap();
     assert_eq!((warp.rows, warp.columns), (1, 1));
     assert_eq!(warp.bezier.as_ref().unwrap().rows, 1);
-    let SceneTrack::Warp { keyforms, .. } = &s.document().get_scene_binding(&id(3)).unwrap().track
+    let SceneTrack::Warp { keyforms, .. } =
+        &s.snapshot().document().scene_binding(&id(3)).unwrap().track
     else {
         panic!()
     };
     assert!(keyforms.iter().all(|f| f.positions.len() == 4));
-    let DeltaKeyforms::Warp(forms) = &s.document().get_blend_binding(&id(103)).unwrap().keyforms
+    let DeltaKeyforms::Warp(forms) = &s
+        .snapshot()
+        .document()
+        .blend_binding(&id(103))
+        .unwrap()
+        .keyforms
     else {
         panic!()
     };
     assert!(forms.iter().all(|f| f.points.len() == 4));
     assert!(forms[1].points.iter().all(|p| *p == Vec2::new(2., 3.)));
     assert_eq!(original(&s, 2).snapshot, saved.snapshot);
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     lock(&mut s, &id(3));
-    assert!(s
-        .plan_scene_content(E::DeformerOriginal {
-            transform_id: id(2),
-            target: ShapeTarget::Base,
-            action: DeformerOriginalAction::Restore { allow_resize: true },
-            context: Default::default()
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::DeformerOriginal {
+                    transform_id: id(2),
+                    target: ShapeTarget::Base,
+                    action: DeformerOriginalAction::Restore { allow_resize: true },
+                    context: Default::default()
+                },
+                Default::default(),
+                &Default::default()
+            ))
+        .is_err()
+    );
 }
 
 #[test]
 fn rotation_original_retains_f64_origin_and_restores_against_the_current_reference_angle() {
     let mut s = session();
     let origin = PreciseVec2::new(12.1234567890123, 4.987654321098);
-    s.edit("Rotation", None, |e| {
-        e.create_transform(Transform {
-            id: id(2),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 17.,
-                pose: RotationPose {
-                    origin,
-                    angle: 721.25,
-                    scale: 0.75,
-                    reflect_x: true,
-                    ..Default::default()
-                },
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: id(2),
+                        data: TransformData::Rotation(RotationTransform {
+                            base_angle: 17.,
+                            pose: RotationPose {
+                                origin,
+                                angle: 721.25,
+                                scale: 0.75,
+                                reflect_x: true,
+                                ..Default::default()
+                            },
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Rotation")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let record = original(&s, 2);
-    let mut t = s.document().get_transform(&id(2)).unwrap().clone();
+    let mut t = s.snapshot().document().transform(&id(2)).unwrap().clone();
     let r = t.rotation_mut().unwrap();
     r.base_angle = 37.;
     r.pose.angle = -49.;
     r.pose.origin = PreciseVec2::new(20., 30.);
-    s.edit("Change pose and reference", None, |e| {
-        e.replace_transform(t)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_transform(t))
+            .and_then(|value| {
+                let prepared = draft.prepare("Change pose and reference")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     apply(
         &mut s,
@@ -552,8 +753,9 @@ fn rotation_original_retains_f64_origin_and_restores_against_the_current_referen
         },
     );
     let r = s
+        .snapshot()
         .document()
-        .get_transform(&id(2))
+        .transform(&id(2))
         .unwrap()
         .rotation()
         .unwrap();
@@ -573,36 +775,41 @@ fn native_save_reopen_duplicate_and_history_retain_independent_canvas_originals(
     let record = original(&s, 2);
     let directory = std::env::temp_dir().join(format!("zipzi-original-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir(&directory).unwrap();
-    let saved = s.save_project(&directory, None).unwrap();
-    let mut reopened = session();
-    reopened.open_project(&saved.path, None).unwrap();
+    let mut reopened = AuthoringSession::new(crate::support::roundtrip(s.snapshot()));
     assert_eq!(original(&reopened, 2), record);
-    let plan = reopened
-        .plan_scene_edit(SceneEdit::Duplicate {
-            ids: vec![id(2)],
-            scope: SceneCopyScope::Selected,
-            destination: None,
-            before: None,
-        })
-        .unwrap();
-    let copied = plan.copied_ids()[&id(2)].clone();
-    reopened.execute_scene_plan(&plan).unwrap();
+    let plan = crate::support::prepared(&reopened, |c| {
+        c.edit_scene(
+            SceneEdit::Duplicate {
+                ids: vec![id(2)],
+                scope: SceneCopyScope::Selected,
+                destination: None,
+                before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    let copied = plan.0.copied_ids[&id(2)].clone();
+    reopened.publish(plan.1).unwrap();
     assert_eq!(
         reopened
+            .snapshot()
             .document()
-            .get_transform(&copied)
+            .transform(&copied)
             .unwrap()
             .original_shape
             .as_ref(),
         Some(&record)
     );
-    reopened.undo().unwrap();
-    assert!(reopened.document().get_transform(&copied).is_none());
-    reopened.redo().unwrap();
+    reopened.undo(reopened.version()).unwrap();
+    assert!(reopened.snapshot().document().transform(&copied).is_none());
+    reopened.redo(reopened.version()).unwrap();
     assert_eq!(
         reopened
+            .snapshot()
             .document()
-            .get_transform(&copied)
+            .transform(&copied)
             .unwrap()
             .original_shape
             .as_ref(),
@@ -616,37 +823,52 @@ fn native_save_reopen_duplicate_and_history_retain_independent_canvas_originals(
 #[test]
 fn creation_and_first_key_capture_the_frozen_authoring_parent_pose() {
     let mut s = session();
-    s.edit("Driven parent", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(30),
-            ..Default::default()
-        })?;
-        e.create_transform(Transform {
-            id: id(20),
-            ..Default::default()
-        })?;
-        e.create_scene_binding(SceneBinding {
-            id: id(21),
-            axes: vec![BindingAxis::new(id(30), vec![-1., 1.])],
-            track: SceneTrack::Rotation {
-                target_id: id(20).into(),
-                keyforms: [-1., 1.]
-                    .iter()
-                    .map(|&v| RotationKeyform {
-                        keys: vec![v],
-                        rotation: RotationPose {
-                            angle: v * 45.,
-                            ..Default::default()
-                        },
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(30),
                         ..Default::default()
-                    })
-                    .collect(),
-            },
-        })
-    })
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: id(20),
+                        ..Default::default()
+                    },
+                )?;
+                e.create_scene_binding(SceneBinding {
+                    id: id(21),
+                    axes: vec![BindingAxis::new(id(30), vec![-1., 1.])],
+                    track: SceneTrack::Rotation {
+                        target_id: id(20).into(),
+                        keyforms: [-1., 1.]
+                            .iter()
+                            .map(|&v| RotationKeyform {
+                                keys: vec![v],
+                                rotation: RotationPose {
+                                    angle: v * 45.,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            })
+                            .collect(),
+                    },
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Driven parent")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let values = std::collections::HashMap::from([(id(30), 0.5)]);
-    s.set_preview_values(values.clone()).unwrap();
+    let values = std::collections::HashMap::from([(id(30), 0.)]);
+
     create(&mut s, 2, Some(20));
     let compare = |s: &AuthoringSession| {
         let record = original(s, 2);
@@ -656,7 +878,7 @@ fn creation_and_first_key_capture_the_frozen_authoring_parent_pose() {
         };
         let mut frame = DrawableFrame::default();
         assert!(zipzi_core::evaluation::evaluate_frame_including_hidden(
-            s.document(),
+            s.snapshot().document(),
             &values,
             &mut frame
         )
@@ -685,7 +907,7 @@ fn nonlinear_or_singular_current_parent_missing_record_type_changes_and_blends_r
         let mut parent = None;
         if case == "nonlinear" || case == "singular" {
             create(&mut s, 3, None);
-            let mut t = s.document().get_transform(&id(3)).unwrap().clone();
+            let mut t = s.snapshot().document().transform(&id(3)).unwrap().clone();
             if case == "nonlinear" {
                 t.warp_mut().unwrap().points[3].x += 4.;
             } else {
@@ -693,11 +915,19 @@ fn nonlinear_or_singular_current_parent_missing_record_type_changes_and_blends_r
                     p.y = 0.;
                 }
             }
-            s.edit("Parent map", None, |e| e.replace_transform(t))
-                .unwrap();
+            {
+                let mut draft = s.begin_draft();
+                draft
+                    .batch(draft.source(), |e| e.replace_transform(t))
+                    .and_then(|value| {
+                        let prepared = draft.prepare("Parent map")?;
+                        s.publish(prepared).map(|receipt| (value, receipt))
+                    })
+            }
+            .unwrap();
             parent = Some(id(3));
         }
-        let mut t = s.document().get_transform(&id(2)).unwrap().clone();
+        let mut t = s.snapshot().document().transform(&id(2)).unwrap().clone();
         t.parent_id = parent.map(Into::into);
         if case == "missing" {
             t.original_shape = None;
@@ -706,9 +936,17 @@ fn nonlinear_or_singular_current_parent_missing_record_type_changes_and_blends_r
             t.data = TransformData::Rotation(Default::default());
             t.warp_authoring = None;
         }
-        s.edit("Context change", None, |e| e.replace_transform(t))
-            .unwrap();
-        let before = s.document().clone();
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_transform(t))
+                .and_then(|value| {
+                    let prepared = draft.prepare("Context change")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap();
+        let before = s.snapshot().document().clone();
         let history = s.history_state();
         let version = s.version();
         let target = if case == "blend" {
@@ -720,18 +958,23 @@ fn nonlinear_or_singular_current_parent_missing_record_type_changes_and_blends_r
             ShapeTarget::Base
         };
         assert!(
-            s.plan_scene_content(E::DeformerOriginal {
-                transform_id: id(2),
-                target,
-                action: DeformerOriginalAction::Restore {
-                    allow_resize: false
-                },
-                context: Default::default()
-            })
+            crate::support::prepared(&s, |candidate_commands| candidate_commands
+                .edit_scene_content(
+                    E::DeformerOriginal {
+                        transform_id: id(2),
+                        target,
+                        action: DeformerOriginalAction::Restore {
+                            allow_resize: false
+                        },
+                        context: Default::default()
+                    },
+                    Default::default(),
+                    &Default::default()
+                ))
             .is_err(),
             "{case}"
         );
-        assert!(s.document().same_content(&before));
+        assert_eq!(s.snapshot().content_id(), before.content_id());
         assert_eq!(s.history_state(), history);
         assert_eq!(s.version(), version);
     }

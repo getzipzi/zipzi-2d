@@ -5980,7 +5980,7 @@
     },
     "ManualMeshOperation": {
       "content": null,
-      "doc": "Manual Mesh UV triangulation intent. Applying it through an Edit requires an exact\ncandidate source and transfers dependent shapes through the SDK.",
+      "doc": "Manual Mesh UV triangulation intent. Applying it through a Draft requires an exact\ncandidate source and transfers dependent shapes through the SDK.",
       "kind": "serde_enum",
       "name": "zipzi_contract::authoring::ManualMeshOperation",
       "tag": "op",
@@ -9424,7 +9424,7 @@
       "content": null,
       "doc": "Explicit base-level texture policy. Budgets count logical straight RGBA8\nbytes per referenced asset ID, independently of physical buffer sharing.",
       "kind": "serde_enum",
-      "name": "zipzi_contract::runtime::ObservationTexturePolicy",
+      "name": "zipzi_contract::observation::ObservationTexturePolicy",
       "tag": "kind",
       "variants": [
         {
@@ -9536,7 +9536,7 @@
         }
       ],
       "kind": "serde_record",
-      "name": "zipzi_contract::runtime::ObservationView",
+      "name": "zipzi_contract::observation::ObservationView",
       "transparent": false,
       "tuple": false
     },
@@ -11362,7 +11362,7 @@
       ]
     },
     "ParameterPatch": {
-      "doc": "Partial replacement of a parameter's authored fields, applied by ParameterOperation::Patch.\nOmitted or None fields preserve their current values; supplied values are validated as replacements.",
+      "doc": "Partial replacement of a parameter's authored fields.\nOmitted or None fields preserve their current values; supplied values are validated as replacements.",
       "fields": [
         {
           "default": null,

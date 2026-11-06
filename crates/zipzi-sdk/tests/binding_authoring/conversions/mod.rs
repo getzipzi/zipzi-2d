@@ -1,35 +1,46 @@
 use super::*;
+use zipzi_contract::authoring::BindingAuthoringEdit as E;
 use zipzi_core::{RotationPose, RotationTransform, Transform, TransformData};
+
 use zipzi_sdk::{
-    AuthoringLimits, AxisReduction, BindingAuthoringEdit as E, BindingConversion,
-    MeshGridEdit as G, ParameterRangeEdit, ParameterRangePolicy, ReparentEdit, ReparentStrategy,
+    AxisReduction, ConversionLimits, ParameterRangeEdit, ParameterRangePolicy, ReparentEdit,
+    ReparentStrategy,
 };
 const Q: &str = "00000000-0000-4000-8000-000000000406";
 const R: &str = "00000000-0000-4000-8000-000000000407";
 const T: &str = "00000000-0000-4000-8000-000000000408";
 
-fn apply(s: &mut AuthoringSession, e: E) -> zipzi_sdk::EditReceipt {
-    let p = s.plan_binding_authoring(e).unwrap();
-    s.execute_binding_plan(&p).unwrap()
+fn apply(s: &mut AuthoringSession, e: E) -> zipzi_sdk::Publication {
+    let p = crate::support::binding(&s, e).unwrap();
+    s.publish(p.1).unwrap()
 }
 
 fn bound() -> AuthoringSession {
     let mut s = fixture();
     let b = binding(&s);
-    s.edit("bind", None, |e| {
-        e.create_parameter(parameter(false))?;
-        e.create_binding(b)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter(parameter(false))?;
+                e.create_binding(b)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("bind")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    s.drain_events();
+    s.take_events();
     s
 }
 
 fn frame(s: &AuthoringSession, p: f32, q: f32) -> zipzi_core::DrawableFrame {
-    s.evaluate(
+    crate::support::frame(
+        s.snapshot(),
         &[(PARAMETER_ID, p), (Q, q)]
             .into_iter()
-            .filter(|(id, _)| s.parameter(id).is_some())
+            .filter(|(id, _)| s.snapshot().document().parameter(id).cloned().is_some())
             .map(|(id, v)| (id.into(), v))
             .collect(),
     )
@@ -37,38 +48,50 @@ fn frame(s: &AuthoringSession, p: f32, q: f32) -> zipzi_core::DrawableFrame {
 }
 
 fn grid_roundtrip(s: &AuthoringSession) {
-    let mut document = s.document().fork_candidate();
-    let mut asset = document.get_asset(ASSET_ID).unwrap().clone();
-    asset.content.as_mut().unwrap().source = "assets/texture.png".into();
-    assert!(document.replace_asset(asset).status.is_ok());
-    let text = zipzi_project::encode_project(&document).unwrap();
-    let restored = zipzi_project::decode_project(&text).unwrap();
-    assert!(restored.validate_structure().is_empty());
-    assert_eq!(restored.hierarchy_order(), s.document().hierarchy_order());
+    let saved = crate::support::roundtrip(s.snapshot());
+    let restored = saved.document();
     assert_eq!(
-        restored.get_binding(BINDING_ID),
-        s.document().get_binding(BINDING_ID)
+        restored.hierarchy_order(),
+        s.snapshot().document().hierarchy_order()
     );
-    assert_eq!(restored.get_mesh(MESH_ID), s.document().get_mesh(MESH_ID));
+    assert_eq!(
+        restored.binding(BINDING_ID),
+        s.snapshot().document().binding(BINDING_ID)
+    );
+    assert_eq!(
+        restored.mesh(MESH_ID),
+        s.snapshot().document().mesh(MESH_ID)
+    );
 }
 
 fn rotation(s: &mut AuthoringSession, scale: f32) {
-    s.edit("rotation", None, |e| {
-        e.create_transform(Transform {
-            id: R.into(),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 12.0,
-                pose: RotationPose {
-                    angle: 23.0,
-                    scale,
-                    origin: zipzi_core::PreciseVec2::new(5.0, -3.0),
-                    reflect_x: true,
-                    ..Default::default()
-                },
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: R.into(),
+                        data: TransformData::Rotation(RotationTransform {
+                            base_angle: 12.0,
+                            pose: RotationPose {
+                                angle: 23.0,
+                                scale,
+                                origin: zipzi_core::PreciseVec2::new(5.0, -3.0),
+                                reflect_x: true,
+                                ..Default::default()
+                            },
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("rotation")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 

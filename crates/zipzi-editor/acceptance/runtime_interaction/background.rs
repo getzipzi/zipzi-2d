@@ -1,13 +1,18 @@
 //! Runtime admission/completion stays on the UI thread; workers own only Work.
-//! Keep this driver identical in both builds of a paired comparison.
+//! All read workloads use an exact published source.
 use anyhow::{Context as _, ensure};
 use std::{
     sync::mpsc,
     thread::JoinHandle,
     time::{Duration, Instant},
 };
+use zipzi_contract::{
+    kernel_tasks::{SampleInput, SampleRequest},
+    observation::ObservationView,
+};
 use zipzi_editor_core::RuntimeHost;
-use zipzi_runtime::{ClientId, Completion, Executor, JobId, JobState, PreviewId, SessionId, Work};
+use zipzi_runtime::{ClientId, Completion, Executor, JobId, JobState, Work};
+use zipzi_sdk::{QuerySource, SessionKey};
 
 #[derive(Clone, Copy)]
 pub(super) enum Kind {
@@ -34,10 +39,10 @@ impl Executor for Scheduled {
 }
 pub(super) struct Background {
     runtime: RuntimeHost,
-    session: SessionId,
+    session: SessionKey,
     client: ClientId,
     kind: Kind,
-    preview: Option<PreviewId>,
+    motion: Option<String>,
     job: Option<JobId>,
     worker: Option<(JoinHandle<()>, mpsc::Receiver<Completion>)>,
     stopped: bool,
@@ -48,7 +53,7 @@ pub(super) struct Background {
 impl Background {
     pub(super) fn start(
         runtime: RuntimeHost,
-        session: SessionId,
+        session: SessionKey,
         kind: Kind,
     ) -> anyhow::Result<Self> {
         let client = runtime.write().register_client()?;
@@ -57,7 +62,7 @@ impl Background {
             session,
             client,
             kind,
-            preview: None,
+            motion: None,
             job: None,
             worker: None,
             stopped: false,
@@ -65,26 +70,17 @@ impl Background {
             steps: 0,
             warmup_steps: 0,
         };
+        result.runtime.write().attach(client, session)?;
         if matches!(kind, Kind::Preview) {
-            let (preview, _) = result
-                .runtime
-                .write()
-                .create_preview(client, session, None, None)?;
-            result.preview = Some(preview);
-            let clip = result
+            result.motion = result
                 .runtime
                 .read()
-                .session(session)?
-                .motion_ids()
+                .read_snapshot(client, session)?
+                .snapshot
+                .document()
+                .motion_order()
                 .first()
                 .cloned();
-            if let Some(id) = clip {
-                result.runtime.write().apply_preview(
-                    client,
-                    preview,
-                    zipzi_runtime::preview::PreviewCommand::ScheduleMotion { id, time: 0. },
-                )?;
-            }
         }
         let deadline = Instant::now() + Duration::from_secs(60);
         while result.jobs == 0 {
@@ -97,30 +93,36 @@ impl Background {
     }
     fn enqueue(&self) -> zipzi_runtime::Result<JobId> {
         let mut runtime = self.runtime.write();
+        let source =
+            QuerySource::Published(runtime.session_read(self.client, self.session)?.version());
+        let input = match self.kind {
+            Kind::Cpu | Kind::Observe => SampleInput::Parameters {
+                values: vec![Default::default(); 4],
+            },
+            Kind::Preview => SampleInput::Animation {
+                times: vec![0., 0.125, 0.25, 0.375],
+                motions: self.motion.iter().map(|id| (id.clone(), 0.)).collect(),
+                expressions: Vec::new(),
+                inputs: Vec::new(),
+                physics: true,
+                stabilized_start: false,
+            },
+        };
         match self.kind {
-            Kind::Cpu => runtime.request_modeling_samples(
+            Kind::Cpu | Kind::Preview => runtime.request_samples(
                 self.client,
-                zipzi_runtime::authoring::ModelingSampleQuery {
-                    session: self.session,
-                    edit: None,
-                    parameters: vec![Default::default(); 4],
-                    checks: Default::default(),
-                    expected: None,
+                source,
+                SampleRequest {
+                    input,
+                    queries: Vec::new(),
+                    quality: false,
                 },
-            ),
-            Kind::Preview => runtime.request_preview_samples(
-                self.client,
-                self.preview.unwrap(),
-                vec![0., 0.125, 0.25, 0.375],
-                true,
-                false,
             ),
             Kind::Observe => runtime.request_observation(
                 self.client,
-                self.session,
-                None,
-                vec![Default::default(); 4],
-                zipzi_runtime::observation::ObservationView {
+                source,
+                input,
+                ObservationView {
                     texture_policy: Default::default(),
                     width: 96,
                     height: 96,
@@ -129,7 +131,6 @@ impl Background {
                     topology: None,
                     quality: false,
                 },
-                None,
             ),
         }
     }
@@ -144,7 +145,7 @@ impl Background {
                         .join()
                         .map_err(|_| anyhow::anyhow!("background worker panicked"))?;
                     ensure!(
-                        self.runtime.write().complete(completion),
+                        self.runtime.write().complete(completion).is_ok(),
                         "background completion rejected"
                     );
                     self.steps += 1;
@@ -154,7 +155,7 @@ impl Background {
             }
         }
         if let Some(job) = self.job {
-            let info = self.runtime.read().job_info(self.client, job)?;
+            let info = self.runtime.read().job(self.client, job)?.clone();
             if info.state.is_terminal() {
                 self.runtime.write().release_job(self.client, job)?;
                 self.job = None;
@@ -175,7 +176,7 @@ impl Background {
                 ensure!(
                     self.runtime
                         .read()
-                        .job_info(self.client, self.job.unwrap())?
+                        .job(self.client, self.job.unwrap())?
                         .state
                         .is_terminal(),
                     "background work could not be dispatched"
@@ -186,8 +187,8 @@ impl Background {
                 let (sender, receiver) = mpsc::channel();
                 self.worker = Some((
                     std::thread::spawn(move || {
-                        // Whole work in the baseline, one quantum in the candidate.
-                        let _ = sender.send(work.run_on_thread("zipzi-bench-read", 16 << 20));
+                        // Cooperative read jobs return one quantum per dispatch.
+                        let _ = sender.send(work.run_with_stack("zipzi-bench-read", 16 << 20));
                     }),
                     receiver,
                 ));
@@ -208,9 +209,6 @@ impl Background {
                 "background cancellation timed out"
             );
             std::thread::sleep(Duration::from_millis(1));
-        }
-        if let Some(preview) = self.preview.take() {
-            self.runtime.write().release_preview(self.client, preview)?;
         }
         Ok(())
     }

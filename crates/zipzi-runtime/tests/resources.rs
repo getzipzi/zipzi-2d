@@ -1,316 +1,198 @@
-use zipzi_core::{ModelSetup, Vec2};
-use zipzi_runtime::{authoring::*, *};
-use zipzi_sdk::{ImageCreateSpec, MeshCreateSpec, MeshGeometry, MeshOperation};
+use zipzi_contract::kernel_commands::{Command, ImageInput};
+use zipzi_runtime::*;
+use zipzi_sdk::SourcedSnapshot;
 
 fn id(n: u32) -> String {
     format!("79400000-0000-4000-8000-{n:012x}")
 }
-fn setup() -> (Runtime, ClientId, SessionId) {
+
+fn setup() -> (Runtime, ClientId, Version) {
     let mut rt = Runtime::default();
     let client = rt.register_client().unwrap();
     let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
+        .create_session(client, &id(1), Default::default())
         .unwrap();
-    (rt, client, session)
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    (rt, client, version)
 }
-fn mesh() -> EditOperation {
-    EditOperation::Mesh {
-        operation: MeshOperation::Create {
-            spec: MeshCreateSpec {
-                id: Some(id(3)),
-                name: "Face".into(),
-                texture_asset_id: id(2),
-                geometry: MeshGeometry {
-                    vertex_ids: vec![42, 7, 99],
-                    positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-                    uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-                    triangles: vec![[42, 7, 99]],
-                    meshing: None,
-                },
-            },
+
+fn create() -> Command {
+    Command::CreateAsset {
+        id: id(2),
+        name: "Texture".into(),
+    }
+}
+
+fn replace(rgba: [u8; 4]) -> Command {
+    Command::ReplaceImage {
+        id: id(2),
+        input: ImageInput::Rgba {
+            width: 1,
+            height: 1,
+            bytes: rgba.to_vec(),
         },
     }
 }
 
-#[test]
-fn prepared_a_b_candidate_plan_and_history_hold_exact_pixels_until_last_owner() {
-    let (mut rt, client, session) = setup();
-    let a = rt
-        .prepare_image(client, 1, 1, vec![12, 34, 56, 255])
+fn pixels(source: &SourcedSnapshot) -> std::sync::Arc<[u8]> {
+    let asset = source.snapshot.document().asset(&id(2)).unwrap();
+    source
+        .snapshot
+        .resources()
+        .read_texture(asset)
         .unwrap()
-        .image;
-    let b = rt
-        .prepare_image(client, 1, 1, vec![250, 128, 64, 255])
-        .unwrap()
-        .image;
-    assert_eq!(rt.image_memory_usage().rgba_bytes, 8);
-    let edit = rt.begin_edit(client, session, "pixels", None).unwrap();
-    let result = rt
-        .apply_authoring(
-            client,
-            edit,
-            vec![
-                EditOperation::Resource(crate::authoring::ResourceOperation::CreateImage {
-                    spec: ImageCreateSpec {
-                        id: Some(id(2)),
-                        name: "A".into(),
-                    },
-                    image: a,
-                }),
-                mesh(),
-            ],
-        )
-        .unwrap();
-    assert!(matches!(result.source, SourceRef::Edit { sequence: 1, .. }));
-    let plan = rt
-        .plan_authoring(
-            client,
-            session,
-            Some(edit),
-            PlanIntent::ImageRename {
-                id: id(2),
-                expected_name: Some("A".into()),
-                name: "Texture".into(),
-            },
-        )
-        .unwrap();
-    assert_eq!(plan.report.affected_ids, vec![id(2)]);
-    rt.release_prepared_image(client, a).unwrap();
-    assert_eq!(
-        rt.image_snapshot(client, session, Some(edit), &id(2))
-            .unwrap()
-            .pixels
-            .rgba
-            .as_ref(),
-        &[12, 34, 56, 255]
-    );
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Resource(
-            crate::authoring::ResourceOperation::ApplyPlan { plan: plan.plan },
-        )],
-    )
-    .unwrap();
-    rt.release_modeling_plan(client, plan.plan).unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(
-        rt.image_snapshot(client, session, None, &id(2))
-            .unwrap()
-            .name,
-        "Texture"
-    );
-    assert_eq!(
-        rt.prepared_image_pixels(client, b).unwrap().rgba.as_ref(),
-        &[250, 128, 64, 255]
-    );
-    rt.release_prepared_image(client, b).unwrap();
-    assert_eq!(rt.image_memory_usage().rgba_bytes, 4);
-    rt.undo(client, session).unwrap();
-    assert_eq!(rt.image_memory_usage().rgba_bytes, 4); // redo retains the image
-    rt.redo(client, session).unwrap();
-    assert_eq!(
-        rt.image_snapshot(client, session, None, &id(2))
-            .unwrap()
-            .pixels
-            .rgba
-            .as_ref(),
-        &[12, 34, 56, 255]
-    );
-    assert_eq!(rt.prepared_image_count(), 0);
-    rt.close_session(client, session, true).unwrap();
-    assert_eq!(rt.image_memory_usage().total_bytes(), 0);
+        .rgba
 }
 
 #[test]
-fn bad_or_foreign_image_write_aborts_on_host_without_client_cleanup() {
-    let (mut rt, client, session) = setup();
+fn draft_snapshots_and_history_keep_distinct_pixels_until_the_last_owner() {
+    let (mut rt, client, version) = setup();
+    let budget = rt.resources().budget().clone();
+    let a = [12, 34, 56, 255];
+    let b = [250, 128, 64, 255];
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt
+        .commands(client, draft, vec![create(), replace(a)])
+        .unwrap();
+    let first = rt.read_draft(client, draft).unwrap();
+    let committed = rt.publish(client, draft, "First image").unwrap();
+    let draft = rt.begin_draft(client, committed.version).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![replace(b)]).unwrap();
+    let second = rt.read_draft(client, draft).unwrap();
+    assert_eq!(pixels(&first).as_ref(), a);
+    assert_eq!(pixels(&second).as_ref(), b);
+    assert_eq!(
+        pixels(&rt.read_snapshot(client, version.session).unwrap()).as_ref(),
+        a
+    );
+    let committed = rt.publish(client, draft, "Second image").unwrap();
+    assert_eq!(committed.history.undo_steps, 2);
+    assert_eq!(budget.usage().rgba_bytes, 8);
+    let undone = rt.undo(client, committed.version).unwrap();
+    assert_eq!(
+        pixels(&rt.read_snapshot(client, version.session).unwrap()).as_ref(),
+        a
+    );
+    rt.redo(client, undone.version).unwrap();
+    assert_eq!(
+        pixels(&rt.read_snapshot(client, version.session).unwrap()).as_ref(),
+        b
+    );
+    rt.close_session(client, version.session, true).unwrap();
+    assert_eq!(pixels(&first).as_ref(), a);
+    assert_eq!(pixels(&second).as_ref(), b);
+    drop(first);
+    assert_eq!(budget.usage().rgba_bytes, 4);
+    drop(second);
+    assert_eq!(budget.usage().total_bytes(), 0);
+}
+
+#[test]
+fn foreign_blob_admission_keeps_the_candidate_and_owners_bytes_intact() {
+    let (mut rt, client, version) = setup();
     let other = rt.register_client().unwrap();
-    let image = rt
-        .prepare_image(other, 1, 1, vec![1, 2, 3, 255])
-        .unwrap()
-        .image;
-    let edit = rt.begin_edit(client, session, "foreign", None).unwrap();
-    let result = rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Resource(
-            crate::authoring::ResourceOperation::CreateImage {
-                spec: ImageCreateSpec {
-                    id: Some(id(2)),
-                    name: "foreign".into(),
-                },
-                image,
-            },
-        )],
-    );
-    assert!(matches!(result, Err(RuntimeError::WrongOwner)));
-    assert_eq!(rt.commit_edit(client, edit), Err(RuntimeError::Aborted));
-    rt.release_edit(client, edit).unwrap();
-    rt.release_client(other);
-    assert_eq!(rt.prepared_image_count(), 0);
-    assert_eq!(rt.image_memory_usage().total_bytes(), 0);
-}
-
-#[test]
-fn preparation_failure_is_independent_and_hundred_cancelled_sources_reclaim_leases() {
-    let (mut rt, client, session) = setup();
-    for index in 0..100 {
-        let edit = rt.begin_edit(client, session, "cancel", None).unwrap();
-        assert!(rt.prepare_image(client, 1, 1, vec![1, 2, 3]).is_err());
-        assert_eq!(rt.edit_state(client, edit).unwrap(), EditState::Editing);
-        let image = rt
-            .prepare_image(client, 1, 1, vec![index, 2, 3, 255])
-            .unwrap()
-            .image;
-        rt.apply_authoring(
-            client,
-            edit,
-            vec![EditOperation::Resource(
-                crate::authoring::ResourceOperation::CreateImage {
-                    spec: ImageCreateSpec {
-                        id: Some(id(2)),
-                        name: "draft".into(),
-                    },
-                    image,
-                },
-            )],
-        )
-        .unwrap();
-        let snapshot = rt.edit_snapshot(client, edit).unwrap();
-        let plan = rt
-            .plan_authoring(
-                client,
-                session,
-                Some(edit),
-                PlanIntent::ImageRename {
-                    id: id(2),
-                    expected_name: Some("draft".into()),
-                    name: "planned".into(),
-                },
-            )
-            .unwrap();
-        rt.release_prepared_image(client, image).unwrap();
-        rt.release_edit(client, edit).unwrap();
-        rt.release_modeling_plan(client, plan.plan).unwrap();
-        assert_eq!(
-            snapshot
-                .snapshot
-                .memory_image(&id(2))
-                .unwrap()
-                .texture()
-                .rgba[0],
-            index
-        );
-        assert_eq!(rt.image_memory_usage().rgba_bytes, 4);
-        drop(snapshot);
-        assert_eq!(rt.image_memory_usage().total_bytes(), 0);
-        assert_eq!(rt.prepared_image_count(), 0);
-        assert_eq!(rt.modeling_plan_count(), 0);
-    }
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
-}
-
-#[test]
-fn plan_from_exact_source_is_stale_after_a_prior_batch_operation() {
-    let (mut rt, client, session) = setup();
-    let edit = rt.begin_edit(client, session, "image", None).unwrap();
-    let image = rt
-        .prepare_image(client, 1, 1, vec![1, 2, 3, 255])
-        .unwrap()
-        .image;
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![
-            EditOperation::Resource(crate::authoring::ResourceOperation::CreateImage {
-                spec: ImageCreateSpec {
-                    id: Some(id(2)),
-                    name: "image".into(),
-                },
-                image,
-            }),
-            mesh(),
-        ],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    let plan = rt
-        .plan_authoring(
-            client,
-            session,
-            None,
-            PlanIntent::MeshRename {
-                id: id(3),
-                expected_name: Some("Face".into()),
-                name: "Planned".into(),
-            },
-        )
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "batch", None).unwrap();
-    let error = rt
-        .apply_authoring(
-            client,
-            edit,
-            vec![
-                EditOperation::Mesh {
-                    operation: MeshOperation::Rename {
-                        expected_name: None,
-                        id: id(3),
-                        name: "Partial".into(),
-                    },
-                },
-                EditOperation::Resource(crate::authoring::ResourceOperation::ApplyPlan {
-                    plan: plan.plan,
-                }),
-            ],
-        )
-        .unwrap_err();
-    assert!(matches!(error, RuntimeError::Sdk(e) if e.code.as_ref() == "STALE_PLAN"));
-    assert_eq!(rt.commit_edit(client, edit), Err(RuntimeError::Aborted));
+    let blob = rt.create_blob(other, 4).unwrap();
+    rt.append_blob(other, blob, 0, &[1, 2, 3, 255]).unwrap();
+    rt.seal_blob(other, blob).unwrap();
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![create()]).unwrap();
     assert_eq!(
-        rt.document(session).unwrap().get_mesh(&id(3)).unwrap().name,
-        "Face"
+        rt.replace_image_blob(client, draft, id(2), blob, 1, 1)
+            .unwrap_err()
+            .code,
+        "NOT_OWNER"
     );
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+    assert_eq!(
+        rt.read_draft(client, draft).unwrap().source,
+        QuerySource::Draft(draft)
+    );
+    assert_eq!(rt.blob(other, blob).unwrap().bytes(), &[1, 2, 3, 255]);
+    rt.release_client(other);
+    assert_eq!(rt.task_bytes(), 0);
+    rt.cancel_draft(client, draft.draft).unwrap();
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
 }
 
 #[test]
-fn preparation_admission_and_client_expiry_reclaim_only_owned_leases() {
+fn a_hundred_cancelled_drafts_release_pixels_after_readers_drop() {
+    let (mut rt, client, version) = setup();
+    let budget = rt.resources().budget().clone();
+    for index in 0..100 {
+        let draft = rt.begin_draft(client, version).unwrap();
+        let (draft, _) = rt
+            .commands(client, draft, vec![create(), replace([index, 2, 3, 255])])
+            .unwrap();
+        let frozen = rt.read_draft(client, draft).unwrap();
+        rt.cancel_draft(client, draft.draft).unwrap();
+        assert_eq!(pixels(&frozen)[0], index);
+        assert_eq!(budget.usage().rgba_bytes, 4);
+        drop(frozen);
+        assert_eq!(budget.usage().total_bytes(), 0);
+    }
+    assert_eq!(
+        rt.subscribe(client, version.session)
+            .unwrap()
+            .history
+            .undo_steps,
+        0
+    );
+}
+
+#[test]
+fn stale_resource_command_cannot_apply_after_another_batch() {
+    let (mut rt, client, version) = setup();
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt
+        .commands(client, draft, vec![create(), replace([1, 2, 3, 255])])
+        .unwrap();
+    let (current, _) = rt
+        .commands(client, draft, vec![replace([4, 5, 6, 255])])
+        .unwrap();
+    let before = rt.read_draft(client, current).unwrap();
+    assert_eq!(
+        rt.commands(client, draft, vec![replace([7, 8, 9, 255])])
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        rt.publish(client, current, "Rejected draft")
+            .unwrap_err()
+            .code,
+        "DRAFT_ENDED"
+    );
+    assert_eq!(pixels(&before).as_ref(), &[4, 5, 6, 255]);
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
+}
+
+#[test]
+fn client_expiry_reclaims_only_its_bulk_buffers_and_their_actual_lifetimes() {
     let mut rt = Runtime::new(RuntimeLimits {
-        prepared_images_per_client: 1,
+        task_bytes: 8,
         ..Default::default()
     });
-    let client = rt.register_client().unwrap();
-    let other = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "independent", None).unwrap();
-    let a = rt
-        .prepare_image(client, 1, 1, vec![1, 2, 3, 255])
-        .unwrap()
-        .image;
-    assert!(matches!(
-        rt.prepare_image(client, 1, 1, vec![1, 2, 3, 255]),
-        Err(RuntimeError::Budget("prepared images"))
-    ));
-    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 0);
-    assert_eq!(rt.edit_state(client, edit).unwrap(), EditState::Editing);
-    let b = rt
-        .prepare_image(other, 1, 1, vec![4, 5, 6, 255])
-        .unwrap()
-        .image;
-    assert_eq!(rt.image_memory_usage().rgba_bytes, 8);
-    rt.release_client(client);
-    assert_eq!(rt.prepared_image_count(), 1);
-    assert_eq!(rt.image_memory_usage().rgba_bytes, 4);
-    assert!(rt.prepared_image_pixels(other, a).is_err());
-    assert_eq!(
-        rt.prepared_image_pixels(other, b).unwrap().rgba.as_ref(),
-        &[4, 5, 6, 255]
-    );
-    rt.release_client(other);
-    assert_eq!(rt.prepared_image_count(), 0);
-    assert_eq!(rt.image_memory_usage().total_bytes(), 0);
+    let a = rt.register_client().unwrap();
+    let b = rt.register_client().unwrap();
+    let first = rt.create_blob(a, 4).unwrap();
+    let second = rt.create_blob(b, 4).unwrap();
+    for (owner, blob) in [(a, first), (b, second)] {
+        rt.append_blob(owner, blob, 0, b"rgba").unwrap();
+        rt.seal_blob(owner, blob).unwrap();
+    }
+    let held = rt.blob(a, first).unwrap();
+    assert_eq!(rt.create_blob(a, 1).unwrap_err().code, "BUDGET_EXCEEDED");
+    rt.release_client(a);
+    assert_eq!(rt.task_bytes(), 8);
+    assert_eq!(rt.blob(b, first).err().unwrap().code, "BLOB_NOT_FOUND");
+    assert_eq!(rt.blob(b, second).unwrap().bytes(), b"rgba");
+    drop(held);
+    assert_eq!(rt.task_bytes(), 4);
+    rt.release_client(b);
+    assert_eq!(rt.task_bytes(), 0);
 }

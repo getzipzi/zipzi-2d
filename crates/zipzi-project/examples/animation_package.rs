@@ -2,9 +2,9 @@
 use std::path::PathBuf;
 
 use zipzi_core::document::{MotionGroup, MotionRegistration, PackageAttachment};
-use zipzi_core::ChangeKind;
 use zipzi_project::{
-    import_expression3, import_motion3, import_physics3, import_pose3, DocumentSession,
+    import_expression3, import_motion3, import_physics3, import_pose3, ProjectImporter,
+    TransferFormat, TransferSnapshot,
 };
 
 const EXPRESSION: &str = "00000000-0000-4000-8000-000000000e21";
@@ -24,15 +24,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .parent()
         .ok_or("repo root")?
         .to_path_buf();
-    let mut session = DocumentSession::new();
-    let (result, _) = session.import_model3(&root.join("fixtures/external_v50/model.model3.json"));
-    if !result.status.is_ok() {
-        return Err(result.status.message.into());
+    let (result, imported, _) = ProjectImporter::default()
+        .import_model3(&root.join("fixtures/external_v50/model.model3.json"));
+    if !result.status.is_ok() || !result.resources_complete() {
+        return Err(format!("{result:?}").into());
     }
-    let mut candidate = session.document().fork_candidate();
-    if !candidate.set_missing_attachments(Vec::new()).status.is_ok() {
-        return Err("cannot discard absent fixture references".into());
-    }
+    let imported = imported.ok_or("missing imported model")?;
+    let mut builder = imported.document.builder();
+    builder
+        .set_missing_attachments(Vec::new())
+        .map_err(|s| s.message)?;
+    let mut candidate = builder.freeze().map_err(|s| s.message)?.state;
     candidate = import_expression3(
         &candidate,
         EXPRESSION,
@@ -59,6 +61,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         r#"{"Type":"Live2D Pose","Groups":[[{"Id":"Part0"}]]}"#,
     )?
     .candidate;
+    let sound_id = uuid::Uuid::new_v4().to_string();
+    let data_id = uuid::Uuid::new_v4().to_string();
     let groups = vec![MotionGroup {
         id: uuid::Uuid::new_v4().to_string(),
         name: "Idle".into(),
@@ -67,24 +71,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             clip_id: MOTION.into(),
             fade_in: None,
             fade_out: None,
-            sound: Some("sounds/probe.wav".into()),
+            sound: Some(zipzi_core::document::AttachmentRef::Resolved {
+                attachment_id: sound_id.clone(),
+            }),
             extensions: Default::default(),
         }],
     }];
-    if !candidate.set_motion_groups(groups).status.is_ok() {
-        return Err("cannot register motion".into());
-    }
     let param = candidate
-        .get_parameter(&candidate.parameter_order()[0])
+        .parameter(&candidate.parameter_order()[0])
         .ok_or("parameter")?
         .runtime_id
         .clone();
     let hit = candidate
-        .get_mesh(&candidate.mesh_order()[0])
+        .mesh(&candidate.mesh_order()[0])
         .ok_or("drawable")?
         .runtime_id
         .clone();
-    let settings = zipzi_project::model3::import_settings(
+    let mut settings = zipzi_project::model3::import_settings(
         &candidate,
         &serde_json::json!({
             "Groups": [{"Target":"Parameter","Name":"EyeBlink","Ids":[param]}],
@@ -94,37 +97,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
     )
     .map_err(|status| status.message)?;
-    if !candidate.set_model3_settings(settings).status.is_ok() {
-        return Err("cannot set model3 metadata".into());
-    }
-    if !candidate
+    settings.user_data = Some(zipzi_core::document::AttachmentRef::Resolved {
+        attachment_id: data_id.clone(),
+    });
+    let mut builder = candidate.builder();
+    builder.set_motion_groups(groups).map_err(|s| s.message)?;
+    builder
+        .set_model3_settings(settings)
+        .map_err(|s| s.message)?;
+    builder
         .set_package_attachments(vec![
             PackageAttachment {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: sound_id,
                 path: "sounds/probe.wav".into(),
                 bytes: Some(std::sync::Arc::new(b"RIFF\0\0\0\0WAVE".to_vec())),
             },
             PackageAttachment {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: data_id,
                 path: "data.userdata3.json".into(),
                 bytes: Some(std::sync::Arc::new(
                     br#"{"Version":3,"UserData":[]}"#.to_vec(),
                 )),
             },
         ])
-        .status
-        .is_ok()
-    {
-        return Err("cannot add attachments".into());
-    }
-    candidate.resolve_attachment_paths();
-    session
-        .publish_authoring_candidate(candidate, ChangeKind::Metadata, false)
-        .map_err(|status| status.message)?;
-    let result = session.export_package(&destination);
-    if !result.status.is_ok() {
-        return Err(result.status.message.into());
-    }
+        .map_err(|s| s.message)?;
+    let candidate = builder.freeze().map_err(|s| s.message)?.state;
+    TransferSnapshot::new(candidate, imported.resources, imported.protected_paths)
+        .map_err(|s| s.message)?
+        .publish(TransferFormat::Runtime, &destination)
+        .map_err(|s| s.message)?;
     println!("{}", destination.display());
     Ok(())
 }

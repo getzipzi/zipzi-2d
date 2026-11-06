@@ -39,13 +39,13 @@ fn test_import_external_v33_3d8e869a() {
     let defaults = doc
         .parameter_order()
         .iter()
-        .map(|id| doc.get_parameter(id).unwrap().default_value)
+        .map(|id| doc.parameter(id).unwrap().default_value)
         .collect::<Vec<_>>();
     let mut toggle = defaults.clone();
     let index = doc
         .parameter_order()
         .iter()
-        .position(|id| doc.get_parameter(id).unwrap().runtime_id == "MouseToggle")
+        .position(|id| doc.parameter(id).unwrap().runtime_id == "MouseToggle")
         .unwrap();
     toggle[index] = 1.0;
     assert_runtime_matches(doc, &bytes, &[defaults, toggle]);
@@ -57,10 +57,11 @@ fn test_import_external_v33_3d8e869a() {
     let mut doc_frame = DrawableFrame::default();
     evaluate_frame(doc, &HashMap::new(), &mut doc_frame);
 
-    let ppu = doc.source_canvas().unwrap().pixels_per_unit;
+    let ppu = doc.setup().source_canvas.unwrap().pixels_per_unit;
 
-    // 4. Re-export imported Document to v50 MOC3 and verify in PurismCore
-    let re_export = encode_moc3(doc).expect("Re-export of v33 model to v50 failed");
+    // 4. Re-export imported DocumentState to v50 MOC3 and verify in PurismCore
+    let re_export =
+        encode_moc3(&capture_images(&doc).0).expect("Re-export of v33 model to v50 failed");
 
     let mut purism_re = PurismModelInstance::new(&re_export.bytes);
     purism_re.update();
@@ -114,13 +115,13 @@ fn test_import_external_v50() {
 
     // Verify nested deformer hierarchy: RotChild has parent WarpRoot
     let rot_id = &doc.sorted_transforms()[1];
-    let rot = doc.get_transform(rot_id).unwrap();
+    let rot = doc.transform(rot_id).unwrap();
     assert_eq!(rot.runtime_id, "RotChild");
     let warp_id = &doc.sorted_transforms()[0];
     assert_eq!(rot.parent(), warp_id);
 
     // Verify explicit v50 multiply and screen colors are preserved
-    let mesh = doc.get_mesh(&doc.mesh_order()[0]).unwrap();
+    let mesh = doc.mesh(&doc.mesh_order()[0]).unwrap();
     let b = doc.binding_for_mesh(&mesh.id).unwrap();
     assert_eq!(b.keyforms.len(), 6);
     // Keyform 0 color from create_v50_external_fixture: mul_r = 0.5, scr_r = 0.0
@@ -131,7 +132,7 @@ fn test_import_external_v50() {
     near(b.keyforms[5].appearance.screen[0], 0.25, 100.0);
 
     // Re-export and verify in PurismCore
-    let re_export = encode_moc3(doc).expect("Re-export failed");
+    let re_export = encode_moc3(&capture_images(&doc).0).expect("Re-export failed");
     let mut purism = PurismModelInstance::new(&re_export.bytes);
     purism.set_parameter("ParamX", 0.5);
     purism.set_parameter("ParamY", -0.5);
@@ -179,27 +180,27 @@ fn test_import_external_v42() {
     let p_bs_id = doc
         .parameter_order()
         .iter()
-        .find(|id| doc.get_parameter(id).unwrap().runtime_id == "ParamBS")
+        .find(|id| doc.parameter(id).unwrap().runtime_id == "ParamBS")
         .expect("ParamBS exists");
-    let p_bs = doc.get_parameter(p_bs_id).unwrap();
+    let p_bs = doc.parameter(p_bs_id).unwrap();
     assert_eq!(p_bs.kind, ParameterKind::BlendShape);
 
     // Verify shared constraint
     let bsc_id = &doc.blend_constraint_order()[0];
-    let bsc = doc.get_blend_constraint(bsc_id).unwrap();
+    let bsc = doc.blend_constraint(bsc_id).unwrap();
     assert_eq!(bsc.parameter_id, *p_bs_id);
     assert_eq!(bsc.keys, vec![-1.0, 0.0, 1.0]);
     assert_eq!(bsc.weights, vec![1.0, 0.0, 1.0]);
 
     // Verify base_key_idx on key table is intermediate (1)
     let bkt_id = &doc.blend_key_table_order()[0];
-    let bkt = doc.get_blend_key_table(bkt_id).unwrap();
+    let bkt = doc.blend_key_table(bkt_id).unwrap();
     assert_eq!(bkt.base_key_idx, 1);
     assert_eq!(bkt.keys, vec![-1.0, 0.0, 1.0]);
 
     // Verify normal colors imported into document
     let warp_id = &doc.sorted_transforms()[0];
-    let warp = doc.get_transform(warp_id).unwrap();
+    let warp = doc.transform(warp_id).unwrap();
     near(warp.appearance.multiply[0], 0.9, 100.0);
     near(warp.appearance.screen[0], 0.05, 100.0);
 
@@ -253,7 +254,8 @@ fn test_v42_without_blendshapes() {
     assert_eq!(res.document.blend_binding_order().len(), 0);
     assert_eq!(res.document.blend_key_table_order().len(), 0);
 
-    let re_export = encode_moc3(&res.document).expect("Re-export to v50 should succeed");
+    let re_export =
+        encode_moc3(&capture_images(&res.document).0).expect("Re-export to v50 should succeed");
     assert!(!re_export.bytes.is_empty());
 }
 
@@ -291,7 +293,7 @@ fn test_v42_does_not_access_v50_fields() {
 
     let res = import_from_bare_moc3(&bytes, &HashMap::new()).expect("Import v42");
     for bb_id in res.document.blend_binding_order() {
-        let bb = res.document.get_blend_binding(bb_id).unwrap();
+        let bb = res.document.blend_binding(bb_id).unwrap();
         match &bb.keyforms {
             DeltaKeyforms::Warp(forms) => {
                 for f in forms {
@@ -321,10 +323,11 @@ fn test_v6_export_and_preflight() {
     let ins_ren = zipzi_moc3::inspect_moc3(&ren_bytes).expect("Ren inspection");
     assert_eq!(ins_ren.version, Moc3Version::Version53);
     let decoded = import_from_bare_moc3(&ren_bytes,&HashMap::from([(0,root.join("third_party/CubismSdkForNative-5-r.5/Samples/Resources/Ren/Ren.2048/texture_00.png"))])).expect("decode Ren with its actual texture");
-    let doc = &decoded.document;
+    let (document, _resources) = capture_images(&decoded.document);
+    let doc = &document;
 
     // 1. Re-export Ren with Auto -> should succeed and export v6
-    let exported = zipzi_moc3::encode_moc3(doc).expect("encode Ren auto");
+    let exported = zipzi_moc3::encode_moc3(&capture_images(&doc).0).expect("encode Ren auto");
     assert_eq!(exported.bytes[4], 6); // Version 6
     let safe_re =
         zipzi_moc3::inspect_moc3_safety(&exported.bytes).expect("safety on re-exported Ren");
@@ -353,7 +356,7 @@ fn test_v6_export_and_preflight() {
     let defaults: Vec<f32> = doc
         .parameter_order()
         .iter()
-        .map(|id| doc.get_parameter(id).unwrap().default_value)
+        .map(|id| doc.parameter(id).unwrap().default_value)
         .collect();
     assert_runtime_matches(doc, &exported.bytes, &[defaults]);
 
@@ -365,6 +368,7 @@ fn test_v6_export_and_preflight() {
     )
     .unwrap()
     .document;
-    let v5_exported = zipzi_moc3::encode_moc3(&v5_doc).expect("encode v5 doc auto");
+    let v5_exported =
+        zipzi_moc3::encode_moc3(&capture_images(&v5_doc).0).expect("encode v5 doc auto");
     assert_eq!(v5_exported.bytes[4], 5); // Version 5
 }

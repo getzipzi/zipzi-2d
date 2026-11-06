@@ -3,6 +3,13 @@ use zipzi_contract::{
     kernel_commands::{Command, CommandOutcome},
     kernel_wire::Query,
 };
+fn check_command_count(commands: &[Command]) -> Result<()> {
+    if commands.len() > 4096 {
+        return Err(error("RESOURCE_LIMIT", "Batch command count exceeds limit"));
+    }
+    Ok(())
+}
+
 impl Runtime {
     pub fn instance_id(&self) -> RuntimeInstanceId {
         self.instance
@@ -62,11 +69,10 @@ impl Runtime {
         expected: DraftSource,
         commands: Vec<Command>,
     ) -> Result<(DraftSource, Vec<CommandOutcome>)> {
+        self.admit_draft(client, expected.draft)?;
+        check_command_count(&commands)?;
         let resources = self.resources.clone();
         self.batch(client, expected, move |c| {
-            if commands.len() > 4096 {
-                return Err(error("RESOURCE_LIMIT", "Batch command count exceeds limit"));
-            }
             commands
                 .into_iter()
                 .map(|command| {
@@ -81,6 +87,8 @@ impl Runtime {
         expected: DraftSource,
         commands: Vec<Command>,
     ) -> Result<JobId> {
+        self.admit_draft(client, expected.draft)?;
+        check_command_count(&commands)?;
         let resources = self.resources.clone();
         let limits = zipzi_core::state::ConversionLimits::default();
         self.request_batch(
@@ -91,9 +99,6 @@ impl Runtime {
                 result_bytes: 0,
             },
             move |c, cancel| {
-                if commands.len() > 4096 {
-                    return Err(error("RESOURCE_LIMIT", "Batch command count exceeds limit"));
-                }
                 let control = cancel.conversion_control();
                 for command in commands {
                     cancel.check()?;
@@ -109,14 +114,10 @@ impl Runtime {
         expected: DraftSource,
         commands: Vec<Command>,
     ) -> Result<(DraftSource, Vec<CommandOutcome>)> {
+        self.admit_draft(client, expected.draft)?;
+        check_command_count(&commands)?;
         let resources = self.resources.clone();
         self.preview(client, expected, move |c| {
-            if commands.len() > 4096 {
-                return Err(error(
-                    "RESOURCE_LIMIT",
-                    "Preview command count exceeds limit",
-                ));
-            }
             commands
                 .into_iter()
                 .map(|command| {

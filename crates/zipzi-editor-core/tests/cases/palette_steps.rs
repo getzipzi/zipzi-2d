@@ -38,7 +38,10 @@ fn disjoint_blocks_move_one_neighbor_without_compacting_and_share_one_history_en
         ];
         d.select_objects(sources.to_vec())?;
         let before = parameters(&d);
-        assert!(step(&mut d, V::Parameters, &sources, down)?.receipt.changed);
+        assert!(
+            step(&mut d, V::Parameters, &sources, down)?.receipt.kind
+                != zipzi_sdk::PublicationKind::Unchanged
+        );
         assert_eq!(
             parameters(&d),
             expected.map(|id| object(K::Parameter, id).id)
@@ -74,7 +77,9 @@ fn boundary_blocks_stay_in_place_and_all_selected_noop_preserves_redo() -> anyho
     for down in [false, true] {
         let plan = d.plan_palette_steps(V::Parameters, &all, down)?;
         assert!(plan.is_noop());
-        assert!(!d.execute_palette_move(&plan)?.receipt.changed);
+        assert!(
+            d.execute_palette_move(&plan)?.receipt.kind == zipzi_sdk::PublicationKind::Unchanged
+        );
         assert_eq!(d.history_lengths(), (0, 1));
     }
     Ok(())

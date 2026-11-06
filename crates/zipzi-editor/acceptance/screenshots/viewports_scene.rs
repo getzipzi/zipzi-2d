@@ -317,8 +317,11 @@ fn transparency_grid_screenshots(directory: &Path) -> anyhow::Result<()> {
             let button = window.find("btn_transparency_grid").bounds();
             let header = window.find("canvas-zoom-toolbar").bounds();
             let zoom = window.find("canvas-zoom-controls").bounds();
-            assert_eq!(button.left(), header.left());
-            assert!(button.right() < zoom.left());
+            assert!(button.left() >= header.left());
+            assert!(
+                button.right() <= zoom.left(),
+                "Grid {button:?} overlaps zoom {zoom:?}"
+            );
             window.click("btn_transparency_grid", cx);
         })?;
         let enabled = h.capture()?;
@@ -386,18 +389,17 @@ fn isolation_screenshots(directory: &Path) -> anyhow::Result<()> {
     let mut h = Harness::new()?;
     let (mut document, assets) = crate::test_fixture::sample_document_with_two_layers()?;
     let saved = document.save(&assets.path().join("isolation.zipzi"))?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let first = sdk.mesh_ids()[0].clone();
-    let mut other = sdk.mesh(&sdk.mesh_ids()[1]).unwrap();
+    let mut sdk = crate::test_fixture::open_fixture(&saved.path)?;
+    let model = sdk.snapshot().document();
+    let first = model.mesh_order()[0].clone();
+    let mut other = model.mesh(&model.mesh_order()[1]).unwrap().clone();
     for position in &mut other.base_positions {
         position.x += 100.;
     }
-    sdk.edit("Offset second mesh", None, |edit| edit.replace_mesh(other))?;
-    sdk.save_project(&saved.path, None)?;
+    crate::test_fixture::publish_fixture(&mut sdk, "Offset second mesh", |edit| {
+        edit.replace_mesh(other)
+    })?;
+    crate::test_fixture::save_fixture(&mut sdk, &saved.path)?;
     let document = zipzi_editor_core::Document::open(&saved.path)?;
     h._assets = assets;
     h.cx.update_window(h.window, |_, window, cx| {

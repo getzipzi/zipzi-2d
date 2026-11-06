@@ -15,8 +15,7 @@ fn enter(cx: &mut TestAppContext) -> Harness {
         include_bytes!("../../zipzi-editor-core/tests/fixtures/alpha-asymmetric.png"),
     )
     .unwrap();
-    let saved = session
-        .save_project(&assets.path().join("multi.zipzi"), None)
+    let saved = crate::test_fixture::save_fixture(&mut session, &assets.path().join("multi.zipzi"))
         .unwrap();
     let mut document = Document::open(&saved.path).unwrap();
     document
@@ -41,10 +40,11 @@ fn meshes(h: &Harness, cx: &TestAppContext) -> Vec<zipzi_core::Mesh> {
     h.view.read_with(cx, |view, _| {
         let document = view.editor.document().unwrap();
         let host = document.runtime_host();
-        let runtime = host.read();
-        let model = runtime.document(document.runtime_session_id()).unwrap();
+        let captured =
+            crate::test_fixture::published_snapshot(&host, document.runtime_session_id()).unwrap();
+        let model = captured.document();
         [2, 4]
-            .map(|n| model.get_mesh(&fixture::id(n)).unwrap().clone())
+            .map(|n| model.mesh(&fixture::id(n)).unwrap().clone())
             .into()
     })
 }

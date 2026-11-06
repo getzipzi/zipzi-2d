@@ -61,6 +61,16 @@ impl Document {
         kind: SceneObjectType,
         selection: &[ObjectRef],
     ) -> anyhow::Result<()> {
+        let host = self.runtime_host();
+        if host
+            .read()
+            .saving_job(host.client_id(), self.runtime_session_id())?
+            .is_some()
+        {
+            return Err(
+                zipzi_core::Status::error("PROJECT_BUSY", "A project save is outstanding").into(),
+            );
+        }
         if matches!(kind, SceneObjectType::Warp | SceneObjectType::Rotation) {
             self.ensure_editable(&self.deformer_creation_members(selection)?)?;
         }

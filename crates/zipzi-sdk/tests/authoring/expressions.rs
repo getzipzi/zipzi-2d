@@ -73,7 +73,9 @@ fn edit(
     s.publish(draft.prepare("expressions").unwrap()).unwrap()
 }
 fn apply(s: &mut AuthoringSession, op: E) {
-    edit(s, |c| c.edit_expression(op));
+    edit(s, |candidate_commands| {
+        candidate_commands.edit_expression(op)
+    });
 }
 fn fields(value: f32) -> ExpressionEntryFields {
     ExpressionEntryFields {
@@ -390,7 +392,8 @@ fn owner_and_entry_locks_cover_copy_move_delete_patch_and_whole_replacement() {
             let mut draft = s.begin_draft();
             assert_eq!(
                 draft
-                    .batch(draft.source(), |c| c.edit_expression(op))
+                    .batch(draft.source(), |candidate_commands| candidate_commands
+                        .edit_expression(op))
                     .unwrap_err()
                     .code,
                 "OBJECT_LOCKED"
@@ -689,4 +692,43 @@ fn full_record_writes_validate_at_batch_boundary_and_share_other_owners() {
     );
     assert!(!draft.is_active());
     assert_eq!(s.snapshot().content_id(), current.content_id());
+}
+
+#[test]
+fn available_export_uses_the_captured_projection_and_stale_candidates_cannot_accept_new_content() {
+    let mut s = session();
+    edit(&mut s, |c| {
+        let mut asset = c.read_document()?.expression(&id(3)).unwrap().clone();
+        for entry in &mut asset.entries {
+            entry.extensions.clear();
+        }
+        c.replace_expression(asset)
+    });
+    patch(&mut s, 6, 0.4);
+    let captured = s.read_snapshot();
+    let projection = captured
+        .snapshot
+        .document()
+        .expression_projection(&id(3))
+        .unwrap();
+    assert_eq!(projection.disabled.len(), 1);
+    assert_eq!(projection.disabled[0].entry_id, id(5));
+    let export =
+        zipzi_project::export_available_expression3(captured.snapshot.document(), &id(3)).unwrap();
+    let wire: serde_json::Value = serde_json::from_str(&export).unwrap();
+    assert_eq!(wire["Parameters"].as_array().unwrap().len(), 1);
+    let stale = s.begin_draft().prepare("captured acceptance").unwrap();
+    patch(&mut s, 5, 0.2);
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    assert!(s
+        .snapshot()
+        .document()
+        .expression_projection(&id(3))
+        .unwrap()
+        .disabled
+        .is_empty());
+    assert_eq!(
+        zipzi_project::export_available_expression3(captured.snapshot.document(), &id(3)).unwrap(),
+        export
+    );
 }

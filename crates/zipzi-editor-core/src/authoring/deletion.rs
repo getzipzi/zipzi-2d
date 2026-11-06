@@ -336,7 +336,7 @@ impl Document {
         let receipt = plan.candidate.publish(&mut self.session)?;
         if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, true);
+            self.consume_authoring_receipt(&receipt, None);
             let index = self.object_index();
             self.context.reconcile(&index);
             if self.context.selections.is_empty() {

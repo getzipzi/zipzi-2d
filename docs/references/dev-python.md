@@ -9,14 +9,14 @@ Windows PowerShell (also available on macOS):
 
 ```powershell
 uv run --locked python tools/dev.py python path/to/probe.py argument
-uv run --locked python tools/dev.py python -c 'import zipzi; print(zipzi.describe("zipzi"))'
+uv run --locked python tools/dev.py python -c 'import zipzi; print(zipzi.values.CONTRACT)'
 ```
 
 macOS shell wrapper:
 
 ```sh
 ./tools/dev-python /tmp/probe.py argument
-./tools/dev-python -c 'import zipzi; print(zipzi.describe("zipzi"))'
+./tools/dev-python -c 'import zipzi; print(zipzi.values.CONTRACT)'
 ./tools/dev-python - <<'PY'
 import zipzi
 with zipzi.local() as runtime:

@@ -6,7 +6,6 @@ use zipzi_core::{
     Transform, TransformData,
 };
 use zipzi_editor_core::{Document, EditorCommand, ObjectKind as K, ObjectRef, RelationKind as R};
-use zipzi_sdk::AuthoringSession;
 fn id() -> String {
     Uuid::new_v4().to_string()
 }
@@ -79,22 +78,28 @@ fn stored_combinations_and_precision_come_from_one_binding() -> anyhow::Result<(
 fn independent_parameter_bindings_stay_separate_and_target_counts_are_deduplicated()
 -> anyhow::Result<()> {
     let out = tempfile::tempdir()?;
-    let mut sdk = AuthoringSession::new(
+    let mut sdk = crate::support::fixture_session(
         &id(),
         Canvas::new(256., 256., zipzi_core::Vec2::new(0., 0.), 1.),
     )?;
     let params = [id(), id()];
     let targets = [id(), id()];
-    sdk.edit("independent bindings", None, |edit| {
+    crate::support::publish_fixture(&mut sdk, "independent bindings", |edit| {
         for i in 0..2 {
-            edit.create_parameter(Parameter {
-                id: params[i].clone(),
-                ..Default::default()
-            })?;
-            edit.create_part(Part {
-                id: targets[i].clone(),
-                ..Default::default()
-            })?;
+            crate::support::insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: params[i].clone(),
+                    ..Default::default()
+                },
+            )?;
+            crate::support::insert_fixture_part(
+                edit,
+                Part {
+                    id: targets[i].clone(),
+                    ..Default::default()
+                },
+            )?;
             edit.create_scene_binding(SceneBinding {
                 id: id(),
                 axes: vec![BindingAxis {
@@ -122,7 +127,7 @@ fn independent_parameter_bindings_stay_separate_and_target_counts_are_deduplicat
         }
         Ok(())
     })?;
-    let saved = sdk.save_project(&out.path().join("model"), None)?;
+    let saved = crate::support::save_fixture(&mut sdk, &out.path().join("model"))?;
     let mut doc = Document::open(&saved.path)?;
     let index = doc.object_index();
     assert_eq!(index.bindings.len(), 2);
@@ -144,30 +149,32 @@ fn inherited_influences_are_paths_not_direct_mesh_bindings() -> anyhow::Result<(
     let out = tempfile::tempdir()?;
     let (mut source, _assets) = support::sample_document_with_two_layers()?;
     let saved = source.save(&out.path().join("model"))?;
-    let mut sdk = AuthoringSession::new(
-        &id(),
-        Canvas::new(256., 256., zipzi_core::Vec2::new(0., 0.), 1.),
-    )?;
-    sdk.open_project(&saved.path, None)?;
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
     let parent = id();
     let child = id();
     let p = id();
     let binding = id();
-    let mesh = sdk.mesh_ids()[0].clone();
-    sdk.edit("deformer chain", None, |edit| {
-        edit.create_parameter(Parameter {
-            id: p.clone(),
-            ..Default::default()
-        })?;
-        for (r, ancestor) in [(&parent, None), (&child, Some(parent.clone().into()))] {
-            edit.create_transform(Transform {
-                id: r.clone(),
-                parent_id: ancestor,
-                data: TransformData::Rotation(RotationTransform::default()),
+    let mesh = sdk.snapshot().document().mesh_order()[0].clone();
+    crate::support::publish_fixture(&mut sdk, "deformer chain", |edit| {
+        crate::support::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: p.clone(),
                 ..Default::default()
-            })?;
+            },
+        )?;
+        for (r, ancestor) in [(&parent, None), (&child, Some(parent.clone().into()))] {
+            crate::support::insert_transform(
+                edit,
+                Transform {
+                    id: r.clone(),
+                    parent_id: ancestor,
+                    data: TransformData::Rotation(RotationTransform::default()),
+                    ..Default::default()
+                },
+            )?;
         }
-        edit.set_deform_parent(&mesh, &child)?;
+        crate::support::reparent_local(edit, &mesh, &child)?;
         edit.create_scene_binding(SceneBinding {
             id: binding.clone(),
             axes: vec![BindingAxis {
@@ -195,7 +202,7 @@ fn inherited_influences_are_paths_not_direct_mesh_bindings() -> anyhow::Result<(
             },
         })
     })?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     let doc = Document::open(&saved.path)?;
     let index = doc.object_index();
     let summary = index.parameter(&p);
@@ -331,12 +338,8 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
     let out = tempfile::tempdir()?;
     let (mut source, _assets) = support::sample_document_with_two_layers()?;
     let saved = source.save(&out.path().join("model"))?;
-    let mut sdk = AuthoringSession::new(
-        &id(),
-        Canvas::new(256., 256., zipzi_core::Vec2::new(0., 0.), 1.),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let meshes = sdk.mesh_ids().to_vec();
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    let meshes = sdk.snapshot().document().mesh_order().to_vec();
     let parameters = [id(), id(), id()];
     let parts = [id(), id()];
     let glue = id();
@@ -353,24 +356,178 @@ fn special_content_keeps_typed_forward_reverse_and_unresolved_references() -> an
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/animation_cpu");
     let motion_text = std::fs::read_to_string(fixture.join("minimal.motion3.json"))?;
     let physics_text = std::fs::read_to_string(fixture.join("thirty.physics3.json"))?;
-    sdk.edit("special content",None,|edit|{
-        for (i,r) in parameters.iter().enumerate(){edit.create_parameter(Parameter{id:r.clone(),runtime_id:format!("Param{}",["X","Y","Blend"][i]),kind:if i==2{ParameterKind::BlendShape}else{ParameterKind::Normal},..Default::default()})?;}
-        for (i,r) in parts.iter().enumerate(){edit.create_part(Part{id:r.clone(),runtime_id:format!("Part{i}"),..Default::default()})?;}
-        edit.set_mesh_part(&meshes[0],&parts[0])?;
-        edit.create_glue(Glue{id:glue.clone(),runtime_id:glue.clone(),name:"Seam".into(),mesh_a_id:(meshes[0].clone()).into(),mesh_b_id:(meshes[1].clone()).into(),intensity:0.,pairs:vec![GlueVertexPair{vertex_a:Some(0),vertex_b:Some(0),weight_a:1.,weight_b:1., ..Default::default()
-}],binding:Some(GlueBinding{axes:vec![BindingAxis{ id: Default::default(), samples: Default::default(),parameter_id:parameters[0].clone(),keys:vec![-1.,1.]}],keyforms:vec![GlueKeyform{ samples: Default::default(),intensity:0.},GlueKeyform{ samples: Default::default(),intensity:1.}]})})?;
-        edit.create_offscreen(Offscreen{enabled: true,id:offscreen.clone(),runtime_id:offscreen.clone(),name:"Composition".into(),part_id:parts[0].clone(),blend_mode:0,flags:0,masks:vec![meshes[1].clone()],part_keyform_indices:vec![],keyforms:vec![OffscreenKeyform{opacity:1.,..Default::default()}]})?;
-        for r in [&table,&unused_table]{edit.create_blend_key_table(BlendShapeKeyTable{ samples: Default::default(), base_sample_id: Default::default(),id:r.clone(),parameter_id:parameters[2].clone(),keys:vec![-1.,1.],base_key_idx:0})?;}
-        edit.create_blend_constraint(BlendShapeConstraint{ samples: Default::default(),id:constraint.clone(),parameter_id:parameters[1].clone(),keys:vec![-1.,1.],weights:vec![1.,1.]})?;
-        edit.create_blend_binding(BlendShapeBinding{id:blend.clone(),target_id:meshes[0].clone(),target_kind:BlendShapeTargetKind::Mesh,key_table_id:table.clone(),constraint_ids:vec![constraint.clone()],keyforms:DeltaKeyforms::Mesh(vec![DeltaMeshKeyform{positions:vec![zipzi_core::Vec2::default();4],..Default::default()};2])})?;
-        edit.import_motion3(&motion,"Idle",&motion_text)?;
-        edit.import_expression3(&expression,"Smile",r#"{"Type":"Live2D Expression","Parameters":[{"Id":"ParamX","Value":0.4,"Blend":"Add"},{"Id":"UnknownParameter","Value":1,"Blend":"Multiply"}]}"#)?;
-        edit.import_physics3(&physics,&physics_text)?;
-        edit.import_pose3(&pose,r#"{"Type":"Live2D Pose","Groups":[[{"Id":"Part0","Link":["Part1"]},{"Id":"Part1"}]]}"#)?;
-        edit.set_package_attachments(vec![zipzi_core::document::PackageAttachment{id:uuid::Uuid::new_v4().to_string(),path:"notes.txt".into(),bytes:Some(std::sync::Arc::new(b"Unused attachment".to_vec()))}])?;
+    crate::support::publish_fixture(&mut sdk, "special content", |edit| {
+        for (i, r) in parameters.iter().enumerate() {
+            crate::support::insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: r.clone(),
+                    runtime_id: format!("Param{}", ["X", "Y", "Blend"][i]),
+                    kind: if i == 2 {
+                        ParameterKind::BlendShape
+                    } else {
+                        ParameterKind::Normal
+                    },
+                    ..Default::default()
+                },
+            )?;
+        }
+        for (i, r) in parts.iter().enumerate() {
+            crate::support::insert_fixture_part(
+                edit,
+                Part {
+                    id: r.clone(),
+                    runtime_id: format!("Part{i}"),
+                    ..Default::default()
+                },
+            )?;
+        }
+        crate::support::organize_mesh(edit, &meshes[0], &parts[0])?;
+        crate::support::insert_glue(
+            edit,
+            Glue {
+                id: glue.clone(),
+                runtime_id: glue.clone(),
+                name: "Seam".into(),
+                mesh_a_id: (meshes[0].clone()).into(),
+                mesh_b_id: (meshes[1].clone()).into(),
+                intensity: 0.,
+                pairs: vec![GlueVertexPair {
+                    vertex_a: Some(0),
+                    vertex_b: Some(0),
+                    weight_a: 1.,
+                    weight_b: 1.,
+                    ..Default::default()
+                }],
+                binding: Some(GlueBinding {
+                    axes: vec![BindingAxis {
+                        id: Default::default(),
+                        samples: Default::default(),
+                        parameter_id: parameters[0].clone(),
+                        keys: vec![-1., 1.],
+                    }],
+                    keyforms: vec![
+                        GlueKeyform {
+                            samples: Default::default(),
+                            intensity: 0.,
+                        },
+                        GlueKeyform {
+                            samples: Default::default(),
+                            intensity: 1.,
+                        },
+                    ],
+                }),
+            },
+        )?;
+        crate::support::insert_offscreen(
+            edit,
+            Offscreen {
+                enabled: true,
+                id: offscreen.clone(),
+                runtime_id: offscreen.clone(),
+                name: "Composition".into(),
+                part_id: parts[0].clone(),
+                blend_mode: 0,
+                flags: 0,
+                masks: vec![meshes[1].clone()],
+                part_keyform_indices: vec![],
+                keyforms: vec![OffscreenKeyform {
+                    opacity: 1.,
+                    ..Default::default()
+                }],
+            },
+        )?;
+        for r in [&table, &unused_table] {
+            crate::support::insert_blend_table(
+                edit,
+                BlendShapeKeyTable {
+                    samples: Default::default(),
+                    base_sample_id: Default::default(),
+                    id: r.clone(),
+                    parameter_id: parameters[2].clone(),
+                    keys: vec![-1., 1.],
+                    base_key_idx: 0,
+                },
+            )?;
+        }
+        edit.edit_blend_shape(
+            zipzi_sdk::BlendAuthoringEdit::CreateConstraint {
+                constraint: BlendShapeConstraint {
+                    samples: Default::default(),
+                    id: constraint.clone(),
+                    parameter_id: parameters[1].clone(),
+                    keys: vec![-1., 1.],
+                    weights: vec![1., 1.],
+                },
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        crate::support::insert_blend_binding(
+            edit,
+            BlendShapeBinding {
+                id: blend.clone(),
+                target_id: meshes[0].clone(),
+                target_kind: BlendShapeTargetKind::Mesh,
+                key_table_id: table.clone(),
+                constraint_ids: vec![constraint.clone()],
+                keyforms: DeltaKeyforms::Mesh(vec![
+                    DeltaMeshKeyform {
+                        positions: vec![zipzi_core::Vec2::default(); 4],
+                        ..Default::default()
+                    };
+                    2
+                ]),
+            },
+        )?;
+        {
+            let imported = zipzi_project::import_motion3(
+                &edit.read_document()?,
+                &motion,
+                "Idle",
+                &motion_text,
+            )
+            .map_err(|error| zipzi_sdk::Status::error(error.code.clone(), error.to_string()))?;
+            edit.create_motion(imported.candidate.motion(&motion).unwrap().clone())
+        }?;
+        {
+            let imported = zipzi_project::import_expression3(&edit.read_document()?, &expression,"Smile",r#"{"Type":"Live2D Expression","Parameters":[{"Id":"ParamX","Value":0.4,"Blend":"Add"},{"Id":"UnknownParameter","Value":1,"Blend":"Multiply"}]}"#).map_err(|error| zipzi_sdk::Status::error(error.code.clone(), error.to_string()))?;
+            edit.create_expression(imported.candidate.expression(&expression).unwrap().clone())
+        }?;
+        {
+            let imported =
+                zipzi_project::import_physics3(&edit.read_document()?, &physics, &physics_text)
+                    .map_err(|error| {
+                        zipzi_sdk::Status::error(error.code.clone(), error.to_string())
+                    })?;
+            edit.replace_physics(imported.candidate.physics().as_deref().cloned())
+        }?;
+        {
+            let imported = zipzi_project::import_pose3(&edit.read_document()?, &pose,r#"{"Type":"Live2D Pose","Groups":[[{"Id":"Part0","Link":["Part1"]},{"Id":"Part1"}]]}"#).map_err(|error| zipzi_sdk::Status::error(error.code.clone(), error.to_string()))?;
+            edit.replace_pose(imported.candidate.pose().as_deref().cloned())
+        }?;
+        use zipzi_core::document::{AttachmentEdit, PackageAttachment};
+        let id = uuid::Uuid::new_v4().to_string();
+        let path = "notes.txt".to_owned();
+        edit.edit_attachment(AttachmentEdit::Create {
+            id: id.clone(),
+            path: path.clone(),
+        })?;
+        let expected = PackageAttachment {
+            id,
+            path,
+            bytes: None,
+        };
+        edit.edit_attachment(AttachmentEdit::Replace {
+            expected: expected.clone(),
+            attachment: PackageAttachment {
+                bytes: Some(std::sync::Arc::new(b"Unused attachment".to_vec())),
+                ..expected
+            },
+        })?;
         Ok(())
     })?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     let mut doc = Document::open(&saved.path)?;
     let index = doc.object_index();
     let contains_edge = |source: ObjectRef, kind: R, target: ObjectRef| {

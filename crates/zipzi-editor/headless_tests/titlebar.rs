@@ -83,7 +83,14 @@ fn project_menu_switches_closes_and_does_not_trigger_window_drag(cx: &mut TestAp
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
         assert_eq!(harness.view.read(cx).editor.active_id(), Some(first));
         let runtime = harness.view.read(cx).editor.runtime_host();
-        assert_eq!(runtime.read().list_sessions().len(), 1);
+        assert_eq!(
+            runtime
+                .read()
+                .session_catalog(runtime.client_id())
+                .unwrap()
+                .len(),
+            1
+        );
         assert!(!harness.view.read(cx).editor.exiting());
     })
     .unwrap();
@@ -201,12 +208,12 @@ fn project_select_opens_and_clears_recent_projects(cx: &mut TestAppContext) {
 
     let harness = setup(cx);
     let project = harness._config_dir.path().join("recent.zipzi");
-    let mut session = zipzi_sdk::AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
     )
     .unwrap();
-    session.save_project(&project, None).unwrap();
+    crate::test_fixture::save_fixture(&mut session, &project).unwrap();
     let missing = harness._config_dir.path().join("missing.zipzi");
 
     cx.update_window(harness.window, |_, window, cx| {
@@ -297,8 +304,15 @@ fn close_modified_project_prompts_and_cancel_preserves_it(cx: &mut TestAppContex
         assert!(harness.view.read(cx).modal);
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
         let runtime = harness.view.read(cx).editor.runtime_host();
-        assert_eq!(runtime.read().list_sessions().len(), 1);
-        assert!(runtime.read().list_sessions()[0].modified);
+        assert_eq!(
+            runtime
+                .read()
+                .session_catalog(runtime.client_id())
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(runtime.read().session_catalog(runtime.client_id()).unwrap()[0].dirty);
         window.click("project-select", cx);
         assert!(window.try_find("popup-menu").is_none());
         assert_eq!(harness.view.read(cx).editor.document_count(), 1);
@@ -322,7 +336,13 @@ fn close_modified_project_prompts_and_cancel_preserves_it(cx: &mut TestAppContex
     harness.view.update(cx, |view, _| {
         assert!(!view.modal);
         assert_eq!(view.editor.document_count(), 0);
-        assert!(view.editor.runtime_host().read().list_sessions().is_empty());
+        assert!({
+            let host = view.editor.runtime_host();
+            host.read()
+                .session_catalog(host.client_id())
+                .unwrap()
+                .is_empty()
+        });
         view.editor.attach_resident_sessions().unwrap();
         assert_eq!(view.editor.document_count(), 0);
         assert!(!view.editor.exiting());

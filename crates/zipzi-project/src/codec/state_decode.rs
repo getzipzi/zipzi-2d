@@ -18,9 +18,8 @@ pub(crate) struct DecodedState {
     pub images: Vec<zipzi_core::ImageAsset>,
 }
 pub(crate) fn decode_state(text: &str) -> Result<DecodedState, Status> {
-    let (doc, display_info, animation_assets) = super::decode::admit_wire(
-        super::decode::parse_wire(text, Some(("zipzi-project", 22)))?,
-    )?;
+    let (doc, display_info, animation_assets) =
+        super::decode::admit_wire(super::decode::parse_wire(text)?)?;
     let mut input = OwnedDocument {
         id: doc.id,
         setup: zipzi_core::ModelSetup {

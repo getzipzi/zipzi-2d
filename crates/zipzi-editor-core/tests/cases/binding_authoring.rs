@@ -1,9 +1,10 @@
 use super::support;
+use zipzi_contract::authoring::BindingAuthoringEdit as E;
+use zipzi_contract::document::{
+    BindingGridEdit as G, BindingGridTarget, ParameterRangeEdit, ParameterRangePolicy,
+};
 use zipzi_core::BindingAxisEditing;
 use zipzi_editor_core::{ObjectKind, ObjectRef, PropertyScope};
-use zipzi_sdk::{
-    BindingAuthoringEdit as E, MeshGridEdit as G, ParameterRangeEdit, ParameterRangePolicy,
-};
 
 #[test]
 fn zero_axis_creation_projects_and_preserves_base_property_editing() -> anyhow::Result<()> {
@@ -11,9 +12,9 @@ fn zero_axis_creation_projects_and_preserves_base_property_editing() -> anyhow::
     let mesh_id = d.selected_id().unwrap().to_string();
     let object = ObjectRef::new(ObjectKind::Mesh, &mesh_id);
     let id = uuid::Uuid::new_v4().to_string();
-    let plan = d.plan_binding_authoring(E::MeshGrid(G::Create {
+    let plan = d.plan_binding_authoring(E::Grid(G::Create {
         id: id.clone(),
-        mesh_id: mesh_id.clone(),
+        target: BindingGridTarget::Mesh(mesh_id.clone()),
     }))?;
     let result = d.execute_binding_authoring(&plan)?;
     assert_eq!(
@@ -54,7 +55,7 @@ fn editor_consumes_joint_range_receipt_and_undo_restores_parameter_visuals() -> 
         policy: ParameterRangePolicy::MapKeyValues,
     }))?;
     let result = d.execute_binding_authoring(&plan)?;
-    assert!(result.receipt.changed);
+    assert!(result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
     assert!(result.suggested_selection.is_empty());
     assert_eq!(
         d.parameter_visuals()[&parameter.id]
@@ -145,9 +146,9 @@ fn editor_binding_authoring_uses_modeling_context_and_rechecks_execution() -> an
     let mesh = d.selected_id().unwrap().to_string();
     let mut editor = support::editor_from_document(d);
     let document = editor.active_id().unwrap();
-    let intent = E::MeshGrid(G::Create {
+    let intent = E::Grid(G::Create {
         id: uuid::Uuid::new_v4().to_string(),
-        mesh_id: mesh,
+        target: BindingGridTarget::Mesh(mesh),
     });
     let plan = editor.plan_binding_authoring(document, intent.clone())?;
     let history = editor.document().unwrap().history_lengths();
@@ -160,7 +161,8 @@ fn editor_binding_authoring_uses_modeling_context_and_rechecks_execution() -> an
         editor
             .execute_binding_authoring(document, &plan)?
             .receipt
-            .changed
+            .kind
+            != zipzi_sdk::PublicationKind::Unchanged
     );
     Ok(())
 }
@@ -173,7 +175,8 @@ fn cancelled_binding_plan_keeps_editor_projection_history_and_redo() -> anyhow::
     let history = d.history_lengths();
     let source = d.object_index();
     let control = zipzi_sdk::ConversionControl::default();
-    let plan = d.plan_binding_authoring_with_control(
+    control.cancel();
+    let refused = d.plan_binding_authoring_with_control(
         E::Grid(zipzi_sdk::BindingGridEdit::Edit {
             owner: binding.clone(),
             operation: zipzi_sdk::GridOperation::InsertSample {
@@ -183,10 +186,15 @@ fn cancelled_binding_plan_keeps_editor_projection_history_and_redo() -> anyhow::
             },
         }),
         &control,
-    )?;
-    assert!(!plan.report().generated.is_empty());
-    control.cancel();
-    assert!(d.execute_binding_authoring(&plan).is_err());
+    );
+    assert_eq!(
+        refused
+            .unwrap_err()
+            .downcast_ref::<zipzi_sdk::Status>()
+            .unwrap()
+            .code,
+        "AUTHORING_CANCELLED"
+    );
     assert_eq!(d.history_lengths(), history);
     assert!(std::sync::Arc::ptr_eq(&d.object_index(), &source));
     Ok(())

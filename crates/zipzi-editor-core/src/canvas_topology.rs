@@ -314,8 +314,10 @@ mod tests {
             Default::default(),
         )
         .unwrap();
+        let mesh_id = uuid::Uuid::new_v4().to_string();
         let mesh = Mesh {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: mesh_id.clone(),
+            runtime_id: mesh_id,
             name: "before".into(),
             ..Default::default()
         };
@@ -324,9 +326,11 @@ mod tests {
         let state = builder.freeze().unwrap().state;
         let before = CanvasTopology::new(&state);
         let mut builder = state.builder();
+        let parameter_id = uuid::Uuid::new_v4().to_string();
         builder
             .create_parameter(zipzi_core::Parameter {
-                id: uuid::Uuid::new_v4().to_string(),
+                id: parameter_id.clone(),
+                runtime_id: parameter_id,
                 ..Default::default()
             })
             .unwrap();
@@ -351,8 +355,10 @@ mod tests {
             "after"
         );
 
+        let part_id = uuid::Uuid::new_v4().to_string();
         let part = zipzi_core::Part {
-            id: uuid::Uuid::new_v4().to_string(),
+            id: part_id.clone(),
+            runtime_id: part_id,
             ..Default::default()
         };
         let mut builder = state.builder();

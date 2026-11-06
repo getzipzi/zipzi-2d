@@ -15,69 +15,68 @@ fn record(kind: DeletionKind, n: u32) -> DeletionTarget {
     })
 }
 fn apply(s: &mut AuthoringSession, request: &DeletionRequest) {
-    let analysis = s.analyze_deletion(request).unwrap();
+    let analysis = analyze(s, request).unwrap();
+    assert!(analysis.0.decisions.is_empty(), "{:?}", analysis.0);
     assert!(
-        analysis.native.decisions.is_empty(),
+        analysis.0.structural_blockers.is_empty(),
         "{:?}",
-        analysis.native
+        analysis.0
     );
-    assert!(
-        analysis.native.structural_blockers.is_empty(),
-        "{:?}",
-        analysis.native
-    );
-    let plan = s
-        .plan_deletion(
-            request,
-            &DeletionOptions {
-                accepted_export_failures: analysis.new_export_failures,
-            },
-        )
-        .unwrap();
-    s.execute_deletion_plan(&plan).unwrap();
+    let (_, p) = prepare_deletion(s, request).unwrap();
+    s.publish(p).unwrap();
 }
 #[test]
 fn parameter_default_reduces_all_ordinary_grids_and_cleans_animation_in_one_undo() {
     let mut s = scene::tree();
     scene::animation(&mut s);
-    s.edit("default", None, |e| {
-        let mut p = e
-            .candidate_document()
-            .get_parameter(&id(3))
-            .unwrap()
-            .clone();
-        p.default_value = 0.4;
-        e.replace_parameter(p)?;
-        let mut b = e.candidate_document().get_binding(&id(20)).unwrap().clone();
-        for v in &mut b.keyforms[1].positions {
-            v.x += 10.;
-        }
-        e.replace_binding(b)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let mut p = e
+                    .read_document()
+                    .unwrap()
+                    .parameter(&id(3))
+                    .unwrap()
+                    .clone();
+                p.default_value = 0.4;
+                e.replace_parameter(p)?;
+                let mut b = e.read_document().unwrap().binding(&id(20)).unwrap().clone();
+                for v in &mut b.keyforms[1].positions {
+                    v.x += 10.;
+                }
+                e.replace_binding(b)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("default")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
-    let evaluated = s.evaluate(&PreviewValues::default()).unwrap();
+    let before = s.snapshot().document().clone();
+    let evaluated = crate::support::frame(s.snapshot(), &PreviewValues::default()).unwrap();
     apply(&mut s, &roots(vec![DeletionTarget::Parameter(id(3))]));
-    assert!(s.document().get_parameter(&id(3)).is_none());
+    assert!(s.snapshot().document().parameter(&id(3)).is_none());
     for n in 20..=22 {
-        let b = s.document().get_binding(&id(n)).unwrap();
+        let b = s.snapshot().document().binding(&id(n)).unwrap();
         assert!(b.axes.is_empty());
         assert!(b.keyforms.is_empty());
     }
     assert!(s
+        .snapshot()
         .document()
-        .get_glue(&id(30))
+        .glue(&id(30))
         .unwrap()
         .binding
         .as_ref()
         .unwrap()
         .axes
         .is_empty());
-    let clip = s.document().get_motion(&id(100)).unwrap();
+    let clip = s.snapshot().document().motion(&id(100)).unwrap();
     assert_eq!(clip.tracks.len(), 1);
     assert_eq!(clip.tracks[0].id, id(101));
     assert_eq!(clip.events.len(), 1);
-    let after = s.evaluate(&PreviewValues::default()).unwrap();
+    let after = crate::support::frame(s.snapshot(), &PreviewValues::default()).unwrap();
     for drawable in &evaluated.drawables {
         let result = after
             .drawables
@@ -86,71 +85,90 @@ fn parameter_default_reduces_all_ordinary_grids_and_cleans_animation_in_one_undo
             .unwrap();
         assert_eq!(drawable.positions, result.positions);
     }
-    assert!(s.document().validate_structure().is_empty());
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
-    s.redo().unwrap();
-    assert!(s.document().get_parameter(&id(3)).is_none());
+    assert!(s.snapshot().document().builder().freeze().is_ok());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
+    s.redo(s.version()).unwrap();
+    assert!(s.snapshot().document().parameter(&id(3)).is_none());
 }
 #[test]
 fn texture_requires_explicit_resolution_and_attachment_cleanup_keeps_users() {
     let mut s = fixture();
     let mut request = roots(vec![DeletionTarget::Texture(id(2))]);
-    let review = s.analyze_deletion(&request).unwrap();
+    let review = analyze(&s, &request).unwrap();
     assert!(review
-        .native
+        .0
         .decisions
         .iter()
         .any(|d| d.reason == DeletionDecisionReason::TextureReplacementRequired));
-    assert!(s
-        .plan_deletion(&request, &DeletionOptions::default())
-        .is_err());
+    assert!(prepare_deletion(&s, &request).is_err());
     request.texture_replacements.insert(id(2), None);
     apply(&mut s, &request);
     for n in 10..=12 {
         assert_eq!(
-            s.document().get_mesh(&id(n)).unwrap().texture_asset_id,
+            s.snapshot()
+                .document()
+                .mesh(&id(n))
+                .unwrap()
+                .texture_asset_id,
             SceneReference::Unspecified
         );
     }
-    assert!(s.document().get_asset(&id(2)).is_none());
-    s.undo().unwrap();
-    assert!(s.document().get_asset(&id(2)).is_some());
+    assert!(s.snapshot().document().asset(&id(2)).is_none());
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().asset(&id(2)).is_some());
 }
 #[test]
 fn deleting_motion_removes_registrations_but_keeps_other_business_assets() {
     let mut s = scene::tree();
     scene::animation(&mut s);
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     apply(&mut s, &roots(vec![record(DeletionKind::Motion, 100)]));
-    assert!(s.document().get_motion(&id(100)).is_none());
-    assert!(s.document().pose().is_some());
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    assert!(s.snapshot().document().motion(&id(100)).is_none());
+    assert!(s.snapshot().document().pose().is_some());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
 }
 #[test]
 fn drawing_and_glue_roles_do_not_delete_their_host() {
     let mut s = fixture();
     apply(&mut s, &roots(vec![record(DeletionKind::GlueBinding, 30)]));
-    assert!(s.document().get_glue(&id(30)).unwrap().binding.is_none());
-    assert!(s.document().get_binding(&id(20)).is_some());
-    s.undo().unwrap();
-    s.edit("drawing role", None, |e| {
-        e.replace_draw_order_groups(vec![
-            zipzi_core::draw_order::DrawOrderGroup {
-                owner: String::new(),
-                items: vec![id(10), id(4), id(11)],
-                min_order: -10,
-                max_order: 10,
-            },
-            zipzi_core::draw_order::DrawOrderGroup {
-                owner: id(4),
-                items: vec![id(12)],
-                min_order: -20,
-                max_order: 20,
-            },
-        ])
-    })
+    assert!(s
+        .snapshot()
+        .document()
+        .glue(&id(30))
+        .unwrap()
+        .binding
+        .is_none());
+    assert!(s.snapshot().document().binding(&id(20)).is_some());
+    s.undo(s.version()).unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::drawing_groups(
+                    e,
+                    vec![
+                        zipzi_core::draw_order::DrawOrderGroup {
+                            owner: String::new(),
+                            items: vec![id(10), id(4), id(11)],
+                            min_order: -10,
+                            max_order: 10,
+                        },
+                        zipzi_core::draw_order::DrawOrderGroup {
+                            owner: id(4),
+                            items: vec![id(12)],
+                            min_order: -20,
+                            max_order: 20,
+                        },
+                    ],
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("drawing role")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let mut request = roots(vec![
         record(DeletionKind::DrawingGroup, 4),
@@ -160,28 +178,39 @@ fn drawing_and_glue_roles_do_not_delete_their_host() {
         .reparent
         .insert(id(4), ReparentStrategy::KeepLocalData);
     apply(&mut s, &request);
-    assert!(s.document().get_part(&id(4)).is_some());
-    assert!(s.document().get_scene_binding(&id(5)).is_some());
+    assert!(s.snapshot().document().part(&id(4)).is_some());
+    assert!(s.snapshot().document().scene_binding(&id(5)).is_some());
 }
 
 fn drawing_role_request(s: &mut AuthoringSession) -> DeletionRequest {
     apply(s, &roots(vec![DeletionTarget::Offscreen(id(40))]));
-    s.edit("drawing role without an Offscreen", None, |e| {
-        e.replace_draw_order_groups(vec![
-            zipzi_core::draw_order::DrawOrderGroup {
-                owner: String::new(),
-                items: vec![id(10), id(4), id(11)],
-                min_order: -10,
-                max_order: 10,
-            },
-            zipzi_core::draw_order::DrawOrderGroup {
-                owner: id(4),
-                items: vec![id(12)],
-                min_order: -20,
-                max_order: 20,
-            },
-        ])
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::drawing_groups(
+                    e,
+                    vec![
+                        zipzi_core::draw_order::DrawOrderGroup {
+                            owner: String::new(),
+                            items: vec![id(10), id(4), id(11)],
+                            min_order: -10,
+                            max_order: 10,
+                        },
+                        zipzi_core::draw_order::DrawOrderGroup {
+                            owner: id(4),
+                            items: vec![id(12)],
+                            min_order: -20,
+                            max_order: 20,
+                        },
+                    ],
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("drawing role without an Offscreen")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     roots(vec![record(DeletionKind::DrawingGroup, 4)])
 }
@@ -190,101 +219,107 @@ fn drawing_role_request(s: &mut AuthoringSession) -> DeletionRequest {
 fn drawing_role_flattening_requires_review_of_the_retained_members() {
     let mut s = fixture();
     let request = drawing_role_request(&mut s);
-    let review = s
-        .read_snapshot()
-        .prepare_deletion_review(
-            zipzi_sdk::DeletionIntent {
-                request,
-                ..Default::default()
-            },
-            AuthoringLimits::default(),
-            &ConversionControl::default(),
-        )
-        .unwrap();
-    assert_eq!(
-        review.summary().state,
-        zipzi_sdk::DeletionReviewState::NeedsConfirmation
-    );
+    let (review, prepared) = crate::support::prepared(&s, |c| {
+        c.review_deletion(&request, Default::default(), &Default::default())
+    })
+    .unwrap();
+    assert!(review.report.requires_confirmation());
     assert!(review
-        .analysis()
-        .native
+        .report
         .rewritten
         .iter()
-        .any(|r| { r.owner.kind == DeletionKind::DrawingGroup && r.owner.id == id(1) }));
-    s.edit("reviewed deletion", None, |e| review.apply(e))
-        .unwrap();
+        .any(|r| r.owner.kind == DeletionKind::DrawingGroup && r.owner.id == id(1)));
+    s.publish(prepared).unwrap();
     assert_eq!(
-        s.document().draw_order_groups().unwrap()[0].items,
+        s.snapshot()
+            .document()
+            .draw_order_groups()
+            .as_ref()
+            .unwrap()[0]
+            .items,
         vec![id(10), id(12), id(11)]
     );
-    assert!(s.document().get_part(&id(4)).is_some());
+    assert!(s.snapshot().document().part(&id(4)).is_some());
 }
 
 #[test]
 fn locked_drawing_destination_is_reported_without_publishing() {
     let mut s = fixture();
     let request = drawing_role_request(&mut s);
-    s.edit("external drawing destination", None, |e| {
-        e.create_part(Part {
-            id: id(90),
-            ..Default::default()
-        })?;
-        let mut groups = e.candidate_document().draw_order_groups().unwrap().to_vec();
-        groups[0].owner = id(90);
-        groups.insert(
-            0,
-            zipzi_core::draw_order::DrawOrderGroup {
-                owner: String::new(),
-                items: vec![id(90)],
-                min_order: -100,
-                max_order: 100,
-            },
-        );
-        e.replace_draw_order_groups(groups)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_part({
+                    let mut value = Part {
+                        id: id(90),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                let mut groups = e
+                    .read_document()
+                    .unwrap()
+                    .draw_order_groups()
+                    .as_ref()
+                    .unwrap()
+                    .to_vec();
+                groups[0].owner = id(90);
+                groups.insert(
+                    0,
+                    zipzi_core::draw_order::DrawOrderGroup {
+                        owner: String::new(),
+                        items: vec![id(90)],
+                        min_order: -100,
+                        max_order: 100,
+                    },
+                );
+                crate::support::drawing_groups(e, groups)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("external drawing destination")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     lock(&mut s, &id(90));
-    let before = s.document().clone();
-    let history = s.history_lengths();
-    let analysis = s.analyze_deletion(&request).unwrap();
+    let before = s.snapshot().document().clone();
+    let history = {
+        let history = s.history_state();
+        (history.undo_steps, history.redo_steps)
+    };
+    let analysis = analyze(&s, &request).unwrap();
     assert!(
-        analysis
-            .native
-            .blockers
-            .iter()
-            .any(|b| b.source_id == id(90)),
+        analysis.0.blockers.iter().any(|b| b.source_id == id(90)),
         "{:?}",
-        analysis.native
+        analysis.0
     );
-    let review = s
-        .read_snapshot()
-        .prepare_deletion_review(
-            zipzi_sdk::DeletionIntent {
-                request: request.clone(),
-                ..Default::default()
-            },
-            s.authoring_limits(),
-            &ConversionControl::default(),
-        )
-        .unwrap();
+    let (review, prepared) = crate::support::prepared(&s, |c| {
+        c.review_deletion(&request, Default::default(), &Default::default())
+    })
+    .unwrap();
+    assert!(review
+        .report
+        .blockers
+        .iter()
+        .any(|b| b.source_id == id(90) && b.object.kind == DeletionKind::DrawingGroup));
+    assert!(prepared.writes().is_empty());
+    assert!(prepare_deletion(&s, &request).is_err());
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     assert_eq!(
-        review.summary().state,
-        zipzi_sdk::DeletionReviewState::Blocked
+        {
+            let history = s.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        history
     );
-    assert!(review.report_page(zipzi_sdk::DeletionSection::Locks, 0, 256).unwrap().rows.iter().any(|r| {
-        matches!(r, zipzi_sdk::DeletionRow::Lock { blocker } if blocker.source_id == id(90) && blocker.object.kind == DeletionKind::DrawingGroup)
-    }));
-    assert!(s
-        .plan_deletion(&request, &DeletionOptions::default())
-        .is_err());
-    assert!(s.document().same_content(&before));
-    assert_eq!(s.history_lengths(), history);
 }
 #[test]
 fn samples_and_keys_use_native_interpolation_and_empty_tracks_are_reported() {
     let mut s = scene::tree();
     scene::animation(&mut s);
-    let sample = s.document().get_binding(&id(20)).unwrap().axes[0].samples[1]
+    let sample = s.snapshot().document().binding(&id(20)).unwrap().axes[0].samples[1]
         .id
         .clone();
     let request = roots(vec![
@@ -296,28 +331,32 @@ fn samples_and_keys_use_native_interpolation_and_empty_tracks_are_reported() {
         record(DeletionKind::MotionKey, 106),
     ]);
     apply(&mut s, &request);
-    assert!(s.document().binding_identity(&sample).is_none());
+    assert!(!s
+        .snapshot()
+        .document()
+        .contains_object(ObjectKind::BindingSample, &sample));
     assert_eq!(
-        s.document().get_motion(&id(100)).unwrap().tracks[0]
+        s.snapshot().document().motion(&id(100)).unwrap().tracks[0]
             .keys()
             .count(),
         1
     );
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let request = roots(vec![
         record(DeletionKind::MotionKey, 102),
         record(DeletionKind::MotionKey, 106),
     ]);
-    let report = s.analyze_deletion(&request).unwrap();
+    let report = analyze(&s, &request).unwrap();
     assert!(report
-        .native
+        .0
         .removed
         .iter()
         .any(|r| r.object.kind == DeletionKind::MotionTrack && r.object.id == id(101)));
     apply(&mut s, &request);
     assert!(s
+        .snapshot()
         .document()
-        .get_motion(&id(100))
+        .motion(&id(100))
         .unwrap()
         .tracks
         .iter()
@@ -330,23 +369,55 @@ fn physics(s: &mut AuthoringSession) {
         Some(id(3))
     })
     .unwrap();
-    s.edit("physics", None, |e| e.set_physics(asset)).unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_physics(Some(asset)))
+            .and_then(|value| {
+                let prepared = draft.prepare("physics")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
 }
 #[test]
 fn parameter_physics_cleanup_and_invalid_chain_choices_honor_channel_locks() {
     let mut s = fixture();
     physics(&mut s);
-    let group = s.document().physics().unwrap().data.settings[0].id.clone();
-    let input = s.document().physics().unwrap().data.settings[0].inputs[0]
+    let group = s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings[0]
+        .id
+        .clone();
+    let input = s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings[0]
+        .inputs[0]
         .id
         .clone();
     let mut request = roots(vec![DeletionTarget::Parameter(id(3))]);
-    let before = s.document().clone();
-    let report = s.analyze_deletion(&request).unwrap();
-    assert!(report.native.decisions.is_empty());
+    let before = s.snapshot().document().clone();
+    let report = analyze(&s, &request).unwrap();
+    assert!(report.0.decisions.is_empty());
     let mut invalid = request.clone();
     invalid.roots.extend(
-        s.document().physics().unwrap().data.settings[0]
+        s.snapshot()
+            .document()
+            .physics()
+            .as_ref()
+            .unwrap()
+            .data
+            .settings[0]
             .vertices
             .iter()
             .map(|v| {
@@ -357,39 +428,52 @@ fn parameter_physics_cleanup_and_invalid_chain_choices_honor_channel_locks() {
                 })
             }),
     );
-    assert!(s
-        .analyze_deletion(&invalid)
+    assert!(analyze(&s, &invalid)
         .unwrap()
-        .native
+        .0
         .decisions
         .iter()
         .any(|d| d.object.id == group
             && matches!(d.reason, DeletionDecisionReason::InvalidContainer { .. })));
-    assert!(s.document().same_content(&before));
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     request.roots.push(DeletionTarget::Record(DeletionObject {
         kind: DeletionKind::PhysicsGroup,
         id: group,
         owner_id: None,
     }));
     lock(&mut s, &input);
-    assert!(s
-        .analyze_deletion(&request)
+    assert!(analyze(&s, &request)
         .unwrap()
-        .native
+        .0
         .blockers
         .iter()
         .any(|b| b.source_id == input));
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     apply(&mut s, &request);
-    assert!(s.document().physics().unwrap().data.settings.is_empty());
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    assert!(s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings
+        .is_empty());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
 }
 #[test]
 fn physics_node_replacement_preserves_output_and_rejects_deleted_or_root_destinations() {
     let mut s = fixture();
     physics(&mut s);
-    let group = &s.document().physics().unwrap().data.settings[0];
+    let group = &s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings[0];
     let removed = group.vertices[1].id.clone();
     let replacement = group.vertices[2].id.clone();
     let output = group.outputs[0].id.clone();
@@ -402,71 +486,89 @@ fn physics_node_replacement_preserves_output_and_rejects_deleted_or_root_destina
         .physics_node_replacements
         .insert(removed.clone(), replacement.clone());
     apply(&mut s, &request);
-    let group = &s.document().physics().unwrap().data.settings[0];
+    let group = &s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings[0];
     assert_eq!(group.vertices.len(), 2);
     assert_eq!(group.outputs[0].id, output);
     assert_eq!(group.outputs[0].node_id, replacement);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     request
         .physics_node_replacements
         .insert(removed.clone(), removed);
-    assert!(!s
-        .analyze_deletion(&request)
-        .unwrap()
-        .native
-        .decisions
-        .is_empty());
+    assert!(!analyze(&s, &request).unwrap().0.decisions.is_empty());
 }
 #[test]
 fn parameter_folder_dissolves_by_default_and_explicit_contents_delete_uses_same_cleanup() {
     let mut s = fixture();
-    s.edit("folders", None, |e| {
-        for (n, parent) in [(210, None), (211, Some(id(210)))] {
-            e.create_parameter_group(CdiParameterGroup {
-                id: id(n),
-                runtime_id: format!("G{n}"),
-                name: "folder".into(),
-                parent_id: parent,
-                extensions: Default::default(),
-            })?;
-        }
-        e.set_parameter_group(&id(3), Some(&id(211)))?;
-        let mut info = e.candidate_document().display_info().clone();
-        info.parameters
-            .as_mut()
-            .unwrap()
-            .push(CdiParameterEntry::Unresolved {
-                runtime_id: "legacy".into(),
-                name: "keep".into(),
-                group_id: Some(id(210)),
-                extensions: Default::default(),
-            });
-        e.replace_display_info(info)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                for (n, parent) in [(210, None), (211, Some(id(210)))] {
+                    e.edit_organization(OrganizationEdit::CreateGroup {
+                        group: CdiParameterGroup {
+                            id: id(n),
+                            runtime_id: format!("G{n}"),
+                            name: "folder".into(),
+                            parent_id: parent,
+                            extensions: Default::default(),
+                        },
+                        before: None,
+                    })?;
+                }
+                e.edit_organization(OrganizationEdit::SetParameterGroup {
+                    parameter_id: id(3),
+                    group_id: Some(id(211)),
+                })?;
+                let mut info = e.read_document().unwrap().display_info().clone();
+                info.parameters
+                    .as_mut()
+                    .unwrap()
+                    .push(CdiParameterEntry::Unresolved {
+                        runtime_id: "legacy".into(),
+                        name: "keep".into(),
+                        group_id: Some(id(210)),
+                        extensions: Default::default(),
+                    });
+                e.replace_display_info(info)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("folders")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     apply(
         &mut s,
         &roots(vec![DeletionTarget::ParameterFolder(id(210))]),
     );
-    assert!(s.document().get_parameter(&id(3)).is_some());
+    assert!(s.snapshot().document().parameter(&id(3)).is_some());
     assert_eq!(
-        s.document()
-            .get_parameter_group(&id(211))
+        s.snapshot()
+            .document()
+            .parameter_group(&id(211))
             .unwrap()
             .parent_id,
         None
     );
-    assert!(s.document().display_info().parameters.as_ref().unwrap().iter().any(|e|matches!(e,CdiParameterEntry::Unresolved {runtime_id,group_id:None,..} if runtime_id=="legacy")));
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    assert!(s.snapshot().document().display_info().parameters.as_ref().unwrap().iter().any(|e|matches!(e,CdiParameterEntry::Unresolved {runtime_id,group_id:None,..} if runtime_id=="legacy")));
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     apply(
         &mut s,
         &roots(vec![DeletionTarget::ParameterFolderContents(id(210))]),
     );
-    assert!(s.document().get_parameter(&id(3)).is_none());
-    assert!(s.document().get_parameter_group(&id(211)).is_none());
+    assert!(s.snapshot().document().parameter(&id(3)).is_none());
+    assert!(s.snapshot().document().parameter_group(&id(211)).is_none());
     assert!(s
+        .snapshot()
         .document()
         .display_info()
         .parameters
@@ -481,153 +583,236 @@ fn parameter_folder_dissolves_by_default_and_explicit_contents_delete_uses_same_
 fn attachment_removal_clears_only_resolved_optional_references_and_retains_bytes_for_undo() {
     let mut s = scene::tree();
     scene::animation(&mut s);
-    s.edit("attachment", None, |e| {
-        e.set_package_attachments(vec![PackageAttachment {
-            id: id(220),
-            path: "audio.wav".into(),
-            bytes: Some(std::sync::Arc::new(vec![1, 2, 3])),
-        }])?;
-        let mut settings = e.candidate_document().model3_settings().clone();
-        settings.user_data = Some(AttachmentRef::Resolved {
-            attachment_id: id(220),
-        });
-        e.set_model3_settings(settings)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                {
+                    for attachment in vec![PackageAttachment {
+                        id: id(220),
+                        path: "audio.wav".into(),
+                        bytes: Some(std::sync::Arc::new(vec![1, 2, 3])),
+                    }] {
+                        e.edit_attachment(AttachmentEdit::Create {
+                            id: attachment.id.clone(),
+                            path: attachment.path.clone(),
+                        })?;
+                        let expected = e
+                            .read_document()?
+                            .package_attachments()
+                            .iter()
+                            .find(|a| a.id == attachment.id)
+                            .unwrap()
+                            .clone();
+                        e.edit_attachment(AttachmentEdit::Replace {
+                            expected,
+                            attachment,
+                        })?;
+                    }
+                    Ok::<_, Status>(())
+                }?;
+                let mut settings = e.read_document().unwrap().model3_settings().clone();
+                settings.user_data = Some(AttachmentRef::Resolved {
+                    attachment_id: id(220),
+                });
+                e.replace_model3_settings(settings)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("attachment")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     apply(&mut s, &roots(vec![DeletionTarget::Attachment(id(220))]));
-    assert!(s.document().get_attachment(&id(220)).is_none());
-    assert!(s.document().model3_settings().user_data.is_none());
-    assert!(s.document().get_motion(&id(100)).is_some());
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    assert!(s.snapshot().document().attachment(&id(220)).is_none());
+    assert!(s
+        .snapshot()
+        .document()
+        .model3_settings()
+        .user_data
+        .is_none());
+    assert!(s.snapshot().document().motion(&id(100)).is_some());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
 }
 #[test]
 fn default_outside_grid_retains_native_disabled_behavior_and_explicit_coordinate_replans() {
     let mut s = fixture();
-    s.edit("outside", None, |e| {
-        let mut p = e
-            .candidate_document()
-            .get_parameter(&id(3))
-            .unwrap()
-            .clone();
-        p.maximum = 2.;
-        p.default_value = 1.5;
-        e.replace_parameter(p)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let mut p = e
+                    .read_document()
+                    .unwrap()
+                    .parameter(&id(3))
+                    .unwrap()
+                    .clone();
+                p.maximum = 2.;
+                p.default_value = 1.5;
+                e.replace_parameter(p)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("outside")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     let mut request = roots(vec![DeletionTarget::Parameter(id(3))]);
-    let report = s.analyze_deletion(&request).unwrap();
-    assert!(report.native.effects.iter().any(|e|matches!(e,DeletionEffect::ParameterDimensionRemoved {disabled:true,value,..} if *value==1.5)));
+    let report = analyze(&s, &request).unwrap();
+    assert!(report.0.effects.iter().any(|e|matches!(e,DeletionEffect::ParameterDimensionRemoved {disabled:true,value,..} if *value==1.5)));
     apply(&mut s, &request);
     for n in 10..=12 {
-        assert!(!s.document().get_mesh(&id(n)).unwrap().enabled);
+        assert!(!s.snapshot().document().mesh(&id(n)).unwrap().enabled);
     }
-    assert!(!s.document().get_part(&id(4)).unwrap().enabled);
+    assert!(!s.snapshot().document().part(&id(4)).unwrap().enabled);
     assert!(s
+        .snapshot()
         .document()
-        .get_glue(&id(30))
+        .glue(&id(30))
         .unwrap()
         .binding
         .as_ref()
         .unwrap()
         .axes
         .is_empty());
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     request.parameter_slices.insert(id(3), 0.5);
     apply(&mut s, &request);
-    assert!(s.document().get_mesh(&id(10)).unwrap().enabled);
+    assert!(s.snapshot().document().mesh(&id(10)).unwrap().enabled);
 }
 #[test]
 fn parameter_cleanup_removes_expression_entries_metadata_and_shared_constraints() {
     let mut s = scene::tree();
     scene::animation(&mut s);
-    s.edit("parameter consumers", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(230),
-            minimum: 0.,
-            maximum: 1.,
-            kind: ParameterKind::BlendShape,
-            ..Default::default()
-        })?;
-        e.create_blend_key_table(BlendShapeKeyTable {
-            id: id(231),
-            parameter_id: id(230),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-            samples: vec![],
-            base_sample_id: String::new(),
-        })?;
-        e.create_blend_constraint(BlendShapeConstraint {
-            id: id(232),
-            parameter_id: id(3),
-            keys: vec![0., 1.],
-            weights: vec![1., 1.],
-            samples: vec![],
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(233),
-            target_id: id(10),
-            target_kind: BlendShapeTargetKind::Mesh,
-            key_table_id: id(231),
-            constraint_ids: vec![id(232)],
-            keyforms: DeltaKeyforms::Mesh(vec![
-                DeltaMeshKeyform {
-                    positions: vec![Vec2::default(); 4],
-                    ..Default::default()
-                };
-                2
-            ]),
-        })?;
-        let mut expression = e
-            .candidate_document()
-            .get_expression(&id(120))
-            .unwrap()
-            .clone();
-        expression.entries.push(ExpressionEntry {
-            id: id(234),
-            target: ExpressionTarget::Resolved {
-                parameter_id: id(3),
-            },
-            value: 0.7,
-            blend: None,
-            extensions: Default::default(),
-        });
-        expression.entries.push(ExpressionEntry {
-            id: id(235),
-            target: ExpressionTarget::Unresolved {
-                runtime_id: "legacy".into(),
-            },
-            value: 0.3,
-            blend: None,
-            extensions: Default::default(),
-        });
-        e.replace_expression(expression)?;
-        let mut settings = e.candidate_document().model3_settings().clone();
-        settings.groups = Some(vec![ModelParameterGroup {
-            id: id(236),
-            name: "params".into(),
-            parameters: vec![ReferenceEntry {
-                id: id(237),
-                target: ModelTargetRef::Resolved { object_id: id(3) },
-            }],
-            extensions: Default::default(),
-        }]);
-        e.set_model3_settings(settings)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(230),
+                        minimum: 0.,
+                        maximum: 1.,
+                        kind: ParameterKind::BlendShape,
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateTable {
+                        table: BlendShapeKeyTable {
+                            id: id(231),
+                            parameter_id: id(230),
+                            keys: vec![0., 1.],
+                            base_key_idx: 0,
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                        },
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateConstraint {
+                        constraint: BlendShapeConstraint {
+                            id: id(232),
+                            parameter_id: id(3),
+                            keys: vec![0., 1.],
+                            weights: vec![1., 1.],
+                            samples: vec![],
+                        },
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                {
+                    let binding = BlendShapeBinding {
+                        id: id(233),
+                        target_id: id(10),
+                        target_kind: BlendShapeTargetKind::Mesh,
+                        key_table_id: id(231),
+                        constraint_ids: vec![id(232)],
+                        keyforms: DeltaKeyforms::Mesh(vec![
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::default(); 4],
+                                ..Default::default()
+                            };
+                            2
+                        ]),
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }?;
+                let mut expression = e
+                    .read_document()
+                    .unwrap()
+                    .expression(&id(120))
+                    .unwrap()
+                    .clone();
+                expression.entries.push(ExpressionEntry {
+                    id: id(234),
+                    target: ExpressionTarget::Resolved {
+                        parameter_id: id(3),
+                    },
+                    value: 0.7,
+                    blend: None,
+                    extensions: Default::default(),
+                });
+                expression.entries.push(ExpressionEntry {
+                    id: id(235),
+                    target: ExpressionTarget::Unresolved {
+                        runtime_id: "legacy".into(),
+                    },
+                    value: 0.3,
+                    blend: None,
+                    extensions: Default::default(),
+                });
+                e.replace_expression(expression)?;
+                let mut settings = e.read_document().unwrap().model3_settings().clone();
+                settings.groups = Some(vec![ModelParameterGroup {
+                    id: id(236),
+                    name: "params".into(),
+                    parameters: vec![ReferenceEntry {
+                        id: id(237),
+                        target: ModelTargetRef::Resolved { object_id: id(3) },
+                    }],
+                    extensions: Default::default(),
+                }]);
+                e.replace_model3_settings(settings)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("parameter consumers")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     apply(&mut s, &roots(vec![DeletionTarget::Parameter(id(3))]));
-    assert!(s.document().get_blend_constraint(&id(232)).is_none());
+    assert!(s.snapshot().document().blend_constraint(&id(232)).is_none());
     assert!(s
+        .snapshot()
         .document()
-        .get_blend_binding(&id(233))
+        .blend_binding(&id(233))
         .unwrap()
         .constraint_ids
         .is_empty());
-    let exp = s.document().get_expression(&id(120)).unwrap();
+    let exp = s.snapshot().document().expression(&id(120)).unwrap();
     assert_eq!(exp.entries.len(), 1);
     assert_eq!(exp.entries[0].id, id(235));
     assert!(exp
@@ -636,66 +821,86 @@ fn parameter_cleanup_removes_expression_entries_metadata_and_shared_constraints(
         .tracks
         .iter()
         .all(|t| !matches!(t.target, MotionTrackTarget::Parameter { .. })));
-    assert!(s.document().model3_settings().groups.as_ref().unwrap()[0]
+    assert!(s
+        .snapshot()
+        .document()
+        .model3_settings()
+        .groups
+        .as_ref()
+        .unwrap()[0]
         .parameters
         .is_empty());
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     apply(&mut s, &roots(vec![DeletionTarget::Parameter(id(230))]));
-    assert!(s.document().get_blend_key_table(&id(231)).is_none());
-    assert!(s.document().get_blend_binding(&id(233)).is_none());
-    assert!(s.document().get_mesh(&id(10)).is_some());
+    assert!(s.snapshot().document().blend_key_table(&id(231)).is_none());
+    assert!(s.snapshot().document().blend_binding(&id(233)).is_none());
+    assert!(s.snapshot().document().mesh(&id(10)).is_some());
 }
 
 #[test]
 fn multiple_axes_reduce_at_frozen_defaults_and_keep_the_other_parameter_domain() {
     let mut s = fixture();
-    s.edit("two dimensions", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(240),
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.25,
-            ..Default::default()
-        })?;
-        let mut p = e
-            .candidate_document()
-            .get_parameter(&id(3))
-            .unwrap()
-            .clone();
-        p.default_value = 0.4;
-        e.replace_parameter(p)?;
-        let mut b = e.candidate_document().get_binding(&id(20)).unwrap().clone();
-        b.axes.push(BindingAxis::new(id(240), vec![0., 1.]));
-        let base = e
-            .candidate_document()
-            .get_mesh(&id(10))
-            .unwrap()
-            .base_positions
-            .clone();
-        b.keyforms = [(0., 0.), (1., 0.), (0., 1.), (1., 1.)]
-            .into_iter()
-            .map(|(x, y)| MeshKeyform {
-                keys: vec![x, y],
-                samples: vec![],
-                positions: base
-                    .iter()
-                    .map(|p| Vec2::new(p.x + x * 10. + y * 5., p.y))
-                    .collect(),
-                appearance: Appearance::default(),
-                draw_order: None,
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(240),
+                        minimum: 0.,
+                        maximum: 1.,
+                        default_value: 0.25,
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                let mut p = e
+                    .read_document()
+                    .unwrap()
+                    .parameter(&id(3))
+                    .unwrap()
+                    .clone();
+                p.default_value = 0.4;
+                e.replace_parameter(p)?;
+                let mut b = e.read_document().unwrap().binding(&id(20)).unwrap().clone();
+                b.axes.push(BindingAxis::new(id(240), vec![0., 1.]));
+                let base = e
+                    .read_document()
+                    .unwrap()
+                    .mesh(&id(10))
+                    .unwrap()
+                    .base_positions
+                    .clone();
+                b.keyforms = [(0., 0.), (1., 0.), (0., 1.), (1., 1.)]
+                    .into_iter()
+                    .map(|(x, y)| MeshKeyform {
+                        keys: vec![x, y],
+                        samples: vec![],
+                        positions: base
+                            .iter()
+                            .map(|p| Vec2::new(p.x + x * 10. + y * 5., p.y))
+                            .collect(),
+                        appearance: Appearance::default(),
+                        draw_order: None,
+                    })
+                    .collect();
+                e.replace_binding(b)
             })
-            .collect();
-        e.replace_binding(b)
-    })
+            .and_then(|value| {
+                let prepared = draft.prepare("two dimensions")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     let eval = |s: &AuthoringSession, v: f32| {
         let mut values = PreviewValues::default();
-        if s.document().get_parameter(&id(240)).is_some() {
+        if s.snapshot().document().parameter(&id(240)).is_some() {
             values.insert(id(240), v);
         }
-        s.evaluate(&values)
+        crate::support::frame(s.snapshot(), &values)
             .unwrap()
             .drawables
             .into_iter()
@@ -708,14 +913,17 @@ fn multiple_axes_reduce_at_frozen_defaults_and_keep_the_other_parameter_domain()
         .map(|v| eval(&s, v))
         .collect();
     apply(&mut s, &roots(vec![DeletionTarget::Parameter(id(3))]));
-    assert_eq!(s.document().get_binding(&id(20)).unwrap().axes.len(), 1);
+    assert_eq!(
+        s.snapshot().document().binding(&id(20)).unwrap().axes.len(),
+        1
+    );
     for (i, v) in [0., 0.3, 0.8, 1.].into_iter().enumerate() {
         for (a, b) in expected[i].iter().zip(eval(&s, v)) {
             assert!((a.x - b.x).abs() < 1e-4);
         }
     }
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     let expected = eval(&s, 0.25);
     apply(
         &mut s,
@@ -732,25 +940,44 @@ fn multiple_axes_reduce_at_frozen_defaults_and_keep_the_other_parameter_domain()
 #[test]
 fn blend_base_sample_requires_an_explicit_retained_base_and_last_sample_has_a_choice() {
     let mut s = fixture();
-    s.edit("blend table", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(250),
-            minimum: 0.,
-            maximum: 1.,
-            kind: ParameterKind::BlendShape,
-            ..Default::default()
-        })?;
-        e.create_blend_key_table(BlendShapeKeyTable {
-            id: id(251),
-            parameter_id: id(250),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-            samples: vec![],
-            base_sample_id: String::new(),
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(250),
+                        minimum: 0.,
+                        maximum: 1.,
+                        kind: ParameterKind::BlendShape,
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateTable {
+                        table: BlendShapeKeyTable {
+                            id: id(251),
+                            parameter_id: id(250),
+                            keys: vec![0., 1.],
+                            base_key_idx: 0,
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                        },
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("blend table")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let table = s.document().get_blend_key_table(&id(251)).unwrap();
+    let table = s.snapshot().document().blend_key_table(&id(251)).unwrap();
     let base = table.base_sample_id.clone();
     let replacement = table.samples[1].id.clone();
     let mut request = roots(vec![DeletionTarget::Record(DeletionObject {
@@ -758,10 +985,9 @@ fn blend_base_sample_requires_an_explicit_retained_base_and_last_sample_has_a_ch
         id: base,
         owner_id: None,
     })]);
-    assert!(s
-        .analyze_deletion(&request)
+    assert!(analyze(&s, &request)
         .unwrap()
-        .native
+        .0
         .decisions
         .iter()
         .any(|d| d.reason == DeletionDecisionReason::BlendBaseReplacementRequired));
@@ -770,8 +996,9 @@ fn blend_base_sample_requires_an_explicit_retained_base_and_last_sample_has_a_ch
         .insert(id(251), replacement.clone());
     apply(&mut s, &request);
     assert_eq!(
-        s.document()
-            .get_blend_key_table(&id(251))
+        s.snapshot()
+            .document()
+            .blend_key_table(&id(251))
             .unwrap()
             .base_sample_id,
         replacement
@@ -781,9 +1008,9 @@ fn blend_base_sample_requires_an_explicit_retained_base_and_last_sample_has_a_ch
         id: replacement,
         owner_id: None,
     })]);
-    let report = s.analyze_deletion(&request).unwrap();
+    let report = analyze(&s, &request).unwrap();
     assert!(report
-        .native
+        .0
         .decisions
         .iter()
         .any(|d| d.object.id == id(251) && d.choices.contains(&DeletionChoice::DeleteSubtree)));
@@ -792,29 +1019,46 @@ fn blend_base_sample_requires_an_explicit_retained_base_and_last_sample_has_a_ch
 #[test]
 fn unconfigured_blend_table_is_not_a_deletion_target() {
     let mut s = fixture();
-    s.edit("pending Blend binding", None, |e| {
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(260),
-            target_id: id(10),
-            target_kind: BlendShapeTargetKind::Mesh,
-            key_table_id: String::new(),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Mesh(vec![]),
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let binding = BlendShapeBinding {
+                    id: id(260),
+                    target_id: id(10),
+                    target_kind: BlendShapeTargetKind::Mesh,
+                    key_table_id: String::new(),
+                    constraint_ids: vec![],
+                    keyforms: DeltaKeyforms::Mesh(vec![]),
+                };
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                        id: binding.id.clone(),
+                        target_id: binding.target_id.clone(),
+                        target_kind: binding.target_kind,
+                        key_table_id: binding.key_table_id.clone(),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )?;
+                e.replace_blend_binding(binding)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("pending Blend binding")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     let request = roots(vec![DeletionTarget::Record(DeletionObject {
         kind: DeletionKind::BlendKeyTable,
         id: String::new(),
         owner_id: None,
     })]);
-    let error = s
-        .plan_deletion(&request, &DeletionOptions::default())
-        .unwrap_err();
-    assert_eq!(error.code.as_ref(), "MISSING_DELETION_TARGET");
-    assert!(s.document().same_content(&before));
-    assert!(s.document().get_blend_binding(&id(260)).is_some());
+    let error = prepare_deletion(&s, &request).unwrap_err();
+    assert_eq!(error.code.as_str(), "MISSING_DELETION_TARGET");
+    assert_eq!(s.snapshot().content_id(), before.content_id());
+    assert!(s.snapshot().document().blend_binding(&id(260)).is_some());
 }
 
 #[test]
@@ -822,56 +1066,61 @@ fn deleting_motion_group_migrates_the_last_registration_and_explicit_last_delete
     let mut s = scene::tree();
     scene::animation(&mut s);
     let entry = s
+        .snapshot()
         .document()
         .motion_roots()
         .iter()
         .find(|e| e.clip_id == id(100))
         .unwrap()
         .clone();
-    s.edit("motion group", None, |e| {
-        e.set_motion_library(
-            vec![MotionGroup {
-                id: id(260),
-                name: "Group".into(),
-                entries: vec![entry.clone()],
-            }],
-            vec![],
-        )
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.edit_motion(MotionEdit::CreateGroup {
+                    id: id(260),
+                    name: "Group".into(),
+                })?;
+                e.edit_motion(MotionEdit::MoveRegistrations {
+                    ids: vec![entry.id.clone()],
+                    destination: MotionContainer::Group(id(260)),
+                    before: None,
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("motion group")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     let request = roots(vec![record(DeletionKind::MotionGroup, 260)]);
-    let report = s.analyze_deletion(&request).unwrap();
+    let report = analyze(&s, &request).unwrap();
     assert!(report
-        .native
+        .0
         .rewritten
         .iter()
         .any(|r| r.field == DeletionField::MotionRegistrationContainer && r.owner.id == entry.id));
-    assert!(!report
-        .native
-        .removed
-        .iter()
-        .any(|r| r.object.id == entry.id));
+    assert!(!report.0.removed.iter().any(|r| r.object.id == entry.id));
     apply(&mut s, &request);
-    assert!(s.document().motion_groups().is_empty());
-    assert_eq!(s.document().motion_roots(), &[entry.clone()]);
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
+    assert!(s.snapshot().document().motion_groups().is_empty());
+    assert_eq!(s.snapshot().document().motion_roots(), &[entry.clone()]);
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
     let request = roots(vec![DeletionTarget::Record(DeletionObject {
         kind: DeletionKind::MotionRegistration,
         id: entry.id,
         owner_id: None,
     })]);
-    assert!(s.analyze_deletion(&request).unwrap().native.decisions.iter().any(|d|matches!(&d.reason,DeletionDecisionReason::InvalidContainer {code} if code=="LAST_MOTION_REGISTRATION")));
+    assert!(analyze(&s,&request).unwrap().0.decisions.iter().any(|d|matches!(&d.reason,DeletionDecisionReason::InvalidContainer {code} if code=="LAST_MOTION_REGISTRATION")));
 }
 #[test]
 fn scene_binding_removal_requires_and_applies_an_explicit_offscreen_mapping() {
     let mut s = fixture();
     let mut request = roots(vec![record(DeletionKind::SceneBinding, 5)]);
-    assert!(s
-        .analyze_deletion(&request)
+    assert!(analyze(&s, &request)
         .unwrap()
-        .native
+        .0
         .decisions
         .iter()
         .any(|d| d.reason == DeletionDecisionReason::OffscreenMappingRequired));
@@ -883,39 +1132,49 @@ fn scene_binding_removal_requires_and_applies_an_explicit_offscreen_mapping() {
         },
     );
     apply(&mut s, &request);
-    assert!(s.document().get_scene_binding(&id(5)).is_none());
+    assert!(s.snapshot().document().scene_binding(&id(5)).is_none());
     assert_eq!(
-        s.document()
-            .get_offscreen(&id(40))
+        s.snapshot()
+            .document()
+            .offscreen(&id(40))
             .unwrap()
             .part_keyform_indices,
         vec![-1]
     );
-    assert!(s.document().get_part(&id(4)).is_some());
+    assert!(s.snapshot().document().part(&id(4)).is_some());
 }
 #[test]
 fn native_repeat_and_decimal_snapping_are_frozen_instead_of_raw_interpolation() {
     for (repeat, precision, value) in [(true, 6, 1.), (false, 0, 0.4)] {
         let mut s = fixture();
-        s.edit("native parameter selection", None, |e| {
-            let mut p = e
-                .candidate_document()
-                .get_parameter(&id(3))
-                .unwrap()
-                .clone();
-            p.repeat = repeat;
-            p.decimal_places = precision;
-            p.default_value = value;
-            e.replace_parameter(p)?;
-            let mut b = e.candidate_document().get_binding(&id(20)).unwrap().clone();
-            for v in &mut b.keyforms[1].positions {
-                v.x += 10.;
-            }
-            e.replace_binding(b)
-        })
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| {
+                    let mut p = e
+                        .read_document()
+                        .unwrap()
+                        .parameter(&id(3))
+                        .unwrap()
+                        .clone();
+                    p.repeat = repeat;
+                    p.decimal_places = precision;
+                    p.default_value = value;
+                    e.replace_parameter(p)?;
+                    let mut b = e.read_document().unwrap().binding(&id(20)).unwrap().clone();
+                    for v in &mut b.keyforms[1].positions {
+                        v.x += 10.;
+                    }
+                    e.replace_binding(b)
+                })
+                .and_then(|value| {
+                    let prepared = draft.prepare("native parameter selection")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
         .unwrap();
         let positions = |s: &AuthoringSession| {
-            s.evaluate(&PreviewValues::default())
+            crate::support::frame(s.snapshot(), &PreviewValues::default())
                 .unwrap()
                 .drawables
                 .into_iter()
@@ -931,107 +1190,131 @@ fn native_repeat_and_decimal_snapping_are_frozen_instead_of_raw_interpolation() 
 
 #[test]
 fn opaque_parameter_cleanup_reports_all_native_export_guards_without_rewriting_provenance() {
-    use zipzi_sdk::OpaqueExportProblem as P;
+    use zipzi_project::OpaqueExportProblem as P;
     let mut s = fixture();
     physics(&mut s);
     let runtime = s
+        .snapshot()
         .document()
-        .get_parameter(&id(3))
+        .parameter(&id(3))
         .unwrap()
         .runtime_id
         .clone();
     let mut wire: serde_json::Value = serde_json::from_str(
-        &zipzi_project::export_physics3(s.document())
+        &zipzi_project::export_physics3(s.snapshot().document())
             .unwrap()
             .unwrap(),
     )
     .unwrap();
     wire["Vendor"] = serde_json::json!({"reference":runtime});
-    s.edit("opaque parameter consumers",None,|e| {
-        e.import_physics3(&id(200),&wire.to_string())?;
-        e.import_expression3(&id(270),"Expression",&serde_json::json!({"Type":"Live2D Expression","Parameters":[{"Id":runtime,"Value":0.4,"Blend":"Add"}],"Vendor":true}).to_string())?;
-        e.import_motion3(&id(271),"Motion",&serde_json::json!({"Version":3,"Meta":{"Duration":1.,"Fps":30.,"Loop":false,"AreBeziersRestricted":true,"CurveCount":1,"TotalSegmentCount":0,"TotalPointCount":1,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[{"Target":"Parameter","Id":runtime,"Segments":[0.,0.]}],"Vendor":true}).to_string())?;
-        e.import_cdi3(&serde_json::json!({"Version":3,"Parameters":[{"Id":runtime,"Name":"Control","GroupId":""}],"Vendor":true}).to_string())?;
+    {
+        let mut draft = s.begin_draft();
+        draft.batch(draft.source(), |e| {
+        {let imported=zipzi_project::import_physics3(&e.read_document()?, &id(200),&wire.to_string()).map_err(|error|Status::error(error.code.clone(),format!("{:?}",error)))?;e.replace_physics(Some(imported.candidate.physics().as_ref().unwrap().as_ref().clone()))}?;
+        {let imported=zipzi_project::import_expression3(&e.read_document()?, &id(270),"Expression",&serde_json::json!({"Type":"Live2D Expression","Parameters":[{"Id":runtime,"Value":0.4,"Blend":"Add"}],"Vendor":true}).to_string()).map_err(|error|Status::error(error.code.clone(),format!("{:?}",error)))?;e.create_expression(imported.candidate.expression(&id(270)).unwrap().clone())}?;
+        {let imported=zipzi_project::import_motion3(&e.read_document()?, &id(271),"Motion",&serde_json::json!({"Version":3,"Meta":{"Duration":1.,"Fps":30.,"Loop":false,"AreBeziersRestricted":true,"CurveCount":1,"TotalSegmentCount":0,"TotalPointCount":1,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[{"Target":"Parameter","Id":runtime,"Segments":[0.,0.]}],"Vendor":true}).to_string()).map_err(|error|Status::error(error.code.clone(),format!("{:?}",error)))?;e.create_motion(imported.candidate.motion(&id(271)).unwrap().clone())}?;
+        {let imported=zipzi_project::import_cdi3(&e.read_document()?, &serde_json::json!({"Version":3,"Parameters":[{"Id":runtime,"Name":"Control","GroupId":""}],"Vendor":true}).to_string()).map_err(|error|Status::error(error.code.clone(),format!("{:?}",error)))?;e.replace_display_info(imported.candidate.display_info().clone())}?;
         Ok(())
-    }).unwrap();
-    let before = s.document().clone();
-    assert!(
-        zipzi_project::preflight_opaque_exports(s.document(), &ConversionControl::default())
-            .unwrap()
-            .is_empty()
-    );
+    }).and_then(|value| {
+            let prepared = draft.prepare("opaque parameter consumers")?;
+            s.publish(prepared).map(|receipt| (value, receipt))
+        })
+    }.unwrap();
+    let before = s.snapshot().document().clone();
+    assert!(zipzi_project::preflight_opaque_exports(
+        s.snapshot().document(),
+        &ConversionControl::default()
+    )
+    .unwrap()
+    .is_empty());
     let request = roots(vec![DeletionTarget::Parameter(id(3))]);
-    let report = s.analyze_deletion(&request).unwrap();
+    let report = analyze(&s, &request).unwrap();
     for problem in [P::NamespaceChanged, P::ContentChanged] {
         assert!(
             report
-                .new_export_failures
-                .contains(&DeletionExportFailure::Motion {
+                .1
+                .contains(&zipzi_project::OpaqueExportIssue::Motion {
                     id: id(271),
                     problem
                 }),
             "{:?}",
-            report.new_export_failures
+            report.1
         );
         assert!(report
-            .new_export_failures
-            .contains(&DeletionExportFailure::Expression {
+            .1
+            .contains(&zipzi_project::OpaqueExportIssue::Expression {
                 id: id(270),
                 problem
             }));
         assert!(report
-            .new_export_failures
-            .contains(&DeletionExportFailure::Physics {
+            .1
+            .contains(&zipzi_project::OpaqueExportIssue::Physics {
                 id: id(200),
                 problem
             }));
     }
-    assert!(report
-        .new_export_failures
-        .contains(&DeletionExportFailure::Cdi {
-            problem: P::NamespaceChanged
-        }));
-    assert!(s
-        .plan_deletion(&request, &DeletionOptions::default())
-        .is_err());
+    assert!(report.1.contains(&zipzi_project::OpaqueExportIssue::Cdi {
+        problem: P::NamespaceChanged
+    }));
+    assert!(!report.1.is_empty());
     apply(&mut s, &request);
     assert_eq!(
-        s.document().physics().unwrap().opaque_source_content_hash,
-        before.physics().unwrap().opaque_source_content_hash
-    );
-    assert_eq!(
-        s.document().physics().unwrap().opaque_source_ids,
-        before.physics().unwrap().opaque_source_ids
-    );
-    assert_eq!(
-        s.document()
-            .get_expression(&id(270))
+        s.snapshot()
+            .document()
+            .physics()
+            .as_ref()
             .unwrap()
             .opaque_source_content_hash,
         before
-            .get_expression(&id(270))
+            .physics()
+            .as_ref()
             .unwrap()
             .opaque_source_content_hash
     );
     assert_eq!(
-        s.document().get_motion(&id(271)).unwrap().opaque_source_ids,
-        before.get_motion(&id(271)).unwrap().opaque_source_ids
+        s.snapshot()
+            .document()
+            .physics()
+            .as_ref()
+            .unwrap()
+            .opaque_source_ids,
+        before.physics().as_ref().unwrap().opaque_source_ids
     );
     assert_eq!(
-        s.document().display_info().opaque_source_ids,
+        s.snapshot()
+            .document()
+            .expression(&id(270))
+            .unwrap()
+            .opaque_source_content_hash,
+        before
+            .expression(&id(270))
+            .unwrap()
+            .opaque_source_content_hash
+    );
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .motion(&id(271))
+            .unwrap()
+            .opaque_source_ids,
+        before.motion(&id(271)).unwrap().opaque_source_ids
+    );
+    assert_eq!(
+        s.snapshot().document().display_info().opaque_source_ids,
         before.display_info().opaque_source_ids
     );
-    assert!(zipzi_project::export_motion3(s.document(), &id(271)).is_err());
-    assert!(zipzi_project::export_expression3(s.document(), &id(270)).is_err());
-    assert!(zipzi_project::export_physics3(s.document()).is_err());
-    assert!(zipzi_project::export_cdi3(s.document()).is_err());
-    s.undo().unwrap();
-    assert!(s.document().same_content(&before));
-    assert!(
-        zipzi_project::preflight_opaque_exports(s.document(), &ConversionControl::default())
-            .unwrap()
-            .is_empty()
-    );
+    assert!(zipzi_project::export_motion3(s.snapshot().document(), &id(271)).is_err());
+    assert!(zipzi_project::export_expression3(s.snapshot().document(), &id(270)).is_err());
+    assert!(zipzi_project::export_physics3(s.snapshot().document()).is_err());
+    assert!(zipzi_project::export_cdi3(s.snapshot().document()).is_err());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
+    assert!(zipzi_project::preflight_opaque_exports(
+        s.snapshot().document(),
+        &ConversionControl::default()
+    )
+    .unwrap()
+    .is_empty());
 }
 
 #[test]
@@ -1040,22 +1323,32 @@ fn retained_motion_keys_and_physics_node_order_keep_native_lock_protection() {
     scene::animation(&mut s);
     lock(&mut s, &id(102));
     let request = roots(vec![record(DeletionKind::MotionKey, 106)]);
-    let before = s.document().clone();
-    let history = s.history_lengths();
-    let report = s.analyze_deletion(&request).unwrap();
-    assert!(report
-        .native
-        .blockers
-        .iter()
-        .any(|b| b.source_id == id(102)));
-    assert!(s
-        .plan_deletion(&request, &DeletionOptions::default())
-        .is_err());
-    assert!(s.document().same_content(&before));
-    assert_eq!(s.history_lengths(), history);
+    let before = s.snapshot().document().clone();
+    let history = {
+        let history = s.history_state();
+        (history.undo_steps, history.redo_steps)
+    };
+    let report = analyze(&s, &request).unwrap();
+    assert!(report.0.blockers.iter().any(|b| b.source_id == id(102)));
+    assert!(prepare_deletion(&s, &request).is_err());
+    assert_eq!(s.snapshot().content_id(), before.content_id());
+    assert_eq!(
+        {
+            let history = s.history_state();
+            (history.undo_steps, history.redo_steps)
+        },
+        history
+    );
     let mut s = fixture();
     physics(&mut s);
-    let nodes = s.document().physics().unwrap().data.settings[0]
+    let nodes = s
+        .snapshot()
+        .document()
+        .physics()
+        .as_ref()
+        .unwrap()
+        .data
+        .settings[0]
         .vertices
         .iter()
         .map(|v| v.id.clone())
@@ -1066,13 +1359,12 @@ fn retained_motion_keys_and_physics_node_order_keep_native_lock_protection() {
         id: nodes[1].clone(),
         owner_id: None,
     })]);
-    let before = s.document().clone();
-    assert!(s
-        .analyze_deletion(&request)
+    let before = s.snapshot().document().clone();
+    assert!(analyze(&s, &request)
         .unwrap()
-        .native
+        .0
         .blockers
         .iter()
         .any(|b| b.source_id == nodes[2]));
-    assert!(s.document().same_content(&before));
+    assert_eq!(s.snapshot().content_id(), before.content_id());
 }
