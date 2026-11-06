@@ -1,9 +1,43 @@
 //! Immutable persistent model, isolated typed construction and net-write summaries.
+mod authoring;
+mod property;
+pub use property::PropertyPatch;
+mod document_edit;
+pub use document_edit::DocumentOutcome;
+pub(crate) mod deletion;
+mod topology;
+pub use deletion::DeletionOutcome;
+mod references;
+mod tracked;
+pub use references::ReferenceOutcome;
+mod scene_content;
+pub use scene_content::SceneContentOutcome;
+mod originals;
+mod scene;
+pub use scene::SceneOutcome;
+mod evaluation;
+use evaluation::StateReadCache;
+mod organization;
+pub use organization::OrganizationOutcome;
+mod conversions;
+pub use crate::model_validation::conversion::{
+    ConversionControl, ConversionLimits, ConversionOutcome, ConversionWork,
+};
 mod cost;
+pub(crate) use cost::{expression_entries_bytes, scene_payload};
+mod attachments;
 mod domains;
+mod expressions;
+mod motions;
+mod physics;
+mod pose;
 mod records;
+mod resources;
 mod validation;
 mod writes;
+pub use crate::model_validation::expression_projection::{
+    DisabledExpressionEntry, ExpressionDisabledReason, ExpressionProjection,
+};
 pub use domains::OwnedDocument;
 
 pub use writes::{RecordChange, RecordDomain, RecordWrite, RootDomain, WriteSet};
@@ -57,6 +91,7 @@ struct Content {
 /// Frozen persistent content. Clones only retain shared roots.
 #[derive(Debug, Clone)]
 pub struct DocumentState {
+    read_cache: Arc<StateReadCache>,
     content_id: ContentId,
     content: Arc<Content>,
 }
@@ -77,6 +112,7 @@ impl DocumentState {
             ));
         }
         Ok(Self {
+            read_cache: Arc::default(),
             content_id: ContentId::new(),
             content: Arc::new(Content {
                 id,
@@ -165,6 +201,7 @@ pub struct DocumentBuilder {
     setup_touched: bool,
     touched: BTreeMap<RecordDomain, BTreeSet<String>>,
     roots_touched: BTreeSet<RootDomain>,
+    scene_initializations: BTreeSet<String>,
     failure: Option<Status>,
 }
 
@@ -185,6 +222,7 @@ impl DocumentBuilder {
             setup_touched: false,
             touched: BTreeMap::new(),
             roots_touched: BTreeSet::new(),
+            scene_initializations: BTreeSet::new(),
             failure: None,
         }
     }
@@ -354,11 +392,7 @@ impl DocumentBuilder {
     /// Net writes compare only touched records; validation checks the whole graph.
     /// No transaction, saved baseline or legacy Document is needed to freeze.
     pub fn freeze(mut self) -> Result<FrozenDocument, Status> {
-        if let Some(failure) = &self.failure {
-            return Err(failure.clone());
-        }
-        self.normalize_touched()?;
-        self.content.validate()?;
+        self.validate_candidate()?;
         let mut writes = WriteSet::default();
         if self.setup_touched && self.base.content.setup != self.content.setup {
             writes.setup = true;
@@ -388,11 +422,23 @@ impl DocumentBuilder {
             self.base
         } else {
             DocumentState {
+                read_cache: Arc::default(),
                 content_id: ContentId::new(),
                 content: Arc::new(self.content),
             }
         };
         Ok(FrozenDocument { state, writes })
+    }
+
+    /// Normalize in place and validate a completed batch, retaining generated
+    /// identities for subsequent commands and queries. Failure ends the builder.
+    pub fn validate_candidate(&mut self) -> Result<(), Status> {
+        self.write(|this| {
+            this.normalize_touched()?;
+            this.content.validate()?;
+            this.finish_scene_initializations()?;
+            this.content.validate()
+        })
     }
 
     /// Validate a read-only candidate without consuming the working builder.
@@ -419,3 +465,35 @@ mod tests;
 
 #[cfg(test)]
 mod domain_tests;
+
+pub use crate::model_validation::physics_projection::{
+    DisabledPhysicsChannel, ExecutablePhysics, PhysicsDisabledReason, PhysicsGroupSlots,
+    PhysicsProjection, PhysicsSlotMap,
+};
+pub use crate::model_validation::pose_projection::{
+    DisabledPoseItem, PoseDisabledReason, PoseProjection,
+};
+impl DocumentState {
+    pub fn pose_projection(&self) -> Result<Option<PoseProjection>, Status> {
+        self.content.model().pose_projection()
+    }
+    pub fn physics_projection(&self) -> Result<Option<PhysicsProjection>, Status> {
+        self.content.model().physics_projection()
+    }
+    pub fn motion_projection(&self, id: &str) -> Result<MotionProjection, Status> {
+        self.content.model().motion_projection(id)
+    }
+    pub fn motion_track_disabled_reason(
+        &self,
+        target: &MotionTrackTarget,
+    ) -> Option<MotionDisabledReason> {
+        self.content.model().motion_track_disabled_reason(target)
+    }
+}
+
+pub use crate::model_validation::physics_projection::PhysicsTargetProjection;
+
+#[cfg(test)]
+mod bone_display_tests;
+#[cfg(test)]
+mod motion_validation_tests;

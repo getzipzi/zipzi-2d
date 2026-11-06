@@ -2,35 +2,45 @@
 
 Core data model for Zipzi 2D, including documents, geometry, deformers, parameter bindings, and scene evaluation.
 
-The new `state` module completes the preparatory authoring kernel foundation.
-`DocumentState` covers every persistent model domain, including scene/geometry,
-bindings, organization, EditorState, animation, pose, physics and attachments.
-`OwnedDocument` constructs a complete state without an old `Document` intermediary;
-`DocumentBuilder` provides isolated typed writes and validated freezing. Shared
-read-only model rules live in `model_validation`, without session or save state.
+`DocumentState` is the immutable model. `OwnedDocument` accepts owned decoding
+inputs; `DocumentBuilder` performs isolated typed writes, normalizes identities,
+validates the complete graph and freezes a new state. Core owns no Session,
+transaction, saved baseline, checkpoint or publication state. The old mutable
+`Document` and its plan executors have been removed.
+
 Directories, records, orders and metadata roots share independently. Geometry and
-binding payloads currently share at record granularity; existing shared animation
-curves and attachment buffers remain shared. Failed writes prevent freezing;
-net-zero writes retain the original content identity. `WriteSet` records net
-changes and a fixed conservative step estimate, deduplicating shared blocks only
-within that step. Core stores resource keys only. Production consumers still use
-`Document`; see the [implementation status](../../docs/plans/authoring-architecture.md).
-Focused check: `cargo test --locked -p zipzi-core --lib state::`.
+binding payloads share at record granularity; animation curves and attachment
+buffers retain their existing sharing. Failed writes prevent freezing; net-zero
+writes retain ContentId. Natural touched-record tracking produces WriteSet and
+its fixed conservative history-step estimate. That estimate is not a conversion
+admission limit. Images store ResourceKey and dimensions, or an explicit empty or
+unresolved value; Core does not own image files.
 
-Rotation bone display baselines capture the evaluated inherited scale at parameter
-defaults, including ordinary/BlendShape bindings and hidden ancestors. Existing
-display preferences stay frozen through later shape edits and project reopening.
+Builder commands cover parameters, ordinary/BlendShape bindings, sampling and
+range/grid conversions, scene and organization edits, mesh topology, reparenting,
+grouping, dependency deletion, Motion, Expression, Pose, Physics, references,
+attachments and EditorState. Typed field patches retain expected values without
+address registries. Read-only domain algorithms live in `model_validation`;
+Builder installs their affected records through the same tracking. Domain locks,
+identity remapping and orphan metadata cleanup apply to these commands.
+Conversion limits bound sample combinations and actual temporary/output payloads,
+independently of retained history.
 
-Document clones and checkpoints share Mesh, Transform, ordinary/BlendShape binding
-records and per-mesh vertex indexes. Writes detach the affected record. Public
-record types and project serialization remain owned values. Logical content/history
-estimates include shared payloads; `estimated_snapshot_bytes` counts the metadata
-and lookup descriptors copied by a candidate fork. `DocumentSnapshotId` supports
-exact snapshot checks without retaining a document copy.
-Candidate publication moves its maintained indexes along with content, preserving
-shared indexes for untouched meshes. Checkpoint exchange rebuilds indexes for
-the restored topology. Incremental validation reuses the geometry proof for
-identical shared Mesh records while rechecking references in the candidate graph.
+Evaluation, reference/export projections and preview caches consume frozen state.
+Rotation bone display baselines capture the default evaluated inherited scale,
+including ordinary/BlendShape bindings and hidden ancestors. Imported numeric
+axes are normalized before initialization. Existing display preferences remain
+stable through later edits and reopening.
+
+Focused checks:
+
+```sh
+cargo test --locked -p zipzi-core --lib
+cargo test --locked -p zipzi-core --test preview_state_tests
+```
+
+Host consumers and remaining legacy integration targets are being migrated in
+later stages; see the [implementation status](../../docs/plans/authoring-architecture.md).
 
 `image::decode_png_bounded` checks encoded bytes, expected header dimensions and
 conservative decoder/conversion workspace before allocating output. Its decoder

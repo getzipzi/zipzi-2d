@@ -1,7 +1,7 @@
 //! Model3/MOC3/PSD import assembly and attachment preservation.
-use super::{DocumentSnapshot, DocumentStore, ProjectResult, ResourceDiagnostic};
+use super::{ImportedProject, ProjectImporter, ProjectResult, ResourceDiagnostic};
 use crate::filesystem::{self as io};
-use crate::resources::content_sha256;
+
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
@@ -9,19 +9,15 @@ use std::{
     path::{Path, PathBuf},
 };
 use zipzi_core::document::{valid_attachment_path, PackageAttachment};
-use zipzi_core::{Document, Status};
+use zipzi_core::{state::DocumentState, Status};
 use zipzi_moc3::{import_from_bare_moc3, import_from_model3_json, ImportReport};
 use zipzi_psd::{import_psd, ImportReport as PsdImportReport};
 
-impl DocumentStore {
+impl ProjectImporter {
     pub fn import_model3(
         &self,
         path: &Path,
-    ) -> (
-        ProjectResult,
-        Option<DocumentSnapshot>,
-        Option<ImportReport>,
-    ) {
+    ) -> (ProjectResult, Option<ImportedProject>, Option<ImportReport>) {
         let content = match fs::read_to_string(path) {
             Ok(c) => c,
             Err(e) => {
@@ -456,7 +452,7 @@ impl DocumentStore {
                         let mut suffix = 0;
                         while res.document.motion_order().iter().any(|existing| {
                             res.document
-                                .get_motion(existing)
+                                .motion(existing)
                                 .is_some_and(|clip| clip.name == name)
                         }) {
                             suffix += 1;
@@ -522,9 +518,12 @@ impl DocumentStore {
                     entries: registrations,
                 });
             }
-            let result = res.document.set_motion_library(motion_groups, vec![]);
-            if !result.status.is_ok() {
-                return (ProjectResult::from_status(result.status), None, None);
+            let result = import_edit(&mut res.document, |builder| {
+                builder.set_motion_groups(motion_groups)?;
+                builder.set_motion_roots(vec![])
+            });
+            if let Err(status) = result {
+                return (ProjectResult::from_status(status), None, None);
             }
             res.report
                 .unimported_attachments
@@ -535,9 +534,11 @@ impl DocumentStore {
             Ok(settings) => settings,
             Err(status) => return (ProjectResult::from_status(status), None, None),
         };
-        let result = res.document.set_model3_settings(settings);
-        if !result.status.is_ok() {
-            return (ProjectResult::from_status(result.status), None, None);
+        let result = import_edit(&mut res.document, |builder| {
+            builder.set_model3_settings(settings)
+        });
+        if let Err(status) = result {
+            return (ProjectResult::from_status(status), None, None);
         }
         res.report.unimported_attachments.retain(|item| {
             !item.starts_with("Groups:")
@@ -609,13 +610,15 @@ impl DocumentStore {
                 bytes: Some(std::sync::Arc::new(bytes)),
             });
         }
-        let result = res.document.set_package_attachments(managed);
-        if !result.status.is_ok() {
-            return (ProjectResult::from_status(result.status), None, None);
+        let result = import_edit(&mut res.document, |builder| {
+            builder.set_package_attachments(managed)
+        });
+        if let Err(status) = result {
+            return (ProjectResult::from_status(status), None, None);
         }
-        let result = res.document.resolve_attachment_paths();
-        if !result.status.is_ok() {
-            return (ProjectResult::from_status(result.status), None, None);
+        let result = resolve_attachment_paths(&mut res.document);
+        if let Err(status) = result {
+            return (ProjectResult::from_status(status), None, None);
         }
         if !managed_diagnostics
             .iter()
@@ -672,17 +675,50 @@ impl DocumentStore {
                 })
                 .map(|item| format!("{}: {}", item.code, item.asset_id)),
         );
-        let result = res.document.set_missing_attachments(incomplete);
-        if !result.status.is_ok() {
-            return (ProjectResult::from_status(result.status), None, None);
+        let result = import_edit(&mut res.document, |builder| {
+            builder.set_missing_attachments(incomplete)
+        });
+        if let Err(status) = result {
+            return (ProjectResult::from_status(status), None, None);
         }
         for w in &res.report.warnings {
             project_result.warnings.push(w.clone());
         }
 
-        self.remember_imported_assets(&res.document);
-        let snapshot = DocumentSnapshot::imported(res.document);
+        let mut snapshot = match self.capture_files(
+            res.document,
+            &res.textures,
+            &mut project_result.diagnostics,
+        ) {
+            Ok(value) => value,
+            Err(status) => return (ProjectResult::from_status(status), None, None),
+        };
 
+        match io::local_path(path) {
+            Ok(source) => snapshot.protected_paths.push(source),
+            Err(status) => return (ProjectResult::from_status(status), None, None),
+        }
+        fn sources(value: &serde_json::Value, root: &Path, out: &mut Vec<PathBuf>) {
+            match value {
+                serde_json::Value::String(v) => {
+                    if let Ok(path) = root.join(v).canonicalize() {
+                        out.push(path);
+                    }
+                }
+                serde_json::Value::Object(v) => {
+                    for value in v.values() {
+                        sources(value, root, out)
+                    }
+                }
+                serde_json::Value::Array(v) => {
+                    for value in v {
+                        sources(value, root, out)
+                    }
+                }
+                _ => {}
+            }
+        }
+        sources(file_refs, base_dir, &mut snapshot.protected_paths);
         (project_result, Some(snapshot), Some(res.report))
     }
 
@@ -690,11 +726,7 @@ impl DocumentStore {
         &self,
         moc3_path: &Path,
         texture_map: &HashMap<usize, PathBuf>,
-    ) -> (
-        ProjectResult,
-        Option<DocumentSnapshot>,
-        Option<ImportReport>,
-    ) {
+    ) -> (ProjectResult, Option<ImportedProject>, Option<ImportReport>) {
         let bytes = match fs::read(moc3_path) {
             Ok(b) => b,
             Err(e) => {
@@ -722,63 +754,49 @@ impl DocumentStore {
             project_result.warnings.push(w.clone());
         }
 
-        self.remember_imported_assets(&res.document);
-        let snapshot = DocumentSnapshot::imported(res.document);
+        let mut snapshot = match self.capture_files(
+            res.document,
+            &res.textures,
+            &mut project_result.diagnostics,
+        ) {
+            Ok(value) => value,
+            Err(status) => return (ProjectResult::from_status(status), None, None),
+        };
 
+        match io::local_path(moc3_path) {
+            Ok(source) => snapshot.protected_paths.push(source),
+            Err(status) => return (ProjectResult::from_status(status), None, None),
+        }
         (project_result, Some(snapshot), Some(res.report))
     }
 
-    /// Publish a new project from a PSD. The destination becomes visible only
-    /// after its manifest and every extracted PNG have been written and synced.
-    pub fn import_psd(
-        &self,
-        source: &Path,
-        destination: &Path,
-    ) -> (
-        ProjectResult,
-        Option<DocumentSnapshot>,
-        Option<PsdImportReport>,
-    ) {
-        match self.import_psd_inner(source, destination) {
-            Ok((result, snapshot, report)) => (result, Some(snapshot), Some(report)),
-            Err(status) => (ProjectResult::from_status(status), None, None),
-        }
-    }
-
-    fn import_psd_inner(
-        &self,
-        source: &Path,
-        destination: &Path,
-    ) -> Result<(ProjectResult, DocumentSnapshot, PsdImportReport), Status> {
+    /// Decode and capture PSD artwork without owning or publishing a live model.
+    pub fn import_psd(&self, source: &Path) -> Result<(ImportedProject, PsdImportReport), Status> {
         let bundle = read_psd_bundle(source)?;
-        if let Some(issue) = bundle.document.validate_structure().into_iter().next() {
-            return Err(issue.status);
+        let mut builder = bundle.document.builder();
+        let mut images = Vec::new();
+        for asset in bundle.assets {
+            let image = self.resources.adopt_image(crate::prepare_png_content(
+                asset.bytes.into(),
+                self.resources.budget(),
+            )?)?;
+            let mut record = builder.asset(&asset.id).unwrap().clone();
+            record.content = image_content(&image);
+            builder.replace_asset(record)?;
+            images.push(image);
         }
-        let resources = self.new_resources()?;
-        for asset in &bundle.assets {
-            let hash = content_sha256(&asset.bytes);
-            resources
-                .insert_png(&asset.bytes, &hash)
-                .map_err(Status::from)?;
-        }
-        let mut candidate = bundle.document;
-        for id in candidate.asset_order().to_vec() {
-            let mut asset = candidate.get_asset(&id).unwrap().clone();
-            if let Some(content) = &mut asset.content {
-                content.source = format!("assets/{}.png", content.sha256);
-            }
-            let edit = candidate.replace_asset(asset);
-            if !edit.status.is_ok() {
-                return Err(edit.status);
-            }
-        }
-        let (mut result, snapshot) =
-            self.save_prepared(&candidate, resources, destination, None, &mut || true);
-        let snapshot = snapshot.ok_or_else(|| result.status.clone())?;
-        result
-            .warnings
-            .extend(bundle.report.warnings.iter().cloned());
-        Ok((result, snapshot, bundle.report))
+        let document = builder.freeze()?.state;
+        let resources = crate::ResourceView::default()
+            .with_images(images)
+            .for_state(&document)?;
+        Ok((
+            ImportedProject {
+                document,
+                resources,
+                protected_paths: vec![source.canonicalize().map_err(io::io_error)?],
+            },
+            bundle.report,
+        ))
     }
 }
 
@@ -866,7 +884,7 @@ fn read_model_attachment_bytes(
     })
 }
 
-fn stable_expression_id(document: &Document, index: usize, name: &str) -> String {
+fn stable_expression_id(document: &DocumentState, index: usize, name: &str) -> String {
     for salt in 0u64.. {
         let mut digest = Sha256::new();
         digest.update(document.id());
@@ -895,7 +913,7 @@ fn stable_expression_id(document: &Document, index: usize, name: &str) -> String
     unreachable!("salt space exhausted")
 }
 
-fn stable_motion_id(document: &Document, relative: &str) -> String {
+fn stable_motion_id(document: &DocumentState, relative: &str) -> String {
     for salt in 0u64.. {
         let mut digest = Sha256::new();
         digest.update(document.id());
@@ -923,11 +941,11 @@ fn stable_motion_id(document: &Document, relative: &str) -> String {
     unreachable!("salt space exhausted")
 }
 
-fn stable_pose_id(document: &Document) -> String {
+fn stable_pose_id(document: &DocumentState) -> String {
     stable_attachment_id(document, b"pose")
 }
 
-fn stable_attachment_id(document: &Document, marker: &[u8]) -> String {
+fn stable_attachment_id(document: &DocumentState, marker: &[u8]) -> String {
     for salt in 0u64.. {
         let mut digest = Sha256::new();
         digest.update(document.id());
@@ -952,4 +970,122 @@ fn stable_attachment_id(document: &Document, marker: &[u8]) -> String {
         }
     }
     unreachable!("salt space exhausted")
+}
+
+fn import_edit(
+    state: &mut DocumentState,
+    edit: impl FnOnce(&mut zipzi_core::state::DocumentBuilder) -> Result<(), Status>,
+) -> Result<(), Status> {
+    let mut builder = state.builder();
+    edit(&mut builder)?;
+    *state = builder.freeze()?.state;
+    Ok(())
+}
+fn resolve_attachment_paths(state: &mut DocumentState) -> Result<(), Status> {
+    let paths: HashMap<_, _> = state
+        .package_attachments()
+        .iter()
+        .map(|a| (a.path.clone(), a.id.clone()))
+        .collect();
+    let resolve = |r: &mut zipzi_core::document::AttachmentRef| {
+        if let zipzi_core::document::AttachmentRef::Unresolved { path } = r {
+            if let Some(id) = paths.get(path) {
+                *r = zipzi_core::document::AttachmentRef::Resolved {
+                    attachment_id: id.clone(),
+                };
+            }
+        }
+    };
+    import_edit(state, |b| {
+        let mut groups = b.motion_groups().clone();
+        let mut roots = b.motion_roots().clone();
+        let mut settings = b.model3_settings().clone();
+        for e in groups
+            .iter_mut()
+            .flat_map(|g| &mut g.entries)
+            .chain(&mut roots)
+        {
+            if let Some(r) = &mut e.sound {
+                resolve(r);
+            }
+        }
+        if let Some(r) = &mut settings.user_data {
+            resolve(r);
+        }
+        b.set_motion_groups(groups)?;
+        b.set_motion_roots(roots)?;
+        b.set_model3_settings(settings)
+    })
+}
+fn image_content(image: &crate::ImageResource) -> zipzi_core::state::AssetContent {
+    zipzi_core::state::AssetContent::Image {
+        resource: image.key(),
+        width: image.width(),
+        height: image.height(),
+    }
+}
+impl ProjectImporter {
+    fn capture_files(
+        &self,
+        state: DocumentState,
+        descriptors: &[zipzi_moc3::TextureSlotInfo],
+        diagnostics: &mut Vec<ResourceDiagnostic>,
+    ) -> Result<ImportedProject, Status> {
+        let mut b = state.builder();
+        let mut images = Vec::new();
+        let mut protected_paths = Vec::new();
+        for id in state.asset_order() {
+            let mut record = state.asset(id).unwrap().clone();
+            let zipzi_core::state::AssetContent::Unresolved { source } = &record.content else {
+                continue;
+            };
+            if source.starts_with("cubism-texture-slot:") {
+                continue;
+            }
+            let Some(descriptor) = descriptors
+                .iter()
+                .find(|d| d.source == *source && d.width > 0 && d.height > 0)
+            else {
+                continue;
+            };
+            let captured = crate::prepare_image_content_with_budget(
+                Path::new(source),
+                self.resources.budget(),
+            )
+            .and_then(|image| {
+                let content = image.content();
+                if (content.width, content.height) != (descriptor.width, descriptor.height)
+                    || (!descriptor.sha256.is_empty() && content.sha256 != descriptor.sha256)
+                {
+                    return Err(Status::error("RESOURCE_CHANGED", source));
+                }
+                self.resources.adopt_image(image)
+            });
+            match captured {
+                Ok(image) => {
+                    protected_paths.push(io::local_path(Path::new(source))?);
+                    record.content = image_content(&image);
+                    b.replace_asset(record)?;
+                    images.push(image);
+                }
+                Err(status) => diagnostics.push(ResourceDiagnostic {
+                    asset_id: id.clone(),
+                    code: status.code,
+                    message: status.message,
+                }),
+            }
+        }
+        let document = b.freeze()?.state;
+        let resources = crate::ResourceView::default()
+            .with_images(images)
+            .for_state(&document)?;
+        let atlases = document.asset_order().iter().cloned().collect();
+        let (document, resources) =
+            crate::atlas::unpack_atlas_images(&document, &resources, &self.resources, &atlases)?;
+        Ok(ImportedProject {
+            document,
+            resources,
+            protected_paths,
+        })
+    }
 }

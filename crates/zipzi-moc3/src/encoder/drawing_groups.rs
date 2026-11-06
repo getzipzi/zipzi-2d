@@ -23,7 +23,7 @@ impl<'a> Moc3EncoderContext<'a> {
         for group in &groups {
             let first = self.l.field("draw_group_obj_src.idx")?.len() / 4;
             for id in &group.items {
-                let is_part = self.doc.get_part(id).is_some();
+                let is_part = self.doc.part(id).is_some();
                 self.l
                     .integer("draw_group_obj_src.type", if is_part { 1 } else { 0 })?;
                 self.l.integer(

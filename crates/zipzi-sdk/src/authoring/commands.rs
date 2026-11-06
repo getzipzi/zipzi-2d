@@ -1,4 +1,13 @@
 use super::*;
+mod bindings;
+mod expressions;
+mod mesh;
+mod motions;
+mod organization;
+mod parameters;
+mod physics;
+mod pose;
+mod resources;
 use std::collections::{HashMap, HashSet};
 use zipzi_core::{
     state::{AssetContent, AssetRecord, DocumentBuilder},
@@ -15,7 +24,7 @@ pub enum NameTarget<'a> {
     Mesh(&'a str),
 }
 
-/// Typed command surface for the first SDK workflow. The underlying builder is
+/// Typed authoring commands for isolated Draft batches. The underlying builder is
 /// private; a caller cannot bypass command validation or failure tracking.
 pub struct Commands<'a> {
     builder: &'a mut DocumentBuilder,
@@ -43,49 +52,8 @@ impl<'a> Commands<'a> {
         }
         result
     }
-    // This slice writes only top-level objects. Locks inherit organizational
-    // owners, not deformation parents, matching the model's authoring rule.
     fn unlocked(&self, id: &str) -> Result<(), Status> {
-        let mut owner = Some(id);
-        let mut seen = HashSet::new();
-        while let Some(id) = owner.filter(|id| !id.is_empty()) {
-            if !seen.insert(id) {
-                return Err(error("RELATION_CYCLE", "Cyclic organization"));
-            }
-            if self.builder.editor_state().get(id).locked {
-                return Err(Status::error("OBJECT_LOCKED", id));
-            }
-            owner = if let Some(part) = self.builder.part(id) {
-                Some(part.parent_id.as_str())
-            } else if let Some(mesh) = self.builder.mesh(id) {
-                Some(mesh.part_id.as_str())
-            } else if let Some(transform) = self.builder.transform(id) {
-                Some(transform.part())
-            } else if self.builder.parameter(id).is_some() {
-                self.builder
-                    .display_info()
-                    .parameters
-                    .iter()
-                    .flatten()
-                    .find_map(|entry| match entry {
-                        zipzi_core::document::CdiParameterEntry::Resolved {
-                            parameter_id,
-                            group_id,
-                            ..
-                        } if parameter_id == id => group_id.as_deref(),
-                        _ => None,
-                    })
-            } else {
-                self.builder
-                    .display_info()
-                    .parameter_groups
-                    .iter()
-                    .flatten()
-                    .find(|group| group.id == id)
-                    .and_then(|group| group.parent_id.as_deref())
-            };
-        }
-        Ok(())
+        self.builder.authoring_unlocked(id)
     }
     pub fn rename(&mut self, target: NameTarget<'_>, name: String) -> Result<(), Status> {
         self.run(|this| {
@@ -165,9 +133,6 @@ impl<'a> Commands<'a> {
             this.unlocked(&mesh.part_id)?;
             this.builder.create_mesh(mesh)
         })
-    }
-    pub fn create_parameter(&mut self, parameter: Parameter) -> Result<(), Status> {
-        self.run(|this| this.builder.create_parameter(parameter))
     }
     pub fn create_empty_asset(&mut self, id: String, name: String) -> Result<(), Status> {
         self.run(|this| {

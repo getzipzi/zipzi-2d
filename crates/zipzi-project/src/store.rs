@@ -1,32 +1,24 @@
-//! Project storage entry points. Asset handling, persistence, import assembly,
-//! and document session state live in separate implementation modules.
+//! Resource preparation and value-only format imports.
 mod assets;
-#[cfg(any(feature = "archive-prototype", feature = "binary-prototype"))]
-mod directory_prototype;
 mod import;
 mod manifest;
-#[cfg(any(feature = "archive-prototype", feature = "binary-prototype"))]
-pub use directory_prototype::DirectorySnapshot;
-mod session;
-
-use crate::filesystem::{FileSystem, NativeFileSystem};
-use assets::MemoryAsset;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
-use zipzi_core::{Document, Status};
-
-pub(crate) use assets::asset_path;
 pub use assets::{
     prepare_image_content, prepare_image_content_with_budget, prepare_png_content,
     prepare_project_image, read_project_asset, read_project_asset_if_changed,
-    read_project_texture_bounded, ImageResourceStore, PreparedImageContent, VerifiedTexture,
+    read_project_texture_bounded, PreparedImageContent, VerifiedTexture,
 };
 pub use manifest::project_identity;
-pub use session::DocumentSession;
-
+use zipzi_core::Status;
+#[derive(Debug, Clone, Default)]
+pub struct ProjectImporter {
+    pub resources: crate::ResourceStore,
+}
+#[derive(Debug, Clone)]
+pub struct ImportedProject {
+    pub document: zipzi_core::state::DocumentState,
+    pub resources: crate::ResourceView,
+    pub protected_paths: Vec<std::path::PathBuf>,
+}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResourceDiagnostic {
     pub asset_id: String,
@@ -74,70 +66,4 @@ impl ProjectResult {
     pub fn resources_complete(&self) -> bool {
         self.diagnostics.is_empty()
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct DocumentSnapshot {
-    pub document: Document,
-    pub path: Option<PathBuf>,
-    pub fingerprint: Option<crate::archive::ProjectFingerprint>,
-    pub resources: Option<crate::archive::ProjectResourceLease>,
-}
-
-pub struct DocumentStore {
-    filesystem: Arc<dyn FileSystem>,
-    archive: crate::archive::ProjectArchiveStore,
-    verified_pngs: Mutex<HashMap<String, (u32, u32)>>,
-    memory_assets: Arc<Mutex<HashMap<String, Arc<MemoryAsset>>>>,
-    image_budget: crate::ImageMemoryBudget,
-}
-
-impl Default for DocumentStore {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl DocumentStore {
-    pub fn new() -> Self {
-        Self::with_filesystem(Arc::new(NativeFileSystem))
-    }
-
-    pub fn with_filesystem(filesystem: Arc<dyn FileSystem>) -> Self {
-        Self {
-            filesystem,
-            archive: crate::archive::ProjectArchiveStore::new(std::env::temp_dir()),
-            verified_pngs: Mutex::new(HashMap::new()),
-            memory_assets: Arc::new(Mutex::new(HashMap::new())),
-            image_budget: Default::default(),
-        }
-    }
-}
-
-impl DocumentSnapshot {
-    pub fn asset_root(&self) -> &std::path::Path {
-        self.resources
-            .as_ref()
-            .map_or(std::path::Path::new(""), |r| r.path())
-    }
-    pub fn imported(document: Document) -> Self {
-        Self {
-            document,
-            path: None,
-            fingerprint: None,
-            resources: None,
-        }
-    }
-}
-impl DocumentStore {
-    pub fn with_archive_store(mut self, archive: crate::archive::ProjectArchiveStore) -> Self {
-        self.archive = archive;
-        self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct PreparedProjectSave {
-    pub document: Document,
-    pub resources: crate::archive::ProjectResourceLease,
 }

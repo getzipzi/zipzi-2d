@@ -1,5 +1,5 @@
 use super::*;
-use crate::document::binding_authoring::identity::normalize_axes;
+use crate::model_validation::binding_coordinates::normalize_axes;
 impl Model<'_> {
     pub(crate) fn normalize_owner_axes(
         &self,

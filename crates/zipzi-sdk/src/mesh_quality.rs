@@ -3,11 +3,11 @@ use std::collections::HashMap;
 
 use zipzi_core::{DrawableFrame, Vec2};
 
-use crate::{ConversionControl, SdkError};
+use crate::{ConversionControl, Status};
 
 pub use zipzi_contract::authoring::{TopologyOverlay, TopologyThresholds};
 pub trait TopologyOverlayValidation {
-    fn validate(&self) -> Result<(), SdkError>;
+    fn validate(&self) -> Result<(), Status>;
     fn needs_quality(&self) -> bool;
 }
 pub trait TopologyThresholdValidation {
@@ -15,7 +15,7 @@ pub trait TopologyThresholdValidation {
 }
 impl TopologyOverlayValidation for TopologyOverlay {
     /// Validate transport-independent drawing options before capture or GPU work.
-    fn validate(&self) -> Result<(), SdkError> {
+    fn validate(&self) -> Result<(), Status> {
         let t = self.thresholds;
         if self.targets.as_ref().is_some_and(|t| t.len() > 256)
             || !self.heat_opacity.is_finite()
@@ -30,10 +30,9 @@ impl TopologyOverlayValidation for TopologyOverlay {
             || !t.max_edge_stretch.is_finite()
             || t.max_edge_stretch < 1.
         {
-            return Err(SdkError::new(
+            return Err(Status::error(
                 "INVALID_TOPOLOGY_OPTIONS",
                 "Invalid topology selection, opacity, label layout or anomaly thresholds",
-                "observation",
             ));
         }
         Ok(())
@@ -54,9 +53,9 @@ impl TopologyThresholdValidation for TopologyThresholds {
     }
 }
 
-impl crate::AuthoringSnapshot {
+impl crate::Snapshot {
     /// Default-parameter evaluation including hidden meshes, for model-space quality comparisons.
-    pub fn quality_reference(&self) -> Result<DrawableFrame, SdkError> {
+    pub fn quality_reference(&self) -> Result<DrawableFrame, Status> {
         let mut frame = DrawableFrame::default();
         let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
             self.document(),
@@ -64,7 +63,7 @@ impl crate::AuthoringSnapshot {
             &mut frame,
         );
         if !status.is_ok() {
-            return Err(SdkError::from_status(status, "mesh_quality", vec![]));
+            return Err(status);
         }
         Ok(frame)
     }
@@ -95,15 +94,12 @@ pub fn mesh_quality(
     frame: &DrawableFrame,
     reference: &DrawableFrame,
     control: &ConversionControl,
-) -> Result<Vec<MeshQuality>, SdkError> {
-    control
-        .check()
-        .map_err(|s| SdkError::from_status(s, "mesh_quality", vec![]))?;
+) -> Result<Vec<MeshQuality>, Status> {
+    control.check().map_err(|s| s)?;
     let fail = || {
-        SdkError::new(
+        Status::error(
             "QUALITY_TOPOLOGY_MISMATCH",
             "Quality requires matching finite reference topology",
-            "mesh_quality",
         )
     };
     let references: HashMap<_, _> = reference
@@ -125,11 +121,9 @@ pub fn mesh_quality(
             let mut triangles = Vec::with_capacity(d.indices.len() / 3);
             for (triangle_index, indices) in d.indices.chunks_exact(3).enumerate() {
                 if triangle_index % 1024 == 0 {
-                    control
-                        .check()
-                        .map_err(|s| SdkError::from_status(s, "mesh_quality", vec![]))?;
+                    control.check().map_err(|s| s)?;
                 }
-                let points = |positions: &[Vec2]| -> Result<[Vec2; 3], SdkError> {
+                let points = |positions: &[Vec2]| -> Result<[Vec2; 3], Status> {
                     let mut p = [Vec2::default(); 3];
                     for (i, &index) in indices.iter().enumerate() {
                         p[i] = *positions.get(index as usize).ok_or_else(fail)?;
@@ -272,7 +266,10 @@ mod tests {
         .validate()
         .is_err());
         assert!(TopologyOverlay {
-            targets: Some(vec![crate::ObjectTarget::Mesh("id".into()); 257]),
+            targets: Some(vec![
+                zipzi_contract::spatial::ObjectTarget::Mesh("id".into());
+                257
+            ]),
             ..options
         }
         .validate()
@@ -330,7 +327,7 @@ mod tests {
             mesh_quality(&different, &base, &ConversionControl::default())
                 .unwrap_err()
                 .code
-                .as_ref(),
+                .as_str(),
             "QUALITY_TOPOLOGY_MISMATCH"
         );
         let control = ConversionControl::default();

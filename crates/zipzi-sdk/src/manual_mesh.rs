@@ -1,5 +1,5 @@
 //! Pure, atomic edits of a single UV triangulation. No document or UI state lives here.
-use crate::{MeshGeometry, SdkError};
+use crate::{MeshGeometry, Status};
 use rstar::{RTree, RTreeObject, AABB};
 use spade::{ConstrainedDelaunayTriangulation, Point2, Triangulation};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -28,7 +28,7 @@ impl ManualVertexIdAllocator {
                 .map_or(0, |id| u64::from(id) + 1),
         }
     }
-    pub fn allocate(&mut self, geometry: &MeshGeometry) -> Result<VertexId, SdkError> {
+    pub fn allocate(&mut self, geometry: &MeshGeometry) -> Result<VertexId, Status> {
         self.next = self.next.max(
             geometry
                 .vertex_ids
@@ -46,8 +46,8 @@ impl ManualVertexIdAllocator {
 fn edge(a: VertexId, b: VertexId) -> Edge {
     [a.min(b), a.max(b)]
 }
-fn bad(message: impl Into<String>) -> SdkError {
-    SdkError::new("INVALID_MANUAL_MESH", &message.into(), "edit_manual_mesh")
+fn bad(message: impl Into<String>) -> Status {
+    Status::error("INVALID_MANUAL_MESH", &message.into())
 }
 fn xy(p: Vec2) -> [f64; 2] {
     [p.x as f64, p.y as f64]
@@ -345,7 +345,7 @@ fn segments_conflict(a: Edge, b: Edge, points: &HashMap<VertexId, [f64; 2]>) -> 
 /// Keep the authored outline, expanding only segments that exclude surviving
 /// sites after a move or deletion. In particular, deleting a corner must not
 /// delete its interior neighbours or turn unrelated concavities into a hull.
-fn enclose_vertices(g: &MeshGeometry, m: &mut MeshMeshing) -> Result<(), SdkError> {
+fn enclose_vertices(g: &MeshGeometry, m: &mut MeshMeshing) -> Result<(), Status> {
     let points = uv_map(g);
     let area: f64 = (0..m.boundary.len())
         .map(|i| {
@@ -474,7 +474,7 @@ pub struct AffineUvMap {
     pub v: Vec2,
 }
 impl AffineUvMap {
-    pub fn from_geometry(g: &MeshGeometry) -> Result<Self, SdkError> {
+    pub fn from_geometry(g: &MeshGeometry) -> Result<Self, Status> {
         if g.uvs.len() != g.positions.len() || g.uvs.len() < 3 {
             return Err(bad("affine mapping requires matching UVs and positions"));
         }
@@ -556,7 +556,7 @@ impl AffineUvMap {
                 + (self.v.y as f64) * (uv.y as f64)) as f32,
         )
     }
-    pub fn uv(self, position: Vec2) -> Result<Vec2, SdkError> {
+    pub fn uv(self, position: Vec2) -> Result<Vec2, Status> {
         if !position.x.is_finite() || !position.y.is_finite() {
             return Err(bad("authoring position must be finite"));
         }
@@ -577,7 +577,7 @@ impl AffineUvMap {
 }
 
 /// Establish editable topology without modifying or reordering the input faces.
-pub fn extract_manual_meshing(g: &MeshGeometry) -> Result<MeshMeshing, SdkError> {
+pub fn extract_manual_meshing(g: &MeshGeometry) -> Result<MeshMeshing, Status> {
     if let Some(m) = &g.meshing {
         validate(g, m)?;
         return Ok(m.clone());
@@ -631,7 +631,7 @@ pub fn extract_manual_meshing(g: &MeshGeometry) -> Result<MeshMeshing, SdkError>
     Ok(meshing)
 }
 
-fn validate(g: &MeshGeometry, m: &MeshMeshing) -> Result<(), SdkError> {
+fn validate(g: &MeshGeometry, m: &MeshMeshing) -> Result<(), Status> {
     let status = validate_mesh_meshing(&g.vertex_ids, &g.uvs, &g.triangles, m);
     if !status.is_ok() {
         return Err(bad(status.message));
@@ -696,7 +696,7 @@ fn triangulate(
     m: &MeshMeshing,
     preserved: &BTreeSet<Edge>,
     winding: f64,
-) -> Result<Vec<[VertexId; 3]>, SdkError> {
+) -> Result<Vec<[VertexId; 3]>, Status> {
     triangulate_with_extension(g, m, preserved, None, winding)
 }
 
@@ -706,7 +706,7 @@ fn triangulate_with_extension(
     preserved: &BTreeSet<Edge>,
     extension: Option<VertexId>,
     winding: f64,
-) -> Result<Vec<[VertexId; 3]>, SdkError> {
+) -> Result<Vec<[VertexId; 3]>, Status> {
     let points = uv_map(g);
     let mut cdt = Cdt::new();
     let mut handles = HashMap::new();
@@ -769,7 +769,7 @@ fn triangulate_with_extension(
 pub(crate) fn edit_manual_uv_topology(
     source: &MeshGeometry,
     operation: ManualMeshOperation,
-) -> Result<ManualMeshResult, SdkError> {
+) -> Result<ManualMeshResult, Status> {
     let original = extract_manual_meshing(source)?;
     let result = edit_manual_uv_candidate(source, original.clone(), operation)?;
     validate(
@@ -785,7 +785,7 @@ pub(crate) fn edit_manual_uv_candidate(
     source: &MeshGeometry,
     original: MeshMeshing,
     operation: ManualMeshOperation,
-) -> Result<ManualMeshResult, SdkError> {
+) -> Result<ManualMeshResult, Status> {
     if let ManualMeshOperation::InsertConnectedVertex { from, id, uv } = operation {
         let mut inserted =
             edit_manual_uv_topology(source, ManualMeshOperation::InsertVertex { id, uv })?;
@@ -1168,7 +1168,7 @@ pub fn add_manual_interior_sites(
     source: &MeshGeometry,
     sites: &[Vec2],
     allocator: &mut ManualVertexIdAllocator,
-) -> Result<ManualMeshResult, SdkError> {
+) -> Result<ManualMeshResult, Status> {
     let meshing = extract_manual_meshing(source)?;
     let sampler = crate::manual_mesh_transfer::UvSampler::new(source);
     let old_edges = mesh_edges(&source.triangles);
@@ -1240,7 +1240,7 @@ pub fn add_manual_interior_sites(
 pub fn edit_manual_mesh(
     source: &MeshGeometry,
     operation: ManualMeshOperation,
-) -> Result<ManualMeshResult, SdkError> {
+) -> Result<ManualMeshResult, Status> {
     let mut result = edit_manual_uv_topology(source, operation)?;
     let sampler = crate::manual_mesh_transfer::UvSampler::new(source);
     for (i, (&id, &uv)) in result

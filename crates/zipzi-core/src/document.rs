@@ -1,658 +1,260 @@
-mod assets;
-mod attachments;
-pub(crate) mod binding_authoring;
-mod bindings;
-mod blendshapes;
-mod canvas;
-mod checkpoint;
-mod deletion;
-mod display_info;
-pub use deletion::*;
-mod editor_state;
-mod expressions;
-mod glue;
-mod hierarchy_order;
-mod meshes;
-mod model3;
-mod motions;
-mod offscreen;
-mod organization;
-mod parameters;
-pub use organization::*;
-pub use parameters::{validate_parameter_range, ParameterRangeError};
-mod scene;
-pub use scene::*;
-mod scene_content;
-pub use scene_content::*;
-mod parts;
-pub(crate) mod physics;
-mod pose;
-mod property;
-mod publication;
-pub use publication::DocumentDomain;
-mod record_map;
-mod reference_authoring;
-mod references;
-use record_map::RecordMap;
-pub use reference_authoring::*;
-mod reference_entry;
-pub use reference_entry::{ReferenceEntry, ReferenceEntryAllocation};
-mod structure;
-mod tracking;
-pub use tracking::TrackedRecord;
-mod deformer_original;
-mod transactions;
-mod transforms;
+//! Shared authoring values and validation helpers. Persistent ownership lives in state.
+use crate::types::*;
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, path::Component};
+pub use zipzi_contract::document::*;
+pub use zipzi_contract::physics_document::*;
 mod validation;
-mod validation_model;
-mod vertices;
-
-pub use attachments::{
-    valid_attachment_path, AttachmentEdit, AttachmentPlan, AttachmentRef, PackageAttachment,
-};
-pub use binding_authoring::*;
-pub use checkpoint::DocumentCheckpoint;
-pub use display_info::{
-    CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterGroup, CdiParameterRef,
-    CdiPartEntry, DisplayInfo, DisplayInfoOrigin,
-};
-pub use editor_state::{EditorState, ObjectEditorState, DEFAULT_ROTATION_BONE_LENGTH};
-pub use expressions::*;
-pub use hierarchy_order::HierarchyOrder;
-pub use model3::{
-    AllocateModelMetadata, Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef,
-};
-pub use motions::{
-    DisabledMotionTrack, MotionClip, MotionClipEditing, MotionContainer, MotionDisabledReason,
-    MotionEdit, MotionEvent, MotionGroup, MotionKey, MotionPlan, MotionPoint, MotionProjection,
-    MotionRegistration, MotionSegment, MotionTrack, MotionTrackEditing, MotionTrackTarget,
-};
-pub use physics::*;
-pub use pose::*;
-pub use property::PropertyPatch;
-pub use structure::StructureIssue;
 pub use validation::*;
-
-use crate::draw_order::DrawOrderGroup;
-use crate::types::{
-    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, Canvas, ChangeKind, ChangeSet,
-    DocumentEdit, EditResult, ExportSettings, Glue, ImageAsset, Mesh, MeshBinding, ModelSetup,
-    Offscreen, Parameter, Part, SceneBinding, Status, Transform, VertexId,
+mod parameters;
+pub use parameters::*;
+mod motions;
+pub use motions::*;
+mod reference_entry;
+pub use reference_entry::*;
+pub(crate) mod physics;
+pub use physics::model::*;
+mod model3;
+pub use crate::model_validation::conversion::report::{
+    ConversionAddress, ConversionElement, ConversionLocation, ConversionOwnerDomain,
+    ConversionReconstruction, ConversionRemapping, ConversionReport, ParameterRangeConversion,
 };
-use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
-
-pub(super) trait EmptyOr {
-    fn empty_or(&self) -> bool;
+pub use crate::model_validation::organization::OrganizationEffects;
+pub use model3::*;
+pub const DEFAULT_ROTATION_BONE_LENGTH: f32 = 128.;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructureIssue {
+    pub object_id: String,
+    pub status: Status,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BindingIdentityKind {
+    Axis,
+    Sample,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BindingIdentity {
+    pub kind: BindingIdentityKind,
+    pub id: String,
+    pub owner: String,
+    pub axis: Option<String>,
 }
 
-impl<T> EmptyOr for Vec<T> {
-    fn empty_or(&self) -> bool {
-        self.is_empty()
-    }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BindingOmission {
+    pub object_id: String,
+    pub code: String,
+    pub dependency: Option<String>,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ReparentSupport {
+    Available,
+    RequiresConversionPlan,
+    NoChange,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReparentGuarantee {
+    pub strategy: ReparentStrategy,
+    pub position_scope: String,
+    pub tolerance: f64,
+    pub relative_tolerance: f64,
+    pub reference_scale: f64,
+    pub context: Option<ReparentContext>,
+    pub measured_error: f64,
+    pub error_bound: f64,
+    /// Channels outside the position proof must be presented to the caller.
+    pub effects: Vec<String>,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SceneUse {
+    Geometry,
+    Drawing,
+    Glue,
+    GluePair,
+    Composite,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SceneDisabledReason {
+    UnspecifiedReference,
+    UnresolvedReference { runtime_id: String },
+    EmptyGeometry,
+    MissingImageContent { asset_id: String },
+    DependencyUnavailable { object_id: String },
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DisabledSceneItem {
+    pub id: String,
+    pub usage: SceneUse,
+    pub reason: SceneDisabledReason,
+    pub chain: Vec<String>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct SceneProjection {
+    pub geometry: Vec<String>,
+    pub drawing: Vec<String>,
+    pub glues: Vec<String>,
+    pub pairs: Vec<String>,
+    /// Stable PairId -> original, uncompressed evaluation coordinates.
+    pub pair_slots: HashMap<String, ScenePairSlot>,
+    pub composites: Vec<String>,
+    pub geometry_slots: HashMap<String, usize>,
+    pub drawing_slots: HashMap<String, usize>,
+    pub glue_slots: HashMap<String, usize>,
+    pub composite_slots: HashMap<String, usize>,
+    pub disabled: Vec<DisabledSceneItem>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScenePairSlot {
+    pub glue_id: String,
+    pub source_slot: usize,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReferenceKind {
+    ModelParameterGroup,
+    ModelParameterMember,
+    ModelHitArea,
+    CdiCombinedSet,
+    CdiCombinedMember,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReferenceIdentity {
+    pub id: String,
+    pub kind: ReferenceKind,
+    pub owner: Option<String>,
+}
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct ReferenceEffects {
+    pub metadata_only: bool,
+    pub behavior_groups_changed: bool,
+    pub hit_areas_changed: bool,
+    pub combined_sets_changed: bool,
+    pub drawing_changed: bool,
+    pub deformation_changed: bool,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ReferenceDisabledReason {
+    Unspecified,
+    Unresolved { runtime_id: String },
+    EmptyGeometry { mesh_id: String },
+    EmptyMembers,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DisabledReferenceItem {
+    pub id: String,
+    pub owner: Option<String>,
+    pub reason: ReferenceDisabledReason,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectedParameterReferences {
+    pub name: Option<String>,
+    pub id: String,
+    pub parameters: Vec<String>,
+    pub members: Vec<String>,
+    pub member_slots: HashMap<String, usize>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectedHitArea {
+    pub name: String,
+    pub id: String,
+    pub mesh_id: String,
+    pub source_slot: usize,
+}
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReferenceProjection {
+    pub group_slots: HashMap<String, usize>,
+    pub combined_set_slots: HashMap<String, usize>,
+    pub groups: Vec<ProjectedParameterReferences>,
+    pub combined_sets: Vec<ProjectedParameterReferences>,
+    pub hit_areas: Vec<ProjectedHitArea>,
+    pub hit_area_slots: HashMap<String, usize>,
+    pub disabled: Vec<DisabledReferenceItem>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeletionMigration {
+    pub object: DeletionObject,
+    pub parent_id: String,
+    pub strategy: ReparentStrategy,
+    pub guarantee: Option<ReparentGuarantee>,
+    pub limited_by: Vec<DeletionObject>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DeletionOrganizationMigration {
+    pub object: DeletionObject,
+    pub parent_id: String,
+    pub offscreen_mapping: Option<Vec<i32>>,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Document {
-    content: DocumentContent,
+/// Slots address the frozen source only; applying a plan never reuses them on a
+/// changed document. Owned records use their stable identities instead.
+pub use zipzi_contract::document::{
+    DeletionChannel, DeletionEffect, DeletionField, DeletionLock, DeletionReason, DeletionRelation,
+    DeletionRemoval, DeletionStructuralBlocker,
+};
 
-    // Clones share an unchanged snapshot; every content mutation creates a new
-    // identity, even when branch-local revision counters happen to coincide.
-    snapshot_identity: Arc<()>,
-    validated_structure: structure::ValidationCache,
-    tracking: tracking::TrackingState,
-    revision: u64,
-    evaluation_revision: u64,
-    batch_build_active: bool,
-    // Frozen authoring inputs for automatic original capture. Never checkpointed
-    // or used by runtime evaluation; SDK candidates/snapshots supply this context.
-    original_capture_context: crate::evaluation::PreviewValues,
-    transaction_active: bool,
-    staged_edits: Vec<DocumentEdit>,
-
-    mesh_runtime_ids: HashMap<String, String>,
-    vertex_slots: RecordMap<HashMap<VertexId, usize>>,
-
-    saved_content: Option<Arc<DocumentContent>>,
-    // Valid until persistent content or its saved baseline changes. OnceLock
-    // keeps read-only queries thread-safe without repeating deep comparisons.
-    modified_cache: OnceLock<bool>,
-    // State-only publication preserves this proof against the saved baseline;
-    // every other content write or checkpoint exchange clears it.
-    saved_non_editor_state_matches: OnceLock<bool>,
-    lookup: OnceLock<DocumentLookup>,
-    binding_lookup: OnceLock<Arc<binding_authoring::identity::BindingLookup>>,
-    reference_projection: OnceLock<Arc<ReferenceProjection>>,
-    reference_index: OnceLock<Arc<reference_authoring::ReferenceIndex>>,
-    deletion_index: deletion::index::DeletionIndexCache,
-    pair_lookup: OnceLock<Arc<HashMap<String, (String, usize)>>>,
-    expression_entries: OnceLock<HashMap<String, (String, usize)>>,
-    motion_lookup: OnceLock<Arc<motions::MotionLookup>>,
-    scene_projection: OnceLock<Arc<SceneProjection>>,
-    organization_index: OnceLock<Arc<organization::OrganizationIndex>>,
-    prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct DeletionReport {
+    pub requested: Vec<DeletionObject>,
+    pub requested_scopes: Vec<DeletionTarget>,
+    pub removed: Vec<DeletionRemoval>,
+    pub rewritten: Vec<DeletionRelation>,
+    pub relations: Vec<DeletionRelation>,
+    pub blockers: Vec<DeletionLock>,
+    pub structural_blockers: Vec<DeletionStructuralBlocker>,
+    pub effects: Vec<DeletionEffect>,
+    pub migrations: Vec<DeletionMigration>,
+    pub organization_migrations: Vec<DeletionOrganizationMigration>,
+    pub decisions: Vec<DeletionDecision>,
 }
-
-/// An exact immutable-content identity without retaining the document payload.
-#[derive(Debug, Clone)]
-pub struct DocumentSnapshotId(Arc<()>);
-impl DocumentSnapshotId {
-    pub fn matches(&self, document: &Document) -> bool {
-        Arc::ptr_eq(&self.0, &document.snapshot_identity)
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub(super) struct DocumentLookup {
-    pub(super) mesh_bindings: HashMap<String, String>,
-    pub(super) scene_bindings: HashMap<String, String>,
-    pub(super) blend_bindings: HashMap<String, Vec<String>>,
-}
-
-/// The single owning representation of persistent state, shared by live
-/// documents, saved baselines, and checkpoints. Runtime indexes stay on Document.
-#[derive(Debug, Clone, Default, PartialEq)]
-struct DocumentContent {
-    id: String,
-    export_settings: ExportSettings,
-    source_canvas: Option<Canvas>,
-    assets: HashMap<String, ImageAsset>,
-    asset_order: Vec<String>,
-    parts: HashMap<String, Part>,
-    part_order: Vec<String>,
-    transforms: RecordMap<Transform>,
-    transform_order: Vec<String>,
-    meshes: RecordMap<Mesh>,
-    mesh_order: Vec<String>,
-    parameters: HashMap<String, Parameter>,
-    parameter_order: Vec<String>,
-    bindings: RecordMap<MeshBinding>,
-    binding_order: Vec<String>,
-    scene_bindings: RecordMap<SceneBinding>,
-    scene_binding_order: Vec<String>,
-    draw_order_groups: Option<Vec<DrawOrderGroup>>,
-    blend_key_tables: HashMap<String, BlendShapeKeyTable>,
-    blend_key_table_order: Vec<String>,
-    blend_constraints: HashMap<String, BlendShapeConstraint>,
-    blend_constraint_order: Vec<String>,
-    blend_bindings: RecordMap<BlendShapeBinding>,
-    blend_binding_order: Vec<String>,
-    glues: HashMap<String, Glue>,
-    glue_order: Vec<String>,
-    offscreens: HashMap<String, Offscreen>,
-    offscreen_order: Vec<String>,
-    display_info: DisplayInfo,
-    hierarchy_order: HierarchyOrder,
-    editor_state: EditorState,
-    expressions: HashMap<String, ExpressionAsset>,
-    expression_order: Vec<String>,
-    motions: HashMap<String, std::sync::Arc<MotionClip>>,
-    motion_order: Vec<String>,
-    motion_groups: Vec<MotionGroup>,
-    motion_roots: Vec<MotionRegistration>,
-    pose: Option<Arc<PoseAsset>>,
-    physics: Option<Arc<PhysicsAsset>>,
-    missing_attachments: Vec<String>,
-    model3_settings: Model3Settings,
-    package_attachments: Vec<PackageAttachment>,
-}
-
-impl Document {
-    pub const SCHEMA_VERSION: u32 = 11;
-
-    pub fn new() -> Self {
-        Self::default()
+impl DeletionReport {
+    /// Conservative report payload estimate for bounded native plan storage.
+    pub fn estimated_bytes(&self) -> usize {
+        serde_json::to_vec(self)
+            .expect("typed report serializes")
+            .len()
+            .saturating_mul(4)
     }
 
-    pub fn initialize(&mut self, id: impl Into<String>, setup: impl Into<ModelSetup>) -> Status {
-        if self.initialized() {
-            return Status::error(
-                "ALREADY_INITIALIZED",
-                "Create a new Document to open another model.",
-            );
-        }
-        let id_str = id.into();
-        if !valid_uuid(&id_str) {
-            return Status::error("INVALID_ID", "Use a nonzero canonical lowercase UUID.");
-        }
-        let setup = setup.into();
-        if !setup.is_valid() {
-            return Status::error(
-                "INVALID_MODEL_SETUP",
-                "Source metadata and export settings must have finite valid dimensions and scale.",
-            );
-        }
-        self.snapshot_identity = Arc::new(());
-        self.tracking = Default::default();
-        self.content.id = id_str;
-        self.content.export_settings = setup.export;
-        self.content.source_canvas = setup.source_canvas;
-        self.modified_cache.take();
-        self.saved_non_editor_state_matches.take();
-        Status::ok()
-    }
-
-    pub fn initialized(&self) -> bool {
-        !self.content.id.is_empty()
-    }
-
-    pub fn id(&self) -> &str {
-        &self.content.id
-    }
-
-    pub fn export_settings(&self) -> ExportSettings {
-        self.content.export_settings
-    }
-
-    pub fn coordinate_space(&self, parent: &str) -> Result<crate::CoordinateSpace, Status> {
-        if parent.is_empty() {
-            return Ok(crate::CoordinateSpace::Model);
-        }
-        let t = self
-            .get_transform(parent)
-            .ok_or_else(|| Status::error("MISSING_TRANSFORM", parent))?;
-        Ok(if t.warp().is_some() {
-            crate::CoordinateSpace::WarpParameter
-        } else {
-            crate::CoordinateSpace::RotationLocal
-        })
-    }
-
-    pub fn source_canvas(&self) -> Option<Canvas> {
-        self.content.source_canvas
-    }
-
-    pub fn model_setup(&self) -> ModelSetup {
-        ModelSetup {
-            export: self.export_settings(),
-            source_canvas: self.source_canvas(),
-        }
-    }
-
-    pub fn missing_attachments(&self) -> &[String] {
-        &self.content.missing_attachments
-    }
-
-    /// Record unresolved model3 files in persistent project state. An editor
-    /// must explicitly clear each entry after repairing or discarding it.
-    pub fn set_missing_attachments(&mut self, mut paths: Vec<String>) -> EditResult {
-        if self.mutation_blocked() {
-            return self.failed(Status::error(
-                "TRANSACTION_ACTIVE",
-                "Commit or cancel first",
-            ));
-        }
-        paths.sort();
-        paths.dedup();
-        if paths.iter().any(|path| path.is_empty()) {
-            return self.failed(Status::error(
-                "INVALID_ATTACHMENT",
-                "Attachment path is empty",
-            ));
-        }
-        if self.content.missing_attachments == paths {
-            return self.failed(Status::ok());
-        }
-        self.content.missing_attachments = paths;
-        self.changed(ChangeKind::Metadata, Vec::new(), Vec::new())
-    }
-
-    /// Last document revision that changed visual inputs. Names do not affect frames.
-    pub fn evaluation_revision(&self) -> u64 {
-        self.evaluation_revision
-    }
-
-    pub fn revision(&self) -> u64 {
-        self.revision
-    }
-
-    /// Clones of the same unchanged content share this identity. Every content
-    /// mutation replaces it, even on branches with equal revision counters.
-    /// Saved-state and evaluation caches are not part of this comparison.
-    pub fn is_same_snapshot(&self, other: &Document) -> bool {
-        Arc::ptr_eq(&self.snapshot_identity, &other.snapshot_identity)
-    }
-
-    pub fn snapshot_id(&self) -> DocumentSnapshotId {
-        DocumentSnapshotId(self.snapshot_identity.clone())
-    }
-
-    pub fn same_content(&self, other: &Document) -> bool {
-        #[cfg(feature = "bench-instrumentation")]
-        let _benchmark_span = crate::benchmark::span("core.same_content");
-        if self.has_only_editor_state_changes_since(other)
-            || other.has_only_editor_state_changes_since(self)
-        {
-            return self.editor_state() == other.editor_state();
-        }
-        self.content == other.content
-    }
-
-    pub fn modified(&self) -> bool {
-        *self.modified_cache.get_or_init(|| {
-            #[cfg(feature = "bench-instrumentation")]
-            let _span = crate::benchmark::span("core.modified");
-            match &self.saved_content {
-                Some(saved) => {
-                    self.content.editor_state != saved.editor_state
-                        || !*self
-                            .saved_non_editor_state_matches
-                            .get_or_init(|| self.content.same_except_editor_state(saved))
-                }
-                None => self.initialized(),
-            }
-        })
-    }
-
-    pub fn mark_saved(&mut self) {
-        self.saved_content = Some(Arc::new(self.content.clone()));
-        self.modified_cache = OnceLock::from(false);
-        self.saved_non_editor_state_matches = OnceLock::from(true);
-    }
-
-    pub fn restore_from(&mut self, source: &Document) {
-        let next_rev = self.revision + 1;
-        let saved = self.saved_content.clone();
-        *self = source.clone();
-        self.saved_content = saved;
-        // The source's cached result refers to its own saved baseline.
-        self.modified_cache.take();
-        self.saved_non_editor_state_matches.take();
-        self.snapshot_identity = Arc::new(());
-        self.revision = next_rev;
-        self.evaluation_revision = next_rev;
-        self.transaction_active = false;
-        self.batch_build_active = false;
-        self.staged_edits.clear();
-    }
-
-    pub fn transaction_active(&self) -> bool {
-        self.transaction_active
-    }
-
-    /// Begin construction of a new document without publishing a revision and
-    /// invalidating derived caches after every inserted object.
-    pub fn begin_batch_build(&mut self) -> Status {
-        if self.initialized() || self.batch_build_active || self.transaction_active {
-            return Status::error(
-                "INVALID_BUILD_STATE",
-                "Batch construction requires a new document",
-            );
-        }
-        self.batch_build_active = true;
-        Status::ok()
-    }
-
-    /// Publish a successfully constructed candidate as one document revision.
-    pub fn finish_batch_build(&mut self) -> Status {
-        if !self.batch_build_active {
-            return Status::error("NO_BATCH_BUILD", "Call begin_batch_build first");
-        }
-        if self.transaction_active || !self.staged_edits.is_empty() {
-            return Status::error(
-                "INVALID_BUILD_STATE",
-                "Commit or cancel the active transaction before finishing the batch",
-            );
-        }
-        if !self.initialized() {
-            return Status::error("NOT_INITIALIZED", "Initialize the document first");
-        }
-        self.batch_build_active = false;
-        self.tracking = Default::default();
-        self.lookup.take();
-        self.binding_lookup.take();
-        self.pair_lookup.take();
-        self.expression_entries.take();
-        self.motion_lookup.take();
-        self.prepared.take();
-        self.snapshot_identity = Arc::new(());
-        self.revision = 1;
-        self.evaluation_revision = 1;
-        Status::ok()
-    }
-
-    pub(super) fn mutation_blocked(&self) -> bool {
-        self.transaction_active
-    }
-
-    pub fn contains_id(&self, id: &str) -> bool {
-        if self.reference_identity(id).is_some() {
-            return true;
-        }
-        self.binding_identity(id).is_some()
-            || self.contains_base_identity(id)
-            || self.get_glue_pair(id).is_some()
-            || self.get_motion_track(id).is_some()
-            || self.get_motion_key(id).is_some()
-            || self.get_motion_event(id).is_some()
-    }
-
-    fn contains_base_identity(&self, id: &str) -> bool {
-        self.content.id == id
-            || self.content.assets.contains_key(id)
-            || self.content.parts.contains_key(id)
-            || self.content.transforms.contains_key(id)
-            || self.content.meshes.contains_key(id)
-            || self.content.parameters.contains_key(id)
-            || self.content.bindings.contains_key(id)
-            || self.content.scene_bindings.contains_key(id)
-            || self.content.blend_key_tables.contains_key(id)
-            || self.content.blend_constraints.contains_key(id)
-            || self.content.blend_bindings.contains_key(id)
-            || self.content.glues.contains_key(id)
-            || self.content.offscreens.contains_key(id)
+    pub fn requires_confirmation(&self) -> bool {
+        self.rewritten.iter().any(|r| {
+            !(matches!(r.field, DeletionField::DrawingItem { .. })
+                || (matches!(r.field, DeletionField::CdiParameter { .. })
+                    && r.target.kind == DeletionKind::Parameter))
+        }) || self
+            .removed
+            .iter()
+            .any(|r| matches!(r.reason, DeletionReason::Dependency | DeletionReason::Scope))
             || self
-                .content
-                .display_info
-                .parameter_groups
-                .as_ref()
-                .is_some_and(|groups| groups.iter().any(|group| group.id == id))
-            || self
-                .content
-                .display_info
-                .combined_parameters
-                .as_ref()
-                .is_some_and(|sets| sets.iter().any(|set| set.id == id))
-            || self.content.expressions.contains_key(id)
-            || self.get_expression_entry(id).is_some()
-            || self.get_motion_group(id).is_some()
-            || self.get_motion_registration(id).is_some()
-            || self.get_attachment(id).is_some()
-            || self.get_physics_group(id).is_some()
-            || self.get_physics_input(id).is_some()
-            || self.get_physics_output(id).is_some()
-            || self.get_physics_node(id).is_some()
-            || self.content.motions.contains_key(id)
-            || self
-                .content
-                .pose
-                .as_ref()
-                .is_some_and(|pose| pose.entity_ids().any(|v| v == id))
-            || self
-                .content
-                .physics
-                .as_ref()
-                .is_some_and(|physics| physics.id == id)
-    }
-
-    pub(super) fn failed(&self, status: Status) -> EditResult {
-        EditResult {
-            status,
-            changes: ChangeSet {
-                kind: ChangeKind::None,
-                mesh_ids: Vec::new(),
-                revision: self.revision,
-                object_ids: Vec::new(),
-            },
-            referrers: Vec::new(),
-        }
-    }
-
-    pub(crate) fn prepared_evaluation(
-        &self,
-    ) -> Result<&crate::evaluation::PreparedEvaluation, &Status> {
-        self.prepared
-            .get_or_init(|| crate::evaluation::PreparedEvaluation::new(self))
-            .as_ref()
-    }
-
-    pub(super) fn changed(
-        &mut self,
-        kind: ChangeKind,
-        mesh_ids: Vec<String>,
-        mut object_ids: Vec<String>,
-    ) -> EditResult {
-        if kind == ChangeKind::Structure {
-            self.lookup.take();
-            self.binding_lookup.take();
-            self.prepared.take();
-            self.update_first_key_originals(&object_ids);
-        }
-        self.tracking = Default::default();
-        self.reference_index.take();
-        self.reference_projection.take();
-        if matches!(kind, ChangeKind::Structure | ChangeKind::Resources) {
-            self.scene_projection.take();
-        }
-        if object_ids.iter().any(|id| {
-            self.content.motions.contains_key(id)
-                || self
-                    .motion_lookup
-                    .get()
-                    .is_some_and(|index| index.clips.contains(id))
-        }) {
-            self.motion_lookup.take();
-        }
-        if kind == ChangeKind::Structure && !self.content.editor_state.is_empty() {
-            self.binding_lookup.take();
-            self.pair_lookup.take();
-            // Owned sample deletion also deletes its authoring-only flags.
-            let removed: Vec<_> = self
-                .content
-                .editor_state
-                .objects
-                .keys()
-                .filter(|id| !self.contains_id(id))
-                .cloned()
-                .collect();
-            for id in removed {
-                self.content.editor_state.objects.remove(&id);
-            }
-            let removed_lengths: Vec<_> = self
-                .content
-                .editor_state
-                .rotation_bone_lengths
-                .keys()
-                .chain(
-                    self.content
-                        .editor_state
-                        .rotation_bone_reference_scales
-                        .keys(),
+                .removed
+                .iter()
+                .any(|r| r.reason == DeletionReason::Owned && !r.object.kind.is_internal())
+            || self.effects.iter().any(|e| {
+                matches!(
+                    e,
+                    DeletionEffect::BindingContributionRemoved { .. }
+                        | DeletionEffect::ParameterDimensionRemoved { .. }
+                        | DeletionEffect::ResourceReplaced { .. }
+                        | DeletionEffect::ContentChanged(_)
+                        | DeletionEffect::DrawingGroupFlattened { .. }
                 )
-                .chain(self.content.editor_state.rotation_bone_angle_offsets.keys())
-                .filter(|id| {
-                    self.get_transform(id)
-                        .is_none_or(|t| t.rotation().is_none())
-                })
-                .cloned()
-                .collect();
-            for id in removed_lengths {
-                self.content.editor_state.rotation_bone_lengths.remove(&id);
-                self.content
-                    .editor_state
-                    .rotation_bone_reference_scales
-                    .remove(&id);
-                self.content
-                    .editor_state
-                    .rotation_bone_angle_offsets
-                    .remove(&id);
-            }
-        }
-        if kind == ChangeKind::Structure {
-            self.organization_index.take();
-            self.scene_projection.take();
-        }
-        self.snapshot_identity = Arc::new(());
-        // Batch construction mutates content without advancing revision too.
-        self.modified_cache.take();
-        self.saved_non_editor_state_matches.take();
-        if self.batch_build_active {
-            if object_ids.is_empty() {
-                object_ids = mesh_ids.clone();
-            }
-            if kind == ChangeKind::Structure {
-                self.lookup.take();
-                self.binding_lookup.take();
-                self.pair_lookup.take();
-                self.prepared.take();
-            }
-            return EditResult {
-                status: Status::ok(),
-                changes: ChangeSet {
-                    kind,
-                    mesh_ids,
-                    revision: self.revision,
-                    object_ids,
-                },
-                referrers: Vec::new(),
-            };
-        }
-        if object_ids.is_empty() {
-            object_ids = mesh_ids.clone();
-        }
-        // References only change with structure edits; vertex drags retain the index.
-        if kind == ChangeKind::Structure {
-            self.lookup.take();
-            self.binding_lookup.take();
-            self.pair_lookup.take();
-            self.prepared.take();
-        }
-        self.revision += 1;
-        if kind != ChangeKind::Metadata {
-            self.evaluation_revision = self.revision;
-        }
-        EditResult {
-            status: Status::ok(),
-            changes: ChangeSet {
-                kind,
-                mesh_ids,
-                revision: self.revision,
-                object_ids,
-            },
-            referrers: Vec::new(),
-        }
-    }
-
-    pub(super) fn lookup(&self) -> &DocumentLookup {
-        self.lookup.get_or_init(|| {
-            let mut lookup = DocumentLookup::default();
-            for id in &self.content.binding_order {
-                lookup
-                    .mesh_bindings
-                    .insert(self.content.bindings[id].mesh_id.clone(), id.clone());
-            }
-            for id in &self.content.scene_binding_order {
-                lookup.scene_bindings.insert(
-                    self.content.scene_bindings[id].target_id().to_owned(),
-                    id.clone(),
-                );
-            }
-            for id in &self.content.blend_binding_order {
-                if let Some(binding) = self.content.blend_bindings.get(id) {
-                    lookup
-                        .blend_bindings
-                        .entry(binding.target_id.clone())
-                        .or_default()
-                        .push(id.clone());
-                }
-            }
-            lookup
-        })
+            })
+            || self.requested.len() > 1
+            || !self.migrations.is_empty()
+            || !self.decisions.is_empty()
     }
 }
 
-mod resource_authoring;
-pub use resource_authoring::*;
-
-mod document_authoring;
-pub use document_authoring::*;
+pub fn valid_attachment_path(path: &str) -> bool {
+    !path.is_empty()
+        && path
+            .split('/')
+            .all(|part| !part.is_empty() && part != "." && part != "..")
+        && !path.contains('\\')
+        && !path.contains('\0')
+        && std::path::Path::new(path)
+            .components()
+            .all(|component| matches!(component, Component::Normal(_)))
+}

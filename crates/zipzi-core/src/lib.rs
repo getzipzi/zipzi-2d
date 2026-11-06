@@ -19,7 +19,6 @@ pub mod state;
 pub use scene_reference::SceneReference;
 pub mod types;
 
-pub use document::Document;
 pub use evaluation::{
     evaluate_frame, parent_positions, Drawable, DrawableFrame, DrawableFrameBounds,
     EvaluatedParameter, FrameEvaluator, PreviewValues,

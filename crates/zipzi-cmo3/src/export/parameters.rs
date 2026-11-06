@@ -20,7 +20,7 @@ impl Exporter<'_> {
         let mut sources = Vec::new();
         let mut child_guids: HashMap<String, Vec<N>> = HashMap::new();
         for id in self.doc.parameter_order() {
-            let p = self.doc.get_parameter(id).unwrap();
+            let p = self.doc.parameter(id).unwrap();
             let parent = parameter_parent
                 .get(id)
                 .map_or(ROOT_PARAMETER_GROUP, |v| v.as_str());

@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextureSlot {
     pub asset_id: String,
-    pub source: String,
     pub package_path: String,
     pub width: u32,
     pub height: u32,

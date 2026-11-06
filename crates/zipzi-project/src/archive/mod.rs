@@ -22,12 +22,8 @@ use std::sync::{Arc, Once};
 
 use serde::{Deserialize, Serialize};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
-use zipzi_core::{Document, Status};
+use zipzi_core::Status;
 
-#[cfg(test)]
-use crate::decode_project;
-#[cfg(any(test, feature = "archive-prototype"))]
-use crate::encode_project;
 use crate::{content_sha256, read_project_texture_bounded};
 
 pub use stream::{read_fingerprint, IoCounts, MeteredIo, ProjectFingerprint};
@@ -95,7 +91,7 @@ struct Format {
     preview: Option<serde_json::Value>,
 }
 
-pub struct WrittenArchive<D = Document> {
+pub struct WrittenArchive<D = ()> {
     /// Same authoring data with complete content-addressed asset paths.
     pub document: D,
     pub unique_assets: usize,
@@ -105,39 +101,13 @@ pub struct WrittenArchive<D = Document> {
     pub resource_read_bytes: u64,
 }
 
-/// A snapshot holds the private directory independently of its originating open.
-/// Consumers retain its resource lease when capturing history or background jobs.
-#[derive(Clone)]
-pub struct OpenedArchive {
-    pub document: Document,
-    pub fingerprint: ProjectFingerprint,
-    pub counts: IoCounts,
-    pub unique_assets: usize,
-    pub asset_bytes: u64,
-    pub peak_working_bytes: u64,
-    pub diagnostics: Vec<crate::ResourceDiagnostic>,
-    working_set: ProjectResourceLease,
-}
-
-impl OpenedArchive {
-    pub fn asset_root(&self) -> &Path {
-        self.working_set.path()
-    }
-
-    pub fn resource_lease(&self) -> ProjectResourceLease {
-        self.working_set.clone()
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ArchiveDocumentFormat {
-    #[cfg(any(test, feature = "archive-prototype"))]
-    Prototype,
     NativeV22,
 }
 
 #[derive(Debug, Clone)]
-pub struct ArchiveSaveReceipt<D = Document> {
+pub struct ArchiveSaveReceipt<D = ()> {
     pub document: D,
     pub path: PathBuf,
     pub fingerprint: ProjectFingerprint,
@@ -227,10 +197,6 @@ impl ProjectArchiveStore {
         std::mem::replace(&mut self.open_memory, memory)
     }
 
-    pub(crate) fn has_open_memory(&self) -> bool {
-        self.open_memory.is_some()
-    }
-
     pub fn with_limits(mut self, limits: ArchiveIoLimits) -> Self {
         self.limits = limits;
         self
@@ -271,21 +237,6 @@ impl ProjectArchiveStore {
         ProjectResourceLease::create(&self.workspace_parent, self.disk_budget.clone())
     }
 
-    pub fn open(&self, path: &Path, keep_going: impl FnMut() -> bool) -> Result<OpenedArchive> {
-        let mut keep_going = keep_going;
-        check(&mut keep_going)?;
-        self.prepare_workspace()?;
-        reader::open(
-            path,
-            &self.workspace_parent,
-            self.limits,
-            self.disk_budget.clone(),
-            false,
-            self.open_memory.as_deref(),
-            keep_going,
-        )
-    }
-
     // Run on the I/O worker before its first allocation, shared by all store
     // clones in a Runtime. A new process reclaims the previous owner's leftovers;
     // live sessions/snapshots remain protected by their working-set owner locks.
@@ -307,32 +258,6 @@ impl ProjectArchiveStore {
         Ok(())
     }
 
-    pub fn save(
-        &self,
-        document: &Document,
-        resources: &ProjectResourceLease,
-        target: &Path,
-        expected: Option<&ProjectFingerprint>,
-        mut keep_going: impl FnMut() -> bool,
-    ) -> Result<ArchiveSaveReceipt> {
-        check(&mut keep_going)?;
-        crate::filesystem::reject_symlink(target)?;
-        let target = crate::filesystem::local_path(target)?;
-        let parent = target
-            .parent()
-            .ok_or_else(|| invalid("Missing target parent"))?;
-        std::fs::create_dir_all(parent)?;
-        crate::filesystem::reject_symlink(&target).map_err(ArchiveError::from)?;
-        check_archive_target(&target, expected, &mut keep_going)?;
-        let prepared = writer::prepare(
-            document,
-            resources.path(),
-            self.limits,
-            &mut keep_going,
-            ArchiveDocumentFormat::NativeV22,
-        )?;
-        self.publish_prepared(prepared, &target, expected, keep_going)
-    }
     fn publish_prepared<D>(
         &self,
         mut prepared: writer::PreparedArchive<D>,
@@ -472,13 +397,11 @@ fn check_archive_target(
 }
 
 enum ResourceInput {
-    File(PathBuf),
     Bytes(Arc<[u8]>),
 }
 struct Resource {
     input: ResourceInput,
     fingerprint: ProjectFingerprint,
-    dimensions: (u32, u32),
 }
 
 fn invalid(message: impl Into<String>) -> ArchiveError {
@@ -511,40 +434,6 @@ fn options(method: CompressionMethod) -> SimpleFileOptions {
         .large_file(true)
 }
 
-/// Write a prototype archive to a fresh, disposable seekable stream.
-#[cfg(any(test, feature = "archive-prototype"))]
-pub fn write_archive<W: Write + Seek>(
-    document: &Document,
-    asset_root: &Path,
-    output: &mut W,
-    limits: PrototypeLimits,
-    keep_going: impl FnMut() -> bool,
-) -> Result<WrittenArchive> {
-    write_archive_inner(
-        document,
-        asset_root,
-        output,
-        limits,
-        keep_going,
-        ArchiveDocumentFormat::Prototype,
-    )
-}
-
-/// Low-level experimental writer for benchmarks and codec fixtures.
-#[cfg(any(test, feature = "archive-prototype"))]
-fn write_archive_inner<W: Write + Seek>(
-    document: &Document,
-    asset_root: &Path,
-    output: &mut W,
-    limits: PrototypeLimits,
-    keep_going: impl FnMut() -> bool,
-    format_kind: ArchiveDocumentFormat,
-) -> Result<WrittenArchive> {
-    let mut keep_going = keep_going;
-    let prepared = writer::prepare(document, asset_root, limits, &mut keep_going, format_kind)?;
-    writer::write(prepared, output, keep_going, None)
-}
-
 fn asset_hash(name: &str) -> Option<&str> {
     let hash = name.strip_prefix("assets/")?.strip_suffix(".png")?;
     (hash.len() == 64
@@ -554,25 +443,6 @@ fn asset_hash(name: &str) -> Option<&str> {
     .then_some(hash)
 }
 
-/// Experimental v21 reader for reproducible P0 benchmarks only.
-#[cfg(any(test, feature = "archive-prototype"))]
-pub fn open_archive(
-    path: &Path,
-    workspace_parent: &Path,
-    limits: PrototypeLimits,
-    keep_going: impl FnMut() -> bool,
-) -> Result<OpenedArchive> {
-    reader::open(
-        path,
-        workspace_parent,
-        limits,
-        ProjectDiskBudget::default(),
-        true,
-        None,
-        keep_going,
-    )
-}
-
 #[cfg(test)]
 mod tests;
 
@@ -580,7 +450,7 @@ mod tests;
 mod publication_tests;
 
 mod state_io;
-pub use state_io::{LoadedProject, ProjectIo, ProjectMetadata};
+pub use state_io::{LoadedProject, ProjectIo, ProjectLoadStats, ProjectMetadata};
 
 #[cfg(test)]
 mod state_fixture;

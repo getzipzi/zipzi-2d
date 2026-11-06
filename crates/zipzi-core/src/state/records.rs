@@ -97,3 +97,11 @@ impl<T: PartialEq> Records<T> {
         order_changed
     }
 }
+
+impl<T: Clone> Records<T> {
+    pub(super) fn get_mut(&mut self, id: &str) -> Option<&mut T> {
+        Arc::make_mut(&mut self.values)
+            .get_mut(id)
+            .map(Arc::make_mut)
+    }
+}

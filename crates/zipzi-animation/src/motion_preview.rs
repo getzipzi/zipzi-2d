@@ -7,7 +7,8 @@ use std::{
 
 use zipzi_core::{
     evaluation::{evaluate_frame_including_hidden, EvaluationTimings},
-    Document, DrawableFrame, FrameEvaluator, PreviewValues,
+    state::DocumentState,
+    DrawableFrame, FrameEvaluator, PreviewValues,
 };
 
 use crate::expression::{ExpressionRuntime, ExpressionTransition};
@@ -97,7 +98,7 @@ pub struct PreviewGeometryTimings {
 /// Detached combined preview with immutable assets and bounded canonical seek checkpoints.
 /// Create a new preview after authoring edits; playback never edits the source document.
 pub struct MotionPreview {
-    document: Arc<Document>,
+    document: Arc<DocumentState>,
     curves: Arc<BTreeMap<String, CompiledCurve>>,
     source_identity: Option<(u64, u64)>,
     base: BTreeMap<String, f32>,
@@ -120,17 +121,20 @@ pub struct MotionPreview {
 
 impl MotionPreview {
     /// Capture an independent document snapshot at time zero. Later document edits are not observed.
-    pub fn new(document: &Document) -> Self {
+    pub fn new(document: &DocumentState) -> Self {
         let curves = document
             .motion_order()
             .iter()
-            .flat_map(|id| &document.get_motion(id).expect("ordered motion").tracks)
+            .flat_map(|id| &document.motion(id).expect("ordered motion").tracks)
             .map(|track| (track.id.clone(), CompiledCurve::from(track)))
             .collect();
         Self::from_shared(Arc::new(document.clone()), Arc::new(curves))
     }
 
-    fn from_shared(document: Arc<Document>, curves: Arc<BTreeMap<String, CompiledCurve>>) -> Self {
+    fn from_shared(
+        document: Arc<DocumentState>,
+        curves: Arc<BTreeMap<String, CompiledCurve>>,
+    ) -> Self {
         let base: BTreeMap<String, f32> = document
             .parameter_order()
             .iter()
@@ -138,7 +142,7 @@ impl MotionPreview {
                 (
                     id.clone(),
                     document
-                        .get_parameter(id)
+                        .parameter(id)
                         .expect("ordered parameter")
                         .default_value,
                 )
@@ -183,15 +187,15 @@ impl MotionPreview {
             pose,
         }
     }
-    /// Return the captured document revision, not the current authoring-session revision.
-    pub fn document_revision(&self) -> u64 {
-        self.document.revision()
+    /// Return the immutable content captured by this preview.
+    pub fn content_id(&self) -> zipzi_core::state::ContentId {
+        self.document.content_id()
     }
 
     /// Check immutable document identity, including branches whose local
     /// revision counters coincide. This never evaluates or copies payloads.
-    pub fn matches_document(&self, document: &Document) -> bool {
-        self.document.is_same_snapshot(document)
+    pub fn matches_document(&self, document: &DocumentState) -> bool {
+        self.document.content_id() == document.content_id()
     }
 
     /// Rebuild this detached preview when comparing with physics bypassed.
@@ -346,7 +350,7 @@ impl MotionPreview {
     ) -> Result<(), AnimationError> {
         let (_, entry) = self
             .document
-            .get_motion_registration(id)
+            .motion_registration(id)
             .ok_or_else(|| AnimationError::MissingMotion(id.into()))?;
         self.motion.schedule_motion(
             &self.document,
@@ -495,7 +499,7 @@ impl MotionPreview {
     pub fn set_base_parameter(&mut self, id: &str, value: f32) -> Result<(), AnimationError> {
         let parameter = self
             .document
-            .get_parameter(id)
+            .parameter(id)
             .ok_or_else(|| AnimationError::Evaluation(format!("missing parameter {id}")))?;
         if !value.is_finite() {
             return Err(AnimationError::Evaluation(format!(
@@ -867,7 +871,7 @@ impl MotionPreview {
                         .unwrap_or(1.0);
                     part_id = self
                         .document
-                        .get_part(part_id)
+                        .part(part_id)
                         .map_or("", |part| part.parent_id.as_str());
                 }
                 drawable.opacity *= opacity;

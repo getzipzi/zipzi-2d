@@ -71,26 +71,22 @@ impl<'a> Moc3DecoderContext<'a> {
                     0.0
                 };
 
-            check_status!(
-                self.doc
-                    .create_part(Part {
-                        id: id.clone(),
-                        runtime_id: if runtime_id.is_empty() {
-                            format!("Part{p}")
-                        } else {
-                            runtime_id.clone()
-                        },
-                        name: if runtime_id.is_empty() {
-                            format!("Part{p}")
-                        } else {
-                            runtime_id
-                        },
-                        parent_id,
-                        enabled,
-                        draw_order: base_draw_order,
-                    })
-                    .status
-            );
+            check_status!(self.doc.create_part(Part {
+                id: id.clone(),
+                runtime_id: if runtime_id.is_empty() {
+                    format!("Part{p}")
+                } else {
+                    runtime_id.clone()
+                },
+                name: if runtime_id.is_empty() {
+                    format!("Part{p}")
+                } else {
+                    runtime_id
+                },
+                parent_id,
+                enabled,
+                draw_order: base_draw_order,
+            }));
 
             if is_bound {
                 let mut keyforms = Vec::with_capacity(total_combos);

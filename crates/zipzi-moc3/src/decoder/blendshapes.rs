@@ -64,18 +64,14 @@ impl<'a> Moc3DecoderContext<'a> {
             }
             let bkt_id = stable_id(&self.doc_id, "blend_key_table", i, &format!("bkt_{i}"));
             self.mapping.blend_key_table_by_index.push(bkt_id.clone());
-            check_status!(
-                self.doc
-                    .create_blend_key_table(BlendShapeKeyTable {
-                        samples: Default::default(),
-                        base_sample_id: Default::default(),
-                        id: bkt_id,
-                        parameter_id,
-                        keys,
-                        base_key_idx,
-                    })
-                    .status
-            );
+            check_status!(self.doc.create_blend_key_table(BlendShapeKeyTable {
+                samples: Default::default(),
+                base_sample_id: Default::default(),
+                id: bkt_id,
+                parameter_id,
+                keys,
+                base_key_idx,
+            }));
         }
 
         Ok(())
@@ -123,17 +119,13 @@ impl<'a> Moc3DecoderContext<'a> {
             }
             let bsc_id = stable_id(&self.doc_id, "blend_constraint", i, &format!("bsc_{i}"));
             self.mapping.blend_constraint_by_index.push(bsc_id.clone());
-            check_status!(
-                self.doc
-                    .create_blend_constraint(BlendShapeConstraint {
-                        samples: Default::default(),
-                        id: bsc_id,
-                        parameter_id,
-                        keys,
-                        weights,
-                    })
-                    .status
-            );
+            check_status!(self.doc.create_blend_constraint(BlendShapeConstraint {
+                samples: Default::default(),
+                id: bsc_id,
+                parameter_id,
+                keys,
+                weights,
+            }));
         }
 
         Ok(())
@@ -384,7 +376,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     DeltaKeyforms::Part(forms)
                 }
                 BlendShapeTargetKind::Warp => {
-                    let warp = self.doc.get_transform(&target_id).unwrap();
+                    let warp = self.doc.transform(&target_id).unwrap();
                     let pt_count = ((warp.warp().unwrap().rows + 1)
                         * (warp.warp().unwrap().columns + 1))
                         as usize;
@@ -429,7 +421,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     DeltaKeyforms::Warp(forms)
                 }
                 BlendShapeTargetKind::Rotation => {
-                    let rot = self.doc.get_transform(&target_id).unwrap();
+                    let rot = self.doc.transform(&target_id).unwrap();
                     let parent = rot.parent();
                     let mut forms = Vec::with_capacity(key_bs_len);
                     for k in 0..key_bs_len {
@@ -473,7 +465,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     DeltaKeyforms::Rotation(forms)
                 }
                 BlendShapeTargetKind::Mesh => {
-                    let mesh = self.doc.get_mesh(&target_id).unwrap();
+                    let mesh = self.doc.mesh(&target_id).unwrap();
                     let vc = mesh.vertex_ids.len();
                     let parent = mesh.deformer_id.as_str();
                     let mut forms = Vec::with_capacity(key_bs_len);
@@ -561,18 +553,14 @@ impl<'a> Moc3DecoderContext<'a> {
 
             let b_id = stable_id(&self.doc_id, "blend_binding", b, &format!("bb_{b}"));
             self.mapping.blend_binding_by_index.push(b_id.clone());
-            check_status!(
-                self.doc
-                    .create_blend_binding(BlendShapeBinding {
-                        id: b_id,
-                        target_id,
-                        target_kind,
-                        key_table_id,
-                        constraint_ids,
-                        keyforms,
-                    })
-                    .status
-            );
+            check_status!(self.doc.create_blend_binding(BlendShapeBinding {
+                id: b_id,
+                target_id,
+                target_kind,
+                key_table_id,
+                constraint_ids,
+                keyforms,
+            }));
         }
 
         Ok(())

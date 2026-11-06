@@ -155,37 +155,33 @@ impl<'a> Moc3DecoderContext<'a> {
                 }
 
                 let base = &keyforms[0];
-                check_status!(
-                    self.doc
-                        .create_imported_transform(Transform {
-                            rotation_scale_unit: None,
-                            warp_authoring: None,
-                            original_shape: None,
-                            id: id.clone(),
-                            runtime_id: if runtime_id.is_empty() {
-                                format!("Warp{local_idx}")
-                            } else {
-                                runtime_id.clone()
-                            },
-                            name: if runtime_id.is_empty() {
-                                format!("Warp{local_idx}")
-                            } else {
-                                runtime_id
-                            },
-                            part_id: zipzi_core::PartId::optional(part_id),
-                            parent_id: zipzi_core::TransformId::optional(parent_id),
-                            enabled,
-                            appearance: base.appearance,
-                            data: TransformData::Warp(WarpTransform {
-                                bezier: None,
-                                rows,
-                                columns: cols,
-                                quad,
-                                points: base.positions.clone(),
-                            }),
-                        })
-                        .status
-                );
+                check_status!(self.doc.create_transform(Transform {
+                    rotation_scale_unit: None,
+                    warp_authoring: None,
+                    original_shape: None,
+                    id: id.clone(),
+                    runtime_id: if runtime_id.is_empty() {
+                        format!("Warp{local_idx}")
+                    } else {
+                        runtime_id.clone()
+                    },
+                    name: if runtime_id.is_empty() {
+                        format!("Warp{local_idx}")
+                    } else {
+                        runtime_id
+                    },
+                    part_id: zipzi_core::PartId::optional(part_id),
+                    parent_id: zipzi_core::TransformId::optional(parent_id),
+                    enabled,
+                    appearance: base.appearance,
+                    data: TransformData::Warp(WarpTransform {
+                        bezier: None,
+                        rows,
+                        columns: cols,
+                        quad,
+                        points: base.positions.clone(),
+                    }),
+                }));
                 warp_by_local_idx[local_idx] = id.clone();
 
                 if is_bound {
@@ -297,34 +293,30 @@ impl<'a> Moc3DecoderContext<'a> {
 
                 let base_angle = self.import_base_angle(&parent_id, base_angle);
                 let base = &keyforms[0];
-                check_status!(
-                    self.doc
-                        .create_imported_transform(Transform {
-                            rotation_scale_unit: (scale_unit != 1.).then_some(scale_unit),
-                            warp_authoring: None,
-                            original_shape: None,
-                            id: id.clone(),
-                            runtime_id: if runtime_id.is_empty() {
-                                format!("Rotation{local_idx}")
-                            } else {
-                                runtime_id.clone()
-                            },
-                            name: if runtime_id.is_empty() {
-                                format!("Rotation{local_idx}")
-                            } else {
-                                runtime_id
-                            },
-                            part_id: zipzi_core::PartId::optional(part_id),
-                            parent_id: zipzi_core::TransformId::optional(parent_id),
-                            enabled,
-                            appearance: base.appearance,
-                            data: TransformData::Rotation(RotationTransform {
-                                base_angle,
-                                pose: base.rotation,
-                            }),
-                        })
-                        .status
-                );
+                check_status!(self.doc.create_transform(Transform {
+                    rotation_scale_unit: (scale_unit != 1.).then_some(scale_unit),
+                    warp_authoring: None,
+                    original_shape: None,
+                    id: id.clone(),
+                    runtime_id: if runtime_id.is_empty() {
+                        format!("Rotation{local_idx}")
+                    } else {
+                        runtime_id.clone()
+                    },
+                    name: if runtime_id.is_empty() {
+                        format!("Rotation{local_idx}")
+                    } else {
+                        runtime_id
+                    },
+                    part_id: zipzi_core::PartId::optional(part_id),
+                    parent_id: zipzi_core::TransformId::optional(parent_id),
+                    enabled,
+                    appearance: base.appearance,
+                    data: TransformData::Rotation(RotationTransform {
+                        base_angle,
+                        pose: base.rotation,
+                    }),
+                }));
                 rotation_by_local_idx[local_idx] = id.clone();
 
                 if is_bound {

@@ -1,7 +1,7 @@
 //! Broad-phase component and segment queries. Exact geo predicates decide topology;
 //! disjoint bounds never need point, polygon-pair or segment-pair tests.
 use super::limit;
-use crate::SdkError;
+use crate::Status;
 use geo::{
     coordinate_position::CoordPos, dimensions::Dimensions, BoundingRect, Contains, Intersects,
     MultiPolygon, Point, Polygon, Relate, RemoveRepeatedPoints, Validation,
@@ -47,7 +47,7 @@ impl<'a> PolygonIndex<'a> {
             .any(|entry| self.polygons.0[entry.data].contains(point))
     }
 
-    fn valid_pairs(&self, mut remaining: usize) -> Result<bool, SdkError> {
+    fn valid_pairs(&self, mut remaining: usize) -> Result<bool, Status> {
         for entry in &self.tree {
             for other in self.tree.locate_in_envelope_intersecting(&entry.envelope()) {
                 if other.data <= entry.data {
@@ -69,7 +69,7 @@ impl<'a> PolygonIndex<'a> {
     }
 }
 
-pub(super) fn is_valid(polygons: &MultiPolygon<f64>) -> Result<bool, SdkError> {
+pub(super) fn is_valid(polygons: &MultiPolygon<f64>) -> Result<bool, Status> {
     // Validate rings before constructing bounds or running inter-polygon relate.
     if polygons.0.iter().any(|polygon| !polygon_valid(polygon)) {
         return Ok(false);
@@ -184,7 +184,7 @@ mod tests {
                 .valid_pairs(0)
                 .unwrap_err()
                 .code
-                .as_ref(),
+                .as_str(),
             "ALPHA_MESH_LIMIT"
         );
     }

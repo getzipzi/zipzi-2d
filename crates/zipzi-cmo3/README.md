@@ -9,28 +9,27 @@ wire-format conventions; it is not a dependency.
 
 ```rust,no_run
 use zipzi_cmo3::{encode_cmo3, AssetResolver, Cmo3Artifact, Cmo3Error, Cmo3Options};
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 
-fn convert(document: &Document, assets: &impl AssetResolver)
+fn convert(document: &DocumentState, assets: &impl AssetResolver)
     -> Result<Cmo3Artifact, Cmo3Error>
 {
     encode_cmo3(document, assets, &Cmo3Options::default())
 }
 ```
 
-`AssetResolver` reads encoded PNG bytes for an `ImageAsset`; closures implement
+`AssetResolver` reads encoded PNG bytes for an `AssetRecord`; closures implement
 it too. PNG dimensions are checked, and project adapters additionally verify
-saved asset hashes. Output bytes and serializable diagnostics are returned
-together. Encoding reads the committed document without changing its revision,
-preview, history or resources. Fixed inputs/options produce identical bytes.
+captured resource identity and dimensions. Output bytes and serializable diagnostics are returned
+together. Encoding reads the committed document without changing its content identity or resources. Fixed inputs/options produce identical bytes.
 
 For a linked model/animation pair, use:
 
 ```rust,no_run
 use zipzi_cmo3::{encode_cubism, CubismArtifact, CubismOptions, AssetResolver, Cmo3Error};
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 
-fn convert_pair(document: &Document, assets: &impl AssetResolver)
+fn convert_pair(document: &DocumentState, assets: &impl AssetResolver)
     -> Result<CubismArtifact, Cmo3Error>
 {
     encode_cubism(document, assets, &CubismOptions {
@@ -53,24 +52,16 @@ callers should surface the report instead of silently discarding it.
 
 ## Project and SDK adapters
 
-`zipzi-project` provides `encode_project_cmo3`, `encode_document_cmo3` and
-`DocumentSession::encode_cmo3`. Paired exports use `encode_project_cubism`,
-`encode_document_cubism` or `DocumentSession::encode_cubism`. The corresponding
-`publish_*` and `export_*` methods write artifacts. `zipzi-sdk::AuthoringSession`
-also exposes in-memory encoding.
+`zipzi-project` provides `encode_project_cmo3`, `encode_document_cmo3`,
+`encode_project_cubism` and `encode_document_cubism`. Document adapters receive
+DocumentState and ResourceView. The corresponding `publish_*` functions write
+artifacts; callers own session publication and task coordination.
 
 Encoding and publication are separate so callers can review diagnostics before
 writing. Paired publication stages the output, protects unrelated files and
 rolls back reported replacement failures; it is not a crash-atomic transaction.
 The destination parent must already exist. A post-rename directory sync failure
 is reported as a publication warning.
-
-```sh
-cargo run --locked -p zipzi-project --example project_cmo3 -- \
-  /path/to/project /path/to/model.cmo3
-cargo run --locked -p zipzi-project --example project_cubism -- \
-  /path/to/project /path/to/editable avatar
-```
 
 ## Preserved model data
 
@@ -129,8 +120,9 @@ Pose and other runtime sidecars use the runtime package exporter.
 
 `import_model` reads CMO3 into a typed document and in-memory PNGs.
 `animation_model_paths` and `import_animation` resolve and import CAN3 scenes.
-Project and SDK adapters resolve sibling files; `AuthoringSession::import_cubism`
-accepts either entry file. Session imports extract independent mesh images from
+ProjectImporter::import_cubism_authoring resolves sibling files and accepts
+either entry file. It returns frozen state and captured resources, extracting
+independent mesh images from
 atlas pages; see [project import artwork](../zipzi-project/README.md#import-artwork).
 
 Unknown required structures and unsupported features are rejected, including
@@ -142,8 +134,8 @@ playback boundaries.
 ## Validation
 
 ```sh
-cargo test --locked -p zipzi-cmo3 -p zipzi-project
-cargo run --locked -p zipzi-cmo3 --example fixture -- /tmp/model.cmo3
+cargo test --locked -p zipzi-cmo3 --lib
+cargo test --locked -p zipzi-project --test authoring_formats
 # Optional: validate with a local Cubism Editor installation.
 uv run --locked python tools/validation/check_cmo3.py \
   --editor '/Applications/Live2D Cubism 5.4 alpha' --check-textures /tmp/model.cmo3

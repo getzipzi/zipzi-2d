@@ -88,3 +88,36 @@ impl Model<'_> {
         Status::ok()
     }
 }
+
+impl Model<'_> {
+    pub fn is_part_ancestor(&self, ancestor_id: &str, part_id: &str) -> bool {
+        if ancestor_id == part_id {
+            return true;
+        }
+        let mut cur = part_id;
+        while let Some(part) = self.get_part(cur) {
+            if part.parent_id.is_empty() {
+                break;
+            }
+            if part.parent_id == ancestor_id {
+                return true;
+            }
+            cur = &part.parent_id;
+        }
+        false
+    }
+
+    pub fn parent_offscreen_for_part(&self, part_id: &str) -> Option<&Offscreen> {
+        let mut cur = part_id;
+        while let Some(part) = self.get_part(cur) {
+            if part.parent_id.is_empty() {
+                break;
+            }
+            if let Some(os) = self.offscreen_for_part(&part.parent_id) {
+                return Some(os);
+            }
+            cur = &part.parent_id;
+        }
+        None
+    }
+}

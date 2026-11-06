@@ -1,6 +1,6 @@
 //! Preserve difficult corners locally while simplifying smooth spans.
 use super::spatial;
-use crate::SdkError;
+use crate::Status;
 use geo::{
     Area, BooleanOps, Buffer, Coord, Intersects, LineString, MultiPolygon, Point, Polygon, Simplify,
 };
@@ -38,7 +38,7 @@ pub(super) fn conservative(
     expanded: &MultiPolygon<f64>,
     required: &MultiPolygon<f64>,
     mut tolerance: f64,
-) -> Result<MultiPolygon<f64>, SdkError> {
+) -> Result<MultiPolygon<f64>, Status> {
     for _ in 0..8 {
         if tolerance <= 1e-6 {
             break;

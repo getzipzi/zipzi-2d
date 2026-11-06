@@ -249,7 +249,7 @@ pub(super) fn validate_budgeted(
             return Err(ArchiveError::Limit("JSON bytes"));
         }
         if matches!(name_text, "format.json" | "project.json") {
-            // Input, syntax/Value/wire decoding, Document and retained candidate.
+            // Input, syntax/Value/wire decoding and the resulting frozen model.
             workspace = expanded
                 .checked_mul(64)
                 .and_then(|n| workspace.checked_add(n))

@@ -1,6 +1,6 @@
 use crate::{expression::ExpressionRuntime, AnimationError};
 use std::{collections::BTreeMap, sync::Arc};
-use zipzi_core::{evaluate_frame, Document, DrawableFrame, PreviewValues};
+use zipzi_core::{evaluate_frame, state::DocumentState, DrawableFrame, PreviewValues};
 
 /// Detached Expression-stage values at one preview time.
 #[derive(Debug, Clone, PartialEq)]
@@ -17,7 +17,7 @@ pub struct RuntimeSnapshot {
 /// steps from the initial state, including activation order.
 #[derive(Clone)]
 pub struct ExpressionPreview {
-    document: Arc<Document>,
+    document: Arc<DocumentState>,
     base: BTreeMap<String, f32>,
     snapshot: RuntimeSnapshot,
     stage: ExpressionRuntime,
@@ -25,14 +25,12 @@ pub struct ExpressionPreview {
 
 impl ExpressionPreview {
     /// Capture an independent document snapshot at time zero. Later document edits are not observed.
-    pub fn new(document: &Document) -> Self {
+    pub fn new(document: &DocumentState) -> Self {
         let base = document
             .parameter_order()
             .iter()
             .map(|id| {
-                let parameter = document
-                    .get_parameter(id)
-                    .expect("ordered parameter exists");
+                let parameter = document.parameter(id).expect("ordered parameter exists");
                 (id.clone(), parameter.default_value)
             })
             .collect::<BTreeMap<_, _>>();
@@ -48,9 +46,9 @@ impl ExpressionPreview {
         }
     }
 
-    /// Return the captured document revision, not the current authoring-session revision.
-    pub fn document_revision(&self) -> u64 {
-        self.document.revision()
+    /// Return the immutable content captured by this preview.
+    pub fn content_id(&self) -> zipzi_core::state::ContentId {
+        self.document.content_id()
     }
 
     /// Borrow the current snapshot without advancing playback.
@@ -62,7 +60,7 @@ impl ExpressionPreview {
     /// Retains schedules. Missing UUIDs/nonfinite values return [`AnimationError::Evaluation`]
     /// without changing state. Motion preview also clears seek checkpoints/statistics.
     pub fn set_base_parameter(&mut self, id: &str, value: f32) -> Result<(), AnimationError> {
-        let parameter = self.document.get_parameter(id);
+        let parameter = self.document.parameter(id);
         if !value.is_finite() || parameter.is_none() {
             return Err(AnimationError::Evaluation(format!(
                 "invalid parameter {id}"

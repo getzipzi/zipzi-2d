@@ -12,12 +12,26 @@ The old EditSession/checkpoint/field-handle API is no longer exported or execute
 an opened session and resource diagnostics. Project owns no live authoring state.
 
 Call `begin_draft`, use `Draft::batch` with its expected `DraftSource`, then consume
-it with `prepare` and `AuthoringSession::publish`. Commands currently cover typed
-asset/parameter/part/transform/mesh names, stable-ID base vertex positions, part,
-mesh and parameter creation, empty assets and immutable image replacement. A batch
-can assemble forward references; its complete graph must validate before success.
-Commands enforce organizational locks. Absolute vertex positions allow gestures
-to calculate from `Draft::baseline` without accumulating deltas.
+it with `prepare` and `AuthoringSession::publish`. Commands cover parameters,
+ordinary/BlendShape bindings and keyforms, range/grid conversions, scene and
+organization edits, reparenting/grouping, dependency deletion, mesh topology and
+manual/alpha mesh generation, Motion/Expression/Pose/Physics, references,
+resources, attachments, document fields and EditorState. Motion curve commands
+retain the existing interpolation, Bezier split/handle and time-scaling rules;
+command failures abort the entire Draft.
+
+Commands install affected records through Core Builder tracking. Typed patches
+check expected values; domain operations enforce owner/child locks, preserve or
+remap stable identities and remove orphan EditorState. Forward references may be
+assembled in a batch, whose complete graph must validate before success.
+Canonical axis/sample identities remain in the working Builder for later commands.
+Absolute vertex positions can be calculated from Draft::baseline without
+accumulating gesture deltas. Conversion admission bounds actual work independently
+of history policy. Manual mesh transfer samples ordinary and BlendShape channels.
+
+Frozen queries expose domain projections, reference/deletion analysis, binding
+samples and evaluation. Query source is carried by SourcedSnapshot. Animation and
+format libraries now consume frozen state; host orchestration remains stage four.
 
 Multiple Drafts may coexist. Ordinary command failure, an ignored command error,
 an invalid final graph or a panic ends that Draft. Preparing or publishing consumes
@@ -64,15 +78,17 @@ cargo test --locked -p zipzi-sdk --doc
 
 ## Migration boundary
 
-Stage two is complete for the native workflow above. The previous domain algorithm
-sources, `tests/integration.rs`, `tests/alpha_mesh.rs` and earlier examples remain
-as migration inputs for stage three. They are not compatibility entrypoints and
-still require migration before their original Cargo targets compile against the
-new crate root. The current fast gate is `--lib --test authoring`; it is not the
-former full domain coverage under another name.
+Stage three domain migration is complete. Core's old mutable Document and
+checkpoint/transaction/planner machinery, SDK full-document diff inference and
+Project live-document ownership have been removed. Format adapters consume
+DocumentState and owned ResourceView values directly.
 
-Observe, Runtime, Editor and the Python native adapter still consume the removed
-API and do not yet compile against this intermediate SDK. They switch in stages
-three/four as specified in the [architecture plan](../../docs/plans/authoring-architecture.md).
-Whole-workspace, old SDK integration/mesh/regression/full, and client gates are not
-claimed passing for this stage. Independent Core/Project behavior remains tested.
+The fast gate covers SDK library and authoring integration tests. Alpha mesh
+algorithms also have a standalone `cargo test --locked -p zipzi-sdk --test alpha_mesh`
+gate. Remaining old integration targets and examples are migration inputs for
+host migration and final cleanup; these gates do not imply their full coverage.
+
+Observe, Runtime, Editor and the Python native adapter still consume removed APIs
+and do not yet compile against this intermediate SDK. They switch in stage four
+of the [architecture plan](../../docs/plans/authoring-architecture.md).
+Whole-workspace, legacy regression/full and client gates are not claimed passing.

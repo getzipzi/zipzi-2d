@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use thiserror::Error;
 use zipzi_core::document::{PoseAsset, PoseEntry, PoseGroup, PoseLink, PosePartRef};
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 use zipzi_live2d::pose3::{decode_pose3, encode_pose3, Pose3, Pose3Part};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +16,7 @@ pub struct PoseDiagnostic {
 
 #[derive(Debug)]
 pub struct PoseImport {
-    pub candidate: Document,
+    pub candidate: DocumentState,
     pub diagnostics: Vec<PoseDiagnostic>,
 }
 
@@ -40,16 +40,12 @@ fn error(
     }
 }
 
-fn namespace(document: &Document, pose: Option<&PoseAsset>) -> BTreeMap<String, String> {
+fn namespace(document: &DocumentState, pose: Option<&PoseAsset>) -> BTreeMap<String, String> {
     let mut ids = BTreeMap::new();
     for id in document.part_order() {
         ids.insert(
             id.clone(),
-            document
-                .get_part(id)
-                .expect("ordered part")
-                .runtime_id
-                .clone(),
+            document.part(id).expect("ordered part").runtime_id.clone(),
         );
     }
     if let Some(pose) = pose {
@@ -78,17 +74,10 @@ fn content_hash(pose: &PoseAsset) -> String {
 }
 
 pub fn import_pose3(
-    document: &Document,
+    document: &DocumentState,
     id: &str,
     text: &str,
 ) -> Result<PoseImport, PoseProjectError> {
-    if !document.initialized() {
-        return Err(error(
-            "NOT_INITIALIZED",
-            "$",
-            "initialize the document first",
-        ));
-    }
     let wire =
         decode_pose3(text).map_err(|failure| error(failure.code, failure.path, failure.message))?;
     let parts: HashMap<_, _> = document
@@ -96,11 +85,7 @@ pub fn import_pose3(
         .iter()
         .map(|id| {
             (
-                document
-                    .get_part(id)
-                    .expect("ordered part")
-                    .runtime_id
-                    .as_str(),
+                document.part(id).expect("ordered part").runtime_id.as_str(),
                 id.as_str(),
             )
         })
@@ -164,25 +149,30 @@ pub fn import_pose3(
         asset.opaque_source_ids = Some(namespace(document, Some(&asset)));
         asset.opaque_source_content_hash = Some(content_hash(&asset));
     }
-    let mut candidate = document.fork_candidate();
-    let result = candidate.set_pose(asset);
-    if !result.status.is_ok() {
-        return Err(error(result.status.code, "$", result.status.message));
+    let mut candidate = document.builder();
+    let result = candidate.replace_pose(Some(asset));
+    if let Err(status) = result {
+        return Err(error(status.code, "$", status.message));
     }
     Ok(PoseImport {
-        candidate,
+        candidate: candidate
+            .freeze()
+            .map_err(|s| error(s.code, "$", s.message))?
+            .state,
         diagnostics,
     })
 }
 
-pub fn export_pose3(document: &Document) -> Result<Option<String>, PoseProjectError> {
+pub fn export_pose3(document: &DocumentState) -> Result<Option<String>, PoseProjectError> {
     export_pose(document, false)
 }
-pub fn export_available_pose3(document: &Document) -> Result<Option<String>, PoseProjectError> {
+pub fn export_available_pose3(
+    document: &DocumentState,
+) -> Result<Option<String>, PoseProjectError> {
     export_pose(document, true)
 }
 pub(crate) fn opaque_export_problems(
-    document: &Document,
+    document: &DocumentState,
     pose: &PoseAsset,
 ) -> Vec<crate::OpaqueExportProblem> {
     use crate::OpaqueExportProblem as P;
@@ -199,7 +189,10 @@ pub(crate) fn opaque_export_problems(
     problems
 }
 
-fn export_pose(document: &Document, available: bool) -> Result<Option<String>, PoseProjectError> {
+fn export_pose(
+    document: &DocumentState,
+    available: bool,
+) -> Result<Option<String>, PoseProjectError> {
     let Some(pose) = document.pose() else {
         return Ok(None);
     };
@@ -214,7 +207,7 @@ fn export_pose(document: &Document, available: bool) -> Result<Option<String>, P
         match target {
             PosePartRef::Unspecified => Err(error("UNCONFIGURED_PART", path, "Choose a Part")),
             PosePartRef::Resolved { part_id } => document
-                .get_part(part_id)
+                .part(part_id)
                 .map(|part| part.runtime_id.clone())
                 .ok_or_else(|| error("MISSING_PART", path, part_id)),
             PosePartRef::Unresolved { runtime_id } => {

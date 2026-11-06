@@ -2,12 +2,12 @@
 use std::collections::BTreeMap;
 
 use zipzi_core::document::PosePartRef;
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 
 #[derive(Clone)]
 pub(crate) struct PoseRuntime {
     pub(crate) opacities: BTreeMap<String, f32>,
-    projection: Option<std::sync::Arc<zipzi_core::document::PoseProjection>>,
+    projection: Option<std::sync::Arc<zipzi_core::state::PoseProjection>>,
 }
 
 impl PoseRuntime {
@@ -16,7 +16,7 @@ impl PoseRuntime {
         map_bytes(&self.opacities)
     }
     pub(crate) fn new(
-        document: &Document,
+        document: &DocumentState,
         real: &mut BTreeMap<String, f32>,
         virtual_controls: &mut BTreeMap<String, f32>,
     ) -> Self {
@@ -34,7 +34,7 @@ impl PoseRuntime {
 
     pub(crate) fn reset(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         real: &mut BTreeMap<String, f32>,
         virtual_controls: &mut BTreeMap<String, f32>,
     ) {
@@ -75,13 +75,13 @@ impl PoseRuntime {
 
     pub(crate) fn update(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         real: &BTreeMap<String, f32>,
         virtual_controls: &BTreeMap<String, f32>,
         dt: f32,
         coverage: &mut Vec<String>,
     ) {
-        let Some(pose) = document.pose() else {
+        let Some(pose) = document.pose().as_deref() else {
             return;
         };
         let fade = pose.fade_in.unwrap_or(0.5);
@@ -161,21 +161,21 @@ impl PoseRuntime {
     }
 }
 
-pub(crate) fn real_parameter_for_part(document: &Document, part_id: &str) -> Option<String> {
-    let runtime_id = &document.get_part(part_id)?.runtime_id;
+pub(crate) fn real_parameter_for_part(document: &DocumentState, part_id: &str) -> Option<String> {
+    let runtime_id = &document.part(part_id)?.runtime_id;
     document
         .parameter_order()
         .iter()
         .find(|id| {
             document
-                .get_parameter(id)
+                .parameter(id)
                 .is_some_and(|parameter| &parameter.runtime_id == runtime_id)
         })
         .cloned()
 }
 
 fn control(
-    document: &Document,
+    document: &DocumentState,
     real: &BTreeMap<String, f32>,
     virtual_controls: &BTreeMap<String, f32>,
     part_id: &str,
@@ -188,7 +188,7 @@ fn control(
 }
 
 fn set_control(
-    document: &Document,
+    document: &DocumentState,
     real: &mut BTreeMap<String, f32>,
     virtual_controls: &mut BTreeMap<String, f32>,
     part_id: &str,

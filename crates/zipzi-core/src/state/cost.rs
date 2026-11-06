@@ -759,3 +759,144 @@ pub(super) fn estimate(base: &Content, after: &Content, writes: &WriteSet) -> us
     }
     bytes
 }
+
+/// Operation-local scene input payload. Immutable unselected records are excluded.
+pub(crate) fn scene_payload(
+    model: &crate::model_validation::Model<'_>,
+    ids: &std::collections::HashSet<String>,
+) -> usize {
+    let mut cost = Footprint::default();
+    macro_rules! add {
+        ($values:expr) => {
+            for value in $values {
+                cost.add(size_of_val(value));
+                value.retained(&mut cost);
+            }
+        };
+    }
+    use std::mem::size_of_val;
+    add!(model
+        .content
+        .parameters
+        .values()
+        .filter(|v| ids.contains(&v.id)));
+    add!(model.content.parts.values().filter(|v| ids.contains(&v.id)));
+    add!(model
+        .content
+        .meshes
+        .values()
+        .filter(|v| ids.contains(&v.id)));
+    add!(model
+        .content
+        .transforms
+        .values()
+        .filter(|v| ids.contains(&v.id)));
+    add!(model
+        .content
+        .bindings
+        .values()
+        .filter(|v| ids.contains(&v.id) || ids.contains(&v.mesh_id)));
+    add!(model
+        .content
+        .scene_bindings
+        .values()
+        .filter(|v| ids.contains(&v.id) || ids.contains(v.target_id())));
+    add!(model
+        .content
+        .blend_bindings
+        .values()
+        .filter(|v| ids.contains(&v.id) || ids.contains(&v.target_id)));
+    add!(model.content.glues.values().filter(|v| ids.contains(&v.id)
+        || ids.contains(v.mesh_a_id.as_str())
+        || ids.contains(v.mesh_b_id.as_str())));
+    add!(model
+        .content
+        .offscreens
+        .values()
+        .filter(|v| ids.contains(&v.id) || ids.contains(&v.part_id)));
+    cost.shared
+        .values()
+        .fold(cost.owned, |n, bytes| n.saturating_add(*bytes))
+}
+
+/// Only records and metadata that dependency deletion can rewrite are charged.
+pub(super) fn deletion_payload(
+    model: &crate::model_validation::Model<'_>,
+    report: &DeletionReport,
+) -> usize {
+    let ids: std::collections::HashSet<_> = report
+        .removed
+        .iter()
+        .map(|r| r.object.id.clone())
+        .chain(report.rewritten.iter().map(|r| r.owner.id.clone()))
+        .collect();
+    let mut cost = Footprint::default();
+    cost.add(scene_payload(model, &ids));
+    macro_rules! add {
+        ($values:expr) => {
+            for value in $values {
+                cost.add(std::mem::size_of_val(value));
+                value.retained(&mut cost);
+            }
+        };
+    }
+    add!(model
+        .content
+        .blend_key_tables
+        .values()
+        .filter(|v| ids.contains(&v.id)));
+    add!(model
+        .content
+        .blend_constraints
+        .values()
+        .filter(|v| ids.contains(&v.id)));
+    add!(model
+        .content
+        .motions
+        .values()
+        .filter(|v| ids.contains(&v.id)
+            || v.tracks
+                .iter()
+                .any(|t| ids.contains(&t.id) || t.keys().any(|k| ids.contains(&k.id)))
+            || v.events.iter().any(|e| ids.contains(&e.id))));
+    add!(model
+        .content
+        .expressions
+        .values()
+        .filter(|v| ids.contains(&v.id)
+            || v.entries.iter().any(|e| ids.contains(&e.id))
+            || report
+                .removed
+                .iter()
+                .any(|r| r.object.owner_id.as_deref() == Some(&v.id))));
+    if let Some(pose) = model
+        .pose()
+        .filter(|v| v.entity_ids().any(|id| ids.contains(id)))
+    {
+        pose.retained(&mut cost);
+    }
+    if let Some(physics) = model
+        .physics()
+        .filter(|v| v.entity_ids().any(|id| ids.contains(id)))
+    {
+        physics.retained(&mut cost);
+    }
+    // These small ordered roots are reconstructed together by the business patch.
+    model.display_info().retained(&mut cost);
+    model.model3_settings().retained(&mut cost);
+    model.editor_state().retained(&mut cost);
+    model.content.motion_groups.retained(&mut cost);
+    model.content.motion_roots.retained(&mut cost);
+    model.content.package_attachments.retained(&mut cost);
+    cost.shared
+        .values()
+        .fold(cost.owned, |n, b| n.saturating_add(*b))
+}
+
+pub(crate) fn expression_entries_bytes(entries: &Vec<ExpressionEntry>) -> usize {
+    let mut cost = Footprint::default();
+    entries.retained(&mut cost);
+    cost.shared
+        .values()
+        .fold(cost.owned, |n, b| n.saturating_add(*b))
+}

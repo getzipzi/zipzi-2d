@@ -328,3 +328,98 @@ fn publication_failure_preserves_file_but_late_cancel_and_warning_install_saved_
     assert!(!s.is_dirty());
     assert_ne!(fs::read(&path).unwrap(), bytes);
 }
+
+#[path = "parameter_editing.rs"]
+mod parameter_editing;
+
+#[test]
+fn authored_parameter_mesh_and_scene_binding_identities_survive_native_save() {
+    use zipzi_core::{BindingAxis, Parameter, PartKeyform, SceneBinding, SceneTrack};
+    use zipzi_sdk::{MeshBindingAxisSpec, MeshBindingCreateSpec, MeshKeyformSpec};
+    let mut s = session();
+    let mut draft = s.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            c.create_parameter(Parameter {
+                id: id(5),
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                ..Default::default()
+            })?;
+            c.create_mesh_binding_spec(MeshBindingCreateSpec {
+                id: Some(id(6)),
+                mesh_id: id(3),
+                axes: vec![MeshBindingAxisSpec {
+                    parameter_id: id(5),
+                    keys: vec![0., 1.],
+                }],
+                keyforms: [0., 1.]
+                    .into_iter()
+                    .map(|v| MeshKeyformSpec {
+                        keys: vec![v],
+                        positions: vec![Vec2::new(v, 0.), Vec2::new(v + 1., 0.), Vec2::new(v, 1.)],
+                        opacity: None,
+                        multiply: None,
+                        screen: None,
+                        draw_order: None,
+                    })
+                    .collect(),
+            })?;
+            c.create_scene_binding(SceneBinding {
+                id: id(7),
+                axes: vec![BindingAxis {
+                    parameter_id: id(5),
+                    keys: vec![0., 1.],
+                    ..Default::default()
+                }],
+                track: SceneTrack::Part {
+                    target_id: id(2).into(),
+                    keyforms: [0., 1.]
+                        .into_iter()
+                        .map(|v| PartKeyform {
+                            keys: vec![v],
+                            draw_order: v * 100.,
+                            ..Default::default()
+                        })
+                        .collect(),
+                },
+            })
+        })
+        .unwrap();
+    s.publish(draft.prepare("parameter and ordinary bindings").unwrap())
+        .unwrap();
+    let authored = s.snapshot().clone();
+    let root = tempfile::tempdir().unwrap();
+    let io = ProjectIo::new(root.path().join("cache"), ResourceStore::default());
+    let path = root.path().join("bindings.zipzi");
+    s.save_as(&io, &path, None, || true).unwrap();
+    let (loaded, _) = AuthoringSession::open(&io, &path, || true).unwrap();
+    assert_eq!(
+        loaded.snapshot().document().parameter(&id(5)),
+        authored.document().parameter(&id(5))
+    );
+    assert_eq!(
+        loaded.snapshot().document().binding(&id(6)),
+        authored.document().binding(&id(6))
+    );
+    assert_eq!(
+        loaded.snapshot().document().scene_binding(&id(7)),
+        authored.document().scene_binding(&id(7))
+    );
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().binding(&id(6)).is_none());
+    assert!(s.is_dirty());
+    s.redo(s.version()).unwrap();
+    assert!(!s.is_dirty());
+    assert_eq!(
+        s.snapshot().document().binding(&id(6)),
+        authored.document().binding(&id(6))
+    );
+}
+
+#[path = "authoring/expressions.rs"]
+mod expressions;
+
+#[path = "authoring/animation_domains.rs"]
+mod animation_domains;

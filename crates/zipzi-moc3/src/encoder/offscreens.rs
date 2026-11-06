@@ -10,7 +10,7 @@ impl<'a> Moc3EncoderContext<'a> {
     pub(super) fn encode_initial_offscreens(&mut self) -> Result<(), Status> {
         if self.export_version >= 6 {
             for os_id in self.doc.offscreen_order() {
-                let os = self.doc.get_offscreen(os_id).unwrap();
+                let os = self.doc.offscreen(os_id).unwrap();
                 let binding = self.doc.binding_for_scene(&os.part_id);
                 let count = binding.map_or(1, |b| b.track.len());
                 let stored = binding.map_or(1, |b| count.max(1usize << b.axes.len()));
@@ -42,7 +42,7 @@ impl<'a> Moc3EncoderContext<'a> {
     pub(super) fn encode_offscreen_sources(&mut self) -> Result<(), Status> {
         if self.export_version >= 6 {
             for os_id in self.doc.offscreen_order() {
-                let os = self.doc.get_offscreen(os_id).unwrap();
+                let os = self.doc.offscreen(os_id).unwrap();
                 let owner_idx = self.parts.iter().position(|p| p == &os.part_id).unwrap() as i32;
                 self.l.integer("offscreen_src.owner_idx", owner_idx)?;
                 self.l.field("offscreen_src.drawable_flag")?.push(os.flags);

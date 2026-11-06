@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use zipzi_core::state::{DocumentBuilder, DocumentState};
 use zipzi_core::types::{Appearance, BindingAxis, Canvas, Status, Vec2};
-use zipzi_core::Document;
 
 use crate::inspector::{inspect_structure, Moc3InspectionReport};
 use crate::schema::section;
@@ -15,7 +15,7 @@ pub(super) struct Moc3DecoderContext<'a> {
     pub(super) bytes: &'a [u8],
     pub(super) inspection: Moc3InspectionReport,
     pub(super) doc_id: String,
-    pub(super) doc: Document,
+    pub(super) doc: DocumentBuilder,
     pub(super) mapping: ImportIdMapping,
     pub(super) generated_ids: Vec<String>,
     pub(super) warnings: Vec<String>,
@@ -39,7 +39,7 @@ impl<'a> Moc3DecoderContext<'a> {
             + if self.reflected()
                 && self
                     .doc
-                    .get_transform(parent)
+                    .transform(parent)
                     .is_some_and(|t| t.warp().is_some())
             {
                 180.
@@ -53,7 +53,7 @@ impl<'a> Moc3DecoderContext<'a> {
         if parent.is_empty()
             || self
                 .doc
-                .get_transform(parent)
+                .transform(parent)
                 .is_some_and(|t| t.rotation().is_some())
         {
             let unit = if parent.is_empty() {
@@ -80,7 +80,7 @@ impl<'a> Moc3DecoderContext<'a> {
     /// Warp nodes pass inherited Rotation scale through unchanged. Apply PPU
     /// once, to the first Rotation on each branch, including beneath Warps.
     pub(super) fn import_scale_unit<'b>(&'b self, mut parent: &'b str) -> f32 {
-        while let Some(transform) = self.doc.get_transform(parent) {
+        while let Some(transform) = self.doc.transform(parent) {
             if transform.rotation().is_some() {
                 return 1.;
             }
@@ -95,7 +95,6 @@ impl<'a> Moc3DecoderContext<'a> {
         let counts = &inspection.counts;
 
         let doc_id = stable_id("document", "doc", 0, "root");
-        let mut doc = Document::new();
 
         // 1. Canvas
         let ppu = inspection.canvas.pixels_per_unit;
@@ -109,7 +108,7 @@ impl<'a> Moc3DecoderContext<'a> {
             pixels_per_unit: ppu,
             flag: inspection.canvas.flag,
         };
-        check_status!(doc.initialize(doc_id.clone(), canvas));
+        let mut doc = DocumentState::new(doc_id.clone(), canvas.into())?.builder();
 
         let mut generated_ids = Vec::new();
         let warnings = Vec::new();
@@ -118,20 +117,13 @@ impl<'a> Moc3DecoderContext<'a> {
         let mut texture_by_slot = HashMap::new();
         for t in textures {
             texture_by_slot.insert(t.slot, t);
-            check_status!(
-                doc.add_asset(zipzi_core::types::ImageAsset {
-                    unresolved_source: (t.width == 0 || t.height == 0).then(|| t.source.clone()),
-                    id: t.asset_id.clone(),
-                    name: t.name.clone(),
-                    content: (t.width > 0 && t.height > 0).then(|| zipzi_core::ImageContent {
-                        source: t.source.clone(),
-                        width: t.width,
-                        height: t.height,
-                        sha256: t.sha256.clone(),
-                    }),
-                })
-                .status
-            );
+            doc.create_asset(zipzi_core::state::AssetRecord {
+                id: t.asset_id.clone(),
+                name: t.name.clone(),
+                content: zipzi_core::state::AssetContent::Unresolved {
+                    source: t.source.clone(),
+                },
+            })?;
         }
 
         // 3. ID Mappings

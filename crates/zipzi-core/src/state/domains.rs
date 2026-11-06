@@ -813,14 +813,7 @@ record_writes!(
     replace_offscreen,
     remove_offscreen
 );
-record_writes!(
-    expressions,
-    ExpressionAsset,
-    Expression,
-    create_expression,
-    replace_expression,
-    remove_expression
-);
+
 record_writes!(
     motions,
     MotionClip,

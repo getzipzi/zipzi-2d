@@ -5,8 +5,13 @@ use super::{
     Result,
 };
 use std::collections::HashMap;
-use zipzi_core::{types::*, Document};
-pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canvas) -> Result<()> {
+use zipzi_core::{state::DocumentBuilder, types::*};
+pub fn read(
+    g: &Graph<'_>,
+    root: Node<'_>,
+    document: &mut DocumentBuilder,
+    canvas: Canvas,
+) -> Result<()> {
     for set in [
         "drawableSourceSet",
         "deformerSourceSet",
@@ -99,7 +104,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                 let color_delta = |a: [f32; 3], b: [f32; 3]| -> Option<[f32; 3]> {
                     Some(std::array::from_fn(|i| a[i] - b[i]))
                 };
-                let (kind, keyforms) = if let Some(mesh) = document.get_mesh(&target) {
+                let (kind, keyforms) = if let Some(mesh) = document.mesh(&target) {
                     let parent = &mesh.deformer_id;
                     let base_points = base.positions(g, parent, canvas)?;
                     let order = base.number(g, "drawOrder")?.round();
@@ -132,7 +137,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                         })
                         .collect::<Result<Vec<_>>>()?;
                     (BlendShapeTargetKind::Mesh, DeltaKeyforms::Mesh(deltas))
-                } else if let Some(transform) = document.get_transform(&target) {
+                } else if let Some(transform) = document.transform(&target) {
                     let parent = transform.parent();
                     match transform.kind() {
                         TransformKind::Warp => {
@@ -201,7 +206,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                             )
                         }
                     }
-                } else if document.get_part(&target).is_some() {
+                } else if document.part(&target).is_some() {
                     let rest = base.number(g, "drawOrder")?.round();
                     (
                         BlendShapeTargetKind::Part,
@@ -220,7 +225,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
                                 .collect::<Result<_>>()?,
                         ),
                     )
-                } else if document.get_glue(&target).is_some() {
+                } else if document.glue(&target).is_some() {
                     let rest = base.number(g, "intensity")?;
                     (
                         BlendShapeTargetKind::Glue,
@@ -263,7 +268,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document, canvas: Canv
 struct DefaultForm<'a>(Vec<(Node<'a>, f32)>);
 impl<'a> DefaultForm<'a> {
     fn new(
-        document: &Document,
+        document: &DocumentBuilder,
         axes: &[BindingAxis],
         forms: &[(Vec<f32>, Node<'a>)],
     ) -> Result<Self> {
@@ -271,7 +276,7 @@ impl<'a> DefaultForm<'a> {
             .iter()
             .map(|axis| {
                 let p = document
-                    .get_parameter(&axis.parameter_id)
+                    .parameter(&axis.parameter_id)
                     .ok_or_else(|| invalid("Missing grid parameter"))?;
                 let epsilon = 0.1f32.powi(p.decimal_places);
                 Ok(zipzi_core::keyforms::find_key_segment(

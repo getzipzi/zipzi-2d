@@ -1,10 +1,18 @@
 use super::*;
-use crate::model_validation::{AssetIds, Model, ModelContent, RecordView};
+use crate::model_validation::{AssetIds, ImageAvailability, Model, ModelContent, RecordView};
 impl Content {
     pub(super) fn model(&self) -> Model<'_> {
         Model::new(ModelContent {
+            source_canvas: self.setup.source_canvas,
             id: &self.id,
+            image_availability: ImageAvailability::Shared(self.assets.shared_map()),
             assets: AssetIds(self.assets.order()),
+            parameter_order: self.parameters.order_vec(),
+            part_order: self.parts.order_vec(),
+            transform_order: self.transforms.order_vec(),
+            offscreen_order: self.offscreens.order_vec(),
+            blend_binding_order: self.blend_bindings.order_vec(),
+            hierarchy_order: &self.hierarchy_order,
             parameters: RecordView::Shared(self.parameters.shared_map()),
             parts: RecordView::Shared(self.parts.shared_map()),
             transforms: RecordView::Shared(self.transforms.shared_map()),
@@ -22,9 +30,13 @@ impl Content {
             glues: RecordView::Shared(self.glues.shared_map()),
             glue_order: self.glues.order_vec(),
             offscreens: RecordView::Shared(self.offscreens.shared_map()),
+            expression_order: self.expressions.order_vec(),
+            draw_order_groups: &self.draw_order_groups,
             expressions: RecordView::Shared(self.expressions.shared_map()),
+            motion_order: self.motions.order_vec(),
             motions: RecordView::Shared(self.motions.shared_map()),
             display_info: &self.display_info,
+            editor_state: &self.editor_state,
             motion_groups: &self.motion_groups,
             motion_roots: &self.motion_roots,
             pose: &self.pose,
@@ -35,6 +47,7 @@ impl Content {
     }
     pub(super) fn validate(&self) -> Result<(), Status> {
         let model = self.model();
+        model.validate_attachment_records()?;
         let mut ids = std::collections::HashSet::new();
         let mut admit = |id: &str| {
             if !valid_uuid(id) {

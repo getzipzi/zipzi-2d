@@ -47,7 +47,7 @@ fn write_blend_binding(
 impl<'a> Moc3EncoderContext<'a> {
     pub(super) fn encode_constraints(&mut self) -> Result<(), Status> {
         for (c_idx, c_id) in self.doc.blend_constraint_order().iter().enumerate() {
-            let c = self.doc.get_blend_constraint(c_id).unwrap();
+            let c = self.doc.blend_constraint(c_id).unwrap();
             let p_idx = index_of(&self.parameter_indices, &c.parameter_id);
             let val_off = checked(
                 self.l.field("blend_constraint_val_src.key")?.len() / 4,
@@ -84,7 +84,7 @@ impl<'a> Moc3EncoderContext<'a> {
         let mut offscreen_targets: HashMap<&str, Vec<&str>> = HashMap::new();
 
         for bid in self.doc.blend_binding_order() {
-            let b = self.doc.get_blend_binding(bid).unwrap();
+            let b = self.doc.blend_binding(bid).unwrap();
             match b.target_kind {
                 BlendShapeTargetKind::Warp => {
                     warp_targets
@@ -155,7 +155,7 @@ impl<'a> Moc3EncoderContext<'a> {
         for target_id in sorted_warp_targets {
             let target_local = self.warp_local_indices[target_id];
             let binding_ids = &warp_targets[target_id];
-            let warp = self.doc.get_transform(target_id).unwrap();
+            let warp = self.doc.transform(target_id).unwrap();
             let bs_b_off = self.l.counts[26] as i32;
             let bs_b_len = checked(binding_ids.len(), "bs_warp_b_len")?;
             self.l
@@ -165,7 +165,7 @@ impl<'a> Moc3EncoderContext<'a> {
             self.l.counts[27] += 1;
 
             for &bid in binding_ids {
-                let b = self.doc.get_blend_binding(bid).unwrap();
+                let b = self.doc.blend_binding(bid).unwrap();
                 if let DeltaKeyforms::Warp(ref forms) = b.keyforms {
                     let key_bs_off = self.l.counts[7] as i32;
                     let key_bs_len = forms.len() as i32;
@@ -203,7 +203,7 @@ impl<'a> Moc3EncoderContext<'a> {
         for target_id in sorted_mesh_targets {
             let target_idx = index_of(&self.mesh_indices, target_id);
             let binding_ids = &mesh_targets[target_id];
-            let mesh = self.doc.get_mesh(target_id).unwrap();
+            let mesh = self.doc.mesh(target_id).unwrap();
             let bs_b_off = self.l.counts[26] as i32;
             let bs_b_len = checked(binding_ids.len(), "bs_mesh_b_len")?;
             self.l.integer("bs_art_mesh_src.target_idx", target_idx)?;
@@ -212,7 +212,7 @@ impl<'a> Moc3EncoderContext<'a> {
             self.l.counts[28] += 1;
 
             for &bid in binding_ids {
-                let b = self.doc.get_blend_binding(bid).unwrap();
+                let b = self.doc.blend_binding(bid).unwrap();
                 if let DeltaKeyforms::Mesh(ref forms) = b.keyforms {
                     let key_bs_off = self.l.counts[9] as i32;
                     let key_bs_len = forms.len() as i32;
@@ -258,7 +258,7 @@ impl<'a> Moc3EncoderContext<'a> {
             self.l.counts[32] += 1;
 
             for &bid in binding_ids {
-                let b = self.doc.get_blend_binding(bid).unwrap();
+                let b = self.doc.blend_binding(bid).unwrap();
                 if let DeltaKeyforms::Part(ref forms) = b.keyforms {
                     let key_bs_off = self.l.counts[6] as i32;
                     let key_bs_len = forms.len() as i32;
@@ -287,7 +287,7 @@ impl<'a> Moc3EncoderContext<'a> {
             for target_id in sorted_rot_targets {
                 let target_local = self.rotation_local_indices[target_id];
                 let binding_ids = &rot_targets[target_id];
-                let rot = self.doc.get_transform(target_id).unwrap();
+                let rot = self.doc.transform(target_id).unwrap();
                 let bs_b_off = self.l.counts[26] as i32;
                 let bs_b_len = checked(binding_ids.len(), "bs_rot_b_len")?;
                 self.l
@@ -297,7 +297,7 @@ impl<'a> Moc3EncoderContext<'a> {
                 self.l.counts[33] += 1;
 
                 for &bid in binding_ids {
-                    let b = self.doc.get_blend_binding(bid).unwrap();
+                    let b = self.doc.blend_binding(bid).unwrap();
                     if let DeltaKeyforms::Rotation(ref forms) = b.keyforms {
                         let key_bs_off = self.l.counts[8] as i32;
                         let key_bs_len = forms.len() as i32;
@@ -348,7 +348,7 @@ impl<'a> Moc3EncoderContext<'a> {
             self.l.counts[34] += 1;
 
             for &bid in binding_ids {
-                let b = self.doc.get_blend_binding(bid).unwrap();
+                let b = self.doc.blend_binding(bid).unwrap();
                 if let DeltaKeyforms::Glue(ref forms) = b.keyforms {
                     let key_bs_off = self.l.counts[22] as i32;
                     let key_bs_len = forms.len() as i32;
@@ -387,7 +387,7 @@ impl<'a> Moc3EncoderContext<'a> {
                 self.l.counts[37] += 1;
 
                 for &bid in binding_ids {
-                    let b = self.doc.get_blend_binding(bid).unwrap();
+                    let b = self.doc.blend_binding(bid).unwrap();
                     if let DeltaKeyforms::Offscreen(ref forms) = b.keyforms {
                         let key_bs_off = self.l.counts[36] as i32;
                         let key_bs_len = forms.len() as i32;

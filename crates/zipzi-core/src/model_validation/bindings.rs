@@ -98,7 +98,7 @@ impl Model<'_> {
         let mut ordered = vec![MeshKeyform::default(); total];
         let mut occupied = vec![false; total];
         for mut form in b.keyforms.drain(..) {
-            if let Err(s) = crate::document::binding_authoring::identity::coordinates(
+            if let Err(s) = crate::model_validation::binding_coordinates::coordinates(
                 &b.axes,
                 &mut form.keys,
                 &mut form.samples,
@@ -303,7 +303,7 @@ impl Model<'_> {
             }
         }
         let normalize = |keys: &mut Vec<f32>, samples: &mut Vec<String>| {
-            crate::document::binding_authoring::identity::coordinates(&b.axes, keys, samples)
+            crate::model_validation::binding_coordinates::coordinates(&b.axes, keys, samples)
         };
         let status: Result<(), Status> = match &mut b.track {
             SceneTrack::Warp { keyforms, .. } => keyforms

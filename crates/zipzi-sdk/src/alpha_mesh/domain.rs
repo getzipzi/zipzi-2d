@@ -1,5 +1,5 @@
 use super::{error, limit, spatial, AlphaMask, AlphaMeshOptions};
-use crate::SdkError;
+use crate::Status;
 use geo::{unary_union, Area, BooleanOps, Buffer, Coord, MultiPolygon, Polygon, Rect};
 use std::collections::BTreeMap;
 
@@ -19,7 +19,7 @@ fn rectangle(left: u32, bottom: u32, right: u32, top: u32) -> Polygon<f64> {
 
 /// Union pixel *areas*, not centers. Merge identical horizontal runs vertically
 /// before the polygon union so large flat artwork needs very few rectangles.
-fn foreground(mask: AlphaMask<'_>, threshold: u8) -> Result<MultiPolygon<f64>, SdkError> {
+fn foreground(mask: AlphaMask<'_>, threshold: u8) -> Result<MultiPolygon<f64>, Status> {
     let mut active = BTreeMap::new();
     let mut rectangles = Vec::new();
     for row in 0..=mask.height {
@@ -62,7 +62,7 @@ fn foreground(mask: AlphaMask<'_>, threshold: u8) -> Result<MultiPolygon<f64>, S
     Ok(unary_union(&rectangles))
 }
 
-fn offset(source: &MultiPolygon<f64>, distance: f64) -> Result<MultiPolygon<f64>, SdkError> {
+fn offset(source: &MultiPolygon<f64>, distance: f64) -> Result<MultiPolygon<f64>, Status> {
     let mut result = source.buffer(distance);
     // Offsets can produce self-touching rings where pixel islands meet exactly
     // at the requested margin. Normalize those rings before simplification;
@@ -82,7 +82,7 @@ fn offset(source: &MultiPolygon<f64>, distance: f64) -> Result<MultiPolygon<f64>
 pub(super) fn build(
     mask: AlphaMask<'_>,
     options: &AlphaMeshOptions,
-) -> Result<(MultiPolygon<f64>, MultiPolygon<f64>), SdkError> {
+) -> Result<(MultiPolygon<f64>, MultiPolygon<f64>), Status> {
     let source = foreground(mask, options.alpha_threshold)?;
     let envelope = if options.preserve_holes {
         source.clone()

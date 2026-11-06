@@ -300,14 +300,6 @@ pub(super) fn open_content<T: ImageDescriptors>(
 pub(super) trait ImageDescriptors {
     fn images(&self) -> Vec<&zipzi_core::ImageAsset>;
 }
-impl ImageDescriptors for Document {
-    fn images(&self) -> Vec<&zipzi_core::ImageAsset> {
-        self.asset_order()
-            .iter()
-            .map(|id| self.get_asset(id).unwrap())
-            .collect()
-    }
-}
 impl ImageDescriptors for crate::codec::DecodedState {
     fn images(&self) -> Vec<&zipzi_core::ImageAsset> {
         self.images.iter().collect()
@@ -322,34 +314,4 @@ pub(super) struct OpenedContent<T> {
     pub peak_working_bytes: u64,
     pub diagnostics: Vec<crate::ResourceDiagnostic>,
     pub working_set: ProjectResourceLease,
-}
-pub(super) fn open(
-    path: &Path,
-    workspace_parent: &Path,
-    limits: ArchiveIoLimits,
-    disk_budget: ProjectDiskBudget,
-    allow_prototype: bool,
-    memory: Option<&crate::TransferReservation>,
-    keep_going: impl FnMut() -> bool,
-) -> Result<OpenedArchive> {
-    let opened = open_content(
-        path,
-        workspace_parent,
-        limits,
-        disk_budget,
-        allow_prototype,
-        memory,
-        crate::codec::decode_archive_project,
-        keep_going,
-    )?;
-    Ok(OpenedArchive {
-        document: opened.document,
-        fingerprint: opened.fingerprint,
-        counts: opened.counts,
-        unique_assets: opened.unique_assets,
-        asset_bytes: opened.asset_bytes,
-        peak_working_bytes: opened.peak_working_bytes,
-        diagnostics: opened.diagnostics,
-        working_set: opened.working_set,
-    })
 }

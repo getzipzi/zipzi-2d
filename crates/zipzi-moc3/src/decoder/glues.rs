@@ -74,8 +74,8 @@ impl<'a> Moc3DecoderContext<'a> {
 
             let mesh_a_id = self.mapping.mesh_by_index[mesh_idx_a as usize].clone();
             let mesh_b_id = self.mapping.mesh_by_index[mesh_idx_b as usize].clone();
-            let mesh_a = self.doc.get_mesh(&mesh_a_id).unwrap();
-            let mesh_b = self.doc.get_mesh(&mesh_b_id).unwrap();
+            let mesh_a = self.doc.mesh(&mesh_a_id).unwrap();
+            let mesh_b = self.doc.mesh(&mesh_b_id).unwrap();
 
             let intensity = if key_len > 0 && offsets[section::GLUE_KEY_SRC_INTENSITY] > 0 {
                 if keyform_off < 0 || keyform_off as usize >= counts.glue_keyforms as usize {
@@ -178,7 +178,7 @@ impl<'a> Moc3DecoderContext<'a> {
                     Some(zipzi_core::types::GlueBinding { axes, keyforms })
                 },
             };
-            check_status!(self.doc.create_glue(glue).status);
+            check_status!(self.doc.create_glue(glue));
             self.mapping.glue_by_index.push(id);
         }
 

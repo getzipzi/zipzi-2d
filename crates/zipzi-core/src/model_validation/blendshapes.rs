@@ -1,5 +1,14 @@
 use super::*;
 impl Model<'_> {
+    pub fn blend_binding_active(&self, b: &BlendShapeBinding) -> bool {
+        self.get_blend_key_table(&b.key_table_id)
+            .is_some_and(|t| !t.parameter_id.is_empty() && !t.keys.is_empty())
+            && b.constraint_ids.iter().all(|id| {
+                self.get_blend_constraint(id)
+                    .is_some_and(|c| !c.parameter_id.is_empty() && !c.keys.is_empty())
+            })
+    }
+
     pub(crate) fn validate_blend_key_table(&self, table: &BlendShapeKeyTable) -> Status {
         if !valid_uuid(&table.id) {
             return Status::error("INVALID_ID", &table.id);

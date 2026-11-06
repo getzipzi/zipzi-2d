@@ -9,18 +9,26 @@ pub struct ProjectMetadata {
     pub fingerprint: ProjectFingerprint,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LoadedProject {
     pub document: DocumentState,
     pub resources: ResourceView,
     pub metadata: ProjectMetadata,
     pub diagnostics: Vec<crate::ResourceDiagnostic>,
+    pub stats: ProjectLoadStats,
 }
 
+#[derive(Debug, Clone)]
+pub struct ProjectLoadStats {
+    pub counts: IoCounts,
+    pub unique_assets: usize,
+    pub asset_bytes: u64,
+    pub peak_working_bytes: u64,
+}
 /// Reusable I/O policy. All model and resource inputs/results are owned values.
 #[derive(Clone)]
 pub struct ProjectIo {
-    archive: ProjectArchiveStore,
+    pub(super) archive: ProjectArchiveStore,
     resources: ResourceStore,
 }
 impl ProjectIo {
@@ -112,6 +120,12 @@ impl ProjectIo {
                 path,
                 fingerprint: loaded.fingerprint,
             },
+            stats: ProjectLoadStats {
+                counts: loaded.counts,
+                unique_assets: loaded.unique_assets,
+                asset_bytes: loaded.asset_bytes,
+                peak_working_bytes: loaded.peak_working_bytes,
+            },
             diagnostics: loaded.diagnostics,
         })
     }
@@ -125,11 +139,33 @@ impl ProjectIo {
         mut keep_going: impl FnMut() -> bool,
     ) -> Result<ArchiveSaveReceipt<()>> {
         check(&mut keep_going)?;
+        self.archive.prepare_workspace()?;
         let target = self.normalize_path(target)?;
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)?;
+        }
         check_archive_target(&target, expected, &mut keep_going)?;
         let prepared =
             writer::prepare_state(state, resources, self.archive.limits, &mut keep_going)?;
         self.archive
             .publish_prepared(prepared, &target, expected, keep_going)
+    }
+}
+
+impl ProjectIo {
+    pub fn set_save_preview(&mut self, preview: Option<ProjectPreview>) -> Option<ProjectPreview> {
+        self.archive.set_save_preview(preview)
+    }
+    pub fn set_save_progress(
+        &mut self,
+        progress: Option<ProjectSaveProgress>,
+    ) -> Option<ProjectSaveProgress> {
+        self.archive.set_save_progress(progress)
+    }
+    pub fn set_open_memory(
+        &mut self,
+        memory: Option<Arc<crate::TransferReservation>>,
+    ) -> Option<Arc<crate::TransferReservation>> {
+        self.archive.set_open_memory(memory)
     }
 }

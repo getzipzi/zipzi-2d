@@ -1,5 +1,5 @@
 pub mod archive;
-pub use archive::{LoadedProject, ProjectIo, ProjectMetadata};
+pub use archive::{LoadedProject, ProjectIo, ProjectLoadStats, ProjectMetadata};
 mod atlas;
 mod export_preflight;
 pub use export_preflight::*;
@@ -27,9 +27,6 @@ pub mod transfer;
 
 pub use cdi::{export_cdi3, import_cdi3, CdiImport, CdiProjectDiagnostic, CdiProjectError};
 pub use cmo3::{encode_document_cmo3, encode_project_cmo3, publish_cmo3};
-pub use codec::{decode_project, encode_project};
-#[cfg(feature = "binary-prototype")]
-pub use codec::{decode_project_cbor, encode_project_cbor};
 pub use cubism::{encode_document_cubism, encode_project_cubism, publish_can3, publish_cubism};
 pub use expression::{
     export_available_expression3, export_expression3, import_expression3, ExpressionDiagnostic,
@@ -57,8 +54,8 @@ pub use resources::{content_sha256, decode_png, is_valid_asset_path, AssetData, 
 pub use store::{
     prepare_image_content, prepare_image_content_with_budget, prepare_png_content,
     prepare_project_image, project_identity, read_project_asset, read_project_texture_bounded,
-    DocumentSession, DocumentSnapshot, DocumentStore, ImageResourceStore, PreparedImageContent,
-    PreparedProjectSave, ProjectResult, ResourceDiagnostic, VerifiedTexture,
+    ImportedProject, PreparedImageContent, ProjectImporter, ProjectResult, ResourceDiagnostic,
+    VerifiedTexture,
 };
 pub use transfer::{
     resolve_model3_entry, TransferFormat, TransferPublishOptions, TransferSnapshot,

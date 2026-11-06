@@ -58,17 +58,16 @@ the implementation crates. The dependency/freshness checks live in
 `tools/tests/test_python_codegen.py`.
 
 The [authoring kernel rewrite](docs/plans/authoring-architecture.md) has completed
-its preparatory foundation: Contract `kernel` owns identity/source
-values, Core `state` owns frozen model roots and typed builders, and Project
-`resource_store` owns resource preparation and immutable views. All persistent
-domains have explicit shared storage, owned construction inputs, validation and
-net-write cost summaries. Core's read-only `model_validation` rules are shared
-with the remaining Document callers. SDK's crate root now exports direct Snapshot
-ownership, isolated Drafts, source-checked publication, soft history and saved
-markers. ProjectIo loads owned state/resources and saves immutable projections.
-Old SDK domain sources/tests and host/client consumers remain to be migrated;
-Observe/Runtime/Editor currently do not compile against the removed APIs. The
-current SDK fast gate covers the new native workflow, not all former domain tests.
+its foundation and domain migration. Contract kernel owns identity/source values;
+Core state owns frozen roots, Builders, domain edits and read-only model rules.
+SDK owns snapshots, isolated Drafts, source-checked publication, soft history and
+saved markers. Project owns immutable resources and value-only native/format I/O.
+Core's mutable Document, checkpoint/transaction/planner machinery, SDK whole-model
+diff inference and Project live-document owners have been removed. Animation and
+format libraries consume frozen state. Observe/Runtime/Editor and Python consumers
+remain stage-four work and do not currently compile against the removed APIs.
+Remaining legacy tests/examples await migration or final cleanup; focused gates
+and their coverage are listed in the plan and affected crate READMEs.
 
 `zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU

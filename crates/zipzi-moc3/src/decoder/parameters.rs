@@ -117,29 +117,25 @@ impl<'a> Moc3DecoderContext<'a> {
                 }
             }
 
-            check_status!(
-                self.doc
-                    .create_parameter(Parameter {
-                        id,
-                        runtime_id: if runtime_id.is_empty() {
-                            format!("Param{p}")
-                        } else {
-                            runtime_id.clone()
-                        },
-                        name: if runtime_id.is_empty() {
-                            format!("Param{p}")
-                        } else {
-                            runtime_id
-                        },
-                        minimum: min,
-                        maximum: max,
-                        default_value: default_val,
-                        decimal_places: dec_places,
-                        kind,
-                        repeat,
-                    })
-                    .status
-            );
+            check_status!(self.doc.create_parameter(Parameter {
+                id,
+                runtime_id: if runtime_id.is_empty() {
+                    format!("Param{p}")
+                } else {
+                    runtime_id.clone()
+                },
+                name: if runtime_id.is_empty() {
+                    format!("Param{p}")
+                } else {
+                    runtime_id
+                },
+                minimum: min,
+                maximum: max,
+                default_value: default_val,
+                decimal_places: dec_places,
+                kind,
+                repeat,
+            }));
         }
         Ok(())
     }

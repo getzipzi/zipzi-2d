@@ -1,4 +1,5 @@
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use zipzi_core::SceneTrackEvaluation;
 
 use super::evaluator::EvalContext;
@@ -6,7 +7,11 @@ use super::prepared::PreparedEvaluation;
 use super::transforms::f32_to_i32;
 use crate::types::DeltaKeyforms;
 
-pub(super) fn evaluate(doc: &Document, prepared: &PreparedEvaluation, state: &mut EvalContext<'_>) {
+pub(super) fn evaluate(
+    doc: &impl EvaluationModel,
+    prepared: &PreparedEvaluation,
+    state: &mut EvalContext<'_>,
+) {
     state.enabled_parts.resize(prepared.parts.len(), false);
     state.part_orders.resize(prepared.parts.len(), 0);
     for (slot, id) in prepared.parts.iter().enumerate() {

@@ -1,9 +1,9 @@
 use crate::Cmo3Error;
-use zipzi_core::{types::Canvas, Document, DrawableFrame};
+use zipzi_core::{state::DocumentState, types::Canvas, DrawableFrame};
 
 /// Use the same evaluated default-pose bounds as MOC3, including hidden meshes
 /// and the full deformer hierarchy. This never mutates the authored canvas.
-pub(crate) fn for_document(doc: &Document) -> Result<Canvas, Cmo3Error> {
+pub(crate) fn for_document(doc: &DocumentState) -> Result<Canvas, Cmo3Error> {
     let mut frame = DrawableFrame::default();
 
     let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
@@ -16,7 +16,7 @@ pub(crate) fn for_document(doc: &Document) -> Result<Canvas, Cmo3Error> {
     }
 
     zipzi_core::geometry::finite_export_canvas(
-        doc.export_settings(),
+        doc.setup().export,
         frame
             .drawables
             .iter()

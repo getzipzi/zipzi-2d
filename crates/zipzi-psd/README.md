@@ -1,11 +1,11 @@
 # zipzi-psd
 
-Imports a layered 8-bit RGB PSD into an in-memory Zipzi `Document` and PNG
+Imports a layered 8-bit RGB PSD into an in-memory Zipzi `DocumentState` and PNG
 assets. The importer does not write files or replace an active session.
 
 ```rust
 let bundle = zipzi_psd::import_psd(&std::fs::read("art.psd")?)?;
-// Write bundle.assets[i].bytes to bundle.assets[i].source relative to the project root.
+// Capture bundle.assets PNG bytes into a ResourceStore before publishing.
 let document = bundle.document;
 ```
 
@@ -27,11 +27,10 @@ layers with raster pixels import as images with warnings; empty layers are
 rejected. PSD/PSB features outside 8-bit RGB PSD version 1 are unsupported.
 Input is limited to 512 MiB; decoded pixels above 512 MiB produce a warning.
 
-`DocumentSession::import_psd_authoring` publishes a new project and its assets;
-SDK and Python expose `import_psd(source, destination)`. The destination must be
-new, and a failed import leaves the active project untouched. For unsaved Rust
-editing, use `AuthoringSession::import_psd_in_memory` and `read_asset`; image
-assets stay in memory until the project is saved.
+`zipzi_project::ProjectImporter::import_psd` captures the PNGs into owned
+ResourceView values and returns an ImportedProject plus the import report.
+The caller can create an SDK Snapshot from its document/resources and publish it
+through AuthoringSession. Import failure performs no active-session mutation.
 
 ```sh
 cargo test --locked -p zipzi-psd

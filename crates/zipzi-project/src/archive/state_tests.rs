@@ -48,14 +48,14 @@ fn existing_native_archives_keep_format_and_resource_validation() {
     io.save(&loaded.document, &loaded.resources, &output, None, || true)
         .unwrap();
     assert_eq!(json(&input), json(&output));
-    // An old file-format consumer can read the new projection unchanged.
-    let old = ProjectArchiveStore::new(root.path().join("old-cache"))
-        .open(&output, || true)
+    // A fresh value-only reader can read the saved projection unchanged.
+    let old = ProjectIo::new(root.path().join("other-cache"), ResourceStore::default())
+        .load(&output, || true)
         .unwrap();
-    assert_eq!(old.document.asset_order(), original.asset_order());
+    assert_eq!(old.document.asset_order(), original.document.asset_order());
     assert_eq!(
         old.document.package_attachments(),
-        original.package_attachments()
+        original.document.package_attachments()
     );
 }
 

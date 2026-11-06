@@ -1,22 +1,17 @@
 use super::*;
-use zipzi_core::document::PhysicsTargetProjection;
+use zipzi_core::evaluation::EvaluationModel;
+use zipzi_core::state::PhysicsTargetProjection;
 use zipzi_core::SceneTrackEvaluation;
 
-pub(crate) fn inspect(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
+pub(crate) fn inspect(doc: &DocumentState) -> Result<Cmo3Report, Cmo3Error> {
     inspect_with_animation(doc, false)
 }
 
 pub(crate) fn inspect_with_animation(
-    doc: &Document,
+    doc: &DocumentState,
     animation: bool,
 ) -> Result<Cmo3Report, Cmo3Error> {
-    if let Some(issue) = doc.validate_structure().first() {
-        return Err(Cmo3Error::InvalidDocument(format!(
-            "{}: {}: {}",
-            issue.object_id, issue.status.code, issue.status.message
-        )));
-    }
-    if doc.get_transform(ROOT_DEFORMER).is_some()
+    if doc.transform(ROOT_DEFORMER).is_some()
         || doc
             .display_info()
             .parameter_groups
@@ -54,11 +49,11 @@ pub(crate) fn inspect_with_animation(
         );
     }
     for id in doc.blend_binding_order() {
-        let binding = doc.get_blend_binding(id).unwrap();
+        let binding = doc.blend_binding(id).unwrap();
         if !doc.blend_binding_active(binding) {
             continue;
         }
-        let table = doc.get_blend_key_table(&binding.key_table_id).unwrap();
+        let table = doc.blend_key_table(&binding.key_table_id).unwrap();
         if table.keys[table.base_key_idx] != 0. {
             loss(
                 id,
@@ -90,7 +85,7 @@ pub(crate) fn inspect_with_animation(
         }
     }
 
-    if let Some(asset) = doc.physics() {
+    if let Some(asset) = doc.physics().as_deref() {
         use zipzi_core::physics::PhysicsAxis;
         if asset.data.settings.iter().any(|rig| {
             rig.inputs.iter().any(|v| v.kind == PhysicsAxis::Y)
@@ -155,7 +150,7 @@ pub(crate) fn inspect_with_animation(
         }
     }
     for id in doc.mesh_order() {
-        let mesh = doc.get_mesh(id).unwrap();
+        let mesh = doc.mesh(id).unwrap();
         if mesh
             .raw_blend_mode
             .is_some_and(|mode| mode >> 16 != 0 || mode & 255 > 17 || (mode >> 8) & 255 > 4)
@@ -185,7 +180,7 @@ pub(crate) fn inspect_with_animation(
         }
     }
     for id in doc.part_order() {
-        let p = doc.get_part(id).unwrap();
+        let p = doc.part(id).unwrap();
         if p.draw_order.fract() != 0.0
             || doc
                 .binding_for_scene(id)
@@ -233,7 +228,7 @@ pub(crate) fn inspect_with_animation(
         && (!doc.motion_order().is_empty()
             || !doc.expression_order().is_empty()
             || !doc.motion_groups().is_empty()))
-        || doc.pose().is_some()
+        || doc.pose().as_deref().is_some()
         || !doc.package_attachments().is_empty()
     {
         loss(
@@ -284,13 +279,13 @@ pub(crate) fn inspect_with_animation(
         let owners: BTreeSet<_> = groups.iter().map(|g| g.owner.as_str()).collect();
         for group in groups {
             for id in &group.items {
-                let mut parent = if let Some(mesh) = doc.get_mesh(id) {
+                let mut parent = if let Some(mesh) = doc.mesh(id) {
                     mesh.part_id.as_str()
                 } else {
-                    doc.get_part(id).unwrap().parent_id.as_str()
+                    doc.part(id).unwrap().parent_id.as_str()
                 };
                 while !parent.is_empty() && !owners.contains(parent) {
-                    parent = &doc.get_part(parent).unwrap().parent_id;
+                    parent = &doc.part(parent).unwrap().parent_id;
                 }
                 if parent != group.owner {
                     loss(
@@ -327,7 +322,7 @@ pub(crate) fn inspect_with_animation(
         ));
     }
     for id in doc.offscreen_order() {
-        let os = doc.get_offscreen(id).unwrap();
+        let os = doc.offscreen(id).unwrap();
         if os.blend_mode >> 16 != 0 || os.blend_mode & 255 > 17 || (os.blend_mode >> 8) & 255 > 4 {
             return Err(Cmo3Error::InvalidDocument(format!(
                 "Unsupported packed blend mode on {id}"

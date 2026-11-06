@@ -159,7 +159,7 @@ impl Animation<'_> {
         for track in &scene.tracks {
             match &track.target {
                 MotionTrackTarget::Parameter { parameter_id } => {
-                    let parameter = self.doc.get_parameter(parameter_id).unwrap();
+                    let parameter = self.doc.parameter(parameter_id).unwrap();
                     let id = format!("{PARAM}{}", parameter.runtime_id);
                     let mut attr = Attribute::new(&id, &parameter.name);
                     attr.guid = N::new("CParameterGuid")
@@ -169,7 +169,7 @@ impl Animation<'_> {
                     attr.options.push(
                         s(format!("live2dParam:{}", parameter.runtime_id)).named("KEY_PARAM_ID"),
                     );
-                    if let Some(expression) = self.doc.get_expression(&scene.guid) {
+                    if let Some(expression) = self.doc.expression(&scene.guid) {
                         if let Some(entry) = expression.entries.iter().find(|entry| {
                             matches!(&entry.target, ExpressionTarget::Resolved { parameter_id: id } if id == parameter_id)
                         }) {
@@ -192,7 +192,7 @@ impl Animation<'_> {
                     param_attrs.push((id, r));
                 }
                 MotionTrackTarget::PartOpacity { part_id } => {
-                    let part = self.doc.get_part(part_id).unwrap();
+                    let part = self.doc.part(part_id).unwrap();
                     let mut attr = Attribute::new(format!("{PART}{}", part.runtime_id), &part.name);
                     attr.guid = N::new("CPartGuid")
                         .attr("uuid", part_id)

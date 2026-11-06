@@ -2,7 +2,7 @@
 
 Project persistence, asset management, and import and publication of model and animation resources.
 
-The new `resource_store` module prepares immutable image versions independently
+The `resource_store` module prepares immutable image versions independently
 of any document/session. `ResourceView` retains those versions and checks the new
 Core `DocumentState` image references before snapshot pairing. Files are captured
 into owned, budgeted image content; retaining an external path is insufficient.
@@ -14,10 +14,20 @@ transaction or history. Resource keys are projected to archive paths without
 rewriting model content. Missing images become explicit unresolved asset records
 and retain their source description when saved again.
 
-The existing DocumentSession-based import/export code described below remains a
-stage-three migration input; it no longer owns formal SDK authoring state.
-Focused checks: `cargo test --locked -p zipzi-project --lib archive::state_tests`
-and `cargo test --locked -p zipzi-project --tests`.
+`ProjectImporter` returns `ImportedProject` values containing frozen state,
+owned resources and protected input paths. Model3/MOC3, CMO3/CAN3, PSD and
+sidecar adapters use Builder and frozen projections. Project no longer contains
+DocumentSession or DocumentStore; the caller decides when to publish an import.
+
+Focused checks:
+
+```sh
+cargo test --locked -p zipzi-project --lib
+cargo test --locked -p zipzi-project --test authoring_formats
+```
+
+Legacy session integration targets/examples remain migration inputs; they are
+not part of the passing gate above.
 
 ## Filesystem guarantees
 
@@ -37,7 +47,7 @@ case-alias, lock and replacement tests always execute.
 
 ## Native project container
 
-`archive::ProjectArchiveStore` reads and atomically publishes native ZIP files:
+`ProjectIo` reads and atomically publishes native ZIP files:
 container version 1, document identifier `zipzi-project`, document version 22.
 An optional `preview.png` and `format.json.preview` descriptor carry a static
 RGBA8 image (maximum 1024 × 1024) and SHA-256. This does not change the container
@@ -50,43 +60,27 @@ data descriptors and non-overlapping regions. Unsupported entries and required
 features fail explicitly. Missing or corrupt images produce repair diagnostics;
 they cannot silently become missing content during save.
 
-The host supplies a private working-set parent and can share a
-`ProjectDiskBudget` across stores. `ProjectResourceLease` retains immutable
-resources until its last holder drops. Recognized abandoned working sets and
-staging files can be reclaimed using owner metadata and locks. Staging is bounded,
-streamed, finalized, synchronized and revalidated before publication. Replacement
-requires a captured full-file fingerprint. A successful publish followed by a
-directory-sync failure returns a published receipt with a durability warning.
+The host supplies a private working directory and can share disk and image
+memory budgets. ResourceView keeps captured immutable image versions alive
+independently of the importer or Session. Staging is bounded, streamed, finalized,
+synchronized and revalidated before publication. Replacement requires a captured
+full-file fingerprint. Publication followed by directory-sync failure returns a
+published receipt with a durability warning.
 
-The first resource allocation or open through a store reclaims abandoned working
-sets on the I/O worker; Runtime store clones share that maintenance pass. Native
-saves reclaim abandoned staging files in the selected destination directory before
-creating a new stage. Cleanup skips live owners and unrecognized files; failures
-are logged without changing publication or durability results.
+I/O reclaims abandoned working sets and destination staging files using owner
+metadata and locks. Cleanup skips live owners and unrecognized files; failures
+are logged without changing publication results. Readers admit ZIP indexes,
+expanded JSON/codec workspace and PNG decode against the supplied memory budget.
+ProjectSaveProgress reports preparation, actual uncompressed payload bytes,
+finalization and publication independently of cancellation results.
 
-Session readers admit ZIP indexes, expanded JSON/codec workspace and one PNG
-decode against the shared host memory budget. Runtime retains the growing
-reservation through completion; compressed archive length is not a decode-memory
-estimate. `ProjectSaveProgress` reports preparation, actual uncompressed payload
-bytes, finalization and publication independently of cancellation results.
-
-Session and SDK entrypoints use this single-file backend. `project_path()` names
-the archive; `asset_root()` names the private resource set. Save As retains that
-set and history bindings. Snapshots, candidates and observation inputs retain
-resource leases independently of their originating Session. The optional
-`archive-prototype` example retains the explicitly marked v21 experiment solely
-for reproducing the P0 measurements, which production readers reject.
-
-```sh
-cargo test --locked -p zipzi-project --lib archive::
-cargo test --locked -p zipzi-project --test project_tests
-cargo run --locked --release -p zipzi-project --features archive-prototype \
-  --example project_archive_prototype -- fixtures target/archive-p0/fixtures
-```
+Native load/save does not relocate historical resources or rewrite model paths.
+The previous experimental archive prototype and its examples await final source
+cleanup; they are not production entrypoints.
 
 ## Import artwork
 
-`DocumentSession` imports of model3/MOC3 and CMO3/CAN3 normalize packed texture
+`ProjectImporter` imports of model3/MOC3 and CMO3/CAN3 normalize packed texture
 pages into independent image assets for each Mesh. Runtime texture slots are
 treated as atlas pages; editable Cubism imports identify active atlas inputs and
 shared pages, keeping independent original artwork intact.
@@ -97,17 +91,17 @@ crop. Integer cropping and UV rebasing preserve sampling for rotated or sheared
 regions without baking or changing positions, vertex IDs, faces, masks or keyforms.
 Missing/corrupt runtime pages retain their existing resource diagnostics.
 
-Extracted images are bounded, in-memory drafts until saved or exported. Import
-failure preserves the previous session. Runtime package and grouped transfer
+Extracted images are bounded, owned resource values until saved or exported.
+Import performs no Session mutation. Runtime package and grouped transfer
 outputs retain overwrite protection for the original input paths. Low-level
 format decoders retain source UVs and pages for inspection.
 Opening an existing Zipzi project does not repeat import normalization. Extraction
 recovers the pixels available to the imported mesh, not missing original PSD art.
 
-Session exports and Runtime exports of every format validate their destination
-before encoding. They protect the original archive, tracked import sources and
-disk images, including immutable working-set images retained only by history.
-Path aliases are resolved through the same filesystem rules as publication.
+TransferSnapshot and export plans capture frozen state and ResourceView.
+Transfer publication protects supplied project/import source paths; path aliases
+use the same filesystem rules as publication. SDK/Runtime task wiring belongs to
+the host migration stage.
 
 Native projects use ordinary `.zipzi` ZIP files. Directory projects and bare JSON
 are not user entrypoints. Bare JSON and experimental CBOR remain codec and

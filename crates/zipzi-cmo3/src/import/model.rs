@@ -3,16 +3,12 @@ use super::{
     invalid, ImportedModel, Result,
 };
 use std::collections::HashMap;
-use zipzi_core::{types::*, Document};
-pub(super) fn edit(result: EditResult) -> Result<()> {
-    status(result.status)
-}
-fn status(s: Status) -> Result<()> {
-    if s.is_ok() {
-        Ok(())
-    } else {
-        Err(invalid(format!("{}: {}", s.code, s.message)))
-    }
+use zipzi_core::{
+    state::{DocumentBuilder, DocumentState},
+    types::*,
+};
+pub(super) fn edit(result: std::result::Result<(), Status>) -> Result<()> {
+    result.map_err(|s| invalid(format!("{}: {}", s.code, s.message)))
 }
 pub(super) fn id() -> String {
     uuid::Uuid::new_v4().to_string()
@@ -36,8 +32,7 @@ pub(super) fn read(
         Vec2::new(g.number(origin, "x")?, g.number(origin, "y")?),
         g.number(info, "pixelsPerUnit")?,
     );
-    let mut document = Document::new();
-    status(document.initialize(
+    let mut document = DocumentState::new(
         &g.guid(root, "guid")?,
         ModelSetup {
             source_canvas: Some(canvas),
@@ -52,7 +47,9 @@ pub(super) fn read(
                 ..Default::default()
             },
         },
-    ))?;
+    )
+    .map_err(|s| invalid(s.message))?
+    .builder();
     if g.field(root, "name")?.is_some() {
         let mut settings = document.model3_settings().clone();
         settings
@@ -102,7 +99,7 @@ pub(super) fn read(
         let mut remaining = Vec::new();
         for n in pending {
             let parent = part_parent(n)?;
-            if !parent.is_empty() && document.get_part(&parent).is_none() {
+            if !parent.is_empty() && document.part(&parent).is_none() {
                 remaining.push(n);
                 continue;
             }
@@ -147,7 +144,7 @@ pub(super) fn read(
         let mut remaining = Vec::new();
         for n in pending {
             let parent = parent_transform(n)?;
-            if !parent.is_empty() && document.get_transform(&parent).is_none() {
+            if !parent.is_empty() && document.transform(&parent).is_none() {
                 remaining.push(n);
                 continue;
             }
@@ -207,7 +204,7 @@ pub(super) fn read(
                 }
                 tag => return Err(invalid(format!("Unsupported deformer {tag}"))),
             };
-            edit(document.create_imported_transform(Transform {
+            edit(document.create_transform(Transform {
                 rotation_scale_unit: None,
                 warp_authoring: None,
                 original_shape: None,
@@ -307,18 +304,14 @@ pub(super) fn read(
             if decoded_bytes > texture_budget as u64 {
                 return Err(invalid("Cubism textures exceed the decoded memory budget"));
             }
-            let decoded = zipzi_core::image::decode_png(&bytes).map_err(|s| invalid(s.message))?;
+            zipzi_core::image::decode_png(&bytes).map_err(|s| invalid(s.message))?;
             let source = format!("assets/.memory-cubism/{texture_id}.png");
-            edit(document.add_asset(ImageAsset {
-                unresolved_source: None,
+            edit(document.create_asset(zipzi_core::state::AssetRecord {
                 id: texture_id.clone(),
                 name: path.into(),
-                content: Some(zipzi_core::ImageContent {
+                content: zipzi_core::state::AssetContent::Unresolved {
                     source: source.clone(),
-                    width: decoded.width,
-                    height: decoded.height,
-                    sha256: String::new(),
-                }),
+                },
             }))?;
             images.insert(source, bytes);
             texture_ids.insert(path.to_string(), texture_id.clone());
@@ -481,7 +474,7 @@ pub(super) fn read(
         }
     }
     for (id, masks) in deferred_masks {
-        let mut mesh = document.get_mesh(&id).unwrap().clone();
+        let mut mesh = document.mesh(&id).unwrap().clone();
         mesh.masks = masks;
         edit(document.replace_mesh(mesh))?;
     }
@@ -545,14 +538,8 @@ pub(super) fn read(
     super::morph::read(g, root, &mut document, canvas)?;
     super::metadata::read(g, root, &mut document)?;
     edit(document.initialize_rotation_bone_reference_scales())?;
-    if let Some(issue) = document.validate_structure().first() {
-        return Err(invalid(format!(
-            "{}: {}",
-            issue.object_id, issue.status.message
-        )));
-    }
     Ok(ImportedModel {
-        document,
+        document: document.freeze().map_err(|s| invalid(s.message))?.state,
         images,
         atlas_assets,
     })
@@ -681,7 +668,7 @@ pub(super) fn grid<'a>(g: &Graph<'a>, source: Node<'a>) -> Result<(Vec<BindingAx
     Ok((axes, forms))
 }
 pub(super) fn default_form<'a>(
-    document: &Document,
+    document: &DocumentBuilder,
     axes: &[BindingAxis],
     forms: &Forms<'a>,
 ) -> Result<(Vec<f32>, Node<'a>)> {
@@ -689,7 +676,7 @@ pub(super) fn default_form<'a>(
         .iter()
         .map(|a| {
             document
-                .get_parameter(&a.parameter_id)
+                .parameter(&a.parameter_id)
                 .map(|p| p.default_value)
                 .ok_or_else(|| invalid("Missing grid parameter"))
         })

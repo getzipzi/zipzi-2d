@@ -1,16 +1,13 @@
 use std::collections::HashMap;
 
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::Status;
-use zipzi_core::Document;
 
 use crate::inspector::{CanvasInfo, Moc3InspectionReport, ModelCounts};
 
 macro_rules! check_status {
     ($expr:expr) => {
-        let s = $expr;
-        if !s.is_ok() {
-            return Err(s);
-        }
+        $expr?
     };
 }
 
@@ -58,7 +55,7 @@ pub struct ImportReport {
 
 #[derive(Debug, Clone)]
 pub struct DecodedMoc3 {
-    pub document: Document,
+    pub document: DocumentState,
     pub report: ImportReport,
 }
 
@@ -87,13 +84,13 @@ pub fn decode_moc3(
     let mesh_bindings = ctx.decode_art_meshes()?;
 
     for b in part_scene_bindings {
-        check_status!(ctx.doc.create_scene_binding(b).status);
+        check_status!(ctx.doc.create_scene_binding(b));
     }
     for b in deformer_scene_bindings {
-        check_status!(ctx.doc.create_scene_binding(b).status);
+        check_status!(ctx.doc.create_scene_binding(b));
     }
     for b in mesh_bindings {
-        check_status!(ctx.doc.create_binding(b).status);
+        check_status!(ctx.doc.create_binding(b));
     }
 
     ctx.decode_glues()?;
@@ -102,14 +99,14 @@ pub fn decode_moc3(
     ctx.decode_offscreens()?;
     ctx.decode_blend_bindings(&warp_by_local_idx, &rotation_by_local_idx)?;
     ctx.decode_drawing_groups()?;
-    check_status!(ctx.doc.initialize_rotation_bone_reference_scales().status);
+    check_status!(ctx.doc.initialize_rotation_bone_reference_scales());
 
     let ver = ctx.inspection.version_number;
     let counts = ctx.inspection.counts.clone();
     let canvas = ctx.inspection.canvas.clone();
 
     Ok(DecodedMoc3 {
-        document: ctx.doc,
+        document: ctx.doc.freeze()?.state,
         report: ImportReport {
             moc_version: ver,
             canvas,

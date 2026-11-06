@@ -11,11 +11,12 @@ use std::{
 };
 use zipzi_core::{
     document::{MotionClip, MotionTrack, MotionTrackTarget},
-    Document, DrawableFrame, FrameEvaluator, PreviewValues,
+    state::DocumentState,
+    DrawableFrame, FrameEvaluator, PreviewValues,
 };
 
 pub struct MotionEditingPreview {
-    document: Arc<Document>,
+    document: Arc<DocumentState>,
     curves: BTreeMap<String, (MotionTrack, CompiledCurve)>,
     #[cfg(test)]
     curve_compilations: usize,
@@ -28,16 +29,11 @@ pub struct MotionEditingPreview {
 }
 
 impl MotionEditingPreview {
-    pub fn new(document: &Document) -> Self {
+    pub fn new(document: &DocumentState) -> Self {
         let mut parameters: BTreeMap<_, _> = document
             .parameter_order()
             .iter()
-            .map(|id| {
-                (
-                    id.clone(),
-                    document.get_parameter(id).unwrap().default_value,
-                )
-            })
+            .map(|id| (id.clone(), document.parameter(id).unwrap().default_value))
             .collect();
         let mut controls = BTreeMap::new();
         let pose = PoseRuntime::new(document, &mut parameters, &mut controls);
@@ -84,7 +80,7 @@ impl MotionEditingPreview {
         let clip = clip_id
             .map(|id| {
                 document
-                    .get_motion(id)
+                    .motion(id)
                     .ok_or_else(|| AnimationError::MissingMotion(id.into()))
             })
             .transpose()?;
@@ -145,7 +141,7 @@ impl MotionEditingPreview {
                     sample_motion_curve(&self.curves[&track.id].1, time, clip.restricted_beziers);
                 match &track.target {
                     MotionTrackTarget::Parameter { parameter_id } => {
-                        let parameter = document.get_parameter(parameter_id).unwrap();
+                        let parameter = document.parameter(parameter_id).unwrap();
                         crate::parameter_values::set_value(
                             &mut snapshot.parameters,
                             parameter_id,
@@ -154,7 +150,7 @@ impl MotionEditingPreview {
                     }
                     MotionTrackTarget::PartOpacity { part_id } => {
                         if let Some(parameter_id) = real_parameter_for_part(document, part_id) {
-                            let parameter = document.get_parameter(&parameter_id).unwrap();
+                            let parameter = document.parameter(&parameter_id).unwrap();
                             crate::parameter_values::set_value(
                                 &mut snapshot.parameters,
                                 &parameter_id,
@@ -167,7 +163,7 @@ impl MotionEditingPreview {
                                 value,
                             );
                         }
-                        if document.pose().is_none() {
+                        if document.pose().as_deref().is_none() {
                             snapshot.coverage.push(format!(
                                 "{}: PartOpacity {part_id} has no Pose asset",
                                 clip.id
@@ -239,7 +235,7 @@ impl MotionEditingPreview {
                 drawable.opacity *= self.snapshot.part_opacities.get(id).copied().unwrap_or(1.);
                 id = self
                     .document
-                    .get_part(id)
+                    .part(id)
                     .map_or("", |part| part.parent_id.as_str());
             }
         }
@@ -255,10 +251,10 @@ mod tests {
     #[test]
     fn candidate_sampling_recompiles_only_changed_tracks_and_restores_the_base_clip() {
         let id = |n| format!("00000000-0000-4000-8000-{n:012x}");
-        let mut document = Document::new();
-        assert!(document
-            .initialize(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))
-            .is_ok());
+        let mut document =
+            DocumentState::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.).into())
+                .unwrap()
+                .builder();
         for (n, runtime) in [(2, "ParamX"), (3, "ParamY")] {
             assert!(document
                 .create_parameter(Parameter {
@@ -268,7 +264,6 @@ mod tests {
                     maximum: 1.,
                     ..Default::default()
                 })
-                .status
                 .is_ok());
         }
         for (n, runtime) in [(4, "Part0"), (5, "Part1")] {
@@ -278,18 +273,17 @@ mod tests {
                     runtime_id: runtime.into(),
                     ..Default::default()
                 })
-                .status
                 .is_ok());
         }
         let document = zipzi_project::import_motion3(
-            &document,
+            &document.freeze().unwrap().state,
             &id(6),
             "Motion",
             include_str!("../../../fixtures/animation_cpu/minimal.motion3.json"),
         )
         .unwrap()
         .candidate;
-        let original = document.get_motion(&id(6)).unwrap();
+        let original = document.motion(&id(6)).unwrap();
         let mut preview = MotionEditingPreview::new(&document);
         let model = preview.document.clone();
         let baseline = preview.sample(Some(&id(6)), 0.5).unwrap().clone();
@@ -315,6 +309,6 @@ mod tests {
         assert!(Arc::ptr_eq(&model, &preview.document));
         preview.sample(None, 0.5).unwrap();
         assert!(preview.curves.is_empty());
-        assert_eq!(document.get_motion(&id(6)).unwrap(), original);
+        assert_eq!(document.motion(&id(6)).unwrap(), original);
     }
 }

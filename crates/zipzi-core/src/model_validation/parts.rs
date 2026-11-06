@@ -29,3 +29,30 @@ impl Model<'_> {
         validate_draw_order(p.draw_order, &p.id)
     }
 }
+
+impl Model<'_> {
+    pub fn sorted_parts(&self) -> Vec<String> {
+        let mut result = Vec::new();
+        let mut seen = HashSet::new();
+
+        fn visit(
+            id: &str,
+            parts: &RecordView<'_, Part>,
+            seen: &mut HashSet<String>,
+            result: &mut Vec<String>,
+        ) {
+            if id.is_empty() || !seen.insert(id.to_string()) {
+                return;
+            }
+            if let Some(p) = parts.get(id) {
+                visit(&p.parent_id, parts, seen, result);
+                result.push(id.to_string());
+            }
+        }
+
+        for id in self.content.part_order {
+            visit(id, &self.content.parts, &mut seen, &mut result);
+        }
+        result
+    }
+}

@@ -4,15 +4,15 @@ use serde_json::{Map, Value};
 use std::collections::{BTreeMap, HashSet};
 use zipzi_core::document::ReferenceEntryAllocation;
 use zipzi_core::document::{Model3Settings, ModelHitArea, ModelParameterGroup, ModelTargetRef};
-use zipzi_core::{types::Status, Document};
+use zipzi_core::{state::DocumentState, types::Status};
 
-pub fn runtime_namespace(document: &Document) -> BTreeMap<String, String> {
+pub fn runtime_namespace(document: &DocumentState) -> BTreeMap<String, String> {
     let mut ids = BTreeMap::new();
     for id in document.parameter_order() {
         ids.insert(
             id.clone(),
             document
-                .get_parameter(id)
+                .parameter(id)
                 .expect("parameter")
                 .runtime_id
                 .clone(),
@@ -21,13 +21,13 @@ pub fn runtime_namespace(document: &Document) -> BTreeMap<String, String> {
     for id in document.part_order() {
         ids.insert(
             id.clone(),
-            document.get_part(id).expect("part").runtime_id.clone(),
+            document.part(id).expect("part").runtime_id.clone(),
         );
     }
     for id in document.mesh_order() {
         ids.insert(
             id.clone(),
-            document.get_mesh(id).expect("mesh").runtime_id.clone(),
+            document.mesh(id).expect("mesh").runtime_id.clone(),
         );
     }
     ids
@@ -54,12 +54,12 @@ struct WireHitArea {
     extensions: BTreeMap<String, Value>,
 }
 
-pub fn import_settings(document: &Document, model3: &Value) -> Result<Model3Settings, Status> {
+pub fn import_settings(document: &DocumentState, model3: &Value) -> Result<Model3Settings, Status> {
     import_with_namespace(document, model3, &runtime_namespace(document))
 }
 
 fn import_with_namespace(
-    document: &Document,
+    document: &DocumentState,
     model3: &Value,
     namespace: &BTreeMap<String, String>,
 ) -> Result<Model3Settings, Status> {
@@ -230,7 +230,7 @@ pub fn validate_settings_namespace(
     Ok(())
 }
 
-pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status> {
+pub fn export_settings(document: &DocumentState) -> Result<Map<String, Value>, Status> {
     let settings = document.model3_settings();
     let opaque = has_opaque_fields(settings);
     if opaque || settings.user_data.is_some() {
@@ -245,9 +245,9 @@ pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status
     let runtime_id = |target: &ModelTargetRef, parameter: bool| -> Result<String, Status> {
         if let ModelTargetRef::Resolved { object_id } = target {
             let id = if parameter {
-                document.get_parameter(object_id).map(|p| &p.runtime_id)
+                document.parameter(object_id).map(|p| &p.runtime_id)
             } else {
-                document.get_mesh(object_id).map(|m| &m.runtime_id)
+                document.mesh(object_id).map(|m| &m.runtime_id)
             };
             if let Some(id) = id {
                 return Ok(id.clone());
@@ -302,7 +302,7 @@ pub fn export_settings(document: &Document) -> Result<Map<String, Value>, Status
     Ok(output)
 }
 
-pub fn validate_user_data(document: &Document, bytes: &[u8]) -> Result<(), Status> {
+pub fn validate_user_data(document: &DocumentState, bytes: &[u8]) -> Result<(), Status> {
     let value: Value = serde_json::from_slice(bytes)
         .map_err(|error| Status::error("INVALID_USERDATA_JSON", error.to_string()))?;
     let items = value
@@ -312,7 +312,7 @@ pub fn validate_user_data(document: &Document, bytes: &[u8]) -> Result<(), Statu
     let drawables: HashSet<_> = document
         .mesh_order()
         .iter()
-        .map(|id| document.get_mesh(id).expect("mesh").runtime_id.as_str())
+        .map(|id| document.mesh(id).expect("mesh").runtime_id.as_str())
         .collect();
     for (index, item) in items.iter().enumerate() {
         if item.get("Target").and_then(Value::as_str) != Some("ArtMesh")
@@ -336,16 +336,15 @@ mod tests {
 
     #[test]
     fn model_name_exports_after_runtime_namespace_changes_but_unknown_fields_stay_strict() {
-        let mut document = Document::new();
-        assert!(document
-            .initialize(
-                "00000000-0000-4000-8000-000000000001",
-                zipzi_core::ModelSetup::default()
-            )
-            .is_ok());
+        let mut document = DocumentState::new(
+            "00000000-0000-4000-8000-000000000001",
+            zipzi_core::ModelSetup::default().into(),
+        )
+        .unwrap()
+        .builder();
         let source = serde_json::json!({"Name":"Original label"});
-        let settings = import_settings(&document, &source).unwrap();
-        assert!(document.set_model3_settings(settings).status.is_ok());
+        let settings = import_settings(&document.preview().unwrap(), &source).unwrap();
+        assert!(document.set_model3_settings(settings).is_ok());
         // A label is independent of the parameter namespace captured on import.
         assert!(document
             .create_parameter(zipzi_core::Parameter {
@@ -354,17 +353,21 @@ mod tests {
                 name: "X".into(),
                 ..Default::default()
             })
-            .status
             .is_ok());
-        assert_eq!(export_settings(&document).unwrap()["Name"], source["Name"]);
+        assert_eq!(
+            export_settings(&document.preview().unwrap()).unwrap()["Name"],
+            source["Name"]
+        );
         for source in [
             serde_json::json!({"Name":42}),
             serde_json::json!({"Name":"Original label", "Unknown":true}),
         ] {
-            let settings = import_settings(&document, &source).unwrap();
-            assert!(document.set_model3_settings(settings).status.is_ok());
+            let settings = import_settings(&document.preview().unwrap(), &source).unwrap();
+            assert!(document.set_model3_settings(settings).is_ok());
             assert_eq!(
-                export_settings(&document).unwrap_err().code,
+                export_settings(&document.preview().unwrap())
+                    .unwrap_err()
+                    .code,
                 "UNSUPPORTED_MODEL3_FIELD"
             );
         }
@@ -372,26 +375,27 @@ mod tests {
 
     #[test]
     fn unknown_file_references_are_preserved_and_block_strict_export() {
-        let mut document = Document::new();
-        assert!(document
-            .initialize(
-                "00000000-0000-4000-8000-000000000001",
-                zipzi_core::Canvas::new(100.0, 100.0, zipzi_core::Vec2::default(), 10.0),
-            )
-            .is_ok());
+        let mut document = DocumentState::new(
+            "00000000-0000-4000-8000-000000000001",
+            zipzi_core::Canvas::new(100.0, 100.0, zipzi_core::Vec2::default(), 10.0).into(),
+        )
+        .unwrap()
+        .builder();
         let source = serde_json::json!({"FileReferences": {
             "Moc": "model.moc3", "VendorAsset": {"File": "vendor.bin"}
         }});
-        let settings = import_settings(&document, &source).unwrap();
+        let settings = import_settings(&document.preview().unwrap(), &source).unwrap();
         assert_eq!(
             settings.extensions["FileReferences"],
             serde_json::json!({
                 "VendorAsset": {"File": "vendor.bin"}
             })
         );
-        assert!(document.set_model3_settings(settings).status.is_ok());
+        assert!(document.set_model3_settings(settings).is_ok());
         assert_eq!(
-            export_settings(&document).unwrap_err().code,
+            export_settings(&document.preview().unwrap())
+                .unwrap_err()
+                .code,
             "UNSUPPORTED_MODEL3_FIELD"
         );
     }

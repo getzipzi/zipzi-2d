@@ -17,8 +17,8 @@ use zipzi_core::{
         ExpressionAsset, ExpressionBlend, ExpressionTarget, MotionClip, MotionKey, MotionSegment,
         MotionTrack, MotionTrackTarget,
     },
+    state::DocumentState,
     types::Canvas,
-    Document,
 };
 
 // A reserved playlist identity namespace distinguishes model3 registrations
@@ -119,15 +119,15 @@ pub(crate) fn validate_name(name: &str) -> Result<(), Cmo3Error> {
 }
 
 /// Inspect animation losses without resources, archive creation or input mutation.
-pub fn inspect_can3(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
+pub fn inspect_can3(doc: &DocumentState) -> Result<Cmo3Report, Cmo3Error> {
     prepare(doc, false, false).map(|(_, _, report)| report)
 }
 /// Inspect the paired export; motions are carried by CAN3 rather than lost in CMO3.
-pub fn inspect_cubism(doc: &Document) -> Result<Cmo3Report, Cmo3Error> {
+pub fn inspect_cubism(doc: &DocumentState) -> Result<Cmo3Report, Cmo3Error> {
     inspect_cubism_with_baking(doc, false, false)
 }
 fn inspect_cubism_with_baking(
-    doc: &Document,
+    doc: &DocumentState,
     bake: bool,
     auto: bool,
 ) -> Result<Cmo3Report, Cmo3Error> {
@@ -138,7 +138,7 @@ fn inspect_cubism_with_baking(
     Ok(report)
 }
 /// Encode animation only, linking the CMO3 filename supplied by the caller.
-pub fn encode_can3(doc: &Document, options: &Can3Options) -> Result<Can3Artifact, Cmo3Error> {
+pub fn encode_can3(doc: &DocumentState, options: &Can3Options) -> Result<Can3Artifact, Cmo3Error> {
     validate_name(&options.model_file_name)?;
     if !options.model_file_name.ends_with(".cmo3") {
         return Err(Cmo3Error::InvalidDocument(
@@ -156,7 +156,7 @@ pub fn encode_can3(doc: &Document, options: &Can3Options) -> Result<Can3Artifact
 }
 /// Encode a linked pair entirely in memory. All loss checks precede image I/O.
 pub fn encode_cubism(
-    doc: &Document,
+    doc: &DocumentState,
     assets: &dyn AssetResolver,
     options: &CubismOptions,
 ) -> Result<CubismArtifact, Cmo3Error> {
@@ -339,7 +339,11 @@ fn keys(
     Ok(result)
 }
 
-fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Report) -> MotionClip {
+fn expression_clip(
+    doc: &DocumentState,
+    asset: &ExpressionAsset,
+    report: &mut Cmo3Report,
+) -> MotionClip {
     let mut clip = asset.source_scene().unwrap_or_else(|| MotionClip {
         track_order: Vec::new(),
         id: asset.id.clone(),
@@ -389,7 +393,7 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
         let blend = entry.blend.unwrap_or(ExpressionBlend::Add);
         // CAN3 stores absolute poses; Add expressions store an offset from the
         // model default. Reconstruct the pose using the current parameter.
-        let default = doc.get_parameter(parameter_id).unwrap().default_value;
+        let default = doc.parameter(parameter_id).unwrap().default_value;
         let value = match blend {
             ExpressionBlend::Add => default + entry.value,
             ExpressionBlend::Multiply => default * entry.value,
@@ -405,7 +409,7 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
             continue;
         }
         // Match expression playback: clamp the target before applying its fade.
-        let parameter = doc.get_parameter(parameter_id).unwrap();
+        let parameter = doc.parameter(parameter_id).unwrap();
         let value = value.clamp(parameter.minimum, parameter.maximum);
         if !targets.insert(parameter_id) {
             loss(
@@ -467,16 +471,10 @@ fn expression_clip(doc: &Document, asset: &ExpressionAsset, report: &mut Cmo3Rep
 }
 
 fn prepare(
-    doc: &Document,
+    doc: &DocumentState,
     bake: bool,
     auto: bool,
 ) -> Result<(Vec<Scene>, Canvas, Cmo3Report), Cmo3Error> {
-    if let Some(issue) = doc.validate_structure().first() {
-        return Err(Cmo3Error::InvalidDocument(format!(
-            "{}: {}",
-            issue.object_id, issue.status.message
-        )));
-    }
     let mut report = Cmo3Report::default();
     let canvas = crate::canvas::for_document(doc)?;
     if [canvas.width, canvas.height]
@@ -500,12 +498,12 @@ fn prepare(
     let expressions: Vec<_> = doc
         .expression_order()
         .iter()
-        .map(|id| expression_clip(doc, doc.get_expression(id).unwrap(), &mut report))
+        .map(|id| expression_clip(doc, doc.expression(id).unwrap(), &mut report))
         .collect();
     let clips: Vec<_> = doc
         .motion_order()
         .iter()
-        .map(|id| doc.get_motion(id).unwrap())
+        .map(|id| doc.motion(id).unwrap())
         .chain(expressions.iter())
         .collect();
     let grids = if auto {
@@ -611,7 +609,7 @@ fn prepare(
                 }
                 MotionTrackTarget::PartOpacity { part_id } => (
                     "part",
-                    scene::part_key(&doc.get_part(part_id).unwrap().runtime_id),
+                    scene::part_key(&doc.part(part_id).unwrap().runtime_id),
                 ),
                 _ => ("model", "Opacity".into()),
             };
@@ -727,7 +725,7 @@ fn rect(width: f32, height: f32) -> N {
 }
 
 struct Animation<'a> {
-    doc: &'a Document,
+    doc: &'a DocumentState,
     canvas: Canvas,
     options: &'a Can3Options,
     graph: Graph,
@@ -739,7 +737,7 @@ struct Animation<'a> {
     serial: u64,
 }
 impl<'a> Animation<'a> {
-    fn new(doc: &'a Document, canvas: Canvas, options: &'a Can3Options) -> Self {
+    fn new(doc: &'a DocumentState, canvas: Canvas, options: &'a Can3Options) -> Self {
         let mut graph = Graph::default();
         let root = graph.reserve("CAnimation");
         let resources = graph.reserve("CResourceManager");

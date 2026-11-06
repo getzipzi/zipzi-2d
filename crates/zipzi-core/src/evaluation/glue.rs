@@ -1,4 +1,5 @@
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::geometry::validate_positions;
 use crate::types::{DeltaKeyforms, Status, Vec2};
 
@@ -6,7 +7,7 @@ use super::evaluator::EvalContext;
 use super::prepared::PreparedEvaluation;
 
 pub(super) fn evaluate(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     prepared: &PreparedEvaluation,
     state: &mut EvalContext<'_>,
 ) -> Status {

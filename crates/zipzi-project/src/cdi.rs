@@ -1,4 +1,4 @@
-//! CDI3 to Document boundary. Import builds an isolated candidate; export is pure.
+//! CDI3 to DocumentState boundary. Import builds an isolated candidate; export is pure.
 use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use zipzi_core::document::ReferenceEntryAllocation;
@@ -10,7 +10,7 @@ use zipzi_core::document::{
     CdiCombinedSet, CdiNamespaceIds, CdiParameterEntry, CdiParameterGroup, CdiParameterRef,
     CdiPartEntry, DisplayInfo, DisplayInfoOrigin,
 };
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 use zipzi_live2d::cdi3::{
     decode_cdi3, encode_cdi3, Cdi3, CdiDiagnostic, CdiParameter, CdiParameterGroup as WireGroup,
     CdiPart, DiagnosticDomain, DiagnosticSeverity,
@@ -25,7 +25,7 @@ pub struct CdiProjectDiagnostic {
 
 #[derive(Debug)]
 pub struct CdiImport {
-    pub candidate: Document,
+    pub candidate: DocumentState,
     pub diagnostics: Vec<CdiProjectDiagnostic>,
 }
 
@@ -165,7 +165,7 @@ fn check_persistable(wire: &Cdi3) -> Result<(), CdiProjectError> {
 }
 
 fn stable_uuid(
-    document: &Document,
+    document: &DocumentState,
     category: &str,
     index: usize,
     runtime_id: &str,
@@ -207,14 +207,7 @@ fn stable_uuid(
 /// Import CDI3 into an isolated candidate. The original document never changes.
 /// Missing model targets are retained as runtime IDs and reported, but a
 /// structurally invalid CDI fails before any candidate is returned.
-pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProjectError> {
-    if !document.initialized() {
-        return Err(error(
-            "NOT_INITIALIZED",
-            "$",
-            "initialize the document first",
-        ));
-    }
+pub fn import_cdi3(document: &DocumentState, text: &str) -> Result<CdiImport, CdiProjectError> {
     let decoded = decode_cdi3(text).map_err(from_wire_error)?;
     if let Some(diagnostic) = decoded.diagnostics.iter().find(|diagnostic| {
         diagnostic.domain == DiagnosticDomain::FileStructure
@@ -234,7 +227,7 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
         .collect();
     let wire = decoded.document;
     check_persistable(&wire)?;
-    let mut candidate = document.fork_candidate();
+    let mut candidate = document.builder();
     let mut info = DisplayInfo {
         origin: DisplayInfoOrigin::Imported,
         extensions: wire.extensions,
@@ -277,9 +270,7 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
         .parameter_order()
         .iter()
         .map(|id| {
-            let parameter = document
-                .get_parameter(id)
-                .expect("ordered parameter exists");
+            let parameter = document.parameter(id).expect("ordered parameter exists");
             (parameter.runtime_id.as_str(), id.as_str())
         })
         .collect();
@@ -289,12 +280,14 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
             let group_id =
                 (!parameter.group_id.is_empty()).then(|| group_ids[&parameter.group_id].clone());
             if let Some(id) = parameter_ids.get(parameter.id.as_str()) {
-                let result = candidate.set_parameter_display_name(id, parameter.name);
-                if !result.status.is_ok() {
+                let mut updated = candidate.parameter(id).unwrap().clone();
+                updated.name = parameter.name;
+                let result = candidate.replace_parameter(updated);
+                if let Err(status) = result {
                     return Err(error(
-                        result.status.code,
+                        status.code,
                         format!("$.Parameters[{i}].Name"),
-                        result.status.message,
+                        status.message,
                     ));
                 }
                 entries.push(CdiParameterEntry::Resolved {
@@ -322,7 +315,7 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
         .part_order()
         .iter()
         .map(|id| {
-            let part = document.get_part(id).expect("ordered part exists");
+            let part = document.part(id).expect("ordered part exists");
             (part.runtime_id.as_str(), id.as_str())
         })
         .collect();
@@ -330,12 +323,14 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
         let mut entries = Vec::with_capacity(parts.len());
         for (i, part) in parts.into_iter().enumerate() {
             if let Some(id) = part_ids.get(part.id.as_str()) {
-                let result = candidate.set_part_display_name(id, part.name);
-                if !result.status.is_ok() {
+                let mut updated = candidate.part(id).unwrap().clone();
+                updated.name = part.name;
+                let result = candidate.replace_part(updated);
+                if let Err(status) = result {
                     return Err(error(
-                        result.status.code,
+                        status.code,
                         format!("$.Parts[{i}].Name"),
-                        result.status.message,
+                        status.message,
                     ));
                 }
                 entries.push(CdiPartEntry::Resolved {
@@ -364,7 +359,7 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
             let runtime_key =
                 |m: &zipzi_core::document::ReferenceEntry<CdiParameterRef>| match &m.target {
                     CdiParameterRef::Resolved { parameter_id } => document
-                        .get_parameter(parameter_id)
+                        .parameter(parameter_id)
                         .map(|p| p.runtime_id.clone()),
                     CdiParameterRef::Unresolved { runtime_id } => Some(runtime_id.clone()),
                     CdiParameterRef::Unspecified => None,
@@ -420,25 +415,33 @@ pub fn import_cdi3(document: &Document, text: &str) -> Result<CdiImport, CdiProj
         info.combined_parameters = Some(combined);
     }
     if info.has_extensions() {
-        info.opaque_source_ids = Some(namespace_ids(&candidate, &info));
+        info.opaque_source_ids = Some(namespace_ids(
+            &candidate
+                .preview()
+                .map_err(|s| error(s.code, "$", s.message))?,
+            &info,
+        ));
     }
     let result = candidate.replace_display_info(info);
-    if !result.status.is_ok() {
-        return Err(error(result.status.code, "$", result.status.message));
+    if let Err(status) = result {
+        return Err(error(status.code, "$", status.message));
     }
     Ok(CdiImport {
-        candidate,
+        candidate: candidate
+            .freeze()
+            .map_err(|s| error(s.code, "$", s.message))?
+            .state,
         diagnostics,
     })
 }
 
-fn namespace_ids(document: &Document, info: &DisplayInfo) -> CdiNamespaceIds {
+fn namespace_ids(document: &DocumentState, info: &DisplayInfo) -> CdiNamespaceIds {
     let mut ids = CdiNamespaceIds::default();
     for id in document.parameter_order() {
         ids.parameters.insert(
             id.clone(),
             document
-                .get_parameter(id)
+                .parameter(id)
                 .expect("ordered parameter exists")
                 .runtime_id
                 .clone(),
@@ -448,7 +451,7 @@ fn namespace_ids(document: &Document, info: &DisplayInfo) -> CdiNamespaceIds {
         ids.parts.insert(
             id.clone(),
             document
-                .get_part(id)
+                .part(id)
                 .expect("ordered part exists")
                 .runtime_id
                 .clone(),
@@ -503,7 +506,7 @@ fn group_runtime_id(
     }
 }
 
-pub(crate) fn opaque_export_problems(document: &Document) -> Vec<crate::OpaqueExportProblem> {
+pub(crate) fn opaque_export_problems(document: &DocumentState) -> Vec<crate::OpaqueExportProblem> {
     use crate::OpaqueExportProblem as P;
     let info = document.display_info();
     if !info.has_extensions() {
@@ -518,17 +521,7 @@ pub(crate) fn opaque_export_problems(document: &Document) -> Vec<crate::OpaqueEx
 
 /// Encode CDI3 from current model names and runtime IDs. Unresolved targets
 /// and opaque-extension namespace changes are explicit errors.
-pub fn export_cdi3(document: &Document) -> Result<String, CdiProjectError> {
-    if !document.initialized() {
-        return Err(error(
-            "NOT_INITIALIZED",
-            "$",
-            "initialize the document first",
-        ));
-    }
-    if let Some(issue) = document.validate_structure().into_iter().next() {
-        return Err(error(issue.status.code, "$", issue.status.message));
-    }
+pub fn export_cdi3(document: &DocumentState) -> Result<String, CdiProjectError> {
     let info = document.display_info();
     if let Some(problem) = opaque_export_problems(document).first() {
         return Err(error(
@@ -593,7 +586,7 @@ pub fn export_cdi3(document: &Document) -> Result<String, CdiProjectError> {
                         group_id,
                         extensions,
                     } => {
-                        let parameter = document.get_parameter(&parameter_id).ok_or_else(|| {
+                        let parameter = document.parameter(&parameter_id).ok_or_else(|| {
                             error(
                                 "MISSING_PARAMETER",
                                 format!("$.Parameters[{i}].Id"),
@@ -644,7 +637,7 @@ pub fn export_cdi3(document: &Document) -> Result<String, CdiProjectError> {
                         part_id,
                         extensions,
                     } => {
-                        let part = document.get_part(&part_id).ok_or_else(|| {
+                        let part = document.part(&part_id).ok_or_else(|| {
                             error(
                                 "MISSING_PART",
                                 format!("$.Parts[{i}].Id"),
@@ -690,7 +683,7 @@ pub fn export_cdi3(document: &Document) -> Result<String, CdiProjectError> {
                                 "Choose a Parameter",
                             )),
                             CdiParameterRef::Resolved { parameter_id } => document
-                                .get_parameter(parameter_id)
+                                .parameter(parameter_id)
                                 .map(|parameter| parameter.runtime_id.clone())
                                 .ok_or_else(|| {
                                     error(

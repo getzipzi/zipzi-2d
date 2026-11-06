@@ -137,3 +137,26 @@ impl ResourceView {
 
 #[cfg(test)]
 mod tests;
+
+impl ResourceView {
+    pub fn read_asset(
+        &self,
+        asset: &zipzi_core::state::AssetRecord,
+    ) -> Result<crate::AssetData, Status> {
+        let zipzi_core::state::AssetContent::Image {
+            resource,
+            width,
+            height,
+        } = asset.content
+        else {
+            return Err(Status::error("MISSING_RESOURCE", &asset.id));
+        };
+        let image = self
+            .image(resource)
+            .ok_or_else(|| Status::error("MISSING_RESOURCE", &asset.id))?;
+        if (width, height) != (image.width(), image.height()) {
+            return Err(Status::error("RESOURCE_DIMENSIONS", &asset.id));
+        }
+        image.read_asset()
+    }
+}

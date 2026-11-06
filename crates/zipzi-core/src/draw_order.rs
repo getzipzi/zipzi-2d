@@ -1,5 +1,5 @@
 //! Drawing groups are independent of the Part organization hierarchy.
-use crate::{Document, Status};
+use crate::Status;
 use std::collections::{HashMap, HashSet};
 use zipzi_core::SceneTrackEvaluation;
 
@@ -9,17 +9,6 @@ pub(crate) trait DrawingModel {
     fn get_part(&self, id: &str) -> Option<&crate::Part>;
     fn get_mesh(&self, id: &str) -> Option<&crate::Mesh>;
     fn mesh_order(&self) -> &[String];
-}
-impl DrawingModel for Document {
-    fn get_part(&self, id: &str) -> Option<&crate::Part> {
-        self.get_part(id)
-    }
-    fn get_mesh(&self, id: &str) -> Option<&crate::Mesh> {
-        self.get_mesh(id)
-    }
-    fn mesh_order(&self) -> &[String] {
-        self.mesh_order()
-    }
 }
 impl DrawingModel for crate::model_validation::Model<'_> {
     fn get_part(&self, id: &str) -> Option<&crate::Part> {
@@ -95,7 +84,7 @@ pub(crate) fn validate_groups(
 
 /// Existing documents derive groups from Parts; imports retain explicit groups.
 /// Expand stored bounds when edits introduce orders outside the source range.
-pub fn resolved_groups(doc: &Document) -> Vec<DrawOrderGroup> {
+pub fn resolved_groups(doc: &impl crate::evaluation::EvaluationModel) -> Vec<DrawOrderGroup> {
     let mut groups = if let Some(groups) = doc.draw_order_groups() {
         groups.to_vec()
     } else {
@@ -177,7 +166,7 @@ pub fn descendant_counts(groups: &[DrawOrderGroup]) -> HashMap<&str, usize> {
 }
 
 pub fn descendant_counts_with_offscreens<'a>(
-    doc: &'a Document,
+    doc: &'a impl crate::evaluation::EvaluationModel,
     groups: &'a [DrawOrderGroup],
 ) -> HashMap<&'a str, usize> {
     let mut totals = HashMap::new();

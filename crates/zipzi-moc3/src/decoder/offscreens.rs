@@ -36,7 +36,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 .unwrap_or_else(|| format!("Part{owner_part_idx}"));
             let part_name = self
                 .doc
-                .get_part(&part_id)
+                .part(&part_id)
                 .map(|p| p.name.clone())
                 .unwrap_or_else(|| format!("Part{owner_part_idx}"));
 
@@ -179,22 +179,18 @@ impl<'a> Moc3DecoderContext<'a> {
             let name = format!("{part_name} (Offscreen)");
             let os_id = stable_id(&self.doc_id, "offscreen", i, &runtime_id);
             self.mapping.offscreen_by_index.push(os_id.clone());
-            check_status!(
-                self.doc
-                    .create_offscreen(Offscreen {
-                        enabled: true,
-                        id: os_id,
-                        runtime_id,
-                        name,
-                        part_id,
-                        blend_mode,
-                        flags,
-                        masks,
-                        part_keyform_indices,
-                        keyforms,
-                    })
-                    .status
-            );
+            check_status!(self.doc.create_offscreen(Offscreen {
+                enabled: true,
+                id: os_id,
+                runtime_id,
+                name,
+                part_id,
+                blend_mode,
+                flags,
+                masks,
+                part_keyform_indices,
+                keyforms,
+            }));
         }
 
         Ok(())

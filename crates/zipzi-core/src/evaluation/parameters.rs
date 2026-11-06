@@ -1,15 +1,16 @@
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::types::Status;
 
 use super::evaluator::EvalContext;
 use super::types::{Drawable, EvaluatedParameter};
 
 pub(super) fn evaluate(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     preview: &super::types::PreviewValues,
     state: &mut EvalContext<'_>,
 ) -> Status {
-    state.frame.source_revision = doc.revision();
+    state.frame.source_revision = doc.evaluation_revision();
     state
         .frame
         .parameters
@@ -44,7 +45,10 @@ pub(super) fn evaluate(
     Status::ok()
 }
 
-pub(super) fn validate_preview(doc: &Document, preview: &super::types::PreviewValues) -> Status {
+pub(super) fn validate_preview(
+    doc: &impl EvaluationModel,
+    preview: &super::types::PreviewValues,
+) -> Status {
     for (id, &v) in preview {
         if doc.get_parameter(id).is_none() {
             return Status::error("MISSING_PARAMETER", id);

@@ -61,11 +61,11 @@ fn assert_pixels(bytes: &[u8], alphas: [u8; 4]) -> ImportBundle {
     assert_eq!(png.rgba, rgba(alphas));
     assert_eq!(pixels.assets[0].rgba, rgba(alphas));
     assert_eq!(pixels.assets[0].id, pngs.assets[0].id);
-    assert!(pngs.document.validate_structure().is_empty());
-    assert!(pixels.document.validate_structure().is_empty());
+    assert!(pngs.document.builder().freeze().is_ok());
+    assert!(pixels.document.builder().freeze().is_ok());
     assert_eq!(pngs.document.mesh_order(), pixels.document.mesh_order());
     for id in pngs.document.mesh_order() {
-        assert_eq!(pngs.document.get_mesh(id), pixels.document.get_mesh(id));
+        assert_eq!(pngs.document.mesh(id), pixels.document.mesh(id));
     }
     pngs
 }
@@ -94,7 +94,7 @@ fn bitmap_mask_multiplies_existing_alpha_and_preserves_layer_properties() {
     assert!(bundle.report.warnings[0].contains("baked into texture alpha"));
     let mesh = bundle
         .document
-        .get_mesh(&bundle.document.mesh_order()[0])
+        .mesh(&bundle.document.mesh_order()[0])
         .unwrap();
     assert_eq!(mesh.name, "蒙版图层");
     assert!(!mesh.enabled);
@@ -216,7 +216,7 @@ fn bitmap_masks_compose_with_existing_clipping_groups() {
         assert_eq!(pixels.assets[index].rgba, rgba(expected));
         let mesh = pngs
             .document
-            .get_mesh(&pngs.document.mesh_order()[index])
+            .mesh(&pngs.document.mesh_order()[index])
             .unwrap();
         assert_eq!(mesh.raw_blend_mode, (index == 1).then_some(256));
         assert!(mesh.masks.is_empty());
@@ -395,8 +395,8 @@ fn local_psd_imports_with_bitmap_masks() {
     assert_eq!(pngs.report, pixels.report);
     assert_eq!(pngs.assets.len(), layers.len());
     assert_eq!(pixels.assets.len(), layers.len());
-    assert!(pngs.document.validate_structure().is_empty());
-    assert!(pixels.document.validate_structure().is_empty());
+    assert!(pngs.document.builder().freeze().is_ok());
+    assert!(pixels.document.builder().freeze().is_ok());
     assert_eq!(pngs.document.mesh_order(), pixels.document.mesh_order());
     assert!(
         active_masks > 0,
@@ -407,10 +407,7 @@ fn local_psd_imports_with_bitmap_masks() {
         assert_eq!(decoded.rgba, pixels.assets[index].rgba);
         assert_eq!(pngs.assets[index].id, pixels.assets[index].id);
         let mesh_id = &pngs.document.mesh_order()[index];
-        assert_eq!(
-            pngs.document.get_mesh(mesh_id),
-            pixels.document.get_mesh(mesh_id)
-        );
+        assert_eq!(pngs.document.mesh(mesh_id), pixels.document.mesh(mesh_id));
         let original = get_layer_image_data(layer).unwrap().unwrap();
         assert_eq!(
             (decoded.width, decoded.height),

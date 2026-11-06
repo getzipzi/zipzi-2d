@@ -5,22 +5,24 @@ impl Exporter<'_> {
     pub(super) fn meshes(&mut self, textures: &HashMap<String, TextureBinding>) -> Vec<N> {
         let mut sources = Vec::new();
         for id in self.doc.mesh_order() {
-            let m = self.doc.get_mesh(id).unwrap();
+            let m = self.doc.mesh(id).unwrap();
             let owner = self.source(id);
             let uvs: Vec<_> = m.uvs.iter().map(|uv| Vec2::new(uv.x, 1. - uv.y)).collect();
             let binding = self.doc.binding_for_mesh(id).filter(|b| !b.axes.is_empty());
             let rest = self.rest[id].clone();
-            let asset = self.doc.get_asset(&m.texture_asset_id).unwrap();
-            let content = asset.content.as_ref().unwrap();
-            let placement = fit_texture(&uvs, &rest, content.width, content.height);
+            let asset = self.doc.asset(&m.texture_asset_id).unwrap();
+            let zipzi_core::state::AssetContent::Image { width, height, .. } = asset.content else {
+                unreachable!("preflight rejects missing images")
+            };
+            let placement = fit_texture(&uvs, &rest, width, height);
             // Cubism rebuilds UVs from source positions and the image placement.
             // Keep that original-shape mesh in texture space; keyforms
             // retain the exact posed geometry, including non-affine UV maps.
             let texture_positions: Vec<_> = uvs
                 .iter()
                 .map(|uv| {
-                    let x = uv.x as f64 * content.width as f64;
-                    let y = uv.y as f64 * content.height as f64;
+                    let x = uv.x as f64 * width as f64;
+                    let y = uv.y as f64 * height as f64;
                     Vec2::new(
                         (placement[0] * x + placement[1] * y + placement[2]) as f32,
                         (placement[3] * x + placement[4] * y + placement[5]) as f32,
@@ -227,7 +229,7 @@ impl Exporter<'_> {
     pub(super) fn glues(&mut self) -> Vec<N> {
         let mut sources = Vec::new();
         for id in self.doc.glue_order() {
-            let glue = self.doc.get_glue(id).unwrap();
+            let glue = self.doc.glue(id).unwrap();
             let owner = self.source(id);
             let mut forms = Vec::new();
             let mut guids = Vec::new();
@@ -248,8 +250,8 @@ impl Exporter<'_> {
                 );
             }
             let grid = self.grid(glue.binding.as_ref().map_or(&[], |b| &b.axes), &guids, None);
-            let mesh_a = self.doc.get_mesh(&glue.mesh_a_id).unwrap();
-            let mesh_b = self.doc.get_mesh(&glue.mesh_b_id).unwrap();
+            let mesh_a = self.doc.mesh(&glue.mesh_a_id).unwrap();
+            let mesh_b = self.doc.mesh(&glue.mesh_b_id).unwrap();
             let uids: Vec<_> = glue
                 .pairs
                 .iter()
@@ -274,7 +276,7 @@ impl Exporter<'_> {
                     self.controllable(
                         &glue.name,
                         true,
-                        &self.doc.get_mesh(&glue.mesh_a_id).unwrap().part_id,
+                        &self.doc.mesh(&glue.mesh_a_id).unwrap().part_id,
                         grid,
                         vec![],
                     ),

@@ -1,25 +1,23 @@
 //! Filesystem adapters for a linked editable Cubism model/animation package.
 use crate::filesystem::{self as io, FileSystem, NativeFileSystem};
-use crate::{DocumentSession, DocumentStore, Publication};
+use crate::{ProjectIo, Publication, ResourceStore, ResourceView};
 use std::{
     fs,
     path::{Component, Path},
 };
-use zipzi_cmo3::{
-    encode_can3, encode_cubism, Can3Artifact, Can3Options, Cmo3Error, Cmo3Report, CubismArtifact,
-    CubismOptions,
-};
-use zipzi_core::{Document, ImageAsset};
+use zipzi_cmo3::{encode_cubism, Can3Artifact, Cmo3Error, CubismArtifact, CubismOptions};
+use zipzi_core::state::{AssetRecord, DocumentState};
 
 pub fn encode_document_cubism(
-    document: &Document,
-    root: &Path,
+    document: &DocumentState,
+    resources: &ResourceView,
     options: &CubismOptions,
 ) -> Result<CubismArtifact, Cmo3Error> {
     encode_cubism(
         document,
-        &|asset: &ImageAsset| {
-            crate::read_project_asset(root, asset)
+        &|asset: &AssetRecord| {
+            resources
+                .read_asset(asset)
                 .map(|data| data.bytes)
                 .map_err(|status| Cmo3Error::Asset {
                     asset_id: asset.id.clone(),
@@ -33,11 +31,10 @@ pub fn encode_project_cubism(
     source: &Path,
     options: &CubismOptions,
 ) -> Result<CubismArtifact, Cmo3Error> {
-    let (result, snapshot) = DocumentStore::new().open(source);
-    let snapshot = snapshot.ok_or_else(|| {
-        Cmo3Error::InvalidDocument(format!("{}: {}", result.status.code, result.status.message))
-    })?;
-    encode_document_cubism(&snapshot.document, snapshot.asset_root(), options)
+    let snapshot = ProjectIo::new(std::env::temp_dir(), ResourceStore::default())
+        .load(source, || true)
+        .map_err(|e| Cmo3Error::InvalidDocument(e.to_string()))?;
+    encode_document_cubism(&snapshot.document, &snapshot.resources, options)
 }
 /// Stage and atomically rename a standalone animation file.
 pub fn publish_can3(artifact: &Can3Artifact, destination: &Path) -> Result<Publication, Cmo3Error> {
@@ -236,47 +233,6 @@ fn publish_with_filesystem(
         ));
     }
     Ok(publication)
-}
-impl DocumentSession {
-    pub fn encode_can3(&self, options: &Can3Options) -> Result<Can3Artifact, Cmo3Error> {
-        encode_can3(self.document(), options)
-    }
-    pub fn export_can3(
-        &self,
-        destination: &Path,
-        options: &Can3Options,
-    ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
-        self.validate_export_destination(destination)
-            .map_err(status)?;
-        let artifact = self.encode_can3(options)?;
-        let publication = publish_can3(&artifact, destination)?;
-        Ok((artifact.report, publication))
-    }
-    pub fn encode_cubism(&self, options: &CubismOptions) -> Result<CubismArtifact, Cmo3Error> {
-        encode_cubism(
-            self.document(),
-            &|asset: &ImageAsset| {
-                self.read_asset(&asset.id)
-                    .map(|data| data.bytes)
-                    .map_err(|s| Cmo3Error::Asset {
-                        asset_id: asset.id.clone(),
-                        message: s.message,
-                    })
-            },
-            options,
-        )
-    }
-    pub fn export_cubism(
-        &self,
-        destination: &Path,
-        options: &CubismOptions,
-    ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
-        self.validate_export_destination(destination)
-            .map_err(status)?;
-        let artifact = self.encode_cubism(options)?;
-        let publication = publish_cubism(&artifact, destination)?;
-        Ok((artifact.report, publication))
-    }
 }
 
 #[cfg(test)]

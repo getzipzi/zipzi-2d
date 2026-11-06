@@ -7,14 +7,14 @@ impl Exporter<'_> {
         let mut sets: HashMap<String, (Vec<N>, Vec<N>)> = HashMap::new();
         let mut drivers = BTreeSet::new();
         for id in self.doc.blend_binding_order() {
-            let binding = self.doc.get_blend_binding(id).unwrap();
-            let table = self.doc.get_blend_key_table(&binding.key_table_id).unwrap();
+            let binding = self.doc.blend_binding(id).unwrap();
+            let table = self.doc.blend_key_table(&binding.key_table_id).unwrap();
             if table.keys[table.base_key_idx] != 0. {
                 continue;
             }
             let target = if binding.target_kind == BlendShapeTargetKind::Offscreen {
                 self.doc
-                    .get_offscreen(&binding.target_id)
+                    .offscreen(&binding.target_id)
                     .unwrap()
                     .part_id
                     .as_str()
@@ -33,7 +33,7 @@ impl Exporter<'_> {
                 }
                 BlendShapeTargetKind::Glue => self
                     .doc
-                    .get_glue(target)
+                    .glue(target)
                     .unwrap()
                     .binding
                     .as_ref()
@@ -73,7 +73,7 @@ impl Exporter<'_> {
                                 .iter()
                                 .map(|&p| {
                                     self.source_delta(
-                                        &self.doc.get_mesh(target).unwrap().deformer_id,
+                                        &self.doc.mesh(target).unwrap().deformer_id,
                                         p,
                                     )
                                 })
@@ -93,7 +93,7 @@ impl Exporter<'_> {
                                 .iter()
                                 .map(|&p| {
                                     self.source_delta(
-                                        self.doc.get_transform(target).unwrap().parent(),
+                                        self.doc.transform(target).unwrap().parent(),
                                         p,
                                     )
                                 })
@@ -103,7 +103,7 @@ impl Exporter<'_> {
                     }
                     DeltaKeyforms::Rotation(values) => {
                         let delta = &values[slot];
-                        let transform = self.doc.get_transform(target).unwrap();
+                        let transform = self.doc.transform(target).unwrap();
                         if let Some(origin) = delta.origin {
                             let origin = self.source_delta(transform.parent(), origin);
                             add_attr(&mut form, "originX", origin.x);
@@ -148,7 +148,7 @@ impl Exporter<'_> {
                 );
             }
             for id in &binding.constraint_ids {
-                let c = self.doc.get_blend_constraint(id).unwrap();
+                let c = self.doc.blend_constraint(id).unwrap();
                 for (&key, &weight) in c.keys.iter().zip(&c.weights) {
                     constraints.push(
                         N::new("MorphTargetBlendWeightConstraint")
@@ -188,10 +188,10 @@ impl Exporter<'_> {
     }
 }
 
-fn grid_default_weights(doc: &Document, axes: &[BindingAxis]) -> Vec<f32> {
+fn grid_default_weights(doc: &DocumentState, axes: &[BindingAxis]) -> Vec<f32> {
     let mut weights = vec![1.];
     for axis in axes {
-        let parameter = doc.get_parameter(&axis.parameter_id).unwrap();
+        let parameter = doc.parameter(&axis.parameter_id).unwrap();
         let epsilon = 0.1f32.powi(parameter.decimal_places);
         let segment = zipzi_core::keyforms::find_key_segment(
             parameter.default_value,

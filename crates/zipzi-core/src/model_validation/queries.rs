@@ -1,5 +1,27 @@
 use super::*;
 impl Model<'_> {
+    pub fn get_expression(&self, id: &str) -> Option<&ExpressionAsset> {
+        self.content.expressions.get(id)
+    }
+    pub fn expression_order(&self) -> &[String] {
+        self.content.expression_order
+    }
+
+    pub fn editor_state(&self) -> &EditorState {
+        self.content.editor_state
+    }
+    pub fn get_offscreen(&self, id: &str) -> Option<&Offscreen> {
+        self.content.offscreens.get(id)
+    }
+    pub fn get_blend_binding(&self, id: &str) -> Option<&BlendShapeBinding> {
+        self.content.blend_bindings.get(id)
+    }
+    pub fn parameter_group_for(&self, id: &str) -> Option<&str> {
+        self.display_info().parameters.iter().flatten()
+            .find(|entry| matches!(entry, CdiParameterEntry::Resolved { parameter_id, .. } if parameter_id == id))
+            .and_then(|entry| entry.group_id())
+    }
+
     pub fn id(&self) -> &str {
         self.content.id
     }
@@ -82,9 +104,7 @@ impl Model<'_> {
     pub fn get_motion_group(&self, id: &str) -> Option<&MotionGroup> {
         self.content.motion_groups.iter().find(|g| g.id == id)
     }
-    pub fn get_motion_registration(&self, id: &str) -> Option<&MotionRegistration> {
-        self.motion_registrations().find(|g| g.id == id)
-    }
+
     pub fn binding_for_mesh(&self, id: &str) -> Option<&MeshBinding> {
         self.content.bindings.values().find(|v| v.mesh_id == id)
     }
@@ -147,11 +167,7 @@ impl Model<'_> {
                     || c.events.iter().any(|e| e.id == id)
             })
     }
-    pub fn physics_owner(&self, id: &str) -> Option<&str> {
-        self.physics()
-            .filter(|a| a.entity_ids().skip(1).any(|v| v == id))
-            .map(|a| a.id.as_str())
-    }
+
     pub fn reference_identities(&self) -> &[ReferenceIdentity] {
         self.reference_ids.get_or_init(|| {
             let mut result = Vec::new();
@@ -331,5 +347,124 @@ impl Model<'_> {
             }));
         }
         result
+    }
+}
+
+impl Model<'_> {
+    pub fn parameter_order(&self) -> &[String] {
+        self.content.parameter_order
+    }
+    pub fn part_order(&self) -> &[String] {
+        self.content.part_order
+    }
+    pub fn transform_order(&self) -> &[String] {
+        self.content.transform_order
+    }
+    pub fn offscreen_order(&self) -> &[String] {
+        self.content.offscreen_order
+    }
+    pub fn blend_binding_order(&self) -> &[String] {
+        self.content.blend_binding_order
+    }
+    pub fn hierarchy_order(&self) -> &HierarchyOrder {
+        self.content.hierarchy_order
+    }
+    pub fn draw_order_groups(&self) -> Option<&[crate::draw_order::DrawOrderGroup]> {
+        self.content.draw_order_groups.as_deref()
+    }
+    pub fn iter_blend_bindings_for_target<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> impl Iterator<Item = &'a BlendShapeBinding> {
+        self.blend_binding_order()
+            .iter()
+            .filter_map(|k| self.get_blend_binding(k))
+            .filter(move |b| b.target_id == id)
+    }
+    pub fn iter_active_blend_bindings_for_target<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> impl Iterator<Item = &'a BlendShapeBinding> {
+        self.iter_blend_bindings_for_target(id)
+            .filter(|b| self.blend_binding_active(b))
+    }
+    pub fn ordered_glue_ids(&self) -> Vec<String> {
+        let mut seen = HashSet::new();
+        self.hierarchy_order()
+            .glues
+            .iter()
+            .chain(self.glue_order())
+            .filter(|id| seen.insert(id.as_str()))
+            .cloned()
+            .collect()
+    }
+}
+
+impl Model<'_> {
+    pub fn asset_order(&self) -> &[String] {
+        self.content.assets.0
+    }
+    pub fn has_image_content(&self, id: &str) -> bool {
+        self.content.image_availability.contains(id)
+    }
+    pub fn prepared_evaluation(&self) -> Result<&crate::evaluation::PreparedEvaluation, &Status> {
+        self.prepared
+            .get_or_init(|| crate::evaluation::PreparedEvaluation::new(self))
+            .as_ref()
+    }
+    pub fn scene_projection(&self) -> Arc<SceneProjection> {
+        self.projection
+            .get_or_init(|| Arc::new(crate::evaluation::build_scene_projection(self)))
+            .clone()
+    }
+    pub fn resolved_drawing_groups(&self) -> Vec<crate::draw_order::DrawOrderGroup> {
+        crate::draw_order::resolved_groups(self)
+    }
+}
+impl Model<'_> {
+    pub fn sorted_transforms(&self) -> Vec<String> {
+        let mut result = Vec::new();
+        let mut seen = HashSet::new();
+
+        fn visit(
+            id: &str,
+            transforms: &RecordView<'_, Transform>,
+            seen: &mut HashSet<String>,
+            result: &mut Vec<String>,
+        ) {
+            if id.is_empty() || !seen.insert(id.to_string()) {
+                return;
+            }
+            if let Some(t) = transforms.get(id) {
+                visit(t.parent(), transforms, seen, result);
+                result.push(id.to_string());
+            }
+        }
+
+        for id in self.content.transform_order {
+            visit(id, &self.content.transforms, &mut seen, &mut result);
+        }
+        result
+    }
+}
+
+impl Model<'_> {
+    pub fn blend_bindings_for_target<'a>(&'a self, id: &'a str) -> Vec<&'a BlendShapeBinding> {
+        self.iter_blend_bindings_for_target(id).collect()
+    }
+}
+
+impl Model<'_> {
+    pub fn source_canvas(&self) -> Option<Canvas> {
+        self.content.source_canvas
+    }
+}
+impl Model<'_> {
+    pub fn glues_for_mesh<'a>(&'a self, id: &str) -> Vec<&'a Glue> {
+        self.glue_order()
+            .iter()
+            .filter_map(|key| self.get_glue(key))
+            .filter(|g| g.mesh_a_id.as_str() == id || g.mesh_b_id.as_str() == id)
+            .collect()
     }
 }

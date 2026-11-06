@@ -1,12 +1,11 @@
 //! Native transfer adapters: fixed resource bytes, linked project imports and
 //! complete grouped output. The editor never performs a second source read.
-use crate::{AssetData, DocumentSession, Publication};
+use crate::Publication;
 use std::{
-    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
-use zipzi_core::{Document, Status};
+use zipzi_core::{state::DocumentState, Status};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TransferFormat {
@@ -22,48 +21,9 @@ pub struct TransferPublishOptions {
 }
 
 pub struct TransferSnapshot {
-    document: Document,
-    resources: HashMap<String, CapturedAsset>,
-    root: PathBuf,
+    document: DocumentState,
+    resources: crate::ResourceView,
     protected_paths: Vec<PathBuf>,
-}
-enum CapturedAsset {
-    Encoded(AssetData),
-    Pixels {
-        texture: crate::TextureData,
-        encoded: std::sync::OnceLock<Result<AssetData, Status>>,
-    },
-}
-impl CapturedAsset {
-    fn data(&self) -> Result<&AssetData, Status> {
-        match self {
-            Self::Encoded(data) => Ok(data),
-            Self::Pixels { texture, encoded } => encoded
-                .get_or_init(|| {
-                    let mut bytes = Vec::new();
-                    {
-                        let mut encoder =
-                            png::Encoder::new(&mut bytes, texture.width, texture.height);
-                        encoder.set_color(png::ColorType::Rgba);
-                        encoder.set_depth(png::BitDepth::Eight);
-                        encoder
-                            .write_header()
-                            .map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?
-                            .write_image_data(&texture.rgba)
-                            .map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?;
-                    }
-                    Ok(AssetData {
-                        sha256: crate::content_sha256(&bytes),
-                        bytes,
-                        rgba: Vec::new(),
-                        width: texture.width,
-                        height: texture.height,
-                    })
-                })
-                .as_ref()
-                .map_err(Clone::clone),
-        }
-    }
 }
 fn codec(e: zipzi_cmo3::Cmo3Error) -> Status {
     Status::error(
@@ -80,106 +40,85 @@ fn codec(e: zipzi_cmo3::Cmo3Error) -> Status {
         },
     )
 }
-impl DocumentSession {
-    pub fn transfer_snapshot(&self) -> Result<TransferSnapshot, Status> {
-        let mut resources = HashMap::new();
-        let mut protected_paths = self.protected_sources();
-        let root = self.root();
-        if !root.as_os_str().is_empty() {
-            protected_paths.push(
-                fs::canonicalize(&root).map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?,
-            );
-        }
-        for id in self.document().asset_order() {
-            let asset = self.document().get_asset(id).unwrap();
-            let captured = if self.has_memory_asset(asset) {
-                CapturedAsset::Pixels {
-                    texture: self.read_texture(id)?,
-                    encoded: Default::default(),
-                }
-            } else {
-                CapturedAsset::Encoded(self.read_asset(id)?)
-            };
-            resources.insert(id.clone(), captured);
-            if !self.has_memory_asset(asset) {
-                let p = Path::new(&asset.content.as_ref().unwrap().source);
-                protected_paths.push(
-                    fs::canonicalize(if p.is_absolute() {
-                        p.to_path_buf()
-                    } else {
-                        root.join(p)
-                    })
-                    .map_err(|e| Status::error("RESOURCE_IO", e.to_string()))?,
-                );
-            }
-        }
-        Ok(TransferSnapshot {
-            document: self.document().clone(),
-            resources,
-            root,
-            protected_paths,
-        })
-    }
-    pub fn import_cubism_authoring(&mut self, path: &Path) -> Result<(), Status> {
-        if self.document().transaction_active() {
-            return Err(Status::error("EDIT_ACTIVE", "Finish the active edit first"));
-        }
-        // Parsing overlaps with the encoded source and prepared image buffers.
-        // Leave headroom for those allocations even when the host's remaining
-        // budget is below the normal decoder workspace cap.
-        let workspace = (self.image_memory_budget().available_bytes() / 2).min(2usize << 30);
-        let _decoded = self.image_memory_budget().reserve_transfer(workspace)?;
+impl crate::ProjectImporter {
+    pub fn import_cubism_authoring(&self, path: &Path) -> Result<crate::ImportedProject, Status> {
+        let workspace = (self.resources.budget().available_bytes() / 2).min(2usize << 30);
+        let _decoded = self.resources.budget().reserve_transfer(workspace)?;
         let (model, animation) = linked_project_with_budget(path, workspace)?;
         let length = fs::metadata(&model)
             .map_err(|e| Status::error("CUBISM_IO", e.to_string()))?
             .len() as usize;
         let _input = self
-            .image_memory_budget()
+            .resources
+            .budget()
             .reserve_transfer(length.saturating_mul(2))?;
         let bytes = fs::read(&model).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
         let mut imported =
             zipzi_cmo3::import_model_with_budget(&bytes, workspace).map_err(codec)?;
         if let Some(animation) = animation {
-            zipzi_cmo3::import_animation_with_budget(&animation, &mut imported.document, workspace)
-                .map_err(codec)?;
+            imported.document =
+                zipzi_cmo3::import_animation_with_budget(&animation, &imported.document, workspace)
+                    .map_err(codec)?;
         }
-        let mut candidate = DocumentSession::from_authoring_document(imported.document);
-        candidate.import_sources = vec![
-            model,
-            fs::canonicalize(path).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?,
-        ];
-        candidate.set_image_memory_budget(self.image_memory_budget().clone())?;
-        let mut document = candidate.document().clone();
-        for asset_id in document.asset_order().to_vec() {
-            let old = document.get_asset(&asset_id).unwrap().clone();
+        let mut b = imported.document.builder();
+        let mut images = Vec::new();
+        for id in imported.document.asset_order() {
+            let mut record = imported.document.asset(id).unwrap().clone();
+            let zipzi_core::state::AssetContent::Unresolved { source } = &record.content else {
+                continue;
+            };
             let bytes = imported
                 .images
-                .get(&old.content.as_ref().unwrap().source)
+                .get(source)
+                .cloned()
                 .ok_or_else(|| Status::error("CUBISM_RESOURCE", "Missing imported image"))?;
-            let image =
-                crate::prepare_png_content(bytes.clone().into(), candidate.image_memory_budget())?;
-            let mut asset = old;
-            asset.content = Some(image.content().clone());
-            asset.unresolved_source = None;
-            let result = document.replace_asset(asset);
-            if !result.status.is_ok() {
-                return Err(result.status);
-            }
-            candidate.retain_prepared_image(&image);
+            let image = self.resources.adopt_image(crate::prepare_png_content(
+                bytes.into(),
+                self.resources.budget(),
+            )?)?;
+            record.content = zipzi_core::state::AssetContent::Image {
+                resource: image.key(),
+                width: image.width(),
+                height: image.height(),
+            };
+            b.replace_asset(record)?;
+            images.push(image);
         }
-        // Source images may be original artwork or packed pages. Only known
-        // atlas inputs and shared pages need extraction; keep independent originals.
-        candidate.document_mut().clone_from(&document);
-        candidate.unpack_atlas_images(&imported.atlas_assets)?;
-        document = candidate.document().clone();
-        // Keep the candidate resource store; publication replaces the session
-        // only after every model, animation and texture has been validated.
-        self.store_import_candidate(candidate, document);
-        Ok(())
+        let document = b.freeze()?.state;
+        let resources = crate::ResourceView::default()
+            .with_images(images)
+            .for_state(&document)?;
+        let (document, resources) = crate::atlas::unpack_atlas_images(
+            &document,
+            &resources,
+            &self.resources,
+            &imported.atlas_assets,
+        )?;
+        Ok(crate::ImportedProject {
+            document,
+            resources,
+            protected_paths: vec![
+                model,
+                fs::canonicalize(path).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?,
+            ],
+        })
     }
 }
 impl TransferSnapshot {
-    pub fn document(&self) -> &Document {
+    pub fn new(
+        document: DocumentState,
+        resources: crate::ResourceView,
+        protected_paths: Vec<PathBuf>,
+    ) -> Result<Self, Status> {
+        let resources = resources.for_state(&document)?;
+        Ok(Self {
+            document,
+            resources,
+            protected_paths,
+        })
+    }
+
+    pub fn document(&self) -> &DocumentState {
         &self.document
     }
     pub fn publish(
@@ -225,14 +164,11 @@ impl TransferSnapshot {
         }
         match format {
             TransferFormat::Runtime => {
-                let plan =
-                    crate::package::build_export_plan_with(&self.document, &self.root, &|asset| {
-                        self.resources
-                            .get(&asset.id)
-                            .ok_or_else(|| Status::error("MISSING_RESOURCE", &asset.id))?
-                            .data()
-                            .cloned()
-                    })?;
+                let plan = crate::package::build_export_plan_with(
+                    &self.document,
+                    &self.protected_paths,
+                    &|asset| self.resources.read_asset(asset),
+                )?;
                 crate::package::publish_managed_export_plan(&plan, destination)
             }
             TransferFormat::Cubism => {
@@ -240,19 +176,14 @@ impl TransferSnapshot {
                     .file_name()
                     .and_then(|n| n.to_str())
                     .ok_or_else(|| Status::error("INVALID_DESTINATION", "Invalid output name"))?;
-                let resolver = |asset: &zipzi_core::ImageAsset| {
-                    let image = self.resources.get(&asset.id).ok_or_else(|| {
-                        zipzi_cmo3::Cmo3Error::Asset {
-                            asset_id: asset.id.clone(),
-                            message: "Missing snapshot image".into(),
-                        }
-                    })?;
-                    image.data().map(|data| data.bytes.clone()).map_err(|s| {
-                        zipzi_cmo3::Cmo3Error::Asset {
+                let resolver = |asset: &zipzi_core::state::AssetRecord| {
+                    self.resources
+                        .read_asset(asset)
+                        .map(|data| data.bytes)
+                        .map_err(|s| zipzi_cmo3::Cmo3Error::Asset {
                             asset_id: asset.id.clone(),
                             message: s.message,
-                        }
-                    })
+                        })
                 };
                 let loss_policy = if publish_options.allow_loss {
                     zipzi_cmo3::LossPolicy::Allow
@@ -447,25 +378,20 @@ mod tests {
         let root =
             std::env::temp_dir().join(format!("zipzi-cubism-budget-{}", uuid::Uuid::new_v4()));
         fs::create_dir(&root).unwrap();
-        let mut doc = zipzi_core::Document::new();
-        assert!(doc
-            .initialize(
-                &uuid::Uuid::new_v4().to_string(),
-                zipzi_core::ModelSetup::default()
-            )
-            .is_ok());
-        let source = DocumentSession::from_authoring_document(doc);
-        let artifact = source.encode_cmo3(&Default::default()).unwrap();
+        let doc = DocumentState::new(uuid::Uuid::new_v4().to_string(), Default::default()).unwrap();
+        let artifact =
+            crate::encode_document_cmo3(&doc, &Default::default(), &Default::default()).unwrap();
         let path = root.join("model.cmo3");
         fs::write(&path, artifact.bytes).unwrap();
         let budget = crate::ImageMemoryBudget::new(128 << 20);
         budget.bind_host_budget(0, 128 << 20);
-        let mut imported = DocumentSession::new();
-        imported.set_image_memory_budget(budget.clone()).unwrap();
+        let imported = crate::ProjectImporter {
+            resources: crate::ResourceStore::new(budget.clone()),
+        };
         let result = imported.import_cubism_authoring(&path);
         fs::remove_dir_all(root).unwrap();
         assert!(result.is_ok(), "{result:?}");
-        assert_eq!(imported.document().id(), source.document().id());
+        assert_eq!(result.unwrap().document.id(), doc.id());
         assert_eq!(budget.usage().transfer_bytes, 0);
     }
 

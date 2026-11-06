@@ -88,9 +88,9 @@ impl Draft {
         let mut commands = Commands::new(&mut builder, &mut resources);
         let value = run(&mut commands)?;
         commands.finish()?;
-        // A batch may assemble forward references internally, but no successful
-        // command exposes an invalid candidate to the next command or query.
-        builder.preview()?;
+        // A batch may assemble forward references internally. Retain canonical
+        // identities before exposing its successful result to the next batch.
+        builder.validate_candidate()?;
         self.workspace = Some((builder, resources));
         self.source = next;
         Ok(value)

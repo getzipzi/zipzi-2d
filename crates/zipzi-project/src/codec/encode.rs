@@ -1,26 +1,8 @@
 use zipzi_core::types::{BlendMode, DeltaKeyforms, Status, TransformKind};
-use zipzi_core::Document;
+
 use zipzi_core::SceneTrackEvaluation;
 
 use super::types::*;
-
-pub fn encode_project(document: &Document) -> Result<String, Status> {
-    let project = encode_wire(document)?;
-    let mut out = serde_json::to_string(&project)
-        .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
-    out.push('\n');
-    Ok(out)
-}
-
-pub(crate) fn encode_native_project(document: &Document) -> Result<Vec<u8>, Status> {
-    let mut project = encode_wire(document)?;
-    project.format = "zipzi-project".into();
-    project.format_version = 22;
-    let mut out = serde_json::to_vec(&project)
-        .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
-    out.push(b'\n');
-    Ok(out)
-}
 
 pub(super) fn encode_wire(document: &impl super::view::EncodeModel) -> Result<ProjectWire, Status> {
     if document.id().is_empty() {

@@ -5,7 +5,7 @@ use super::{
     spatial::{self, PolygonIndex},
     AlphaMask, AlphaMeshOptions,
 };
-use crate::{extract_manual_meshing, MeshGeometry, SdkError};
+use crate::{extract_manual_meshing, MeshGeometry, Status};
 use geo::{
     unary_union, Area, BooleanOps, BoundingRect, Buffer, Contains, Coord, InteriorPoint,
     LineString, MultiLineString, MultiPolygon, Point, Polygon, Simplify,
@@ -47,7 +47,7 @@ pub struct InteriorSites {
 
 impl EdgeLayout {
     /// Render the edge phase as a valid mesh before interior sites are added.
-    pub fn preview_geometry(&self) -> Result<MeshGeometry, SdkError> {
+    pub fn preview_geometry(&self) -> Result<MeshGeometry, Status> {
         triangulate_constrained(InteriorSites {
             sampler: self.sampler.clone(),
             outline: self.outline.clone(),
@@ -66,7 +66,7 @@ impl InteriorSites {
     }
 
     /// Inspect the complete result without consuming this stage.
-    pub fn preview_geometry(&self) -> Result<MeshGeometry, SdkError> {
+    pub fn preview_geometry(&self) -> Result<MeshGeometry, Status> {
         triangulate_constrained(self.clone())
     }
 }
@@ -77,7 +77,7 @@ fn ring_points(
     spacing: f64,
     minimum: usize,
     mut remaining: usize,
-) -> Result<Vec<Coord<f64>>, SdkError> {
+) -> Result<Vec<Coord<f64>>, Status> {
     let perimeter: f64 = ring
         .0
         .windows(2)
@@ -140,7 +140,7 @@ impl Sampler {
         Point2::new(p.x as f32 as f64, p.y as f32 as f64)
     }
 
-    fn insert(&mut self, p: Coord<f64>) -> Result<FixedVertexHandle, SdkError> {
+    fn insert(&mut self, p: Coord<f64>) -> Result<FixedVertexHandle, Status> {
         self.remaining = self.remaining.checked_sub(1).ok_or_else(limit)?;
         let p = self.point(p);
         let before = self.cdt.num_vertices();
@@ -161,7 +161,7 @@ impl Sampler {
         &mut self,
         p: Coord<f64>,
         clearance: f64,
-    ) -> Result<Option<FixedVertexHandle>, SdkError> {
+    ) -> Result<Option<FixedVertexHandle>, Status> {
         if self.occupied.nearby(self.point(p), clearance) {
             self.remaining = self.remaining.checked_sub(1).ok_or_else(limit)?;
             return Ok(None);
@@ -173,7 +173,7 @@ impl Sampler {
         &mut self,
         outline: &MultiPolygon<f64>,
         options: &AlphaMeshOptions,
-    ) -> Result<(), SdkError> {
+    ) -> Result<(), Status> {
         let mut vertices = Vec::new();
         let mut indices = HashMap::new();
         let mut edges = Vec::new();
@@ -245,7 +245,7 @@ impl Sampler {
         ring: &LineString<f64>,
         spacing: f64,
         minimum: usize,
-    ) -> Result<(), SdkError> {
+    ) -> Result<(), Status> {
         let mut handles = Vec::new();
         for point in ring_points(ring, spacing, minimum, self.remaining)? {
             let handle = self.insert(point)?;
@@ -277,7 +277,7 @@ pub(super) fn build_edge_layout(
     options: &AlphaMeshOptions,
     foreground: &MultiPolygon<f64>,
     outline: &MultiPolygon<f64>,
-) -> Result<EdgeLayout, SdkError> {
+) -> Result<EdgeLayout, Status> {
     let clearance = (options.inside_spacing * 0.3).max(0.001);
     let mut sampler = Sampler {
         cdt: Cdt::new(),
@@ -459,7 +459,7 @@ pub(super) fn build_edge_layout(
     })
 }
 
-pub(super) fn sample_interior(layout: EdgeLayout) -> Result<InteriorSites, SdkError> {
+pub(super) fn sample_interior(layout: EdgeLayout) -> Result<InteriorSites, Status> {
     let EdgeLayout {
         mut sampler,
         foreground,
@@ -561,7 +561,7 @@ pub(super) fn sample_interior(layout: EdgeLayout) -> Result<InteriorSites, SdkEr
     })
 }
 
-pub(super) fn triangulate_constrained(sites: InteriorSites) -> Result<MeshGeometry, SdkError> {
+pub(super) fn triangulate_constrained(sites: InteriorSites) -> Result<MeshGeometry, Status> {
     let InteriorSites {
         sampler,
         outline,
@@ -722,7 +722,7 @@ mod tests {
             let error = self::sampler(remaining, vertices)
                 .boundary(&outline, &options())
                 .unwrap_err();
-            assert_eq!(error.code.as_ref(), "ALPHA_MESH_LIMIT");
+            assert_eq!(error.code.as_str(), "ALPHA_MESH_LIMIT");
         }
     }
 
@@ -751,7 +751,7 @@ mod tests {
                     },
                 )
                 .unwrap_err();
-            assert_eq!(error.code.as_ref(), "ALPHA_MESH_GEOMETRY");
+            assert_eq!(error.code.as_str(), "ALPHA_MESH_GEOMETRY");
         }
     }
 }

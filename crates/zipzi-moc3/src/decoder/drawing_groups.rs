@@ -118,7 +118,7 @@ impl<'a> Moc3DecoderContext<'a> {
                 max_order,
             });
         }
-        check_status!(self.doc.replace_draw_order_groups(groups).status);
+        check_status!(self.doc.set_draw_order_groups(Some(groups)));
 
         Ok(())
     }

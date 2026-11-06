@@ -1,99 +1,68 @@
-//! Normalize imported packed pages into independent, pixel-aligned mesh images.
-//! UV rebasing preserves the original interpolation, including rotated artwork.
-use crate::{DocumentSession, PreparedImageContent, TextureData};
+//! Normalize packed pages using captured immutable resource versions.
+use crate::{ResourceStore, ResourceView, TextureData};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use zipzi_core::{ImageAsset, Mesh, Status, Vec2};
-
-impl DocumentSession {
-    /// Called on an unpublished import candidate. Failure drops every draft image.
-    pub(crate) fn unpack_atlas_images(
-        &mut self,
-        known_atlases: &HashSet<String>,
-    ) -> Result<(), Status> {
-        let mut users = BTreeMap::<String, Vec<String>>::new();
-        for id in self.document().mesh_order() {
-            let mesh = self.document().get_mesh(id).unwrap();
-            if let Some(asset) = mesh.texture_asset_id.resolved_id() {
-                users.entry(asset.to_owned()).or_default().push(id.clone());
-            }
+use zipzi_core::{
+    state::{AssetContent, AssetRecord, DocumentState},
+    Mesh, Status, Vec2,
+};
+pub(crate) fn unpack_atlas_images(
+    state: &DocumentState,
+    resources: &ResourceView,
+    store: &ResourceStore,
+    known_atlases: &HashSet<String>,
+) -> Result<(DocumentState, ResourceView), Status> {
+    let mut users = BTreeMap::<String, Vec<String>>::new();
+    for id in state.mesh_order() {
+        let mesh = state.mesh(id).unwrap();
+        if let Some(asset) = mesh.texture_asset_id.resolved_id() {
+            users.entry(asset.into()).or_default().push(id.clone());
         }
-        for (source_id, mesh_ids) in users {
-            if mesh_ids.len() == 1 && !known_atlases.contains(&source_id) {
-                continue;
-            }
-            let source = self.document().get_asset(&source_id).unwrap().clone();
-            // Runtime imports already report missing/corrupt pages as resource
-            // diagnostics. Keep those unresolved references repairable.
-            if source
-                .content
-                .as_ref()
-                .is_none_or(|image| image.width == 0 || image.height == 0)
-            {
-                continue;
-            }
-            let prepared = match self.memory_image(&source) {
-                Some(image) => image,
-                None => {
-                    crate::prepare_project_image(&self.root(), &source, self.image_memory_budget())?
-                }
-            };
-            let texture = prepared.texture();
-            for id in mesh_ids {
-                let mut mesh = self.document().get_mesh(&id).unwrap().clone();
-                let crop = Crop::new(&mesh, texture.width, texture.height)?;
-                let size = crop.width as usize * crop.height as usize * 4;
-                // Reserve before allocating the output; from_rgba transfers the
-                // Arc to the same shared pool without another image copy.
-                let reservation = self.image_memory_budget().reserve(size.saturating_mul(2))?;
-                let pixels: std::sync::Arc<[u8]> = crop.extract(&mesh, &texture)?.into();
-                reservation.commit(&pixels, crate::ImageBufferKind::Rgba)?;
-                let image = PreparedImageContent::from_rgba(
-                    crop.width,
-                    crop.height,
-                    pixels,
-                    self.image_memory_budget(),
-                )?;
-                let asset_id = uuid::Uuid::new_v4().to_string();
-                let result = self.document_mut().add_asset(ImageAsset {
-                    id: asset_id.clone(),
-                    name: mesh.name.clone(),
-                    content: Some(image.content().clone()),
-                    unresolved_source: None,
-                });
-                check(result.status)?;
-                crop.rebase(&mut mesh.uvs, texture.width, texture.height);
-                mesh.texture_asset_id = asset_id.into();
-                check(self.document_mut().replace_mesh(mesh).status)?;
-                self.retain_prepared_image(&image);
-            }
-            // Preserve a page if another authored resource still references it.
-            if self.document().references_to(&source_id).is_empty() {
-                check(self.document_mut().erase_object(&source_id).status)?;
-            }
+    }
+    let mut builder = state.builder();
+    let mut images = Vec::new();
+    for (source_id, mesh_ids) in users {
+        if mesh_ids.len() == 1 && !known_atlases.contains(&source_id) {
+            continue;
         }
-        let sources: HashSet<_> = self
-            .document()
-            .asset_order()
-            .iter()
-            .filter_map(|id| {
-                self.document()
-                    .get_asset(id)?
-                    .content
-                    .as_ref()
-                    .map(|c| c.source.clone())
-            })
-            .collect();
-        self.retain_image_sources(&sources);
-        Ok(())
+        let AssetContent::Image { resource, .. } = state.asset(&source_id).unwrap().content else {
+            continue;
+        };
+        let texture = resources
+            .image(resource)
+            .ok_or_else(|| Status::error("MISSING_RESOURCE", &source_id))?
+            .texture();
+        for id in mesh_ids {
+            let mut mesh = builder.mesh(&id).unwrap().clone();
+            let crop = Crop::new(&mesh, texture.width, texture.height)?;
+            let size = crop.width as usize * crop.height as usize * 4;
+            let reservation = store.budget().reserve(size.saturating_mul(2))?;
+            let pixels: std::sync::Arc<[u8]> = crop.extract(&mesh, &texture)?.into();
+            reservation.commit(&pixels, crate::ImageBufferKind::Rgba)?;
+            let image = store.prepare_rgba(crop.width, crop.height, pixels)?;
+            let asset_id = uuid::Uuid::new_v4().to_string();
+            builder.create_asset(AssetRecord {
+                id: asset_id.clone(),
+                name: mesh.name.clone(),
+                content: AssetContent::Image {
+                    resource: image.key(),
+                    width: image.width(),
+                    height: image.height(),
+                },
+            })?;
+            crop.rebase(&mut mesh.uvs, texture.width, texture.height);
+            mesh.texture_asset_id = asset_id.into();
+            builder.replace_mesh(mesh)?;
+            images.push(image);
+        }
+        if !builder.mesh_order().iter().any(|id| {
+            builder.mesh(id).unwrap().texture_asset_id.resolved_id() == Some(source_id.as_str())
+        }) {
+            builder.remove_asset(&source_id)?;
+        }
     }
-}
-
-fn check(status: Status) -> Result<(), Status> {
-    if status.is_ok() {
-        Ok(())
-    } else {
-        Err(status)
-    }
+    let document = builder.freeze()?.state;
+    let resources = resources.with_images(images).for_state(&document)?;
+    Ok((document, resources))
 }
 fn invalid(message: &str) -> Status {
     Status::error("ATLAS_EXTRACTION", message)
@@ -328,23 +297,26 @@ mod tests {
 
     #[test]
     fn atlas_normalization_keeps_an_independent_original_image_intact() {
-        let mut document = zipzi_core::Document::new();
-        assert!(document
-            .initialize(
-                uuid::Uuid::new_v4().to_string(),
-                zipzi_core::Canvas::new(64., 64., Vec2::default(), 1.)
-            )
-            .is_ok());
-        let image =
-            PreparedImageContent::from_rgba_bytes(8, 8, vec![127; 8 * 8 * 4], &Default::default())
-                .unwrap();
-        let asset = ImageAsset {
+        let mut document = DocumentState::new(
+            uuid::Uuid::new_v4().to_string(),
+            zipzi_core::Canvas::new(64., 64., Vec2::default(), 1.).into(),
+        )
+        .unwrap()
+        .builder();
+        let store = ResourceStore::default();
+        let image = store
+            .prepare_rgba(8, 8, vec![127; 8 * 8 * 4].into())
+            .unwrap();
+        let asset = AssetRecord {
             id: uuid::Uuid::new_v4().to_string(),
             name: "Original artwork".into(),
-            content: Some(image.content().clone()),
-            unresolved_source: None,
+            content: AssetContent::Image {
+                resource: image.key(),
+                width: 8,
+                height: 8,
+            },
         };
-        assert!(document.add_asset(asset.clone()).status.is_ok());
+        assert!(document.create_asset(asset.clone()).is_ok());
         assert!(document
             .create_mesh(Mesh {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -361,15 +333,15 @@ mod tests {
                 triangles: vec![[0, 1, 2]],
                 ..Default::default()
             })
-            .status
             .is_ok());
-        let mut session = DocumentSession::from_authoring_document(document.clone());
-        session.retain_prepared_image(&image);
-        session.unpack_atlas_images(&HashSet::new()).unwrap();
-        assert!(document.same_content(session.document()));
+        let document = document.freeze().unwrap().state;
+        let resources = ResourceView::default().with_images([image.clone()]);
+        let (next, view) =
+            unpack_atlas_images(&document, &resources, &store, &HashSet::new()).unwrap();
+        assert_eq!(document.content_id(), next.content_id());
         assert_eq!(
-            session.read_texture(&asset.id).unwrap().rgba,
-            image.texture().rgba
+            view.read_asset(&asset).unwrap().rgba.as_slice(),
+            image.texture().rgba.as_ref()
         );
     }
 }
