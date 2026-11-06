@@ -17,10 +17,17 @@ mod geometry;
 pub use geometry::*;
 mod manual_mesh_transfer;
 pub use manual_mesh_transfer::{
-    ManualMeshOutcome, ManualMeshTransferReport, ManualMeshUvMap, VertexProvenance,
+    ManualMeshInspection, ManualMeshOutcome, ManualMeshTransferReport, ManualMeshUvMap,
+    VertexProvenance,
 };
 
 mod motion_curve;
 pub use motion_curve::{
     MotionBezierHandle, MotionCurveEdit, MotionInterpolation, MotionKeyMove, MotionKeyRef,
+};
+
+mod spatial;
+pub use spatial::{
+    hit_test_geometry, object_bounds, query_spatial_frame, validate_spatial_queries, GeometryHit,
+    GeometryQuery, ObjectBounds, SpatialError, SpatialQuery, SpatialResult, TriangleHit,
 };

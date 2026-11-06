@@ -576,3 +576,84 @@ fn preview_tracks_ignored_command_failure_without_mutating_the_live_draft() {
         "changed"
     );
 }
+
+#[test]
+fn texture_snapshot_history_reads_each_captured_asset_version() {
+    let store = ResourceStore::default();
+    let red = store
+        .prepare_rgba(1, 1, Arc::from([255, 0, 0, 255]))
+        .unwrap();
+    let blue = store
+        .prepare_rgba(1, 1, Arc::from([0, 0, 255, 255]))
+        .unwrap();
+    let mut session = AuthoringSession::new(snapshot());
+    let mut first = session.begin_draft();
+    first
+        .batch(first.source(), |c| c.replace_image(&id(5), red))
+        .unwrap();
+    session.publish(first.prepare("red").unwrap()).unwrap();
+    let old = session.snapshot().clone();
+    let mut second = session.begin_draft();
+    second
+        .batch(second.source(), |c| c.replace_image(&id(5), blue))
+        .unwrap();
+    let candidate = second.read_snapshot().unwrap().snapshot;
+    let pixels = |snapshot: &Snapshot| {
+        snapshot
+            .resources()
+            .read_texture(snapshot.document().asset(&id(5)).unwrap())
+            .unwrap()
+    };
+    let red_pixels = pixels(&old);
+    let blue_pixels = pixels(&candidate);
+    assert_eq!(&*red_pixels.rgba, &[255, 0, 0, 255]);
+    assert_eq!(&*blue_pixels.rgba, &[0, 0, 255, 255]);
+    session.publish(second.prepare("blue").unwrap()).unwrap();
+    session.undo(session.version()).unwrap();
+    assert!(Arc::ptr_eq(
+        &pixels(session.snapshot()).rgba,
+        &red_pixels.rgba
+    ));
+    session.redo(session.version()).unwrap();
+    assert!(Arc::ptr_eq(
+        &pixels(session.snapshot()).rgba,
+        &blue_pixels.rgba
+    ));
+    drop(session);
+    drop(store);
+    assert!(Arc::ptr_eq(&pixels(&old).rgba, &red_pixels.rgba));
+    assert!(Arc::ptr_eq(&pixels(&candidate).rgba, &blue_pixels.rgba));
+}
+
+#[test]
+fn one_candidate_sequence_has_one_snapshot_through_preview_and_publication() {
+    let mut session = AuthoringSession::new(snapshot());
+    let mut draft = session.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            c.rename(NameTarget::Mesh(&id(4)), "first".into())
+        })
+        .unwrap();
+    let first = draft.read_snapshot().unwrap();
+    assert_eq!(
+        draft.read_snapshot().unwrap().snapshot.content_id(),
+        first.snapshot.content_id()
+    );
+    let (prepared, ()) = draft
+        .prepare_preview(draft.source(), |c| {
+            c.rename(NameTarget::Mesh(&id(4)), "preview".into())
+        })
+        .unwrap();
+    let displayed = prepared.read_snapshot().unwrap();
+    assert_eq!(
+        prepared.read_snapshot().unwrap().content_id(),
+        displayed.content_id()
+    );
+    draft.install_preview(prepared).unwrap();
+    let installed = draft.read_snapshot().unwrap();
+    assert_ne!(installed.source, first.source);
+    assert_eq!(installed.snapshot.content_id(), displayed.content_id());
+    let receipt = session.publish(draft.prepare("confirm").unwrap()).unwrap();
+    assert_eq!(receipt.content, displayed.content_id());
+    assert_eq!(session.snapshot().content_id(), displayed.content_id());
+}

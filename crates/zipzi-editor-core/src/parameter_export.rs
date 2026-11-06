@@ -14,7 +14,7 @@ impl Document {
         &self,
         command: &EditorCommand,
     ) -> Vec<ParameterExportDiagnostic> {
-        let mut candidate = self.model().fork_candidate();
+        let mut candidate = self.model().builder();
         let intent = match command {
             EditorCommand::CreateParameter(draft)
             | EditorCommand::CreateParameterChecked { draft, .. } => Some(
@@ -43,40 +43,38 @@ impl Document {
                 })
             }
             EditorCommand::UpdateParameter { id, draft, .. } => {
-                if !candidate
-                    .replace_parameter(draft.parameter(id))
-                    .status
-                    .is_ok()
-                {
+                if !candidate.replace_parameter(draft.parameter(id)).is_ok() {
                     return Vec::new();
                 }
-                (candidate.parameter_group_for(id) != draft.group_id.as_deref()).then(|| {
-                    zipzi_contract::document::OrganizationEdit::Move {
-                        ids: vec![id.clone()],
-                        destination: zipzi_contract::document::OrganizationCollection::Parameters {
-                            group_id: draft.group_id.clone(),
-                        },
-                        before: None,
-                    }
+                (candidate
+                    .preview()
+                    .ok()
+                    .as_ref()
+                    .and_then(|state| state.parameter_group_for(id).map(str::to_owned))
+                    .as_deref()
+                    != draft.group_id.as_deref())
+                .then(|| zipzi_contract::document::OrganizationEdit::Move {
+                    ids: vec![id.clone()],
+                    destination: zipzi_contract::document::OrganizationCollection::Parameters {
+                        group_id: draft.group_id.clone(),
+                    },
+                    before: None,
                 })
             }
             _ => None,
         };
-        let status = if let Some(intent) = intent {
-            match candidate.plan_organization_edit(intent) {
-                Ok(plan) => candidate.apply_organization_plan(&plan).status,
-                Err(status) => status,
+        if let Some(intent) = intent {
+            if candidate.edit_organization(intent).is_err() {
+                return Vec::new();
             }
-        } else if matches!(command, EditorCommand::UpdateParameter { .. }) {
-            zipzi_core::Status::ok()
-        } else {
-            return Vec::new();
-        };
-        if !status.is_ok() {
+        } else if !matches!(command, EditorCommand::UpdateParameter { .. }) {
             return Vec::new();
         }
+        let Ok(candidate) = candidate.freeze() else {
+            return Vec::new();
+        };
         let before = export_diagnostics(&self.model());
-        export_diagnostics(&candidate)
+        export_diagnostics(&candidate.state)
             .into_iter()
             .map(|(resource, code, message)| {
                 let introduced =
@@ -106,13 +104,13 @@ fn export_diagnostics(doc: &zipzi_core::state::DocumentState) -> Vec<(String, St
     inspect!("Model3", zipzi_project::model3::export_settings(doc));
     for id in doc.expression_order() {
         inspect!(
-            format!("Expression: {}", doc.get_expression(id).unwrap().name),
+            format!("Expression: {}", doc.expression(id).unwrap().name),
             zipzi_project::export_expression3(doc, id)
         );
     }
     for id in doc.motion_order() {
         inspect!(
-            format!("Motion: {}", doc.get_motion(id).unwrap().name),
+            format!("Motion: {}", doc.motion(id).unwrap().name),
             zipzi_project::export_motion3(doc, id)
         );
     }

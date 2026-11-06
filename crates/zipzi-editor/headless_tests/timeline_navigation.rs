@@ -265,10 +265,7 @@ fn edge_pan_keeps_key_candidate_alive_and_commits_one_undo_step(cx: &mut TestApp
             press(window, origin, cx);
             slide(window, pointer, false, cx);
             let edit = harness.view.read(cx).editor.timeline_edit().unwrap();
-            let before = (
-                edit.identity.edit,
-                edit.candidate.clip().tracks[0].initial.time,
-            );
+            let before = (edit.identity.edit, edit.candidate.tracks[0].initial.time);
             window.dispatch_event(
                 ScrollWheelEvent {
                     position: pointer,
@@ -296,7 +293,7 @@ fn edge_pan_keeps_key_candidate_alive_and_commits_one_undo_step(cx: &mut TestApp
             .timeline_edit()
             .expect("pan must preserve the candidate");
         assert_eq!(edit.identity.edit, before.0);
-        assert!(edit.candidate.clip().tracks[0].initial.time > before.1);
+        assert!(edit.candidate.tracks[0].initial.time > before.1);
         assert!(view.editor.timeline_view().unwrap().time_range.0 > 0.);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
     });

@@ -3,7 +3,6 @@ use super::*;
 use anyhow::{Result, ensure};
 use zipzi_contract::document::ExpressionEdit;
 use zipzi_contract::document::ExpressionEntryFields;
-use zipzi_sdk::{ExpressionEditPlan, ExpressionEntryAddress};
 
 impl Document {
     pub fn expression_authoring_capabilities(
@@ -15,44 +14,72 @@ impl Document {
             ObjectKind::ExpressionEntry => zipzi_contract::authoring::ObjectKind::ExpressionEntry,
             _ => anyhow::bail!("Expected an expression or entry"),
         };
-        let handle = self.session.handle(kind, &object.id)?;
+
         Ok(ExpressionAuthoringCapabilities {
-            domain: self.session.expression_capabilities(&handle)?,
+            domain: self.model().expression_capabilities(&object.id)?,
             session_reason: self
                 .pending
                 .as_ref()
                 .map(|_| AuthoringSessionReason::CandidateActive),
         })
     }
-    pub fn plan_expression_authoring(&self, intent: ExpressionEdit) -> Result<ExpressionEditPlan> {
+    pub fn plan_expression_authoring(
+        &self,
+        intent: ExpressionEdit,
+    ) -> Result<crate::EditPreview<()>> {
         self.ensure_authoring_idle()?;
-        Ok(self.session.plan_expression_edit(intent)?)
+        Ok(EditPreview::prepare(
+            &self.session,
+            "Edit expression",
+            None,
+            |c| c.edit_expression(intent),
+        )?)
     }
     pub fn execute_expression_authoring(
         &mut self,
-        plan: &ExpressionEditPlan,
+        plan: &crate::EditPreview<()>,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let receipt = self.session.execute_expression_plan(plan)?;
+        let receipt = plan.publish(&mut self.session)?;
         self.expression_operation_result(receipt)
+            .map(|result| result.with_preview(plan))
     }
-    pub fn expression_entry_address(&self, id: &str) -> Result<ExpressionEntryAddress> {
-        Ok(self.session.expression_entry_address(id)?)
+    pub fn expression_entry_address(
+        &self,
+        id: &str,
+    ) -> Result<crate::FieldCapture<ExpressionEntryFields>> {
+        let source = self.session.sourced_snapshot();
+        let (owner, entry) = source
+            .snapshot
+            .document()
+            .expression_entry(id)
+            .ok_or_else(|| zipzi_sdk::Status::error("MISSING_EXPRESSION_ENTRY", id))?;
+        Ok(FieldCapture {
+            source: match source.source {
+                zipzi_sdk::QuerySource::Published(v) => v,
+                _ => unreachable!(),
+            },
+            id: id.into(),
+            owner: Some(owner.id.clone()),
+            value: entry.into(),
+        })
     }
     pub fn begin_expression_entry_edit(
         &mut self,
-        address: &ExpressionEntryAddress,
+        address: &crate::FieldCapture<ExpressionEntryFields>,
     ) -> Result<ExpressionEntryEditToken> {
         self.ensure_authoring_idle()?;
-        self.session
-            .plan_expression_entry_patch(address, address.expected().clone())?;
+        ensure!(
+            self.session.version() == address.source,
+            "Expression source changed"
+        );
         let token = ExpressionEntryEditToken(Uuid::new_v4());
         self.pending = Some(PendingEdit {
             kind: Gesture::ExpressionEntry(token.0),
             original: PendingOriginal::ExpressionEntry(address.clone()),
             edit: self
                 .session
-                .begin_owned_edit("Edit expression entry", None)?
+                .begin_draft("Edit expression entry", Some(address.source))?
                 .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -98,19 +125,33 @@ impl Document {
         let PendingOriginal::ExpressionEntry(address) = &pending.original else {
             unreachable!()
         };
-        let owner = address.owner_id().to_owned();
+        let owner = address
+            .owner
+            .as_deref()
+            .expect("expression owner")
+            .to_owned();
         let previous_target = pending
             .edit
             .candidate_document()
-            .get_expression_entry(address.entry_id())
+            .expression_entry(&address.id)
             .unwrap()
             .1
             .target
             .clone();
         let references_changed = previous_target != fields.target;
-        pending
+        let expected = pending
             .edit
-            .preview_expression_entry(address.entry_id(), fields)?;
+            .candidate_document()
+            .expression_entry(&address.id)
+            .map(|(_, entry)| ExpressionEntryFields::from(entry))
+            .ok_or_else(|| zipzi_sdk::Status::error("MISSING_EXPRESSION_ENTRY", &address.id))?;
+        pending.edit.preview(|c| {
+            c.edit_expression(ExpressionEdit::PatchEntry {
+                id: address.id.clone(),
+                expected,
+                fields,
+            })
+        })?;
         pending.changed.take();
         let previous_revision = self.projection_revision;
         self.invalidate_expression_projection();
@@ -122,10 +163,21 @@ impl Document {
 
     pub fn plan_expression_entry_patch(
         &self,
-        address: &ExpressionEntryAddress,
+        address: &crate::FieldCapture<ExpressionEntryFields>,
         fields: ExpressionEntryFields,
-    ) -> Result<ExpressionEditPlan> {
-        Ok(self.session.plan_expression_entry_patch(address, fields)?)
+    ) -> Result<crate::EditPreview<()>> {
+        Ok(EditPreview::prepare(
+            &self.session,
+            "Edit expression entry",
+            Some(address.source),
+            |c| {
+                c.edit_expression(ExpressionEdit::PatchEntry {
+                    id: address.id.clone(),
+                    expected: address.value.clone(),
+                    fields,
+                })
+            },
+        )?)
     }
 
     pub fn commit_expression_entry_edit(
@@ -136,21 +188,32 @@ impl Document {
             self.expression_edit_token() == Some(token),
             "Expression edit expired"
         );
-        let pending = self.pending.take().unwrap();
+        let mut pending = self.pending.take().unwrap();
         let PendingOriginal::ExpressionEntry(address) = &pending.original else {
             unreachable!()
         };
-        let owner = address.owner_id().to_owned();
+        let owner = address
+            .owner
+            .as_deref()
+            .expect("expression owner")
+            .to_owned();
         let references_changed = pending
             .edit
             .candidate_document()
-            .get_expression_entry(address.entry_id())
+            .expression_entry(&address.id)
             .unwrap()
             .1
             .target
-            != address.expected().target;
+            != address.value.target;
         let result = pending.edit.commit_to(&mut self.session);
-        if !result.as_ref().is_ok_and(|receipt| receipt.changed) {
+        if result.is_err() && pending.edit.is_active() {
+            self.pending = Some(pending);
+            return Err(result.unwrap_err().into());
+        }
+        if !result
+            .as_ref()
+            .is_ok_and(|receipt| (receipt.kind != zipzi_sdk::PublicationKind::Unchanged))
+        {
             let previous_revision = self.projection_revision;
             self.invalidate_expression_projection();
             if !references_changed {
@@ -164,7 +227,7 @@ impl Document {
         &mut self,
         receipt: zipzi_sdk::Publication,
     ) -> Result<OperationResult> {
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, false);
         }

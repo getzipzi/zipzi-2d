@@ -58,22 +58,22 @@ impl ObjectStateIndex {
             );
         };
         for id in model.part_order() {
-            if let Some(p) = model.get_part(id) {
+            if let Some(p) = model.part(id) {
                 add(K::Part, id, &p.parent_id);
             }
         }
         for id in model.transform_order() {
-            if let Some(t) = model.get_transform(id) {
+            if let Some(t) = model.transform(id) {
                 add(K::Deformer, id, t.part());
             }
         }
         for id in model.mesh_order() {
-            if let Some(m) = model.get_mesh(id) {
+            if let Some(m) = model.mesh(id) {
                 add(K::Mesh, id, &m.part_id);
             }
         }
         for id in model.offscreen_order() {
-            if let Some(o) = model.get_offscreen(id) {
+            if let Some(o) = model.offscreen(id) {
                 add(K::Offscreen, id, &o.part_id);
             }
         }
@@ -100,7 +100,7 @@ impl ObjectStateIndex {
         let mut composites: HashMap<&str, Vec<&str>> = HashMap::new();
         for id in model.offscreen_order() {
             if editor.get(id).hidden_in_editor {
-                if let Some(group) = model.get_offscreen(id) {
+                if let Some(group) = model.offscreen(id) {
                     composites.entry(&group.part_id).or_default().push(id);
                 }
             }
@@ -148,7 +148,7 @@ impl ObjectStateIndex {
 impl Document {
     pub fn object_state_index(&self) -> Arc<ObjectStateIndex> {
         // Pending geometry gestures never change lock membership or hierarchy.
-        let revision = self.session.document().revision();
+        let revision = self.session.version().revision;
         let mut cache = self.object_state_index.lock().unwrap();
         if cache.as_ref().is_none_or(|(r, _)| *r != revision) {
             *cache = Some((
@@ -232,7 +232,7 @@ impl Document {
             .session
             .edit(label, None, |edit| edit.replace_editor_state(state))?;
         self.session.acknowledge_receipts();
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.invalidate_editor_state_projection();
             self.pristine_blank = None;
         }
@@ -255,7 +255,7 @@ impl Document {
         self.select_objects(objects)
     }
     pub(crate) fn evaluation_revision(&self) -> u64 {
-        self.session.evaluation_revision()
+        self.animation_input_revision
     }
 }
 

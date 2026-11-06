@@ -1,5 +1,8 @@
 //! Immutable persistent model, isolated typed construction and net-write summaries.
 mod authoring;
+mod capabilities;
+mod collections;
+mod inspection;
 mod property;
 pub use property::PropertyPatch;
 mod document_edit;

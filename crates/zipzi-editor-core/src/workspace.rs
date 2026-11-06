@@ -99,7 +99,7 @@ impl Editor {
     pub fn runtime_host(&self) -> crate::RuntimeHost {
         self.runtime.clone()
     }
-    pub fn runtime_session_id(&self, id: DocumentId) -> Option<zipzi_runtime::SessionId> {
+    pub fn runtime_session_id(&self, id: DocumentId) -> Option<zipzi_sdk::SessionKey> {
         self.entry(id)
             .ok()?
             .session()
@@ -307,19 +307,11 @@ impl Editor {
         self.active.is_some_and(|id| {
             self.entry(id).is_ok_and(|entry| {
                 entry.saving().is_some()
-                    // External Jobs take SDK ownership before the workspace's
-                    // asynchronous notification has frozen its projection.
                     || self
                         .runtime
                         .read()
-                        .session_info(entry.hosted_session_id())
-                        .is_ok_and(|info| {
-                            matches!(
-                                info.state,
-                                zipzi_runtime::SessionState::Busy(_)
-                                    | zipzi_runtime::SessionState::Closing
-                            )
-                        })
+                        .saving_job(self.runtime.client_id(), entry.hosted_session_id())
+                        .is_ok_and(|job| job.is_some())
             })
         })
     }

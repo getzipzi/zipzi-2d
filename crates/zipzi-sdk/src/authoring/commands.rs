@@ -8,6 +8,7 @@ mod organization;
 mod parameters;
 mod physics;
 mod pose;
+mod records;
 mod resources;
 use std::collections::{HashMap, HashSet};
 use zipzi_core::{
@@ -33,6 +34,10 @@ pub struct Commands<'a> {
     failure: Option<Status>,
 }
 impl<'a> Commands<'a> {
+    /// Freeze the current candidate for dependent reads within this batch.
+    pub fn read_document(&self) -> Result<zipzi_core::state::DocumentState, Status> {
+        self.builder.preview()
+    }
     pub(super) fn new(builder: &'a mut DocumentBuilder, resources: &'a mut ResourceView) -> Self {
         Self {
             builder,

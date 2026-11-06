@@ -241,6 +241,7 @@ pub fn values(
 ) -> Result<PropertyValues> {
     let asset = model
         .physics()
+        .as_deref()
         .ok_or_else(|| anyhow::anyhow!("Physics changed"))?;
     let rig = group(asset, object)?;
     let mut values = PropertyValues::new();
@@ -338,6 +339,7 @@ pub(crate) fn patch(
 ) -> Result<PhysicsPatch> {
     let asset = model
         .physics()
+        .as_deref()
         .ok_or_else(|| anyhow::anyhow!("Physics changed"))?;
     let rig = group(asset, object)?;
     let mut result = PhysicsPatch {

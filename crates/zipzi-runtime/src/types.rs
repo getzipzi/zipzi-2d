@@ -2,7 +2,7 @@ use std::sync::Arc;
 use zipzi_project::TransferReservation;
 use zipzi_sdk::{DraftSource, OpenReceipt, Publication, QuerySource, SaveReceipt, Status};
 
-pub use zipzi_contract::kernel::{ClientId, JobId, RuntimeInstanceId};
+pub use zipzi_contract::kernel::{BlobId, ClientId, JobId, RuntimeInstanceId};
 
 pub type Result<T> = std::result::Result<T, Status>;
 pub(crate) fn error(code: &str, message: &str) -> Status {
@@ -97,8 +97,17 @@ pub enum JobValue {
     DraftUpdated(DraftSource),
     Published(Publication),
     Opened(OpenReceipt),
+    Imported(ImportReceipt),
     Saved(SaveReceipt),
     Read(ReadResult),
+    Exported(ExportReceipt),
+}
+#[derive(Debug, Clone)]
+pub struct ImportReceipt {
+    pub publication: Publication,
+    pub warnings: Vec<String>,
+    pub diagnostics: Vec<zipzi_project::ResourceDiagnostic>,
+    pub name: Option<String>,
 }
 #[derive(Debug, Clone)]
 pub struct JobInfo {
@@ -115,4 +124,31 @@ pub struct SessionSubscription {
     pub snapshot: zipzi_sdk::SourcedSnapshot,
     pub history: zipzi_sdk::HistoryState,
     pub cursor: zipzi_sdk::Version,
+}
+
+/// Publication origin belongs to the host event log, not persistent content.
+#[derive(Debug, Clone)]
+pub struct PublicationEvent {
+    pub client: ClientId,
+    pub publication: Publication,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SessionOverview {
+    pub session: crate::SessionKey,
+    pub version: crate::Version,
+    pub document_id: String,
+    pub path: Option<std::path::PathBuf>,
+    pub dirty: bool,
+    pub saving: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ExportReceipt {
+    pub source: QuerySource,
+    pub path: std::path::PathBuf,
+    pub published: bool,
+    pub durable: bool,
+    pub warnings: Vec<String>,
+    pub notices: Vec<String>,
 }

@@ -177,3 +177,51 @@ fn escaped_texture_keeps_its_resource_budget_responsibility() {
     drop(texture);
     assert_eq!(budget.usage().total_bytes(), 0);
 }
+
+#[test]
+fn texture_reads_bind_resource_versions_and_validate_record_dimensions() {
+    let store = ResourceStore::default();
+    let red = store
+        .prepare_rgba(1, 1, Arc::from([255, 0, 0, 255]))
+        .unwrap();
+    let state = model(&red);
+    let asset = state.asset(&state.asset_order()[0]).unwrap();
+    let old = ResourceView::default().with_images([red.clone()]);
+    let pixels = old.read_texture(asset).unwrap();
+    assert!(Arc::ptr_eq(&pixels.rgba, &red.texture().rgba));
+    let blue = store
+        .prepare_rgba(1, 1, Arc::from([0, 0, 255, 255]))
+        .unwrap();
+    let mut changed = asset.clone();
+    changed.content = AssetContent::Image {
+        resource: blue.key(),
+        width: 1,
+        height: 1,
+    };
+    let new = ResourceView::default().with_images([blue]);
+    assert_eq!(
+        new.read_texture(asset).unwrap_err().code,
+        "MISSING_RESOURCE"
+    );
+    assert_eq!(
+        &*new.read_texture(&changed).unwrap().rgba,
+        &[0, 0, 255, 255]
+    );
+    if let AssetContent::Image { width, .. } = &mut changed.content {
+        *width = 2;
+    }
+    assert_eq!(
+        new.read_texture(&changed).unwrap_err().code,
+        "RESOURCE_DIMENSIONS"
+    );
+    changed.content = AssetContent::Empty;
+    assert_eq!(
+        old.read_texture(&changed).unwrap_err().code,
+        "MISSING_RESOURCE"
+    );
+    drop(old);
+    drop(red);
+    drop(new);
+    drop(store);
+    assert_eq!(&*pixels.rgba, &[255, 0, 0, 255]);
+}

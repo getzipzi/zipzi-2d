@@ -2,7 +2,7 @@
 from pathlib import Path
 from . import values as values
 from .values import Command, ObjectAddress, ObjectKind, Version, DraftSource, QuerySource, Query
-from ._kernel import Runtime, Session, Draft, Job, Snapshot
+from ._kernel import Runtime, Session, Draft, Job, Snapshot, Blob
 from ._errors import SdkFailure, Busy, OutcomeUnknown, PendingRequest, JobTimeout, recover_call
 
 def local() -> Runtime:
@@ -17,6 +17,6 @@ def connect(*, endpoint: Path | None=None, start: bool=False, host: Path | None=
     return Runtime(connect_backend(endpoint,start=start,host=host,timeout=timeout,
         startup_timeout=startup_timeout,sdk_build=sdk_build))
 
-__all__=['local','connect','Runtime','Session','Draft','Job','Snapshot','values','Command',
+__all__=['local','connect','Runtime','Session','Draft','Job','Snapshot','Blob','values','Command',
     'ObjectAddress','ObjectKind','Version','DraftSource','QuerySource','Query','SdkFailure',
     'Busy','OutcomeUnknown','PendingRequest','JobTimeout','recover_call']

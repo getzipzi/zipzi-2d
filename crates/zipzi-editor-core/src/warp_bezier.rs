@@ -81,7 +81,7 @@ pub(crate) fn authored(
     parameters: &HashMap<&str, f32>,
 ) -> Option<LazyBezierGeometry> {
     let model = document.model();
-    let transform = model.get_transform(&object.id)?;
+    let transform = model.transform(&object.id)?;
     let warp = transform.warp()?;
     let (stored, positions) = if let Some(b) = model
         .binding_for_scene(&object.id)
@@ -123,7 +123,7 @@ pub(crate) fn authored(
         authoring,
         parent_id: transform.parent().into(),
         parent_shape: model
-            .get_transform(transform.parent())
+            .transform(transform.parent())
             .and_then(|t| t.warp())
             .map(|w| (w.rows as usize, w.columns as usize, w.quad)),
         geometry: OnceLock::new(),

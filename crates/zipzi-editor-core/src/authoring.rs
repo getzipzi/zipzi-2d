@@ -1,7 +1,10 @@
 //! UI-independent adaptation of SDK authoring results. Selection and location
 //! suggestions are transient; they never activate an expression or enter history.
 use super::*;
+#[path = "authoring/preview.rs"]
+mod preview;
 use crate::{ObjectKind, ObjectRef};
+pub use preview::{EditPreview, FieldCapture};
 #[path = "authoring/creation.rs"]
 mod creation;
 #[path = "authoring/scene_creation.rs"]
@@ -146,14 +149,14 @@ impl crate::DocumentSession {
         // A successful native publication can replace image pixels without
         // changing topology. Retire the host scene snapshot as well as the SDK
         // frame; subsequent viewport requests must carry the new resources.
-        if result.receipt.changed
+        if (result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged)
             && (self.document.evaluation_revision() != evaluation
                 || result
                     .receipt
-                    .changes
-                    .content_changes
+                    .writes
+                    .records()
                     .iter()
-                    .any(|c| c.domain == zipzi_core::document::SceneContentDomain::MeshTopology)
+                    .any(|r| r.domain == zipzi_core::state::RecordDomain::Mesh)
                 || !Arc::ptr_eq(&textures, &self.document.textures.snapshot()))
         {
             self.invalidate_scene();
@@ -173,7 +176,7 @@ pub use reparenting::{PalettePreservation, PaletteReparentCapture, PaletteRepare
 mod capabilities;
 pub(super) use capabilities::AuthoringCapabilityCache;
 pub use capabilities::{
-    AuthoringAction, AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
+    AuthoringAction, AuthoringCollectionCapabilities, AuthoringPlanningError, CollectionTarget,
     ObjectAuthoringCapabilities,
 };
 

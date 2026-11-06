@@ -58,7 +58,7 @@ impl Document {
             .expression_order()
             .iter()
             .filter_map(|id| {
-                let expression = model.get_expression(id)?;
+                let expression = model.expression(id)?;
                 Some(ExpressionResource {
                     id: id.clone(),
                     name: expression.name.clone(),
@@ -109,10 +109,14 @@ impl Document {
                     g.entries.as_slice(),
                 )
             })
-            .chain(std::iter::once((None, None, model.motion_roots())))
+            .chain(std::iter::once((
+                None,
+                None,
+                model.motion_roots().as_slice(),
+            )))
         {
             for (index, entry) in entries.iter().enumerate() {
-                if let Some(clip) = model.get_motion(&entry.clip_id) {
+                if let Some(clip) = model.motion(&entry.clip_id) {
                     result.push(MotionResource {
                         selection: MotionSelection {
                             clip_id: clip.id.clone(),

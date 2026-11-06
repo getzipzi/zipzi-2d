@@ -39,8 +39,8 @@ impl SceneObjectCreationPlan {
 }
 #[derive(Clone, Debug)]
 enum CreationPlan {
-    Organization(zipzi_sdk::OrganizationEditPlan),
-    Scene(zipzi_sdk::SceneEditPlan),
+    Organization(crate::EditPreview<zipzi_core::state::OrganizationOutcome>),
+    Scene(crate::EditPreview<zipzi_core::state::SceneOutcome>),
 }
 
 impl Document {
@@ -82,10 +82,12 @@ impl Document {
             }
         };
         let state = self
-            .session
-            .organization_collection_capabilities(&OrganizationCollection::PartMembers {
-                part_id: part_id.clone(),
-            })?
+            .model()
+            .collection_capabilities(&CollectionTarget::Organization(
+                OrganizationCollection::PartMembers {
+                    part_id: part_id.clone(),
+                },
+            ))?
             .create;
         if let zipzi_contract::authoring::CapabilityState::Unavailable { code }
         | zipzi_contract::authoring::CapabilityState::Unsupported { code } = state
@@ -94,8 +96,10 @@ impl Document {
         }
         if projection == PaletteProjection::Deformation {
             let state = self
-                .session
-                .scene_collection_capabilities(&SceneCollection::Deformation { parent_id })?
+                .model()
+                .collection_capabilities(&CollectionTarget::Scene(SceneCollection::Deformation {
+                    parent_id,
+                }))?
                 .create;
             if let zipzi_contract::authoring::CapabilityState::Unavailable { code }
             | zipzi_contract::authoring::CapabilityState::Unsupported { code } = state
@@ -182,10 +186,22 @@ impl Document {
                     before,
                     deformation_before: None,
                 };
-                let plan = self
-                    .session
-                    .read()
-                    .plan_deformer_group(create, members.into_iter().map(|o| o.id).collect())?;
+                let source = self.session.capture_authoring();
+                let limits = zipzi_core::state::ConversionLimits::default();
+                let plan = crate::EditPreview::convert(
+                    &source,
+                    "Create deformer group",
+                    limits,
+                    &Default::default(),
+                    move |commands, control| {
+                        commands.group_deformer(
+                            create,
+                            members.into_iter().map(|object| object.id).collect(),
+                            limits,
+                            control,
+                        )
+                    },
+                )?;
                 return Ok(SceneObjectCreationPlan {
                     projection,
                     plan: CreationPlan::Scene(plan),
@@ -208,7 +224,7 @@ impl Document {
                 let (part, parent, after) = self.deformation_creation_container(selection)?;
                 let before = if after {
                     let members = self
-                        .session
+                        .model()
                         .scene_collection(&SceneCollection::Deformation {
                             parent_id: parent.clone(),
                         })?;
@@ -216,8 +232,7 @@ impl Document {
                         .iter()
                         .filter(|object| {
                             parent.is_some()
-                                || (object.kind()
-                                    == zipzi_contract::authoring::ObjectKind::Transform)
+                                || self.model().transform(object).is_some()
                                     == (kind != SceneObjectType::Mesh)
                         })
                         .collect();
@@ -225,9 +240,9 @@ impl Document {
                         selection.iter().map(|object| object.id.as_str()).collect();
                     members
                         .iter()
-                        .rposition(|object| selected.contains(object.id()))
+                        .rposition(|object| selected.contains(object.as_str()))
                         .and_then(|i| members.get(i + 1))
-                        .map(|object| object.id().to_owned())
+                        .map(|object| object.to_string())
                 } else {
                     None
                 };
@@ -292,8 +307,8 @@ impl Document {
             );
             // Only validate identity here. Full capabilities also scan deletion
             // dependencies; destination availability is checked by the caller.
-            self.session
-                .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
+            self.model()
+                .require_object(object.kind.sdk_kind().unwrap(), &object.id)?;
             let owner = self
                 .model()
                 .organization_owner(&object.id)
@@ -328,7 +343,7 @@ impl Document {
         let mut seen = std::collections::HashSet::new();
         let mut parts = std::collections::HashSet::new();
         for object in selection {
-            self.session.handle(
+            self.model().require_object(
                 object
                     .kind
                     .sdk_kind()
@@ -351,7 +366,7 @@ impl Document {
                     if parts.contains(owner) {
                         if seen.insert(id.clone()) {
                             members.push(ObjectRef::new(
-                                if model.get_mesh(id).is_some() {
+                                if model.mesh(id).is_some() {
                                     ObjectKind::Mesh
                                 } else {
                                     ObjectKind::Deformer
@@ -361,9 +376,7 @@ impl Document {
                         }
                         break;
                     }
-                    owner = model
-                        .get_part(owner)
-                        .map_or("", |part| part.parent_id.as_str());
+                    owner = model.part(owner).map_or("", |part| part.parent_id.as_str());
                 }
             }
         }
@@ -420,8 +433,8 @@ impl Document {
             );
             // Only validate identity here. Full capabilities also scan deletion
             // dependencies; destination availability is checked by the caller.
-            self.session
-                .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
+            self.model()
+                .require_object(object.kind.sdk_kind().unwrap(), &object.id)?;
             if selection.len() == 1 && object.kind == ObjectKind::Part {
                 return Ok((Some(object.id.clone()), false));
             }
@@ -450,8 +463,8 @@ impl Document {
             return Ok((owner, None));
         }
         let order = self
-            .session
-            .organization_collection(OrganizationCollection::PartMembers {
+            .model()
+            .organization_collection(&OrganizationCollection::PartMembers {
                 part_id: owner.clone(),
             })?;
         // The root projection displays Parts and unowned scene objects in
@@ -460,17 +473,16 @@ impl Document {
             .iter()
             .filter(|handle| {
                 owner.is_some()
-                    || (handle.kind() == zipzi_contract::authoring::ObjectKind::Part)
-                        == (kind == SceneObjectType::Part)
+                    || (self.model().part(handle).is_some()) == (kind == SceneObjectType::Part)
             })
             .collect();
         let selected: std::collections::HashSet<_> =
             selection.iter().map(|object| object.id.as_str()).collect();
         let before = order
             .iter()
-            .rposition(|handle| selected.contains(handle.id()))
+            .rposition(|handle| selected.contains(handle.as_str()))
             .and_then(|index| order.get(index + 1))
-            .map(|handle| handle.id().to_owned());
+            .map(|handle| (*handle).clone());
         Ok((owner, before))
     }
 

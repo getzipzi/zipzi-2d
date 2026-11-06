@@ -230,8 +230,8 @@ pub(super) fn effect_label(
     };
     format!("{} · {}", name(object), t!(key))
 }
-pub(super) fn export_label(e: &zipzi_sdk::DeletionExportFailure) -> String {
-    use zipzi_sdk::DeletionExportFailure::*;
+pub(super) fn export_label(e: &zipzi_project::OpaqueExportIssue) -> String {
+    use zipzi_project::OpaqueExportIssue::*;
     match e {
         Model3NamespaceChanged => "model3 · OPAQUE_NAMESPACE_CHANGED".into(),
         Cdi { problem } => format!("CDI · {problem:?}"),

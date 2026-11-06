@@ -86,7 +86,7 @@ impl PropertiesPanel {
         asset: &PhysicsAsset,
         parameters: &[zipzi_editor_core::ParameterValue],
         rig_index: usize,
-        trace: Option<&zipzi_sdk::PhysicsRigSnapshot>,
+        trace: Option<&zipzi_contract::animation::PhysicsRigSnapshot>,
         values: &BTreeMap<String, f32>,
         manual: Option<&zipzi_editor_core::PhysicsPreviewSettings>,
         disabled: bool,

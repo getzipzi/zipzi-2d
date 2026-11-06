@@ -13,5 +13,8 @@ class LocalBackend:
             self._native.close()
             raise SdkFailure('PROTOCOL_MISMATCH','Native adapter uses another authoring contract')
     def request(self, operation: dict[str, Any]) -> Any: return unwrap(self._native.request(operation))
+    def binary_request(self, operation: dict[str, Any], payload: bytes = b'') -> tuple[Any, bytes]:
+        value, data = self._native.binary_request(operation, payload)
+        return unwrap(value), data
     def recover(self) -> Any: raise SdkFailure('NO_PENDING_REQUEST','Local calls have no transport replay window')
     def close(self) -> None: self._native.close()

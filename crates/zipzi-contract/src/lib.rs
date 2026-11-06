@@ -25,3 +25,5 @@ pub mod spatial;
 pub use shared_vec::SharedVec;
 
 pub mod warp_bezier;
+
+pub mod kernel_tasks;

@@ -9,6 +9,19 @@ use super::*;
 use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues};
 use anyhow::bail;
 
+pub(crate) enum PreparedProperties {
+    Draft(crate::runtime_host::HostedDraft),
+    Parent(crate::PaletteMovePlan),
+}
+impl PreparedProperties {
+    fn version(&self) -> zipzi_sdk::Version {
+        match self {
+            Self::Draft(draft) => draft.base_version(),
+            Self::Parent(plan) => plan.source_version(),
+        }
+    }
+}
+
 enum PropertyPayload {
     Unchanged,
     Object(serde_json::Value),
@@ -47,7 +60,7 @@ impl Document {
         let values: std::collections::HashMap<_, _> = model
             .parameter_order()
             .iter()
-            .filter_map(|id| model.get_parameter(id))
+            .filter_map(|id| model.parameter(id))
             .map(|p| {
                 let requested = self
                     .session
@@ -78,7 +91,7 @@ impl Document {
             })
             .collect();
         if model
-            .iter_blend_bindings_for_target(blend_id)
+            .blend_bindings_for_target(blend_id)
             .any(|b| !zipzi_core::evaluation::evaluate_blend_binding(model, &values, b).is_empty())
         {
             return PropertyScope::DeformerBlendShape;
@@ -178,7 +191,7 @@ impl Document {
                     .zip(&form.keys)
                     .all(|(axis, key)| {
                         model
-                            .get_parameter(&axis.parameter_id)
+                            .parameter(&axis.parameter_id)
                             .is_some_and(|parameter| {
                                 let value = self
                                     .session
@@ -439,7 +452,7 @@ impl Document {
 
     fn apply_properties(
         &self,
-        edit: &mut EditSession<'_>,
+        edit: &mut Commands<'_>,
         object: &ObjectRef,
         patch: &PropertyPatch,
         payload: PropertyPayload,
@@ -452,7 +465,8 @@ impl Document {
         let payload = match payload {
             PropertyPayload::Unchanged => return Ok(()),
             PropertyPayload::DeformationParent(plan) => {
-                return plan.apply_to(edit, self.preview_revision());
+                let _ = plan;
+                anyhow::bail!("Parent changes must publish their prepared candidate");
             }
             PropertyPayload::Motion(intent) => return Ok(edit.edit_motion(intent)?),
             PropertyPayload::Pose(intent) => return Ok(edit.edit_pose(intent)?),
@@ -460,9 +474,9 @@ impl Document {
             payload => payload.json()?,
         };
         if object.kind == ObjectKind::Texture {
-            let original = edit
-                .candidate_document()
-                .get_asset(&object.id)
+            let current = edit.read_document()?;
+            let original = current
+                .asset(&object.id)
                 .ok_or_else(|| anyhow!("Texture no longer exists"))?;
             return Ok(
                 edit.edit_resource(zipzi_contract::document::ResourceEdit::PatchName {
@@ -490,20 +504,26 @@ impl Document {
                 "Texture changes must be independent"
             );
             let expected = edit
-                .candidate_document()
+                .read_document()?
                 .scene_field(&object.id, zipzi_contract::document::SceneField::Texture)
                 .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-            return Ok(edit.edit_scene(zipzi_contract::document::SceneEdit::Patch {
-                id: object.id.clone(),
-                expected,
-                value: zipzi_contract::document::SceneFieldValue::Texture(
-                    payload["texture_choice"].as_str().unwrap().into(),
-                ),
-                clear_glue_pairs: false,
-            })?);
+            return Ok(edit
+                .edit_scene(
+                    zipzi_contract::document::SceneEdit::Patch {
+                        id: object.id.clone(),
+                        expected,
+                        value: zipzi_contract::document::SceneFieldValue::Texture(
+                            payload["texture_choice"].as_str().unwrap().into(),
+                        ),
+                        clear_glue_pairs: false,
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?);
         }
         if patch.uses_scalar_patch(object.kind) {
-            return Ok(edit.patch_property(&self.scalar_patch(object, patch, &payload)?)?);
+            return Ok(edit.patch_property(self.scalar_patch(object, patch, &payload)?)?);
         }
         if matches!(
             object.kind,
@@ -515,17 +535,23 @@ impl Document {
                 .all(|key| crate::property_spec(*key).is_some_and(|s| s.path == "name"))
         {
             let expected = edit
-                .candidate_document()
+                .read_document()?
                 .scene_field(&object.id, zipzi_contract::document::SceneField::Label)
                 .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-            return Ok(edit.edit_scene(zipzi_contract::document::SceneEdit::Patch {
-                id: object.id.clone(),
-                expected,
-                value: zipzi_contract::document::SceneFieldValue::Label(
-                    payload["name"].as_str().unwrap().into(),
-                ),
-                clear_glue_pairs: false,
-            })?);
+            return Ok(edit
+                .edit_scene(
+                    zipzi_contract::document::SceneEdit::Patch {
+                        id: object.id.clone(),
+                        expected,
+                        value: zipzi_contract::document::SceneFieldValue::Label(
+                            payload["name"].as_str().unwrap().into(),
+                        ),
+                        clear_glue_pairs: false,
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?);
         }
         if object.kind == ObjectKind::Deformer {
             if patch
@@ -556,7 +582,7 @@ impl Document {
         use crate::property::mesh;
         let model_read_guard_111 = self.session.document();
         let original = model_read_guard_111
-            .get_mesh(&object.id)
+            .mesh(&object.id)
             .ok_or_else(|| anyhow!("Mesh no longer exists"))?;
         let mut next: zipzi_core::Mesh = if patch.mesh_presentation_only(object.kind) {
             let mut next = original.clone();
@@ -723,11 +749,13 @@ impl Document {
         &self,
         object: &ObjectRef,
         patch: &PropertyPatch,
-    ) -> Result<Option<crate::runtime_host::HostedEdit>> {
+    ) -> Result<Option<PreparedProperties>> {
         let payload = self.checked_payload(object, patch)?;
         if object.kind == ObjectKind::Parameter {
             let draft = self.parameter_from_payload(object, payload.json()?)?;
-            return self.prepare_parameter_update(&object.id, &draft).map(Some);
+            return self
+                .prepare_parameter_update(&object.id, &draft)
+                .map(|draft| Some(PreparedProperties::Draft(draft)));
         }
         if object.kind == ObjectKind::ParameterGroup {
             self.validate_parameter_group(
@@ -736,11 +764,12 @@ impl Document {
             )?;
             return Ok(None);
         }
-        let mut edit = self
-            .session
-            .begin_owned_edit("Edit object properties", None)?;
+        if let PropertyPayload::DeformationParent(plan) = payload {
+            return Ok(Some(PreparedProperties::Parent(plan)));
+        }
+        let mut edit = self.session.begin_draft("Edit object properties", None)?;
         edit.apply(|sdk| self.apply_properties(sdk, object, patch, payload))?;
-        Ok(Some(edit))
+        Ok(Some(PreparedProperties::Draft(edit)))
     }
 
     pub fn set_object_properties(
@@ -756,7 +785,7 @@ impl Document {
         &mut self,
         object: &ObjectRef,
         patch: &PropertyPatch,
-        prepared: Option<crate::runtime_host::HostedEdit>,
+        prepared: Option<PreparedProperties>,
     ) -> Result<()> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.set_properties");
@@ -773,7 +802,7 @@ impl Document {
         self.validate_property_baseline(object, patch)?;
         let prepared = if prepared
             .as_ref()
-            .is_some_and(|edit| edit.base_version() != self.session.version())
+            .is_some_and(|edit| edit.version() != self.session.version())
         {
             self.prepare_object_properties(object, patch)?
         } else {
@@ -784,17 +813,24 @@ impl Document {
             let draft = self.parameter_group_from_payload(&object.id, payload.json_ref()?)?;
             return self.update_parameter_group(&object.id, draft, self.parameter_model_revision());
         };
+        let mut edit = match edit {
+            PreparedProperties::Parent(plan) => {
+                self.execute_palette_move(&plan)?;
+                return Ok(());
+            }
+            PreparedProperties::Draft(edit) => edit,
+        };
         let preserves_structure = patch.preserves_structure()
             && (object.kind != ObjectKind::Parameter || {
                 let old = self
                     .session
                     .document()
-                    .get_parameter(&object.id)
+                    .parameter(&object.id)
                     .unwrap()
                     .clone();
                 let next = edit
                     .candidate_document()
-                    .get_parameter(&object.id)
+                    .parameter(&object.id)
                     .unwrap()
                     .clone();
                 old.name == next.name && old.runtime_id == next.runtime_id
@@ -814,21 +850,15 @@ impl Document {
                 | ObjectKind::PoseGroup
                 | ObjectKind::PoseEntry
                 | ObjectKind::PoseLink
-        ) || (!receipt.changes.scene_fields.is_empty()
-            && receipt
-                .changes
-                .scene_fields
-                .iter()
-                .all(|f| f.field == zipzi_contract::document::SceneField::Label))
-        {
-            if receipt.changed {
+        ) {
+            if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                 self.pristine_blank = None;
             }
             self.consume_authoring_receipt(&receipt, false);
             return Ok(());
         }
         self.session.acknowledge_receipts();
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
             let presentation_only = patch.mesh_presentation_only(object.kind);
             use crate::property::mesh;
@@ -838,7 +868,7 @@ impl Document {
                     let name = self
                         .session
                         .document()
-                        .get_mesh(&object.id)
+                        .mesh(&object.id)
                         .unwrap()
                         .name
                         .clone();
@@ -965,7 +995,7 @@ impl Document {
             original: PendingOriginal::Properties(object.clone(), original, patch.scope.clone()),
             edit: self
                 .session
-                .begin_owned_edit("Edit object property", None)?
+                .begin_draft("Edit object property", None)?
                 .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -1011,13 +1041,27 @@ impl Document {
             let owner = self
                 .session
                 .document()
-                .get_expression_entry(&id)
+                .expression_entry(&id)
                 .unwrap()
                 .0
                 .id
                 .clone();
             let pending = self.pending.as_mut().unwrap();
-            pending.edit.preview_expression_entry(&id, fields)?;
+            let expected = zipzi_contract::document::ExpressionEntryFields::from(
+                pending
+                    .edit
+                    .candidate_document()
+                    .expression_entry(&id)
+                    .unwrap()
+                    .1,
+            );
+            pending.edit.preview(|commands| {
+                commands.edit_expression(zipzi_contract::document::ExpressionEdit::PatchEntry {
+                    id,
+                    expected,
+                    fields,
+                })
+            })?;
             pending.changed.take();
             let previous = self.projection_revision;
             self.invalidate_expression_projection();
@@ -1075,9 +1119,7 @@ impl Document {
         } else {
             // Preview capability does not require a scalar backend. Full object
             // writes retain isolated replacement and atomic preview validation.
-            let mut edit = self
-                .session
-                .begin_owned_edit("Edit object property", None)?;
+            let mut edit = self.session.begin_draft("Edit object property", None)?;
             edit.apply(|sdk| self.apply_properties(sdk, object, patch, payload))?;
             let mut preview = PreviewState::default();
             preview
@@ -1105,7 +1147,7 @@ impl Document {
     }
 }
 
-fn replace(edit: &mut EditSession<'_>, kind: ObjectKind, payload: serde_json::Value) -> Result<()> {
+fn replace(edit: &mut Commands<'_>, kind: ObjectKind, payload: serde_json::Value) -> Result<()> {
     macro_rules! replace {
         ($method:ident) => {
             edit.$method(serde_json::from_value(payload)?)?
@@ -1113,9 +1155,15 @@ fn replace(edit: &mut EditSession<'_>, kind: ObjectKind, payload: serde_json::Va
     }
     match kind {
         ObjectKind::Document => {
-            edit.replace_export_settings(serde_json::from_value(
-                payload["export_settings"].clone(),
-            )?)?;
+            let expected = zipzi_contract::document::DocumentValue::ExportSettings(
+                edit.read_document()?.setup().export,
+            );
+            edit.edit_document(zipzi_contract::document::DocumentAuthoringEdit::Patch {
+                expected,
+                value: zipzi_contract::document::DocumentValue::ExportSettings(
+                    serde_json::from_value(payload["export_settings"].clone())?,
+                ),
+            })?;
         }
         ObjectKind::Part => replace!(replace_part),
         ObjectKind::Parameter => replace!(replace_parameter),
@@ -1336,11 +1384,7 @@ mod tests {
             }
             assert_eq!(doc.session.history_lengths().0, history + 1);
             assert_eq!(
-                doc.session
-                    .document()
-                    .get_binding(&binding)
-                    .unwrap()
-                    .keyforms[0]
+                doc.session.document().binding(&binding).unwrap().keyforms[0]
                     .appearance
                     .opacity,
                 0.4
@@ -1348,18 +1392,18 @@ mod tests {
             assert_eq!(
                 doc.session
                     .document()
-                    .get_mesh(&object.id)
+                    .mesh(&object.id)
                     .unwrap()
                     .appearance
                     .opacity,
                 1.
             );
             assert_eq!(
-                doc.session.document().get_binding(&peer_binding),
-                retained.document().get_binding(&peer_binding)
+                doc.session.document().binding(&peer_binding),
+                retained.document().binding(&peer_binding)
             );
             assert_eq!(
-                retained.document().get_binding(&binding).unwrap().keyforms[0]
+                retained.document().binding(&binding).unwrap().keyforms[0]
                     .appearance
                     .opacity,
                 1.
@@ -1382,11 +1426,7 @@ mod tests {
             );
             doc.undo()?;
             assert_eq!(
-                doc.session
-                    .document()
-                    .get_binding(&binding)
-                    .unwrap()
-                    .keyforms[0]
+                doc.session.document().binding(&binding).unwrap().keyforms[0]
                     .appearance
                     .opacity,
                 1.

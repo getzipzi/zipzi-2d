@@ -25,7 +25,7 @@ impl PositionUvMap {
     ) -> Result<Self> {
         let model = document.model();
         let mesh = model
-            .get_mesh(mesh_id)
+            .mesh(mesh_id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
         let shown = frame
             .geometry
@@ -64,10 +64,10 @@ impl PoseMapping {
     pub(super) fn capture(document: &Document, frame: &CanvasFrame, mesh_id: &str) -> Result<Self> {
         let model = document.model();
         let mesh = model
-            .get_mesh(mesh_id)
+            .mesh(mesh_id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
         let local = zipzi_core::evaluation::authoring_mesh_positions(
-            &model,
+            &*model,
             mesh_id,
             frame.geometry.parameter_values(),
         )

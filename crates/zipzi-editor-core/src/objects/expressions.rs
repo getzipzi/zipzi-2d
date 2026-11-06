@@ -7,7 +7,7 @@ impl ObjectIndex {
     /// Requires unchanged identities, order and reference endpoints. Callers use
     /// ChangeSet (or the preview's target comparison) to establish that condition.
     pub(crate) fn refresh_expression(&mut self, model: &Model, id: &str) -> bool {
-        let Some(expression) = model.get_expression(id) else {
+        let Some(expression) = model.expression(id) else {
             return false;
         };
         let owner = ObjectRef::new(ObjectKind::Expression, id);

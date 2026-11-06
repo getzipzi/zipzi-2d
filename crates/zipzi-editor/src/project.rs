@@ -309,7 +309,6 @@ impl EditorView {
                 match this.editor.finish_save(&mut completion) {
                     Ok(receipt) => {
                         let mut notices = receipt.warnings;
-                        notices.extend(receipt.history_warnings);
                         if !receipt.durable {
                             notices.push(t!("project.durability_warning").into_owned());
                         }
@@ -335,9 +334,13 @@ impl EditorView {
                         this.record_recent_file(path.clone(), cx);
                     }
                     Err(error) => {
-                        let conflict = matches!(error.downcast_ref::<zipzi_runtime::RuntimeError>(), Some(zipzi_runtime::RuntimeError::Sdk(error)) if error.code.as_ref() == "PROJECT_CONFLICT");
+                        let conflict = error
+                            .downcast_ref::<zipzi_core::Status>()
+                            .is_some_and(|error| error.code == "PROJECT_CONFLICT");
                         this.set_operation_error(Some(id), error.to_string(), cx);
-                        if conflict { this.resolve_save_conflict(id, path.clone(), window, cx); }
+                        if conflict {
+                            this.resolve_save_conflict(id, path.clone(), window, cx);
+                        }
                     }
                 }
                 // A background save must not blur or rewrite another document's input.

@@ -1,20 +1,15 @@
 use super::Document;
 use anyhow::Result;
-use zipzi_sdk::{MotionClipCandidate, Version};
 
 impl Document {
-    pub(crate) fn commit_timeline_candidate(
+    pub(crate) fn commit_timeline_draft(
         &mut self,
-        candidate: MotionClipCandidate,
-        version: Version,
-        label: &str,
+        draft: &mut crate::runtime_host::HostedDraft,
     ) -> Result<()> {
         self.finish_edit()?;
-        let (_, receipt) = self.session.edit(label, Some(version), |edit| {
-            edit.replace_motion_candidate(candidate)
-        })?;
+        let receipt = draft.commit_to(&mut self.session)?;
         self.session.acknowledge_receipts();
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
             self.invalidate_projection(false);
         }

@@ -96,7 +96,7 @@ fn editing_preview_uses_raw_clip_result_preview_matches_sdk_and_keeps_expression
     e.set_animation_preview_mode(d, AnimationPreviewMode::Result)?;
     let request = e.animation_request().unwrap();
     let result = evaluator.evaluate(&request, |_, _| true)?;
-    let mut sdk = MotionPreview::new(request.source.materialized_snapshot().unwrap().document());
+    let mut sdk = MotionPreview::new(request.source.evaluation_snapshot().document());
     sdk.schedule_motion(&id(4), 0.)?;
     let expected = sdk.seek(request.identity.time)?;
     assert_eq!(result.snapshot.as_ref(), expected);

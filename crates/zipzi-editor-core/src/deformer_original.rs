@@ -5,7 +5,7 @@ use zipzi_core::{DeformerOriginalAction, DeformerOriginalShape, DeformerOriginal
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeformerOriginalTarget {
     pub object: ObjectRef,
-    session: zipzi_runtime::SessionId,
+    session: zipzi_sdk::SessionKey,
     version: zipzi_sdk::Version,
     preview_revision: u64,
     scope: PropertyScope,
@@ -33,7 +33,7 @@ impl Document {
             return None;
         }
         (object.kind == ObjectKind::Deformer).then_some(())?;
-        self.model().get_transform(&object.id)?;
+        self.model().transform(&object.id)?;
         Some(DeformerOriginalTarget {
             object: object.clone(),
             session: self.session.id,
@@ -45,7 +45,7 @@ impl Document {
     }
     pub fn deformer_original_info(&self, object: &ObjectRef) -> Option<DeformerOriginalInfo> {
         let model = self.model();
-        let t = model.get_transform(&object.id)?;
+        let t = model.transform(&object.id)?;
         let record = t.original_shape.as_ref();
         let snapshot = record.and_then(|r| r.snapshot.as_ref());
         let mut info = DeformerOriginalInfo {

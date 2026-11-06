@@ -4,12 +4,12 @@
     {
       "path": "client/python/zipzi/values.py",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "bd92ff1c3a69cfb2743588ff09b8a9ba7929378411dd3a1000ff0581c8cbc012"
+      "sha256": "30111cae3280d7a03b2b11b137c22f988208f012a6f7f15f413600d1d2e2c4f0"
     },
     {
       "path": "schema/authoring.json",
       "owner": "zipzi-python/tools/generate.py",
-      "sha256": "e54da2be627686e05ff8e1216b69bb19dd9d73373a4156d3738a85eb0bc0f2d1"
+      "sha256": "f97b6b09a0b57523d6d0d288f1c7fc90df7a255a9844c444110bafc19129761d"
     }
   ]
 }

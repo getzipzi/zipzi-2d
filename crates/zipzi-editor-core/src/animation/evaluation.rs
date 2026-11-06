@@ -86,9 +86,8 @@ impl AnimationEvaluator {
                         .source
                         .candidate
                         .as_ref()
-                        .filter(|candidate| candidate.clip().id == motion.clip_id)
-                        .map(|candidate| candidate.clip())
-                        .or_else(|| request.source.document().get_motion(&motion.clip_id))
+                        .and_then(|candidate| candidate.snapshot.document().motion(&motion.clip_id))
+                        .or_else(|| request.source.document().motion(&motion.clip_id))
                         .ok_or_else(|| anyhow::anyhow!("Missing motion {}", motion.clip_id))
                 })
                 .transpose()?;
@@ -149,25 +148,18 @@ impl AnimationEvaluator {
             })
         };
         if !reusable {
-            let snapshot = request.source.materialized_snapshot()?;
-            let document = request
-                .source
-                .properties
-                .as_deref()
-                .unwrap_or_else(|| snapshot.document());
+            let document = request.source.evaluation_snapshot().document();
             let mut preview = MotionPreview::new(document);
             preview.set_physics_enabled(!request.physics.bypass);
             for (id, value) in &request.physics.baseline {
                 preview.set_base_parameter(id, *value)?;
             }
             preview.set_physics_stabilized_start(request.physics.stabilized);
-            let version = request.source.snapshot.version();
-            preview.bind_session_identity(version.session_id, version.generation);
             if let Some(motion) = &request.motion.as_ref().filter(|_| !request.physics.manual) {
                 if let Some(id) = &motion.entry {
                     ensure!(
                         document
-                            .get_motion_registration(id)
+                            .motion_registration(id)
                             .is_some_and(|(_, e)| e.clip_id == motion.clip_id),
                         "Motion registration changed"
                     );

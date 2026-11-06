@@ -273,3 +273,82 @@ fn released_client_can_recover_close_but_cannot_execute_new_operations() {
         "INVALID_REQUEST"
     );
 }
+
+#[test]
+fn binary_recovery_retains_exact_bytes_and_rejects_payload_substitution() {
+    let mut rt = Runtime::default();
+    let mut p = Protocol::default();
+    let (client, connection, _) = connect(&mut rt, &mut p);
+    let auth = crate::local::Auth { client, connection };
+    let blob: BlobId = serde_json::from_value(
+        request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            1,
+            json!({"op":"create_blob","length":4}),
+        )["ok"]
+            .clone(),
+    )
+    .unwrap();
+    let bytes = vec![10, 20, 30, 255];
+    let digest: String = Sha256::digest(&bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    let envelope = |id, operation| json!({"protocol":CONTRACT,"runtime":rt.instance_id(),"client":client,"request_id":id,"operation":operation});
+    let upload = envelope(
+        2,
+        json!({"op":"append_blob_binary","blob":blob,"offset":0,"length":4,"payload_sha256":digest}),
+    );
+    let download = envelope(
+        4,
+        json!({"op":"read_blob_binary","blob":blob,"offset":1,"length":2}),
+    );
+    assert_eq!(
+        p.receive_binary(&mut rt, auth, upload.clone(), bytes.clone(), Instant::now())
+            .value["ok"],
+        4
+    );
+    assert_eq!(
+        p.receive_binary(&mut rt, auth, upload.clone(), bytes, Instant::now())
+            .value["ok"],
+        4
+    );
+    assert_eq!(
+        p.receive_binary(&mut rt, auth, upload, vec![1, 2, 3, 4], Instant::now())
+            .value["error"]["code"],
+        "INVALID_REQUEST"
+    );
+    assert_eq!(
+        request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            3,
+            json!({"op":"seal_blob","blob":blob})
+        )["ok"],
+        4
+    );
+    let response = p.receive_binary(&mut rt, auth, download.clone(), vec![], Instant::now());
+    assert_eq!(response.payload.unwrap().bytes(), &[20, 30]);
+    assert!(request(
+        &mut rt,
+        &mut p,
+        client,
+        connection,
+        5,
+        json!({"op":"release_blob","blob":blob})
+    )
+    .get("ok")
+    .is_some());
+    assert_eq!(
+        p.receive_binary(&mut rt, auth, download, vec![], Instant::now())
+            .payload
+            .unwrap()
+            .bytes(),
+        &[20, 30]
+    );
+}

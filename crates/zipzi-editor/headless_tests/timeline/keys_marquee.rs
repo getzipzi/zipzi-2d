@@ -43,7 +43,7 @@ fn empty_motion_inline_value_creates_one_key_at_the_head_and_can_cancel(cx: &mut
         })
         .unwrap();
     harness.view.read_with(cx, |view, _| {
-        let candidate = view.editor.timeline_edit().unwrap().candidate.clip();
+        let candidate = &view.editor.timeline_edit().unwrap().candidate;
         assert_eq!(candidate.tracks.len(), 1);
         assert_eq!(candidate.tracks[0].initial.time, 0.5);
         assert!(candidate.tracks[0].segments.is_empty());

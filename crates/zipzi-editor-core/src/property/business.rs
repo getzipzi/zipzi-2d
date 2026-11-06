@@ -53,6 +53,7 @@ pub(crate) fn payload(
     if object.kind == ObjectKind::Physics {
         let asset = model
             .physics()
+            .as_deref()
             .filter(|a| a.id == object.id)
             .ok_or_else(|| anyhow::anyhow!("Missing physics"))?;
         return Ok(serde_json::json!({"fps":asset.data.meta.fps}));

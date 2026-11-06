@@ -511,7 +511,13 @@ impl Render for ReparentReview {
             );
         }
         if let Some(plan) = &self.plan {
-            if let Some(report) = plan.scene().conversion_report() {
+            if let Some(report) = plan
+                .scene()
+                .outcome
+                .conversion
+                .as_ref()
+                .map(|outcome| &outcome.report)
+            {
                 let mut review = div()
                     .id("reparent-report")
                     .test_support()
@@ -596,14 +602,13 @@ impl Render for ReparentReview {
                         }
                     }
                 }
-                if let Some(cost) = plan.scene().cost() {
+                if let Some(cost) = plan.scene().outcome.work {
                     review = review.child(
                         t!(
                             "reparent.cost",
                             samples = cost.sample_combinations,
                             payload = cost.payload_bytes,
-                            temporary = cost.temporary_bytes,
-                            history = cost.history_bytes
+                            temporary = cost.workspace_bytes
                         )
                         .into_owned(),
                     );

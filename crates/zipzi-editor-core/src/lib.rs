@@ -1,7 +1,7 @@
 //! UI-independent editor coordination, SDK-backed document editing and CPU-only previews.
 pub mod adaptive_mesh;
-pub mod canvas_style;
 mod animation;
+pub mod canvas_style;
 mod physics;
 pub use physics::*;
 mod animation_resources;
@@ -42,22 +42,23 @@ pub use workspace_kind::WorkspaceKind;
 
 pub use document::{
     AnimationDeletionPlan, AnimationLibraryPlan, AnimationRemoval, AuthoringAction,
-    AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
-    AuthoringSessionReason, BusinessAction, BusinessDestination, BusinessPlan, Document,
-    ExpressionAuthoringCapabilities, ExpressionEntryEditToken, Layer, ManualMeshTarget,
-    MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource, MeshGridOptions,
-    MeshSettings, MotionCopyKind, MotionCopyPlan, NewParameter, ObjectAuthoringCapabilities,
-    ObjectState, ObjectStateIndex, OperationResult, OrdinaryBindingAction, OrdinaryBindingCapture,
-    OrdinaryBindingPlan, OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination,
-    PaletteMovePlan, PaletteMovePlanningError, PalettePosition, PalettePreservation,
-    PaletteProjection, PaletteReparentCapture, PaletteReparentPlan, ParameterCreateError,
-    ParameterDraft, ParameterExportDiagnostic, ParameterGroupDraft, ParameterGroupOption,
-    ParameterGroupValue, ParameterKey, ParameterKeyformAction, ParameterManagementError,
-    ParameterValidationError, ParameterValue, ParameterVisual, PhysicsAuthoringCapabilities,
-    PhysicsChannelAction, PoseAuthoringCapabilities, ReferenceAuthoringCapabilities,
-    ResourceAuthoringCapabilities, SceneAuthoringCapabilities, SceneContentAuthoringCapabilities,
-    SceneObjectCreationPlan, SceneObjectType, TextureInfo, TreeDeletionCancellation,
-    TreeDeletionCompletion, TreeDeletionPlan, TreeDeletionTask, WarpGridPreviewMetrics,
+    AuthoringCollectionCapabilities, AuthoringPlanningError, AuthoringSessionReason,
+    BusinessAction, BusinessDestination, BusinessPlan, CollectionTarget, Document, EditPreview,
+    ExpressionAuthoringCapabilities, ExpressionEntryEditToken, FieldCapture, Layer,
+    ManualMeshTarget, MeshGenerationOptions, MeshGenerationPreview, MeshGenerationSource,
+    MeshGridOptions, MeshSettings, MotionCopyKind, MotionCopyPlan, NewParameter,
+    ObjectAuthoringCapabilities, ObjectState, ObjectStateIndex, OperationResult,
+    OrdinaryBindingAction, OrdinaryBindingCapture, OrdinaryBindingPlan,
+    OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination, PaletteMovePlan,
+    PaletteMovePlanningError, PalettePosition, PalettePreservation, PaletteProjection,
+    PaletteReparentCapture, PaletteReparentPlan, ParameterCreateError, ParameterDraft,
+    ParameterExportDiagnostic, ParameterGroupDraft, ParameterGroupOption, ParameterGroupValue,
+    ParameterKey, ParameterKeyformAction, ParameterManagementError, ParameterValidationError,
+    ParameterValue, ParameterVisual, PhysicsAuthoringCapabilities, PhysicsChannelAction,
+    PoseAuthoringCapabilities, ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities,
+    SceneAuthoringCapabilities, SceneContentAuthoringCapabilities, SceneObjectCreationPlan,
+    SceneObjectType, TextureInfo, TreeDeletionCancellation, TreeDeletionCompletion,
+    TreeDeletionPlan, TreeDeletionTask, WarpGridPreviewMetrics,
 };
 pub use document::{OrganizationDestination, ParameterDestination, ReorderPosition};
 pub use editor::{CloseDisposition, EditorCommand, EditorPreview, LoadRequest};
@@ -106,8 +107,6 @@ pub use hosted_document::HostedDocument;
 
 mod runtime_host;
 pub use runtime_host::RuntimeHost;
-
-pub use zipzi_runtime::SessionState as RuntimeSessionState;
 
 pub use zipzi_runtime::JobInfo as RuntimeJobInfo;
 

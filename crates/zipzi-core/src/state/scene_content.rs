@@ -1,6 +1,7 @@
 use super::*;
 #[derive(Debug, Clone)]
 pub struct SceneContentOutcome {
+    pub affected: Vec<String>,
     pub report: SceneContentReport,
     pub work: ConversionWork,
 }
@@ -27,6 +28,7 @@ impl DocumentBuilder {
                 .model()
                 .plan_scene_content_with_control(edit, limits, control)?;
             result = Some(SceneContentOutcome {
+                affected: changes.domain.affected.clone(),
                 report: changes.report.clone(),
                 work: changes.cost,
             });

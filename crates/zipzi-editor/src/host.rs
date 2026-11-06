@@ -58,7 +58,7 @@ impl DesktopHost {
     pub(super) fn keep_running_without_windows(&self) -> bool {
         self.resident
             || self.protocol.borrow().has_connected_clients()
-            || !self.runtime.read().pending_jobs().is_empty()
+            || self.runtime.read().outstanding_jobs() > 0
     }
     pub(super) fn release_disconnected_clients(&self) {
         self.protocol
@@ -95,7 +95,7 @@ impl DesktopHost {
     /// Complete presentation bookkeeping in a parked workspace, after Runtime
     /// already returned SDK ownership. This never opens a window.
     pub(super) fn completed(&self) {
-        if let Ok(jobs) = self.runtime.read().list_jobs(self.runtime.client_id()) {
+        if let Ok(jobs) = self.runtime.read().client_jobs(self.runtime.client_id()) {
             let mut outcomes = self.outcomes.borrow_mut();
             for job in jobs {
                 if job.state.is_terminal() && !outcomes.iter().any(|old| old.id == job.id) {

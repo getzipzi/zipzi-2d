@@ -1,24 +1,19 @@
-//! Bounded binary blob messages share authenticated request identity/recovery.
+//! Binary frames use the same authenticated request IDs and recovery window.
 use super::*;
-use std::sync::Arc;
-
-pub const MAX_BINARY_CHUNK: usize = 1 << 20;
-pub const MAX_BINARY_HEADER: usize = 16 << 10;
-
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct BinarySlice {
-    data: Arc<[u8]>,
+    data: BlobBytes,
     offset: usize,
     length: usize,
 }
 impl BinarySlice {
-    pub fn new(data: Arc<[u8]>, offset: usize, length: usize) -> crate::Result<Self> {
+    pub fn new(data: BlobBytes, offset: usize, length: usize) -> Result<Self> {
         if length > MAX_BINARY_CHUNK
             || offset
                 .checked_add(length)
-                .is_none_or(|end| end > data.len())
+                .is_none_or(|end| end > data.bytes().len())
         {
-            return Err(RuntimeError::InvalidReference);
+            return Err(error("INVALID_BLOB_RANGE", "Binary range exceeds buffer"));
         }
         Ok(Self {
             data,
@@ -26,11 +21,11 @@ impl BinarySlice {
             length,
         })
     }
-    pub(crate) fn allocation(&self) -> (usize, usize) {
-        (self.data.as_ptr() as usize, self.data.len())
-    }
     pub fn bytes(&self) -> &[u8] {
-        &self.data[self.offset..self.offset + self.length]
+        &self.data.bytes()[self.offset..self.offset + self.length]
+    }
+    pub(super) fn retained_bytes(&self) -> usize {
+        self.data.bytes().len()
     }
 }
 pub struct BinaryReply {
@@ -38,33 +33,37 @@ pub struct BinaryReply {
     pub value: Value,
     pub payload: Option<BinarySlice>,
 }
+pub(super) fn validate_payload(length: usize, expected: &str, bytes: &[u8]) -> Result<()> {
+    if bytes.len() > MAX_BINARY_CHUNK
+        || length != bytes.len()
+        || Sha256::digest(bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
+            != expected
+    {
+        return Err(error("INVALID_REQUEST", "Binary payload identity differs"));
+    }
+    Ok(())
+}
 impl Protocol {
-    fn invalidate_attached_binary(
-        &self,
-        runtime: &mut Runtime,
-        auth: crate::local::Auth,
-        header: &Value,
-    ) {
-        let authenticated = self
-            .clients
-            .get(&auth.client)
-            .is_some_and(|c| c.connection == auth.connection && c.disconnected.is_none())
-            && header["protocol"] == CONTRACT
-            && serde_json::from_value::<ClientId>(header["client"].clone()).ok()
-                == Some(auth.client)
-            && serde_json::from_value::<RuntimeInstanceId>(header["runtime"].clone()).ok()
-                == Some(runtime.instance_id());
-        if authenticated {
-            if let Ok(blob) = serde_json::from_value::<BlobId>(header["operation"]["blob"].clone())
-            {
-                let _ = runtime.fail_attached_upload(auth.client, blob);
-            }
+    fn binary_input(operation: &Value, bytes: &[u8]) -> Result<()> {
+        match operation["op"].as_str() {
+            Some("append_blob_binary") => validate_payload(
+                operation["length"]
+                    .as_u64()
+                    .and_then(|n| usize::try_from(n).ok())
+                    .unwrap_or(usize::MAX),
+                operation["payload_sha256"].as_str().unwrap_or(""),
+                bytes,
+            ),
+            Some("read_blob_binary") if bytes.is_empty() => Ok(()),
+            _ => Err(error(
+                "INVALID_REQUEST",
+                "Unexpected binary operation or payload",
+            )),
         }
     }
-
-    /// The binary header is an ordinary Request. Input hashes include the exact
-    /// payload digest; cached output retains immutable backing storage and its
-    /// requested range, so release/other writes cannot change a replayed result.
     pub fn receive_binary(
         &mut self,
         runtime: &mut Runtime,
@@ -73,35 +72,13 @@ impl Protocol {
         bytes: Vec<u8>,
         now: Instant,
     ) -> BinaryReply {
-        self.expire(runtime, now);
         self.binary_output = None;
-        if bytes.len() > MAX_BINARY_CHUNK {
-            self.invalidate_attached_binary(runtime, auth, &header);
+        // Check exact payload identity before looking up a cached request: a
+        // replay with substituted bytes must never return a successful receipt.
+        if let Err(e) = Self::binary_input(&header["operation"], &bytes) {
             return BinaryReply {
                 transfer: None,
-                value: failure("BUDGET_EXCEEDED", "Binary chunk limit"),
-                payload: None,
-            };
-        }
-        if header["operation"]["op"] == "append_blob_binary" {
-            let digest: String = Sha256::digest(&bytes)
-                .iter()
-                .map(|v| format!("{v:02x}"))
-                .collect();
-            if header["operation"]["length"].as_u64() != Some(bytes.len() as u64)
-                || header["operation"]["payload_sha256"].as_str() != Some(digest.as_str())
-            {
-                self.invalidate_attached_binary(runtime, auth, &header);
-                return BinaryReply {
-                    transfer: None,
-                    value: failure("INVALID_REQUEST", "Binary payload identity differs"),
-                    payload: None,
-                };
-            }
-        } else if header["operation"]["op"] != "read_blob_binary" || !bytes.is_empty() {
-            return BinaryReply {
-                transfer: None,
-                value: failure("INVALID_REQUEST", "Unknown binary operation"),
+                value: status(e),
                 payload: None,
             };
         }
@@ -111,6 +88,28 @@ impl Protocol {
         BinaryReply {
             transfer: None,
             value,
+            payload: self.binary_output.take(),
+        }
+    }
+    /// Local owned values enter the same operation handlers without wire encoding.
+    pub fn execute_binary(
+        &mut self,
+        runtime: &mut Runtime,
+        client: ClientId,
+        operation: Value,
+        bytes: Vec<u8>,
+    ) -> BinaryReply {
+        self.binary_output = None;
+        let result = Self::binary_input(&operation, &bytes).and_then(|()| {
+            let op = serde_json::from_value(operation)
+                .map_err(|e| error("INVALID_REQUEST", &e.to_string()))?;
+            self.binary_input = Some(bytes);
+            self.execute(runtime, client, op)
+        });
+        self.binary_input = None;
+        BinaryReply {
+            transfer: None,
+            value: result.map(success).unwrap_or_else(status),
             payload: self.binary_output.take(),
         }
     }

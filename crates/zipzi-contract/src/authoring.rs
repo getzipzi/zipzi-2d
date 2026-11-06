@@ -3,7 +3,7 @@
 use crate::document::{
     AxisReduction, BindingGridEdit, BlendAuthoringEdit, DeletionDecision, DeletionEffect,
     DeletionLock, DeletionObject, DeletionRelation, DeletionRemoval, DeletionStructuralBlocker,
-    MeshGridEdit, ParameterRangeEdit, ReparentEdit,
+    ParameterRangeEdit, ReparentEdit,
 };
 use crate::model::{
     BlendShapeBinding, Glue, Mesh, MeshBinding, MeshMeshing, ParameterKind, Vec2, VertexId,

@@ -80,7 +80,7 @@ fn fixture(rotation: bool, bound: bool) -> Result<(Document, ObjectRef, String)>
                             keys: vec![key],
                             positions: edit
                                 .candidate_document()
-                                .get_transform(&object.id)
+                                .transform(&object.id)
                                 .unwrap()
                                 .warp()
                                 .unwrap()
@@ -110,7 +110,7 @@ fn fixture(rotation: bool, bound: bool) -> Result<(Document, ObjectRef, String)>
 #[test]
 fn rotation_fields_preserve_origin_precision_and_definition_scope() -> Result<()> {
     let (mut doc, object, parameter) = fixture(true, true)?;
-    let base = doc.model().get_transform(&object.id).unwrap().clone();
+    let base = doc.model().transform(&object.id).unwrap().clone();
     let original_binding = doc.model().binding_for_scene(&object.id).unwrap().clone();
     assert!(matches!(
         doc.property_scope(&object),
@@ -126,7 +126,7 @@ fn rotation_fields_preserve_origin_precision_and_definition_scope() -> Result<()
     doc.set_object_property(&object, fields::SCALE.path, json!(0.125))?;
     doc.set_object_property(&object, fields::REFLECT_X.path, json!(true))?;
     let model = doc.model();
-    assert_eq!(model.get_transform(&object.id), Some(&base));
+    assert_eq!(model.transform(&object.id), Some(&base));
     let SceneTrack::Rotation { keyforms, .. } = &model.binding_for_scene(&object.id).unwrap().track
     else {
         unreachable!()
@@ -157,7 +157,7 @@ fn rotation_fields_preserve_origin_precision_and_definition_scope() -> Result<()
     doc.set_object_property(&object, fields::BASE_ANGLE.path, json!(-30.))?;
     assert_eq!(
         doc.model()
-            .get_transform(&object.id)
+            .transform(&object.id)
             .unwrap()
             .rotation()
             .unwrap()
@@ -169,7 +169,7 @@ fn rotation_fields_preserve_origin_precision_and_definition_scope() -> Result<()
         Some(&edited_binding)
     );
     doc.undo()?;
-    assert_eq!(doc.model().get_transform(&object.id), Some(&base));
+    assert_eq!(doc.model().transform(&object.id), Some(&base));
     Ok(())
 }
 
@@ -179,7 +179,7 @@ fn deformer_appearance_preview_is_local_atomic_and_one_undo_step() -> Result<()>
         for bound in [false, true] {
             let (mut doc, object, _) = fixture(rotation, bound)?;
             let baseline = doc.property_values(&object)?;
-            let old_transform = doc.model().get_transform(&object.id).unwrap().clone();
+            let old_transform = doc.model().transform(&object.id).unwrap().clone();
             let old_binding = doc.model().binding_for_scene(&object.id).cloned();
             let history = doc.history_lengths();
             let patch = doc.object_property_patch(&object, fields::OPACITY.path, &json!(0.4))?;
@@ -197,7 +197,7 @@ fn deformer_appearance_preview_is_local_atomic_and_one_undo_step() -> Result<()>
             }
             doc.cancel_edit();
             assert_eq!(doc.history_lengths(), history);
-            assert_eq!(doc.model().get_transform(&object.id), Some(&old_transform));
+            assert_eq!(doc.model().transform(&object.id), Some(&old_transform));
             assert_eq!(
                 doc.model().binding_for_scene(&object.id),
                 old_binding.as_ref()
@@ -211,10 +211,10 @@ fn deformer_appearance_preview_is_local_atomic_and_one_undo_step() -> Result<()>
                 PropertyValue::Float(0.4)
             );
             if bound {
-                assert_eq!(doc.model().get_transform(&object.id), Some(&old_transform));
+                assert_eq!(doc.model().transform(&object.id), Some(&old_transform));
             }
             doc.undo()?;
-            assert_eq!(doc.model().get_transform(&object.id), Some(&old_transform));
+            assert_eq!(doc.model().transform(&object.id), Some(&old_transform));
             assert_eq!(
                 doc.model().binding_for_scene(&object.id),
                 old_binding.as_ref()
@@ -354,7 +354,7 @@ fn deformer_blend_contributions_reject_shape_edits_and_neutral_shapes_remain_edi
         doc.invalidate_projection(true);
         assert_eq!(doc.property_scope(&object), PropertyScope::Object);
         doc.set_object_property(&object, fields::OPACITY.path, json!(0.8))?;
-        let base = doc.model().get_transform(&object.id).unwrap().clone();
+        let base = doc.model().transform(&object.id).unwrap().clone();
         doc.set_preview_parameter(&parameter, 0.5)?;
         assert_eq!(
             doc.property_scope(&object),
@@ -372,7 +372,7 @@ fn deformer_blend_contributions_reject_shape_edits_and_neutral_shapes_remain_edi
             );
         }
         assert_eq!(doc.history_lengths(), history);
-        assert_eq!(doc.model().get_transform(&object.id), Some(&base));
+        assert_eq!(doc.model().transform(&object.id), Some(&base));
         doc.set_preview_parameter(&parameter, 0.)?;
         assert_eq!(doc.property_scope(&object), PropertyScope::Object);
         doc.set_object_property(&object, fields::OPACITY.path, json!(0.6))?;
@@ -393,7 +393,7 @@ fn repeating_parameter_upper_endpoint_targets_the_wrapped_deformer_keyform() -> 
     doc.session.edit("Repeat", None, |edit| {
         let mut next = edit
             .candidate_document()
-            .get_parameter(&parameter)
+            .parameter(&parameter)
             .unwrap()
             .clone();
         next.repeat = true;
@@ -442,7 +442,7 @@ fn deformer_reference_properties_share_organization_and_preserving_tree_plans() 
         })?;
         let mut transform = edit
             .candidate_document()
-            .get_transform(&object.id)
+            .transform(&object.id)
             .unwrap()
             .clone();
         transform.rotation_mut().unwrap().pose.origin = PreciseVec2::default();
@@ -487,12 +487,9 @@ fn deformer_reference_properties_share_organization_and_preserving_tree_plans() 
     let before = positions(&doc);
     let history = doc.history_lengths().0;
     doc.set_object_property(&object, fields::PART.path, json!(part))?;
-    assert_eq!(doc.model().get_transform(&object.id).unwrap().part(), part);
+    assert_eq!(doc.model().transform(&object.id).unwrap().part(), part);
     doc.set_object_property(&object, fields::PARENT.path, json!(parent))?;
-    assert_eq!(
-        doc.model().get_transform(&object.id).unwrap().parent(),
-        parent
-    );
+    assert_eq!(doc.model().transform(&object.id).unwrap().parent(), parent);
     for (a, b) in before
         .iter()
         .flatten()
@@ -501,7 +498,7 @@ fn deformer_reference_properties_share_organization_and_preserving_tree_plans() 
         assert!((a.x - b.x).hypot(a.y - b.y) < 0.01, "{a:?} != {b:?}");
     }
     assert_eq!(doc.history_lengths().0, history + 2);
-    let frozen = doc.model().get_transform(&object.id).unwrap().clone();
+    let frozen = doc.model().transform(&object.id).unwrap().clone();
     assert!(
         doc.set_object_property(&object, fields::PARENT.path, json!(object.id))
             .is_err()
@@ -511,19 +508,16 @@ fn deformer_reference_properties_share_organization_and_preserving_tree_plans() 
         doc.set_object_property(&parent_object, fields::PARENT.path, json!(object.id))
             .is_err()
     );
-    assert_eq!(doc.model().get_transform(&object.id), Some(&frozen));
+    assert_eq!(doc.model().transform(&object.id), Some(&frozen));
     assert_eq!(doc.history_lengths().0, history + 2);
     doc.undo()?;
-    assert_eq!(doc.model().get_transform(&object.id).unwrap().parent(), "");
+    assert_eq!(doc.model().transform(&object.id).unwrap().parent(), "");
     assert_eq!(positions(&doc), before);
     doc.undo()?;
-    assert_eq!(doc.model().get_transform(&object.id).unwrap().part(), "");
+    assert_eq!(doc.model().transform(&object.id).unwrap().part(), "");
     doc.redo()?;
     doc.redo()?;
-    assert_eq!(
-        doc.model().get_transform(&object.id).unwrap().parent(),
-        parent
-    );
+    assert_eq!(doc.model().transform(&object.id).unwrap().parent(), parent);
     Ok(())
 }
 
@@ -541,7 +535,7 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
         })?;
         let mut transform = edit
             .candidate_document()
-            .get_transform(&object.id)
+            .transform(&object.id)
             .unwrap()
             .clone();
         let grid = transform.warp_mut().unwrap();
@@ -599,9 +593,9 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
         })
     })?;
     doc.invalidate_projection(true);
-    let original = doc.model().get_transform(&object.id).unwrap().clone();
+    let original = doc.model().transform(&object.id).unwrap().clone();
     let binding = doc.model().binding_for_scene(&object.id).unwrap().clone();
-    let deltas = doc.model().get_blend_binding(&blend).unwrap().clone();
+    let deltas = doc.model().blend_binding(&blend).unwrap().clone();
     let values = doc.property_values(&object)?;
     let patch = PropertyPatch {
         scope: PropertyScope::Object,
@@ -624,7 +618,7 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
         assert!(metrics.maximum_sample_error > 10.);
         assert_eq!(doc.history_lengths(), history);
         let model = doc.model();
-        let warp = model.get_transform(&object.id).unwrap().warp().unwrap();
+        let warp = model.transform(&object.id).unwrap().warp().unwrap();
         assert_eq!(warp.points.len(), 4);
         assert_eq!(warp.bezier, original.warp().unwrap().bezier);
         let SceneTrack::Warp { keyforms, .. } = &model.binding_for_scene(&object.id).unwrap().track
@@ -638,7 +632,7 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
             assert_eq!(form.positions.len(), 4);
             assert_eq!(form.bezier, old.bezier);
         }
-        let DeltaKeyforms::Warp(forms) = &model.get_blend_binding(&blend).unwrap().keyforms else {
+        let DeltaKeyforms::Warp(forms) = &model.blend_binding(&blend).unwrap().keyforms else {
             unreachable!()
         };
         assert!(forms.iter().all(|f| f.points.len() == 4));
@@ -657,9 +651,9 @@ fn warp_grid_preview_resamples_all_shapes_preserves_controllers_and_reports_loss
             doc.object_index().get(&object).unwrap().properties["warp"]["columns"],
             2
         );
-        assert_eq!(doc.model().get_transform(&object.id), Some(&original));
+        assert_eq!(doc.model().transform(&object.id), Some(&original));
         assert_eq!(doc.model().binding_for_scene(&object.id), Some(&binding));
-        assert_eq!(doc.model().get_blend_binding(&blend), Some(&deltas));
+        assert_eq!(doc.model().blend_binding(&blend), Some(&deltas));
     }
     doc.redo()?;
     assert_eq!(doc.history_lengths().0, history.0 + 1);
@@ -692,7 +686,7 @@ fn affine_warp_grid_sampling_stays_close_and_invalid_dimensions_are_atomic() -> 
 #[test]
 fn bone_length_is_global_editor_metadata_with_history_and_no_runtime_changes() -> Result<()> {
     let (mut doc, object, parameter) = fixture(true, true)?;
-    let transform = doc.model().get_transform(&object.id).unwrap().clone();
+    let transform = doc.model().transform(&object.id).unwrap().clone();
     let binding = doc.model().binding_for_scene(&object.id).unwrap().clone();
     doc.set_preview_parameter(&parameter, 0.5)?;
     let frame = doc.snapshot()?.viewport_frame;
@@ -707,7 +701,7 @@ fn bone_length_is_global_editor_metadata_with_history_and_no_runtime_changes() -
         &frame,
         &doc.snapshot()?.viewport_frame
     ));
-    assert_eq!(doc.model().get_transform(&object.id), Some(&transform));
+    assert_eq!(doc.model().transform(&object.id), Some(&transform));
     assert_eq!(doc.model().binding_for_scene(&object.id), Some(&binding));
     doc.undo()?;
     assert_eq!(

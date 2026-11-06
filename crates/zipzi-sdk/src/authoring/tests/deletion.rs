@@ -167,3 +167,39 @@ fn deleting_sample_keeps_other_stable_identities() {
     assert_eq!(b.axes[0].samples[0].id, axis.samples[0].id);
     assert_eq!(b.keyforms.len(), 1);
 }
+
+#[test]
+fn blocked_deletion_review_retains_candidate_and_strict_command_aborts() {
+    let mut session = AuthoringSession::new(snapshot());
+    edit(&mut session, binding);
+    let mut editor = session.snapshot().document().editor_state().clone();
+    editor.objects.insert(
+        id(2),
+        ObjectEditorState {
+            locked: true,
+            hidden_in_editor: false,
+        },
+    );
+    edit(&mut session, |c| c.replace_editor_state(editor));
+    let req = request(DeletionTarget::Parameter(id(2)));
+    let mut draft = session.begin_draft();
+    let report = draft
+        .batch(draft.source(), |c| {
+            c.review_deletion(&req, Default::default(), &Default::default())
+        })
+        .unwrap();
+    assert!(!report.report.blockers.is_empty());
+    assert_eq!(
+        draft.read_snapshot().unwrap().snapshot.content_id(),
+        session.snapshot().content_id()
+    );
+    assert!(draft
+        .batch(draft.source(), |c| c.edit_deletion(
+            &req,
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err());
+    assert!(!draft.is_active());
+    assert!(session.snapshot().document().parameter(&id(2)).is_some());
+}

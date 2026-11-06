@@ -7,6 +7,7 @@ impl Document {
             asset_id: self
                 .model()
                 .physics()
+                .as_deref()
                 .map_or_else(|| Uuid::new_v4().to_string(), |a| a.id.clone()),
             id: Uuid::new_v4().to_string(),
             name,
@@ -15,29 +16,29 @@ impl Document {
     }
     pub fn physics_group_step(&self, id: &str, down: bool) -> Result<Option<PhysicsEdit>> {
         let groups = self
-            .session
+            .model()
             .physics_collection(zipzi_contract::authoring::PhysicsCollection::Groups)?;
         let i = groups
             .iter()
-            .position(|g| g.id() == id)
+            .position(|g| g == id)
             .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
         if (!down && i == 0) || (down && i + 1 >= groups.len()) {
             return Ok(None);
         }
-        let before = groups
-            .get(if down { i + 2 } else { i - 1 })
-            .map(|g| g.id().to_owned());
+        let before = groups.get(if down { i + 2 } else { i - 1 }).cloned();
         Ok(Some(PhysicsEdit::ReorderGroups {
             ids: vec![id.into()],
             before,
         }))
     }
-    pub fn plan_physics_authoring(
-        &self,
-        intent: PhysicsEdit,
-    ) -> Result<zipzi_sdk::PhysicsEditPlan> {
+    pub fn plan_physics_authoring(&self, intent: PhysicsEdit) -> Result<crate::EditPreview<()>> {
         self.ensure_authoring_idle()?;
-        Ok(self.session.plan_physics_edit(intent)?)
+        Ok(EditPreview::prepare(
+            &self.session,
+            "Edit physics",
+            None,
+            |c| c.edit_physics(intent),
+        )?)
     }
     pub fn physics_authoring_capabilities(
         &self,
@@ -51,9 +52,9 @@ impl Document {
             ObjectKind::PhysicsNode => zipzi_contract::authoring::ObjectKind::PhysicsNode,
             _ => anyhow::bail!("Expected a physics object"),
         };
-        let handle = self.session.handle(kind, &object.id)?;
+
         Ok(PhysicsAuthoringCapabilities {
-            domain: self.session.physics_capabilities(&handle)?,
+            domain: self.model().physics_capabilities(&object.id)?,
             session_reason: self
                 .pending
                 .is_some()
@@ -62,15 +63,15 @@ impl Document {
     }
     pub fn execute_physics_authoring(
         &mut self,
-        plan: &zipzi_sdk::PhysicsEditPlan,
+        plan: &crate::EditPreview<()>,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let receipt = self.session.execute_physics_plan(plan)?;
-        if receipt.changed {
+        let receipt = plan.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
-        Ok(self.authoring_result(receipt))
+        Ok(self.authoring_result(receipt).with_preview(plan))
     }
 }
 impl crate::Editor {
@@ -78,14 +79,14 @@ impl crate::Editor {
         &self,
         document: crate::DocumentId,
         intent: PhysicsEdit,
-    ) -> Result<zipzi_sdk::PhysicsEditPlan> {
+    ) -> Result<crate::EditPreview<()>> {
         self.ensure_animation_target(document)?;
         self.document().unwrap().plan_physics_authoring(intent)
     }
     pub fn execute_physics_authoring(
         &mut self,
         document: crate::DocumentId,
-        plan: &zipzi_sdk::PhysicsEditPlan,
+        plan: &crate::EditPreview<()>,
     ) -> Result<OperationResult> {
         self.ensure_animation_target(document)?;
         self.active_session_mut()
@@ -149,7 +150,7 @@ impl Document {
     ) -> Result<Option<PhysicsEdit>> {
         let model_read_guard_50 = self.model();
         let rig = model_read_guard_50
-            .get_physics_group(group)
+            .physics_group(group)
             .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
         Ok(Some(match action {
             PhysicsChannelAction::CreateInput => PhysicsEdit::CreateInput {
@@ -171,8 +172,8 @@ impl Document {
                     ),
                     AuthoringPlanningError::new("WRONG_OBJECT_KIND")
                 );
-                self.session
-                    .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
+                self.model()
+                    .require_object(object.kind.sdk_kind().unwrap(), &object.id)?;
                 PhysicsEdit::Delete {
                     ids: vec![object.id.clone()],
                     node_replacements: Default::default(),
@@ -192,17 +193,15 @@ impl Document {
                     }
                     _ => anyhow::bail!("Expected a Physics input or output"),
                 };
-                let ids = self.session.physics_collection(collection)?;
+                let ids = self.model().physics_collection(collection)?;
                 let at = ids
                     .iter()
-                    .position(|h| h.id() == object.id)
+                    .position(|h| h == &object.id)
                     .ok_or_else(|| anyhow::anyhow!("Physics channel changed"))?;
                 if (!down && at == 0) || (*down && at + 1 >= ids.len()) {
                     return Ok(None);
                 }
-                let before = ids
-                    .get(if *down { at + 2 } else { at - 1 })
-                    .map(|h| h.id().to_owned());
+                let before = ids.get(if *down { at + 2 } else { at - 1 }).cloned();
                 if object.kind == ObjectKind::PhysicsInput {
                     PhysicsEdit::MoveInputs {
                         ids: vec![object.id.clone()],
@@ -223,7 +222,7 @@ impl Document {
     pub fn physics_append_node(&self, group: &str) -> Result<PhysicsEdit> {
         let model_read_guard_51 = self.model();
         let rig = model_read_guard_51
-            .get_physics_group(group)
+            .physics_group(group)
             .ok_or_else(|| anyhow::anyhow!("Physics group no longer exists"))?;
         let mut node = rig.vertices.last().unwrap().clone();
         node.id = Uuid::new_v4().to_string();

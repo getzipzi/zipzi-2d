@@ -67,6 +67,14 @@ impl Commands<'_> {
 }
 
 impl Commands<'_> {
+    pub fn review_deletion(
+        &mut self,
+        request: &zipzi_contract::document::DeletionRequest,
+        limits: ConversionLimits,
+        control: &ConversionControl,
+    ) -> Result<zipzi_core::state::DeletionOutcome, Status> {
+        self.run(|this| this.builder.review_deletion(request, limits, control))
+    }
     pub fn edit_deletion(
         &mut self,
         request: &zipzi_core::document::DeletionRequest,

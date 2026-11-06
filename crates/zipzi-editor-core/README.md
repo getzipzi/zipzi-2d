@@ -51,11 +51,25 @@ Licensed **GPL-3.0-only**; not published to crates.io. See
 
 ## Runtime ownership
 
-`RuntimeHost` owns the sole formal SDK/history. `Document` holds a SessionId
+`RuntimeHost` owns the sole formal SDK/history. `Document` holds a SessionKey
 adapter, view projections, selection and preview state; formal writes and event
 consumption pass through Runtime. `Editor::with_runtime` attaches a workspace to
 an application host. `detach_document` retains resident content/history, while
 explicit close releases it after save/discard coordination.
+
+The stage-four adapter uses immutable snapshots for view reads and Runtime
+DraftSource for candidates. Editor gesture exclusion is local to the view;
+another client can publish and invalidate a captured candidate. Busy publication
+retains the gesture for retry. Texture reads resolve captured ResourceKeys rather
+than reopening files. Confirmation views hold the exact Draft snapshot they display and publish it
+once. Field captures contain stable IDs, expected values and the full Version;
+there is no address registry. Conversion/deletion/mesh workers return prepared
+candidates, and publication invalidates projections from WriteSet.
+
+Production libraries and the desktop application compile against these APIs.
+The independent `authoring_kernel` target covers native confirmation and resource
+workflows. Legacy aggregate test targets still reference removed APIs and need
+stage-five migration; they are not covered by the focused pass.
 
 Background load/save tasks carry Runtime Work, never Editor view state. Publish
 a Completion into Runtime before attempting a weak view callback.
@@ -66,5 +80,5 @@ workers prepare textures/object indexes before returning to the UI.
 Focused lifecycle regressions:
 
 ```sh
-env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration runtime::
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test authoring_kernel
 ```

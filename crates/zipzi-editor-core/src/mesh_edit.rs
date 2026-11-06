@@ -373,7 +373,7 @@ mod tests {
         amount: f32,
         blend: bool,
         parent: bool,
-        setup: impl FnOnce(&mut zipzi_sdk::EditSession<'_>) -> Result<(), zipzi_core::Status>,
+        setup: impl FnOnce(&mut zipzi_sdk::Commands<'_>) -> Result<(), zipzi_core::Status>,
     ) -> anyhow::Result<(Document, tempfile::TempDir)> {
         let dir = tempfile::tempdir()?;
         let mut s = zipzi_sdk::AuthoringSession::new(
@@ -551,17 +551,17 @@ mod tests {
         for cancel in [false, true] {
             let (mut doc, _dir) = fixture(0.5, false)?;
             let scene = capture_scene(&mut doc)?;
-            let original = doc.model().get_mesh(&id(1)).unwrap().clone();
-            let peer = doc.model().get_mesh(&id(2)).unwrap().clone();
+            let original = doc.model().mesh(&id(1)).unwrap().clone();
+            let peer = doc.model().mesh(&id(2)).unwrap().clone();
             let edit = ControlEdit::prepare(&doc, &scene, &target())?;
             doc.begin_control_edit(std::slice::from_ref(&edit))?;
             for dx in [3., 6., 12.] {
                 preview(&mut doc, &edit, dx)?;
             }
-            let accepted = doc.model().get_mesh(&id(1)).unwrap().clone();
+            let accepted = doc.model().mesh(&id(1)).unwrap().clone();
             let failure = preview(&mut doc, &edit, f32::MAX).unwrap_err();
             assert!(failure.is::<PreviewConstraint>());
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&accepted));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&accepted));
             let actual = doc
                 .snapshot()?
                 .viewport_frame
@@ -572,12 +572,12 @@ mod tests {
                 .positions[0];
             close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 12.);
             close(
-                doc.model().get_mesh(&id(1)).unwrap().base_positions[0].x,
+                doc.model().mesh(&id(1)).unwrap().base_positions[0].x,
                 original.base_positions[0].x + 24.,
             );
-            assert_eq!(doc.model().get_mesh(&id(2)), Some(&peer));
+            assert_eq!(doc.model().mesh(&id(2)), Some(&peer));
             assert_eq!(
-                doc.model().get_mesh(&id(1)).unwrap().base_positions[1..],
+                doc.model().mesh(&id(1)).unwrap().base_positions[1..],
                 original.base_positions[1..]
             );
             if cancel {
@@ -588,7 +588,7 @@ mod tests {
                 assert_eq!(doc.history_lengths(), (1, 0));
                 doc.undo()?;
             }
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&original));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&original));
         }
         Ok(())
     }
@@ -643,9 +643,9 @@ mod tests {
             ControlEdit::describe(&doc, &scene, &target())?,
             ControlDescription::Writable(_)
         ));
-        let original = doc.model().get_blend_binding(&id(7)).unwrap().clone();
-        let ordinary = doc.model().get_binding(&id(9)).unwrap().clone();
-        let base = doc.model().get_mesh(&id(1)).unwrap().clone();
+        let original = doc.model().blend_binding(&id(7)).unwrap().clone();
+        let ordinary = doc.model().binding(&id(9)).unwrap().clone();
+        let base = doc.model().mesh(&id(1)).unwrap().clone();
         let edit = ControlEdit::prepare(&doc, &scene, &target())?;
         doc.begin_control_edit(std::slice::from_ref(&edit))?;
         preview(&mut doc, &edit, 10.)?;
@@ -659,18 +659,18 @@ mod tests {
             .positions[0];
         close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
         close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-        let binding = doc.model().get_blend_binding(&id(7)).unwrap().clone();
+        let binding = doc.model().blend_binding(&id(7)).unwrap().clone();
         let DeltaKeyforms::Mesh(forms) = binding.keyforms else {
             panic!()
         };
         close(forms[1].positions[0].x, 42.); // delta 10 / Glue .5 / constraint .5
         assert_eq!(forms[0].positions, vec![Vec2::default(); 3]);
         assert_eq!(forms[1].positions[1..], vec![Vec2::new(2., 3.); 2]);
-        assert_eq!(doc.model().get_binding(&id(9)), Some(&ordinary));
-        assert_eq!(doc.model().get_mesh(&id(1)), Some(&base));
+        assert_eq!(doc.model().binding(&id(9)), Some(&ordinary));
+        assert_eq!(doc.model().mesh(&id(1)), Some(&base));
         doc.finish_edit()?;
         doc.undo()?;
-        assert_eq!(doc.model().get_blend_binding(&id(7)), Some(&original));
+        assert_eq!(doc.model().blend_binding(&id(7)), Some(&original));
         // Zero effective weight cannot be inverted, and the hint names the parameter.
         doc.set_preview_parameter(&id(8), 1.)?;
         let scene = capture_scene(&mut doc)?;
@@ -696,14 +696,8 @@ mod tests {
         edit.mesh.as_mut().unwrap().original_points = true;
         doc.begin_control_edit(std::slice::from_ref(&edit))?;
         preview(&mut doc, &edit, 10.)?;
-        close(
-            doc.model().get_mesh(&id(1)).unwrap().base_positions[0].x,
-            20.,
-        );
-        close(
-            doc.model().get_mesh(&id(2)).unwrap().base_positions[0].x,
-            10.,
-        );
+        close(doc.model().mesh(&id(1)).unwrap().base_positions[0].x, 20.);
+        close(doc.model().mesh(&id(2)).unwrap().base_positions[0].x, 10.);
         close(
             doc.snapshot()?.viewport_frame.drawables[0].positions[0].x,
             10.,
@@ -728,19 +722,13 @@ mod tests {
         doc.begin_control_edit(&edits)?;
         doc.preview_control_edit(&edits, &selected, ControlChange::Translate(d(10., 4.)))?;
         for n in [1, 2] {
-            close(
-                doc.model().get_mesh(&id(n)).unwrap().base_positions[0].x,
-                20.,
-            );
+            close(doc.model().mesh(&id(n)).unwrap().base_positions[0].x, 20.);
         }
         doc.finish_edit()?;
         assert_eq!(doc.history_lengths(), (1, 0));
         doc.undo()?;
         for n in [1, 2] {
-            close(
-                doc.model().get_mesh(&id(n)).unwrap().base_positions[0].x,
-                10.,
-            );
+            close(doc.model().mesh(&id(n)).unwrap().base_positions[0].x, 10.);
         }
         Ok(())
     }
@@ -748,14 +736,14 @@ mod tests {
     fn glue_inverse_composes_with_a_nonlinear_parent_warp() -> anyhow::Result<()> {
         let (mut doc, _dir) = fixture_with_parent(0.5, false, true)?;
         let scene = capture_scene(&mut doc)?;
-        let parent = doc.model().get_transform(&id(12)).unwrap().clone();
+        let parent = doc.model().transform(&id(12)).unwrap().clone();
         let edit = ControlEdit::prepare(&doc, &scene, &target())?;
         doc.begin_control_edit(std::slice::from_ref(&edit))?;
         preview(&mut doc, &edit, 10.)?;
         let actual = doc.snapshot()?.viewport_frame.drawables[0].positions[0];
         close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
         close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-        assert_eq!(doc.model().get_transform(&id(12)), Some(&parent));
+        assert_eq!(doc.model().transform(&id(12)), Some(&parent));
         doc.cancel_edit();
         Ok(())
     }
@@ -811,11 +799,11 @@ mod tests {
                 ControlEdit::describe(&doc, &scene, &target())?,
                 ControlDescription::Writable(_)
             ));
-            let ordinary = doc.model().get_binding(&id(9)).unwrap().clone();
-            let mesh = doc.model().get_mesh(&id(1)).unwrap().clone();
+            let ordinary = doc.model().binding(&id(9)).unwrap().clone();
+            let mesh = doc.model().mesh(&id(1)).unwrap().clone();
             let blends: Vec<_> = [7, 16]
                 .into_iter()
-                .map(|n| doc.model().get_blend_binding(&id(n)).unwrap().clone())
+                .map(|n| doc.model().blend_binding(&id(n)).unwrap().clone())
                 .collect();
             let edit = ControlEdit::prepare(&doc, &scene, &target())?;
             assert!(matches!(
@@ -827,20 +815,20 @@ mod tests {
             let actual = doc.snapshot()?.viewport_frame.drawables[0].positions[0];
             close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
             close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&mesh));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&mesh));
             for b in &blends {
-                assert_eq!(doc.model().get_blend_binding(&b.id), Some(b));
+                assert_eq!(doc.model().blend_binding(&b.id), Some(b));
             }
             assert_eq!(
-                doc.model().get_binding(&id(9)).unwrap().keyforms[1],
+                doc.model().binding(&id(9)).unwrap().keyforms[1],
                 ordinary.keyforms[1]
             );
             doc.finish_edit()?;
             assert_eq!(doc.history_lengths(), (1, 0));
             doc.undo()?;
-            assert_eq!(doc.model().get_binding(&id(9)), Some(&ordinary));
+            assert_eq!(doc.model().binding(&id(9)), Some(&ordinary));
             doc.redo()?;
-            let moved = doc.model().get_binding(&id(9)).unwrap().keyforms[0].positions[0];
+            let moved = doc.model().binding(&id(9)).unwrap().keyforms[0].positions[0];
             close(moved.x, ordinary.keyforms[0].positions[0].x + 20.);
             close(moved.y, ordinary.keyforms[0].positions[0].y + 8.);
             // The ordinary destination still has to be an actual stored form.
@@ -925,8 +913,8 @@ mod tests {
                 ControlEdit::describe(&doc, &scene, &object)?,
                 ControlDescription::Writable(_)
             ));
-            let base = doc.model().get_transform(&id(20)).unwrap().clone();
-            let blend = doc.model().get_blend_binding(&id(21)).unwrap().clone();
+            let base = doc.model().transform(&id(20)).unwrap().clone();
+            let blend = doc.model().blend_binding(&id(21)).unwrap().clone();
             let edit = ControlEdit::prepare(&doc, &scene, &object)?;
             doc.begin_control_edit(std::slice::from_ref(&edit))?;
             doc.preview_control_edit(
@@ -934,12 +922,12 @@ mod tests {
                 &[],
                 ControlChange::MoveAll(d(10., 4.)),
             )?;
-            assert_ne!(doc.model().get_transform(&id(20)), Some(&base));
-            assert_eq!(doc.model().get_blend_binding(&id(21)), Some(&blend));
+            assert_ne!(doc.model().transform(&id(20)), Some(&base));
+            assert_eq!(doc.model().blend_binding(&id(21)), Some(&blend));
             doc.finish_edit()?;
             assert_eq!(doc.history_lengths(), (1, 0));
             doc.undo()?;
-            assert_eq!(doc.model().get_transform(&id(20)), Some(&base));
+            assert_eq!(doc.model().transform(&id(20)), Some(&base));
             if !rotation {
                 // Bezier handles refine the conversion lattice. Existing blend
                 // deltas must follow that topology, including undo/cancel.
@@ -957,10 +945,10 @@ mod tests {
                         ControlChange::Translate(d(10., 4.)),
                     )?;
                     let model = doc.model();
-                    let warp = model.get_transform(&id(20)).unwrap().warp().unwrap();
+                    let warp = model.transform(&id(20)).unwrap().warp().unwrap();
                     assert_eq!((warp.rows, warp.columns), (1, 1));
                     let DeltaKeyforms::Warp(forms) =
-                        &model.get_blend_binding(&id(21)).unwrap().keyforms
+                        &model.blend_binding(&id(21)).unwrap().keyforms
                     else {
                         panic!()
                     };
@@ -976,8 +964,8 @@ mod tests {
                         doc.finish_edit()?;
                         doc.undo()?;
                     }
-                    assert_eq!(doc.model().get_transform(&id(20)), Some(&base));
-                    assert_eq!(doc.model().get_blend_binding(&id(21)), Some(&blend));
+                    assert_eq!(doc.model().transform(&id(20)), Some(&base));
+                    assert_eq!(doc.model().blend_binding(&id(21)), Some(&blend));
                 }
             }
         }
@@ -987,19 +975,11 @@ mod tests {
     fn blend_initial_target_uses_only_an_unambiguous_stored_keyform() -> anyhow::Result<()> {
         for state in ["stored", "between_keys", "ambiguous", "constrained"] {
             let (mut doc, _dir) = fixture_with_setup(0.5, true, false, |e| {
-                let mut p = e
-                    .candidate_document()
-                    .get_parameter(&id(5))
-                    .unwrap()
-                    .clone();
+                let mut p = e.candidate_document().parameter(&id(5)).unwrap().clone();
                 p.default_value = if state == "between_keys" { 0.5 } else { 1. };
                 e.replace_parameter(p)?;
                 if state == "constrained" {
-                    let mut p = e
-                        .candidate_document()
-                        .get_parameter(&id(8))
-                        .unwrap()
-                        .clone();
+                    let mut p = e.candidate_document().parameter(&id(8)).unwrap().clone();
                     p.default_value = 0.99;
                     e.replace_parameter(p)?;
                 }
@@ -1073,19 +1053,19 @@ mod tests {
             assert!(
                 matches!(ControlEdit::describe(&doc,&scene,&target())?,ControlDescription::Writable(w) if w.label.contains("Smile = 1"))
             );
-            let base = doc.model().get_mesh(&id(1)).unwrap().clone();
-            let ordinary = doc.model().get_binding(&id(9)).unwrap().clone();
+            let base = doc.model().mesh(&id(1)).unwrap().clone();
+            let ordinary = doc.model().binding(&id(9)).unwrap().clone();
             doc.begin_control_edit(std::slice::from_ref(&edit))?;
             preview(&mut doc, &edit, 10.)?;
             let actual = doc.snapshot()?.viewport_frame.drawables[0].positions[0];
             close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
             close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&base));
-            assert_eq!(doc.model().get_binding(&id(9)), Some(&ordinary));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&base));
+            assert_eq!(doc.model().binding(&id(9)), Some(&ordinary));
             doc.finish_edit()?;
             assert_eq!(doc.history_lengths(), (1, 0));
             doc.undo()?;
-            assert_eq!(doc.model().get_blend_binding(&id(7)), Some(original));
+            assert_eq!(doc.model().blend_binding(&id(7)), Some(original));
             doc.focus_parameter(&id(5))?;
             let explicit = ControlEdit::prepare(&doc, &scene, &target())?;
             assert_eq!(explicit.original.id(), edit.original.id());

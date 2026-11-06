@@ -39,7 +39,7 @@ impl Document {
             return Ok(());
         };
         self.finish_edit()?;
-        let plan = self.session.plan_organization_edit(prepared.intent)?;
+        let plan = self.plan_organization_authoring(prepared.intent)?;
         self.execute_organization_authoring(&plan)?;
         Ok(())
     }
@@ -77,7 +77,7 @@ impl Document {
             destination: C::PartMembers { part_id: parent },
             before,
         };
-        let plan = self.session.plan_organization_edit(intent.clone())?;
+        let plan = self.plan_organization_authoring(intent.clone())?;
         Ok((!plan.is_noop()).then_some(OrganizationMove { intent }))
     }
     pub fn reorder_tree(
@@ -114,8 +114,7 @@ impl Document {
             .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
         if parent.is_empty() {
             members.retain(|id| {
-                self.model().get_transform(id).is_some()
-                    == self.model().get_transform(&target.id).is_some()
+                self.model().transform(id).is_some() == self.model().transform(&target.id).is_some()
             });
         }
         let before = if position == ReorderPosition::Before {
@@ -130,13 +129,11 @@ impl Document {
         };
         drop(model_read_guard_37);
         self.finish_edit()?;
-        let plan = self
-            .session
-            .plan_scene_edit(zipzi_contract::document::SceneEdit::Move {
-                ids: vec![source.id.clone()],
-                destination: collection,
-                before,
-            })?;
+        let plan = self.plan_scene_authoring(zipzi_contract::document::SceneEdit::Move {
+            ids: vec![source.id.clone()],
+            destination: collection,
+            before,
+        })?;
         self.execute_scene_authoring(&plan)?;
         Ok(())
     }
@@ -152,7 +149,7 @@ impl Document {
                     return Ok(());
                 }
                 ensure!(
-                    self.model().get_parameter(&id).is_some(),
+                    self.model().parameter(&id).is_some(),
                     "Target parameter no longer exists"
                 );
                 let group = self.model().parameter_group_for(&id).map(str::to_owned);
@@ -164,7 +161,7 @@ impl Document {
             }
         };
         self.finish_edit()?;
-        let plan = self.session.plan_organization_edit(E::Move {
+        let plan = self.plan_organization_authoring(E::Move {
             ids: vec![source.into()],
             destination: C::Parameters { group_id: group },
             before,
@@ -183,7 +180,7 @@ impl Document {
         }
         let model_read_guard_38 = self.model();
         let group = model_read_guard_38
-            .get_parameter_group(target)
+            .parameter_group(target)
             .ok_or_else(|| anyhow!("Target group no longer exists"))?;
         let collection = C::ParameterGroups {
             parent_id: group.parent_id.clone(),
@@ -191,7 +188,7 @@ impl Document {
         let before = placement_after(&self.model(), &collection, source, target, position)?;
         drop(model_read_guard_38);
         self.finish_edit()?;
-        let plan = self.session.plan_organization_edit(E::Move {
+        let plan = self.plan_organization_authoring(E::Move {
             ids: vec![source.into()],
             destination: collection,
             before,
@@ -218,7 +215,7 @@ fn placement_after(
         .filter(|id| {
             id != source
                 && (!matches!(c, C::PartMembers { part_id: None })
-                    || d.get_part(id).is_some() == d.get_part(target).is_some())
+                    || d.part(id).is_some() == d.part(target).is_some())
         })
         .collect();
     let index = members
@@ -236,9 +233,9 @@ pub(crate) struct OrganizationMove {
 impl OrganizationMove {
     pub(crate) fn apply(
         self,
-        edit: &mut zipzi_sdk::EditSession<'_>,
+        edit: &mut zipzi_sdk::Commands<'_>,
         _source: &ObjectRef,
     ) -> std::result::Result<(), zipzi_core::Status> {
-        edit.edit_organization(self.intent)
+        edit.edit_organization(self.intent).map(|_| ())
     }
 }

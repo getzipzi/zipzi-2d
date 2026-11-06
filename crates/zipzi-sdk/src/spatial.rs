@@ -3,12 +3,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{ConversionControl, SdkError};
+use crate::{ConversionControl, Status};
 use zipzi_core::{DrawableFrame, Mesh, Part, Vec2};
 
 pub use zipzi_contract::spatial::{
-    GeometryHit, GeometryQuery, ObjectBounds, ObjectTarget, SpatialFrame, SpatialQuery,
-    SpatialResult, SpatialSamples, TriangleHit,
+    GeometryHit, GeometryQuery, ObjectBounds, ObjectTarget, SpatialQuery, SpatialResult,
+    TriangleHit,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -26,7 +26,7 @@ pub enum SpatialError {
     Cancelled,
 }
 
-pub(crate) fn spatial_error(error: SpatialError) -> SdkError {
+pub(crate) fn spatial_error(error: SpatialError) -> Status {
     let (code, message, id) = match error {
         SpatialError::MissingMesh(id) => (
             "MISSING_MESH",
@@ -50,27 +50,28 @@ pub(crate) fn spatial_error(error: SpatialError) -> SdkError {
         ),
         SpatialError::Cancelled => ("CANCELLED", "Spatial query cancelled", None),
     };
-    let mut error = SdkError::new(code, message, "spatial");
-    error.object_ids.extend(id);
-    error
+    Status::error(
+        code,
+        id.map_or_else(|| message.to_owned(), |id| format!("{message}: {id}")),
+    )
 }
 
 /// Query a frame using borrowed object tables from its exact authoring source.
 /// No mesh geometry or binding payload is cloned to construct those tables.
 pub fn query_spatial_frame(
-    document: &zipzi_core::Document,
+    document: &zipzi_core::state::DocumentState,
     frame: &DrawableFrame,
     queries: &[SpatialQuery],
     control: &ConversionControl,
-) -> Result<Vec<SpatialResult>, SdkError> {
+) -> Result<Vec<SpatialResult>, Status> {
     let meshes = document
         .mesh_order()
         .iter()
-        .filter_map(|id| document.get_mesh(id));
+        .filter_map(|id| document.mesh(id));
     let parts = document
         .part_order()
         .iter()
-        .filter_map(|id| document.get_part(id));
+        .filter_map(|id| document.part(id));
     queries
         .iter()
         .map(|query| {
@@ -112,20 +113,20 @@ pub fn query_spatial_frame(
 
 /// Validate selections and scalar options before evaluating or advancing a Preview.
 pub fn validate_spatial_queries(
-    document: &zipzi_core::Document,
+    document: &zipzi_core::state::DocumentState,
     queries: &[SpatialQuery],
     control: &ConversionControl,
-) -> Result<(), SdkError> {
+) -> Result<(), Status> {
     for query in queries {
         cancelled(control).map_err(spatial_error)?;
         match query {
             SpatialQuery::Bounds { targets, .. } => {
                 for target in targets {
                     let error = match target {
-                        ObjectTarget::Mesh(id) if document.get_mesh(id).is_none() => {
+                        ObjectTarget::Mesh(id) if document.mesh(id).is_none() => {
                             Some(SpatialError::MissingMesh(id.clone()))
                         }
-                        ObjectTarget::Part(id) if document.get_part(id).is_none() => {
+                        ObjectTarget::Part(id) if document.part(id).is_none() => {
                             Some(SpatialError::MissingPart(id.clone()))
                         }
                         _ => None,
@@ -152,95 +153,10 @@ pub fn validate_spatial_queries(
     Ok(())
 }
 
-impl crate::AuthoringSnapshot {
-    /// Frozen explicit-parameter spatial evaluation; never reads the session's mutable Preview.
-    pub fn sample_spatial_with_control(
-        &self,
-        requested: Vec<zipzi_core::PreviewValues>,
-        queries: Vec<SpatialQuery>,
-        control: &ConversionControl,
-    ) -> Result<SpatialSamples, SdkError> {
-        let mut sampler = SpatialSampler::new(self, requested, queries);
-        loop {
-            if let Some(samples) = sampler.step(control)? {
-                return Ok(samples);
-            }
-        }
-    }
-}
-
-/// Resumable spatial sampling with one validation of the shared queries.
-/// A completed or failed sampler must be discarded.
-pub struct SpatialSampler<S> {
-    source: S,
-    output: Option<SpatialSamples>,
-    validated: bool,
-}
-impl<S: std::borrow::Borrow<crate::AuthoringSnapshot>> SpatialSampler<S> {
-    pub fn new(
-        source: S,
-        requested: Vec<zipzi_core::PreviewValues>,
-        queries: Vec<SpatialQuery>,
-    ) -> Self {
-        let version = source.borrow().version();
-        let capacity = requested.len();
-        Self {
-            source,
-            output: Some(SpatialSamples {
-                version,
-                requested,
-                queries,
-                frames: Vec::with_capacity(capacity),
-            }),
-            validated: false,
-        }
-    }
-    /// Evaluate at most one pose, preserving requested order and duplicates.
-    pub fn step(
-        &mut self,
-        control: &ConversionControl,
-    ) -> Result<Option<SpatialSamples>, SdkError> {
-        cancelled(control).map_err(spatial_error)?;
-        let output = self.output.as_mut().ok_or_else(|| {
-            SdkError::new("SAMPLING_FINISHED", "Sampler already completed", "spatial")
-        })?;
-        let source = self.source.borrow();
-        if !self.validated {
-            validate_spatial_queries(source.document(), &output.queries, control)?;
-            self.validated = true;
-        }
-        if let Some(values) = output.requested.get(output.frames.len()) {
-            let mut frame = DrawableFrame::default();
-            let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
-                source.document(),
-                values,
-                &mut frame,
-            );
-            if !status.is_ok() {
-                return Err(SdkError::from_status(status, "spatial", vec![]));
-            }
-            let results = query_spatial_frame(source.document(), &frame, &output.queries, control)?;
-            let parameters = frame
-                .parameters
-                .iter()
-                .map(|p| (p.id.clone(), p.value))
-                .collect();
-            output.frames.push(SpatialFrame {
-                parameters,
-                results,
-            });
-        }
-        cancelled(control).map_err(spatial_error)?;
-        if output.frames.len() < output.requested.len() {
-            return Ok(None);
-        }
-        Ok(self.output.take())
-    }
-}
-
 /// Resolve target IDs in authoring mesh order. Missing IDs are errors; an
 /// existing Part without descendant meshes resolves to an empty vector.
-pub fn resolve_mesh_ids(
+#[cfg(test)]
+fn resolve_mesh_ids(
     meshes: &[Mesh],
     parts: &[Part],
     targets: &[ObjectTarget],

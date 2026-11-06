@@ -32,23 +32,22 @@ impl BusinessAction {
 #[derive(Clone, Debug)]
 enum Native {
     Noop,
-    Pose(zipzi_sdk::PoseEditPlan),
-    Physics(zipzi_sdk::PhysicsEditPlan),
+    Pose(PoseEdit),
+    Physics(PhysicsEdit),
 }
 impl Native {
-    fn apply(&self, edit: &mut zipzi_sdk::EditSession<'_>) -> Result<()> {
+    fn apply(&self, edit: &mut zipzi_sdk::Commands<'_>) -> Result<()> {
         match self {
             Self::Noop => {}
-            Self::Pose(p) => edit.apply_pose_plan(p)?,
-            Self::Physics(p) => edit.apply_physics_plan(p)?,
+            Self::Pose(p) => edit.edit_pose(p.clone())?,
+            Self::Physics(p) => edit.edit_physics(p.clone())?,
         };
         Ok(())
     }
 }
 #[derive(Clone, Debug)]
 pub struct BusinessPlan {
-    native: Native,
-    version: zipzi_sdk::Version,
+    preview: EditPreview<()>,
     pub removed: Vec<ObjectRef>,
     pub moved: Vec<ObjectRef>,
     pub fallback: Vec<ObjectRef>,
@@ -108,7 +107,7 @@ impl Document {
             ObjectKind::PoseEntry => PC::Entries {
                 group_id: self
                     .model()
-                    .get_pose_entry(&object.id)
+                    .pose_entry(&object.id)
                     .ok_or_else(|| anyhow::anyhow!("Missing Pose entry"))?
                     .0
                     .id
@@ -117,7 +116,7 @@ impl Document {
             ObjectKind::PoseLink => PC::Links {
                 entry_id: self
                     .model()
-                    .get_pose_link(&object.id)
+                    .pose_link(&object.id)
                     .ok_or_else(|| anyhow::anyhow!("Missing Pose link"))?
                     .0
                     .id
@@ -128,10 +127,9 @@ impl Document {
     }
     fn pose_order(&self, collection: &PC) -> Result<Vec<String>> {
         Ok(self
-            .session
+            .model()
             .pose_collection(collection.clone())?
             .into_iter()
-            .map(|h| h.id().to_owned())
             .collect())
     }
     fn pose_creation_collection(&self, kind: ObjectKind, at: Option<&ObjectRef>) -> Result<PC> {
@@ -141,7 +139,7 @@ impl Document {
             (K::PoseEntry, Some(o)) if o.kind == K::PoseGroup => o.id.clone(),
             (K::PoseEntry, Some(o)) if o.kind == K::PoseEntry => self
                 .model()
-                .get_pose_entry(&o.id)
+                .pose_entry(&o.id)
                 .ok_or_else(|| anyhow::anyhow!("Missing member"))?
                 .0
                 .id
@@ -149,15 +147,15 @@ impl Document {
             (K::PoseEntry, Some(o)) if o.kind == K::PoseLink => {
                 let model = self.model();
                 let entry = model
-                    .get_pose_link(&o.id)
+                    .pose_link(&o.id)
                     .ok_or_else(|| anyhow::anyhow!("Missing link"))?
                     .0;
-                self.model().get_pose_entry(&entry.id).unwrap().0.id.clone()
+                self.model().pose_entry(&entry.id).unwrap().0.id.clone()
             }
             (K::PoseLink, Some(o)) if o.kind == K::PoseEntry => o.id.clone(),
             (K::PoseLink, Some(o)) if o.kind == K::PoseLink => self
                 .model()
-                .get_pose_link(&o.id)
+                .pose_link(&o.id)
                 .ok_or_else(|| anyhow::anyhow!("Missing link"))?
                 .0
                 .id
@@ -176,12 +174,12 @@ impl Document {
         match action {
             A::Create(kind, at) => {
                 let collection = match kind {
-                    K::PhysicsGroup => AuthoringCollection::Physics(
+                    K::PhysicsGroup => CollectionTarget::Physics(
                         zipzi_contract::authoring::PhysicsCollection::Groups,
                     ),
-                    K::PoseGroup | K::PoseEntry | K::PoseLink => AuthoringCollection::Pose(
-                        self.pose_creation_collection(*kind, at.as_ref())?,
-                    ),
+                    K::PoseGroup | K::PoseEntry | K::PoseLink => {
+                        CollectionTarget::Pose(self.pose_creation_collection(*kind, at.as_ref())?)
+                    }
                     _ => {
                         return Ok(C::Unsupported {
                             code: "WRONG_OBJECT_KIND",
@@ -238,10 +236,10 @@ impl Document {
             _ => anyhow::bail!("Not an ordered business object"),
         };
         Ok(self
-            .session
+            .model()
             .physics_collection(collection)?
             .iter()
-            .map(|h| h.id().to_owned())
+            .cloned()
             .collect())
     }
     pub fn business_destinations(
@@ -260,6 +258,7 @@ impl Document {
                 );
                 for g in &model
                     .pose()
+                    .as_deref()
                     .ok_or_else(|| anyhow::anyhow!("Missing Pose"))?
                     .groups
                 {
@@ -273,7 +272,7 @@ impl Document {
                 }
             }
             K::PoseLink => {
-                for g in &model.pose().unwrap().groups {
+                for g in &model.pose().as_deref().unwrap().groups {
                     for e in &g.entries {
                         result.push(BusinessDestination {
                             id: e.id.clone(),
@@ -290,10 +289,14 @@ impl Document {
                 }
             }
             K::PhysicsInput | K::PhysicsOutput => {
-                for g in &model.physics().unwrap().data.settings {
+                for g in &model.physics().as_deref().unwrap().data.settings {
                     result.push(BusinessDestination {
                         id: g.id.clone(),
-                        label: format!("{} · {}", model.physics().unwrap().group_name(&g.id), g.id),
+                        label: format!(
+                            "{} · {}",
+                            model.physics().as_deref().unwrap().group_name(&g.id),
+                            g.id
+                        ),
                         nodes: g
                             .vertices
                             .iter()
@@ -313,7 +316,11 @@ impl Document {
         use ObjectKind as K;
         self.ensure_authoring_idle()?;
         let source = action.source();
-        let model = self.model();
+        let captured = self.session.sourced_snapshot();
+        let zipzi_sdk::QuerySource::Published(expected) = captured.source else {
+            unreachable!()
+        };
+        let model = captured.snapshot.document();
         let existing: Vec<&str> = match action {
             A::Create(K::PoseGroup, _) => model
                 .pose()
@@ -325,7 +332,7 @@ impl Document {
                 .physics()
                 .into_iter()
                 .flat_map(|p| &p.data.settings)
-                .map(|g| model.physics().unwrap().group_name(&g.id))
+                .map(|g| model.physics().as_deref().unwrap().group_name(&g.id))
                 .collect(),
             _ => vec![],
         };
@@ -355,6 +362,7 @@ impl Document {
                     PC::Groups => PoseEdit::CreateGroup {
                         pose_id: model
                             .pose()
+                            .as_deref()
                             .map_or_else(|| Uuid::new_v4().to_string(), |p| p.id.clone()),
                         id,
                         name,
@@ -371,11 +379,11 @@ impl Document {
                         before,
                     },
                 };
-                Native::Pose(self.plan_pose_authoring(intent)?)
+                Native::Pose(intent)
             }
             A::Create(K::PhysicsGroup, _) => {
                 created_kind = Some(K::PhysicsGroup);
-                Native::Physics(self.plan_physics_authoring(self.physics_group_creation(name))?)
+                Native::Physics(self.physics_group_creation(name))
             }
             A::Copy(o) | A::Step(o, _)
                 if matches!(o.kind, K::PoseGroup | K::PoseEntry | K::PoseLink) =>
@@ -398,7 +406,7 @@ impl Document {
                 if before.as_deref() == Some(o.id.as_str()) {
                     Native::Noop
                 } else {
-                    Native::Pose(self.plan_pose_authoring(if matches!(action, A::Copy(_)) {
+                    Native::Pose(if matches!(action, A::Copy(_)) {
                         created_kind = Some(o.kind);
                         PoseEdit::Duplicate {
                             ids: vec![o.id.clone()],
@@ -411,18 +419,18 @@ impl Document {
                             destination: collection,
                             before,
                         }
-                    })?)
+                    })
                 }
             }
             A::Delete(o)
                 if matches!(o.kind, K::Pose | K::PoseGroup | K::PoseEntry | K::PoseLink) =>
             {
-                Native::Pose(self.plan_pose_authoring(PoseEdit::Delete {
+                Native::Pose(PoseEdit::Delete {
                     ids: vec![o.id.clone()],
-                })?)
+                })
             }
             A::Move(o, destination, _) if matches!(o.kind, K::PoseEntry | K::PoseLink) => {
-                Native::Pose(self.plan_pose_authoring(PoseEdit::Move {
+                Native::Pose(PoseEdit::Move {
                     ids: vec![o.id.clone()],
                     destination: if o.kind == K::PoseEntry {
                         PC::Entries {
@@ -434,22 +442,20 @@ impl Document {
                         }
                     },
                     before: None,
-                })?)
+                })
             }
-            A::MigratePoseGroup(o, destination) => {
-                Native::Pose(self.plan_pose_authoring(PoseEdit::DissolveGroup {
-                    id: o.id.clone(),
-                    destination: destination.clone(),
-                    before: None,
-                })?)
-            }
+            A::MigratePoseGroup(o, destination) => Native::Pose(PoseEdit::DissolveGroup {
+                id: o.id.clone(),
+                destination: destination.clone(),
+                before: None,
+            }),
             A::Copy(o) if o.kind == K::PhysicsNode => {
                 created_kind = Some(K::PhysicsNode);
                 let before = next(self.business_order(o)?, &o.id);
-                Native::Physics(self.plan_physics_authoring(PhysicsEdit::DuplicateNode {
+                Native::Physics(PhysicsEdit::DuplicateNode {
                     id: o.id.clone(),
                     before,
-                })?)
+                })
             }
             A::Step(o, down) if o.kind == K::PhysicsNode => {
                 let order = self.business_order(o)?;
@@ -461,10 +467,10 @@ impl Document {
                     Native::Noop
                 } else {
                     let before = order.get(if *down { at + 2 } else { at - 1 }).cloned();
-                    Native::Physics(self.plan_physics_authoring(PhysicsEdit::MoveNode {
+                    Native::Physics(PhysicsEdit::MoveNode {
                         id: o.id.clone(),
                         before,
-                    })?)
+                    })
                 }
             }
             A::Copy(o)
@@ -475,16 +481,16 @@ impl Document {
                     .business_owner(o)
                     .filter(|p| p.kind == K::PhysicsGroup)
                     .map(|p| p.id);
-                Native::Physics(self.plan_physics_authoring(PhysicsEdit::Duplicate {
+                Native::Physics(PhysicsEdit::Duplicate {
                     ids: vec![o.id.clone()],
                     group_id: owner,
                     before: None,
-                })?)
+                })
             }
-            A::Delete(o) => Native::Physics(self.plan_physics_authoring(PhysicsEdit::Delete {
+            A::Delete(o) => Native::Physics(PhysicsEdit::Delete {
                 ids: vec![o.id.clone()],
                 node_replacements: Default::default(),
-            })?),
+            }),
             A::ReorderPhysicsGroup(source, target, position) => {
                 ensure!(
                     source.kind == K::PhysicsGroup && target.kind == K::PhysicsGroup,
@@ -509,10 +515,10 @@ impl Document {
                     } else {
                         next(remaining, &target.id)
                     };
-                    Native::Physics(self.plan_physics_authoring(PhysicsEdit::ReorderGroups {
+                    Native::Physics(PhysicsEdit::ReorderGroups {
                         ids: vec![source.id.clone()],
                         before,
-                    })?)
+                    })
                 }
             }
             A::Step(o, down) => {
@@ -531,7 +537,7 @@ impl Document {
                     )?
                 };
                 match intent {
-                    Some(intent) => Native::Physics(self.plan_physics_authoring(intent)?),
+                    Some(intent) => Native::Physics(intent),
                     None => Native::Noop,
                 }
             }
@@ -548,6 +554,7 @@ impl Document {
                     ensure!(o.kind == K::PhysicsOutput, "Expected Physics channel");
                     let rig = model
                         .physics()
+                        .as_deref()
                         .unwrap()
                         .data
                         .settings
@@ -573,16 +580,15 @@ impl Document {
                         node_replacements: replacements,
                     }
                 };
-                Native::Physics(self.plan_physics_authoring(intent)?)
+                Native::Physics(intent)
             }
             _ => anyhow::bail!("Unsupported business action"),
         };
-        drop(model);
         let mut candidate = self
             .session
-            .begin_owned_edit("Review Physics or Pose", None)?;
+            .begin_draft("Review Physics or Pose", Some(expected))?;
         candidate.apply(|sdk| native.apply(sdk))?;
-        let model = self.model();
+        let model = captured.snapshot.document();
         let before = inventory(&model);
         let after: std::collections::HashSet<_> = inventory(&candidate.candidate_document())
             .into_iter()
@@ -590,7 +596,7 @@ impl Document {
         let removed = before.into_iter().filter(|o| !after.contains(o)).collect();
         let moved = if let A::MigratePoseGroup(o, _) = action {
             model
-                .get_pose_group(&o.id)
+                .pose_group(&o.id)
                 .unwrap()
                 .entries
                 .iter()
@@ -606,28 +612,25 @@ impl Document {
                     .collect()
             })
             .unwrap_or_default();
+        let noop = candidate.candidate_document().content_id() == model.content_id();
+        let preview = EditPreview::from_candidate(candidate, captured.snapshot.clone(), ())?;
         Ok(BusinessPlan {
-            native,
-            version: self.session.version(),
+            preview,
             removed,
             moved,
             fallback,
             created_kind,
-            noop: candidate.candidate_document().revision() == model.revision(),
+            noop,
         })
     }
     pub fn execute_business(&mut self, plan: &BusinessPlan) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let mut edit = self
-            .session
-            .begin_owned_edit("Edit Physics or Pose", Some(plan.version))?;
-        edit.apply(|sdk| plan.native.apply(sdk))?;
-        let receipt = edit.commit_to(&mut self.session)?;
-        if receipt.changed {
+        let receipt = plan.preview.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
-        Ok(self.authoring_result(receipt))
+        Ok(self.authoring_result(receipt).with_preview(&plan.preview))
     }
 }
 impl crate::Editor {

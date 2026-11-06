@@ -575,13 +575,13 @@ pub(crate) fn object_payload(
     Ok(match object.kind {
         K::Document => {
             ensure!(model.id() == object.id, "Object no longer exists");
-            serde_json::json!({ "export_settings": model.export_settings() })
+            serde_json::json!({ "export_settings": model.setup().export })
         }
-        K::Part => get!(get_part),
+        K::Part => get!(part),
         K::Mesh => mesh::payload(model, &object.id, &PropertyScope::Object)?,
-        K::Deformer => get!(get_transform),
+        K::Deformer => get!(transform),
         K::Parameter => {
-            let mut payload = get!(get_parameter);
+            let mut payload = get!(parameter);
             let group = model
                 .display_info()
                 .parameters
@@ -607,11 +607,11 @@ pub(crate) fn object_payload(
                 .find(|group| group.id == object.id)
                 .ok_or_else(|| anyhow::anyhow!("Object no longer exists"))?,
         )?,
-        K::Glue => get!(get_glue),
-        K::Offscreen => get!(get_offscreen),
-        K::Texture => get!(get_asset),
-        K::Motion => get!(get_motion),
-        K::Expression => get!(get_expression),
+        K::Glue => get!(glue),
+        K::Offscreen => get!(offscreen),
+        K::Texture => get!(asset),
+        K::Motion => get!(motion),
+        K::Expression => get!(expression),
         K::Physics | K::Pose | K::PoseGroup | K::PoseEntry | K::PoseLink => {
             business::payload(model, object)?
         }
@@ -634,13 +634,13 @@ pub(crate) fn inspector_payload(
         }
         ObjectKind::Motion => {
             let c = model
-                .get_motion(&object.id)
+                .motion(&object.id)
                 .ok_or_else(|| anyhow::anyhow!("Motion no longer exists"))?;
             serde_json::json!({"name":c.name,"duration":c.duration,"fps":c.fps,"looping":c.looping,"fade_in":c.fade_in,"fade_out":c.fade_out})
         }
         ObjectKind::Expression => {
             let e = model
-                .get_expression(&object.id)
+                .expression(&object.id)
                 .ok_or_else(|| anyhow::anyhow!("Expression no longer exists"))?;
             serde_json::json!({"name":e.name,"fade_in":e.fade_in,"fade_out":e.fade_out})
         }

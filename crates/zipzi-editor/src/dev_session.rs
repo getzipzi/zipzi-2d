@@ -17,15 +17,16 @@ impl OpenDocuments {
     fn capture(editor: &Editor) -> Self {
         let active_id = editor.active_id();
         let documents = editor.documents();
+        let host = editor.runtime_host();
         Self {
             active: documents
                 .iter()
                 .find(|document| Some(document.id) == active_id)
                 .and_then(|document| document.path.clone()),
-            paths: editor
-                .runtime_host()
+            paths: host
                 .read()
-                .list_sessions()
+                .session_catalog(host.client_id())
+                .unwrap_or_default()
                 .into_iter()
                 .filter_map(|session| session.path)
                 .collect(),

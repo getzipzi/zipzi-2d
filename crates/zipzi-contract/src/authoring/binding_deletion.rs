@@ -21,12 +21,6 @@ pub enum BindingAuthoringEdit {
         /// rather than mutating this value.
         BlendAuthoringEdit,
     ),
-    /// Edit an ordinary mesh binding grid.
-    MeshGrid(
-        /// Typed intent for mesh binding grid edits; apply/plan it against a Session/Edit
-        /// source rather than mutating this value.
-        MeshGridEdit,
-    ),
     /// Change a parameter range and its dependent coordinates.
     ParameterRange(
         /// Typed intent for parameter range conversion; apply/plan it against a Session/Edit

@@ -6,6 +6,24 @@ pub struct ReferenceOutcome {
     pub copied_ids: BTreeMap<String, String>,
 }
 impl DocumentState {
+    pub fn reference_selection(
+        &self,
+        owner: &str,
+        field: ReferenceSelectionField,
+    ) -> Result<&[String], Status> {
+        match field {
+            ReferenceSelectionField::MeshMasks => {
+                self.mesh(owner).map(|value| value.masks.as_slice())
+            }
+            ReferenceSelectionField::OffscreenMasks => {
+                self.offscreen(owner).map(|value| value.masks.as_slice())
+            }
+            ReferenceSelectionField::BlendConstraints => self
+                .blend_binding(owner)
+                .map(|value| value.constraint_ids.as_slice()),
+        }
+        .ok_or_else(|| Status::error("WRONG_REFERENCE_SELECTION", owner))
+    }
     pub fn reference_collection(
         &self,
         collection: &ReferenceCollection,

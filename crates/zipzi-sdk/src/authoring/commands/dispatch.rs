@@ -28,10 +28,7 @@ impl Commands<'_> {
                 }
                 Command::CreateMesh { spec } => Some(this.create_mesh_spec(spec)?),
                 Command::PutMesh { value } => {
-                    this.unlocked(&value.id)?;
-                    this.unlocked(&value.part_id)?;
-                    this.unlocked(&value.deformer_id)?;
-                    this.builder.replace_mesh(value)?;
+                    this.replace_mesh(value)?;
                     None
                 }
                 Command::CreateAsset { id, name } => {

@@ -2,7 +2,7 @@
 //! GIL is released; only the owner-thread Runtime executes authoring commands.
 use pyo3::{
     prelude::*,
-    types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyModule, PyString, PyTuple},
+    types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyModule, PyString, PyTuple},
 };
 use serde_json::Value;
 use std::sync::Arc;
@@ -188,6 +188,38 @@ impl NativeRuntime {
             Err(e) => failure("HOST_FAILURE", &e.to_string()),
         };
         write(py, response)
+    }
+    fn binary_request(
+        &self,
+        py: Python<'_>,
+        input: &Bound<'_, PyAny>,
+        payload: &Bound<'_, PyBytes>,
+    ) -> PyResult<(Py<PyAny>, Py<PyBytes>)> {
+        let mut bytes = payload.as_bytes().len();
+        if bytes > zipzi_runtime::protocol::MAX_BINARY_CHUNK {
+            return Err(input_limit());
+        }
+        measure(input, 0, &mut bytes)?;
+        let lease = py
+            .detach(|| self.host.call(move |rt| rt.reserve_transfer(bytes)))
+            .map_err(|e| pyo3::exceptions::PyMemoryError::new_err(e.to_string()))?;
+        let operation = read(input)?;
+        let bytes = payload.as_bytes().to_vec();
+        let client = self.client;
+        let result = py
+            .detach(|| {
+                self.host.call(move |rt| {
+                    let _lease = lease;
+                    Ok(Protocol::default().execute_binary(rt, client, operation, bytes))
+                })
+            })
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+        let bytes = result.payload.as_ref().map_or(&[][..], |p| p.bytes());
+        let length = bytes.len();
+        let _copy = py
+            .detach(|| self.host.call(move |rt| rt.reserve_transfer(length)))
+            .map_err(|e| pyo3::exceptions::PyMemoryError::new_err(e.to_string()))?;
+        Ok((write(py, result.value)?, PyBytes::new(py, bytes).unbind()))
     }
     fn close(&self, py: Python<'_>) -> PyResult<()> {
         py.detach(|| self.host.close())

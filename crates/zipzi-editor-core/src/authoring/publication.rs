@@ -1,7 +1,6 @@
 //! Receipts drive the same projection updates for commands and history.
 use super::*;
-use zipzi_contract::authoring::ObjectKind as SdkKind;
-use zipzi_sdk::ChangeCategory;
+use zipzi_core::state::{RecordDomain, RootDomain};
 
 impl Document {
     pub(in crate::document) fn invalidate_expression_projection(&mut self) {
@@ -26,581 +25,108 @@ impl Document {
         }
     }
 
-    /// Patch a cached projection only at its current revision. A failed patch
-    /// leaves the old revision in place so the next read rebuilds the index.
-    fn refresh_authoring_projection(
-        &mut self,
-        refresh: impl FnOnce(&mut crate::ObjectIndex, &zipzi_core::state::DocumentState) -> bool,
-    ) {
-        let previous = self.projection_revision;
-        self.invalidate_projection(false);
-        let mut cache = self.object_index.lock().unwrap();
-        if let Some((revision, index)) = cache.as_mut() {
-            if *revision == previous && refresh(Arc::make_mut(index), &self.model()) {
-                *revision = self.projection_revision;
-            }
-        }
-        drop(cache);
-        self.session.acknowledge_receipts();
-    }
-
+    /// Published writes are the shared input for native edits, history and
+    /// remote clients. They describe persistent records, not obsolete field logs.
     pub(in crate::document) fn consume_authoring_receipt(
         &mut self,
         receipt: &Publication,
-        fallback_topology: bool,
+        _fallback_topology: bool,
     ) {
-        if !receipt.changed {
+        if receipt.kind == zipzi_sdk::PublicationKind::Unchanged {
             return;
         }
-        let changes = &receipt.changes;
-        if changes.full_invalidation {
+        if receipt.kind == zipzi_sdk::PublicationKind::Replace {
+            self.animation_catalog.get_mut().unwrap().take();
             self.after_history(true);
             return;
         }
-        if changes.categories.len() == 1
-            && changes.categories.contains(&ChangeCategory::EditorState)
-            && changes.created.is_empty()
-            && changes.deleted.is_empty()
-        {
+        let writes = &receipt.writes;
+        let editor_only = writes.root_changed(RootDomain::EditorState)
+            && writes.records().is_empty()
+            && !writes.setup_changed()
+            && !ALL_RECORD_DOMAINS.iter().any(|d| writes.order_changed(*d))
+            && !ALL_CONTENT_ROOTS.iter().any(|d| writes.root_changed(*d));
+        if editor_only {
+            let input_revision = self.animation_input_revision;
             self.invalidate_editor_state_projection();
+            self.animation_input_revision = input_revision;
             self.session.acknowledge_receipts();
             return;
         }
-        // Canvas structure and labels can change alongside document metadata or
-        // another domain. Handle them before choosing a projection fast path.
-        let scene_kind = |kind| {
-            matches!(
-                kind,
-                SdkKind::Part
-                    | SdkKind::Mesh
-                    | SdkKind::Transform
-                    | SdkKind::Offscreen
-                    | SdkKind::Glue
-            )
-        };
-        let structure_changed = (changes.categories.contains(&ChangeCategory::Topology)
-            && changes
-                .created
+        let scene = writes.records().iter().any(|r| scene_record(r.domain))
+            || ALL_RECORD_DOMAINS
                 .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-                .any(|entity| scene_kind(entity.kind)))
-            || changes.scene_fields.iter().any(|field| {
-                field.field == zipzi_contract::document::SceneField::Context
-                    && scene_kind(field.entity.kind)
-            })
-            || changes
-                .organization_references
+                .any(|d| scene_record(*d) && writes.order_changed(*d))
+            || writes.root_changed(RootDomain::DrawOrderGroups)
+            || writes.root_changed(RootDomain::HierarchyOrder);
+        if scene {
+            // The topology builder compares captured immutable records and
+            // reuses unchanged geometry, including label-only replacements.
+            let meshes = writes
+                .records()
                 .iter()
-                .any(|edge| scene_kind(edge.entity.kind));
-        if structure_changed {
-            let changed = changes
-                .modified
-                .iter()
-                .chain(&changes.created)
-                .chain(&changes.deleted)
-                .filter(|entity| entity.kind == SdkKind::Mesh)
-                .map(|entity| entity.id.clone())
+                .filter(|r| r.domain == RecordDomain::Mesh)
+                .map(|r| r.id.clone())
                 .collect();
-            self.invalidate_canvas_topology(Some(changed));
-        } else if changes.categories.contains(&ChangeCategory::Labels)
-            && self.canvas_topology.get_mut().unwrap().is_some()
-        {
-            let names: Vec<_> = changes
-                .modified
-                .iter()
-                .filter_map(|entity| {
-                    let kind = match entity.kind {
-                        SdkKind::Part => ObjectKind::Part,
-                        SdkKind::Mesh => ObjectKind::Mesh,
-                        SdkKind::Transform => ObjectKind::Deformer,
-                        SdkKind::Offscreen => ObjectKind::Offscreen,
-                        SdkKind::Glue => ObjectKind::Glue,
-                        _ => return None,
-                    };
-                    self.session
-                        .document()
-                        .scene_field(&entity.id, zipzi_contract::document::SceneField::Label)
-                        .ok()
-                        .and_then(|value| match value {
-                            zipzi_contract::document::SceneFieldValue::Label(name) => {
-                                Some((ObjectRef::new(kind, &entity.id), name))
-                            }
-                            _ => None,
-                        })
-                })
-                .collect();
-            if let Some(topology) = self.canvas_topology.get_mut().unwrap().as_mut() {
-                for (object, name) in names {
-                    Arc::make_mut(topology).rename(&object, &name);
-                }
-            }
+            self.invalidate_canvas_topology(Some(meshes));
         }
-        let entities = || {
-            changes
-                .created
-                .iter()
-                .chain(&changes.deleted)
-                .chain(&changes.modified)
-        };
-        let only_entities = |matches: fn(SdkKind) -> bool| {
-            let mut entities = entities().peekable();
-            entities.peek().is_some() && entities.all(|e| matches(e.kind))
-        };
-        let resources_only = only_entities(|kind| kind == SdkKind::Asset);
-        let document_only = changes
-            .document_fields
+        if writes
+            .records()
             .iter()
-            .any(|field| *field != zipzi_contract::document::DocumentField::DisplayInfo)
-            || (!changes.document_fields.is_empty()
-                && changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.modified.is_empty());
-        if document_only || resources_only {
-            let previous = self.animation_input_revision;
-            let labels = resources_only
-                && changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.collections.is_empty()
-                && changes
-                    .categories
-                    .iter()
-                    .all(|c| *c == ChangeCategory::Labels);
-            let document_fields_only = document_only
-                && changes.collections.is_empty()
-                && changes
-                    .categories
-                    .iter()
-                    .all(|c| *c == ChangeCategory::Content)
-                && changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.modified.is_empty()
-                && changes.document_fields.iter().all(|f| {
-                    matches!(
-                        f,
-                        zipzi_contract::document::DocumentField::Layout
-                            | zipzi_contract::document::DocumentField::ExportSettings
-                            | zipzi_contract::document::DocumentField::SourceCanvas
-                            | zipzi_contract::document::DocumentField::OpaqueMetadata
-                    )
-                });
-            if labels || document_fields_only {
-                let ids = changes
-                    .modified
-                    .iter()
-                    .map(|e| e.id.clone())
-                    .collect::<Vec<_>>();
-                self.refresh_authoring_projection(|index, model| {
-                    if labels {
-                        index.refresh_resource_labels(model, &ids)
-                    } else {
-                        index.refresh_document_metadata(model)
-                    }
-                });
-            } else {
-                self.after_history(
-                    changes.categories.contains(&ChangeCategory::Topology) && !structure_changed,
-                );
-            }
-            if !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-            {
-                self.animation_input_revision = previous;
-            }
-            return;
-        }
-        let scene_kinds = |kind| {
-            matches!(
-                kind,
-                SdkKind::Part
-                    | SdkKind::Mesh
-                    | SdkKind::Transform
-                    | SdkKind::Offscreen
-                    | SdkKind::Glue
-                    | SdkKind::GlueVertexPair
-                    | SdkKind::DrawOrderGroup
-                    | SdkKind::MeshBinding
-                    | SdkKind::SceneBinding
-                    | SdkKind::BlendBinding
-                    | SdkKind::BindingAxis
-                    | SdkKind::BindingSample
-            )
-        };
-        let scene_only = !changes.full_invalidation && only_entities(scene_kinds);
-        if scene_only {
-            let previous_input = self.animation_input_revision;
-            let labels = !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-                && !changes.categories.contains(&ChangeCategory::Content)
-                && changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.collections.is_empty()
-                && !changes.scene_fields.is_empty()
-                && changes
-                    .scene_fields
-                    .iter()
-                    .all(|f| f.field == zipzi_contract::document::SceneField::Label)
-                && !changes.categories.contains(&ChangeCategory::EditorState);
-            if labels {
-                let references: Vec<_> = changes
-                    .modified
-                    .iter()
-                    .filter_map(|e| {
-                        Some(ObjectRef::new(
-                            match e.kind {
-                                SdkKind::Part => ObjectKind::Part,
-                                SdkKind::Mesh => ObjectKind::Mesh,
-                                SdkKind::Transform => ObjectKind::Deformer,
-                                SdkKind::Offscreen => ObjectKind::Offscreen,
-                                SdkKind::Glue => ObjectKind::Glue,
-                                SdkKind::DrawOrderGroup => ObjectKind::DrawOrderGroup,
-                                _ => return None,
-                            },
-                            &e.id,
-                        ))
-                    })
-                    .collect();
-                self.refresh_authoring_projection(|index, model| {
-                    references
-                        .iter()
-                        .all(|r| index.refresh_scene_label(model, r))
-                });
-            } else {
-                let structural = changes
-                    .created
-                    .iter()
-                    .chain(&changes.deleted)
-                    .any(|e| e.kind != SdkKind::DrawOrderGroup)
-                    || changes.scene_fields.iter().any(|f| {
-                        f.field == zipzi_contract::document::SceneField::Context
-                            && f.entity.kind != SdkKind::DrawOrderGroup
-                    })
-                    || changes.categories.contains(&ChangeCategory::Topology);
-                self.after_history(structural && !structure_changed);
-            }
-            if !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-            {
-                self.animation_input_revision = previous_input;
-            }
-            return;
-        }
-        let reference_kinds = |k| {
-            matches!(
-                k,
-                SdkKind::ModelParameterGroup
-                    | SdkKind::ModelParameterMember
-                    | SdkKind::ModelHitArea
-                    | SdkKind::CdiCombinedSet
-                    | SdkKind::CdiCombinedMember
-            )
-        };
-        let reference_only = !changes.full_invalidation && only_entities(reference_kinds);
-        if reference_only {
-            let previous_input = self.animation_input_revision;
-            let labels = changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.collections.is_empty()
-                && !changes.reference_fields.is_empty()
-                && changes
-                    .categories
-                    .iter()
-                    .all(|c| *c == ChangeCategory::Labels);
-            if labels {
-                let ids = changes
-                    .reference_fields
-                    .iter()
-                    .map(|f| f.entity.id.clone())
-                    .collect::<Vec<_>>();
-                self.refresh_authoring_projection(|index, model| {
-                    index.refresh_reference_labels(model, &ids)
-                });
-            } else {
-                self.after_history(false);
-            }
-            if !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-            {
-                self.animation_input_revision = previous_input;
-            }
-            return;
-        }
-        let organization_only = !changes.full_invalidation
-            && (changes
-                .collections
-                .iter()
-                .any(|c| matches!(c, zipzi_sdk::CollectionRef::Organization { .. }))
-                || !changes.organization_references.is_empty()
-                || entities().any(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Parameter | SdkKind::CdiParameterGroup | SdkKind::Part
-                    )
-                }))
-            && entities().all(|e| {
-                matches!(
-                    e.kind,
-                    SdkKind::Parameter
-                        | SdkKind::CdiParameterGroup
-                        | SdkKind::Part
-                        | SdkKind::Mesh
-                        | SdkKind::Transform
-                        | SdkKind::Offscreen
-                )
-            });
-        if organization_only {
-            let previous = self.animation_input_revision;
-            let payload_only = changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.collections.is_empty()
-                && changes.organization_references.is_empty()
-                && !changes.categories.contains(&ChangeCategory::EditorState);
-            if payload_only
-                && changes.modified.iter().all(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Parameter | SdkKind::CdiParameterGroup | SdkKind::Part
-                    )
-                })
-            {
-                self.refresh_authoring_projection(|index, model| {
-                    changes
-                        .modified
-                        .iter()
-                        .all(|e| index.refresh_organization_properties(model, e.kind, &e.id))
-                        && index.refresh_organization_document(model)
-                });
-            } else {
-                let scene_changed = changes.created.iter().chain(&changes.deleted).any(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Part | SdkKind::Mesh | SdkKind::Transform | SdkKind::Offscreen
-                    )
-                }) || changes.organization_references.iter().any(|r| {
-                    matches!(
-                        r.entity.kind,
-                        SdkKind::Part | SdkKind::Mesh | SdkKind::Transform | SdkKind::Offscreen
-                    )
-                });
-                self.after_history(scene_changed && !structure_changed);
-            }
-            if !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-            {
-                self.animation_input_revision = previous;
-            }
-            return;
-        }
-        let pose_only = !changes.full_invalidation
-            && only_entities(|kind| {
-                matches!(
-                    kind,
-                    SdkKind::Pose | SdkKind::PoseGroup | SdkKind::PoseEntry | SdkKind::PoseLink
-                )
-            });
-        if pose_only {
-            let previous = self.animation_input_revision;
-            if changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.collections.is_empty()
-                && changes.pose_references.is_empty()
-                && !changes.categories.contains(&ChangeCategory::EditorState)
-                && changes
-                    .modified
-                    .iter()
-                    .all(|e| matches!(e.kind, SdkKind::Pose | SdkKind::PoseGroup))
-            {
-                self.refresh_authoring_projection(|index, model| {
-                    changes.modified.iter().all(|e| {
-                        index.refresh_pose_properties(
-                            model,
-                            &ObjectRef::new(
-                                if e.kind == SdkKind::Pose {
-                                    ObjectKind::Pose
-                                } else {
-                                    ObjectKind::PoseGroup
-                                },
-                                &e.id,
-                            ),
-                        )
-                    })
-                });
-            } else {
-                self.after_history(false);
-            }
-            if !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-            {
-                self.animation_input_revision = previous;
-            }
-            return;
-        }
-        let physics_only = !changes.full_invalidation
-            && only_entities(|kind| {
-                matches!(
-                    kind,
-                    SdkKind::Physics
-                        | SdkKind::PhysicsGroup
-                        | SdkKind::PhysicsInput
-                        | SdkKind::PhysicsOutput
-                        | SdkKind::PhysicsNode
-                )
-            });
-        if physics_only {
-            let previous = self.animation_input_revision;
-            if changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.collections.is_empty()
-                && changes.physics_references.is_empty()
-                && !changes.categories.contains(&ChangeCategory::EditorState)
-            {
-                let owners = changes
-                    .modified
-                    .iter()
-                    .filter_map(|e| {
-                        if e.kind == SdkKind::PhysicsGroup {
-                            Some(e.id.clone())
-                        } else {
-                            self.model()
-                                .physics_owner(&e.id)
-                                .filter(|id| self.model().get_physics_group(id).is_some())
-                                .map(str::to_owned)
-                        }
-                    })
-                    .collect::<std::collections::BTreeSet<_>>()
-                    .into_iter()
-                    .collect::<Vec<_>>();
-                self.refresh_authoring_projection(|index, model| {
-                    index.refresh_physics_properties(model, &owners)
-                });
-            } else {
-                self.after_history(false);
-            }
-            if !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-            {
-                self.animation_input_revision = previous;
-            }
-            return;
-        }
-        let motion_only = changes.references.is_empty()
-            && changes
-                .collections
-                .iter()
-                .all(|c| matches!(c, zipzi_sdk::CollectionRef::Motion { .. }))
-            && !changes.full_invalidation
-            && entities().all(|e| {
-                matches!(
-                    e.kind,
-                    SdkKind::Motion
-                        | SdkKind::MotionGroup
-                        | SdkKind::MotionRegistration
-                        | SdkKind::MotionTrack
-                        | SdkKind::MotionKey
-                        | SdkKind::MotionEvent
-                        | SdkKind::Attachment
-                )
-            })
-            && (!changes.created.is_empty()
-                || !changes.deleted.is_empty()
-                || !changes.modified.is_empty()
-                || !changes.collections.is_empty()
-                || !changes.motion_references.is_empty());
-        if motion_only {
-            let previous = self.animation_input_revision;
-            if changes.created.is_empty()
-                && changes.deleted.is_empty()
-                && changes.collections.is_empty()
-                && changes.motion_references.is_empty()
-                && changes.modified.iter().all(|e| {
-                    matches!(
-                        e.kind,
-                        SdkKind::Motion | SdkKind::MotionGroup | SdkKind::MotionRegistration
-                    )
-                })
-            {
-                self.refresh_authoring_projection(|index, model| {
-                    changes.modified.iter().all(|e| {
-                        let kind = match e.kind {
-                            SdkKind::Motion => ObjectKind::Motion,
-                            SdkKind::MotionGroup => ObjectKind::MotionGroup,
-                            SdkKind::MotionRegistration => ObjectKind::MotionRegistration,
-                            _ => unreachable!(),
-                        };
-                        index.refresh_motion_properties(model, &ObjectRef::new(kind, &e.id))
-                    })
-                });
-            } else {
-                self.after_history(false);
-            }
-            if !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-            {
-                self.animation_input_revision = previous;
-            }
-            return;
-        }
-        let expression_only = !changes.full_invalidation
-            && !changes.categories.contains(&ChangeCategory::Topology)
-            && (!changes.created.is_empty()
-                || !changes.deleted.is_empty()
-                || !changes.modified.is_empty()
-                || !changes.collections.is_empty()
-                || !changes.references.is_empty())
-            && entities().all(|entity| {
-                matches!(entity.kind, SdkKind::Expression | SdkKind::ExpressionEntry)
-            });
-        let previous_input = self.animation_input_revision;
-        if expression_only
-            && changes.created.is_empty()
-            && changes.deleted.is_empty()
-            && changes.collections.is_empty()
-            && changes.references.is_empty()
+            .any(|r| matches!(r.domain, RecordDomain::Expression | RecordDomain::Motion))
+            || writes.order_changed(RecordDomain::Expression)
+            || writes.order_changed(RecordDomain::Motion)
+            || writes.root_changed(RootDomain::MotionGroups)
+            || writes.root_changed(RootDomain::MotionRoots)
         {
-            let mut owners = std::collections::BTreeSet::new();
-            for entity in &changes.modified {
-                match entity.kind {
-                    SdkKind::Expression => {
-                        owners.insert(entity.id.clone());
-                    }
-                    SdkKind::ExpressionEntry => {
-                        if let Some((owner, _)) = self.model().get_expression_entry(&entity.id) {
-                            owners.insert(owner.id.clone());
-                        }
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            let previous_revision = self.projection_revision;
-            self.invalidate_expression_projection();
-            self.refresh_expression_index(
-                previous_revision,
-                &owners.into_iter().collect::<Vec<_>>(),
-            );
-            self.session.acknowledge_receipts();
-        } else {
-            // Other slices retain their existing invalidation policy. Expression
-            // structural edits rebuild relations, but never canvas topology.
-            self.after_history(!expression_only && fallback_topology && !structure_changed);
+            self.animation_catalog.get_mut().unwrap().take();
         }
-        // Library order and labels change presentation, while entry order/content
-        // carries EvaluationInputs and must still invalidate the running preview.
-        if expression_only
-            && !changes
-                .categories
-                .contains(&ChangeCategory::EvaluationInputs)
-        {
-            self.animation_input_revision = previous_input;
-        }
+        self.after_history(false);
     }
+}
+
+const ALL_RECORD_DOMAINS: &[RecordDomain] = &[
+    RecordDomain::Asset,
+    RecordDomain::Parameter,
+    RecordDomain::Part,
+    RecordDomain::Transform,
+    RecordDomain::Mesh,
+    RecordDomain::Binding,
+    RecordDomain::SceneBinding,
+    RecordDomain::BlendKeyTable,
+    RecordDomain::BlendConstraint,
+    RecordDomain::BlendBinding,
+    RecordDomain::Glue,
+    RecordDomain::Offscreen,
+    RecordDomain::Expression,
+    RecordDomain::Motion,
+];
+const ALL_CONTENT_ROOTS: &[RootDomain] = &[
+    RootDomain::DrawOrderGroups,
+    RootDomain::DisplayInfo,
+    RootDomain::HierarchyOrder,
+    RootDomain::MotionGroups,
+    RootDomain::MotionRoots,
+    RootDomain::Pose,
+    RootDomain::Physics,
+    RootDomain::MissingAttachments,
+    RootDomain::Model3Settings,
+    RootDomain::PackageAttachments,
+];
+fn scene_record(domain: RecordDomain) -> bool {
+    matches!(
+        domain,
+        RecordDomain::Mesh
+            | RecordDomain::Part
+            | RecordDomain::Transform
+            | RecordDomain::Binding
+            | RecordDomain::SceneBinding
+            | RecordDomain::BlendBinding
+            | RecordDomain::BlendKeyTable
+            | RecordDomain::BlendConstraint
+            | RecordDomain::Glue
+            | RecordDomain::Offscreen
+    )
 }
 
 #[cfg(test)]
@@ -667,7 +193,7 @@ mod tests {
                 .to_string()
                 .contains("modeling topology")
         );
-        let mut mesh = document.session.document().get_mesh(&id).unwrap().clone();
+        let mut mesh = document.session.document().mesh(&id).unwrap().clone();
         mesh.meshing
             .as_mut()
             .unwrap()
@@ -695,7 +221,7 @@ mod tests {
         assert!(
             document
                 .model()
-                .get_mesh(&id)
+                .mesh(&id)
                 .unwrap()
                 .meshing
                 .as_ref()
@@ -707,7 +233,7 @@ mod tests {
         assert_eq!(
             document
                 .model()
-                .get_mesh(&id)
+                .mesh(&id)
                 .unwrap()
                 .meshing
                 .as_ref()

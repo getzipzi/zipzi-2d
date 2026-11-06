@@ -790,3 +790,742 @@ fn detached_yielded_read_is_retired_on_worker() {
     r.attach(other, s).unwrap();
     assert_eq!(r.read_snapshot(other, s).unwrap().source, source);
 }
+
+#[test]
+fn native_adoption_and_rehome_preserve_identity_history_and_saved_marker() {
+    let (mut source, client, session) = setup();
+    add(&mut source, client, session, 2);
+    let io = source.project_io().clone();
+    let dir = tempfile::tempdir().unwrap();
+    let save = source
+        .request_save_as(
+            client,
+            version(&source, client, session),
+            &io,
+            &dir.path().join("host.zipzi"),
+            None,
+            TaskBudget::default(),
+        )
+        .unwrap();
+    run(&mut source);
+    source.release_job(client, save).unwrap();
+    let content = source
+        .read_snapshot(client, session)
+        .unwrap()
+        .snapshot
+        .content_id();
+    let before = version(&source, client, session);
+    let mut target = Runtime::default();
+    let destination = target.register_client().unwrap();
+    assert_eq!(
+        source
+            .transfer_session_to(client, session, &mut target, destination)
+            .unwrap(),
+        session
+    );
+    assert_eq!(
+        code(source.read_snapshot(client, session)),
+        "SESSION_NOT_FOUND"
+    );
+    let sdk = target.session_read(destination, session).unwrap();
+    assert_eq!(sdk.version(), before);
+    assert_eq!(sdk.snapshot().content_id(), content);
+    assert_eq!(sdk.history_state().undo_steps, 1);
+    assert!(!sdk.is_dirty());
+    target.undo(destination, before).unwrap();
+    assert!(target
+        .session_read(destination, session)
+        .unwrap()
+        .is_dirty());
+    let (loaded, _) =
+        zipzi_sdk::AuthoringSession::open(&io, &dir.path().join("host.zipzi"), || true).unwrap();
+    let mut fresh = Runtime::default();
+    let c = fresh.register_client().unwrap();
+    let key = loaded.version().session;
+    assert_eq!(fresh.adopt_session(c, loaded).unwrap(), key);
+    assert!(!fresh.session_read(c, key).unwrap().is_dirty());
+}
+
+#[test]
+fn native_rehome_admission_preserves_both_hosts_and_view_stamp_ignores_drafts() {
+    let (mut source, c, s) = setup();
+    let mut target = Runtime::default();
+    let destination = target.register_client().unwrap();
+    let stamp = source.host_state_stamp();
+    let d = draft(&mut source, c, s);
+    assert_eq!(source.host_state_stamp(), stamp);
+    assert_eq!(
+        code(source.transfer_session_to(c, s, &mut target, destination)),
+        "SESSION_BUSY"
+    );
+    source.cancel_draft(c, d.draft).unwrap();
+    let other = source.register_client().unwrap();
+    source.attach(other, s).unwrap();
+    assert_eq!(
+        code(source.transfer_session_to(c, s, &mut target, destination)),
+        "SESSION_BUSY"
+    );
+    assert!(target.session_keys(destination).unwrap().is_empty());
+    source.detach(other, s).unwrap();
+    add(&mut source, c, s, 2);
+    assert_ne!(source.host_state_stamp(), stamp);
+    source
+        .transfer_session_to(c, s, &mut target, destination)
+        .unwrap();
+    assert_eq!(target.session_keys(destination).unwrap(), vec![s]);
+}
+
+#[test]
+fn targeted_dispatch_refuses_without_consuming_queued_work() {
+    let (mut rt, c, s) = setup();
+    rt.limits.running_jobs = 1;
+    let source = QuerySource::Published(version(&rt, c, s));
+    let first = rt
+        .request_read(c, source, TaskBudget::default(), |_, _| Ok(vec![]))
+        .unwrap();
+    let second = rt
+        .request_read(c, source, TaskBudget::default(), |_, _| Ok(vec![]))
+        .unwrap();
+    let running = rt.take_work(second).unwrap();
+    assert_eq!(code(rt.take_work(first)), "JOB_BUSY");
+    assert_eq!(rt.job(c, first).unwrap().state, JobState::Queued);
+    rt.complete(running.run()).unwrap();
+    let pending = rt.take_work(first).unwrap();
+    rt.complete(pending.run()).unwrap();
+    assert_eq!(rt.job(c, first).unwrap().state, JobState::Succeeded);
+}
+
+#[test]
+fn immediate_save_admits_concurrency_before_acquiring_the_save_permit() {
+    let (mut rt, client, session) = setup();
+    rt.limits.running_jobs = 1;
+    let expected = version(&rt, client, session);
+    let draft = rt.begin_draft(client, expected).unwrap();
+    let read = rt
+        .request_read(
+            client,
+            QuerySource::Published(expected),
+            TaskBudget::default(),
+            |_, _| Ok(vec![]),
+        )
+        .unwrap();
+    let running = rt.take_work(read).unwrap();
+    let io = rt.project_io().clone();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("save.zipzi");
+    let stamp = rt.host_state_stamp();
+    assert_eq!(
+        code(rt.start_save_as(client, expected, &io, &path, None, TaskBudget::default())),
+        "JOB_BUSY"
+    );
+    assert_eq!(rt.host_state_stamp(), stamp);
+    assert!(rt.reservations.is_empty());
+    assert!(!path.exists());
+    let (draft, ()) = rt
+        .batch(client, draft, |commands| {
+            commands.create_parameter(parameter(2))
+        })
+        .unwrap();
+    rt.complete(running.run()).unwrap();
+    rt.release_job(client, read).unwrap();
+
+    let (job, work) = rt
+        .start_save_as(client, expected, &io, &path, None, TaskBudget::default())
+        .unwrap();
+    assert_eq!(rt.job(client, job).unwrap().state, JobState::Running);
+    assert_eq!(
+        code(rt.publish(client, draft, "pending edit")),
+        "PROJECT_BUSY"
+    );
+    assert!(rt.read_draft(client, draft).is_ok());
+    rt.complete(work.run()).unwrap();
+    assert!(matches!(result(&rt, client, job), Ok(JobValue::Saved(_))));
+    rt.release_job(client, job).unwrap();
+    assert!(path.exists());
+    assert!(!rt.session_read(client, session).unwrap().is_dirty());
+    rt.publish(client, draft, "pending edit").unwrap();
+    assert!(rt.session_read(client, session).unwrap().is_dirty());
+}
+
+#[test]
+fn timeline_preview_resets_from_baseline_and_preserves_last_valid_curve() {
+    use zipzi_core::document::{
+        MotionClip, MotionKey, MotionPoint, MotionSegment, MotionTrack, MotionTrackTarget,
+    };
+    use zipzi_sdk::{MotionCurveEdit, MotionKeyMove, MotionKeyRef};
+    let (mut rt, client, session) = setup();
+    let clip = MotionClip {
+        id: id(30),
+        name: "gesture".into(),
+        duration: 1.,
+        fps: 30.,
+        looping: false,
+        restricted_beziers: false,
+        fade_in: None,
+        fade_out: None,
+        track_order: vec![],
+        tracks: vec![MotionTrack {
+            id: id(31),
+            target: MotionTrackTarget::Model {
+                runtime_id: "Opacity".into(),
+            },
+            initial: MotionKey {
+                id: id(32),
+                time: 0.,
+                value: 0.,
+            },
+            segments: Arc::new(vec![MotionSegment::Linear {
+                end: MotionKey {
+                    id: id(33),
+                    time: 1.,
+                    value: 1.,
+                },
+            }]),
+            fade_in: None,
+            fade_out: None,
+            extensions: Default::default(),
+        }]
+        .into(),
+        events: Default::default(),
+        extensions: Default::default(),
+        meta_extensions: Default::default(),
+        opaque_source_ids: None,
+        opaque_source_content_hash: None,
+    };
+    let d = draft(&mut rt, client, session);
+    let (d, ()) = rt
+        .batch(client, d, |c| c.create_motion(clip.clone()))
+        .unwrap();
+    rt.publish(client, d, "motion").unwrap();
+    let base = version(&rt, client, session);
+    let d = draft(&mut rt, client, session);
+    let preview = |rt: &mut Runtime, d, time| {
+        rt.preview(client, d, |commands| {
+            commands.replace_motion(clip.clone())?;
+            commands.edit_motion_curve(
+                &clip.id,
+                MotionCurveEdit::MoveKeys(vec![MotionKeyMove {
+                    key: MotionKeyRef {
+                        track_id: id(31),
+                        key_id: id(32),
+                    },
+                    point: MotionPoint { time, value: 0.5 },
+                }]),
+            )
+        })
+    };
+    let (d, ()) = preview(&mut rt, d, 0.2).unwrap();
+    let captured = rt.read_draft(client, d).unwrap();
+    assert!(preview(&mut rt, d, 1.).is_err());
+    assert_eq!(rt.read_draft(client, d).unwrap().source, captured.source);
+    assert_eq!(
+        rt.read_draft(client, d)
+            .unwrap()
+            .snapshot
+            .document()
+            .motion(&clip.id)
+            .unwrap()
+            .tracks[0]
+            .initial
+            .time,
+        0.2
+    );
+    let (d, ()) = preview(&mut rt, d, 0.3).unwrap();
+    assert_eq!(
+        rt.read_draft(client, d)
+            .unwrap()
+            .snapshot
+            .document()
+            .motion(&clip.id)
+            .unwrap()
+            .tracks[0]
+            .initial
+            .time,
+        0.3
+    );
+    assert_eq!(
+        captured
+            .snapshot
+            .document()
+            .motion(&clip.id)
+            .unwrap()
+            .tracks[0]
+            .initial
+            .time,
+        0.2
+    );
+    assert_eq!(version(&rt, client, session), base);
+    let committed = rt.publish(client, d, "drag keys").unwrap();
+    assert_eq!(committed.history.undo_steps, 2);
+    rt.undo(client, committed.version).unwrap();
+    assert_eq!(
+        rt.read_snapshot(client, session)
+            .unwrap()
+            .snapshot
+            .document()
+            .motion(&clip.id)
+            .unwrap()
+            .tracks[0]
+            .initial
+            .time,
+        0.
+    );
+}
+
+#[test]
+fn imported_content_is_prepared_on_worker_and_installed_only_at_its_source() {
+    use zipzi_contract::kernel_wire::ImportFormat;
+    let (mut rt, c, s) = setup();
+    add(&mut rt, c, s, 2);
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("input.psd");
+    std::fs::write(
+        &path,
+        include_bytes!("../../zipzi-psd/tests/fixtures/layered.psd"),
+    )
+    .unwrap();
+    let base = version(&rt, c, s);
+    let job = rt
+        .request_import(c, base, &path, ImportFormat::Psd, TaskBudget::default())
+        .unwrap();
+    let ptr = rt.session_read(c, s).unwrap() as *const AuthoringSession;
+    let completion = rt
+        .take_work(job)
+        .unwrap()
+        .run_with_stack("test-psd-import", 8 << 20);
+    let prepared = completion.prepared_snapshot().unwrap().clone();
+    assert!(!prepared.document().asset_order().is_empty());
+    assert_eq!(
+        ptr,
+        rt.session_read(c, s).unwrap() as *const AuthoringSession
+    );
+    assert_eq!(version(&rt, c, s), base);
+    add(&mut rt, c, s, 3);
+    rt.complete(completion).unwrap();
+    assert_eq!(error_code(&rt, c, job), "STALE_SOURCE");
+    assert!(rt
+        .read_snapshot(c, s)
+        .unwrap()
+        .snapshot
+        .document()
+        .parameter(&id(3))
+        .is_some());
+    assert_eq!(rt.session_read(c, s).unwrap().history_state().undo_steps, 2);
+
+    let job = rt
+        .request_import(
+            c,
+            version(&rt, c, s),
+            &path,
+            ImportFormat::Psd,
+            TaskBudget::default(),
+        )
+        .unwrap();
+    let completion = rt.take_work(job).unwrap().run();
+    rt.cancel_job(c, job).unwrap();
+    rt.complete(completion).unwrap();
+    assert_eq!(rt.job(c, job).unwrap().state, JobState::Cancelled);
+    assert_eq!(rt.session_read(c, s).unwrap().history_state().undo_steps, 2);
+
+    let job = rt
+        .request_import(
+            c,
+            version(&rt, c, s),
+            &path,
+            ImportFormat::Psd,
+            TaskBudget::default(),
+        )
+        .unwrap();
+    run(&mut rt);
+    let JobValue::Imported(receipt) = result(&rt, c, job).as_ref().unwrap() else {
+        panic!("import result")
+    };
+    assert_eq!(receipt.publication.version.generation, base.generation + 1);
+    let sdk = rt.session_read(c, s).unwrap();
+    assert_eq!(sdk.history_state().undo_steps, 0);
+    assert!(sdk.is_dirty());
+    assert!(sdk.project().is_none());
+    let frozen = rt.read_snapshot(c, s).unwrap().snapshot;
+    let asset = frozen
+        .document()
+        .asset(frozen.document().asset_order().first().unwrap())
+        .unwrap();
+    let pixels = frozen.resources().read_texture(asset).unwrap();
+    let io = rt.project_io().clone();
+    assert_eq!(
+        code(rt.request_save_as(
+            c,
+            version(&rt, c, s),
+            &io,
+            &path,
+            None,
+            TaskBudget::default()
+        )),
+        "INVALID_DESTINATION"
+    );
+    let source = QuerySource::Published(version(&rt, c, s));
+    let transfer = rt.transfer_snapshot(c, source).unwrap();
+    assert_eq!(
+        code(rt.transfer_snapshot(c, QuerySource::Published(base))),
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        code(
+            rt.transfer_snapshot(c, source)
+                .unwrap()
+                .publish(zipzi_project::TransferFormat::Runtime, dir.path())
+        ),
+        "INVALID_DESTINATION"
+    );
+    std::fs::remove_file(path).unwrap();
+    assert_eq!(
+        frozen.resources().read_texture(asset).unwrap().rgba,
+        pixels.rgba
+    );
+    let save = rt
+        .request_save_as(
+            c,
+            version(&rt, c, s),
+            &io,
+            &dir.path().join("native.zipzi"),
+            None,
+            TaskBudget::default(),
+        )
+        .unwrap();
+    run(&mut rt);
+    assert!(matches!(result(&rt, c, save), Ok(JobValue::Saved(_))));
+    rt.close_session(c, s, false).unwrap();
+    let destination = dir.path().join("export");
+    transfer
+        .publish(zipzi_project::TransferFormat::Runtime, &destination)
+        .unwrap();
+    assert!(destination.is_dir());
+}
+
+#[test]
+fn collection_capabilities_keep_full_query_source_and_draft_sequence() {
+    use zipzi_contract::{
+        document::OrganizationCollection,
+        kernel_wire::{CollectionTarget, Query},
+    };
+    let (mut r, c, s) = setup();
+    let source = draft(&mut r, c, s);
+    let (source, _) = r
+        .batch(c, source, |cmd| {
+            cmd.create_part(zipzi_core::Part {
+                id: id(8),
+                runtime_id: "part8".into(),
+                ..Default::default()
+            })
+        })
+        .unwrap();
+    let published = r.publish(c, source, "part").unwrap().version;
+    let query = Query::CollectionCapabilities {
+        target: CollectionTarget::Organization(OrganizationCollection::PartMembers {
+            part_id: Some(id(8)),
+        }),
+    };
+    let before = r
+        .query(c, QuerySource::Published(published), query.clone())
+        .unwrap();
+    let source = draft(&mut r, c, s);
+    let (next, _) = r
+        .batch(c, source, |cmd| {
+            let mut state = zipzi_contract::document::EditorState::default();
+            state.objects.entry(id(8)).or_default().locked = true;
+            cmd.replace_editor_state(state)
+        })
+        .unwrap();
+    assert_eq!(
+        code(r.query(c, QuerySource::Draft(source), query.clone())),
+        "STALE_SOURCE"
+    );
+    let preview = r.query(c, QuerySource::Draft(next), query.clone()).unwrap();
+    assert_eq!(
+        preview["source"],
+        serde_json::to_value(QuerySource::Draft(next)).unwrap()
+    );
+    assert_ne!(preview["value"]["create"], before["value"]["create"]);
+    assert_eq!(
+        r.query(c, QuerySource::Published(published), query.clone())
+            .unwrap(),
+        before
+    );
+    let publication = r.publish(c, next, "lock").unwrap();
+    assert_eq!(
+        code(r.query(c, QuerySource::Published(published), query.clone())),
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        r.query(c, QuerySource::Published(publication.version), query)
+            .unwrap()["value"],
+        preview["value"]
+    );
+}
+
+#[test]
+fn immediate_open_and_import_refusal_preserves_owner_queue_and_reservations() {
+    let (mut rt, client, session) = setup();
+    rt.limits.running_jobs = 1;
+    let expected = version(&rt, client, session);
+    let draft = rt.begin_draft(client, expected).unwrap();
+    let job = rt
+        .request_read(
+            client,
+            QuerySource::Published(expected),
+            TaskBudget::default(),
+            |_, _| Ok(vec![]),
+        )
+        .unwrap();
+    let running = rt.take_work(job).unwrap();
+    let stamp = rt.host_state_stamp();
+    let queue = rt.outstanding_job_ids();
+    let io = rt.project_io().clone();
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("model.zipzi");
+    assert_eq!(
+        code(rt.start_open(client, expected, &io, &target, TaskBudget::default())),
+        "JOB_BUSY"
+    );
+    assert_eq!(
+        code(rt.start_import(
+            client,
+            expected,
+            &target,
+            zipzi_contract::kernel_wire::ImportFormat::Psd,
+            TaskBudget::default()
+        )),
+        "JOB_BUSY"
+    );
+    assert_eq!(rt.host_state_stamp(), stamp);
+    assert_eq!(rt.outstanding_job_ids(), queue);
+    assert!(rt.reservations.is_empty());
+    rt.complete(running.run()).unwrap();
+    rt.release_job(client, job).unwrap();
+    // A refused native load has not retired an existing edit or changed history.
+    let (draft, _) = rt
+        .batch(client, draft, |c| c.create_parameter(parameter(2)))
+        .unwrap();
+    rt.publish(client, draft, "still usable").unwrap();
+    assert_eq!(
+        rt.session_read(client, session)
+            .unwrap()
+            .history_state()
+            .undo_steps,
+        1
+    );
+}
+
+#[test]
+fn host_is_send_sync_and_events_identify_the_publishing_client() {
+    fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<Runtime>();
+    let (mut rt, owner, session) = setup();
+    let subscriber = rt.register_client().unwrap();
+    rt.attach(subscriber, session).unwrap();
+    let cursor = version(&rt, subscriber, session);
+    add(&mut rt, owner, session, 2);
+    let events = rt.publication_events_since(subscriber, cursor).unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].client, owner);
+}
+
+#[test]
+fn bulk_upload_ownership_and_failed_image_batch_do_not_publish() {
+    let (mut rt, client, session) = setup();
+    let foreign = rt.register_client().unwrap();
+    let blob = rt.create_blob(client, 4).unwrap();
+    assert_eq!(
+        rt.append_blob(foreign, blob, 0, &[0; 4]).unwrap_err().code,
+        "NOT_OWNER"
+    );
+    rt.append_blob(client, blob, 0, &[1, 2, 3, 255]).unwrap();
+    rt.seal_blob(client, blob).unwrap();
+    let source = draft(&mut rt, client, session);
+    let (source, ()) = rt
+        .batch(client, source, |c| {
+            c.create_empty_asset(id(2), "image".into())
+        })
+        .unwrap();
+    assert_eq!(
+        rt.replace_image_blob(client, source, id(2), blob, 2, 1)
+            .unwrap_err()
+            .code,
+        "INVALID_IMAGE"
+    );
+    assert!(rt.read_draft(client, source).is_err());
+    assert!(rt
+        .session_read(client, session)
+        .unwrap()
+        .snapshot()
+        .document()
+        .asset(&id(2))
+        .is_none());
+    let source = draft(&mut rt, client, session);
+    let (source, ()) = rt
+        .batch(client, source, |c| {
+            c.create_empty_asset(id(2), "image".into())
+        })
+        .unwrap();
+    let source = rt
+        .replace_image_blob(client, source, id(2), blob, 1, 1)
+        .unwrap();
+    rt.release_blob(client, blob).unwrap();
+    let receipt = rt.publish(client, source, "image").unwrap();
+    let result = rt
+        .read_image_blob(client, QuerySource::Published(receipt.version), &id(2))
+        .unwrap();
+    let blob = serde_json::from_value(result["blob"].clone()).unwrap();
+    let held = rt.blob(client, blob).unwrap();
+    rt.release_client(client);
+    assert_eq!(held.bytes(), &[1, 2, 3, 255]);
+}
+
+#[test]
+fn sampled_tasks_keep_frozen_provenance_across_publication_and_yield() {
+    let (mut rt, client, session) = setup();
+    add(&mut rt, client, session, 2);
+    let source = QuerySource::Published(version(&rt, client, session));
+    let input = zipzi_contract::kernel_tasks::SampleRequest {
+        input: zipzi_contract::kernel_tasks::SampleInput::Parameters {
+            values: vec![Default::default(), Default::default()],
+        },
+        queries: vec![],
+        quality: true,
+    };
+    let job = rt.request_samples(client, source, input).unwrap();
+    let work = rt.take_work(job).unwrap();
+    add(&mut rt, client, session, 3);
+    rt.complete(work.run()).unwrap();
+    assert!(!rt.job(client, job).unwrap().state.is_terminal());
+    let work = rt.take_work(job).unwrap();
+    rt.complete(work.run()).unwrap();
+    let JobValue::Read(result) = rt
+        .job(client, job)
+        .unwrap()
+        .result
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+    else {
+        panic!("sample result")
+    };
+    assert_eq!(result.source, source);
+    let value: serde_json::Value = serde_json::from_slice(result.bytes()).unwrap();
+    assert_eq!(value["frames"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        value["frames"][0]["geometry"]["parameters"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(value["frames"][0]["geometry"]["parameters"][0]["id"], id(2));
+}
+
+#[test]
+fn exported_files_report_success_after_late_cancellation_without_changing_save_marker() {
+    let (mut rt, client, session) = setup();
+    let directory = tempfile::tempdir().unwrap();
+    let input = directory.path().join("layers.psd");
+    std::fs::write(
+        &input,
+        include_bytes!("../../zipzi-psd/tests/fixtures/layered.psd"),
+    )
+    .unwrap();
+    let expected = version(&rt, client, session);
+    let import = rt
+        .request_import(
+            client,
+            expected,
+            &input,
+            zipzi_contract::kernel_wire::ImportFormat::Psd,
+            TaskBudget::default(),
+        )
+        .unwrap();
+    let work = rt.take_work(import).unwrap();
+    rt.complete(work.run()).unwrap();
+    assert!(rt
+        .job(client, import)
+        .unwrap()
+        .result
+        .as_ref()
+        .unwrap()
+        .is_ok());
+    let source = QuerySource::Published(version(&rt, client, session));
+    let path = directory.path().join("runtime");
+    let job = rt
+        .request_export(
+            client,
+            source,
+            &path,
+            zipzi_contract::kernel_tasks::ExportFormat::Runtime,
+            false,
+        )
+        .unwrap();
+    let work = rt.take_work(job).unwrap();
+    let completed = work.run();
+    rt.cancel_job(client, job).unwrap();
+    rt.complete(completed).unwrap();
+    let JobValue::Exported(receipt) = rt
+        .job(client, job)
+        .unwrap()
+        .result
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+    else {
+        panic!("export result")
+    };
+    assert!(receipt.published);
+    assert!(path.is_dir());
+    assert!(rt
+        .session_read(client, session)
+        .unwrap()
+        .project()
+        .is_none());
+}
+
+#[cfg(feature = "gpu-observation")]
+#[test]
+fn observation_worker_returns_png_and_exact_frozen_source() {
+    let (mut rt, client, session) = setup();
+    let source = QuerySource::Published(version(&rt, client, session));
+    let view = zipzi_contract::runtime::ObservationView {
+        texture_policy: Default::default(),
+        width: 32,
+        height: 32,
+        roi: [-1., -1., 1., 1.],
+        padding_model: 0.,
+        topology: None,
+        quality: false,
+    };
+    let input = zipzi_contract::kernel_tasks::SampleInput::Parameters {
+        values: vec![Default::default()],
+    };
+    let job = rt.request_observation(client, source, input, view).unwrap();
+    let work = rt.take_work(job).unwrap();
+    add(&mut rt, client, session, 2);
+    rt.complete(work.run()).unwrap();
+    let JobValue::Read(result) = rt
+        .job(client, job)
+        .unwrap()
+        .result
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+    else {
+        panic!("image")
+    };
+    assert_eq!(result.source, source);
+    let length = u32::from_be_bytes(result.bytes()[..4].try_into().unwrap()) as usize;
+    let header: serde_json::Value = serde_json::from_slice(&result.bytes()[4..4 + length]).unwrap();
+    assert_eq!(header["source"], serde_json::to_value(source).unwrap());
+    assert_eq!(
+        &result.bytes()[4 + length..4 + length + 8],
+        b"\x89PNG\r\n\x1a\n"
+    );
+}

@@ -1,6 +1,6 @@
 # Authoring 新内核重写方案
 
-状态：第一至第三阶段已完成；第四阶段进行中，Observe、Runtime 常驻核心、v4 命令/查询及 Python Local/Connected 基础工作流已切换；Editor、二进制传输和剩余领域任务仍待完成。日期：2026-11-06。
+状态：第一至第四阶段已完成；Editor、Observe、Runtime、Python Local/Connected 与生成契约直接接入新内核。下一阶段为旧实现删除、遗留测试/示例迁移与正确性回归。日期：2026-11-06。
 代码审计基线：`main@44111d1c`；实施起点：`main@0262b010`；实施分支：`codex/authoring-kernel`。
 
 重新实现 authoring 的状态与执行内核。新内核以不可变模型、隔离 Draft、唯一发布入口、
@@ -245,6 +245,64 @@ Python Local/Connected 的 10 项端到端测试通过，覆盖创建/竞争候�
 上述 focused 通过不能代替第四阶段完成。按用户后续要求，先提交本批 checkpoint，
 然后继续 Editor 与其余接线；此提交不标记第四阶段完成。
 
+第四阶段第四批实现（Editor 宿主与资源读取；阶段尚未完成）：
+
+- 已按用户要求提交前一批 checkpoint：`28eedeb0`。继续迁移的改动另行保留。
+- Runtime 增加原生宿主的初始 Session 接管、空闲 Session 转移、定向派发、
+  状态通知戳和即时保存派发；转移保留原身份、历史与保存点。即时保存先检查并发
+  名额，拒绝时不留下排队任务、路径预留或保存许可。
+- Editor 的 HostedDraft 使用 Runtime batch/preview/publish；手势协调保存在 Editor，
+  不阻止其他客户端发布。ModelRead 持有不可变 Snapshot，读取不再长期持有 Runtime 锁。
+  busy 拒绝提交时保留待提交的手势候选；外部发布使旧来源失效。
+- ResourceView 按 AssetRecord 的资源版本直接读取已捕获纹理。Editor 纹理缓存改用
+  Snapshot/ResourceView，处理资源替换和重排；画布缓存同时捕获完整来源和内容，
+  跨来源复用前检查结构，保留相等的几何与索引共享。
+
+本批已通过 Runtime 32 项 lib 测试、Project 9 项资源测试、SDK 的纹理快照/Undo/Redo
+专项测试，以及 workspace domain 检查。Editor 的宿主、画布和授权读取测试已迁移或补充，
+但仍受整个 crate 的旧领域 Plan、地址、发布分类与任务接口阻塞，尚未运行通过。
+本批不代表 Editor 整体编译或第四阶段验收通过；剩余任务沿用上一批清单。
+
+
+第四阶段收尾（本批完成阶段验收）：
+
+- Editor 的领域确认、换父级、普通绑定、删除、Palette 多步操作和网格生成直接准备
+  Runtime Draft；确认发布同一个候选，克隆对话框共享其一次性生命周期，不重放命令。
+  字段捕获只保存稳定 ID、期望值和完整 Version，旧字段注册表/跨版本代理退出产品路径。
+- Core 提供不可变能力/集合/检查查询与资源元数据编辑；SDK 补齐受锁保护的记录替换。
+  删除审查在私有 Builder 中完成转换，转换阶段新增阻塞时保留完整报告并丢弃部分迁移。
+- Draft 同一 sequence 的读取、PreparedPreview 和正式发布使用同一不可变快照及 ContentId；
+  修复确认视图和发布内容身份不一致的问题。宿主写锁串行化后台完成与 UI 读取；Runtime
+  排队的 Work 用独占锁持有 Send 闭包，使共享宿主不要求 Worker 回调实现 Sync。
+- Runtime 接通实际资源捕获的格式导入/导出、空间与动画采样、GPU 观察及 Editor context。
+  采样按姿态让出，结果保留原始来源；导出预留输出路径，文件发布后的取消不伪报撤销。
+  发布事件记录实际 client 来源，宿主目录暴露真实 dirty/saving 状态。
+- v4 二进制上传/读取使用相同认证与 request ID 恢复，校验输入摘要；缓存读取只保留请求的
+  分片和实际租约。封存 RGBA 在 Draft 批次中替换图片，Job 输出通过 Blob 读取，不塞入
+  控制帧。Python 两端共享生成 Operation、分片生命周期及恢复后的原始结果投影。
+- 桌面应用与矩阵渲染工具直接使用新接口；更新 Runtime、SDK、EditorCore、Python 文档，
+  记录明确的原生回归目标和生产 Editor 宿主验证入口。
+
+本批最终验证（macOS）：
+
+| Gate | 结果 |
+| --- | --- |
+| `cargo check --locked --workspace --lib --bins` | 全部工作区产品库/可执行入口通过 |
+| `cargo build --locked -p zipzi-editor --bin zipzi-editor` | 生产桌面宿主构建通过 |
+| Runtime `--features gpu-observation --lib` | 42 项通过；含实际 Metal PNG、来源保持、二进制恢复、导入/导出和保存 |
+| SDK `--lib` | 72 项通过；含候选身份、阻塞删除审查与空间算法 |
+| EditorCore `--test authoring_kernel` | 6 项通过；含确认一次发布、Undo 后过期来源、保存忙时重试、删除取消、图片保存及并发读写 |
+| Python `tests/test_kernel.py` | Local/Connected 共 19 项通过，含故意丢失二进制回执后的恢复 |
+| 同一 Python `ConnectedLifecycle`，`ZIPZI_KERNEL_EDITOR_HOST=.../target/debug/zipzi-editor` | 生产宿主 7 项通过，含异步编辑、保存/重开、图片 bulk、空间/动画、观察和格式导入/导出 |
+| Python codegen/类型检查 | 9 项通过 |
+| Core linked cancellation | 1 项通过；同批前序 Core state 28 项通过 |
+| Contract 全 crate、变更文件格式、`git diff --check`、package-domain | 通过 |
+
+范围说明：阶段四的产品调用链已切换；没有以旧协议 facade 保留旧实现。
+旧 Editor 聚合 lib/integration tests 仍引用删除的 API，本批试编译未通过；旧 Runtime/SDK
+集成目标、旧 Python 聚合用例、示例和未编译旧源统一在第五阶段迁移或删除。这些不计入上表，
+也不宣称 full workspace tests / 完整桌面交互验收通过。Windows 与 WGPU 运行验收未执行；
+Runtime all-features 编译检查通过不等于其运行验收。两项预先存在的应用图标删除不纳入阶段提交。
 
 ## 1 新内核的边界
 

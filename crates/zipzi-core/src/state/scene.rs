@@ -8,6 +8,24 @@ pub struct SceneOutcome {
     pub work: Option<ConversionWork>,
 }
 impl DocumentState {
+    pub fn validate_scene_edit(&self, intent: &SceneEdit) -> Result<(), Status> {
+        self.content
+            .model()
+            .plan_scene_edit_with_control(intent.clone(), Default::default(), &Default::default())
+            .map(|_| ())
+    }
+    pub fn drawing_group_range(&self, owner: &str) -> Result<[i32; 2], Status> {
+        let model = self.content.model();
+        let groups = model
+            .draw_order_groups()
+            .map(|groups| groups.to_vec())
+            .unwrap_or_else(|| crate::draw_order::resolved_groups(&model));
+        groups
+            .iter()
+            .find(|group| group.owner == owner)
+            .map(|group| [group.min_order, group.max_order])
+            .ok_or_else(|| Status::error("MISSING_DRAWING_GROUP", owner))
+    }
     pub fn scene_collection(&self, collection: &SceneCollection) -> Result<Vec<String>, Status> {
         self.content.model().scene_collection(collection)
     }

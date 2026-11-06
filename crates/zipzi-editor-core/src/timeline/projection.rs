@@ -172,11 +172,7 @@ impl TimelineProjection {
         };
         let parameters = document.parameters();
         for parameter in &parameters {
-            let runtime_id = model
-                .get_parameter(&parameter.id)
-                .unwrap()
-                .runtime_id
-                .clone();
+            let runtime_id = model.parameter(&parameter.id).unwrap().runtime_id.clone();
             result.add_channel(
                 clip,
                 TimelineChannelId::Parameter(parameter.id.clone()),
@@ -197,7 +193,7 @@ impl TimelineProjection {
             vec![],
         );
         for id in model.part_order() {
-            let part = model.get_part(id).unwrap();
+            let part = model.part(id).unwrap();
             result.add_channel(
                 clip,
                 TimelineChannelId::PartOpacity(id.clone()),
@@ -436,7 +432,7 @@ impl TimelineProjection {
         self.key(end)?;
         let index = track.key_indices[&end.key_id].checked_sub(1)?;
         let CompiledCurve { segments, .. } = &track.curve;
-        let zipzi_sdk::CompiledSegment::Bezier {
+        let zipzi_animation::CompiledSegment::Bezier {
             control1,
             control2,
             end: point,

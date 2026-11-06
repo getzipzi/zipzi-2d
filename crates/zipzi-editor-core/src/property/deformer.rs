@@ -252,7 +252,7 @@ pub(crate) fn inspector_payload(
     scope: &PropertyScope,
 ) -> Result<Value> {
     let transform = model
-        .get_transform(id)
+        .transform(id)
         .ok_or_else(|| anyhow::anyhow!("Deformer no longer exists"))?;
     let mut payload = json!({
         "name": transform.name, "runtime_id": transform.runtime_id,
@@ -322,7 +322,7 @@ pub(crate) fn values(
 /// Merge inspector fields into the captured shape; geometry and other shapes
 /// are retained by the SDK's typed replacement operations.
 pub(crate) fn apply(
-    edit: &mut zipzi_sdk::EditSession<'_>,
+    edit: &mut zipzi_sdk::Commands<'_>,
     id: &str,
     patch: &super::PropertyPatch,
     payload: &Value,
@@ -333,8 +333,8 @@ pub(crate) fn apply(
             "Bone display length must be edited independently"
         );
         ensure!(
-            edit.candidate_document()
-                .get_transform(id)
+            edit.read_document()?
+                .transform(id)
                 .is_some_and(|t| t.rotation().is_some()),
             "Select a Rotation"
         );
@@ -343,7 +343,7 @@ pub(crate) fn apply(
             length.is_finite() && length > 0.,
             "Bone length must be finite and positive"
         );
-        let mut state = edit.candidate_document().editor_state().clone();
+        let mut state = edit.read_document()?.editor_state().clone();
         state.rotation_bone_lengths.insert(id.to_owned(), length);
         edit.replace_editor_state(state)?;
         return Ok(());
@@ -362,6 +362,8 @@ pub(crate) fn apply(
                 },
                 context: Default::default(),
             },
+            Default::default(),
+            &Default::default(),
         )?;
         return Ok(());
     }
@@ -388,12 +390,16 @@ pub(crate) fn apply(
                 columns: payload["warp"]["bezier_columns"].as_u64().unwrap() as u32,
             });
         }
-        return Ok(edit.edit_scene_content(
-            zipzi_contract::document::SceneContentEdit::WarpAuthoring {
-                transform_id: id.into(),
-                settings,
-            },
-        )?);
+        return Ok(edit
+            .edit_scene_content(
+                zipzi_contract::document::SceneContentEdit::WarpAuthoring {
+                    transform_id: id.into(),
+                    settings,
+                },
+                Default::default(),
+                &Default::default(),
+            )
+            .map(|_| ())?);
     }
     if patch
         .changes
@@ -407,18 +413,22 @@ pub(crate) fn apply(
                 .all(|key| [COLUMNS.key, ROWS.key, QUAD.key].contains(key)),
             "Warp grid changes must be independent"
         );
-        return Ok(edit.edit_scene_content(
-            zipzi_contract::document::SceneContentEdit::ResizeWarp {
-                transform_id: id.into(),
-                rows: payload["warp"]["rows"].as_u64().unwrap() as u32,
-                columns: payload["warp"]["columns"].as_u64().unwrap() as u32,
-                quad: payload["warp"]["quad"].as_bool().unwrap(),
-            },
-        )?);
+        return Ok(edit
+            .edit_scene_content(
+                zipzi_contract::document::SceneContentEdit::ResizeWarp {
+                    transform_id: id.into(),
+                    rows: payload["warp"]["rows"].as_u64().unwrap() as u32,
+                    columns: payload["warp"]["columns"].as_u64().unwrap() as u32,
+                    quad: payload["warp"]["quad"].as_bool().unwrap(),
+                },
+                Default::default(),
+                &Default::default(),
+            )
+            .map(|_| ())?);
     }
-    let model = edit.candidate_document();
+    let model = edit.read_document()?;
     let original = model
-        .get_transform(id)
+        .transform(id)
         .ok_or_else(|| anyhow::anyhow!("Deformer no longer exists"))?;
     let mut next = original.clone();
     next.name = serde_json::from_value(payload["name"].clone())?;

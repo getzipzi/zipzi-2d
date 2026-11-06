@@ -58,12 +58,12 @@ fn native_lock(doc: &mut Document, id: &str, locked: bool) -> Result<()> {
 #[test]
 fn part_offscreen_toggle_preserves_part_and_roundtrips_history_and_project() -> Result<()> {
     let (mut doc, part, _) = fixture(false)?;
-    let original = doc.model().get_part(&part.id).unwrap().clone();
+    let original = doc.model().part(&part.id).unwrap().clone();
     let before = doc.history_lengths();
     doc.set_object_property(&part, fields::OFFSCREEN.path, json!(true))?;
     let os = doc.model().offscreen_for_part(&part.id).unwrap().clone();
     assert!(os.enabled);
-    assert_eq!(doc.model().get_part(&part.id), Some(&original));
+    assert_eq!(doc.model().part(&part.id), Some(&original));
     assert_eq!(doc.history_lengths().0, before.0 + 1);
     let tree = doc.part_tree();
     let node = tree.iter().find(|node| node.id == part.id).unwrap();
@@ -80,7 +80,7 @@ fn part_offscreen_toggle_preserves_part_and_roundtrips_history_and_project() -> 
     assert_eq!(reopened.model().offscreen_for_part(&part.id), Some(&stored));
     doc.set_object_property(&part, fields::OFFSCREEN.path, json!(false))?;
     assert!(doc.model().offscreen_for_part(&part.id).is_none());
-    assert_eq!(doc.model().get_part(&part.id), Some(&original));
+    assert_eq!(doc.model().part(&part.id), Some(&original));
     doc.undo()?;
     assert_eq!(doc.model().offscreen_for_part(&part.id), Some(&stored));
     doc.redo()?;
@@ -350,14 +350,10 @@ fn part_offscreen_deletion_cleans_owned_blends_but_retains_shared_animation_and_
         Ok(())
     })?;
     doc.invalidate_projection(true);
-    let own = doc.model().get_blend_binding(&own_blend).unwrap().clone();
-    let retained = doc.model().get_blend_binding(&other_blend).unwrap().clone();
-    let table_before = doc.model().get_blend_key_table(&table).unwrap().clone();
-    let constraint_before = doc
-        .model()
-        .get_blend_constraint(&constraint)
-        .unwrap()
-        .clone();
+    let own = doc.model().blend_binding(&own_blend).unwrap().clone();
+    let retained = doc.model().blend_binding(&other_blend).unwrap().clone();
+    let table_before = doc.model().blend_key_table(&table).unwrap().clone();
+    let constraint_before = doc.model().blend_constraint(&constraint).unwrap().clone();
     native_lock(&mut doc, &own_blend, true)?;
     let history = doc.history_lengths();
     assert!(
@@ -366,7 +362,7 @@ fn part_offscreen_deletion_cleans_owned_blends_but_retains_shared_animation_and_
     );
     assert_eq!(doc.history_lengths(), history);
     assert_eq!(doc.model().offscreen_for_part(&part.id), Some(&offscreen));
-    assert_eq!(doc.model().get_blend_binding(&own_blend), Some(&own));
+    assert_eq!(doc.model().blend_binding(&own_blend), Some(&own));
     native_lock(&mut doc, &own_blend, false)?;
     // Shared dependencies are read-only during component deletion, so their
     // locks must neither block deletion nor be removed as an incidental effect.
@@ -377,31 +373,28 @@ fn part_offscreen_deletion_cleans_owned_blends_but_retains_shared_animation_and_
     doc.set_object_property(&part, fields::OFFSCREEN.path, json!(false))?;
     assert_eq!(doc.history_lengths().0, history.0 + 1);
     let model = doc.model();
-    assert!(model.get_offscreen(&offscreen.id).is_none());
-    assert!(model.get_blend_binding(&own_blend).is_none());
+    assert!(model.offscreen(&offscreen.id).is_none());
+    assert!(model.blend_binding(&own_blend).is_none());
     assert!(!model.editor_state().objects.contains_key(&own_blend));
-    assert!(model.get_parameter(&ordinary_parameter).is_some());
-    assert!(model.get_parameter(&blend_parameter).is_some());
+    assert!(model.parameter(&ordinary_parameter).is_some());
+    assert!(model.parameter(&blend_parameter).is_some());
     assert_eq!(model.binding_for_scene(&part.id), Some(&ordinary_binding));
+    assert_eq!(model.offscreen(&other_offscreen.id), Some(&other_offscreen));
+    assert_eq!(model.blend_binding(&other_blend), Some(&retained));
+    assert_eq!(model.blend_key_table(&table), Some(&table_before));
     assert_eq!(
-        model.get_offscreen(&other_offscreen.id),
-        Some(&other_offscreen)
-    );
-    assert_eq!(model.get_blend_binding(&other_blend), Some(&retained));
-    assert_eq!(model.get_blend_key_table(&table), Some(&table_before));
-    assert_eq!(
-        model.get_blend_constraint(&constraint),
+        model.blend_constraint(&constraint),
         Some(&constraint_before)
     );
     assert!(model.editor_state().get(&table).locked);
     assert!(model.editor_state().get(&constraint).locked);
     drop(model);
     doc.undo()?;
-    assert_eq!(doc.model().get_offscreen(&offscreen.id), Some(&offscreen));
-    assert_eq!(doc.model().get_blend_binding(&own_blend), Some(&own));
+    assert_eq!(doc.model().offscreen(&offscreen.id), Some(&offscreen));
+    assert_eq!(doc.model().blend_binding(&own_blend), Some(&own));
     doc.redo()?;
-    assert!(doc.model().get_blend_binding(&own_blend).is_none());
-    assert_eq!(doc.model().get_blend_binding(&other_blend), Some(&retained));
+    assert!(doc.model().blend_binding(&own_blend).is_none());
+    assert_eq!(doc.model().blend_binding(&other_blend), Some(&retained));
     Ok(())
 }
 
@@ -422,12 +415,12 @@ fn part_offscreen_part_deletion_reports_hidden_components_and_restores_them_on_u
     let history = doc.history_lengths();
     doc.execute_tree_deletion(&plan)?;
     assert_eq!(doc.history_lengths().0, history.0 + 1);
-    assert!(doc.model().get_part(&part.id).is_none());
-    assert!(doc.model().get_offscreen(&offscreen.id).is_none());
-    assert!(doc.model().get_scene_binding(&binding.id).is_none());
+    assert!(doc.model().part(&part.id).is_none());
+    assert!(doc.model().offscreen(&offscreen.id).is_none());
+    assert!(doc.model().scene_binding(&binding.id).is_none());
     doc.undo()?;
-    assert_eq!(doc.model().get_offscreen(&offscreen.id), Some(&offscreen));
-    assert_eq!(doc.model().get_scene_binding(&binding.id), Some(&binding));
+    assert_eq!(doc.model().offscreen(&offscreen.id), Some(&offscreen));
+    assert_eq!(doc.model().scene_binding(&binding.id), Some(&binding));
     assert!(
         doc.part_tree()
             .iter()
@@ -436,8 +429,8 @@ fn part_offscreen_part_deletion_reports_hidden_components_and_restores_them_on_u
             .offscreen
     );
     doc.redo()?;
-    assert!(doc.model().get_part(&part.id).is_none());
-    assert!(doc.model().get_offscreen(&offscreen.id).is_none());
+    assert!(doc.model().part(&part.id).is_none());
+    assert!(doc.model().offscreen(&offscreen.id).is_none());
     Ok(())
 }
 
@@ -449,7 +442,7 @@ fn part_offscreen_enabled_recovers_native_visibility_without_replacing_appearanc
         doc.set_object_property(&part, fields::OPACITY.path, json!(0.4))?;
         doc.set_object_property(&part, fields::COMPOSITE_VISIBLE.path, json!(false))?;
         let original = doc.model().offscreen_for_part(&part.id).unwrap().clone();
-        assert!(doc.model().get_part(&part.id).unwrap().enabled);
+        assert!(doc.model().part(&part.id).unwrap().enabled);
         assert_eq!(
             doc.property_values(&part)?[&fields::ENABLED.key],
             PropertyValue::Bool(false)
@@ -457,7 +450,7 @@ fn part_offscreen_enabled_recovers_native_visibility_without_replacing_appearanc
         // Editing unrelated fields must preserve the raw Part flag and the
         // hidden native visibility state rather than normalizing either one.
         doc.set_object_property(&part, fields::NAME.path, json!("Renamed"))?;
-        assert!(doc.model().get_part(&part.id).unwrap().enabled);
+        assert!(doc.model().part(&part.id).unwrap().enabled);
         assert_eq!(doc.model().offscreen_for_part(&part.id), Some(&original));
         let binding = doc.model().binding_for_scene(&part.id).cloned();
         let history = doc.history_lengths();
@@ -494,11 +487,7 @@ fn part_offscreen_enabled_recovery_honors_component_locks_atomically() -> Result
     native_lock(&mut doc, &os.id, true)?;
     for raw_part_enabled in [true, false] {
         doc.session.edit("Raw Part visibility", None, |edit| {
-            let mut part = edit
-                .candidate_document()
-                .get_part(&part.id)
-                .unwrap()
-                .clone();
+            let mut part = edit.candidate_document().part(&part.id).unwrap().clone();
             part.enabled = raw_part_enabled;
             edit.replace_part(part)
         })?;
@@ -510,7 +499,7 @@ fn part_offscreen_enabled_recovery_honors_component_locks_atomically() -> Result
         );
         assert_eq!(doc.history_lengths(), history);
         assert_eq!(
-            doc.model().get_part(&part.id).unwrap().enabled,
+            doc.model().part(&part.id).unwrap().enabled,
             raw_part_enabled
         );
         assert_eq!(doc.model().offscreen_for_part(&part.id), Some(&os));
@@ -518,11 +507,11 @@ fn part_offscreen_enabled_recovery_honors_component_locks_atomically() -> Result
     native_lock(&mut doc, &os.id, false)?;
     let history = doc.history_lengths();
     doc.set_object_property(&part, fields::ENABLED.path, json!(true))?;
-    assert!(doc.model().get_part(&part.id).unwrap().enabled);
+    assert!(doc.model().part(&part.id).unwrap().enabled);
     assert!(doc.model().offscreen_for_part(&part.id).unwrap().enabled);
     assert_eq!(doc.history_lengths().0, history.0 + 1);
     doc.undo()?;
-    assert!(!doc.model().get_part(&part.id).unwrap().enabled);
+    assert!(!doc.model().part(&part.id).unwrap().enabled);
     assert_eq!(doc.model().offscreen_for_part(&part.id), Some(&os));
     Ok(())
 }

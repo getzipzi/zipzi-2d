@@ -289,8 +289,8 @@ impl DeletionDialog {
         Some(scope.into_any_element())
     }
 
-    fn export_message(&self, failure: &zipzi_sdk::DeletionExportFailure, cx: &App) -> String {
-        use zipzi_sdk::DeletionExportFailure::*;
+    fn export_message(&self, failure: &zipzi_project::OpaqueExportIssue, cx: &App) -> String {
+        use zipzi_project::OpaqueExportIssue::*;
         let name = match failure {
             Model3NamespaceChanged => "model3".to_owned(),
             Cdi { .. } => "CDI".to_owned(),

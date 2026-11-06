@@ -3,7 +3,7 @@ impl Document {
     pub(crate) fn export_canvas(&self) -> Result<crate::ExportCanvas> {
         let mut frame = zipzi_core::DrawableFrame::default();
         let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
-            &self.model(),
+            &*self.model(),
             &Default::default(),
             &mut frame,
         );
@@ -27,7 +27,7 @@ impl Document {
         if settings == self.export_settings() {
             return Ok(());
         }
-        let mut edit = self.session.begin_owned_edit("Export settings", None)?;
+        let mut edit = self.session.begin_draft("Export settings", None)?;
         edit.replace_export_settings(settings)?;
         edit.commit_to(&mut self.session)?;
         self.session.acknowledge_receipts();
@@ -39,10 +39,11 @@ impl Document {
         Ok(self.session.transfer_snapshot()?)
     }
     pub fn import_cubism(path: &Path) -> Result<(Self, Vec<String>)> {
-        let mut session = Self::empty_session()?;
-        session.import_cubism(path, None)?;
-        let mut document = Self::from_session(session)?;
+        let (mut document, notices) = Self::load_document(
+            path,
+            Some(zipzi_contract::kernel_wire::ImportFormat::Cubism),
+        )?;
         document.import_name = path.file_stem().map(|s| s.to_string_lossy().into_owned());
-        Ok((document, Vec::new()))
+        Ok((document, notices))
     }
 }

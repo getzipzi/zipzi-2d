@@ -355,8 +355,8 @@ impl BindingDialog {
                         "{}: {} · {} / {}",
                         t!("binding.cost"),
                         plan.cost.sample_combinations,
-                        plan.cost.temporary_bytes,
-                        plan.cost.history_bytes
+                        plan.cost.workspace_bytes,
+                        plan.cost.payload_bytes
                     ));
                 }
                 self.rows = rows.into();

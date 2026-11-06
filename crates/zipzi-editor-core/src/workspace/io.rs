@@ -62,11 +62,11 @@ impl LoadTask {
         } = self;
         progress.set_stage(LoadStage::Reading);
         // Real model decoders need an explicit stack, independent of GPUI's pool.
-        let returned = work.run_on_thread("zipzi-document-load", 8 * 1024 * 1024);
-        let prepared = returned.returned_session().map(|session| {
+        let returned = work.run_with_stack("zipzi-document-load", 8 * 1024 * 1024);
+        let prepared = returned.prepared_snapshot().map(|snapshot| {
             progress.set_stage(LoadStage::PreparingView);
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                Document::prepare_runtime_view(session)
+                Document::prepare_runtime_view(snapshot)
             }))
             .unwrap_or_else(|_| Err(anyhow!("Document view preparation panicked")))
         });
@@ -86,16 +86,25 @@ impl LoadCompletion {
     /// Application host calls this before touching any weak view/window handle.
     pub fn publish(&mut self, host: &crate::RuntimeHost) {
         if let Some(returned) = self.returned.take() {
-            let session = host
+            if let Err(returned) = host.write().complete(returned) {
+                self.returned = Some(returned);
+                return;
+            }
+            let published = host
                 .read()
-                .job_info(host.client_id(), self.job)
+                .job(host.client_id(), self.job)
                 .ok()
-                .map(|job| job.session);
-            let accepted = host.write().complete(returned);
-            if accepted {
-                if let (Some(session), Some(prepared)) = (session, self.prepared.take()) {
-                    host.prepare_view(session, prepared);
-                }
+                .and_then(|job| {
+                    if job.state != zipzi_runtime::JobState::Succeeded {
+                        return None;
+                    }
+                    match job.source {
+                        zipzi_sdk::QuerySource::Published(version) => Some(version.session),
+                        zipzi_sdk::QuerySource::Draft(source) => Some(source.base.session),
+                    }
+                });
+            if let (Some(session), Some(prepared)) = (published, self.prepared.take()) {
+                host.prepare_view(session, prepared);
             }
         }
     }
@@ -105,6 +114,7 @@ pub struct SaveTask {
     operation: OperationId,
     job: JobId,
     work: Work,
+    progress: zipzi_project::archive::ProjectSaveProgress,
 }
 pub struct SaveCompletion {
     id: DocumentId,
@@ -114,7 +124,7 @@ pub struct SaveCompletion {
 }
 impl SaveTask {
     pub fn progress(&self) -> zipzi_project::archive::ProjectSaveProgress {
-        self.work.save_progress().expect("save task progress")
+        self.progress.clone()
     }
     pub fn run(self) -> SaveCompletion {
         SaveCompletion {
@@ -129,10 +139,12 @@ impl SaveCompletion {
     pub fn job_id(&self) -> JobId {
         self.job
     }
-    /// Returning SDK ownership and storing the outcome never depend on a view.
+    /// Install save metadata before touching any weak view handle.
     pub fn publish(&mut self, host: &crate::RuntimeHost) {
         if let Some(returned) = self.returned.take() {
-            host.write().complete(returned);
+            if let Err(returned) = host.write().complete(returned) {
+                self.returned = Some(returned);
+            }
         }
     }
 }
@@ -144,38 +156,67 @@ impl Editor {
             self.end_editing(id, EditingLifecycle::ContextChange)?;
         }
         let host = self.runtime.clone();
-        let job = match request {
-            LoadRequest::Open(path) => {
-                let opened = host.write().request_open(host.client_id(), &path)?;
-                match opened {
-                    zipzi_runtime::OpenRequest::Existing(session) => {
-                        if let Some(id) = self
-                            .documents
-                            .iter()
-                            .find(|e| e.hosted_session_id() == session)
-                            .map(|e| e.id)
-                        {
-                            self.activate(id)?;
-                        } else {
-                            let document = Document::attach_runtime(host.clone(), session)?;
-                            self.insert(document)?;
-                        }
-                        return Ok(None);
-                    }
-                    zipzi_runtime::OpenRequest::Pending(job) => job,
+        if let LoadRequest::Open(path) = &request {
+            let existing = host.read().project_session(host.client_id(), path)?;
+            if let Some(session) = existing {
+                if let Some(id) = self
+                    .documents
+                    .iter()
+                    .find(|entry| entry.hosted_session_id() == session)
+                    .map(|entry| entry.id)
+                {
+                    self.activate(id)?;
+                } else {
+                    self.insert(Document::attach_runtime(host.clone(), session)?)?;
                 }
+                return Ok(None);
             }
-            LoadRequest::Model3(path) => host
-                .write()
-                .request_import(host.client_id(), zipzi_runtime::ImportSource::Model3(path))?,
-            LoadRequest::Psd(path) => host
-                .write()
-                .request_import(host.client_id(), zipzi_runtime::ImportSource::Psd(path))?,
-            LoadRequest::Cubism(path) => host
-                .write()
-                .request_import(host.client_id(), zipzi_runtime::ImportSource::Cubism(path))?,
+        }
+        let session = host.write().create_session(
+            host.client_id(),
+            &Uuid::new_v4().to_string(),
+            Default::default(),
+        )?;
+        let version = host
+            .read()
+            .session_read(host.client_id(), session)?
+            .version();
+        let admitted = match request {
+            LoadRequest::Open(path) => {
+                let io = host.read().project_io().clone();
+                host.write()
+                    .start_open(host.client_id(), version, &io, &path, Default::default())
+            }
+            LoadRequest::Model3(path) => host.write().start_import(
+                host.client_id(),
+                version,
+                &path,
+                zipzi_contract::kernel_wire::ImportFormat::Model3,
+                Default::default(),
+            ),
+            LoadRequest::Psd(path) => host.write().start_import(
+                host.client_id(),
+                version,
+                &path,
+                zipzi_contract::kernel_wire::ImportFormat::Psd,
+                Default::default(),
+            ),
+            LoadRequest::Cubism(path) => host.write().start_import(
+                host.client_id(),
+                version,
+                &path,
+                zipzi_contract::kernel_wire::ImportFormat::Cubism,
+                Default::default(),
+            ),
         };
-        let work = host.dispatch_job(job)?;
+        let (job, work) = match admitted {
+            Ok(value) => value,
+            Err(error) => {
+                host.write()
+                    .close_session(host.client_id(), session, true)?;
+                return Err(error.into());
+            }
+        };
         let id = DocumentId(Uuid::new_v4());
         let operation = OperationId(Uuid::new_v4());
         self.loads.insert(operation, (id, job));
@@ -196,14 +237,14 @@ impl Editor {
         self.entry_mut(id)?.begin_save(operation, None)?;
         let host = self.runtime.clone();
         let prepared = (|| -> Result<_> {
-            let job = host.write().request_project(
-                host.client_id(),
-                session,
-                zipzi_runtime::project_io::ProjectRequest::Open {
-                    path: path.to_path_buf(),
-                },
-            )?;
-            Ok((job, host.dispatch_job(job)?))
+            let version = host
+                .read()
+                .session_read(host.client_id(), session)?
+                .version();
+            let io = host.read().project_io().clone();
+            Ok(host
+                .write()
+                .start_open(host.client_id(), version, &io, path, Default::default())?)
         })();
         let (job, work) = match prepared {
             Ok(value) => value,
@@ -242,7 +283,8 @@ impl Editor {
         let info = self
             .runtime
             .read()
-            .job_info(self.runtime.client_id(), job)?;
+            .job(self.runtime.client_id(), job)?
+            .clone();
         let result = info
             .result
             .ok_or_else(|| anyhow!("Load is still running"))?;
@@ -255,18 +297,51 @@ impl Editor {
             self.entry_mut(id)?.restore_session();
             self.refresh_viewport_bindings();
         }
-        let (session, notices, name) = match result? {
-            JobValue::Project { session, report } if reopening => {
-                (session, report.warnings.clone(), None)
+        let loaded = match result {
+            Ok(value) => value,
+            Err(error) => {
+                if !reopening {
+                    let zipzi_sdk::QuerySource::Published(version) = info.source else {
+                        unreachable!("load source")
+                    };
+                    // A failed provisional load has no view. Remove only its
+                    // untouched blank; a foreign edit must remain resident.
+                    let unchanged = self
+                        .runtime
+                        .read()
+                        .session_read(self.runtime.client_id(), version.session)
+                        .is_ok_and(|sdk| sdk.version() == version);
+                    if unchanged {
+                        let _ = self.runtime.write().close_session(
+                            self.runtime.client_id(),
+                            version.session,
+                            true,
+                        );
+                    }
+                }
+                return Err(error.into());
             }
-            JobValue::Opened(session) => (session, vec![], None),
-            JobValue::Imported {
-                session,
-                notices,
-                name,
-            } => (session, notices, name),
+        };
+        let (session, mut notices, diagnostics, name) = match loaded {
+            JobValue::Opened(receipt) => (
+                receipt.publication.version.session,
+                vec![],
+                receipt.diagnostics,
+                None,
+            ),
+            JobValue::Imported(receipt) => (
+                receipt.publication.version.session,
+                receipt.warnings,
+                receipt.diagnostics,
+                receipt.name,
+            ),
             _ => return Err(anyhow!("Unexpected load result")),
         };
+        notices.extend(
+            diagnostics
+                .into_iter()
+                .map(|d| format!("{}: {}", d.code, d.message)),
+        );
         let mut document = Document::attach_runtime(self.runtime.clone(), session)?;
         document.set_import_name(name);
         if let Some(previous) = self.active.filter(|_| !self.is_busy()) {
@@ -339,15 +414,22 @@ impl Editor {
         self.entry_mut(id)?
             .begin_save(operation, close_after.then_some(close_reason))?;
         let host = self.runtime.clone();
+        let progress = zipzi_project::archive::ProjectSaveProgress::default();
         let prepared = (|| -> Result<(JobId, Work)> {
-            let job = match target_fingerprint {
-                Some(hash) => {
-                    host.write()
-                        .request_save_replacing(host.client_id(), session, path, hash)?
-                }
-                None => host.write().request_save(host.client_id(), session, path)?,
-            };
-            Ok((job, host.dispatch_job(job)?))
+            let version = host
+                .read()
+                .session_read(host.client_id(), session)?
+                .version();
+            let mut io = host.read().project_io().clone();
+            io.set_save_progress(Some(progress.clone()));
+            Ok(host.write().start_save_as(
+                host.client_id(),
+                version,
+                &io,
+                path,
+                target_fingerprint,
+                Default::default(),
+            )?)
         })();
         let (job, work) = match prepared {
             Ok(value) => value,
@@ -366,6 +448,7 @@ impl Editor {
             operation,
             job,
             work,
+            progress,
         })
     }
     pub fn finish_save(&mut self, completion: &mut SaveCompletion) -> Result<SaveReceipt> {
@@ -384,26 +467,11 @@ impl Editor {
         let info = self
             .runtime
             .read()
-            .job_info(self.runtime.client_id(), job)?;
+            .job(self.runtime.client_id(), job)?
+            .clone();
         let result = info
             .result
             .ok_or_else(|| anyhow!("Save is still running"))?;
-        let session_id = self.entry(id)?.hosted_session_id();
-        let faulted = matches!(
-            self.runtime.read().session_info(session_id)?.state,
-            zipzi_runtime::SessionState::Faulted(_)
-        );
-        if faulted {
-            self.entry_mut(id)?.mark_faulted();
-            self.runtime
-                .write()
-                .release_job(self.runtime.client_id(), job)?;
-            self.cancel_exit();
-            return Err(result
-                .err()
-                .map(anyhow::Error::from)
-                .unwrap_or_else(|| anyhow!("Session faulted")));
-        }
         let close = self.entry_mut(id)?.restore_session();
         self.runtime
             .write()
@@ -463,7 +531,7 @@ impl Editor {
             if self
                 .runtime
                 .read()
-                .job_info(self.runtime.client_id(), job)
+                .job(self.runtime.client_id(), job)
                 .is_ok_and(|j| j.state.is_terminal())
             {
                 if let Err(error) = self.finish_save_job(id, job) {
@@ -475,7 +543,7 @@ impl Editor {
             if self
                 .runtime
                 .read()
-                .job_info(self.runtime.client_id(), job)
+                .job(self.runtime.client_id(), job)
                 .is_ok_and(|j| j.state.is_terminal())
             {
                 match self.finish_load_job(operation, id, job) {
@@ -490,7 +558,7 @@ impl Editor {
             .filter_map(|entry| entry.saving().filter(|s| !s.external).and_then(|s| s.job))
             .chain(self.loads.values().map(|(_, job)| *job))
             .collect();
-        let jobs = self.runtime.read().list_jobs(self.runtime.client_id());
+        let jobs = self.runtime.read().client_jobs(self.runtime.client_id());
         if let Ok(jobs) = jobs {
             for job in jobs {
                 if job.state.is_terminal() && !pending.contains(&job.id) {
@@ -512,7 +580,7 @@ impl Editor {
         let session = self.entry(id)?.hosted_session_id();
         self.runtime
             .write()
-            .detach_editor_view(self.runtime.client_id(), session)?;
+            .detach(self.runtime.client_id(), session)?;
         let index = self.documents.iter().position(|e| e.id == id).unwrap();
         self.documents.remove(index);
         if self.active == Some(id) {
@@ -551,18 +619,29 @@ impl Editor {
     pub fn attach_resident_sessions(&mut self) -> Result<Vec<String>> {
         let notices = self.sync_runtime_jobs();
         self.sync_runtime()?;
-        let sessions = self.runtime.read().list_sessions();
-        for info in sessions {
-            if !self
-                .documents
-                .iter()
-                .any(|e| e.hosted_session_id() == info.id)
-                && info.state == zipzi_runtime::SessionState::Ready
-            {
+        let sessions = self.runtime.read().session_keys(self.runtime.client_id())?;
+        let loading: std::collections::HashSet<_> = self
+            .loads
+            .values()
+            .filter_map(|(_, job)| {
                 self.runtime
-                    .write()
-                    .attach_session(self.runtime.client_id(), info.id)?;
-                let document = Document::attach_runtime(self.runtime.clone(), info.id)?;
+                    .read()
+                    .job(self.runtime.client_id(), *job)
+                    .ok()
+                    .map(|job| match job.source {
+                        zipzi_sdk::QuerySource::Published(version) => version.session,
+                        zipzi_sdk::QuerySource::Draft(source) => source.base.session,
+                    })
+            })
+            .collect();
+        for session in sessions {
+            if !loading.contains(&session)
+                && !self
+                    .documents
+                    .iter()
+                    .any(|entry| entry.hosted_session_id() == session)
+            {
+                let document = Document::attach_runtime(self.runtime.clone(), session)?;
                 self.insert(document)?;
             }
         }
@@ -570,27 +649,12 @@ impl Editor {
     }
     pub fn sync_runtime(&mut self) -> Result<bool> {
         let mut changed = false;
-        let mut fault = None;
         for entry in &mut self.documents {
-            let info = self
+            let saving = self
                 .runtime
                 .read()
-                .session_info(entry.hosted_session_id())?;
-            if matches!(info.state, zipzi_runtime::SessionState::Faulted(_)) {
-                if entry.session().is_some() {
-                    entry.begin_save(OperationId(Uuid::new_v4()), None)?;
-                }
-                if entry.saving().is_some() {
-                    entry.mark_faulted();
-                    fault = info.fault.clone();
-                    if self.active == Some(entry.id) {
-                        self.inspection_generation += 1;
-                    }
-                    changed = true;
-                }
-                continue;
-            }
-            if let zipzi_runtime::SessionState::Busy(job) = info.state {
+                .saving_job(self.runtime.client_id(), entry.hosted_session_id())?;
+            if let Some(job) = saving {
                 if entry.session().is_some() {
                     entry.begin_save(OperationId(Uuid::new_v4()), None)?;
                     let saving = entry.saving_mut().unwrap();
@@ -616,10 +680,6 @@ impl Editor {
             // Runtime publications and save barriers keep the same document/context.
             // The inspector revalidates its pinned object against the refreshed index.
             self.refresh_viewport_bindings();
-        }
-        if let Some(error) = fault {
-            self.cancel_exit();
-            return Err(error.into());
         }
         Ok(changed)
     }
@@ -688,20 +748,24 @@ impl Editor {
         // Visible local saves already have a completion path that resumes exit.
         // Detached and foreign jobs (including provisional loads) do not.
         ensure!(
-            self.runtime.read().pending_jobs().iter().all(|job| {
+            self.runtime.read().outstanding_job_ids().iter().all(|job| {
                 self.documents.iter().any(|entry| {
                     entry
                         .saving()
-                        .is_some_and(|s| !s.external && s.job == Some(job.id))
+                        .is_some_and(|s| !s.external && s.job == Some(*job))
                 })
             }),
             "Wait for background Runtime operations to finish"
         );
         ensure!(
-            self.runtime.read().list_sessions().iter().all(|info| self
-                .documents
+            self.runtime
+                .read()
+                .session_keys(self.runtime.client_id())?
                 .iter()
-                .any(|entry| entry.hosted_session_id() == info.id)),
+                .all(|session| self
+                    .documents
+                    .iter()
+                    .any(|entry| entry.hosted_session_id() == *session)),
             "Resolve detached Runtime sessions before quitting"
         );
         if let Some(document) = self.active {

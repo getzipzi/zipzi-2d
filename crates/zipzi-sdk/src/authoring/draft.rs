@@ -8,6 +8,7 @@ pub struct Draft {
     source: DraftSource,
     baseline: Snapshot,
     workspace: Option<(DocumentBuilder, ResourceView)>,
+    snapshot: std::sync::OnceLock<Snapshot>,
 }
 
 /// An independently prepared preview. Only its exact originating candidate can
@@ -17,13 +18,14 @@ pub struct PreparedPreview {
     source: DraftSource,
     builder: DocumentBuilder,
     resources: ResourceView,
+    snapshot: Snapshot,
 }
 impl PreparedPreview {
     pub fn source(&self) -> DraftSource {
         self.source
     }
     pub fn read_snapshot(&self) -> Result<Snapshot, Status> {
-        Snapshot::new(self.builder.preview()?, self.resources.clone())
+        Ok(self.snapshot.clone())
     }
 }
 
@@ -56,6 +58,7 @@ impl Draft {
             },
             workspace: Some((snapshot.document().builder(), snapshot.resources().clone())),
             baseline: snapshot,
+            snapshot: std::sync::OnceLock::new(),
         }
     }
     pub fn source(&self) -> DraftSource {
@@ -79,9 +82,13 @@ impl Draft {
             .workspace
             .as_ref()
             .ok_or_else(|| error("DRAFT_ENDED", "Draft has ended"))?;
+        if self.snapshot.get().is_none() {
+            let snapshot = Snapshot::new(builder.preview()?, resources.clone())?;
+            let _ = self.snapshot.set(snapshot);
+        }
         Ok(SourcedSnapshot {
             source: QuerySource::Draft(self.source),
-            snapshot: Snapshot::new(builder.preview()?, resources.clone())?,
+            snapshot: self.snapshot.get().unwrap().clone(),
         })
     }
     /// One sequence increment for a successful batch. Any error, including an
@@ -110,6 +117,7 @@ impl Draft {
         builder.validate_candidate()?;
         self.workspace = Some((builder, resources));
         self.source = next;
+        self.snapshot.take();
         Ok(value)
     }
     pub fn cancel(mut self) {
@@ -135,12 +143,13 @@ impl Draft {
         commands.finish()?;
         builder.validate_candidate()?;
         // Resource validation is also preparation, never a post-install failure.
-        Snapshot::new(builder.preview()?, resources.clone())?;
+        let snapshot = Snapshot::new(builder.preview()?, resources.clone())?;
         Ok((
             PreparedPreview {
                 source: expected,
                 builder,
                 resources,
+                snapshot,
             },
             value,
         ))
@@ -157,6 +166,7 @@ impl Draft {
             .next_sequence()
             .ok_or_else(|| error("VERSION_OVERFLOW", "Candidate sequence exhausted"))?;
         self.workspace = Some((prepared.builder, prepared.resources));
+        self.snapshot = std::sync::OnceLock::from(prepared.snapshot);
         self.source = source;
         Ok(source)
     }
@@ -169,7 +179,10 @@ impl Draft {
         let frozen = builder.freeze()?;
         Ok(PreparedChange {
             source: self.source,
-            snapshot: Snapshot::new(frozen.state, resources)?,
+            snapshot: match self.snapshot.into_inner() {
+                Some(snapshot) => snapshot,
+                None => Snapshot::new(frozen.state, resources)?,
+            },
             writes: frozen.writes,
             description: description.into(),
         })

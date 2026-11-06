@@ -25,6 +25,15 @@ after cancellation or client release. Misrouted completions are returned to the
 caller so they can reach the correct Runtime. A worker panic ends its task without
 requiring a Session recovery copy.
 
+Native hosts can use `take_work(job)` for targeted dispatch and `start_save_as`
+to admit and dispatch a synchronous save in one owner call. A full worker pool
+leaves queued work intact; immediate save refusal creates no job or save permit.
+`adopt_session` installs an initially constructed native session, and
+`transfer_session_to` moves an idle, exclusively attached session between owner
+hosts without cloning history. Neither operation is a Worker completion API.
+`host_state_stamp` provides bounded session/job metadata for view notifications;
+candidate bookkeeping does not wake published projections.
+
 `request_read` freezes the requested Published or Draft source. Later edits do not
 change its input or relabel its output. This low-level host API accepts trusted
 Rust computation callbacks; domain-specific protocol handlers must choose task
@@ -61,25 +70,38 @@ Client release cancels owned outstanding work and ends its Drafts, but does not
 close resident Sessions. A later client can attach. Explicit close checks other
 attached clients, outstanding work and unsaved content.
 
+## Domain and bulk tasks
+
+`request_samples` runs geometry, spatial queries and detached animation schedules
+against one exact Published/Draft source, yielding between poses. Results retain
+the original source after later publication. `request_observation` prepares a
+bounded texture plan and renders explicit views; output contains length-prefixed
+JSON metadata followed by each PNG. GPU availability is a host capability.
+`request_export` captures resources and source protection, reserves the output,
+and returns actual publication/durability even after late cancellation.
+
+Client-owned blobs provide bounded upload/read chunks. Binary requests use the
+same authentication, request IDs, payload digests and recovery cache as control
+requests. Cached reads retain just their requested chunk and its allocation
+lease. Image replacement consumes sealed RGBA inside one ordinary Draft batch;
+source pixels remain valid after the upload is released. Job byte results are
+retrieved through `ReadJobBlob`, rather than embedded in control frames.
+
 ## Migration and focused tests
 
-Stage four is in progress. The crate root now compiles this resident kernel and
-worker pool directly. Old domain handlers, host/local transport, protocol,
-ObjectRef/FieldAddress registries and their integration tests remain migration
-inputs, not a compiled compatibility facade. The new wire major/schema, typed
-import/export/observation job adapters, cooperative read-batch scheduling, call
-recovery, Editor and Python Local/Connected adapters still need migration.
-Their prior behavior is not claimed covered by the kernel gate.
-
-From the repository root:
+The v4 protocol, Local/Connected clients, native Editor and Observe directly use
+the resident kernel. No compiled legacy field-address or Session-moving facade
+is provided. Legacy uncompiled domain files and old aggregate test targets remain
+for stage-five deletion and behavior-test migration.
 
 ```sh
 cargo test --locked -p zipzi-runtime --lib
+cargo test --locked -p zipzi-runtime --features gpu-observation --lib
 cargo test --locked -p zipzi-sdk --test authoring
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test authoring_kernel
 ```
 
-These gates cover resident ownership, isolated Drafts, cancellation/panics,
-source races and Undo, bounded notifications/results, worker dispatch, native
-load/save, path reservations and late save completion. Full runtime/protocol and
-Editor/Python gates cannot run against this intermediate API yet. Follow the
-[architecture plan](../../docs/plans/authoring-architecture.md) for remaining work.
+These focused gates cover resident ownership, isolated Drafts, immutable source
+identity, cancellation, binary recovery, native load/save/import/export and
+resource lifetime. The GPU gate requires a usable device. They do not imply the
+legacy aggregate tests or Windows native acceptance have passed.

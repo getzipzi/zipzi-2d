@@ -1,8 +1,10 @@
 //! Authenticated v4 requests and exactly-once recovery on the host owner thread.
 mod project_queue;
 pub use project_queue::ProjectOpenQueue;
+mod binary;
 mod values;
 use crate::*;
+pub use binary::{BinaryReply, BinarySlice};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -58,7 +60,15 @@ struct Record {
     digest: [u8; 32],
     bytes: Arc<[u8]>,
     at: Instant,
+    payload: Option<BinarySlice>,
     _lease: zipzi_project::TransferReservation,
+}
+impl Record {
+    fn retained_bytes(&self) -> usize {
+        self.bytes
+            .len()
+            .saturating_add(self.payload.as_ref().map_or(0, BinarySlice::retained_bytes))
+    }
 }
 struct RemoteClient {
     secret: String,
@@ -76,6 +86,8 @@ pub struct Protocol {
     windows: bool,
     show_window: Option<Option<SessionKey>>,
     project_queue: Option<Arc<Mutex<ProjectOpenQueue>>>,
+    binary_input: Option<Vec<u8>>,
+    binary_output: Option<BinarySlice>,
 }
 impl Default for Protocol {
     fn default() -> Self {
@@ -92,6 +104,8 @@ impl Protocol {
             windows: false,
             show_window: None,
             project_queue: None,
+            binary_input: None,
+            binary_output: None,
         }
     }
     pub fn with_mesh_generator(mut self, generate: fn(Value) -> Value) -> Self {
@@ -181,9 +195,17 @@ impl Protocol {
             "jobs",
             "history",
             "native_project_io",
+            "project_import",
             "events",
             "request_recovery",
+            "binary_blobs",
+            "spatial_samples",
+            "animation_samples",
+            "project_export",
         ];
+        if cfg!(feature = "gpu-observation") {
+            out.push("gpu_observation");
+        }
         if self.mesh_generator.is_some() {
             out.push("editor_mesh_generate");
         }
@@ -254,7 +276,7 @@ impl Protocol {
         self.clients
             .values()
             .flat_map(|c| &c.records)
-            .fold((0, 0), |(n, b), r| (n + 1, b + r.bytes.len()))
+            .fold((0, 0), |(n, b), r| (n + 1, b + r.retained_bytes()))
     }
     pub fn retained_memory_bytes(&self) -> usize {
         self.retained_results().1
@@ -267,6 +289,7 @@ impl Protocol {
         request: Request,
         now: Instant,
     ) -> Value {
+        self.binary_output = None;
         self.expire(runtime, now);
         if request.protocol != CONTRACT {
             return failure("PROTOCOL_MISMATCH", "Incompatible authoring wire major");
@@ -304,6 +327,7 @@ impl Protocol {
             Sha256::digest(serde_json::to_vec(&request.operation).unwrap()).into();
         if let Some(record) = remote.records.iter().find(|r| r.id == request.request_id) {
             return if record.digest == digest {
+                self.binary_output = record.payload.clone();
                 serde_json::from_slice(&record.bytes).unwrap()
             } else {
                 failure("REQUEST_ID_REUSED", "Request ID has different arguments")
@@ -329,8 +353,13 @@ impl Protocol {
         let remote = self.clients.get_mut(&client).unwrap();
         remote.highest = request.request_id;
         if let Ok(bytes) = encode_bounded(&result) {
-            if bytes.len() <= self.limits.result_bytes_per_client
-                && bytes.len() <= self.limits.result_bytes_total
+            let retained = bytes.len().saturating_add(
+                self.binary_output
+                    .as_ref()
+                    .map_or(0, BinarySlice::retained_bytes),
+            );
+            if retained <= self.limits.result_bytes_per_client
+                && retained <= self.limits.result_bytes_total
             {
                 if let Ok(lease) = runtime.reserve_transfer(bytes.len()) {
                     remote.records.push_back(Record {
@@ -338,13 +367,18 @@ impl Protocol {
                         digest,
                         bytes: bytes.into(),
                         at: now,
+                        payload: self.binary_output.clone(),
                         _lease: lease,
                     });
                 }
             }
         }
         while remote.records.len() > self.limits.results_per_client
-            || remote.records.iter().map(|r| r.bytes.len()).sum::<usize>()
+            || remote
+                .records
+                .iter()
+                .map(Record::retained_bytes)
+                .sum::<usize>()
                 > self.limits.result_bytes_per_client
         {
             remote.records.pop_front();
@@ -364,6 +398,64 @@ impl Protocol {
     pub fn execute(&mut self, rt: &mut Runtime, client: ClientId, op: Operation) -> Result<Value> {
         use Operation::*;
         Ok(match op {
+            Sample { source, input } => json!(rt.request_samples(client, source, input)?),
+            Observe {
+                source,
+                input,
+                view,
+            } => json!(rt.request_observation(client, source, input, view)?),
+            Export {
+                source,
+                path,
+                format,
+                allow_loss,
+            } => json!(rt.request_export(client, source, &path, format, allow_loss)?),
+            CreateBlob { length } => json!(rt.create_blob(client, length)?),
+            SealBlob { blob } => json!(rt.seal_blob(client, blob)?),
+            ReleaseBlob { blob } => {
+                rt.release_blob(client, blob)?;
+                Value::Null
+            }
+            AppendBlobBinary {
+                blob,
+                offset,
+                length,
+                payload_sha256,
+            } => {
+                let bytes = self
+                    .binary_input
+                    .take()
+                    .ok_or_else(|| error("INVALID_REQUEST", "Binary frame required"))?;
+                binary::validate_payload(length, &payload_sha256, &bytes)?;
+                json!(rt.append_blob(client, blob, offset, &bytes)?)
+            }
+            ReadBlobBinary {
+                blob,
+                offset,
+                length,
+            } => {
+                if self.binary_input.take().is_none() {
+                    return Err(error("INVALID_REQUEST", "Binary frame required"));
+                }
+                self.binary_output = Some(BinarySlice::new(
+                    rt.read_blob_range(client, blob, offset, length)?,
+                    0,
+                    length,
+                )?);
+                json!({"length":length})
+            }
+            ReplaceImageBlob {
+                expected,
+                id,
+                blob,
+                width,
+                height,
+            } => {
+                json!({"source":rt.replace_image_blob(client, expected, id, blob, width, height)?,"outcomes":[]})
+            }
+            ReadImageBlob { source, id } => rt.read_image_blob(client, source, &id)?,
+            ReadJobBlob { job } => rt.read_job_blob(client, job)?,
+            EditorContext { expected } => json!(rt.editor_context(client, expected)?),
             RuntimeCapabilities => json!(self.capabilities()),
             RuntimeLimits => json!(rt.limits()),
             ListSessions => json!(rt.list_sessions(client)?),
@@ -416,6 +508,13 @@ impl Protocol {
             Open { expected, path } => {
                 let io = rt.project_io().clone();
                 json!(rt.request_open(client, expected, &io, &path, TaskBudget::default())?)
+            }
+            Import {
+                expected,
+                path,
+                format,
+            } => {
+                json!(rt.request_import(client, expected, &path, format, TaskBudget::default())?)
             }
             Save { expected } => {
                 let io = rt.project_io().clone();
@@ -525,19 +624,6 @@ pub struct EncodedReply {
     pub bytes: Arc<[u8]>,
     pub authenticated: Option<crate::local::Auth>,
     pub(crate) _transfer: zipzi_project::TransferReservation,
-}
-pub struct BinarySlice {
-    bytes: Arc<[u8]>,
-}
-impl BinarySlice {
-    pub fn bytes(&self) -> &[u8] {
-        &self.bytes
-    }
-}
-pub struct BinaryReply {
-    pub transfer: Option<zipzi_project::TransferReservation>,
-    pub value: Value,
-    pub payload: Option<BinarySlice>,
 }
 impl Protocol {
     pub fn receive_encoded(

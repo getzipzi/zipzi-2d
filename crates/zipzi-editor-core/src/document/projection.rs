@@ -23,7 +23,7 @@ impl Document {
             .iter()
             .filter_map(|id| {
                 let model_read_guard_53 = self.model();
-                let parameter = model_read_guard_53.get_parameter(id)?;
+                let parameter = model_read_guard_53.parameter(id)?;
                 Some(ParameterValue {
                     id: id.clone(),
                     group_id: groups.get(id.as_str()).cloned().flatten(),
@@ -127,7 +127,7 @@ impl Document {
             "Finish the active editor gesture first"
         );
         ensure!(
-            self.model().get_parameter(parameter_id).is_some(),
+            self.model().parameter(parameter_id).is_some(),
             "Parameter no longer exists"
         );
         if let Some((top_id, bottom_id)) = self.parameter_link_partner(parameter_id) {
@@ -162,11 +162,9 @@ impl Document {
             "The next parameter is already linked"
         );
         let version = self.session.version();
-        let mut edit = self
-            .session
-            .begin_owned_edit("Link parameters", Some(version))?;
+        let mut edit = self.session.begin_draft("Link parameters", Some(version))?;
         edit.apply(|candidate| {
-            let mut info = candidate.candidate_document().display_info().clone();
+            let mut info = candidate.read_document()?.display_info().clone();
             let sets = info.combined_parameters.get_or_insert_with(Vec::new);
             sets.retain(|set| {
                 !set.members.iter().any(|member| {
@@ -248,7 +246,7 @@ impl Document {
             .parameter_ids()
             .iter()
             .filter_map(|id| {
-                let p = model.get_parameter(id)?;
+                let p = model.parameter(id)?;
                 Some((
                     id.clone(),
                     ParameterVisual {
@@ -280,21 +278,21 @@ impl Document {
             }
         };
         for id in model.binding_order() {
-            if let Some(binding) = model.get_binding(id) {
+            if let Some(binding) = model.binding(id) {
                 for axis in &binding.axes {
                     add_axis(&axis.parameter_id, &axis.keys, &binding.mesh_id, None);
                 }
             }
         }
         for id in model.scene_binding_order() {
-            if let Some(binding) = model.get_scene_binding(id) {
+            if let Some(binding) = model.scene_binding(id) {
                 for axis in &binding.axes {
                     add_axis(&axis.parameter_id, &axis.keys, binding.target_id(), None);
                 }
             }
         }
         for id in model.glue_order() {
-            if let Some(binding) = model.get_glue(id).and_then(|glue| glue.binding.as_ref()) {
+            if let Some(binding) = model.glue(id).and_then(|glue| glue.binding.as_ref()) {
                 for axis in &binding.axes {
                     add_axis(&axis.parameter_id, &axis.keys, id, None);
                 }
@@ -302,8 +300,8 @@ impl Document {
         }
         // A key table alone is not an object binding (it can exist unused).
         for id in model.blend_binding_order() {
-            if let Some(binding) = model.get_blend_binding(id) {
-                if let Some(table) = model.get_blend_key_table(&binding.key_table_id) {
+            if let Some(binding) = model.blend_binding(id) {
+                if let Some(table) = model.blend_key_table(&binding.key_table_id) {
                     add_axis(
                         &table.parameter_id,
                         &table.keys,
@@ -373,11 +371,7 @@ impl Document {
             let kind = match x.reference.kind {
                 K::Part if !deformer => TreeNodeKind::Part,
                 K::Mesh => TreeNodeKind::Mesh,
-                K::Deformer => match self
-                    .model()
-                    .get_transform(&x.reference.id)
-                    .map(|t| t.kind())
-                {
+                K::Deformer => match self.model().transform(&x.reference.id).map(|t| t.kind()) {
                     Some(zipzi_core::TransformKind::Rotation) => TreeNodeKind::RotationDeformer,
                     _ => TreeNodeKind::WarpDeformer,
                 },
@@ -395,7 +389,7 @@ impl Document {
                     .hidden_in_editor,
             );
             if kind == TreeNodeKind::Mesh {
-                node.triangles = self.model().get_mesh(&node.id).map(|m| m.triangles.len());
+                node.triangles = self.model().mesh(&node.id).map(|m| m.triangles.len());
             }
             references.push(x.reference.clone());
             nodes.push(node);

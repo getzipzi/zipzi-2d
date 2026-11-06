@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Literal, Self, cast, overload
+import hashlib
 import math
 import time
 from . import values as v
@@ -69,6 +70,19 @@ class Runtime:
             return project(value)
         return resolve(lambda: self._backend.request(encode(operation)))
 
+    def _binary[T](self, operation: v.Operation, payload: bytes, project: Callable[[Any], T]) -> T:
+        def resolve(run: Callable[[], Any]) -> T:
+            try:
+                result = run()
+            except OutcomeUnknown as unknown:
+                unknown._resume = lambda: resolve(self._backend.recover)
+                raise
+            return project(result)
+        return resolve(lambda: self._backend.binary_request(encode(operation), payload))
+
+    def blob(self, length: int) -> Blob:
+        return self._call(v.OperationCreateBlob(length=length), lambda id: Blob(self, id, length))
+
     def capabilities(self) -> tuple[str, ...]:
         return tuple(self._call(v.OperationRuntimeCapabilities()))
 
@@ -132,6 +146,27 @@ class Session:
             raise ValueError('Project path must be absolute on the host')
         return self.runtime._call(v.OperationOpen(expected=self.version, path=str(path)), lambda job: Job[WireMap](self.runtime, job, _freeze))
 
+    def import_project(self, path: Path, format: v.ImportFormat, *, expected: v.Version | None = None) -> Job[WireMap]:
+        if not path.is_absolute():
+            raise ValueError('Import path must be absolute on the host')
+        return self.runtime._call(v.OperationImport(expected=expected or self.version, path=str(path), format=format), lambda job: Job[WireMap](self.runtime, job, _freeze))
+
+    def samples(self, input: v.SampleRequest, *, source: v.QuerySource | None = None) -> Job[WireMap]:
+        return self.runtime._call(v.OperationSample(source=source or self.source, input=input), lambda id: Job(self.runtime, id, _freeze))
+
+    def observe(self, input: v.SampleInput, view: v.ObservationView, *, source: v.QuerySource | None = None) -> Job[WireMap]:
+        return self.runtime._call(v.OperationObserve(source=source or self.source, input=input, view=view), lambda id: Job(self.runtime, id, _freeze))
+
+    def export(self, path: Path, format: v.ExportFormat, *, allow_loss: bool = False, source: v.QuerySource | None = None) -> Job[WireMap]:
+        if not path.is_absolute(): raise ValueError('Export path must be absolute on the host')
+        return self.runtime._call(v.OperationExport(source=source or self.source, path=str(path), format=format, allow_loss=allow_loss), lambda id: Job(self.runtime, id, _freeze))
+
+    def image_blob(self, id: str, *, source: v.QuerySource | None = None) -> Blob:
+        return self.runtime._call(v.OperationReadImageBlob(source=source or self.source, id=id), lambda info: Blob(self.runtime, info['blob'], info['length'], info))
+
+    def editor_context(self) -> WireMap | None:
+        return self.runtime._call(v.OperationEditorContext(expected=self.version), _freeze)
+
     def subscribe(self) -> WireMap:
         return self.runtime._call(v.OperationSubscribe(session=self.id), _freeze)
 
@@ -174,6 +209,12 @@ class Draft:
     def apply(self, *commands: v.Command) -> tuple[WireMap, ...]:
         self._ready()
         return self.session.runtime._call(v.OperationBatch(expected=self._source, commands=commands), self._updated, self._failure)
+
+    def replace_image_blob(self, id: str, blob: Blob, *, width: int, height: int) -> None:
+        self._ready()
+        if blob.runtime is not self.session.runtime:
+            raise ValueError('Blob belongs to another Runtime client')
+        self.session.runtime._call(v.OperationReplaceImageBlob(expected=self._source, id=id, blob=blob.id, width=width, height=height), self._updated, self._failure)
 
     def preview(self, *commands: v.Command) -> tuple[WireMap, ...]:
         """Prepare a gesture position; rejection preserves the last valid Draft."""
@@ -273,6 +314,9 @@ class Job[T]:
                 raise JobTimeout()
             time.sleep(.005)
 
+    def blob(self) -> Blob:
+        return self.runtime._call(v.OperationReadJobBlob(job=self.id), lambda info: Blob(self.runtime, info['blob'], info['length'], info))
+
     def cancel(self) -> None:
         self.runtime._call(v.OperationCancelJob(job=self.id))
 
@@ -297,3 +341,37 @@ class Job[T]:
     def __exit__(self, kind: type[BaseException] | None, error: BaseException | None, tb: TracebackType | None) -> None:
         if not isinstance(error, OutcomeUnknown):
             self.close()
+
+
+class Blob:
+    """Owned bulk bytes. Upload and download one bounded chunk per recoverable call."""
+    def __init__(self, runtime: Runtime, id: str, length: int, info: WireMap | None = None) -> None:
+        self.runtime = runtime
+        self.id = id
+        self.length = length
+        self.info: WireMap = _freeze(info or {})
+        self._closed = False
+
+    def append(self, offset: int, payload: bytes) -> int:
+        if not isinstance(payload, bytes) or len(payload) > 1 << 20:
+            raise ValueError('Payload must be bytes of at most 1 MiB')
+        operation = v.OperationAppendBlobBinary(blob=self.id, offset=offset, length=len(payload), payload_sha256=hashlib.sha256(payload).hexdigest())
+        return self.runtime._binary(operation, payload, lambda result: int(result[0]))
+
+    def seal(self) -> int:
+        return int(self.runtime._call(v.OperationSealBlob(blob=self.id)))
+
+    def read(self, offset: int, length: int) -> bytes:
+        return self.runtime._binary(v.OperationReadBlobBinary(blob=self.id, offset=offset, length=length), b'', lambda result: bytes(result[1]))
+
+    def close(self) -> None:
+        if not self._closed:
+            def done(_: Any) -> None:
+                self._closed = True
+            self.runtime._call(v.OperationReleaseBlob(blob=self.id), done)
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, kind: type[BaseException] | None, error: BaseException | None, tb: TracebackType | None) -> None:
+        if not isinstance(error, OutcomeUnknown): self.close()

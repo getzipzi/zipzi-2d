@@ -141,7 +141,7 @@ pub(crate) fn payload(
     scope: &PropertyScope,
 ) -> Result<Value> {
     let part = model
-        .get_part(id)
+        .part(id)
         .ok_or_else(|| anyhow::anyhow!("Part no longer exists"))?;
     let mut payload = serde_json::to_value(part)?;
     let os = model.offscreen_for_part(id);
@@ -199,13 +199,13 @@ pub(crate) fn values(
 }
 
 pub(crate) fn apply_enabled(
-    edit: &mut zipzi_sdk::EditSession<'_>,
+    edit: &mut zipzi_sdk::Commands<'_>,
     id: &str,
     payload: &Value,
 ) -> Result<()> {
     let next: zipzi_core::Part = serde_json::from_value(payload.clone())?;
-    let model = edit.candidate_document();
-    let part_changed = model.get_part(id) != Some(&next);
+    let model = edit.read_document()?;
+    let part_changed = model.part(id) != Some(&next);
     let composite = model
         .offscreen_for_part(id)
         .filter(|os| next.enabled && !os.enabled)
@@ -226,7 +226,7 @@ pub(crate) fn apply_enabled(
 }
 
 pub(crate) fn apply_offscreen(
-    edit: &mut zipzi_sdk::EditSession<'_>,
+    edit: &mut zipzi_sdk::Commands<'_>,
     id: &str,
     patch: &PropertyPatch,
     payload: &Value,
@@ -236,7 +236,7 @@ pub(crate) fn apply_offscreen(
         "Edit compositing separately from Part fields"
     );
     let data = &payload["offscreen"];
-    let model = edit.candidate_document();
+    let model = edit.read_document()?;
     let original = model.offscreen_for_part(id);
     if patch.changes.contains_key(&OFFSCREEN.key) {
         ensure!(
@@ -245,21 +245,29 @@ pub(crate) fn apply_offscreen(
         );
         if data["present"] == true {
             if original.is_none() {
-                edit.edit_scene(zipzi_contract::document::SceneEdit::Create {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    name: model.get_part(id).unwrap().name.clone(),
-                    object: zipzi_contract::document::SceneCreate::Offscreen,
-                    part_id: Some(id.into()),
-                    parent_id: None,
-                    before: None,
-                    deformation_before: None,
-                })?;
+                edit.edit_scene(
+                    zipzi_contract::document::SceneEdit::Create {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        name: model.part(id).unwrap().name.clone(),
+                        object: zipzi_contract::document::SceneCreate::Offscreen,
+                        part_id: Some(id.into()),
+                        parent_id: None,
+                        before: None,
+                        deformation_before: None,
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )?;
             }
         } else if let Some(os) = original {
-            edit.edit_scene(zipzi_contract::document::SceneEdit::Delete {
-                ids: vec![os.id.clone()],
-                scope: zipzi_contract::document::SceneCopyScope::Selected,
-            })?;
+            edit.edit_scene(
+                zipzi_contract::document::SceneEdit::Delete {
+                    ids: vec![os.id.clone()],
+                    scope: zipzi_contract::document::SceneCopyScope::Selected,
+                },
+                Default::default(),
+                &Default::default(),
+            )?;
         }
         return Ok(());
     }

@@ -5,7 +5,6 @@ use zipzi_contract::authoring::SceneContentCapabilities;
 use zipzi_contract::document::SceneContentEdit;
 use zipzi_contract::document::SceneContentTarget;
 use zipzi_contract::document::SceneContentValue;
-use zipzi_sdk::{SceneContentAddress, SceneContentEditPlan};
 #[derive(Debug, Clone)]
 pub struct SceneContentAuthoringCapabilities {
     pub domain: SceneContentCapabilities,
@@ -25,9 +24,7 @@ impl Document {
             _ => anyhow::bail!("Expected a content owner"),
         };
         Ok(SceneContentAuthoringCapabilities {
-            domain: self
-                .session
-                .scene_content_capabilities(&self.session.handle(kind, &object.id)?)?,
+            domain: self.model().scene_content_capabilities(kind, &object.id)?,
             session_reason: self
                 .pending
                 .as_ref()
@@ -38,33 +35,79 @@ impl Document {
         &self,
         owner: &str,
         target: SceneContentTarget,
-    ) -> Result<SceneContentAddress> {
-        Ok(self.session.scene_content_address(owner, target)?)
+    ) -> Result<
+        crate::FieldCapture<(
+            zipzi_contract::document::SceneContentTarget,
+            zipzi_contract::document::SceneContentValue,
+        )>,
+    > {
+        let captured = self.session.sourced_snapshot();
+        let zipzi_sdk::QuerySource::Published(source) = captured.source else {
+            unreachable!()
+        };
+        let value = captured
+            .snapshot
+            .document()
+            .scene_content_value(owner, &target)?;
+        Ok(crate::FieldCapture {
+            source,
+            id: owner.into(),
+            owner: None,
+            value: (target, value),
+        })
     }
     pub fn plan_scene_content_patch(
         &self,
-        address: &SceneContentAddress,
+        address: &crate::FieldCapture<(
+            zipzi_contract::document::SceneContentTarget,
+            zipzi_contract::document::SceneContentValue,
+        )>,
         value: SceneContentValue,
-    ) -> Result<SceneContentEditPlan> {
+    ) -> Result<crate::EditPreview<zipzi_core::state::SceneContentOutcome>> {
         self.ensure_authoring_idle()?;
-        Ok(self.session.plan_scene_content_patch(address, value)?)
+        Ok(crate::EditPreview::prepare(
+            &self.session,
+            "Edit scene content",
+            Some(address.source),
+            |commands| {
+                commands.patch_scene_content(
+                    &address.id,
+                    &address.value.0,
+                    address.value.1.clone(),
+                    value,
+                    Default::default(),
+                    &Default::default(),
+                )
+            },
+        )?)
     }
-    pub fn plan_scene_content(&self, intent: SceneContentEdit) -> Result<SceneContentEditPlan> {
+    pub fn plan_scene_content(
+        &self,
+        intent: SceneContentEdit,
+    ) -> Result<crate::EditPreview<zipzi_core::state::SceneContentOutcome>> {
         self.ensure_authoring_idle()?;
-        Ok(self.session.plan_scene_content(intent)?)
+        let source = self.session.capture_authoring();
+        let limits = Default::default();
+        Ok(crate::EditPreview::convert(
+            &source,
+            "Edit scene content",
+            limits,
+            &Default::default(),
+            move |commands, control| commands.edit_scene_content(intent, limits, control),
+        )?)
     }
     pub fn execute_scene_content(
         &mut self,
-        plan: &SceneContentEditPlan,
+        plan: &crate::EditPreview<zipzi_core::state::SceneContentOutcome>,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let receipt = self.session.execute_scene_content_plan(plan)?;
-        if receipt.changed {
+        let receipt = plan.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
             self.consume_authoring_receipt(&receipt, true);
             self.context.reconcile(&self.object_index());
         }
-        Ok(self.authoring_result(receipt))
+        Ok(self.authoring_result(receipt).with_preview(plan))
     }
 }
 impl crate::Editor {
@@ -72,14 +115,14 @@ impl crate::Editor {
         &self,
         id: crate::DocumentId,
         intent: SceneContentEdit,
-    ) -> Result<SceneContentEditPlan> {
+    ) -> Result<crate::EditPreview<zipzi_core::state::SceneContentOutcome>> {
         self.ensure_authoring_target(id, "Content")?;
         self.document().unwrap().plan_scene_content(intent)
     }
     pub fn execute_scene_content(
         &mut self,
         id: crate::DocumentId,
-        plan: &SceneContentEditPlan,
+        plan: &crate::EditPreview<zipzi_core::state::SceneContentOutcome>,
     ) -> Result<OperationResult> {
         self.ensure_authoring_target(id, "Content")?;
         self.active_session_mut()

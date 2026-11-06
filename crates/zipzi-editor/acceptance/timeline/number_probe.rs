@@ -122,16 +122,16 @@ pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
             })?;
             projection_build.push(elapsed(start));
             let start = Instant::now();
-            let mut preview =
-                zipzi_sdk::MotionEditingPreview::new(request.source.snapshot.document());
+            let mut preview = zipzi_animation::MotionEditingPreview::new(request.source.document());
             creation.push(elapsed(start));
             let start = Instant::now();
             preview.sample_clip(
-                request
-                    .source
-                    .candidate
-                    .as_ref()
-                    .map(|candidate| candidate.clip()),
+                request.source.candidate.as_ref().and_then(|candidate| {
+                    request
+                        .motion
+                        .as_ref()
+                        .and_then(|motion| candidate.snapshot.document().motion(&motion.clip_id))
+                }),
                 request.identity.time,
             )?;
             sampling.push(elapsed(start));

@@ -8,37 +8,56 @@ fn hosted_view_borrows_original_sdk_instance_and_observes_shared_publication() {
     let mut runtime = Runtime::default();
     let editor = runtime.register_client().unwrap();
     let agent = runtime.register_client().unwrap();
-    let original = AuthoringSession::new(
-        "60000000-0000-4000-8000-000000000001",
-        Canvas::new(100., 100., Vec2::default(), 1.),
+    let snapshot = zipzi_sdk::Snapshot::new(
+        zipzi_core::state::DocumentState::new(
+            "60000000-0000-4000-8000-000000000001",
+            zipzi_core::ModelSetup::default(),
+        )
+        .unwrap(),
+        Default::default(),
     )
     .unwrap();
+    let original = AuthoringSession::new(snapshot);
     let version = original.version();
     let id = runtime.adopt_session(editor, original).unwrap();
-    let view = HostedDocument::new(id);
+    let view = HostedDocument::new(editor, id);
     assert!(std::ptr::eq(
         view.read(&runtime).unwrap(),
-        runtime.session(id).unwrap()
+        runtime.session_read(editor, id).unwrap()
     ));
     assert_eq!(view.read(&runtime).unwrap().version(), version);
-    let edit = runtime
-        .begin_edit(agent, id, "resize", Some(version))
-        .unwrap();
+    runtime.attach(agent, id).unwrap();
+    let draft = runtime.begin_draft(agent, version).unwrap();
     let changed = Canvas::new(200., 100., Vec2::default(), 1.);
-    runtime
-        .apply_edit(agent, edit, |e| e.replace_model_setup(changed))
+    let (draft, _) = runtime
+        .batch(agent, draft, |c| {
+            c.edit_document(zipzi_contract::document::DocumentAuthoringEdit::Patch {
+                expected: zipzi_contract::document::DocumentValue::SourceCanvas(None),
+                value: zipzi_contract::document::DocumentValue::SourceCanvas(Some(changed)),
+            })
+        })
         .unwrap();
-    runtime.commit_edit(agent, edit).unwrap();
-    assert_eq!(view.read(&runtime).unwrap().source_canvas(), Some(changed));
-    assert_eq!(view.read(&runtime).unwrap().history_lengths(), (1, 0));
-    runtime.detach_session(editor, id).unwrap();
-    assert_eq!(view.read(&runtime).unwrap().history_lengths(), (1, 0));
-    runtime.undo(agent, id).unwrap();
+    let publication = runtime.publish(agent, draft, "resize").unwrap();
     assert_eq!(
-        view.read(&runtime).unwrap().version().session_id,
-        version.session_id
+        view.read(&runtime)
+            .unwrap()
+            .snapshot()
+            .document()
+            .setup()
+            .source_canvas,
+        Some(changed)
     );
-    assert_eq!(view.read(&runtime).unwrap().history_lengths(), (0, 1));
+    assert_eq!(view.read(&runtime).unwrap().history_state().undo_steps, 1);
+    runtime.detach(editor, id).unwrap();
+    assert_eq!(view.read(&runtime).unwrap_err().code, "NOT_OWNER");
+    runtime.undo(agent, publication.version).unwrap();
+    runtime.attach(editor, id).unwrap();
+    assert_eq!(
+        view.read(&runtime).unwrap().version().session,
+        version.session
+    );
+    let history = view.read(&runtime).unwrap().history_state();
+    assert_eq!((history.undo_steps, history.redo_steps), (0, 1));
 }
 
 use std::{path::Path, sync::Arc};

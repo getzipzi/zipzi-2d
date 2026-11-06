@@ -10,8 +10,7 @@ pub enum MotionCopyKind {
 }
 #[derive(Clone, Debug)]
 pub struct MotionCopyPlan {
-    native: zipzi_sdk::MotionEditPlan,
-    placement: Vec<MotionEdit>,
+    native: crate::EditPreview<()>,
     pub selection: ObjectRef,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -24,22 +23,21 @@ pub enum AnimationRemoval {
 }
 #[derive(Clone, Debug)]
 enum RemovalPlan {
-    Motion(zipzi_sdk::MotionEditPlan),
-    Expression(zipzi_sdk::ExpressionEditPlan),
+    Motion(MotionEdit),
+    Expression(ExpressionEdit),
 }
 impl RemovalPlan {
-    fn apply(&self, edit: &mut zipzi_sdk::EditSession<'_>) -> Result<()> {
+    fn apply(&self, edit: &mut zipzi_sdk::Commands<'_>) -> Result<()> {
         match self {
-            Self::Motion(plan) => edit.apply_motion_plan(plan)?,
-            Self::Expression(plan) => edit.apply_expression_plan(plan)?,
+            Self::Motion(plan) => edit.edit_motion(plan.clone())?,
+            Self::Expression(plan) => edit.edit_expression(plan.clone())?,
         }
         Ok(())
     }
 }
 #[derive(Clone, Debug)]
 pub struct AnimationDeletionPlan {
-    native: RemovalPlan,
-    version: zipzi_sdk::Version,
+    preview: EditPreview<()>,
     pub source: ObjectRef,
     pub operation: AnimationRemoval,
     pub removed: Vec<ObjectRef>,
@@ -74,7 +72,7 @@ impl Document {
         Ok(match at {
             Some(o) if o.kind == ObjectKind::MotionGroup => {
                 ensure!(
-                    self.model().get_motion_group(&o.id).is_some(),
+                    self.model().motion_group(&o.id).is_some(),
                     "Missing motion group"
                 );
                 (MotionContainer::Group(o.id.clone()), None)
@@ -86,7 +84,7 @@ impl Document {
                 let model = self.model();
                 let entries = match &owner {
                     MotionContainer::Root => model.motion_roots(),
-                    MotionContainer::Group(id) => &model.get_motion_group(id).unwrap().entries,
+                    MotionContainer::Group(id) => &model.motion_group(id).unwrap().entries,
                 };
                 let before = entries
                     .iter()
@@ -121,7 +119,6 @@ impl Document {
         })?;
         Ok(MotionCopyPlan {
             native,
-            placement: vec![],
             selection: ObjectRef::new(ObjectKind::MotionRegistration, id),
         })
     }
@@ -177,6 +174,7 @@ impl Document {
         kind: MotionCopyKind,
         name: String,
     ) -> Result<MotionCopyPlan> {
+        let expected = self.session.version();
         let model = self.model();
         let id = Uuid::new_v4().to_string();
         let mut placement = vec![];
@@ -207,7 +205,7 @@ impl Document {
                     model
                         .motion_order()
                         .iter()
-                        .filter_map(|id| model.get_motion(id).map(|c| c.name.as_str()))
+                        .filter_map(|id| model.motion(id).map(|c| c.name.as_str()))
                         .collect(),
                 );
                 (
@@ -251,32 +249,20 @@ impl Document {
                 )
             }
         };
-        let native = self.plan_motion_authoring(intent)?;
         drop(model);
-        let mut candidate = self
-            .session
-            .begin_owned_edit("Copy motion", Some(native.version()))?;
-        candidate.apply_motion_plan(&native)?;
-        for intent in &placement {
-            candidate.edit_motion(intent.clone())?;
-        }
-        Ok(MotionCopyPlan {
-            native,
-            placement,
-            selection,
-        })
+        let native = EditPreview::prepare(&self.session, "Copy motion", Some(expected), |c| {
+            c.edit_motion(intent)?;
+            for intent in placement {
+                c.edit_motion(intent)?;
+            }
+            Ok(())
+        })?;
+        Ok(MotionCopyPlan { native, selection })
     }
     pub fn execute_motion_copy(&mut self, plan: &MotionCopyPlan) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let mut edit = self
-            .session
-            .begin_owned_edit("Copy or register motion", Some(plan.native.version()))?;
-        edit.apply_motion_plan(&plan.native)?;
-        for intent in &plan.placement {
-            edit.edit_motion(intent.clone())?;
-        }
-        let receipt = edit.commit_to(&mut self.session)?;
-        if receipt.changed {
+        let receipt = plan.native.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
         // This plan only adds identities and orders the library; existing Clip
@@ -285,7 +271,7 @@ impl Document {
         let previous_input = self.animation_input_revision;
         self.consume_authoring_receipt(&receipt, false);
         self.animation_input_revision = previous_input;
-        Ok(self.authoring_result(receipt))
+        Ok(self.authoring_result(receipt).with_preview(&plan.native))
     }
     pub fn plan_animation_deletion(
         &self,
@@ -293,54 +279,54 @@ impl Document {
         operation: AnimationRemoval,
     ) -> Result<AnimationDeletionPlan> {
         self.ensure_authoring_idle()?;
+        let captured = self.session.sourced_snapshot();
+        let zipzi_sdk::QuerySource::Published(expected) = captured.source else {
+            unreachable!()
+        };
         let native = match operation {
             AnimationRemoval::Registration => {
                 ensure!(
                     source.kind == ObjectKind::MotionRegistration,
                     "Expected registration"
                 );
-                RemovalPlan::Motion(self.plan_motion_authoring(
-                    MotionEdit::DeleteRegistrations {
-                        ids: vec![source.id.clone()],
-                    },
-                )?)
+                RemovalPlan::Motion(MotionEdit::DeleteRegistrations {
+                    ids: vec![source.id.clone()],
+                })
             }
             AnimationRemoval::Group | AnimationRemoval::DissolveGroup => {
                 ensure!(
                     source.kind == ObjectKind::MotionGroup,
                     "Expected motion group"
                 );
-                RemovalPlan::Motion(self.plan_motion_authoring(
-                    if operation == AnimationRemoval::Group {
-                        MotionEdit::DeleteGroup {
-                            id: source.id.clone(),
-                        }
-                    } else {
-                        MotionEdit::DissolveGroup {
-                            id: source.id.clone(),
-                        }
-                    },
-                )?)
+                RemovalPlan::Motion(if operation == AnimationRemoval::Group {
+                    MotionEdit::DeleteGroup {
+                        id: source.id.clone(),
+                    }
+                } else {
+                    MotionEdit::DissolveGroup {
+                        id: source.id.clone(),
+                    }
+                })
             }
             AnimationRemoval::Motion => {
                 ensure!(source.kind == ObjectKind::Motion, "Expected motion content");
-                RemovalPlan::Motion(self.plan_motion_authoring(MotionEdit::DeleteClip {
+                RemovalPlan::Motion(MotionEdit::DeleteClip {
                     id: source.id.clone(),
-                })?)
+                })
             }
             AnimationRemoval::Expression => {
                 ensure!(source.kind == ObjectKind::Expression, "Expected expression");
-                RemovalPlan::Expression(self.plan_expression_authoring(ExpressionEdit::Delete {
+                RemovalPlan::Expression(ExpressionEdit::Delete {
                     id: source.id.clone(),
-                })?)
+                })
             }
         };
         let mut candidate = self
             .session
-            .begin_owned_edit("Review animation deletion", None)?;
+            .begin_draft("Review animation deletion", Some(expected))?;
         candidate.apply(|sdk| native.apply(sdk))?;
         let after = candidate.candidate_document();
-        let before = self.model();
+        let before = captured.snapshot.document();
         let mut removed = vec![];
         let mut migrated_to_root = vec![];
         let mut preserved = vec![];
@@ -379,7 +365,7 @@ impl Document {
             }
             let affected = entry.id == source.id || owner == Some(source.id.as_str());
             if affected {
-                if after.get_motion(&entry.clip_id).is_some() {
+                if after.motion(&entry.clip_id).is_some() {
                     preserved.push(ObjectRef::new(ObjectKind::Motion, &entry.clip_id));
                 }
                 if survives {
@@ -390,9 +376,9 @@ impl Document {
         for clip in before
             .motion_order()
             .iter()
-            .filter_map(|id| before.get_motion(id))
+            .filter_map(|id| before.motion(id))
         {
-            if after.get_motion(&clip.id).is_none() {
+            if after.motion(&clip.id).is_none() {
                 removed.push(ObjectRef::new(ObjectKind::Motion, &clip.id));
                 for track in &clip.tracks {
                     removed.push(ObjectRef::new(ObjectKind::MotionTrack, &track.id));
@@ -412,9 +398,9 @@ impl Document {
         for expression in before
             .expression_order()
             .iter()
-            .filter_map(|id| before.get_expression(id))
+            .filter_map(|id| before.expression(id))
         {
-            if after.get_expression(&expression.id).is_none() {
+            if after.expression(&expression.id).is_none() {
                 removed.push(ObjectRef::new(ObjectKind::Expression, &expression.id));
                 removed.extend(
                     expression
@@ -452,9 +438,10 @@ impl Document {
         }
         let preserved_set: std::collections::HashSet<_> = preserved.iter().collect();
         retained_resources.retain(|o| !preserved_set.contains(o));
+        let noop = after.content_id() == before.content_id();
+        let preview = EditPreview::from_candidate(candidate, captured.snapshot.clone(), ())?;
         Ok(AnimationDeletionPlan {
-            native,
-            version: self.session.version(),
+            preview,
             source: source.clone(),
             operation,
             removed,
@@ -462,7 +449,7 @@ impl Document {
             preserved,
             retained_resources,
             blocked_by,
-            noop: after.revision() == before.revision(),
+            noop,
         })
     }
     pub fn execute_animation_deletion(
@@ -474,16 +461,12 @@ impl Document {
             plan.blocked_by.is_empty(),
             AuthoringPlanningError::new("OBJECT_REFERENCED")
         );
-        let mut edit = self
-            .session
-            .begin_owned_edit("Delete animation resource", Some(plan.version))?;
-        edit.apply(|sdk| plan.native.apply(sdk))?;
-        let receipt = edit.commit_to(&mut self.session)?;
-        if receipt.changed {
+        let receipt = plan.preview.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
-        Ok(self.authoring_result(receipt))
+        Ok(self.authoring_result(receipt).with_preview(&plan.preview))
     }
 }
 impl crate::Editor {

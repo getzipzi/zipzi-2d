@@ -1,6 +1,12 @@
 use super::*;
 use zipzi_core::{document::EditorState, SceneReference};
 impl Commands<'_> {
+    pub fn edit_resource(
+        &mut self,
+        edit: zipzi_core::document::ResourceEdit,
+    ) -> Result<(), Status> {
+        self.run(|this| this.builder.edit_resource(edit))
+    }
     pub fn edit_attachment(&mut self, edit: AttachmentEdit) -> Result<(), Status> {
         self.run(|this| this.builder.edit_attachment(edit))
     }

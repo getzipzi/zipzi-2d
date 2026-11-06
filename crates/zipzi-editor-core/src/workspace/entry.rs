@@ -16,7 +16,6 @@ pub(super) struct SavingState {
     pub(super) job: Option<zipzi_runtime::JobId>,
     pub(super) external: bool,
     session: Option<DocumentSession>,
-    faulted: bool,
     pub(super) close_after_save: Option<DeferredClose>,
     frozen: FrozenDocument,
 }
@@ -61,16 +60,10 @@ impl Entry {
         self.state = EntryState::Ready(session);
         close
     }
-    pub(super) fn hosted_session_id(&self) -> zipzi_runtime::SessionId {
+    pub(super) fn hosted_session_id(&self) -> zipzi_sdk::SessionKey {
         match &self.state {
             EntryState::Ready(s) => s.document.session.id,
             EntryState::Saving(s) => s.session.as_ref().unwrap().document.session.id,
-        }
-    }
-    pub(super) fn mark_faulted(&mut self) {
-        if let EntryState::Saving(saving) = &mut self.state {
-            saving.faulted = true;
-            saving.job = None;
         }
     }
     pub(super) fn session(&self) -> Option<&DocumentSession> {
@@ -87,15 +80,13 @@ impl Entry {
     }
     pub(super) fn saving(&self) -> Option<&SavingState> {
         match &self.state {
-            EntryState::Saving(saving) if !saving.faulted => Some(saving),
-            EntryState::Saving(_) => None,
+            EntryState::Saving(saving) => Some(saving),
             EntryState::Ready(_) => None,
         }
     }
     pub(super) fn saving_mut(&mut self) -> Option<&mut SavingState> {
         match &mut self.state {
-            EntryState::Saving(saving) if !saving.faulted => Some(saving),
-            EntryState::Saving(_) => None,
+            EntryState::Saving(saving) => Some(saving),
             EntryState::Ready(_) => None,
         }
     }
@@ -122,7 +113,6 @@ impl Entry {
                 job: None,
                 external: false,
                 session: None,
-                faulted: false,
                 close_after_save,
                 frozen,
             }),

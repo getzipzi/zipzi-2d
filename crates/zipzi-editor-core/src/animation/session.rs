@@ -129,7 +129,7 @@ impl AnimationSession {
             selection.entry.as_ref().is_some_and(|id| {
                 document
                     .model()
-                    .get_motion_registration(id)
+                    .motion_registration(id)
                     .is_none_or(|(_, entry)| entry.clip_id != selection.clip_id)
             })
         });

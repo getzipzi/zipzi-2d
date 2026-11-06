@@ -283,6 +283,9 @@ pub(crate) fn read(
     let s = snapshot.snapshot.document();
     let mut remaining = max_bytes;
     let value = match query {
+        Query::CollectionCapabilities { target } => {
+            bounded(&s.collection_capabilities(&target)?, &mut remaining)?
+        }
         Query::Summary => {
             json!({"id":s.id(),"setup":s.setup(),"meshes":s.mesh_order().len(),"parameters":s.parameter_order().len(),"assets":s.asset_order().len()})
         }

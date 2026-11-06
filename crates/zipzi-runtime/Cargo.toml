@@ -16,6 +16,7 @@ bench-instrumentation = ["zipzi-project/bench-instrumentation"]
 zipzi-contract.workspace = true
 zipzi-api-derive = { version = "=0.1.0-alpha.8", path = "../zipzi-api-derive" }
 zipzi-core.workspace = true
+zipzi-animation.workspace = true
 zipzi-sdk.workspace = true
 zipzi-project.workspace = true
 zipzi-observe = { version = "=0.1.0-alpha.8", path = "../zipzi-observe", default-features = false }

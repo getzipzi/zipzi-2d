@@ -162,7 +162,37 @@ impl DocumentState {
     }
 }
 impl DocumentBuilder {
+    /// Prepare conversion-dependent review on a private candidate. A blocked
+    /// review returns its full decisions without installing partial migrations.
+    pub fn review_deletion(
+        &mut self,
+        request: &DeletionRequest,
+        limits: ConversionLimits,
+        control: &ConversionControl,
+    ) -> Result<DeletionOutcome, Status> {
+        let mut candidate = self.clone();
+        let outcome = candidate.prepare_deletion(request, limits, control)?;
+        if ready(&outcome.report).is_ok() {
+            *self = candidate;
+        }
+        Ok(outcome)
+    }
     pub fn edit_deletion(
+        &mut self,
+        request: &DeletionRequest,
+        limits: ConversionLimits,
+        control: &ConversionControl,
+    ) -> Result<DeletionOutcome, Status> {
+        let mut result = None;
+        self.write(|this| {
+            let outcome = this.review_deletion(request, limits, control)?;
+            ready(&outcome.report)?;
+            result = Some(outcome);
+            Ok(())
+        })?;
+        Ok(result.unwrap())
+    }
+    fn prepare_deletion(
         &mut self,
         request: &DeletionRequest,
         limits: ConversionLimits,
@@ -180,7 +210,13 @@ impl DocumentBuilder {
                 limits.max_workspace_bytes / 2,
             )?;
             let mut report = model.analyze_deletion(request, control)?;
-            ready(&report)?;
+            if ready(&report).is_err() {
+                outcome = Some(DeletionOutcome {
+                    report,
+                    work: Default::default(),
+                });
+                return Ok(());
+            }
             let payload = super::cost::deletion_payload(&model, &report);
             let mut cost = limits.check_conversion(0, payload.saturating_add(index_bytes))?;
             if !model.install_deletion_migrations(
@@ -191,7 +227,10 @@ impl DocumentBuilder {
                 control,
                 &mut cost,
             )? {
-                ready(&report)?;
+                if ready(&report).is_err() {
+                    outcome = Some(DeletionOutcome { report, work: cost });
+                    return Ok(());
+                }
             }
             if !model.install_parameter_deletion(
                 candidate,
@@ -201,7 +240,10 @@ impl DocumentBuilder {
                 control,
                 &mut cost,
             )? {
-                ready(&report)?;
+                if ready(&report).is_err() {
+                    outcome = Some(DeletionOutcome { report, work: cost });
+                    return Ok(());
+                }
             }
             if !model.install_leaf_deletion(
                 candidate,
@@ -211,7 +253,10 @@ impl DocumentBuilder {
                 control,
                 &mut cost,
             )? {
-                ready(&report)?;
+                if ready(&report).is_err() {
+                    outcome = Some(DeletionOutcome { report, work: cost });
+                    return Ok(());
+                }
             }
             let ids: BTreeSet<_> = report
                 .removed

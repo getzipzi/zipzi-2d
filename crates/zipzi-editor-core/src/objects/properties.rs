@@ -9,7 +9,7 @@ impl super::ObjectIndex {
         model: &zipzi_core::state::DocumentState,
         object: &super::ObjectRef,
     ) -> bool {
-        let Some(mesh) = model.get_mesh(&object.id) else {
+        let Some(mesh) = model.mesh(&object.id) else {
             return false;
         };
         let Some(&slot) = self.structure.slots.get(object) else {

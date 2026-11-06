@@ -10,7 +10,7 @@ pub struct ManualMeshTarget {
     pub mapping: AffineUvMap,
     pub texture: SceneTexture,
     pub glue_vertices: Vec<zipzi_core::VertexId>,
-    pub source: zipzi_runtime::SourceRef,
+    pub source: zipzi_sdk::QuerySource,
 }
 
 impl Document {
@@ -62,12 +62,12 @@ impl Document {
         ensure!(!self.has_pending_edit(), "Finish the current edit first");
         let model = self.model();
         let mesh = model
-            .get_mesh(&object.id)
+            .mesh(&object.id)
             .ok_or_else(|| anyhow!("Mesh no longer exists"))?;
         ensure!(
             !self.session.mesh_ids().iter().any(|id| id != &object.id
                 && model
-                    .get_mesh(id)
+                    .mesh(id)
                     .is_some_and(|other| other.texture_asset_id == mesh.texture_asset_id)),
             "Mesh Edit requires an independent source image"
         );
@@ -110,7 +110,7 @@ impl Document {
             glue_vertices: model
                 .glue_order()
                 .iter()
-                .filter_map(|id| model.get_glue(id))
+                .filter_map(|id| model.glue(id))
                 .flat_map(|g| {
                     g.pairs.iter().flat_map(|p| {
                         [
@@ -122,10 +122,7 @@ impl Document {
                     })
                 })
                 .collect(),
-            source: zipzi_runtime::SourceRef::Formal {
-                session: self.session.id,
-                version: self.session.version(),
-            },
+            source: zipzi_sdk::QuerySource::Published(self.session.version()),
         })
     }
 
@@ -139,7 +136,7 @@ impl Document {
             let model = self.model();
             objects
                 .iter()
-                .filter(|o| model.get_mesh(&o.id).is_some())
+                .filter(|o| model.mesh(&o.id).is_some())
                 .cloned()
                 .collect::<Vec<_>>()
         };
@@ -162,7 +159,7 @@ impl Document {
             "Mesh Edit target changed"
         );
         ensure!(
-            self.session.version() == target.source.version(),
+            zipzi_sdk::QuerySource::Published(self.session.version()) == target.source,
             "Mesh Edit source version changed"
         );
         let texture = self
@@ -187,38 +184,50 @@ impl Document {
     ) -> Result<bool> {
         self.validate_manual_target(target)?;
         ensure!(!self.has_pending_edit(), "Finish the current edit first");
-        let source = zipzi_sdk::ManualMeshSource::new(&self.model(), &target.object.id)?;
-        let mut geometry = source.geometry().clone();
+        let captured = self.session.capture_authoring();
+        let source = zipzi_sdk::ManualMeshInspection::capture(
+            captured.captured.snapshot.document(),
+            &target.object.id,
+            Default::default(),
+        )?;
+        let mut geometry = source.geometry.clone();
         let Some(texture) =
             super::mesh_generation::pad_texture_edges(&target.texture, &mut geometry, [margin; 4])?
         else {
             return Ok(false);
         };
-        let version = self.session.version();
-        let plan = source.plan_geometry_with_texture_uvs(
-            source.document(),
-            version,
-            source.geometry().clone(),
-            geometry.uvs,
-            self.session.authoring_limits(),
-            &zipzi_core::document::ConversionControl::default(),
+        let image = self.session.resource_store().prepare_rgba(
+            texture.width,
+            texture.height,
+            texture.rgba,
         )?;
-        let image = self
-            .session
-            .prepare_rgba_image(texture.width, texture.height, texture.rgba)?;
-        let (_, receipt) =
-            self.session
-                .edit("Expand mesh source image", Some(version), |edit| {
-                    edit.apply_manual_mesh_plan(plan)?;
-                    edit.replace_prepared_image(&target.texture.asset_id, &image)?;
-                    Ok(())
-                })?;
-        if receipt.changed {
+        let id = target.object.id.clone();
+        let texture_id = target.texture.asset_id.clone();
+        let limits = zipzi_core::state::ConversionLimits::default();
+        let candidate = crate::EditPreview::convert(
+            &captured,
+            "Expand mesh source image",
+            limits,
+            &Default::default(),
+            move |commands, control| {
+                let outcome = commands.remesh_with_texture_uvs(
+                    &id,
+                    source.geometry,
+                    geometry.uvs,
+                    limits,
+                    control,
+                )?;
+                commands.replace_image(&texture_id, image)?;
+                Ok(outcome)
+            },
+        )?;
+        let receipt = candidate.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.refresh_textures()?;
             self.pristine_blank = None;
             self.after_history(true);
         }
-        Ok(receipt.changed)
+        Ok((receipt.kind != zipzi_sdk::PublicationKind::Unchanged))
     }
 
     pub fn preview_manual_mesh(
@@ -232,7 +241,13 @@ impl Document {
             self.manual_pending = Some(ManualPending {
                 edit: self
                     .session
-                    .begin_owned_edit("Mesh Edit", Some(target.source.version()))?
+                    .begin_draft(
+                        "Mesh Edit",
+                        Some(match target.source {
+                            zipzi_sdk::QuerySource::Published(version) => version,
+                            zipzi_sdk::QuerySource::Draft(source) => source.base,
+                        }),
+                    )?
                     .interactive()?,
                 preview: PreviewState::default(),
                 changed: false,
@@ -269,7 +284,7 @@ impl Document {
             self.manual_pending = Some(ManualPending {
                 edit: self
                     .session
-                    .begin_owned_edit("Mesh Edit", Some(self.session.version()))?
+                    .begin_draft("Mesh Edit", Some(self.session.version()))?
                     .interactive()?,
                 preview: PreviewState::default(),
                 changed: false,
@@ -309,7 +324,7 @@ impl Document {
             if let Some((revision, index)) = cache.as_mut().filter(|(r, _)| *r == previous_revision)
             {
                 let refreshed = objects.iter().all(|object| {
-                    let mesh = model.get_mesh(&object.id).unwrap();
+                    let mesh = model.mesh(&object.id).unwrap();
                     let unchanged = index.get(object).is_some_and(|object| {
                         object.properties["vertices"].as_u64() == Some(mesh.vertex_ids.len() as u64)
                             && object.properties["triangles"].as_u64()
@@ -330,7 +345,7 @@ impl Document {
             objects
                 .iter()
                 .filter(|object| {
-                    let mesh = model.get_mesh(&object.id).unwrap();
+                    let mesh = model.mesh(&object.id).unwrap();
                     topology
                         .as_ref()
                         .and_then(|t| t.meshes.get(&object.id))
@@ -351,12 +366,22 @@ impl Document {
     }
 
     pub fn finish_manual_mesh_gesture(&mut self) -> Result<()> {
-        let Some(pending) = self.manual_pending.take() else {
+        let Some(mut pending) = self.manual_pending.take() else {
             return Ok(());
         };
         if pending.changed {
-            let receipt = pending.edit.commit_to(&mut self.session)?;
-            if receipt.changed {
+            let receipt = match pending.edit.commit_to(&mut self.session) {
+                Ok(receipt) => receipt,
+                Err(error) => {
+                    if pending.edit.is_active() {
+                        self.manual_pending = Some(pending);
+                    } else {
+                        self.invalidate_projection(false);
+                    }
+                    return Err(error.into());
+                }
+            };
+            if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                 self.pristine_blank = None;
             }
             self.consume_authoring_receipt(&receipt, false);

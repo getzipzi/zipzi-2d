@@ -16,6 +16,7 @@ bench-instrumentation = ["zipzi-editor-core/bench-instrumentation", "zipzi-edito
 [dependencies]
 zipzi-animation.workspace = true
 zipzi-contract.workspace = true
+zipzi-project.workspace = true
 uuid.workspace = true
 url = "2"
 serde.workspace = true

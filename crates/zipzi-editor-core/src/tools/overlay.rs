@@ -305,7 +305,7 @@ impl ToolController {
                     .and_then(|hit| {
                         document
                             .model()
-                            .get_transform(&hit.object().id)
+                            .transform(&hit.object().id)
                             .and_then(|t| t.warp_authoring.as_ref().map(|s| s.edit_mode))
                     })
                     .filter(|mode| *mode != zipzi_core::WarpBezierEditMode::Local);

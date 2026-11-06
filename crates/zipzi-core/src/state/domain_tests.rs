@@ -579,3 +579,216 @@ fn invalid_business_records_and_metadata_fail_freeze_without_publishing() {
     assert!(builder.freeze().is_err());
     assert!(base.builder().freeze().is_ok());
 }
+
+#[test]
+fn captured_capabilities_follow_owned_locks_without_session_handles() {
+    use zipzi_contract::authoring::CapabilityState as C;
+    let before = complete();
+    assert!(matches!(
+        before.expression_capabilities(&id(20)).unwrap().delete,
+        C::Available
+    ));
+    assert!(matches!(
+        before.pose_capabilities(&id(22)).unwrap().delete,
+        C::Available
+    ));
+    assert!(matches!(
+        before.motion_capabilities(&id(30)).unwrap().delete,
+        C::Available
+    ));
+    assert!(matches!(
+        before.physics_capabilities(&id(25)).unwrap().patch,
+        C::Available
+    ));
+    let mut builder = before.builder();
+    let mut flags = before.editor_state().clone();
+    for child in [21, 24, 32, 36, 25] {
+        flags.objects.entry(id(child)).or_default().locked = true;
+    }
+    builder.set_editor_state(flags).unwrap();
+    let after = builder.freeze().unwrap().state;
+    let locked = |state| {
+        matches!(
+            state,
+            C::Unavailable {
+                code: "OBJECT_LOCKED"
+            }
+        )
+    };
+    assert!(locked(
+        after.expression_capabilities(&id(20)).unwrap().delete
+    ));
+    assert!(locked(after.pose_capabilities(&id(22)).unwrap().delete));
+    assert!(locked(after.motion_capabilities(&id(30)).unwrap().delete));
+    assert!(locked(after.motion_capabilities(&id(31)).unwrap().delete));
+    assert!(locked(after.motion_capabilities(&id(35)).unwrap().delete));
+    assert!(locked(after.physics_capabilities(&id(25)).unwrap().patch));
+    // Parent patch availability is independent of deleting a locked descendant.
+    assert!(matches!(
+        after.expression_capabilities(&id(20)).unwrap().patch,
+        C::Available
+    ));
+    // Earlier snapshots retain their own capability answers.
+    assert!(matches!(
+        before.motion_capabilities(&id(30)).unwrap().delete,
+        C::Available
+    ));
+    assert!(matches!(
+        before.pose_capabilities(&id(22)).unwrap().delete,
+        C::Available
+    ));
+    assert_eq!(
+        after.pose_capabilities(&id(30)).unwrap_err().code,
+        "MISSING_OBJECT"
+    );
+    assert_eq!(
+        after.expression_capabilities(&id(99)).unwrap_err().code,
+        "MISSING_OBJECT"
+    );
+    assert_eq!(
+        after
+            .builder()
+            .edit_expression(ExpressionEdit::Delete { id: id(20) })
+            .unwrap_err()
+            .code,
+        "OBJECT_LOCKED"
+    );
+    assert_eq!(
+        after
+            .builder()
+            .edit_pose(PoseEdit::Delete { ids: vec![id(22)] })
+            .unwrap_err()
+            .code,
+        "OBJECT_LOCKED"
+    );
+}
+
+#[test]
+fn typed_collection_queries_validate_roles_and_inherit_locks() {
+    use zipzi_contract::{
+        authoring::{CapabilityState as C, ObjectKind as K},
+        kernel_wire::CollectionTarget as T,
+    };
+    let before = complete();
+    assert!(before.contains_object(K::Mesh, &id(6)));
+    assert!(!before.contains_object(K::Parameter, &id(6)));
+    assert!(before.contains_object(K::DrawOrderGroup, before.id()));
+    assert!(!before.contains_object(K::DrawOrderGroup, &id(6)));
+    let entries = T::ExpressionEntries {
+        expression_id: id(20),
+    };
+    assert!(matches!(
+        before.collection_capabilities(&entries).unwrap().create,
+        C::Available
+    ));
+    assert_eq!(
+        before
+            .collection_capabilities(&T::ExpressionEntries {
+                expression_id: id(21)
+            })
+            .unwrap_err()
+            .code,
+        "MISSING_OBJECT"
+    );
+    assert_eq!(
+        before
+            .collection_capabilities(&T::Pose(PoseCollection::Entries { group_id: id(24) }))
+            .unwrap_err()
+            .code,
+        "MISSING_OBJECT"
+    );
+    assert!(matches!(
+        before
+            .binding_capabilities(K::MeshBinding, &id(8))
+            .unwrap()
+            .patch,
+        C::Available
+    ));
+    assert!(matches!(
+        before.scene_capabilities(K::Mesh, &id(6)).unwrap().patch,
+        C::Available
+    ));
+    assert!(matches!(
+        before
+            .resource_capabilities(K::Asset, &id(50))
+            .unwrap()
+            .load_content,
+        C::Available
+    ));
+    assert!(matches!(
+        before
+            .reference_capabilities(K::ModelHitArea, &id(41))
+            .unwrap()
+            .patch,
+        C::Available
+    ));
+    let mut builder = before.builder();
+    let mut flags = before.editor_state().clone();
+    for owner in [2, 20, 23, 35, 40, 50] {
+        flags.objects.entry(id(owner)).or_default().locked = true;
+    }
+    builder.set_editor_state(flags).unwrap();
+    let after = builder.freeze().unwrap().state;
+    let locked = |state| {
+        matches!(
+            state,
+            C::Unavailable {
+                code: "OBJECT_LOCKED"
+            }
+        )
+    };
+    assert!(locked(
+        after.collection_capabilities(&entries).unwrap().create
+    ));
+    assert!(locked(
+        after
+            .collection_capabilities(&T::Pose(PoseCollection::Entries { group_id: id(23) }))
+            .unwrap()
+            .create
+    ));
+    assert!(locked(
+        after
+            .collection_capabilities(&T::Motion(MotionContainer::Group(id(35))))
+            .unwrap()
+            .create
+    ));
+    assert!(locked(
+        after
+            .collection_capabilities(&T::Organization(OrganizationCollection::PartMembers {
+                part_id: Some(id(2))
+            }))
+            .unwrap()
+            .create
+    ));
+    assert!(locked(
+        after
+            .binding_capabilities(K::MeshBinding, &id(8))
+            .unwrap()
+            .patch
+    ));
+    assert!(locked(
+        after.scene_capabilities(K::Mesh, &id(6)).unwrap().patch
+    ));
+    assert!(locked(
+        after
+            .scene_content_capabilities(K::Mesh, &id(6))
+            .unwrap()
+            .edit
+    ));
+    assert!(locked(
+        after
+            .resource_capabilities(K::Asset, &id(50))
+            .unwrap()
+            .patch
+    ));
+    assert!(locked(
+        after
+            .attachment_capabilities(K::Attachment, &id(40))
+            .unwrap()
+            .patch
+    ));
+    assert!(matches!(
+        before.collection_capabilities(&entries).unwrap().create,
+        C::Available
+    ));
+}

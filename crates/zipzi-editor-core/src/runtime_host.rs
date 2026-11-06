@@ -6,19 +6,24 @@ use std::{
 };
 use zipzi_core::Status;
 use zipzi_core::{PreviewValues, preview::PreviewState, state::DocumentState as Model};
-use zipzi_runtime::{ClientId, EditId, EventCursor, EventKind, Runtime, SessionId};
+use zipzi_runtime::{ClientId, Runtime, SessionKey};
 use zipzi_sdk::Publication;
-use zipzi_sdk::{AuthoringSession, EditSession, SaveReceipt, Version};
+use zipzi_sdk::{AuthoringSession, Commands, SaveReceipt, Version};
+use zipzi_sdk::{DraftSource, QuerySource, SourcedSnapshot};
 
 #[derive(Clone)]
 pub struct RuntimeHost {
     pub(crate) runtime: Arc<RwLock<Runtime>>,
-    pristine_views: Arc<std::sync::Mutex<std::collections::HashMap<SessionId, Version>>>,
+    pristine_views: Arc<std::sync::Mutex<std::collections::HashMap<SessionKey, Version>>>,
     pub(crate) client: ClientId,
+    interactions: Arc<std::sync::Mutex<std::collections::HashSet<SessionKey>>>,
     notifiers: Arc<std::sync::Mutex<Vec<async_channel::Sender<()>>>>,
     prepared_views: Arc<
         std::sync::Mutex<
-            std::collections::HashMap<SessionId, Result<crate::document::PreparedDocument, String>>,
+            std::collections::HashMap<
+                SessionKey,
+                Result<crate::document::PreparedDocument, String>,
+            >,
         >,
     >,
 }
@@ -28,25 +33,30 @@ impl Default for RuntimeHost {
     }
 }
 pub(crate) struct HostedInteraction {
-    host: RuntimeHost,
-    session: SessionId,
+    active: Arc<std::sync::Mutex<std::collections::HashSet<SessionKey>>>,
+    session: SessionKey,
 }
 impl Drop for HostedInteraction {
     fn drop(&mut self) {
-        let _ = self
-            .host
-            .write()
-            .end_interaction(self.host.client_id(), self.session);
+        self.active.lock().unwrap().remove(&self.session);
     }
 }
 impl RuntimeHost {
+    /// UI gesture coordination is local to the Editor; other Runtime clients
+    /// remain free to publish and make this gesture's captured source stale.
     pub(crate) fn interaction(
         &self,
-        session: SessionId,
+        session: SessionKey,
     ) -> zipzi_runtime::Result<HostedInteraction> {
-        self.write().begin_interaction(self.client_id(), session)?;
+        self.read().session_read(self.client, session)?;
+        if !self.interactions.lock().unwrap().insert(session) {
+            return Err(Status::error(
+                "EDITOR_BUSY",
+                "Finish the active Editor gesture",
+            ));
+        }
         Ok(HostedInteraction {
-            host: self.clone(),
+            active: self.interactions.clone(),
             session,
         })
     }
@@ -54,15 +64,7 @@ impl RuntimeHost {
         &self,
         job: zipzi_runtime::JobId,
     ) -> zipzi_runtime::Result<zipzi_runtime::Work> {
-        let mut runtime = self.write();
-        match runtime.take_work(job) {
-            Ok(work) => Ok(work),
-            Err(error) => {
-                runtime.cancel_queued_job(self.client_id(), job)?;
-                runtime.release_job(self.client_id(), job)?;
-                Err(error)
-            }
-        }
+        self.write().take_work(job)
     }
     pub fn new() -> Self {
         let mut runtime = Runtime::default();
@@ -71,33 +73,26 @@ impl RuntimeHost {
             runtime: Arc::new(RwLock::new(runtime)),
             pristine_views: Default::default(),
             client,
+            interactions: Default::default(),
             notifiers: Default::default(),
             prepared_views: Default::default(),
         }
     }
     /// Desktop resources use the platform cache, with one shared Runtime disk budget.
     pub fn configure_project_cache(&self, root: std::path::PathBuf) -> anyhow::Result<()> {
-        let budget = self.read().limits().project_disk_bytes;
-        self.write().configure_project_io(
-            zipzi_project::archive::ProjectArchiveStore::new(root)
-                .with_disk_budget(zipzi_project::archive::ProjectDiskBudget::new(budget)),
-        )?;
+        let io = zipzi_project::ProjectIo::new(root, self.read().resources().clone());
+        self.write().configure_project_io(io);
         Ok(())
     }
     pub fn read(&self) -> RwLockReadGuard<'_, Runtime> {
         self.runtime.read().unwrap_or_else(|p| p.into_inner())
     }
     pub fn write(&self) -> RuntimeWrite<'_> {
-        let guard = self
-            .runtime
-            .try_write()
-            .unwrap_or_else(|error| match error {
-                std::sync::TryLockError::Poisoned(p) => p.into_inner(),
-                std::sync::TryLockError::WouldBlock => {
-                    panic!("Runtime write overlapped a read: finish the read before mutation")
-                }
-            });
-        let stamp = guard.host_event_stamp();
+        // Background preparation can finish while the UI captures a read.
+        // Serialize these legitimate owner calls instead of treating overlap
+        // between threads as a programming error.
+        let guard = self.runtime.write().unwrap_or_else(|p| p.into_inner());
+        let stamp = guard.host_state_stamp();
         RuntimeWrite {
             stamp,
             guard: Some(guard),
@@ -113,7 +108,7 @@ impl RuntimeHost {
     }
     pub(crate) fn prepare_view(
         &self,
-        session: SessionId,
+        session: SessionKey,
         prepared: anyhow::Result<crate::document::PreparedDocument>,
     ) {
         self.prepared_views
@@ -123,7 +118,7 @@ impl RuntimeHost {
     }
     pub(crate) fn take_prepared_view(
         &self,
-        session: SessionId,
+        session: SessionKey,
     ) -> anyhow::Result<Option<crate::document::PreparedDocument>> {
         self.prepared_views
             .lock()
@@ -132,21 +127,21 @@ impl RuntimeHost {
             .transpose()
             .map_err(anyhow::Error::msg)
     }
-    pub(crate) fn mark_pristine_view(&self, session: SessionId, version: Version) {
+    pub(crate) fn mark_pristine_view(&self, session: SessionKey, version: Version) {
         let live: std::collections::HashSet<_> = self
             .read()
-            .list_sessions()
+            .session_keys(self.client)
+            .expect("Editor client")
             .into_iter()
-            .map(|info| info.id)
             .collect();
         let mut pristine = self.pristine_views.lock().unwrap();
         pristine.retain(|id, _| live.contains(id));
         pristine.insert(session, version);
     }
-    pub(crate) fn pristine_view(&self, session: SessionId) -> Option<Version> {
+    pub(crate) fn pristine_view(&self, session: SessionKey) -> Option<Version> {
         self.pristine_views.lock().unwrap().get(&session).copied()
     }
-    pub(crate) fn forget_pristine_view(&self, session: SessionId) {
+    pub(crate) fn forget_pristine_view(&self, session: SessionKey) {
         self.pristine_views.lock().unwrap().remove(&session);
     }
     pub fn client_id(&self) -> ClientId {
@@ -158,7 +153,7 @@ impl RuntimeHost {
 }
 
 pub struct RuntimeWrite<'a> {
-    stamp: (zipzi_runtime::EventCursor, u64),
+    stamp: zipzi_runtime::HostStateStamp,
     guard: Option<RwLockWriteGuard<'a, Runtime>>,
     notifiers: &'a std::sync::Mutex<Vec<async_channel::Sender<()>>>,
 }
@@ -175,7 +170,7 @@ impl std::ops::DerefMut for RuntimeWrite<'_> {
 }
 impl Drop for RuntimeWrite<'_> {
     fn drop(&mut self) {
-        let changed = self.guard.as_ref().unwrap().host_event_stamp() != self.stamp;
+        let changed = self.guard.as_ref().unwrap().host_state_stamp() != self.stamp;
         drop(self.guard.take());
         if !changed {
             return;
@@ -189,70 +184,71 @@ impl Drop for RuntimeWrite<'_> {
 
 pub(crate) struct HostedSession {
     pub(crate) host: RuntimeHost,
-    pub(crate) id: SessionId,
+    pub(crate) id: SessionKey,
     client: ClientId,
     path: Option<std::path::PathBuf>,
-    cursor: EventCursor,
+    cursor: Version,
+    last_local: Option<Version>,
+    saved: Option<zipzi_sdk::ContentId>,
     needs_resync: bool,
     management_changed: bool,
     preview: PreviewState,
 }
 pub(crate) struct SessionRead<'a> {
     guard: RwLockReadGuard<'a, Runtime>,
-    id: SessionId,
+    client: ClientId,
+    id: SessionKey,
 }
 impl Deref for SessionRead<'_> {
     type Target = AuthoringSession;
     fn deref(&self) -> &Self::Target {
         self.guard
-            .session(self.id)
-            .expect("editable hosted document")
+            .session_read(self.client, self.id)
+            .expect("resident hosted document")
     }
 }
-pub(crate) struct EditRead<'a> {
-    guard: RwLockReadGuard<'a, Runtime>,
-    client: ClientId,
-    id: EditId,
-}
-impl Deref for EditRead<'_> {
-    type Target = EditSession<'static>;
-    fn deref(&self) -> &Self::Target {
-        self.guard
-            .candidate(self.client, self.id)
-            .expect("retained candidate")
-    }
-}
-pub(crate) enum ModelRead<'a> {
-    Formal(SessionRead<'a>),
-    Candidate(EditRead<'a>),
-    Frozen(Arc<zipzi_sdk::Snapshot>),
-}
-impl Deref for ModelRead<'_> {
+/// A view owns a cheap immutable snapshot, never a Runtime read lock. It can
+/// outlive a publication or Session close without freezing unrelated UI work.
+pub(crate) struct ModelRead(pub(crate) zipzi_sdk::Snapshot);
+impl Deref for ModelRead {
     type Target = Model;
     fn deref(&self) -> &Model {
-        match self {
-            Self::Formal(s) => s.document(),
-            Self::Candidate(e) => e.candidate_document(),
-            Self::Frozen(snapshot) => snapshot.document(),
-        }
+        self.0.document()
     }
 }
 
 impl HostedSession {
+    pub(crate) fn capture_authoring(&self) -> HostedSource {
+        HostedSource {
+            host: self.host.clone(),
+            client: self.client,
+            captured: self.sourced_snapshot(),
+        }
+    }
     pub(crate) fn from_session(session: AuthoringSession) -> anyhow::Result<Self> {
         let host = RuntimeHost::new();
         let id = host.write().adopt_session(host.client, session)?;
         Self::attach(host, id)
     }
-    pub(crate) fn attach(host: RuntimeHost, id: SessionId) -> anyhow::Result<Self> {
-        let info = host.read().session_info(id)?;
-        let cursor = host.read().event_cursor(id)?;
+    pub(crate) fn attach(host: RuntimeHost, id: SessionKey) -> anyhow::Result<Self> {
+        host.write().attach(host.client, id)?;
+        let (cursor, path, saved) = {
+            let runtime = host.read();
+            let sdk = runtime.session_read(host.client, id)?;
+            (
+                sdk.version(),
+                sdk.project().map(|p| p.path().to_owned()),
+                sdk.saved_marker().map(|m| m.content),
+            )
+        };
         Ok(Self {
             client: host.client,
             host,
             id,
-            path: info.path,
+            path,
             cursor,
+            last_local: None,
+            saved,
             needs_resync: false,
             management_changed: false,
             preview: Default::default(),
@@ -276,46 +272,42 @@ impl HostedSession {
         self.client = target.client;
         self.host = target;
         self.refresh_metadata()?;
-        self.cursor = self.host.read().event_cursor(id)?;
+        let version = self.read().version();
+        self.cursor = version;
         Ok(())
     }
     pub(crate) fn read(&self) -> SessionRead<'_> {
         SessionRead {
             guard: self.host.read(),
+            client: self.client,
             id: self.id,
         }
     }
-    /// Fallible queries must tolerate an external job taking SDK ownership
-    /// between UI reads. Keep the checked guard through the query so admission
-    /// cannot race the readiness check.
     pub(crate) fn try_read(&self) -> Result<SessionRead<'_>, Status> {
         let read = self.read();
-        read.guard.session(self.id).map_err(|error| {
-            let code = match error {
-                zipzi_runtime::RuntimeError::Busy => "BUSY",
-                zipzi_runtime::RuntimeError::Faulted => "FAULTED",
-                zipzi_runtime::RuntimeError::InvalidReference => "INVALID_REFERENCE",
-                _ => "SESSION_UNAVAILABLE",
-            };
-            Status::new(code, &error.to_string(), "hosted_session.read")
-        })?;
+        read.guard.session_read(self.client, self.id)?;
         Ok(read)
     }
-    pub(crate) fn document(&self) -> ModelRead<'_> {
-        let guard = self.host.read();
-        if guard.session(self.id).is_ok() {
-            ModelRead::Formal(SessionRead { guard, id: self.id })
-        } else {
-            ModelRead::Frozen(
-                guard
-                    .source_snapshot(self.id)
-                    .expect("frozen hosted source")
-                    .snapshot,
-            )
-        }
+    pub(crate) fn document(&self) -> ModelRead {
+        ModelRead(self.sourced_snapshot().snapshot)
+    }
+    pub(crate) fn sourced_snapshot(&self) -> SourcedSnapshot {
+        self.host
+            .read()
+            .read_snapshot(self.client, self.id)
+            .expect("resident hosted source")
     }
     pub(crate) fn refresh_metadata(&mut self) -> anyhow::Result<()> {
-        self.path = self.host.read().session_info(self.id)?.path;
+        let (path, saved) = {
+            let sdk = self.try_read()?;
+            (
+                sdk.project().map(|p| p.path().to_owned()),
+                sdk.saved_marker().map(|m| m.content),
+            )
+        };
+        self.management_changed |= self.path != path || self.saved != saved;
+        self.path = path;
+        self.saved = saved;
         Ok(())
     }
     pub(crate) fn project_path(&self) -> Option<&std::path::Path> {
@@ -332,40 +324,23 @@ impl HostedSession {
         acknowledge_local: bool,
     ) -> zipzi_runtime::Result<Vec<Publication>> {
         if !acknowledge_local && std::mem::take(&mut self.needs_resync) {
-            return Err(zipzi_runtime::RuntimeError::ResyncRequired);
+            return Err(Status::error(
+                "EVENT_GAP",
+                "Resynchronize Editor projections",
+            ));
         }
         let runtime = self.host.read();
-        let events = match runtime.events_since(self.cursor) {
-            Ok(events) => events,
-            Err(error) => {
-                self.cursor = runtime.event_cursor(self.id)?;
-                return Err(error);
-            }
-        };
-        self.cursor = runtime.event_cursor(self.id)?;
-        self.management_changed |= events
-            .iter()
-            .any(|event| matches!(event.kind, EventKind::Saved(_) | EventKind::StateChanged(_)));
-        // Local fast paths apply their own receipt. Unseen foreign changes must
-        // still rebuild affected projections, even if this acknowledgment moves
-        // past them or the bounded Runtime stream already has a gap.
+        let events = runtime.publications_since(self.client, self.cursor);
+        self.cursor = runtime.session_read(self.client, self.id)?.version();
+        let events = events?;
         if acknowledge_local
-            && events.iter().any(|event| {
-                event.client != Some(self.client) && matches!(event.kind, EventKind::Published(_))
-            })
+            && events
+                .iter()
+                .any(|receipt| Some(receipt.version) != self.last_local)
         {
             self.needs_resync = true;
         }
-        Ok(events
-            .iter()
-            .filter_map(|e| {
-                if let EventKind::Published(r) = &e.kind {
-                    Some(r.as_ref().clone())
-                } else {
-                    None
-                }
-            })
-            .collect())
+        Ok(events)
     }
     pub(crate) fn acknowledge_receipts(&mut self) -> Vec<Publication> {
         match self.poll_receipts(true) {
@@ -376,88 +351,77 @@ impl HostedSession {
             }
         }
     }
-    pub(crate) fn begin_owned_edit(
+    pub(crate) fn begin_draft(
         &self,
         label: impl Into<String>,
         expected: Option<Version>,
-    ) -> zipzi_runtime::Result<HostedEdit> {
-        let id = self
-            .host
-            .write()
-            .prepare_edit(self.client, self.id, label, expected)?;
-        Ok(HostedEdit {
+    ) -> zipzi_runtime::Result<HostedDraft> {
+        let expected = expected.unwrap_or_else(|| self.read().version());
+        let source = self.host.write().begin_draft(self.client, expected)?;
+        Ok(HostedDraft {
             host: self.host.clone(),
-            session: self.id,
             client: self.client,
-            id: Some(id),
-            interactive: false,
-        })
-    }
-    pub(crate) fn begin_image_content_edit(
-        &self,
-        token: &zipzi_sdk::ImageLoadToken,
-        content: Option<zipzi_core::ImageContent>,
-    ) -> zipzi_runtime::Result<HostedEdit> {
-        let edit = self.read().begin_image_content_edit(token, content)?;
-        let id = self
-            .host
-            .write()
-            .register_owned_edit(self.client, self.id, edit)?;
-        Ok(HostedEdit {
-            host: self.host.clone(),
-            session: self.id,
-            client: self.client,
-            id: Some(id),
-            interactive: false,
+            source,
+            description: label.into(),
+            ended: false,
+            interaction: None,
         })
     }
     pub(crate) fn edit<T>(
         &mut self,
         label: impl Into<String>,
         expected: Option<Version>,
-        apply: impl FnOnce(&mut EditSession<'static>) -> Result<T, Status>,
+        apply: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
     ) -> zipzi_runtime::Result<(T, Publication)> {
-        let mut edit = self.begin_owned_edit(label, expected)?;
-        let value = edit.apply_sdk(false, apply)?;
+        let mut edit = self.begin_draft(label, expected)?;
+        let value = edit.batch(apply)?;
         let receipt = edit.commit_to(self)?;
         Ok((value, receipt))
     }
-    pub(crate) fn execute_modeling_plan(
-        &mut self,
-        plan: zipzi_runtime::PlanId,
-        expected: Version,
-    ) -> zipzi_runtime::Result<Publication> {
-        let edit =
-            self.begin_owned_edit("Delete objects and clean dependencies", Some(expected))?;
-        self.host
-            .write()
-            .promote_edit(self.client, edit.id.unwrap())?;
-        self.host
-            .write()
-            .apply_modeling_plan(self.client, edit.id.unwrap(), plan)?;
-        edit.commit_to(self)
-    }
     pub(crate) fn undo(&mut self) -> zipzi_runtime::Result<Publication> {
-        self.host.write().undo(self.client, self.id)
+        let version = self.read().version();
+        let publication = self.host.write().undo(self.client, version)?;
+        self.last_local = Some(publication.version);
+        Ok(publication)
     }
     pub(crate) fn redo(&mut self) -> zipzi_runtime::Result<Publication> {
-        self.host.write().redo(self.client, self.id)
+        let version = self.read().version();
+        let publication = self.host.write().redo(self.client, version)?;
+        self.last_local = Some(publication.version);
+        Ok(publication)
     }
     pub(crate) fn save_project(
         &mut self,
         path: &std::path::Path,
-        _: Option<Version>,
+        expected: Option<Version>,
     ) -> anyhow::Result<SaveReceipt> {
-        let job = self.host.write().request_save(self.client, self.id, path)?;
-        let work = self.host.dispatch_job(job)?;
+        let version = expected.unwrap_or_else(|| self.read().version());
+        let io = self.host.read().project_io().clone();
+        let (job, work) = self.host.write().start_save_as(
+            self.client,
+            version,
+            &io,
+            path,
+            None,
+            Default::default(),
+        )?;
         let completion = work.run();
-        self.host.write().complete(completion);
-        let result = self.host.read().job_info(self.client, job)?.result.unwrap();
+        self.host
+            .write()
+            .complete(completion)
+            .expect("Editor save completion belongs to its host");
+        let result = self
+            .host
+            .read()
+            .job(self.client, job)?
+            .result
+            .clone()
+            .expect("completed save");
         self.host.write().release_job(self.client, job)?;
         self.refresh_metadata()?;
         match result? {
             zipzi_runtime::JobValue::Saved(receipt) => Ok(receipt),
-            _ => unreachable!(),
+            _ => unreachable!("save returned a different job value"),
         }
     }
     pub(crate) fn preview_values(&self) -> &PreviewValues {
@@ -465,161 +429,291 @@ impl HostedSession {
     }
     pub(crate) fn set_preview_values(&mut self, values: PreviewValues) -> anyhow::Result<bool> {
         let runtime = self.host.read();
-        let sdk = runtime.session(self.id)?;
+        let sdk = runtime.session_read(self.client, self.id)?;
         self.preview
-            .replace(sdk.document(), sdk.version().generation, values)
+            .replace(sdk.snapshot().document(), sdk.version().generation, values)
             .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))
     }
     pub(crate) fn preview_frame(&mut self) -> anyhow::Result<Arc<zipzi_core::DrawableFrame>> {
         let runtime = self.host.read();
-        let sdk = runtime.session(self.id)?;
+        let sdk = runtime.session_read(self.client, self.id)?;
         self.preview
-            .frame(sdk.document(), sdk.version().generation)
+            .frame(sdk.snapshot().document(), sdk.version().generation)
             .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))
     }
 }
 
-pub(crate) struct HostedEdit {
+#[derive(Clone)]
+pub(crate) struct HostedSource {
     host: RuntimeHost,
-    session: SessionId,
     client: ClientId,
-    id: Option<EditId>,
-    interactive: bool,
+    pub captured: SourcedSnapshot,
 }
-impl HostedEdit {
-    pub(crate) fn apply_manual_mesh_batch(
-        &mut self,
-        operations: Vec<(String, zipzi_contract::authoring::ManualMeshOperation)>,
-    ) -> zipzi_runtime::Result<()> {
-        self.apply_sdk(true, |edit| {
-            edit.edit_manual_mesh_batch(operations).map(|_| ())
+impl std::fmt::Debug for HostedSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HostedSource")
+            .field("source", &self.captured.source)
+            .finish()
+    }
+}
+impl HostedSource {
+    pub fn resource_store(&self) -> zipzi_project::ResourceStore {
+        self.host.read().resources().clone()
+    }
+    pub fn version(&self) -> Version {
+        match self.captured.source {
+            QuerySource::Published(version) => version,
+            _ => unreachable!("captured published source"),
+        }
+    }
+    pub fn begin_draft(&self, description: &str) -> Result<HostedDraft, Status> {
+        let source = self.host.write().begin_draft(self.client, self.version())?;
+        Ok(HostedDraft {
+            host: self.host.clone(),
+            client: self.client,
+            source,
+            description: description.into(),
+            ended: false,
+            interaction: None,
         })
     }
+}
 
-    pub(crate) fn apply_manual_mesh(
+pub(crate) struct HostedDraft {
+    host: RuntimeHost,
+    client: ClientId,
+    source: DraftSource,
+    description: String,
+    ended: bool,
+    interaction: Option<HostedInteraction>,
+}
+impl HostedDraft {
+    pub(crate) fn request_batch(
         &mut self,
-        mesh_id: &str,
-        operation: zipzi_contract::authoring::ManualMeshOperation,
-    ) -> zipzi_runtime::Result<zipzi_contract::authoring::ManualMeshTransferReport> {
-        let expected = self.source_ref();
-        let result = self.host.write().apply_authoring(
+        budget: zipzi_runtime::TaskBudget,
+        run: impl FnOnce(&mut Commands<'_>, &zipzi_runtime::Cancellation) -> Result<(), Status>
+        + Send
+        + 'static,
+    ) -> Result<zipzi_runtime::JobId, Status> {
+        self.host
+            .write()
+            .request_batch(self.client, self.source, budget, run)
+    }
+    pub(crate) fn finish_batch(&mut self, job: zipzi_runtime::JobId) -> Result<(), Status> {
+        let mut runtime = self.host.write();
+        let result = runtime
+            .job(self.client, job)?
+            .result
+            .clone()
+            .ok_or_else(|| Status::error("JOB_PENDING", "Batch has not completed"))?;
+        runtime.release_job(self.client, job)?;
+        match result {
+            Ok(zipzi_runtime::JobValue::DraftUpdated(source)) => {
+                self.source = source;
+                Ok(())
+            }
+            Ok(_) => Err(Status::error("JOB_RESULT", "Expected Draft update")),
+            Err(error) => {
+                self.ended = true;
+                self.interaction.take();
+                Err(error)
+            }
+        }
+    }
+    /// Run conversion work without holding the resident Runtime lock. The worker
+    /// receives only its owned Draft; completion is installed under the host lock.
+    pub(crate) fn worker_batch<T: Send + 'static>(
+        &mut self,
+        budget: zipzi_runtime::TaskBudget,
+        run: impl FnOnce(&mut Commands<'_>, &zipzi_runtime::Cancellation) -> Result<T, Status>
+        + Send
+        + 'static,
+    ) -> Result<T, Status> {
+        let output = Arc::new(std::sync::Mutex::new(None));
+        let worker_output = output.clone();
+        let job = self.host.write().request_batch(
             self.client,
-            self.id.expect("active candidate"),
-            vec![zipzi_runtime::authoring::EditOperation::Modeling {
-                operation: Box::new(zipzi_runtime::modeling::ModelingCommand::ManualMesh {
-                    mesh_id: mesh_id.into(),
-                    expected,
-                    operation,
-                }),
-            }],
+            self.source,
+            budget,
+            move |commands, cancel| {
+                let value = run(commands, cancel)?;
+                *worker_output.lock().unwrap_or_else(|p| p.into_inner()) = Some(value);
+                Ok(())
+            },
         )?;
-        Ok(result.mesh_transfer.expect("manual transfer report"))
-    }
-
-    pub(crate) fn source_ref(&self) -> zipzi_runtime::SourceRef {
-        let edit = self.id.expect("active candidate");
-        let sequence = self
-            .host
-            .read()
-            .edit_sequence(self.client, edit)
-            .expect("active candidate sequence");
-        zipzi_runtime::SourceRef::Edit {
-            session: self.session,
-            edit,
-            base: self.base_version(),
-            sequence,
+        let work = match self.host.dispatch_job(job) {
+            Ok(work) => work,
+            Err(error) => {
+                let mut runtime = self.host.write();
+                let _ = runtime.cancel_job(self.client, job);
+                let _ = runtime.release_job(self.client, job);
+                self.ended = true;
+                return Err(error);
+            }
+        };
+        let completion = work.run_with_stack("editor-conversion", 8 * 1024 * 1024);
+        let result = {
+            let mut runtime = self.host.write();
+            runtime.complete(completion).map_err(|_| {
+                Status::error(
+                    "WRONG_RUNTIME",
+                    "Conversion completion belongs to another host",
+                )
+            })?;
+            let result = runtime
+                .job(self.client, job)?
+                .result
+                .clone()
+                .ok_or_else(|| Status::error("JOB_PENDING", "Conversion did not finish"))?;
+            runtime.release_job(self.client, job)?;
+            result
+        };
+        match result {
+            Ok(zipzi_runtime::JobValue::DraftUpdated(source)) => self.source = source,
+            Ok(_) => return Err(Status::error("JOB_RESULT", "Expected a Draft update")),
+            Err(error) => {
+                self.ended = true;
+                self.interaction.take();
+                return Err(error);
+            }
         }
+        output
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .take()
+            .ok_or_else(|| Status::error("JOB_RESULT", "Conversion returned no outcome"))
     }
-    pub(crate) fn read(&self) -> EditRead<'_> {
-        EditRead {
-            guard: self.host.read(),
-            client: self.client,
-            id: self.id.expect("active candidate"),
-        }
+    pub(crate) fn read_snapshot(&self) -> zipzi_runtime::Result<SourcedSnapshot> {
+        self.host.read().read_draft(self.client, self.source)
     }
-    pub(crate) fn candidate_document(&self) -> ModelRead<'_> {
-        ModelRead::Candidate(self.read())
+    pub(crate) fn candidate_document(&self) -> ModelRead {
+        ModelRead(self.read_snapshot().expect("active Editor Draft").snapshot)
+    }
+    pub(crate) fn source_ref(&self) -> QuerySource {
+        QuerySource::Draft(self.source)
     }
     pub(crate) fn base_version(&self) -> Version {
-        self.read().base_version()
+        self.source.base
     }
     pub(crate) fn claim_interaction(&mut self) -> zipzi_runtime::Result<()> {
-        self.host
-            .write()
-            .promote_edit(self.client, self.id.unwrap())?;
-        self.host
-            .write()
-            .begin_interaction(self.client, self.session)?;
-        self.interactive = true;
+        if self.interaction.is_none() {
+            self.interaction = Some(self.host.interaction(self.source.base.session)?);
+        }
         Ok(())
     }
     pub(crate) fn interactive(mut self) -> zipzi_runtime::Result<Self> {
         self.claim_interaction()?;
         Ok(self)
     }
-    pub(crate) fn apply<T>(
+    pub(crate) fn batch<T>(
         &mut self,
-        apply: impl FnOnce(&mut EditSession<'static>) -> anyhow::Result<T>,
-    ) -> anyhow::Result<T> {
-        Ok(self.apply_inner(false, apply)??)
-    }
-    fn apply_inner<T, E>(
-        &mut self,
-        recoverable: bool,
-        apply: impl FnOnce(&mut EditSession<'static>) -> Result<T, E>,
-    ) -> zipzi_runtime::Result<Result<T, E>> {
-        let mut work = self
-            .host
-            .write()
-            .lease_candidate(self.client, self.id.unwrap())?;
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| work.apply(apply)));
-        let failed = result.as_ref().map_or(true, |value| value.is_err());
-        let returned = self
-            .host
-            .write()
-            .return_candidate(work, failed, recoverable);
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
+    ) -> zipzi_runtime::Result<T> {
+        let result = self.host.write().batch(self.client, self.source, run);
         match result {
-            Ok(value) => {
-                returned?;
+            Ok((source, value)) => {
+                self.source = source;
                 Ok(value)
             }
-            Err(panic) => std::panic::resume_unwind(panic),
+            Err(error) => {
+                if !matches!(
+                    error.code.as_str(),
+                    "DRAFT_BUSY" | "PROJECT_BUSY" | "NOT_OWNER" | "CLIENT_NOT_FOUND"
+                ) {
+                    self.ended = true;
+                    self.interaction.take();
+                }
+                Err(error)
+            }
         }
     }
-    pub(crate) fn apply_sdk<T>(
+    pub(crate) fn preview<T>(
         &mut self,
-        recoverable: bool,
-        apply: impl FnOnce(&mut EditSession<'static>) -> Result<T, Status>,
+        run: impl FnOnce(&mut Commands<'_>) -> Result<T, Status>,
     ) -> zipzi_runtime::Result<T> {
-        self.apply_inner(recoverable, apply)?.map_err(Into::into)
+        let (source, value) = self.host.write().preview(self.client, self.source, run)?;
+        self.source = source;
+        Ok(value)
+    }
+    pub(crate) fn apply<T>(
+        &mut self,
+        run: impl FnOnce(&mut Commands<'_>) -> anyhow::Result<T>,
+    ) -> anyhow::Result<T> {
+        Ok(self.batch(|commands| {
+            run(commands).map_err(|error| {
+                error
+                    .downcast_ref::<Status>()
+                    .cloned()
+                    .unwrap_or_else(|| Status::error("EDITOR_COMMAND", error.to_string()))
+            })
+        })?)
+    }
+    pub(crate) fn apply_manual_mesh_batch(
+        &mut self,
+        operations: Vec<(String, zipzi_contract::authoring::ManualMeshOperation)>,
+    ) -> zipzi_runtime::Result<()> {
+        self.preview(|commands| {
+            for (mesh, operation) in operations {
+                commands.edit_manual_mesh(
+                    &mesh,
+                    operation,
+                    Default::default(),
+                    &Default::default(),
+                )?;
+            }
+            Ok(())
+        })
+    }
+    pub(crate) fn apply_manual_mesh(
+        &mut self,
+        mesh: &str,
+        operation: zipzi_contract::authoring::ManualMeshOperation,
+    ) -> zipzi_runtime::Result<zipzi_sdk::ManualMeshTransferReport> {
+        self.preview(|commands| {
+            commands
+                .edit_manual_mesh(mesh, operation, Default::default(), &Default::default())
+                .map(|outcome| outcome.report)
+        })
+    }
+    pub(crate) fn is_active(&self) -> bool {
+        !self.ended
     }
     pub(crate) fn commit_to(
-        mut self,
+        &mut self,
         session: &mut HostedSession,
     ) -> zipzi_runtime::Result<Publication> {
-        if self.session != session.id || !self.host.same_host(&session.host) {
-            return Err(zipzi_runtime::RuntimeError::InvalidReference);
+        if session.id != self.source.base.session || !session.host.same_host(&self.host) {
+            return Err(Status::error(
+                "NOT_OWNER",
+                "Draft belongs to another hosted document",
+            ));
         }
-        let id = self.id.unwrap();
-        self.host.write().promote_edit(self.client, id)?;
-        let result = self.host.write().commit_edit(self.client, id);
-        if result.is_ok() {
-            self.id = None;
+        let result = self
+            .host
+            .write()
+            .publish(self.client, self.source, self.description.clone());
+        if result.as_ref().err().is_none_or(|error| {
+            !matches!(
+                error.code.as_str(),
+                "DRAFT_BUSY" | "PROJECT_BUSY" | "NOT_OWNER" | "CLIENT_NOT_FOUND"
+            )
+        }) {
+            self.ended = true;
+            self.interaction.take();
+        }
+        if let Ok(publication) = &result {
+            session.last_local = Some(publication.version);
         }
         result
     }
 }
-impl Drop for HostedEdit {
+impl Drop for HostedDraft {
     fn drop(&mut self) {
-        if self.id.is_none() && !self.interactive {
-            return;
-        }
-        let mut runtime = self.host.write();
-        if let Some(id) = self.id {
-            let _ = runtime.release_edit(self.client, id);
-        }
-        if self.interactive {
-            let _ = runtime.end_interaction(self.client, self.session);
+        if !self.ended {
+            let _ = self
+                .host
+                .write()
+                .cancel_draft(self.client, self.source.draft);
         }
     }
 }
@@ -635,17 +729,18 @@ mod receipt_tests {
         let host = document.runtime_host();
         let session = document.runtime_session_id();
         let agent = host.write().register_client()?;
+        host.write().attach(agent, session)?;
         let publish = |width: f32| -> anyhow::Result<()> {
-            let edit = host.write().begin_edit(agent, session, "resize", None)?;
-            host.write().apply_edit(agent, edit, |edit| {
-                edit.replace_model_setup(zipzi_core::Canvas::new(
-                    width,
-                    100.,
-                    Default::default(),
-                    1.,
-                ))
+            let version = host.read().session_read(agent, session)?.version();
+            let draft = host.write().begin_draft(agent, version)?;
+            let (draft, ()) = host.write().batch(agent, draft, |commands| {
+                commands.create_parameter(zipzi_core::Parameter {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    name: format!("parameter {width}"),
+                    ..Default::default()
+                })
             })?;
-            host.write().commit_edit(agent, edit)?;
+            host.write().publish(agent, draft, "create parameter")?;
             Ok(())
         };
         publish(200.)?;
@@ -667,6 +762,87 @@ mod receipt_tests {
 #[cfg(test)]
 mod notification_tests {
     use super::*;
+
+    fn session() -> anyhow::Result<HostedSession> {
+        let host = RuntimeHost::new();
+        let id = host.write().create_session(
+            host.client,
+            &uuid::Uuid::new_v4().to_string(),
+            Default::default(),
+        )?;
+        HostedSession::attach(host, id)
+    }
+
+    #[test]
+    fn busy_publication_retains_interactive_candidate_for_retry() -> anyhow::Result<()> {
+        let mut session = session()?;
+        let mut draft = session.begin_draft("gesture", None)?.interactive()?;
+        let id = uuid::Uuid::new_v4().to_string();
+        draft.batch(|c| {
+            c.create_parameter(zipzi_core::Parameter {
+                id: id.clone(),
+                ..Default::default()
+            })
+        })?;
+        let captured = draft.read_snapshot()?;
+        let version = session.read().version();
+        let io = session.host.read().project_io().clone();
+        let dir = tempfile::tempdir()?;
+        let (job, work) = session.host.write().start_save_as(
+            session.client,
+            version,
+            &io,
+            &dir.path().join("view.zipzi"),
+            None,
+            Default::default(),
+        )?;
+        assert_eq!(
+            draft.commit_to(&mut session).unwrap_err().code,
+            "PROJECT_BUSY"
+        );
+        assert!(draft.is_active());
+        assert_eq!(draft.read_snapshot()?.source, captured.source);
+        assert!(session.host.interaction(session.id).is_err());
+        session.host.write().complete(work.run()).unwrap();
+        session.host.write().release_job(session.client, job)?;
+        draft.commit_to(&mut session)?;
+        assert!(!draft.is_active());
+        assert!(session.host.interaction(session.id).is_ok());
+        assert!(session.document().parameter(&id).is_some());
+        assert_eq!(captured.snapshot.document().parameter(&id).unwrap().id, id);
+        Ok(())
+    }
+
+    #[test]
+    fn local_gesture_does_not_block_foreign_publication_or_hold_read_locks() -> anyhow::Result<()> {
+        let mut session = session()?;
+        let before = session.document();
+        let mut gesture = session.begin_draft("gesture", None)?.interactive()?;
+        let agent = session.host.write().register_client()?;
+        session.host.write().attach(agent, session.id)?;
+        let other = session
+            .host
+            .write()
+            .begin_draft(agent, gesture.base_version())?;
+        let id = uuid::Uuid::new_v4().to_string();
+        let (other, ()) = session.host.write().batch(agent, other, |c| {
+            c.create_parameter(zipzi_core::Parameter {
+                id: id.clone(),
+                ..Default::default()
+            })
+        })?;
+        session.host.write().publish(agent, other, "foreign")?;
+        assert!(before.parameter(&id).is_none());
+        assert!(session.document().parameter(&id).is_some());
+        assert_eq!(
+            gesture.commit_to(&mut session).unwrap_err().code,
+            "STALE_SOURCE"
+        );
+        assert!(!gesture.is_active());
+        assert!(session.host.interaction(session.id).is_ok());
+        Ok(())
+    }
+
     #[test]
     fn candidate_table_changes_stay_quiet_but_publication_and_job_states_wake_views()
     -> anyhow::Result<()> {
@@ -678,32 +854,37 @@ mod notification_tests {
             zipzi_core::ModelSetup::default(),
         )?;
         let receiver = host.subscribe_changes();
-        let edit = host
-            .write()
-            .prepare_edit(client, session, "preview", None)?;
-        host.write().promote_edit(client, edit)?;
-        let mut candidate = host.write().lease_candidate(client, edit)?;
-        candidate.apply(|edit| {
-            edit.replace_model_setup(zipzi_core::Canvas::new(200., 100., Default::default(), 1.))
+        let version = host.read().session_read(client, session)?.version();
+        let draft = host.write().begin_draft(client, version)?;
+        let (draft, ()) = host.write().preview(client, draft, |commands| {
+            commands.create_parameter(zipzi_core::Parameter {
+                id: uuid::Uuid::new_v4().to_string(),
+                ..Default::default()
+            })
         })?;
-        host.write().return_candidate(candidate, false, false)?;
         assert!(
             receiver.try_recv().is_err(),
             "candidate bookkeeping woke formal projections"
         );
-        host.write().commit_edit(client, edit)?;
+        let publication = host.write().publish(client, draft, "preview")?;
         receiver.try_recv()?;
         let directory = tempfile::tempdir()?;
-        let job = host
-            .write()
-            .request_save(client, session, directory.path())?;
+        let io = host.read().project_io().clone();
+        let job = host.write().request_save_as(
+            client,
+            publication.version,
+            &io,
+            &directory.path().join("view.zipzi"),
+            None,
+            Default::default(),
+        )?;
         receiver.try_recv()?;
         let work = host.write().take_work(job)?;
-        assert!(receiver.try_recv().is_err());
-        host.write().complete(work.run());
+        receiver.try_recv()?;
+        host.write().complete(work.run()).unwrap();
         receiver.try_recv()?;
         host.write().release_job(client, job)?;
-        assert!(receiver.try_recv().is_err());
+        receiver.try_recv()?;
         host.write().close_session(client, session, false)?;
         receiver.try_recv()?;
         Ok(())
@@ -713,7 +894,7 @@ mod notification_tests {
 impl zipzi_runtime::editor_context::EditorContextProvider for crate::Editor {
     fn editor_context(
         &self,
-        session: SessionId,
+        session: SessionKey,
     ) -> Option<zipzi_runtime::editor_context::EditorContext> {
         let document = self.document()?;
         if document.runtime_session_id() != session {

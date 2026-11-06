@@ -12,51 +12,32 @@ use anyhow::{Result, ensure};
 pub use evaluation::{AnimationEvaluated, AnimationEvaluator};
 pub use provenance::{AnimationIdentity, AnimationRequest};
 pub use resources::{ExpressionResource, ExpressionTrigger, MotionResource, MotionSelection};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use zipzi_animation::ExpressionTransition;
 use zipzi_animation::MotionPreview;
 use zipzi_animation::MotionSnapshot;
-use zipzi_sdk::Snapshot;
+use zipzi_sdk::{Snapshot, SourcedSnapshot};
 
 pub struct AnimationSource {
-    /// Immutable committed model shared by all revisions of a gesture.
-    pub snapshot: Arc<Snapshot>,
+    /// Captured model/resource pair with its exact published or inspector source.
+    pub snapshot: Arc<SourcedSnapshot>,
     pub textures: Arc<[SceneTexture]>,
-    /// Validated motion overlay; the base document remains unchanged.
-    pub candidate: Option<Arc<zipzi_sdk::MotionClipCandidate>>,
-    /// Detached inspector candidate; remains isolated from authoring history.
-    pub properties: Option<Arc<zipzi_core::state::DocumentState>>,
-    pub(crate) materialized: OnceLock<Arc<Snapshot>>,
+    /// A Timeline preview carries a complete, validated Draft snapshot.
+    pub candidate: Option<Arc<SourcedSnapshot>>,
 }
 
 impl AnimationSource {
     pub fn document(&self) -> &zipzi_core::state::DocumentState {
-        self.properties
-            .as_deref()
-            .unwrap_or_else(|| self.snapshot.document())
+        self.snapshot.snapshot.document()
     }
 
     pub(super) fn same_document(&self, other: &Self) -> bool {
-        self.snapshot.version() == other.snapshot.version()
-            && match (&self.properties, &other.properties) {
-                (None, None) => true,
-                (Some(a), Some(b)) => Arc::ptr_eq(a, b),
-                _ => false,
-            }
+        self.snapshot.source == other.snapshot.source
+            && self.snapshot.snapshot.content_id() == other.snapshot.snapshot.content_id()
     }
 
-    /// Result playback needs a document containing the candidate. Raw editing
-    /// samples its curve overlay directly and shares the immutable model.
-    pub fn materialized_snapshot(&self) -> Result<Arc<Snapshot>> {
-        let Some(candidate) = &self.candidate else {
-            return Ok(self.snapshot.clone());
-        };
-        if let Some(snapshot) = self.materialized.get() {
-            return Ok(snapshot.clone());
-        }
-        let snapshot = Arc::new(self.snapshot.with_motion_candidate(candidate)?);
-        let _ = self.materialized.set(snapshot);
-        Ok(self.materialized.get().unwrap().clone())
+    pub fn evaluation_snapshot(&self) -> &Snapshot {
+        &self.candidate.as_ref().unwrap_or(&self.snapshot).snapshot
     }
 }
 

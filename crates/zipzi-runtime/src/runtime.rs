@@ -1,10 +1,16 @@
+mod bulk;
+mod hosting;
+mod tasks;
+pub use bulk::BlobBytes;
+pub(crate) mod imports;
 mod wire;
 use crate::jobs::{Batch, Identity, Output, Read, Task, TaskKind};
 use crate::*;
+pub use hosting::HostStateStamp;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 use zipzi_core::{state::DocumentState, ModelSetup};
 use zipzi_project::{
@@ -16,8 +22,10 @@ struct SessionEntry {
     sdk: AuthoringSession,
     users: HashSet<ClientId>,
     saving: Option<JobId>,
-    events: VecDeque<Publication>,
+    events: VecDeque<PublicationEvent>,
     event_floor: Version,
+    protected_paths: Vec<PathBuf>,
+    editor_context: Option<crate::editor_context::EditorContext>,
 }
 enum DraftState {
     Ready(Draft),
@@ -48,10 +56,11 @@ pub struct Runtime {
     sessions: HashMap<SessionKey, SessionEntry>,
     drafts: HashMap<DraftId, DraftEntry>,
     jobs: HashMap<JobId, JobEntry>,
-    queue: VecDeque<Work>,
+    queue: VecDeque<Mutex<Work>>,
     budget: ImageMemoryBudget,
     paths: HashMap<PathBuf, SessionKey>,
     reservations: HashMap<PathBuf, JobId>,
+    blobs: HashMap<BlobId, bulk::BlobEntry>,
 }
 impl Default for Runtime {
     fn default() -> Self {
@@ -80,6 +89,7 @@ impl Runtime {
             budget,
             paths: HashMap::new(),
             reservations: HashMap::new(),
+            blobs: HashMap::new(),
         }
     }
     pub fn register_client(&mut self) -> Result<ClientId> {
@@ -143,6 +153,8 @@ impl Runtime {
             id,
             SessionEntry {
                 sdk,
+                protected_paths: Vec::new(),
+                editor_context: None,
                 users: HashSet::from([client]),
                 saving: None,
                 events: VecDeque::new(),
@@ -261,7 +273,7 @@ impl Runtime {
             .unwrap()
             .sdk
             .publish(prepared)?;
-        self.record_publications(expected.base.session);
+        self.record_publications(expected.base.session, client);
         Ok(receipt)
     }
     pub fn preview<T>(
@@ -298,7 +310,7 @@ impl Runtime {
             .unwrap()
             .sdk
             .undo(expected)?;
-        self.record_publications(expected.session);
+        self.record_publications(expected.session, client);
         Ok(receipt)
     }
     pub fn redo(&mut self, client: ClientId, expected: Version) -> Result<Publication> {
@@ -309,7 +321,7 @@ impl Runtime {
             .unwrap()
             .sdk
             .redo(expected)?;
-        self.record_publications(expected.session);
+        self.record_publications(expected.session, client);
         Ok(receipt)
     }
     pub fn replace(
@@ -326,14 +338,25 @@ impl Runtime {
             .sdk
             .replace(expected, snapshot)?;
         self.paths.retain(|_, owner| *owner != expected.session);
-        self.record_publications(expected.session);
+        self.record_publications(expected.session, client);
         Ok(publication)
     }
-    fn record_publications(&mut self, session: SessionKey) {
+    fn record_publications(&mut self, session: SessionKey, client: ClientId) {
         let entry = self.sessions.get_mut(&session).unwrap();
-        entry.events.extend(entry.sdk.take_events());
+        entry
+            .events
+            .extend(
+                entry
+                    .sdk
+                    .take_events()
+                    .into_iter()
+                    .map(|publication| PublicationEvent {
+                        client,
+                        publication,
+                    }),
+            );
         while entry.events.len() > self.limits.events_per_session {
-            entry.event_floor = entry.events.pop_front().unwrap().version;
+            entry.event_floor = entry.events.pop_front().unwrap().publication.version;
         }
     }
     pub fn subscribe(&self, client: ClientId, session: SessionKey) -> Result<SessionSubscription> {
@@ -351,6 +374,17 @@ impl Runtime {
         client: ClientId,
         cursor: Version,
     ) -> Result<Vec<Publication>> {
+        Ok(self
+            .publication_events_since(client, cursor)?
+            .into_iter()
+            .map(|event| event.publication)
+            .collect())
+    }
+    pub fn publication_events_since(
+        &self,
+        client: ClientId,
+        cursor: Version,
+    ) -> Result<Vec<PublicationEvent>> {
         let entry = self.session(client, cursor.session)?;
         if cursor.revision < entry.event_floor.revision {
             return Err(error(
@@ -358,13 +392,15 @@ impl Runtime {
                 "Publication cursor was evicted; resubscribe",
             ));
         }
-        if cursor != entry.event_floor && !entry.events.iter().any(|e| e.version == cursor) {
+        if cursor != entry.event_floor
+            && !entry.events.iter().any(|e| e.publication.version == cursor)
+        {
             return Err(error("INVALID_CURSOR", "Unknown publication cursor"));
         }
         Ok(entry
             .events
             .iter()
-            .filter(|e| e.version.revision > cursor.revision)
+            .filter(|e| e.publication.version.revision > cursor.revision)
             .cloned()
             .collect())
     }
@@ -409,7 +445,7 @@ impl Runtime {
                 target,
             },
         );
-        self.queue.push_back(Work {
+        self.queue.push_back(Mutex::new(Work {
             identity: Identity {
                 job: id,
                 client,
@@ -419,7 +455,7 @@ impl Runtime {
             cancel,
             workspace: leases.0,
             result_lease: leases.1,
-        });
+        }));
         id
     }
     pub fn request_batch(
@@ -528,7 +564,10 @@ impl Runtime {
     }
     fn target(&self, path: &Path, session: SessionKey) -> Result<()> {
         if self.paths.get(path).is_some_and(|owner| *owner != session)
-            || self.reservations.contains_key(path)
+            || self
+                .reservations
+                .keys()
+                .any(|reserved| path.starts_with(reserved) || reserved.starts_with(path))
         {
             Err(error("PROJECT_BUSY", "Project path is owned or reserved"))
         } else {
@@ -585,7 +624,14 @@ impl Runtime {
         fingerprint: Option<&ProjectFingerprint>,
         budget: TaskBudget,
     ) -> Result<JobId> {
-        self.source(client, expected)?;
+        let entry = self.source(client, expected)?;
+        let target = io.normalize_path(path)?;
+        if entry.protected_paths.iter().any(|source| source == &target) {
+            return Err(error(
+                "INVALID_DESTINATION",
+                "Save would overwrite an imported source",
+            ));
+        }
         // Do not let an entered mutation finish during external publication.
         if self.jobs.values().any(|j| {
             !j.info.state.is_terminal()
@@ -623,7 +669,11 @@ impl Runtime {
         {
             return None;
         }
-        let work = self.queue.pop_front()?;
+        let work = self
+            .queue
+            .pop_front()?
+            .into_inner()
+            .unwrap_or_else(|p| p.into_inner());
         let entry = self.jobs.get_mut(&work.identity.job).unwrap();
         entry.entered = true;
         if !entry.cancel.is_cancelled() {
@@ -639,7 +689,7 @@ impl Runtime {
                 if !entry.cancel.is_cancelled() {
                     entry.info.state = JobState::Queued;
                 }
-                self.queue.push_front(*work);
+                self.queue.push_front(Mutex::new(*work));
                 break;
             }
         }
@@ -672,6 +722,7 @@ impl Runtime {
         Ok(())
     }
     pub fn release_client(&mut self, client: ClientId) {
+        self.blobs.retain(|_, blob| blob.owner != client);
         self.clients.remove(&client);
         self.drafts.retain(|_, d| d.owner != client);
         for entry in self.sessions.values_mut() {
@@ -744,11 +795,11 @@ impl Runtime {
             self.jobs.insert(identity.job, entry);
             // Even a cancelled/detached continuation returns to a worker. Its
             // potentially large private buffers are never destroyed on the owner.
-            self.queue.push_back(*work);
+            self.queue.push_back(Mutex::new(*work));
             return Ok(());
         }
         let outcome = self.install(identity, &entry, completion.outcome);
-        self.record_publications(identity.base().session);
+        self.record_publications(identity.base().session, identity.client);
         if let QuerySource::Draft(source) = identity.source {
             if self
                 .drafts
@@ -799,6 +850,9 @@ impl Runtime {
             self.paths.insert(receipt.path.clone(), session);
             return Ok(JobValue::Saved(receipt));
         }
+        if let Output::Export(receipt) = output {
+            return Ok(JobValue::Exported(receipt));
+        }
         entry.cancel.check()?;
         self.client(identity.client)?;
         if let Output::Read(value) = output {
@@ -848,9 +902,28 @@ impl Runtime {
                     .publish_loaded(prepared)?;
                 self.paths.retain(|_, owner| *owner != session);
                 self.paths.insert(entry.target.clone().unwrap(), session);
+                self.sessions
+                    .get_mut(&session)
+                    .unwrap()
+                    .protected_paths
+                    .clear();
                 Ok(JobValue::Opened(receipt))
             }
-            Output::Read(_) | Output::Save(_) | Output::Yield(_) => unreachable!(),
+            Output::Import(prepared) => {
+                let hosted = self.sessions.get_mut(&session).unwrap();
+                let publication = hosted.sdk.replace(identity.base(), prepared.snapshot)?;
+                hosted.protected_paths = prepared.protected_paths;
+                self.paths.retain(|_, owner| *owner != session);
+                Ok(JobValue::Imported(ImportReceipt {
+                    publication,
+                    warnings: prepared.warnings,
+                    diagnostics: prepared.diagnostics,
+                    name: prepared.name,
+                }))
+            }
+            Output::Read(_) | Output::Save(_) | Output::Export(_) | Output::Yield(_) => {
+                unreachable!()
+            }
         }
     }
 }

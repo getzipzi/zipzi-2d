@@ -99,7 +99,7 @@ impl EditorView {
             self.editor.active_id() == Some(document),
             "Document changed"
         );
-        if !result.receipt.changed {
+        if !(result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged) {
             return Ok(None);
         }
         let (object, projection, created, inspect, focus) = match intent {

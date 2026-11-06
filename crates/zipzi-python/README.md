@@ -40,11 +40,19 @@ call. Recovery preserves its request ID, arguments and result projection. Do not
 retry a mutation under a new request ID. Context managers leave an unresolved
 call owned so that it can still be recovered, including a lost close response.
 
-The current slice covers bounded object queries, commands, previews, history,
-events and native project open/save. Remaining migration work includes binary
-bulk transfers, format/observation job adapters and production Editor integration.
-Legacy source files and tests outside the v4 entrypoint are migration inputs,
-not supported alternate APIs.
+The entrypoint covers typed object/collection queries, commands, confirmation
+previews, history, events, project open/save/import/export, spatial and animation
+sampling, and GPU observation when the host provides it. `runtime.blob(length)`
+creates an owned upload; `append(offset, bytes)` and `read(offset, length)` transfer
+at most 1 MiB per recoverable call. Seal uploads before `draft.replace_image_blob`.
+`session.image_blob` and `job.blob` return owned bulk readback with source metadata.
+
+`session.samples(SampleRequest(...))` returns a Job whose blob is UTF-8 JSON with
+source/content and ordered frames. `session.observe(input, view)` returns packets:
+a four-byte big-endian JSON-header length, that header, then `png_bytes` bytes of
+PNG, repeated for each sample. The first header includes the shared texture report.
+Legacy source files and aggregate tests outside this v4 entrypoint remain inputs
+for stage-five cleanup, not supported alternate APIs.
 
 ## Generation and focused validation
 
@@ -56,11 +64,13 @@ the manifest controls replacement and retirement of generated files.
 uv run --locked python crates/zipzi-python/tools/generate.py
 uv run --locked python crates/zipzi-python/tools/generate.py --check
 uv run --locked python tools/test_tools.py -p test_python_codegen.py
-cargo build --locked -p zipzi-runtime --example local_host_fixture
+cargo build --locked -p zipzi-runtime --example local_host_fixture --features gpu-observation
 ./tools/dev-python crates/zipzi-python/tests/test_kernel.py
 ```
 
 The fixture exercises real local IPC and intentionally dropped responses; it is
-not a substitute for the production Editor-host gate. The broad Python gate and
-older examples are still being migrated. Use the repository development launcher
+not a substitute for production Editor-host validation. To run the same lifecycle
+cases against a built desktop host, set `ZIPZI_KERNEL_EDITOR_HOST` to its absolute
+path and run `./tools/dev-python crates/zipzi-python/tests/test_kernel.py ConnectedLifecycle`.
+The broad Python gate and older examples still need stage-five migration. Use the repository development launcher
 rather than global Python or a custom `PYTHONPATH` for native tests.

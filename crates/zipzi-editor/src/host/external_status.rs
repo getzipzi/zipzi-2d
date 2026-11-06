@@ -2,29 +2,31 @@
 use crate::t;
 use std::{collections::HashMap, path::PathBuf};
 use zipzi_editor_core::{Editor, RuntimeHost};
-use zipzi_runtime::{EventCursor, EventKind, SessionId};
+use zipzi_runtime::{SessionKey, Version};
 
 pub(crate) struct ExternalChanges {
-    cursors: HashMap<SessionId, EventCursor>,
+    cursors: HashMap<SessionKey, Version>,
 }
 
 struct AppliedProject {
-    session: SessionId,
+    session: SessionKey,
     path: Option<PathBuf>,
 }
 
 impl ExternalChanges {
     pub(crate) fn new(runtime: &RuntimeHost) -> Self {
+        let client = runtime.client_id();
         let runtime = runtime.read();
         Self {
             cursors: runtime
-                .list_sessions()
+                .session_keys(client)
+                .unwrap_or_default()
                 .into_iter()
-                .filter_map(|info| {
+                .filter_map(|id| {
                     runtime
-                        .event_cursor(info.id)
+                        .subscribe(client, id)
                         .ok()
-                        .map(|cursor| (info.id, cursor))
+                        .map(|subscription| (id, subscription.cursor))
                 })
                 .collect(),
         }
@@ -61,7 +63,7 @@ impl ExternalChanges {
                 .unwrap_or_else(|| {
                     t!(
                         "status.external_untitled_project",
-                        id = target.session.serial()
+                        id = target.session.to_string()
                     )
                     .into_owned()
                 })
@@ -74,37 +76,34 @@ impl ExternalChanges {
 
 fn external_publications(
     host: &RuntimeHost,
-    cursors: &mut HashMap<SessionId, EventCursor>,
+    cursors: &mut HashMap<SessionKey, Version>,
 ) -> Vec<AppliedProject> {
     let runtime = host.read();
-    let sessions = runtime.list_sessions();
-    cursors.retain(|id, _| sessions.iter().any(|info| info.id == *id));
+    let client = host.client_id();
+    let sessions = runtime.session_keys(client).unwrap_or_default();
+    cursors.retain(|id, _| sessions.contains(id));
     let mut projects = Vec::new();
-    for info in sessions {
-        let Ok(next) = runtime.event_cursor(info.id) else {
+    for session in sessions {
+        let Ok(subscription) = runtime.subscribe(client, session) else {
             continue;
         };
-        let cursor = cursors.entry(info.id).or_insert(EventCursor {
-            sequence: 0,
-            ..next
-        });
-        if *cursor != next {
-            // A bounded log gap must not turn a version change into a guessed
-            // external commit. Advance quietly and observe future publications.
-            if let Ok(events) = runtime.events_since(*cursor) {
-                if events.iter().any(|event| {
-                    event
-                        .client
-                        .is_some_and(|client| client != host.client_id())
-                        && matches!(&event.kind, EventKind::Published(receipt) if receipt.changed)
-                }) {
-                    projects.push(AppliedProject {
-                        session: info.id,
-                        path: info.path,
-                    });
+        let next = subscription.cursor;
+        if let Some(cursor) = cursors.insert(session, next) {
+            if cursor != next {
+                if let Ok(events) = runtime.publication_events_since(client, cursor) {
+                    if events.iter().any(|event| {
+                        event.client != client
+                            && event.publication.kind != zipzi_sdk::PublicationKind::Unchanged
+                    }) {
+                        projects.push(AppliedProject {
+                            session,
+                            path: runtime.session_read(client, session).ok().and_then(|sdk| {
+                                sdk.project().map(|project| project.path().to_owned())
+                            }),
+                        });
+                    }
                 }
             }
-            *cursor = next;
         }
     }
     projects

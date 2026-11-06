@@ -20,7 +20,7 @@ impl Document {
         self.ensure_editable(std::slice::from_ref(object))?;
         ensure!(
             self.model()
-                .get_transform(&object.id)
+                .transform(&object.id)
                 .is_some_and(|t| t.rotation().is_some()),
             "Select a Rotation"
         );
@@ -36,7 +36,7 @@ impl Document {
             original: PendingOriginal::RotationLength(object.id.clone(), original),
             edit: self
                 .session
-                .begin_owned_edit("Adjust rotation bone length", None)?
+                .begin_draft("Adjust rotation bone length", None)?
                 .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -100,7 +100,7 @@ impl Document {
         self.pending = Some(PendingEdit {
             kind,
             original: PendingOriginal::Controls(crate::control_edit::EditOriginal::Mesh(original)),
-            edit: self.session.begin_owned_edit(label, None)?.interactive()?,
+            edit: self.session.begin_draft(label, None)?.interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: false,
@@ -127,7 +127,7 @@ impl Document {
             )),
             edit: self
                 .session
-                .begin_owned_edit("Edit canvas controls", None)?
+                .begin_draft("Edit canvas controls", None)?
                 .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -172,7 +172,7 @@ impl Document {
                 pending
                     .edit
                     .candidate_document()
-                    .get_transform(&target.object.id)
+                    .transform(&target.object.id)
                     .and_then(|t| t.warp())
                     .map(|w| (w.rows, w.columns))
             };
@@ -183,7 +183,7 @@ impl Document {
             let after = pending
                 .edit
                 .candidate_document()
-                .get_transform(&target.object.id)
+                .transform(&target.object.id)
                 .and_then(|t| t.warp())
                 .map(|w| (w.rows, w.columns));
             if before != after {
@@ -274,7 +274,7 @@ impl Document {
             return Ok(());
         }
         let changed = self.pending_changed();
-        if let Some(pending) = self.pending.take() {
+        if let Some(mut pending) = self.pending.take() {
             let previous_revision = self.projection_revision;
             let property = pending.property_index_target();
             if changed
@@ -290,6 +290,10 @@ impl Document {
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,
                     Err(error) => {
+                        if pending.edit.is_active() {
+                            self.pending = Some(pending);
+                            return Err(error.into());
+                        }
                         if let Some(object) =
                             property.as_ref().filter(|_| !pending.topology_changed)
                         {
@@ -302,7 +306,7 @@ impl Document {
                         return Err(error.into());
                     }
                 };
-                if receipt.changed {
+                if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                     self.pristine_blank = None;
                 }
                 self.consume_authoring_receipt(&receipt, false);
@@ -316,6 +320,10 @@ impl Document {
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,
                     Err(error) => {
+                        if pending.edit.is_active() {
+                            self.pending = Some(pending);
+                            return Err(error.into());
+                        }
                         if let Some(object) =
                             property.as_ref().filter(|_| !pending.topology_changed)
                         {
@@ -328,16 +336,7 @@ impl Document {
                         return Err(error.into());
                     }
                 };
-                if property
-                    .as_ref()
-                    .is_none_or(|p| p.kind != crate::ObjectKind::Motion)
-                    || receipt
-                        .changes
-                        .categories
-                        .contains(&zipzi_sdk::ChangeCategory::EvaluationInputs)
-                {
-                    self.animation_input_revision = receipt.after.revision;
-                }
+                self.animation_input_revision = receipt.version.revision;
                 if parameter {
                     self.reconcile_parameter_preview()?;
                 }
@@ -366,17 +365,21 @@ impl Document {
                 let references_changed = pending
                     .edit
                     .candidate_document()
-                    .get_expression_entry(address.entry_id())
+                    .expression_entry(&address.id)
                     .unwrap()
                     .1
                     .target
-                    != address.expected().target;
+                    != address.value.target;
                 let previous_revision = self.projection_revision;
                 self.invalidate_expression_projection();
                 if !references_changed {
                     self.refresh_expression_index(
                         previous_revision,
-                        &[address.owner_id().to_owned()],
+                        &[address
+                            .owner
+                            .as_deref()
+                            .expect("expression owner")
+                            .to_owned()],
                     );
                 }
                 return;

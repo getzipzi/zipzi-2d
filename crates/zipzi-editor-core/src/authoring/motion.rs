@@ -3,35 +3,45 @@ use super::*;
 use anyhow::Result;
 use zipzi_core::document::{AttachmentEdit, MotionEdit};
 impl Document {
-    pub fn plan_motion_authoring(&self, intent: MotionEdit) -> Result<zipzi_sdk::MotionEditPlan> {
+    pub fn plan_motion_authoring(&self, intent: MotionEdit) -> Result<crate::EditPreview<()>> {
         self.ensure_authoring_idle()?;
-        Ok(self.session.plan_motion_edit(intent)?)
+        Ok(EditPreview::prepare(
+            &self.session,
+            "Edit motion",
+            None,
+            |c| c.edit_motion(intent),
+        )?)
     }
     pub fn execute_motion_authoring(
         &mut self,
-        plan: &zipzi_sdk::MotionEditPlan,
+        plan: &crate::EditPreview<()>,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let receipt = self.session.execute_motion_plan(plan)?;
-        Ok(self.motion_operation_result(receipt))
+        let receipt = plan.publish(&mut self.session)?;
+        Ok(self.motion_operation_result(receipt).with_preview(plan))
     }
     pub fn plan_attachment_authoring(
         &self,
         intent: AttachmentEdit,
-    ) -> Result<zipzi_sdk::AttachmentEditPlan> {
+    ) -> Result<crate::EditPreview<()>> {
         self.ensure_authoring_idle()?;
-        Ok(self.session.plan_attachment_edit(intent)?)
+        Ok(EditPreview::prepare(
+            &self.session,
+            "Edit attachment",
+            None,
+            |c| c.edit_attachment(intent),
+        )?)
     }
     pub fn execute_attachment_authoring(
         &mut self,
-        plan: &zipzi_sdk::AttachmentEditPlan,
+        plan: &crate::EditPreview<()>,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let receipt = self.session.execute_attachment_plan(plan)?;
-        Ok(self.motion_operation_result(receipt))
+        let receipt = plan.publish(&mut self.session)?;
+        Ok(self.motion_operation_result(receipt).with_preview(plan))
     }
     fn motion_operation_result(&mut self, receipt: zipzi_sdk::Publication) -> OperationResult {
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, false);
@@ -44,14 +54,14 @@ impl crate::Editor {
         &self,
         document: crate::DocumentId,
         intent: MotionEdit,
-    ) -> Result<zipzi_sdk::MotionEditPlan> {
+    ) -> Result<crate::EditPreview<()>> {
         self.ensure_animation_target(document)?;
         self.document().unwrap().plan_motion_authoring(intent)
     }
     pub fn execute_motion_authoring(
         &mut self,
         document: crate::DocumentId,
-        plan: &zipzi_sdk::MotionEditPlan,
+        plan: &crate::EditPreview<()>,
     ) -> Result<OperationResult> {
         self.ensure_animation_target(document)?;
         self.active_session_mut()

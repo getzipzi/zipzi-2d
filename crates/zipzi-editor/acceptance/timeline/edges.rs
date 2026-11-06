@@ -58,10 +58,7 @@ pub(crate) fn edges(h: &mut Harness) -> anyhow::Result<Value> {
                 )
                 .is_err()
         );
-        assert_eq!(
-            view.editor.timeline_edit().unwrap().candidate.clip(),
-            &original
-        );
+        assert_eq!(&view.editor.timeline_edit().unwrap().candidate, &original);
         view.editor.cancel_timeline_edit();
         Ok(())
     })?;

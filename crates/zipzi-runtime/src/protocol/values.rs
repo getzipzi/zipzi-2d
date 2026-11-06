@@ -24,9 +24,11 @@ pub(super) fn job(info: &JobInfo) -> Value {
             JobValue::DraftUpdated(source) => json!({"kind":"draft_updated","source":source}),
             JobValue::Published(p) => json!({"kind":"published","receipt":publication(p)}),
             JobValue::Opened(p) => json!({"kind":"opened","receipt":publication(&p.publication),"diagnostics":p.diagnostics.iter().map(|d| json!({"asset_id":d.asset_id,"code":d.code,"message":d.message})).collect::<Vec<_>>()}),
+            JobValue::Imported(p) => json!({"kind":"imported","receipt":publication(&p.publication),"name":p.name,"warnings":p.warnings,"diagnostics":p.diagnostics.iter().map(|d| json!({"asset_id":d.asset_id,"code":d.code,"message":d.message})).collect::<Vec<_>>()}),
             JobValue::Saved(p) => json!({"kind":"saved","content":p.content,"path":p.path,"fingerprint":p.fingerprint,
                 "published":p.published,"durable":p.durable,"warnings":p.warnings}),
-            JobValue::Read(p) => json!({"kind":"read","source":p.source,"bytes":p.bytes()}),
+            JobValue::Exported(p) => json!({"kind":"exported","receipt":p}),
+            JobValue::Read(p) => json!({"kind":"read","source":p.source,"length":p.bytes().len()}),
         })
     });
     json!({"id":info.id,"source":info.source,"state":info.state,"result":result})

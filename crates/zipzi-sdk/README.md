@@ -31,7 +31,7 @@ of history policy. Manual mesh transfer samples ordinary and BlendShape channels
 
 Frozen queries expose domain projections, reference/deletion analysis, binding
 samples and evaluation. Query source is carried by SourcedSnapshot. Animation and
-format libraries now consume frozen state; host orchestration remains stage four.
+format libraries consume frozen state; Runtime owns host orchestration.
 
 Multiple Drafts may coexist. Ordinary command failure, an ignored command error,
 an invalid final graph or a panic ends that Draft. Preparing or publishing consumes
@@ -40,7 +40,9 @@ there is no automatic replay or rebase. Worker values can be sent across threads
 without moving the Session. Notifications are queued after formal installation.
 
 `read_snapshot` preserves whether a query observed published or candidate content.
-Cloned snapshots and their image versions remain valid after Session closure.
+Each Draft sequence caches its immutable snapshot, including the snapshot shown
+by a PreparedPreview; publication uses that same content identity. Cloned
+snapshots and their image versions remain valid after Session closure.
 
 ## History and project I/O
 
@@ -93,7 +95,7 @@ algorithms also have a standalone `cargo test --locked -p zipzi-sdk --test alpha
 gate. Remaining old integration targets and examples are migration inputs for
 host migration and final cleanup; these gates do not imply their full coverage.
 
-Observe and the resident Runtime core now consume this API. Runtime domain/wire
-handlers, Editor and the Python native adapter still require stage-four migration
-in the [architecture plan](../../docs/plans/authoring-architecture.md).
-Whole-workspace, legacy regression/full and client gates are not claimed passing.
+Observe, Runtime domain/wire handlers, Editor and Python Local/Connected now use
+this API directly. Workspace production builds are covered separately from the
+legacy aggregate regression targets, which still need stage-five cleanup and
+migration in the [architecture plan](../../docs/plans/authoring-architecture.md).

@@ -5,8 +5,8 @@ use std::{
     sync::Arc,
 };
 use zipzi_animation::MotionSnapshot;
-use zipzi_core::document::PhysicsTargetProjection;
 use zipzi_core::document::{ExpressionTarget, MotionTrackTarget};
+use zipzi_core::state::PhysicsTargetProjection;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AnimationFailure {
@@ -118,7 +118,7 @@ impl AnimationCatalog {
             issues.insert(AnimationDiagnostic::MissingAttachment { path: path.clone() });
         }
         for id in model.motion_order() {
-            let Some(motion) = model.get_motion(id) else {
+            let Some(motion) = model.motion(id) else {
                 continue;
             };
             for track in &motion.tracks {
@@ -146,7 +146,7 @@ impl AnimationCatalog {
                         AnimationDiagnostic::PartOpacityWithoutPose {
                             motion: motion.name.clone(),
                             part: model
-                                .get_part(part_id)
+                                .part(part_id)
                                 .map_or_else(|| part_id.clone(), |p| p.name.clone()),
                         },
                     ),
@@ -160,13 +160,13 @@ impl AnimationCatalog {
             .motion_groups()
             .iter()
             .map(|g| (Some(g.name.as_str()), g.entries.as_slice()))
-            .chain(std::iter::once((None, model.motion_roots())))
+            .chain(std::iter::once((None, model.motion_roots().as_slice())))
         {
             for (index, entry) in entries.iter().enumerate() {
                 if let Some(file) = &entry.sound {
                     issues.insert(AnimationDiagnostic::SoundUnsupported {
                         motion: group.map_or_else(
-                            || model.get_motion(&entry.clip_id).unwrap().name.clone(),
+                            || model.motion(&entry.clip_id).unwrap().name.clone(),
                             |name| format!("{}[{}]", name, index + 1),
                         ),
                         file: model
@@ -178,7 +178,7 @@ impl AnimationCatalog {
             }
         }
         for id in model.expression_order() {
-            let Some(expression) = model.get_expression(id) else {
+            let Some(expression) = model.expression(id) else {
                 continue;
             };
             for entry in &expression.entries {
@@ -225,7 +225,7 @@ impl AnimationCatalog {
         if let Ok(Some(projection)) = model.pose_projection() {
             for disabled in projection.disabled {
                 let issue = match disabled.reason {
-                    zipzi_core::document::PoseDisabledReason::Unresolved { runtime_id } => {
+                    zipzi_core::state::PoseDisabledReason::Unresolved { runtime_id } => {
                         AnimationDiagnostic::UnresolvedPose { target: runtime_id }
                     }
                     _ => AnimationDiagnostic::UnconfiguredPoseItem {
@@ -245,7 +245,7 @@ impl AnimationCatalog {
             parameters: model
                 .parameter_order()
                 .iter()
-                .filter_map(|id| model.get_parameter(id))
+                .filter_map(|id| model.parameter(id))
                 .map(|p| AnimationParameter {
                     id: p.id.clone(),
                     name: p.name.clone(),
@@ -273,7 +273,7 @@ impl Document {
         zipzi_core::document::MotionRegistration,
     )> {
         self.model()
-            .get_motion_registration(id)
+            .motion_registration(id)
             .map(|(owner, value)| (owner, value.clone()))
     }
     pub fn expression_entry(
@@ -284,23 +284,23 @@ impl Document {
         zipzi_core::document::ExpressionEntry,
     )> {
         self.model()
-            .get_expression_entry(id)
+            .expression_entry(id)
             .map(|(asset, value)| (asset.clone(), value.clone()))
     }
     pub fn motion_definition(&self, id: &str) -> Option<Arc<zipzi_core::document::MotionClip>> {
-        self.model().shared_motion(id)
+        self.model().motion(id).cloned().map(Arc::new)
     }
 
     pub fn expression_definition(&self, id: &str) -> Option<zipzi_core::document::ExpressionAsset> {
-        self.model().get_expression(id).cloned()
+        self.model().expression(id).cloned()
     }
 
     pub fn physics_definition(&self) -> Option<Arc<zipzi_core::document::PhysicsAsset>> {
-        self.model().shared_physics()
+        self.model().physics().clone()
     }
 
     pub fn pose_definition(&self) -> Option<Arc<zipzi_core::document::PoseAsset>> {
-        self.model().shared_pose()
+        self.model().pose().clone()
     }
 
     pub fn animation_catalog(&self) -> Arc<AnimationCatalog> {

@@ -39,7 +39,7 @@ fn overview_drag_is_one_transaction_and_escape_restores_the_asset(cx: &mut TestA
         let view = harness.view.read(cx);
         assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 0));
         assert_eq!(
-            view.editor.timeline_edit().unwrap().candidate.clip().tracks[0]
+            view.editor.timeline_edit().unwrap().candidate.tracks[0]
                 .initial
                 .time,
             0.5

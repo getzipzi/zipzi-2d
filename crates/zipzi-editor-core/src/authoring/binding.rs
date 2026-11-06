@@ -2,23 +2,36 @@
 use super::*;
 use anyhow::{Result, ensure};
 use zipzi_contract::authoring::BindingAuthoringEdit;
-use zipzi_sdk::BindingEditPlan;
+
+pub(super) fn apply_binding(
+    commands: &mut zipzi_sdk::Commands<'_>,
+    intent: BindingAuthoringEdit,
+    limits: zipzi_core::state::ConversionLimits,
+    control: &zipzi_core::state::ConversionControl,
+) -> Result<zipzi_core::state::ConversionOutcome, zipzi_core::Status> {
+    match intent {
+        BindingAuthoringEdit::Grid(edit) => commands.edit_binding_grid(edit, limits, control),
+        BindingAuthoringEdit::Blend(edit) => commands.edit_blend_shape(edit, limits, control),
+        BindingAuthoringEdit::ParameterRange(edit) => {
+            commands.edit_parameter_range(edit, limits, control)
+        }
+        BindingAuthoringEdit::Reparent(edit) => commands
+            .edit_scene(
+                zipzi_contract::document::SceneEdit::Reparent { edit },
+                limits,
+                control,
+            )?
+            .conversion
+            .ok_or_else(|| {
+                zipzi_core::Status::error("CONVERSION_REPORT", "Reparent produced no report")
+            }),
+    }
+}
 impl Document {
-    pub fn binding_field_address(&self, id: &str) -> Result<zipzi_sdk::BindingFieldAddress> {
-        Ok(self.session.binding_field_address(id)?)
-    }
-    pub fn plan_binding_field_patch(
-        &self,
-        address: &zipzi_sdk::BindingFieldAddress,
-        patch: zipzi_contract::authoring::BindingFieldPatch,
-    ) -> Result<BindingEditPlan> {
-        self.ensure_authoring_idle()?;
-        Ok(self.session.plan_binding_field_patch(address, patch)?)
-    }
     pub fn reparent_support(
         &self,
         edit: &zipzi_contract::document::ReparentEdit,
-    ) -> Result<zipzi_sdk::ReparentSupport> {
+    ) -> Result<zipzi_core::document::ReparentSupport> {
         self.ensure_authoring_idle()?;
         Ok(self.session.reparent_support(edit)?)
     }
@@ -26,24 +39,36 @@ impl Document {
         &self,
         intent: BindingAuthoringEdit,
         control: &zipzi_sdk::ConversionControl,
-    ) -> Result<BindingEditPlan> {
+    ) -> Result<crate::EditPreview<zipzi_core::state::ConversionOutcome>> {
         self.ensure_authoring_idle()?;
-        Ok(self
-            .session
-            .plan_binding_authoring_with_control(intent, control)?)
+        let source = self.session.capture_authoring();
+        let limits = zipzi_core::state::ConversionLimits::default();
+        Ok(crate::EditPreview::convert(
+            &source,
+            "Edit binding",
+            limits,
+            control,
+            move |commands, control| apply_binding(commands, intent, limits, control),
+        )?)
     }
-    pub fn plan_binding_authoring(&self, intent: BindingAuthoringEdit) -> Result<BindingEditPlan> {
+    pub fn plan_binding_authoring(
+        &self,
+        intent: BindingAuthoringEdit,
+    ) -> Result<crate::EditPreview<zipzi_core::state::ConversionOutcome>> {
         self.ensure_authoring_idle()?;
-        Ok(self.session.plan_binding_authoring(intent)?)
+        self.plan_binding_authoring_with_control(intent, &Default::default())
     }
-    pub fn execute_binding_authoring(&mut self, plan: &BindingEditPlan) -> Result<OperationResult> {
+    pub fn execute_binding_authoring(
+        &mut self,
+        plan: &crate::EditPreview<zipzi_core::state::ConversionOutcome>,
+    ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let receipt = self.session.execute_binding_plan(plan)?;
-        if receipt.changed {
+        let receipt = plan.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
         self.consume_authoring_receipt(&receipt, true);
-        Ok(self.authoring_result(receipt))
+        Ok(self.authoring_result(receipt).with_preview(plan))
     }
 }
 impl crate::Editor {
@@ -61,7 +86,7 @@ impl crate::Editor {
         &self,
         document: crate::DocumentId,
         intent: BindingAuthoringEdit,
-    ) -> Result<BindingEditPlan> {
+    ) -> Result<crate::EditPreview<zipzi_core::state::ConversionOutcome>> {
         self.ensure_binding_authoring_target(document)?;
         self.document().unwrap().plan_binding_authoring(intent)
     }
@@ -69,7 +94,7 @@ impl crate::Editor {
         &self,
         document: crate::DocumentId,
         edit: &zipzi_contract::document::ReparentEdit,
-    ) -> Result<zipzi_sdk::ReparentSupport> {
+    ) -> Result<zipzi_core::document::ReparentSupport> {
         self.ensure_binding_authoring_target(document)?;
         self.document().unwrap().reparent_support(edit)
     }
@@ -78,7 +103,7 @@ impl crate::Editor {
         document: crate::DocumentId,
         intent: BindingAuthoringEdit,
         control: &zipzi_sdk::ConversionControl,
-    ) -> Result<BindingEditPlan> {
+    ) -> Result<crate::EditPreview<zipzi_core::state::ConversionOutcome>> {
         self.ensure_binding_authoring_target(document)?;
         self.document()
             .unwrap()
@@ -87,7 +112,7 @@ impl crate::Editor {
     pub fn execute_binding_authoring(
         &mut self,
         document: crate::DocumentId,
-        plan: &BindingEditPlan,
+        plan: &crate::EditPreview<zipzi_core::state::ConversionOutcome>,
     ) -> Result<OperationResult> {
         self.ensure_binding_authoring_target(document)?;
         self.active_session_mut()

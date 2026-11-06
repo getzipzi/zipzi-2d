@@ -67,7 +67,18 @@ pub(crate) enum Task {
         io: ProjectIo,
         path: PathBuf,
     },
+    Import {
+        importer: zipzi_project::ProjectImporter,
+        path: PathBuf,
+        format: zipzi_contract::kernel_wire::ImportFormat,
+    },
     Save(PreparedSave),
+    Export {
+        snapshot: zipzi_project::TransferSnapshot,
+        path: PathBuf,
+        format: zipzi_contract::kernel_tasks::ExportFormat,
+        allow_loss: bool,
+    },
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TaskKind {
@@ -75,7 +86,9 @@ pub(crate) enum TaskKind {
     Publish,
     Read,
     Open,
+    Import,
     Save,
+    Export,
 }
 impl Task {
     pub(crate) fn kind(&self) -> TaskKind {
@@ -84,7 +97,9 @@ impl Task {
             Self::Publish { .. } => TaskKind::Publish,
             Self::Read { .. } | Self::ReadSteps { .. } => TaskKind::Read,
             Self::Open { .. } => TaskKind::Open,
+            Self::Import { .. } => TaskKind::Import,
             Self::Save(_) => TaskKind::Save,
+            Self::Export { .. } => TaskKind::Export,
         }
     }
 }
@@ -124,7 +139,9 @@ pub(crate) enum Output {
     Publish(PreparedChange),
     Read(ReadResult),
     Open(PreparedProject),
+    Import(crate::runtime::imports::PreparedImport),
     Save(CompletedSave),
+    Export(ExportReceipt),
 }
 /// Accepted work must deliver a completion even after client detachment. In
 /// particular, an externally published save always needs metadata installation.
@@ -138,8 +155,36 @@ impl Completion {
     pub fn job_id(&self) -> JobId {
         self.identity.job
     }
+    /// Frozen content available for worker-side view preparation. Its originating
+    /// request is still subject to owner publication checks; this is not a Session.
+    pub fn prepared_snapshot(&self) -> Option<&zipzi_sdk::Snapshot> {
+        match self.outcome.as_ref().ok()? {
+            Output::Open(prepared) => Some(prepared.snapshot()),
+            Output::Import(prepared) => Some(&prepared.snapshot),
+            Output::Publish(prepared) => Some(prepared.snapshot()),
+            _ => None,
+        }
+    }
 }
 impl Work {
+    /// Format decoders can request a dedicated stack without moving formal state.
+    pub fn run_with_stack(self, name: &str, bytes: usize) -> Completion {
+        let identity = self.identity;
+        match std::thread::Builder::new()
+            .name(name.into())
+            .stack_size(bytes)
+            .spawn(move || self.run())
+        {
+            Ok(worker) => worker.join().unwrap_or_else(|_| Completion {
+                identity,
+                outcome: Err(error("WORKER_PANIC", "Decoder worker panicked")),
+            }),
+            Err(error) => Completion {
+                identity,
+                outcome: Err(zipzi_sdk::Status::error("WORKER_START", error.to_string())),
+            },
+        }
+    }
     pub fn job_id(&self) -> JobId {
         self.identity.job
     }
@@ -234,6 +279,43 @@ impl Work {
                 Task::Open { io, path } => {
                     PreparedProject::load(identity.base(), &io, &path, || !cancel.is_cancelled())
                         .map(Output::Open)
+                }
+                Task::Import {
+                    importer,
+                    path,
+                    format,
+                } => {
+                    let prepared = crate::runtime::imports::prepare(&importer, &path, format)?;
+                    cancel.check()?;
+                    Ok(Output::Import(prepared))
+                }
+                Task::Export {
+                    snapshot,
+                    path,
+                    format,
+                    allow_loss,
+                } => {
+                    let format = match format {
+                        zipzi_contract::kernel_tasks::ExportFormat::Runtime => {
+                            zipzi_project::TransferFormat::Runtime
+                        }
+                        zipzi_contract::kernel_tasks::ExportFormat::Cubism => {
+                            zipzi_project::TransferFormat::Cubism
+                        }
+                    };
+                    let receipt = snapshot.publish_with_options(
+                        format,
+                        &path,
+                        &zipzi_project::TransferPublishOptions { allow_loss },
+                    )?;
+                    Ok(Output::Export(ExportReceipt {
+                        source: identity.source,
+                        path,
+                        published: true,
+                        durable: receipt.durable(),
+                        warnings: receipt.warnings,
+                        notices: receipt.notices,
+                    }))
                 }
                 // No cancellation check after write: a success means externally published.
                 Task::Save(prepared) => prepared.write(|| !cancel.is_cancelled()).map(Output::Save),

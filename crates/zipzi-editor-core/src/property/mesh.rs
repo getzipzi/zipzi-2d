@@ -192,7 +192,7 @@ pub(crate) fn payload(
     #[cfg(feature = "bench-instrumentation")]
     let _benchmark_span = zipzi_core::benchmark::span("editor.mesh_full_json");
     let mesh = model
-        .get_mesh(id)
+        .mesh(id)
         .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
     let mut payload = serde_json::to_value(mesh)?;
     inspector_fields(mesh, &mut payload);
@@ -212,7 +212,7 @@ pub(crate) fn inspector_payload(
     #[cfg(feature = "bench-instrumentation")]
     let _benchmark_span = zipzi_core::benchmark::span("editor.mesh_inspector_json");
     let mesh = model
-        .get_mesh(id)
+        .mesh(id)
         .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
     let mut payload = json!({
         "name": mesh.name, "runtime_id": mesh.runtime_id,

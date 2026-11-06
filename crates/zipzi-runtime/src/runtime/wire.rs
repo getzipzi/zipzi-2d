@@ -82,17 +82,26 @@ impl Runtime {
         commands: Vec<Command>,
     ) -> Result<JobId> {
         let resources = self.resources.clone();
-        self.request_batch(client, expected, TaskBudget::default(), move |c, cancel| {
-            if commands.len() > 4096 {
-                return Err(error("RESOURCE_LIMIT", "Batch command count exceeds limit"));
-            }
-            let control = cancel.conversion_control();
-            for command in commands {
-                cancel.check()?;
-                c.execute(command, &resources, Default::default(), &control)?;
-            }
-            Ok(())
-        })
+        let limits = zipzi_core::state::ConversionLimits::default();
+        self.request_batch(
+            client,
+            expected,
+            TaskBudget {
+                workspace_bytes: limits.max_workspace_bytes,
+                result_bytes: 0,
+            },
+            move |c, cancel| {
+                if commands.len() > 4096 {
+                    return Err(error("RESOURCE_LIMIT", "Batch command count exceeds limit"));
+                }
+                let control = cancel.conversion_control();
+                for command in commands {
+                    cancel.check()?;
+                    c.execute(command, &resources, limits, &control)?;
+                }
+                Ok(())
+            },
+        )
     }
     pub fn preview_commands(
         &mut self,

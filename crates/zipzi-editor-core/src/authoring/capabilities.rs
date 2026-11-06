@@ -198,10 +198,13 @@ impl Document {
             }
             return Ok(result);
         };
-        let handle = self.session.handle(kind, &object.id)?;
+        ensure!(
+            self.model().contains_object(kind, &object.id),
+            AuthoringPlanningError::new("MISSING_OBJECT")
+        );
         match object.kind {
             ObjectKind::Part | ObjectKind::Parameter | ObjectKind::ParameterGroup => {
-                states!(self.session.organization_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_child,
+                states!(self.model().organization_capabilities(kind, &object.id); Inspect=>inspect, Patch=>patch, CreateChild=>create_child,
                     Move=>move_object, Reorder=>reorder, Duplicate=>duplicate, Delete=>delete, Dissolve=>dissolve);
             }
             ObjectKind::Mesh
@@ -209,14 +212,14 @@ impl Document {
             | ObjectKind::Offscreen
             | ObjectKind::Glue
             | ObjectKind::DrawOrderGroup => {
-                states!(self.session.scene_capabilities(&handle); Inspect=>inspect, Patch=>patch, Move=>move_object, Reparent=>reparent,
+                states!(self.model().scene_capabilities(kind, &object.id); Inspect=>inspect, Patch=>patch, Move=>move_object, Reparent=>reparent,
                     Reorder=>reorder, Duplicate=>duplicate, Delete=>delete, Dissolve=>dissolve);
                 if !matches!(object.kind, ObjectKind::DrawOrderGroup) {
-                    states!(self.session.scene_content_capabilities(&handle); EditContent=>edit, Topology=>topology);
+                    states!(self.model().scene_content_capabilities(kind, &object.id); EditContent=>edit, Topology=>topology);
                 }
             }
             ObjectKind::GlueVertexPair => {
-                states!(self.session.scene_content_capabilities(&handle); Inspect=>inspect, EditContent=>edit, Topology=>topology);
+                states!(self.model().scene_content_capabilities(kind, &object.id); Inspect=>inspect, EditContent=>edit, Topology=>topology);
             }
             ObjectKind::MeshBinding
             | ObjectKind::SceneBinding
@@ -226,7 +229,7 @@ impl Document {
             | ObjectKind::BlendBinding
             | ObjectKind::BlendKeyTable
             | ObjectKind::BlendConstraint => {
-                states!(self.session.binding_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Reorder=>reorder, Delete=>delete, Repair=>repair, Preview=>preview);
+                states!(self.model().binding_capabilities(kind, &object.id); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Reorder=>reorder, Delete=>delete, Repair=>repair, Preview=>preview);
             }
             ObjectKind::Motion
             | ObjectKind::MotionGroup
@@ -234,7 +237,7 @@ impl Document {
             | ObjectKind::MotionTrack
             | ObjectKind::MotionKey
             | ObjectKind::MotionEvent => {
-                states!(self.session.motion_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object,
+                states!(self.model().motion_capabilities(&object.id); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object,
                     Reorder=>reorder, Duplicate=>duplicate, Delete=>delete, Repair=>repair, Preview=>preview, EditContent=>edit_content);
                 // Both native group removals check the group and its registrations.
                 if object.kind == ObjectKind::MotionGroup {
@@ -242,7 +245,7 @@ impl Document {
                 }
             }
             ObjectKind::Expression | ObjectKind::ExpressionEntry => {
-                states!(self.session.expression_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_entry, Move=>move_entry, Reorder=>patch,
+                states!(self.model().expression_capabilities(&object.id); Inspect=>inspect, Patch=>patch, CreateChild=>create_entry, Move=>move_entry, Reorder=>patch,
                     Duplicate=>duplicate, Delete=>delete, Repair=>repair, Preview=>preview);
             }
             ObjectKind::Physics
@@ -250,28 +253,28 @@ impl Document {
             | ObjectKind::PhysicsInput
             | ObjectKind::PhysicsOutput
             | ObjectKind::PhysicsNode => {
-                states!(self.session.physics_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object, Reorder=>reorder,
+                states!(self.model().physics_capabilities(&object.id); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object, Reorder=>reorder,
                     Duplicate=>duplicate, Delete=>delete, Repair=>repair, Preview=>preview);
             }
             ObjectKind::Pose
             | ObjectKind::PoseGroup
             | ObjectKind::PoseEntry
             | ObjectKind::PoseLink => {
-                states!(self.session.pose_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object, Reorder=>reorder,
+                states!(self.model().pose_capabilities(&object.id); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object, Reorder=>reorder,
                     Duplicate=>duplicate, Delete=>delete, Repair=>repair, Preview=>preview, Dissolve=>dissolve);
             }
             ObjectKind::Texture => {
-                states!(self.session.resource_capabilities(&handle); Inspect=>inspect, Patch=>patch, LoadContent=>load_content, Duplicate=>duplicate, Delete=>delete, Reorder=>reorder);
+                states!(self.model().resource_capabilities(kind, &object.id); Inspect=>inspect, Patch=>patch, LoadContent=>load_content, Duplicate=>duplicate, Delete=>delete, Reorder=>reorder);
             }
             ObjectKind::Attachment => {
-                states!(self.session.attachment_capabilities(&handle); Inspect=>inspect, Patch=>patch, LoadContent=>load_content, Duplicate=>duplicate, Delete=>delete, Reorder=>patch);
+                states!(self.model().attachment_capabilities(kind, &object.id); Inspect=>inspect, Patch=>patch, LoadContent=>load_content, Duplicate=>duplicate, Delete=>delete, Reorder=>patch);
             }
             ObjectKind::ModelParameterGroup
             | ObjectKind::ModelParameterMember
             | ObjectKind::ModelHitArea
             | ObjectKind::CdiCombinedSet
             | ObjectKind::CdiCombinedMember => {
-                states!(self.session.reference_capabilities(&handle); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object, Reorder=>move_object,
+                states!(self.model().reference_capabilities(kind, &object.id); Inspect=>inspect, Patch=>patch, CreateChild=>create_child, Move=>move_object, Reorder=>move_object,
                     Duplicate=>duplicate, Delete=>delete, Dissolve=>dissolve);
             }
             ObjectKind::Document | ObjectKind::Unresolved => unreachable!(),
@@ -280,7 +283,7 @@ impl Document {
     }
 }
 
-pub use zipzi_sdk::AuthoringCollection;
+pub use zipzi_contract::kernel_wire::CollectionTarget;
 #[derive(Clone, Debug)]
 pub struct AuthoringCollectionCapabilities {
     pub domain: zipzi_contract::authoring::CollectionCapabilities,
@@ -289,10 +292,10 @@ pub struct AuthoringCollectionCapabilities {
 impl Document {
     pub fn authoring_collection_capabilities(
         &self,
-        collection: &AuthoringCollection,
+        collection: &CollectionTarget,
     ) -> Result<AuthoringCollectionCapabilities> {
         Ok(AuthoringCollectionCapabilities {
-            domain: self.session.authoring_collection_capabilities(collection)?,
+            domain: self.model().collection_capabilities(collection)?,
             session_reason: self
                 .pending
                 .as_ref()
@@ -339,7 +342,11 @@ impl crate::Editor {
     pub fn authoring_command_capability(&self, id: crate::CommandId) -> Result<C> {
         use crate::CommandId as I;
         if self.is_busy() {
-            return Err(zipzi_runtime::RuntimeError::Busy.into());
+            return Err(zipzi_core::Status::error(
+                "PROJECT_BUSY",
+                "Finish the active project task",
+            )
+            .into());
         }
         let doc = self
             .document()

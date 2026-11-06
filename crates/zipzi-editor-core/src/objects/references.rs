@@ -2,9 +2,9 @@ use super::*;
 impl ObjectIndex {
     pub(crate) fn refresh_reference_labels(&mut self, model: &Model, ids: &[String]) -> bool {
         for id in ids {
-            let (kind, name) = if let Some(g) = model.get_model_parameter_group(id) {
+            let (kind, name) = if let Some(g) = model.model_parameter_group(id) {
                 (ObjectKind::ModelParameterGroup, g.name.as_str())
-            } else if let Some(a) = model.get_model_hit_area(id) {
+            } else if let Some(a) = model.model_hit_area(id) {
                 (ObjectKind::ModelHitArea, a.name.as_str())
             } else {
                 return false;

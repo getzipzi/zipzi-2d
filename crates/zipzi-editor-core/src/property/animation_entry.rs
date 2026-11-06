@@ -70,17 +70,17 @@ pub(crate) fn payload(
 ) -> Result<Value> {
     Ok(match object.kind {
         ObjectKind::MotionGroup => {
-            serde_json::json!({"name": model.get_motion_group(&object.id).ok_or_else(|| anyhow::anyhow!("Missing motion group"))?.name})
+            serde_json::json!({"name": model.motion_group(&object.id).ok_or_else(|| anyhow::anyhow!("Missing motion group"))?.name})
         }
         ObjectKind::MotionRegistration => {
             let (_, entry) = model
-                .get_motion_registration(&object.id)
+                .motion_registration(&object.id)
                 .ok_or_else(|| anyhow::anyhow!("Missing registration"))?;
             serde_json::json!({"fade_in":entry.fade_in,"fade_out":entry.fade_out,"sound":entry.sound.as_ref().map(|r| match r { zipzi_core::document::AttachmentRef::Resolved { attachment_id } => attachment_id.clone(), zipzi_core::document::AttachmentRef::Unresolved { path } => format!("path:{path}") }).unwrap_or_default()})
         }
         ObjectKind::ExpressionEntry => {
             let (_, entry) = model
-                .get_expression_entry(&object.id)
+                .expression_entry(&object.id)
                 .ok_or_else(|| anyhow::anyhow!("Missing expression entry"))?;
             let target = match &entry.target {
                 ExpressionTarget::Unspecified => String::new(),
@@ -110,7 +110,7 @@ pub(crate) fn motion_patch(
         });
     }
     let (_, expected) = model
-        .get_motion_registration(&object.id)
+        .motion_registration(&object.id)
         .ok_or_else(|| anyhow::anyhow!("Missing registration"))?;
     let mut entry = expected.clone();
     entry.fade_in = serde_json::from_value(payload["fade_in"].clone())?;
@@ -139,7 +139,7 @@ pub(crate) fn expression_patch(
     payload: Value,
 ) -> Result<ExpressionEdit> {
     let (_, expected) = model
-        .get_expression_entry(&object.id)
+        .expression_entry(&object.id)
         .ok_or_else(|| anyhow::anyhow!("Missing expression entry"))?;
     let target = payload["target"].as_str().unwrap();
     let target = if target.is_empty() {

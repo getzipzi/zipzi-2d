@@ -1,10 +1,10 @@
 //! Timeline selections describe ordinary inspector fields; only the value and
 //! command adapters know about curves, keys and events.
 use super::*;
+use zipzi_contract::kernel_commands::MotionInterpolation;
 use zipzi_editor_core::{
     Inspection, InspectionSource, TimelineCommand, TimelineKeyRef, TimelineRowId,
 };
-use zipzi_sdk::MotionInterpolation;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum TimelineTarget {

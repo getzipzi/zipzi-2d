@@ -293,9 +293,9 @@ impl ToolController {
             !locks.is_locked(&c.object)
                 && document.context().selections.contains(&c.object)
                 && match c.object.kind {
-                    ObjectKind::Mesh => model.get_mesh(&c.object.id).is_some(),
+                    ObjectKind::Mesh => model.mesh(&c.object.id).is_some(),
                     ObjectKind::Deformer => {
-                        model.get_transform(&c.object.id).is_some()
+                        model.transform(&c.object.id).is_some()
                             && document.deformer_controls_visible(&c.object.id)
                     }
                     _ => false,

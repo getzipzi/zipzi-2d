@@ -70,9 +70,26 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             Ok(Inbound::Disconnected(auth)) => {
                 protocol.disconnect(auth.client, auth.connection, Instant::now())
             }
-            Ok(Inbound::Binary { reply, .. }) => {
-                // Binary transfer is not advertised by this v4 control fixture.
-                drop(reply);
+            Ok(Inbound::Binary {
+                auth,
+                value,
+                bytes,
+                reply,
+                _transfer,
+            }) => {
+                let op = value["operation"]["op"].as_str().unwrap_or("").to_owned();
+                let mut response =
+                    protocol.receive_binary(&mut runtime, auth, value, bytes, Instant::now());
+                response.transfer = Some(_transfer);
+                if !drop_response.is_empty() && drop_response == op && drop_after == 0 {
+                    drop_response.clear();
+                    drop(reply);
+                } else {
+                    if drop_response == op {
+                        drop_after -= 1;
+                    }
+                    let _ = reply.send(response);
+                }
             }
             Err(async_channel::TryRecvError::Empty) => std::thread::sleep(Duration::from_millis(1)),
             Err(async_channel::TryRecvError::Closed) => break,

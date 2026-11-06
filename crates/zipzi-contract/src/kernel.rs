@@ -43,6 +43,7 @@ macro_rules! identity {
 
 identity!(ClientId, "Identity of an authenticated Runtime client.");
 identity!(JobId, "Identity of an owned Runtime task.");
+identity!(BlobId, "Identity of client-owned immutable bulk bytes.");
 identity!(RuntimeInstanceId, "Identity of a host process lifetime.");
 identity!(
     ContentId,

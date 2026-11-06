@@ -345,6 +345,38 @@ pub struct ManualMeshTransferReport {
 
 /// Complete frozen authoring source, including inactive and incomplete dependencies.
 #[derive(Clone, Debug)]
+pub struct ManualMeshInspection {
+    pub geometry: MeshGeometry,
+    pub referenced_vertices: Vec<VertexId>,
+}
+impl ManualMeshInspection {
+    pub fn capture(
+        document: &DocumentState,
+        mesh_id: &str,
+        limits: ConversionLimits,
+    ) -> Result<Self, Status> {
+        let source = ManualMeshSource::new(document, mesh_id, limits)?;
+        Ok(Self {
+            geometry: source.geometry.clone(),
+            referenced_vertices: source.referenced_vertices,
+        })
+    }
+    pub fn can_rebuild(&self) -> bool {
+        self.referenced_vertices.is_empty()
+    }
+    pub fn check_rebuild(&self) -> Result<(), Status> {
+        if self.can_rebuild() {
+            Ok(())
+        } else {
+            Err(Status::error(
+                "GLUE_VERTEX_REFERENCED",
+                "Full rebuild would remove Glue endpoints",
+            ))
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct ManualMeshSource<'a> {
     document: &'a DocumentState,
     mesh_id: String,

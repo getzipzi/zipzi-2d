@@ -39,9 +39,9 @@ pub struct MeshGenerationSource {
     grid_available: bool,
     pub texture: Option<crate::SceneTexture>,
     manual_target: Option<crate::ManualMeshTarget>,
-    transfer: Option<Arc<zipzi_sdk::ManualMeshSource>>,
-    version: zipzi_sdk::Version,
-    limits: zipzi_core::document::AuthoringLimits,
+    transfer: Option<Arc<zipzi_sdk::ManualMeshInspection>>,
+    source: crate::runtime_host::HostedSource,
+    limits: zipzi_core::state::ConversionLimits,
     allocator: Arc<std::sync::Mutex<zipzi_sdk::ManualVertexIdAllocator>>,
     generation: Arc<AtomicU64>,
 }
@@ -57,7 +57,7 @@ pub struct MeshGenerationPreview {
     padded_texture: Option<crate::SceneTexture>,
     manual_target: Option<crate::ManualMeshTarget>,
     texture_identity: Option<(String, u32, u32)>,
-    plan: Option<zipzi_sdk::ManualMeshPlan>,
+    plan: Option<crate::EditPreview<zipzi_sdk::ManualMeshOutcome>>,
     generation: Arc<AtomicU64>,
     generation_id: u64,
 }
@@ -222,7 +222,7 @@ impl MeshGenerationSource {
                     let fresh = if preserve && self.geometry.vertex_ids.contains(&id) {
                         id
                     } else {
-                        allocator.allocate(transfer.geometry())?
+                        allocator.allocate(&transfer.geometry)?
                     };
                     remap.insert(id, fresh);
                 }
@@ -249,22 +249,62 @@ impl MeshGenerationSource {
             if let Some(uvs) = sampling_uvs {
                 sampled.uvs = uvs;
             }
-            let plan = transfer.plan_geometry_with_texture_uvs(
-                transfer.document(),
-                self.version,
-                sampled,
-                geometry.uvs.clone(),
-                self.limits,
-                &zipzi_core::document::ConversionControl::default(),
+            let mesh_id = self.target.id.clone();
+            let target_uvs = geometry.uvs.clone();
+            let limits = self.limits;
+            let padded = padded_texture.clone();
+            let resources = self.source.resource_store();
+            let texture_id = self
+                .source
+                .captured
+                .snapshot
+                .document()
+                .mesh(&mesh_id)
+                .unwrap()
+                .texture_asset_id
+                .to_string();
+            let plan = crate::EditPreview::convert(
+                &self.source,
+                "Generate mesh",
+                limits,
+                &Default::default(),
+                move |commands, control| {
+                    let outcome = commands
+                        .remesh_with_texture_uvs(&mesh_id, sampled, target_uvs, limits, control)?;
+                    if let Some(texture) = padded {
+                        let image =
+                            resources.prepare_rgba(texture.width, texture.height, texture.rgba)?;
+                        commands.replace_image(&texture_id, image)?;
+                    }
+                    Ok(outcome)
+                },
             )?;
-            // Manual dialogs stay in source pixels; ordinary alpha dialogs use
-            // the same authored positions as their eventual application.
             if self.manual_target.is_none() {
-                geometry.positions = plan.geometry().positions;
+                geometry.positions = plan
+                    .snapshot()
+                    .snapshot
+                    .document()
+                    .mesh(&self.target.id)
+                    .unwrap()
+                    .base_positions
+                    .clone();
             }
             Some(plan)
         } else {
-            None
+            let MeshGenerationOptions::Grid(grid) = options else {
+                unreachable!()
+            };
+            let id = self.target.id.clone();
+            let limits = self.limits;
+            Some(crate::EditPreview::convert(
+                &self.source,
+                "Generate grid mesh",
+                limits,
+                &Default::default(),
+                move |commands, control| {
+                    commands.remesh_rectangle_grid(&id, grid.columns, grid.rows, limits, control)
+                },
+            )?)
         };
         let positions: std::collections::HashMap<_, _> = geometry
             .vertex_ids
@@ -381,6 +421,7 @@ impl Document {
         &self,
         target: &crate::ManualMeshTarget,
     ) -> Result<MeshGenerationSource> {
+        let source = self.session.capture_authoring();
         self.validate_manual_target(target)?;
         ensure!(!self.has_pending_edit(), "Finish the current edit first");
         let mesh = self
@@ -397,12 +438,20 @@ impl Document {
             triangles: mesh.triangles,
             meshing: mesh.meshing,
         };
-        let transfer = zipzi_sdk::ManualMeshSource::new(&self.model(), &target.object.id)?;
+        let transfer = zipzi_sdk::ManualMeshInspection::capture(
+            &self.model(),
+            &target.object.id,
+            Default::default(),
+        )?;
         let allocator = self.manual_vertex_allocator(&target.object.id, &geometry);
+        ensure!(
+            self.session.version() == source.version(),
+            "Mesh source changed during capture"
+        );
         Ok(MeshGenerationSource {
             transfer: Some(Arc::new(transfer)),
-            version: self.session.version(),
-            limits: self.session.authoring_limits(),
+            source,
+            limits: zipzi_core::state::ConversionLimits::default(),
             allocator,
             target: target.object.clone(),
             revision: self.mesh_generation_revision(),
@@ -418,6 +467,7 @@ impl Document {
     }
 
     pub fn mesh_generation_source(&self, object: &ObjectRef) -> Result<MeshGenerationSource> {
+        let source = self.session.capture_authoring();
         self.validate_mesh_generation_target(object)?;
         ensure!(!self.has_pending_edit(), "Document has changed");
         let mesh = self
@@ -427,7 +477,14 @@ impl Document {
         let transfer = self
             .manual_mesh_target_for(object)
             .ok()
-            .and_then(|_| zipzi_sdk::ManualMeshSource::new(&self.model(), &object.id).ok())
+            .and_then(|_| {
+                zipzi_sdk::ManualMeshInspection::capture(
+                    &self.model(),
+                    &object.id,
+                    Default::default(),
+                )
+                .ok()
+            })
             .map(Arc::new);
         let allocator = self.manual_vertex_allocator(
             &object.id,
@@ -439,10 +496,14 @@ impl Document {
                 meshing: mesh.meshing.clone(),
             },
         );
+        ensure!(
+            self.session.version() == source.version(),
+            "Mesh source changed during capture"
+        );
         Ok(MeshGenerationSource {
             transfer,
-            version: self.session.version(),
-            limits: self.session.authoring_limits(),
+            source,
+            limits: zipzi_core::state::ConversionLimits::default(),
             allocator,
             target: object.clone(),
             revision: self.mesh_generation_revision(),
@@ -505,22 +566,13 @@ impl Document {
             preview.plan.is_some() || matches!(preview.options, MeshGenerationOptions::Grid(_)),
             "Missing mesh transfer plan"
         );
-        let mut edit = self
-            .session
-            .begin_owned_edit("Generate mesh preview", Some(self.session.version()))?;
-        edit.apply(|edit| {
-            if let Some(plan) = &preview.plan {
-                edit.apply_manual_mesh_plan(plan.clone())?;
-            } else if let MeshGenerationOptions::Grid(grid) = preview.options {
-                edit.remesh_rectangle_grid(&preview.target.id, grid.columns, grid.rows)?;
-            }
-            Ok(())
-        })?;
         self.generation_texture = preview.padded_texture.clone();
-        self.generation_pending = Some(super::ManualPending {
-            edit,
+        self.generation_pending = Some(super::GenerationPending {
+            edit: preview
+                .plan
+                .clone()
+                .context("Missing generated candidate")?,
             preview: Default::default(),
-            changed: false,
         });
         self.preview_revision += 1;
         self.invalidate_canvas_topology(None);
@@ -553,56 +605,17 @@ impl Document {
                 "Source image changed"
             );
         }
-        match preview.options {
-            MeshGenerationOptions::Alpha(_)
-            | MeshGenerationOptions::ManualEdge(_)
-            | MeshGenerationOptions::ManualInterior(_)
-            | MeshGenerationOptions::ManualFull(_)
-            | MeshGenerationOptions::ManualReconnect => {
-                if preview.manual_target.is_none() {
-                    self.validate_mesh_alpha(&preview.target)?;
-                }
-                let version = self.session.version();
-                let plan = preview
-                    .plan
-                    .as_ref()
-                    .context("Missing mesh transfer plan")?;
-                let mesh = self
-                    .session
-                    .mesh(&preview.target.id)
-                    .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
-                let image = if let Some(texture) = &preview.padded_texture {
-                    Some(self.session.prepare_rgba_image(
-                        texture.width,
-                        texture.height,
-                        texture.rgba.clone(),
-                    )?)
-                } else {
-                    None
-                };
-                let asset_id = mesh.texture_asset_id.to_string();
-                let (_, receipt) =
-                    self.session
-                        .edit("generate alpha mesh", Some(version), |edit| {
-                            edit.apply_manual_mesh_plan(plan.clone())?;
-                            if let Some(image) = image {
-                                edit.replace_prepared_image(&asset_id, &image)?;
-                            }
-                            Ok(())
-                        })?;
-                if receipt.changed {
-                    self.refresh_textures()?;
-                    self.pristine_blank = None;
-                    self.after_history(true);
-                }
-                Ok(())
-            }
-            // The deterministic SDK generator uses the same source and options as the
-            // preview. The revision guard prevents applying to a different source.
-            MeshGenerationOptions::Grid(options) => {
-                self.generate_mesh_grid(&preview.target, options, preview.revision)
-            }
+        let candidate = preview
+            .plan
+            .as_ref()
+            .context("Missing generated candidate")?;
+        let receipt = candidate.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
+            self.refresh_textures()?;
+            self.pristine_blank = None;
+            self.consume_authoring_receipt(&receipt, true);
         }
+        Ok(())
     }
 
     pub fn mesh_generation_revision(&self) -> u64 {
@@ -660,7 +673,8 @@ impl Document {
     pub fn validate_mesh_alpha(&self, object: &ObjectRef) -> Result<()> {
         ensure!(object.kind == ObjectKind::Mesh, "Select one mesh");
         self.ensure_editable(std::slice::from_ref(object))?;
-        zipzi_sdk::ManualMeshSource::new(&self.model(), &object.id)?.check_rebuild()?;
+        zipzi_sdk::ManualMeshInspection::capture(&self.model(), &object.id, Default::default())?
+            .check_rebuild()?;
         let mesh = self
             .mesh(&object.id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
@@ -735,7 +749,7 @@ impl Document {
             options.rows,
             Some(expected),
         )?;
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
             self.after_history(true);
         }

@@ -151,6 +151,22 @@ impl ResourceView {
         &self,
         asset: &zipzi_core::state::AssetRecord,
     ) -> Result<crate::AssetData, Status> {
+        self.asset_image(asset)?.read_asset()
+    }
+
+    /// Captured RGBA pixels for exactly the resource version referenced by this
+    /// record. No decoder, encoder or external path lookup runs during a read.
+    pub fn read_texture(
+        &self,
+        asset: &zipzi_core::state::AssetRecord,
+    ) -> Result<TextureData, Status> {
+        Ok(self.asset_image(asset)?.texture())
+    }
+
+    fn asset_image(
+        &self,
+        asset: &zipzi_core::state::AssetRecord,
+    ) -> Result<&ImageResource, Status> {
         let zipzi_core::state::AssetContent::Image {
             resource,
             width,
@@ -165,6 +181,6 @@ impl ResourceView {
         if (width, height) != (image.width(), image.height()) {
             return Err(Status::error("RESOURCE_DIMENSIONS", &asset.id));
         }
-        image.read_asset()
+        Ok(image)
     }
 }

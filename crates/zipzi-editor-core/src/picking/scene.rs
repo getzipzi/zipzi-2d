@@ -39,9 +39,9 @@ impl CanvasScene {
             let Some(&slot) = self.mesh_slots.get(&object.id) else {
                 continue;
             };
-            let mesh = doc.get_mesh(&object.id).unwrap();
+            let mesh = doc.mesh(&object.id).unwrap();
             let space = crate::control_edit::ControlSpace::new(document, self, &mesh.deformer_id)?;
-            let local = zipzi_core::evaluation::authoring_mesh_positions(&doc, &object.id, values)
+            let local = zipzi_core::evaluation::authoring_mesh_positions(&*doc, &object.id, values)
                 .map_err(|e| anyhow::anyhow!("{}", e.message))?;
             let m = Arc::make_mut(&mut meshes[slot]);
             m.vertices = mesh
@@ -81,7 +81,7 @@ impl CanvasScene {
         let mut scene = self.clone();
         let model = document.model();
         if let Some(&slot) = self.mesh_slots.get(&target.object.id) {
-            if let Some(mesh) = model.get_mesh(&target.object.id) {
+            if let Some(mesh) = model.mesh(&target.object.id) {
                 let mut meshes = self.meshes.to_vec();
                 let m = Arc::make_mut(&mut meshes[slot]);
                 m.vertices = mesh
@@ -282,7 +282,7 @@ impl CanvasScene {
         let parameter_values = Self::capture_parameter_values(&source, previous);
         let glue_map = Arc::new(crate::mesh_edit::GlueMap::new(
             &zipzi_core::evaluation::evaluated_glue_operations(
-                &document.model(),
+                &*document.model(),
                 &parameter_values,
             ),
         ));

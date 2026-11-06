@@ -1719,6 +1719,163 @@
         }
       ]
     },
+    "CollectionTarget": {
+      "content": "target",
+      "doc": "Stable collection selector, interpreted only within its accompanying QuerySource.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::kernel_wire::CollectionTarget",
+      "tag": "domain",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "OrganizationCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "organization",
+          "rust_name": "Organization"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "SceneCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "scene",
+          "rust_name": "Scene"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "ReferenceCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "references",
+          "rust_name": "References"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "PoseCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "pose",
+          "rust_name": "Pose"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "PhysicsCollection"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "physics",
+          "rust_name": "Physics"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "ref",
+                "name": "MotionContainer"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "motion",
+          "rust_name": "Motion"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "motion_groups",
+          "rust_name": "MotionGroups"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "clips",
+          "rust_name": "Clips"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "expressions",
+          "rust_name": "Expressions"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "expression_id",
+              "rust_name": "expression_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "expression_entries",
+          "rust_name": "ExpressionEntries"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "resources",
+          "rust_name": "Resources"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "attachments",
+          "rust_name": "Attachments"
+        }
+      ]
+    },
     "Command": {
       "content": null,
       "doc": "Commands run atomically in one Draft batch. Source checking is on the batch,\nso positional selectors cannot be replayed against a different query source.",
@@ -4732,6 +4889,26 @@
       "transparent": false,
       "tuple": false
     },
+    "ExportFormat": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::kernel_tasks::ExportFormat",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "runtime",
+          "rust_name": "Runtime"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cubism",
+          "rust_name": "Cubism"
+        }
+      ]
+    },
     "ExportSettings": {
       "doc": "Cubism output policy. A model unit corresponds to one canvas pixel; PPU\nconverts those lengths into Cubism runtime units only at the file boundary.",
       "fields": [
@@ -5772,6 +5949,32 @@
           "form": "record",
           "name": "file",
           "rust_name": "File"
+        }
+      ]
+    },
+    "ImportFormat": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::kernel_wire::ImportFormat",
+      "tag": null,
+      "variants": [
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "model3",
+          "rust_name": "Model3"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "psd",
+          "rust_name": "Psd"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "cubism",
+          "rust_name": "Cubism"
         }
       ]
     },
@@ -9174,6 +9377,169 @@
         }
       ]
     },
+    "ObjectTarget": {
+      "content": "id",
+      "doc": "A mesh or Part selected by its stable authoring ID.\n\nA Part selects every descendant mesh, including meshes in nested Parts.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::spatial::ObjectTarget",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Select exactly one mesh.",
+          "fields": [
+            {
+              "doc": "Persistent authoring mesh UUID.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "mesh",
+          "rust_name": "Mesh"
+        },
+        {
+          "doc": "Select all descendant meshes of a Part.",
+          "fields": [
+            {
+              "doc": "Persistent Part UUID selecting descendant meshes.",
+              "name": "value",
+              "rust_name": "0",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "newtype",
+          "name": "part",
+          "rust_name": "Part"
+        }
+      ]
+    },
+    "ObservationTexturePolicy": {
+      "content": null,
+      "doc": "Explicit base-level texture policy. Budgets count logical straight RGBA8\nbytes per referenced asset ID, independently of physical buffer sharing.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::runtime::ObservationTexturePolicy",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Preserve source dimensions and decoded RGBA8 pixels without downsampling.",
+          "fields": [],
+          "form": "record",
+          "name": "original",
+          "rust_name": "Original"
+        },
+        {
+          "doc": "Deterministically downsample referenced base textures to fit a logical RGBA8 budget.",
+          "fields": [
+            {
+              "doc": "Positive integer no greater than the host's base RGBA limit.",
+              "name": "max_rgba_bytes",
+              "rust_name": "max_rgba_bytes",
+              "shape": {
+                "kind": "u64"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "fit_budget",
+          "rust_name": "FitBudget"
+        }
+      ]
+    },
+    "ObservationView": {
+      "doc": "Output dimensions and Y-up model-space region for GPU observation.",
+      "fields": [
+        {
+          "default": {
+            "kind": "original"
+          },
+          "doc": "Explicit texture policy; Original preserves source pixels and dimensions.",
+          "name": "texture_policy",
+          "rust_name": "texture_policy",
+          "shape": {
+            "kind": "ref",
+            "name": "ObservationTexturePolicy"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Output width in pixels, positive and subject to host/device limits (host default 4096).",
+          "name": "width",
+          "rust_name": "width",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Output height in pixels, positive and subject to host/device limits (host default 4096).",
+          "name": "height",
+          "rust_name": "height",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Nonempty finite [min_x,min_y,max_x,max_y] in Y-up model coordinates.",
+          "name": "roi",
+          "rust_name": "roi",
+          "shape": {
+            "item": {
+              "kind": "f32"
+            },
+            "kind": "array",
+            "length": 4
+          },
+          "skip": false
+        },
+        {
+          "default": 0.0,
+          "doc": "Nonnegative padding around the ROI in model units; aspect ratio is preserved.",
+          "name": "padding_model",
+          "rust_name": "padding_model",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Optional topology overlay in the same frozen Source and ROI mapping. It ignores\nmasks and occlusion; None preserves the ordinary GPU image.",
+          "name": "topology",
+          "rust_name": "topology",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "TopologyOverlay"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Include per-mesh evaluated quality and approximate source-alpha coverage.\nUses default parameters of the same source as reference; checks requested frames only.",
+          "name": "quality",
+          "rust_name": "quality",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::runtime::ObservationView",
+      "transparent": false,
+      "tuple": false
+    },
     "OffscreenDeletePolicy": {
       "content": null,
       "doc": "Choose how Part mappings are handled when Offscreen keyform slots are deleted.",
@@ -9309,6 +9675,353 @@
       "name": "zipzi_contract::kernel_wire::Operation",
       "tag": "op",
       "variants": [
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "ref",
+                "name": "QuerySource"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "input",
+              "rust_name": "input",
+              "shape": {
+                "kind": "ref",
+                "name": "SampleRequest"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "sample",
+          "rust_name": "Sample"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "ref",
+                "name": "QuerySource"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "input",
+              "rust_name": "input",
+              "shape": {
+                "kind": "ref",
+                "name": "SampleInput"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "view",
+              "rust_name": "view",
+              "shape": {
+                "kind": "ref",
+                "name": "ObservationView"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "observe",
+          "rust_name": "Observe"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "ref",
+                "name": "QuerySource"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "format",
+              "rust_name": "format",
+              "shape": {
+                "kind": "ref",
+                "name": "ExportFormat"
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "",
+              "name": "allow_loss",
+              "rust_name": "allow_loss",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "export",
+          "rust_name": "Export"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "length",
+              "rust_name": "length",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "create_blob",
+          "rust_name": "CreateBlob"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "blob",
+              "rust_name": "blob",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "offset",
+              "rust_name": "offset",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "length",
+              "rust_name": "length",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "payload_sha256",
+              "rust_name": "payload_sha256",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "append_blob_binary",
+          "rust_name": "AppendBlobBinary"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "blob",
+              "rust_name": "blob",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "seal_blob",
+          "rust_name": "SealBlob"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "blob",
+              "rust_name": "blob",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "offset",
+              "rust_name": "offset",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "length",
+              "rust_name": "length",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "read_blob_binary",
+          "rust_name": "ReadBlobBinary"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "blob",
+              "rust_name": "blob",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "release_blob",
+          "rust_name": "ReleaseBlob"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "DraftSource"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "blob",
+              "rust_name": "blob",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "width",
+              "rust_name": "width",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "height",
+              "rust_name": "height",
+              "shape": {
+                "kind": "u32"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "replace_image_blob",
+          "rust_name": "ReplaceImageBlob"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "source",
+              "rust_name": "source",
+              "shape": {
+                "kind": "ref",
+                "name": "QuerySource"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "id",
+              "rust_name": "id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "read_image_blob",
+          "rust_name": "ReadImageBlob"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "job",
+              "rust_name": "job",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "read_job_blob",
+          "rust_name": "ReadJobBlob"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "Version"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "editor_context",
+          "rust_name": "EditorContext"
+        },
         {
           "fields": [],
           "form": "unit",
@@ -9701,6 +10414,42 @@
           "form": "record",
           "name": "open",
           "rust_name": "Open"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "expected",
+              "rust_name": "expected",
+              "shape": {
+                "kind": "ref",
+                "name": "Version"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "path",
+              "rust_name": "path",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            },
+            {
+              "doc": "",
+              "name": "format",
+              "rust_name": "format",
+              "shape": {
+                "kind": "ref",
+                "name": "ImportFormat"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "import",
+          "rust_name": "Import"
         },
         {
           "fields": [
@@ -10443,6 +11192,41 @@
       "transparent": false,
       "tuple": false
     },
+    "ParameterActivation": {
+      "fields": [
+        {
+          "doc": "",
+          "name": "id",
+          "rust_name": "id",
+          "shape": {
+            "kind": "string"
+          },
+          "skip": false
+        },
+        {
+          "doc": "",
+          "name": "time",
+          "rust_name": "time",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "doc": "",
+          "name": "value",
+          "rust_name": "value",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::kernel_tasks::ParameterActivation",
+      "transparent": false,
+      "tuple": false
+    },
     "ParameterCreateSpec": {
       "doc": "Input for creating a document parameter; the host validates its range and supplies omitted defaults.",
       "fields": [
@@ -11040,6 +11824,73 @@
           "form": "unit",
           "name": "Angle",
           "rust_name": "Angle"
+        }
+      ]
+    },
+    "PhysicsCollection": {
+      "content": null,
+      "doc": "Select a Physics rig collection or rows within one rig.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::authoring::PhysicsCollection",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Select Physics rigs.",
+          "fields": [],
+          "form": "unit",
+          "name": "groups",
+          "rust_name": "Groups"
+        },
+        {
+          "doc": "Select inputs of one rig.",
+          "fields": [
+            {
+              "doc": "Stable Physics rig ID owning the selected rows.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "inputs",
+          "rust_name": "Inputs"
+        },
+        {
+          "doc": "Select outputs of one rig.",
+          "fields": [
+            {
+              "doc": "Stable Physics rig ID owning the selected rows.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "outputs",
+          "rust_name": "Outputs"
+        },
+        {
+          "doc": "Select nodes of one rig.",
+          "fields": [
+            {
+              "doc": "Stable Physics rig ID owning the selected rows.",
+              "name": "group_id",
+              "rust_name": "group_id",
+              "shape": {
+                "kind": "string"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "nodes",
+          "rust_name": "Nodes"
         }
       ]
     },
@@ -13875,6 +14726,23 @@
       "tag": "query",
       "variants": [
         {
+          "fields": [
+            {
+              "doc": "",
+              "name": "target",
+              "rust_name": "target",
+              "shape": {
+                "kind": "ref",
+                "name": "CollectionTarget"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "collection_capabilities",
+          "rust_name": "CollectionCapabilities"
+        },
+        {
           "fields": [],
           "form": "unit",
           "name": "summary",
@@ -14923,6 +15791,173 @@
       ],
       "kind": "serde_record",
       "name": "zipzi_contract::model::RotationTransform",
+      "transparent": false,
+      "tuple": false
+    },
+    "SampleInput": {
+      "content": null,
+      "kind": "serde_enum",
+      "name": "zipzi_contract::kernel_tasks::SampleInput",
+      "tag": "kind",
+      "variants": [
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "values",
+              "rust_name": "values",
+              "shape": {
+                "item": {
+                  "kind": "string_map",
+                  "value": {
+                    "kind": "f32"
+                  }
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "parameters",
+          "rust_name": "Parameters"
+        },
+        {
+          "fields": [
+            {
+              "doc": "",
+              "name": "times",
+              "rust_name": "times",
+              "shape": {
+                "item": {
+                  "kind": "f32"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": [],
+              "doc": "",
+              "name": "motions",
+              "rust_name": "motions",
+              "shape": {
+                "item": {
+                  "items": [
+                    {
+                      "kind": "string"
+                    },
+                    {
+                      "kind": "f32"
+                    }
+                  ],
+                  "kind": "tuple"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": [],
+              "doc": "",
+              "name": "expressions",
+              "rust_name": "expressions",
+              "shape": {
+                "item": {
+                  "items": [
+                    {
+                      "kind": "string"
+                    },
+                    {
+                      "kind": "f32"
+                    }
+                  ],
+                  "kind": "tuple"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": [],
+              "doc": "",
+              "name": "inputs",
+              "rust_name": "inputs",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "ParameterActivation"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "",
+              "name": "physics",
+              "rust_name": "physics",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "",
+              "name": "stabilized_start",
+              "rust_name": "stabilized_start",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "animation",
+          "rust_name": "Animation"
+        }
+      ]
+    },
+    "SampleRequest": {
+      "fields": [
+        {
+          "doc": "",
+          "name": "input",
+          "rust_name": "input",
+          "shape": {
+            "kind": "ref",
+            "name": "SampleInput"
+          },
+          "skip": false
+        },
+        {
+          "default": [],
+          "doc": "",
+          "name": "queries",
+          "rust_name": "queries",
+          "shape": {
+            "item": {
+              "kind": "ref",
+              "name": "SpatialQuery"
+            },
+            "kind": "sequence"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "",
+          "name": "quality",
+          "rust_name": "quality",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::kernel_tasks::SampleRequest",
       "transparent": false,
       "tuple": false
     },
@@ -17693,6 +18728,297 @@
           "rust_name": "Blend"
         }
       ]
+    },
+    "SpatialQuery": {
+      "content": null,
+      "doc": "CPU geometric queries; masks, textures and occlusion are not pixel-tested.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::spatial::SpatialQuery",
+      "tag": "kind",
+      "variants": [
+        {
+          "doc": "Measure the union of evaluated geometry for the selected targets.",
+          "fields": [
+            {
+              "doc": "Mesh/Part UUID selectors; an empty selection selects no meshes.",
+              "name": "targets",
+              "rust_name": "targets",
+              "shape": {
+                "item": {
+                  "kind": "ref",
+                  "name": "ObjectTarget"
+                },
+                "kind": "sequence"
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "Include disabled, hidden and zero-opacity geometry in the union.",
+              "name": "include_hidden",
+              "rust_name": "include_hidden",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "bounds",
+          "rust_name": "Bounds"
+        },
+        {
+          "doc": "Find geometric candidates containing a model-space point.",
+          "fields": [
+            {
+              "doc": "Finite XY point in evaluated Y-up model coordinates, not screen pixels.",
+              "name": "point",
+              "rust_name": "point",
+              "shape": {
+                "item": {
+                  "kind": "f64"
+                },
+                "kind": "array",
+                "length": 2
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "Include disabled, hidden and zero-opacity geometric candidates.",
+              "name": "include_hidden",
+              "rust_name": "include_hidden",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            },
+            {
+              "default": false,
+              "doc": "Include every containing triangle, stable vertex IDs, barycentric weights and UV.",
+              "name": "details",
+              "rust_name": "details",
+              "shape": {
+                "kind": "bool"
+              },
+              "skip": false
+            },
+            {
+              "default": 32,
+              "doc": "Maximum mesh candidates retained in descending draw order; total remains untruncated.",
+              "name": "max_candidates",
+              "rust_name": "max_candidates",
+              "shape": {
+                "kind": "usize"
+              },
+              "skip": false
+            }
+          ],
+          "form": "record",
+          "name": "hits",
+          "rust_name": "Hits"
+        }
+      ]
+    },
+    "TopologyOverlay": {
+      "doc": "Explicit diagnostic drawing options; overlays ignore masks and occlusion.",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Diagnostic selection only; the textured context image is unchanged. None selects all\nmeshes, an empty selection selects none. Mesh/Part targets are unioned and deduplicated;\nParts include nested Parts. Missing targets fail explicitly. Maximum 256 selectors.",
+          "name": "targets",
+          "rust_name": "targets",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "ref",
+                "name": "ObjectTarget"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
+        },
+        {
+          "default": true,
+          "doc": "Draw triangle edges in cyan, in final evaluated model coordinates.",
+          "name": "wireframe",
+          "rust_name": "wireframe",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Draw vertex positions as yellow dots.",
+          "name": "vertices",
+          "rust_name": "vertices",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Draw stable authoring vertex IDs in yellow, rather than transient array offsets.",
+          "name": "vertex_ids",
+          "rust_name": "vertex_ids",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Draw meshing boundary edges in green and internal constraints in magenta.",
+          "name": "constraints",
+          "rust_name": "constraints",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Fill triangles by symmetric edge stretch relative to the default pose: blue=1,\norange=2, red>=4; flipped or collapsed triangles are magenta.",
+          "name": "strain",
+          "rust_name": "strain",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Include disabled, hidden and zero-opacity meshes. Default draws visible meshes only.",
+          "name": "include_hidden",
+          "rust_name": "include_hidden",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Clear the textured image before diagnostic drawing, retaining the exact same view.",
+          "name": "topology_only",
+          "rust_name": "topology_only",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": 0.25,
+          "doc": "Heat fill opacity in [0,1]. Applied once per pixel using the most severe overlapping\ntriangle, so overlapping layers cannot accumulate opacity. Lines and labels stay opaque.",
+          "name": "heat_opacity",
+          "rust_name": "heat_opacity",
+          "shape": {
+            "kind": "f32"
+          },
+          "skip": false
+        },
+        {
+          "default": false,
+          "doc": "Restrict every diagnostic layer to anomalous triangles and their incident vertices/edges.\nDegenerate, flipped and undefined-reference triangles always count as anomalies.",
+          "name": "anomalies_only",
+          "rust_name": "anomalies_only",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        },
+        {
+          "default": {
+            "max_aspect_ratio": 20.0,
+            "max_edge_stretch": 2.0,
+            "min_angle_degrees": 10.0
+          },
+          "doc": "Thresholds used by anomalies_only; reports themselves are never threshold-filtered.",
+          "name": "thresholds",
+          "rust_name": "thresholds",
+          "shape": {
+            "kind": "ref",
+            "name": "TopologyThresholds"
+          },
+          "skip": false
+        },
+        {
+          "default": 2,
+          "doc": "Decimal glyph scale in output pixels, 1..4. Labels avoid other labels globally;\nan ID is omitted when no nearby in-view position has enough space.",
+          "name": "label_scale",
+          "rust_name": "label_scale",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "default": 3,
+          "doc": "Minimum clear gap between label rectangles in pixels, 0..32.",
+          "name": "label_spacing",
+          "rust_name": "label_spacing",
+          "shape": {
+            "kind": "u32"
+          },
+          "skip": false
+        },
+        {
+          "default": 256,
+          "doc": "Maximum labels per image, 0..4096. Vertex dots remain independent of this limit.",
+          "name": "max_labels",
+          "rust_name": "max_labels",
+          "shape": {
+            "kind": "usize"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::TopologyOverlay",
+      "transparent": false,
+      "tuple": false
+    },
+    "TopologyThresholds": {
+      "doc": "Advisory anomaly thresholds in evaluated model space, relative to the default pose.",
+      "fields": [
+        {
+          "default": 10.0,
+          "doc": "An angle below this value is anomalous; finite degrees in [0,60]. Default 10.",
+          "name": "min_angle_degrees",
+          "rust_name": "min_angle_degrees",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": 20.0,
+          "doc": "A longest-edge/altitude ratio above this is anomalous; finite and >= 1. Default 20.",
+          "name": "max_aspect_ratio",
+          "rust_name": "max_aspect_ratio",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "default": 2.0,
+          "doc": "A symmetric edge-length ratio above this is anomalous; finite and >= 1. Default 2.",
+          "name": "max_edge_stretch",
+          "rust_name": "max_edge_stretch",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::authoring::TopologyThresholds",
+      "transparent": false,
+      "tuple": false
     },
     "TransformId": {
       "doc": "Persistent scene object identifier.",
