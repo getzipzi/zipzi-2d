@@ -301,6 +301,11 @@ impl std::fmt::Debug for PreparedImageContent {
     }
 }
 impl PreparedImageContent {
+    pub(crate) fn encoded_png(&self) -> Result<(Arc<[u8]>, String), Status> {
+        self.verified_texture()?;
+        let png = self.memory.encoded_png()?;
+        Ok((png.bytes.clone(), png.sha256.clone()))
+    }
     pub fn texture(&self) -> TextureData {
         self.memory.texture.clone()
     }

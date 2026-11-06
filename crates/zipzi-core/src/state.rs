@@ -156,7 +156,7 @@ impl DocumentState {
 /// Exclusive candidate workspace. All writes are typed and automatically tracked.
 /// A failed command poisons this workspace, so earlier candidate writes cannot
 /// accidentally be frozen after a batch failure. SDK owns the Draft lifecycle.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DocumentBuilder {
     base: DocumentState,
     content: Content,
@@ -393,6 +393,12 @@ impl DocumentBuilder {
             }
         };
         Ok(FrozenDocument { state, writes })
+    }
+
+    /// Validate a read-only candidate without consuming the working builder.
+    /// Shared roots remain immutable; only touched normalization records detach.
+    pub fn preview(&self) -> Result<DocumentState, Status> {
+        Ok(self.clone().freeze()?.state)
     }
 }
 

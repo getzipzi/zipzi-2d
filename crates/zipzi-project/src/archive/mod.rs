@@ -95,9 +95,9 @@ struct Format {
     preview: Option<serde_json::Value>,
 }
 
-pub struct WrittenArchive {
+pub struct WrittenArchive<D = Document> {
     /// Same authoring data with complete content-addressed asset paths.
-    pub document: Document,
+    pub document: D,
     pub unique_assets: usize,
     pub asset_bytes: u64,
     pub document_bytes: u64,
@@ -137,8 +137,8 @@ enum ArchiveDocumentFormat {
 }
 
 #[derive(Debug, Clone)]
-pub struct ArchiveSaveReceipt {
-    pub document: Document,
+pub struct ArchiveSaveReceipt<D = Document> {
+    pub document: D,
     pub path: PathBuf,
     pub fingerprint: ProjectFingerprint,
     pub published: bool,
@@ -323,18 +323,35 @@ impl ProjectArchiveStore {
             .ok_or_else(|| invalid("Missing target parent"))?;
         std::fs::create_dir_all(parent)?;
         crate::filesystem::reject_symlink(&target).map_err(ArchiveError::from)?;
-        let _lock = self
-            .filesystem
-            .acquire_lock(&target)
-            .map_err(|e| Status::error("PROJECT_BUSY", e.to_string()))?;
         check_archive_target(&target, expected, &mut keep_going)?;
-        let mut prepared = writer::prepare(
+        let prepared = writer::prepare(
             document,
             resources.path(),
             self.limits,
             &mut keep_going,
             ArchiveDocumentFormat::NativeV22,
         )?;
+        self.publish_prepared(prepared, &target, expected, keep_going)
+    }
+    fn publish_prepared<D>(
+        &self,
+        mut prepared: writer::PreparedArchive<D>,
+        target: &Path,
+        expected: Option<&ProjectFingerprint>,
+        mut keep_going: impl FnMut() -> bool,
+    ) -> Result<ArchiveSaveReceipt<D>> {
+        check(&mut keep_going)?;
+        crate::filesystem::reject_symlink(target)?;
+        let target = crate::filesystem::local_path(target)?;
+        let parent = target
+            .parent()
+            .ok_or_else(|| invalid("Missing target parent"))?;
+        fs::create_dir_all(parent)?;
+        let _lock = self
+            .filesystem
+            .acquire_lock(&target)
+            .map_err(|e| Status::error("PROJECT_BUSY", e.to_string()))?;
+        check_archive_target(&target, expected, &mut keep_going)?;
         let base_extent = prepared.extent;
         let base_format = prepared.preview_format();
         prepared.set_preview(self.save_preview.clone(), self.limits)?;
@@ -454,8 +471,12 @@ fn check_archive_target(
     }
 }
 
+enum ResourceInput {
+    File(PathBuf),
+    Bytes(Arc<[u8]>),
+}
 struct Resource {
-    path: PathBuf,
+    input: ResourceInput,
     fingerprint: ProjectFingerprint,
     dimensions: (u32, u32),
 }
@@ -557,3 +578,11 @@ mod tests;
 
 #[cfg(test)]
 mod publication_tests;
+
+mod state_io;
+pub use state_io::{LoadedProject, ProjectIo, ProjectMetadata};
+
+#[cfg(test)]
+mod state_fixture;
+#[cfg(test)]
+mod state_tests;

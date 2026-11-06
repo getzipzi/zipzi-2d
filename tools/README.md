@@ -92,7 +92,7 @@ metadata coverage gate. Vendor packages are not workspace members.
 python3 tools/workspace/cargo_domain.py --check
 python3 tools/workspace/cargo_domain.py sdk check --locked --all-targets
 python3 tools/workspace/cargo_domain.py editor check --locked --all-targets --features zipzi-editor/test-support
-./tools/test-sdk.sh fast physics_editing::
+./tools/test-sdk.sh fast native_image
 ./tools/test-editor.sh ui i18n::
 ```
 
@@ -103,7 +103,7 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 
 | Entry | Coverage |
 | --- | --- |
-| SDK `fast` | zipzi-sdk library and ordinary integration; optional filter |
+| SDK `fast` | New zipzi-sdk library and `authoring` native-workflow integration; optional filter |
 | SDK `runtime` | CPU Runtime sessions, path reservations, transactions, jobs, panic, events, protocol/framing and retention contracts; optional filter |
 | SDK `mesh` / `regression` | Daily alpha mesh / all 19 SDK libraries and integrations; skip only `alpha_mesh_stress::` |
 | SDK `stress` | Entire fixed-seed alpha mesh matrix |
@@ -115,6 +115,13 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 | Editor `acceptance` | acceptance, native_render, headless_screenshot, animation_acceptance, timeline_acceptance、runtime_ipc_acceptance、runtime_handoff_acceptance（自动安装隔离 Python 客户端） |
 | Editor `tools` | All repository tooling tests (automatic discovery) |
 | Editor `full` | Editor formatting, tooling and complete three-package Cargo test invocation with test-support (examples/doctests included) |
+
+During the authoring rewrite, SDK fast targets the new public API. The former
+`integration`/`alpha_mesh` targets and old examples remain migration inputs;
+Runtime/Observe/Editor/Python-native and broad SDK gates still require the removed
+API and are not passing intermediate-stage gates. See the
+[stage boundary](../docs/plans/authoring-architecture.md). This narrower fast gate
+does not replace the domain regressions required after their migration.
 
 SDK and Editor full extra arguments go to Cargo tests. Editor `fast` and `regression` omit
 example compilation and doctests; `full` includes both. Focused Cargo arguments and arguments

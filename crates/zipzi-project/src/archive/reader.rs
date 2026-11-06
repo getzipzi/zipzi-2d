@@ -20,15 +20,16 @@ fn unsupported(code: &str, message: &str) -> ArchiveError {
     Status::error(code, message).into()
 }
 
-pub(super) fn open(
+pub(super) fn open_content<T: ImageDescriptors>(
     path: &Path,
     workspace_parent: &Path,
     limits: ArchiveIoLimits,
     disk_budget: ProjectDiskBudget,
     allow_prototype: bool,
     memory: Option<&crate::TransferReservation>,
+    decode: impl FnOnce(&str, &str, u64) -> std::result::Result<T, Status>,
     mut keep_going: impl FnMut() -> bool,
-) -> Result<OpenedArchive> {
+) -> Result<OpenedContent<T>> {
     check(&mut keep_going)?;
     if let Some(memory) = memory {
         memory.ensure_at_least(2 << 20)?;
@@ -126,7 +127,7 @@ pub(super) fn open(
     } else {
         (NATIVE_FORMAT, NATIVE_DOCUMENT_VERSION)
     };
-    let document = crate::codec::decode_archive_project(
+    let document = decode(
         std::str::from_utf8(&bytes).map_err(|_| invalid("Invalid UTF-8 document"))?,
         identifier,
         version,
@@ -135,8 +136,8 @@ pub(super) fn open(
     check(&mut keep_going)?;
     let mut assets = BTreeMap::<String, Vec<&zipzi_core::ImageAsset>>::new();
     let mut diagnostics = Vec::new();
-    for id in document.asset_order() {
-        let asset = document.get_asset(id).unwrap();
+    for asset in document.images() {
+        let id = &asset.id;
         let Some(content) = &asset.content else {
             diagnostics.push(crate::ResourceDiagnostic {
                 asset_id: id.to_string(),
@@ -284,7 +285,7 @@ pub(super) fn open(
     fs::remove_file(copy_path)?;
     drop(copy_reservation);
     check(&mut keep_going)?;
-    Ok(OpenedArchive {
+    Ok(OpenedContent {
         document,
         fingerprint: fingerprint.clone(),
         counts,
@@ -293,5 +294,62 @@ pub(super) fn open(
         peak_working_bytes: fingerprint.length + asset_bytes,
         diagnostics,
         working_set,
+    })
+}
+
+pub(super) trait ImageDescriptors {
+    fn images(&self) -> Vec<&zipzi_core::ImageAsset>;
+}
+impl ImageDescriptors for Document {
+    fn images(&self) -> Vec<&zipzi_core::ImageAsset> {
+        self.asset_order()
+            .iter()
+            .map(|id| self.get_asset(id).unwrap())
+            .collect()
+    }
+}
+impl ImageDescriptors for crate::codec::DecodedState {
+    fn images(&self) -> Vec<&zipzi_core::ImageAsset> {
+        self.images.iter().collect()
+    }
+}
+pub(super) struct OpenedContent<T> {
+    pub document: T,
+    pub fingerprint: ProjectFingerprint,
+    pub counts: IoCounts,
+    pub unique_assets: usize,
+    pub asset_bytes: u64,
+    pub peak_working_bytes: u64,
+    pub diagnostics: Vec<crate::ResourceDiagnostic>,
+    pub working_set: ProjectResourceLease,
+}
+pub(super) fn open(
+    path: &Path,
+    workspace_parent: &Path,
+    limits: ArchiveIoLimits,
+    disk_budget: ProjectDiskBudget,
+    allow_prototype: bool,
+    memory: Option<&crate::TransferReservation>,
+    keep_going: impl FnMut() -> bool,
+) -> Result<OpenedArchive> {
+    let opened = open_content(
+        path,
+        workspace_parent,
+        limits,
+        disk_budget,
+        allow_prototype,
+        memory,
+        crate::codec::decode_archive_project,
+        keep_going,
+    )?;
+    Ok(OpenedArchive {
+        document: opened.document,
+        fingerprint: opened.fingerprint,
+        counts: opened.counts,
+        unique_assets: opened.unique_assets,
+        asset_bytes: opened.asset_bytes,
+        peak_working_bytes: opened.peak_working_bytes,
+        diagnostics: opened.diagnostics,
+        working_set: opened.working_set,
     })
 }

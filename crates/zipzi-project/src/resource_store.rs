@@ -17,6 +17,9 @@ struct Resource {
 }
 
 impl ImageResource {
+    pub(crate) fn encoded_png(&self) -> Result<(Arc<[u8]>, String), Status> {
+        self.0.image.encoded_png()
+    }
     pub fn key(&self) -> ResourceKey {
         self.0.key
     }

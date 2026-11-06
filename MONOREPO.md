@@ -1,6 +1,6 @@
 # Repository structure
 
-The root Cargo workspace owns 22 crates: 19 SDK packages and 3 Editor packages.
+The root Cargo workspace owns 23 crates: 20 SDK packages and 3 Editor packages.
 `Cargo.toml` defines membership; [`tools/workspace/package-domains.json`](tools/workspace/package-domains.json)
 assigns test domains. Validate both with `python3 tools/workspace/cargo_domain.py --check`
 after adding or removing a member. All owned crates live directly under `crates/`.
@@ -10,7 +10,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | Crate | Responsibility |
 | --- | --- |
 | `zipzi-contract` | Shared authoring contract metadata and value types |
-| `zipzi-core` | Editable documents, deformation and evaluation |
+| `zipzi-core` | Immutable authoring state/builders, model rules, deformation and evaluation |
 | `zipzi-live2d` | Live2D motion, expression, pose and physics formats |
 | `zipzi-animation` | Animation evaluation |
 | `zipzi-project` | Project persistence, resources and package publication |
@@ -22,7 +22,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-render` | Backend-independent render planning |
 | `zipzi-render-wgpu` | WGPU rendering |
 | `zipzi-render-metal` | Native Metal rendering |
-| `zipzi-sdk` | Transactional Rust authoring API |
+| `zipzi-sdk` | Snapshot/Draft authoring, sole publication, soft history and project context |
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-observe` | Immutable inspection and GPU capture |
 | `zipzi-observe-backend` | Optional observation GPU platform dependency selection |
@@ -63,8 +63,12 @@ values, Core `state` owns frozen model roots and typed builders, and Project
 `resource_store` owns resource preparation and immutable views. All persistent
 domains have explicit shared storage, owned construction inputs, validation and
 net-write cost summaries. Core's read-only `model_validation` rules are shared
-with the existing Document callers. SDK publication and production load/save have
-not switched; the production responsibilities above still describe those entrypoints.
+with the remaining Document callers. SDK's crate root now exports direct Snapshot
+ownership, isolated Drafts, source-checked publication, soft history and saved
+markers. ProjectIo loads owned state/resources and saves immutable projections.
+Old SDK domain sources/tests and host/client consumers remain to be migrated;
+Observe/Runtime/Editor currently do not compile against the removed APIs. The
+current SDK fast gate covers the new native workflow, not all former domain tests.
 
 `zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU

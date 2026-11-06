@@ -22,8 +22,8 @@ pub(crate) fn encode_native_project(document: &Document) -> Result<Vec<u8>, Stat
     Ok(out)
 }
 
-pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
-    if !document.initialized() {
+pub(super) fn encode_wire(document: &impl super::view::EncodeModel) -> Result<ProjectWire, Status> {
+    if document.id().is_empty() {
         return Err(Status::error(
             "NOT_INITIALIZED",
             "Initialize Document first",
@@ -381,4 +381,24 @@ pub(super) fn encode_wire(document: &Document) -> Result<ProjectWire, Status> {
     };
 
     Ok(project)
+}
+
+pub(crate) fn encode_state(
+    state: &zipzi_core::state::DocumentState,
+    images: Vec<zipzi_core::ImageAsset>,
+) -> Result<Vec<u8>, Status> {
+    let projection = super::view::StateProjection {
+        state,
+        images: images
+            .into_iter()
+            .map(|image| (image.id.clone(), image))
+            .collect(),
+    };
+    let mut project = encode_wire(&projection)?;
+    project.format = "zipzi-project".into();
+    project.format_version = 22;
+    let mut out = serde_json::to_vec(&project)
+        .map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
+    out.push(b'\n');
+    Ok(out)
 }

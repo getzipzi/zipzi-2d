@@ -1,7 +1,7 @@
 use super::*;
 
-pub(super) struct PreparedArchive {
-    result: WrittenArchive,
+pub(super) struct PreparedArchive<D = Document> {
+    result: WrittenArchive<D>,
     resources: BTreeMap<String, Resource>,
     json: Vec<u8>,
     format: Vec<u8>,
@@ -9,7 +9,7 @@ pub(super) struct PreparedArchive {
     preview: Option<ProjectPreview>,
 }
 
-impl PreparedArchive {
+impl<D> PreparedArchive<D> {
     pub fn preview_format(&self) -> Vec<u8> {
         self.format.clone()
     }
@@ -104,7 +104,7 @@ pub(super) fn prepare(
                 resources.insert(
                     hash.clone(),
                     Resource {
-                        path: path.clone(),
+                        input: ResourceInput::File(path.clone()),
                         fingerprint,
                         dimensions,
                     },
@@ -133,6 +133,31 @@ pub(super) fn prepare(
             return Err(result.status.into());
         }
     }
+    let json = match format_kind {
+        ArchiveDocumentFormat::NativeV22 => crate::codec::encode_native_project(&candidate)?,
+        #[cfg(any(test, feature = "archive-prototype"))]
+        ArchiveDocumentFormat::Prototype => encode_project(&candidate)?.into_bytes(),
+    };
+    candidate.mark_saved();
+    prepare_encoded(
+        candidate,
+        resources,
+        json,
+        asset_bytes,
+        read_bytes,
+        limits,
+        format_kind,
+    )
+}
+fn prepare_encoded<D>(
+    document: D,
+    resources: BTreeMap<String, Resource>,
+    json: Vec<u8>,
+    asset_bytes: u64,
+    read_bytes: u64,
+    limits: ArchiveIoLimits,
+    format_kind: ArchiveDocumentFormat,
+) -> Result<PreparedArchive<D>> {
     if resources
         .len()
         .checked_add(2)
@@ -140,11 +165,6 @@ pub(super) fn prepare(
     {
         return Err(ArchiveError::Limit("entries"));
     }
-    let json = match format_kind {
-        ArchiveDocumentFormat::NativeV22 => crate::codec::encode_native_project(&candidate)?,
-        #[cfg(any(test, feature = "archive-prototype"))]
-        ArchiveDocumentFormat::Prototype => encode_project(&candidate)?.into_bytes(),
-    };
     if json.len() as u64 > limits.document_bytes {
         return Err(ArchiveError::Limit("document bytes"));
     }
@@ -175,10 +195,9 @@ pub(super) fn prepare(
         .and_then(|n| n.checked_add(65536))
         .ok_or(ArchiveError::Limit("archive extent"))?
         .min(limits.archive_bytes);
-    candidate.mark_saved();
     Ok(PreparedArchive {
         result: WrittenArchive {
-            document: candidate,
+            document,
             unique_assets: resources.len(),
             asset_bytes,
             document_bytes: json.len() as u64,
@@ -192,12 +211,12 @@ pub(super) fn prepare(
     })
 }
 
-pub(super) fn write<W: Write + Seek>(
-    prepared: PreparedArchive,
+pub(super) fn write<W: Write + Seek, D>(
+    prepared: PreparedArchive<D>,
     output: &mut W,
     mut keep_going: impl FnMut() -> bool,
     progress: Option<&ProjectSaveProgress>,
-) -> Result<WrittenArchive> {
+) -> Result<WrittenArchive<D>> {
     if output.stream_position()? != 0 {
         return Err(invalid("Writer must start at offset zero"));
     }
@@ -249,8 +268,12 @@ pub(super) fn write<W: Write + Seek>(
             format!("assets/{hash}.png"),
             options(CompressionMethod::Stored),
         )?;
+        let mut input: Box<dyn Read + '_> = match &resource.input {
+            ResourceInput::File(path) => Box::new(File::open(path)?),
+            ResourceInput::Bytes(bytes) => Box::new(std::io::Cursor::new(bytes.as_ref())),
+        };
         let actual = stream::copy_exact(
-            &mut File::open(&resource.path)?,
+            &mut input,
             &mut progress::ProgressWriter {
                 writer: &mut zip,
                 progress,
@@ -274,4 +297,71 @@ pub(super) fn write<W: Write + Seek>(
     }
     check(&mut keep_going)?;
     Ok(result)
+}
+
+pub(super) fn prepare_state(
+    state: &zipzi_core::state::DocumentState,
+    view: &crate::ResourceView,
+    limits: ArchiveIoLimits,
+    mut keep_going: impl FnMut() -> bool,
+) -> Result<PreparedArchive<()>> {
+    use zipzi_core::{state::AssetContent, ImageAsset, ImageContent};
+    let view = view.for_state(state)?;
+    let mut images = Vec::new();
+    let mut resources = BTreeMap::new();
+    let mut asset_bytes = 0;
+    for id in state.asset_order() {
+        check(&mut keep_going)?;
+        let asset = state.asset(id).unwrap();
+        let mut image = ImageAsset {
+            id: id.clone(),
+            name: asset.name.clone(),
+            ..Default::default()
+        };
+        match &asset.content {
+            AssetContent::Empty => (),
+            AssetContent::Unresolved { source } => image.unresolved_source = Some(source.clone()),
+            AssetContent::Image {
+                resource,
+                width,
+                height,
+            } => {
+                let (bytes, hash) = view
+                    .image(*resource)
+                    .expect("validated resource")
+                    .encoded_png()?;
+                image.content = Some(ImageContent {
+                    source: format!("assets/{hash}.png"),
+                    width: *width,
+                    height: *height,
+                    sha256: hash.clone(),
+                });
+                if !resources.contains_key(&hash) {
+                    add(&mut asset_bytes, bytes.len() as u64, limits.expanded_bytes)?;
+                    resources.insert(
+                        hash.clone(),
+                        Resource {
+                            fingerprint: ProjectFingerprint {
+                                length: bytes.len() as u64,
+                                sha256: hash,
+                            },
+                            input: ResourceInput::Bytes(bytes),
+                            dimensions: (*width, *height),
+                        },
+                    );
+                }
+            }
+        }
+        images.push(image);
+    }
+    let json = crate::codec::encode_state(state, images)?;
+    prepare_encoded(
+        (),
+        resources,
+        json,
+        asset_bytes,
+        0,
+        limits,
+        ArchiveDocumentFormat::NativeV22,
+    )
 }

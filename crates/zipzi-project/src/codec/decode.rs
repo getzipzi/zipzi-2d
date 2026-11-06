@@ -31,7 +31,7 @@ fn decode_blend_mode(mode: i32) -> Result<BlendMode, Status> {
     }
 }
 
-fn transform_from_wire(
+pub(super) fn transform_from_wire(
     transform: &TransformWire,
     parent_id: Option<&str>,
 ) -> Result<Transform, Status> {
@@ -69,7 +69,7 @@ fn transform_from_wire(
     })
 }
 
-fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh, Status> {
+pub(super) fn mesh_from_wire(mesh: &MeshWire, masks: Vec<String>) -> Result<Mesh, Status> {
     if !mesh.triangles.len().is_multiple_of(3) {
         return Err(Status::error(
             "INVALID_PROJECT",
@@ -123,6 +123,9 @@ fn decode_project_with_format(
     text: &str,
     expected: Option<(&str, u64)>,
 ) -> Result<Document, Status> {
+    decode_wire(parse_wire(text, expected)?)
+}
+pub(super) fn parse_wire(text: &str, expected: Option<(&str, u64)>) -> Result<ProjectWire, Status> {
     validate_json_syntax(text)?;
 
     #[derive(serde::Deserialize)]
@@ -168,154 +171,11 @@ fn decode_project_with_format(
     let root: ProjectWire =
         serde_json::from_str(text).map_err(|e| Status::error("INVALID_PROJECT", e.to_string()))?;
 
-    decode_wire(root)
+    Ok(root)
 }
 
 pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
-    if root.format != "zipzi-directory-project" && root.format != "zipzi-project" {
-        return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
-    }
-
-    if !matches!(
-        (root.format.as_str(), root.format_version),
-        ("zipzi-directory-project", 21) | ("zipzi-project", 22)
-    ) {
-        return Err(Status::error(
-            "UNSUPPORTED_VERSION",
-            format!(
-                "Unsupported directory-project version: {}",
-                root.format_version
-            ),
-        ));
-    }
-
-    if !root.extra.is_empty() || !root.document.extra.is_empty() {
-        return Err(Status::error(
-            "UNSUPPORTED_VERSION",
-            "Unrecognized project fields",
-        ));
-    }
-    let display_info = match &root.document.display_info {
-        Present::Present(Some(info)) => Some(info.clone()),
-        _ => {
-            return Err(Status::error(
-                "INVALID_PROJECT",
-                "Project requires non-null display_info",
-            ));
-        }
-    };
-    let animation_assets = match &root.document.animation_assets {
-        Present::Present(Some(assets)) => assets.clone(),
-        _ => {
-            return Err(Status::error(
-                "INVALID_PROJECT",
-                "Project requires non-null animation_assets",
-            ));
-        }
-    };
-
-    for (id, samples) in root
-        .document
-        .bindings
-        .iter()
-        .flat_map(|b| &b.axes)
-        .chain(root.document.scene_bindings.iter().flat_map(|b| &b.axes))
-        .map(|a| (&a.id, &a.samples))
-        .chain(
-            root.document
-                .glues
-                .iter()
-                .filter_map(|g| g.binding.as_ref())
-                .flat_map(|b| &b.axes)
-                .map(|a| (&a.id, &a.samples)),
-        )
-    {
-        if !zipzi_core::document::valid_uuid(id)
-            || samples
-                .iter()
-                .any(|s| !zipzi_core::document::valid_uuid(&s.id))
-        {
-            return Err(Status::error(
-                "INVALID_ID",
-                "Native axis/sample identity is required",
-            ));
-        }
-    }
-    // Native sources already own their identities. Only external import/creation
-    // APIs may synthesize IDs from implicit numeric coordinates.
-    let valid = zipzi_core::document::valid_uuid;
-    for table in &root.document.blend_key_tables {
-        if table.samples.iter().any(|s| !valid(&s.id))
-            || (!table.samples.is_empty() && !valid(&table.base_sample_id))
-        {
-            return Err(Status::error(
-                "INVALID_ID",
-                "Native table/sample identity is required",
-            ));
-        }
-    }
-    for constraint in &root.document.blend_constraints {
-        if constraint.samples.iter().any(|s| !valid(&s.id)) {
-            return Err(Status::error(
-                "INVALID_ID",
-                "Native constraint sample identity is required",
-            ));
-        }
-    }
-    for glue in &root.document.glues {
-        if glue.binding.as_ref().is_some_and(|b| {
-            b.keyforms
-                .iter()
-                .any(|f| f.samples.is_empty() || f.samples.iter().any(|id| !valid(id)))
-        }) {
-            return Err(Status::error(
-                "INVALID_SAMPLE_REFERENCE",
-                "Native Glue coordinates are required",
-            ));
-        }
-    }
-    for binding in &root.document.blend_bindings {
-        let invalid = match &binding.keyforms {
-            DeltaKeyformsWire::Mesh(f) => f.iter().any(|f| !valid(&f.sample_id)),
-            DeltaKeyformsWire::Warp(f) => f.iter().any(|f| !valid(&f.sample_id)),
-            DeltaKeyformsWire::Rotation(f) => f.iter().any(|f| !valid(&f.sample_id)),
-            DeltaKeyformsWire::Part(f) => f.iter().any(|f| !valid(&f.sample_id)),
-            DeltaKeyformsWire::Glue(f) => f.iter().any(|f| !valid(&f.sample_id)),
-            DeltaKeyformsWire::Offscreen(f) => f.iter().any(|f| !valid(&f.sample_id)),
-        };
-        if invalid {
-            return Err(Status::error(
-                "INVALID_SAMPLE_REFERENCE",
-                "Native delta sample identity is required",
-            ));
-        }
-    }
-    let doc = root.document;
-
-    // Check prototype relationships
-    for val in [
-        &doc.deformers,
-        &doc.deformation_links,
-        &doc.organization_links,
-    ]
-    .into_iter()
-    .flatten()
-    {
-        if let Some(arr) = val.as_array() {
-            if !arr.is_empty() {
-                return Err(Status::error(
-                    "LEGACY_PROJECT",
-                    "Prototype relationships are unsupported",
-                ));
-            }
-        } else {
-            return Err(Status::error(
-                "LEGACY_PROJECT",
-                "Prototype relationships are unsupported",
-            ));
-        }
-    }
-
+    let (doc, display_info, animation_assets) = admit_wire(root)?;
     let mut candidate = Document::new();
     let s = candidate.begin_batch_build();
     if !s.is_ok() {
@@ -744,4 +604,161 @@ pub(super) fn decode_wire(root: ProjectWire) -> Result<Document, Status> {
     }
     candidate.mark_saved();
     Ok(candidate)
+}
+
+pub(super) fn admit_wire(
+    mut root: ProjectWire,
+) -> Result<
+    (
+        DocumentWire,
+        Option<zipzi_core::document::DisplayInfo>,
+        AnimationAssetsWire,
+    ),
+    Status,
+> {
+    if root.format != "zipzi-directory-project" && root.format != "zipzi-project" {
+        return Err(Status::error("INVALID_PROJECT", "Unknown project format"));
+    }
+
+    if !matches!(
+        (root.format.as_str(), root.format_version),
+        ("zipzi-directory-project", 21) | ("zipzi-project", 22)
+    ) {
+        return Err(Status::error(
+            "UNSUPPORTED_VERSION",
+            format!(
+                "Unsupported directory-project version: {}",
+                root.format_version
+            ),
+        ));
+    }
+
+    if !root.extra.is_empty() || !root.document.extra.is_empty() {
+        return Err(Status::error(
+            "UNSUPPORTED_VERSION",
+            "Unrecognized project fields",
+        ));
+    }
+    let display_info = match std::mem::take(&mut root.document.display_info) {
+        Present::Present(Some(info)) => Some(info),
+        _ => {
+            return Err(Status::error(
+                "INVALID_PROJECT",
+                "Project requires non-null display_info",
+            ));
+        }
+    };
+    let animation_assets = match std::mem::take(&mut root.document.animation_assets) {
+        Present::Present(Some(assets)) => assets,
+        _ => {
+            return Err(Status::error(
+                "INVALID_PROJECT",
+                "Project requires non-null animation_assets",
+            ));
+        }
+    };
+
+    for (id, samples) in root
+        .document
+        .bindings
+        .iter()
+        .flat_map(|b| &b.axes)
+        .chain(root.document.scene_bindings.iter().flat_map(|b| &b.axes))
+        .map(|a| (&a.id, &a.samples))
+        .chain(
+            root.document
+                .glues
+                .iter()
+                .filter_map(|g| g.binding.as_ref())
+                .flat_map(|b| &b.axes)
+                .map(|a| (&a.id, &a.samples)),
+        )
+    {
+        if !zipzi_core::document::valid_uuid(id)
+            || samples
+                .iter()
+                .any(|s| !zipzi_core::document::valid_uuid(&s.id))
+        {
+            return Err(Status::error(
+                "INVALID_ID",
+                "Native axis/sample identity is required",
+            ));
+        }
+    }
+    // Native sources already own their identities. Only external import/creation
+    // APIs may synthesize IDs from implicit numeric coordinates.
+    let valid = zipzi_core::document::valid_uuid;
+    for table in &root.document.blend_key_tables {
+        if table.samples.iter().any(|s| !valid(&s.id))
+            || (!table.samples.is_empty() && !valid(&table.base_sample_id))
+        {
+            return Err(Status::error(
+                "INVALID_ID",
+                "Native table/sample identity is required",
+            ));
+        }
+    }
+    for constraint in &root.document.blend_constraints {
+        if constraint.samples.iter().any(|s| !valid(&s.id)) {
+            return Err(Status::error(
+                "INVALID_ID",
+                "Native constraint sample identity is required",
+            ));
+        }
+    }
+    for glue in &root.document.glues {
+        if glue.binding.as_ref().is_some_and(|b| {
+            b.keyforms
+                .iter()
+                .any(|f| f.samples.is_empty() || f.samples.iter().any(|id| !valid(id)))
+        }) {
+            return Err(Status::error(
+                "INVALID_SAMPLE_REFERENCE",
+                "Native Glue coordinates are required",
+            ));
+        }
+    }
+    for binding in &root.document.blend_bindings {
+        let invalid = match &binding.keyforms {
+            DeltaKeyformsWire::Mesh(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Warp(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Rotation(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Part(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Glue(f) => f.iter().any(|f| !valid(&f.sample_id)),
+            DeltaKeyformsWire::Offscreen(f) => f.iter().any(|f| !valid(&f.sample_id)),
+        };
+        if invalid {
+            return Err(Status::error(
+                "INVALID_SAMPLE_REFERENCE",
+                "Native delta sample identity is required",
+            ));
+        }
+    }
+    let doc = root.document;
+
+    // Check prototype relationships
+    for val in [
+        &doc.deformers,
+        &doc.deformation_links,
+        &doc.organization_links,
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if let Some(arr) = val.as_array() {
+            if !arr.is_empty() {
+                return Err(Status::error(
+                    "LEGACY_PROJECT",
+                    "Prototype relationships are unsupported",
+                ));
+            }
+        } else {
+            return Err(Status::error(
+                "LEGACY_PROJECT",
+                "Prototype relationships are unsupported",
+            ));
+        }
+    }
+
+    Ok((doc, display_info, animation_assets))
 }

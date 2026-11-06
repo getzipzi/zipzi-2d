@@ -34,7 +34,7 @@ def test_commands(domain, mode, args):
             name = 'test.py' if mode in {'python', 'python2'} else 'connected.py'
             return [[python, str(ROOT / 'crates/zipzi-python/tools' / name), *args]]
         selectors = {
-            'fast': ['-p', 'zipzi-sdk', '--lib', '--test', 'integration'],
+            'fast': ['-p', 'zipzi-sdk', '--lib', '--test', 'authoring'],
             'runtime': ['-p', 'zipzi-runtime'],
             'mesh': ['-p', 'zipzi-sdk', '--test', 'alpha_mesh'],
             'stress': ['-p', 'zipzi-sdk', '--test', 'alpha_mesh'],

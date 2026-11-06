@@ -12,3 +12,8 @@ pub use decode::decode_project;
 pub(crate) use encode::encode_native_project;
 pub use encode::encode_project;
 pub use validation::validate_json_syntax;
+
+mod state_decode;
+mod view;
+pub(crate) use encode::encode_state;
+pub(crate) use state_decode::{decode_state, DecodedState};

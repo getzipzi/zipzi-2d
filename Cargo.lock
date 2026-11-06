@@ -9711,6 +9711,7 @@ dependencies = [
  "serde",
  "serde_json",
  "spade",
+ "tempfile",
  "uuid",
  "zipzi-animation",
  "zipzi-api-derive",

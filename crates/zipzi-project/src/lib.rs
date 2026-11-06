@@ -1,4 +1,5 @@
 pub mod archive;
+pub use archive::{LoadedProject, ProjectIo, ProjectMetadata};
 mod atlas;
 mod export_preflight;
 pub use export_preflight::*;

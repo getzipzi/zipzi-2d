@@ -1,6 +1,6 @@
 # Authoring 新内核重写方案
 
-状态：第一阶段（模型与资源基础）已完成，尚未接入产品入口。日期：2026-11-06。
+状态：第一、二阶段已完成；SDK 原生工程工作流已切换，领域算法与宿主/客户端迁移待后续阶段。日期：2026-11-06。
 代码审计基线：`main@44111d1c`；实施起点：`main@0262b010`；实施分支：`codex/authoring-kernel`。
 
 重新实现 authoring 的状态与执行内核。新内核以不可变模型、隔离 Draft、唯一发布入口、
@@ -15,6 +15,9 @@
 内存与性能在重写完成后集中对照；明显卡死、持续增长和行为退化仍及时作为缺陷处理。
 
 ### 当前实施进度
+
+第一阶段提交：`300e8a18`（`feat(authoring): complete immutable model and resource foundation`）。
+阶段完成并通过对应验证后提交。第二阶段的切换范围与验证记录见下文。
 
 - Contract `kernel`：区分 ContentId、SessionKey、Version、DraftId、DraftSource 与
   ResourceKey；版本/候选计数溢出拒绝推进。新值类型尚未进入 Runtime wire 或 Python schema。
@@ -31,10 +34,10 @@
   图片，ResourceView 持有不可变版本并按模型引用检查存在性与尺寸。外部文件先捕获为自有
   内容；资源持有者可跨 Store 生命周期读取，同一图片对象的不同版本可独立存活。
 
-第一阶段已可独立构造、修改、冻结和读取完整持久模型。实际文件解码/保存及 SDK 产品入口
-尚未切换；下一阶段接通 Snapshot、Draft、唯一发布、软历史和保存投影。
+第一阶段已可独立构造、修改、冻结和读取完整持久模型。第二阶段接通原生文件解码/保存及
+SDK 根入口，正式状态改由新 AuthoringSession 直接持有 Snapshot。
 细粒度几何通道分离及各领域 authoring 算法迁入仍按后续阶段推进。
-D1–D13 的旧机制仍在旧产品路径中，未标记为删除完成。
+旧领域、格式转换和宿主源文件仍待后续迁移/删除，不能将入口切换等同于 D1–D13 全部删除完成。
 
 持久字段迁入时的归属清单（对应旧 DocumentContent 的全部字段）：
 
@@ -72,6 +75,52 @@ SDK 的 5 项失败均在独立的 `0262b010` 基线 checkout 原样复现，涉
 `scene_content::deformer_original::native_save_reopen_duplicate_and_history_retain_independent_canvas_originals`。
 这些旧测试按目录工程访问当前 ZIP 工程，报文件缺失、NotADirectory 或 UNSUPPORTED_PROJECT_PATH；
 本批次未修改这些既有失败。未执行 Runtime/Editor 全链路或 GPU/Windows 验证。
+
+第二阶段实现位于 SDK 私有 `authoring` 模块，并直接从 crate 根导出：
+
+- Snapshot 将冻结模型与精确 ResourceView 配对；正式与候选查询携带不同来源。
+- Draft 独立持有 Builder 和资源增量，提供类型化改名、顶点编辑、批量创建和图片版本替换。
+  成功 batch 推进 sequence；命令错误、被忽略的错误、无效最终图或 panic 均中止候选。
+- PreparedChange 在发布前完成冻结和资源检查。新的 AuthoringSession 直接拥有 Snapshot，
+  通过唯一安装点发布提交、Undo/Redo 与文档替换；来源、取消和计数溢出在安装前检查。
+- 线性快照历史按 WriteSet 固定估计裁剪，使用 `target_bytes` 软目标；大步骤保留最近一步，
+  Undo/Redo 不按字节拒绝或临时裁剪。发布时使用最新策略，失败或无净变化保留 redo。
+- Core Builder 增加只读候选预览，不消费工作区；SDK 不通过旧 Session 或 Document 执行。
+- Project `ProjectIo` 直接将 owned 解码值冻结为 DocumentState，接管并配对资源；没有旧
+  Document 转换执行器。编解码共用严格 wire admission 与只读投影，归档格式保持原生 v22。
+- 保存只将 ResourceKey 投影为归档内容路径。新旧格式消费者共用 ZIP 验证、预算、目标指纹、
+  staging 和原子发布算法；保存不修改内容身份、资源键或历史。缺失/损坏图片保留明确未解析来源。
+- SDK ProjectContext / SavedMarker 安装实际发布目标与 ContentId。保存持有独占 `&mut Session`
+  借用；失败不改保存点，发布后的取消/目录同步警告按已发布处理。异步宿主排他任务接线属于阶段四。
+- SDK 根入口已经直接切换，旧 EditSession / AuthoringSnapshot / ObjectHandle 等不再导出，
+  旧 SDK 事务和 checkpoint 历史不进入编译路径。未使用新旧 facade 或运行时回退。
+
+阶段边界：D6 的 Project 活文档所有权已退出正式 SDK 路径，D7/D8/D11 的旧 SDK 执行入口已切断；
+旧领域/格式转换源文件中的 DocumentSession、checkpoint、计费和路径改写代码仍按阶段三至五删除。
+旧 SDK 集成/mesh 测试与示例源保留为迁移输入，尚不能按旧接口编译。当前 fast gate 明确改为
+`--lib --test authoring`，不将它宣称为原有全部领域覆盖。阶段三继续迁入领域算法和行为测试。
+
+本阶段执行边界检查：`cargo check --locked -p zipzi-runtime --lib` 在 Observe 引用已删除的
+AuthoringSnapshot / ConversionControl 等 SDK 接口处失败；这是阶段三/四尚未迁移的调用方，
+不是已通过的 workspace 验证。Editor、Python native 和旧 SDK 的 regression/full gates 同样不在
+本阶段通过范围；不添加兼容接口使它们暂时编译。方案第 10 节允许这样的中间切换提交。
+
+当前可运行入口：`cargo run --locked -p zipzi-sdk --example native_authoring -- INPUT.zipzi NEW_OUTPUT.zipzi`。
+
+2026-11-06 第二阶段验证结果：
+
+| 检查 | 结果 |
+| --- | --- |
+| `./tools/test-sdk.sh fast` | 新 SDK 单元 14 项、原生工作流集成 6 项通过；包含三个已入库工程样本 |
+| `cargo test --locked -p zipzi-sdk --doc` | 保存排他借用的 compile-fail 检查通过 |
+| `cargo test --locked -p zipzi-project --tests` | 单元和集成共 159 项通过；包含新状态完整领域往返、旧文件格式互读和资源失败边界 |
+| `cargo test --locked -p zipzi-core --lib state::` | 24 项通过 |
+| `uv run --locked python tools/test_tools.py -p test_dev_entrypoint.py` | 10 项通过 |
+| `native_authoring` 示例 | 对 pixel-binding.zipzi 实际执行加载、改名、Undo/Redo、另存并检查 ZIP 输出通过 |
+| workspace package-domain、所改 Rust 文件格式、`git diff --check` | 通过 |
+
+未运行 GPU/Windows 验证。上面的 Runtime 边界检查仍失败；该项及旧 SDK/宿主的未迁移 gates
+不包含在本阶段通过结果中。
 
 ## 1 新内核的边界
 

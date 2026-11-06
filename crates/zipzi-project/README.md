@@ -7,9 +7,17 @@ of any document/session. `ResourceView` retains those versions and checks the ne
 Core `DocumentState` image references before snapshot pairing. Files are captured
 into owned, budgeted image content; retaining an external path is insufficient.
 Views survive their originating store, and the last pixel/resource holder controls
-reclamation. This is preparatory kernel work: production load/save and SDK wiring
-have not switched yet. Focused check:
-`cargo test --locked -p zipzi-project --lib resource_store::tests`.
+reclamation. `ProjectIo` is the native SDK load/save entrypoint: load returns
+DocumentState, ResourceView, project metadata and diagnostics; save accepts frozen
+state/resources and returns an atomic-publication receipt. It owns no live model,
+transaction or history. Resource keys are projected to archive paths without
+rewriting model content. Missing images become explicit unresolved asset records
+and retain their source description when saved again.
+
+The existing DocumentSession-based import/export code described below remains a
+stage-three migration input; it no longer owns formal SDK authoring state.
+Focused checks: `cargo test --locked -p zipzi-project --lib archive::state_tests`
+and `cargo test --locked -p zipzi-project --tests`.
 
 ## Filesystem guarantees
 
