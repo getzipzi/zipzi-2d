@@ -14,6 +14,8 @@ pub mod package;
 pub mod physics;
 pub mod pose;
 pub mod resource_budget;
+pub mod resource_store;
+pub use resource_store::{ImageResource, ResourceStore, ResourceView};
 pub mod resources;
 pub use resource_budget::{
     ImageBufferKind, ImageMemoryBudget, ImageMemoryReservation, ImageMemoryUsage,

@@ -1,6 +1,6 @@
 mod assets;
 mod attachments;
-mod binding_authoring;
+pub(crate) mod binding_authoring;
 mod bindings;
 mod blendshapes;
 mod canvas;
@@ -25,7 +25,7 @@ pub use scene::*;
 mod scene_content;
 pub use scene_content::*;
 mod parts;
-mod physics;
+pub(crate) mod physics;
 mod pose;
 mod property;
 mod publication;
@@ -44,6 +44,7 @@ mod deformer_original;
 mod transactions;
 mod transforms;
 mod validation;
+mod validation_model;
 mod vertices;
 
 pub use attachments::{
@@ -472,55 +473,6 @@ impl Document {
                 .physics
                 .as_ref()
                 .is_some_and(|physics| physics.id == id)
-    }
-
-    /// Bulk identity checks must not rescan every rig/registration for each key.
-    /// Borrow this set for one validation; no cache can outlive document edits.
-    fn base_identity_set(&self) -> std::collections::HashSet<&str> {
-        let c = &self.content;
-        let mut ids = std::collections::HashSet::new();
-        ids.insert(c.id.as_str());
-        ids.extend(c.assets.keys().map(String::as_str));
-        ids.extend(c.parts.keys().map(String::as_str));
-        ids.extend(c.transforms.keys().map(String::as_str));
-        ids.extend(c.meshes.keys().map(String::as_str));
-        ids.extend(c.parameters.keys().map(String::as_str));
-        ids.extend(c.bindings.keys().map(String::as_str));
-        ids.extend(c.scene_bindings.keys().map(String::as_str));
-        ids.extend(c.blend_key_tables.keys().map(String::as_str));
-        ids.extend(c.blend_constraints.keys().map(String::as_str));
-        ids.extend(c.blend_bindings.keys().map(String::as_str));
-        ids.extend(c.glues.keys().map(String::as_str));
-        ids.extend(c.offscreens.keys().map(String::as_str));
-        ids.extend(c.expressions.keys().map(String::as_str));
-        ids.extend(c.motions.keys().map(String::as_str));
-        ids.extend(
-            c.display_info
-                .parameter_groups
-                .iter()
-                .flatten()
-                .map(|g| g.id.as_str()),
-        );
-        ids.extend(
-            c.display_info
-                .combined_parameters
-                .iter()
-                .flatten()
-                .map(|s| s.id.as_str()),
-        );
-        ids.extend(
-            c.expressions
-                .values()
-                .flat_map(|e| e.entries.iter().map(|e| e.id.as_str())),
-        );
-        ids.extend(c.motion_groups.iter().map(|g| g.id.as_str()));
-        ids.extend(self.motion_registrations().map(|r| r.id.as_str()));
-        ids.extend(c.package_attachments.iter().map(|a| a.id.as_str()));
-        ids.extend(c.pose.iter().flat_map(|p| p.entity_ids()));
-        ids.extend(c.physics.iter().flat_map(|p| p.entity_ids()));
-        #[cfg(feature = "bench-instrumentation")]
-        crate::benchmark::count("core.motion_validation_reserved_ids", ids.len());
-        ids
     }
 
     pub(super) fn failed(&self, status: Status) -> EditResult {

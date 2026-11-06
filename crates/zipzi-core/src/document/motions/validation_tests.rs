@@ -112,7 +112,8 @@ fn bulk_motion_validation_retains_collisions_with_nested_document_identities() {
     let d = fixture();
     let valid = clip();
     assert!(d.validate_motion(&valid).is_ok());
-    let reserved = d.base_identity_set();
+    let model = d.validation_model();
+    let reserved = model.base_identity_set();
     for identity in reserved {
         assert!(
             d.contains_base_identity(identity),
@@ -133,7 +134,10 @@ fn bulk_motion_validation_retains_collisions_with_nested_document_identities() {
         }
     }
     for n in [1, 2, 10, 11, 12, 13, 20, 21, 22, 23, 30, 31, 32, 33] {
-        assert!(d.base_identity_set().contains(id(n).as_str()));
+        assert!(d
+            .validation_model()
+            .base_identity_set()
+            .contains(id(n).as_str()));
     }
 }
 

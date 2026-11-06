@@ -33,6 +33,9 @@ impl<T> FromIterator<(String, T)> for RecordMap<T> {
 }
 
 impl<T> RecordMap<T> {
+    pub(crate) fn shared_map(&self) -> &HashMap<String, Arc<T>> {
+        &self.0
+    }
     pub fn get(&self, id: &str) -> Option<&T> {
         self.0.get(id).map(Arc::as_ref)
     }

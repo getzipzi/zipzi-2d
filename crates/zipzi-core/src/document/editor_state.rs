@@ -267,66 +267,7 @@ impl Document {
     }
 
     pub(super) fn editor_state_issues(&self, state: &EditorState) -> Vec<StructureIssue> {
-        state
-            .objects
-            .keys()
-            .filter_map(|id| {
-                // Resolve top-level identities before building the global
-                // reference/binding indexes for owned metadata identities.
-                let valid = self.content.assets.contains_key(id)
-                    || self.content.meshes.contains_key(id)
-                    || self.content.transforms.contains_key(id)
-                    || self.content.parts.contains_key(id)
-                    || self.content.offscreens.contains_key(id)
-                    || self.content.glues.contains_key(id)
-                    || self.content.parameters.contains_key(id)
-                    || self.get_parameter_group(id).is_some()
-                    || self.content.bindings.contains_key(id)
-                    || self.content.scene_bindings.contains_key(id)
-                    || self.content.blend_key_tables.contains_key(id)
-                    || self.content.blend_constraints.contains_key(id)
-                    || self.content.blend_bindings.contains_key(id)
-                    || self.content.expressions.contains_key(id)
-                    || self.get_expression_entry(id).is_some()
-                    || self.motion_identity_exists(id)
-                    || self.get_attachment(id).is_some()
-                    || self.physics_owner(id).is_some()
-                    || self.physics().is_some_and(|a| a.id == *id)
-                    || self.pose().is_some_and(|a| a.entity_ids().any(|v| v == id))
-                    || self.reference_identity(id).is_some()
-                    || self.binding_identity(id).is_some()
-                    || self.get_glue_pair(id).is_some();
-                (!valid).then(|| StructureIssue {
-                    object_id: id.clone(),
-                    status: Status::error(
-                        "INVALID_EDITOR_STATE",
-                        "Editor state references a missing or incompatible object",
-                    ),
-                })
-            })
-            .chain(
-                state
-                    .rotation_bone_lengths
-                    .iter()
-                    .chain(state.rotation_bone_reference_scales.iter())
-                    .map(|(id, value)| (id, value, true))
-                    .chain(state.rotation_bone_angle_offsets.iter().map(|(id, value)| (id, value, false)))
-                    .filter_map(|(id, length, positive)| {
-                        (!length.is_finite()
-                            || (positive && *length <= 0.)
-                            || self
-                                .get_transform(id)
-                                .is_none_or(|t| t.rotation().is_none()))
-                        .then(|| StructureIssue {
-                            object_id: id.clone(),
-                            status: Status::error(
-                                "INVALID_EDITOR_STATE",
-                                "Bone display values must be finite, lengths and reference scales positive, and reference a Rotation",
-                            ),
-                        })
-                    }),
-            )
-            .collect()
+        self.validation_model().editor_state_issues(state)
     }
 }
 

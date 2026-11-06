@@ -482,31 +482,7 @@ impl Document {
         &self,
         record: &DeformerOriginal,
     ) -> Result<(), Status> {
-        if let Some(snapshot) = &record.snapshot {
-            match &snapshot.shape {
-                DeformerOriginalShape::Warp { warp, .. } => {
-                    if warp.rows == 0
-                        || warp.columns == 0
-                        || warp.rows > 1024
-                        || warp.columns > 1024
-                        || warp.points.len() != ((warp.rows + 1) * (warp.columns + 1)) as usize
-                    {
-                        return Err(Status::error(
-                            "INVALID_DEFORMER_ORIGINAL",
-                            "Invalid saved lattice",
-                        ));
-                    }
-                    require_ok(crate::geometry::validate_positions(&warp.points))?;
-                    if let Some(controller) = &warp.bezier {
-                        require_ok(controller.validate())?;
-                    }
-                }
-                DeformerOriginalShape::Rotation { pose } => {
-                    require_ok(pose_valid(pose, "original shape"))?
-                }
-            }
-        }
-        Ok(())
+        self.validation_model().validate_deformer_original(record)
     }
 }
 fn same_samples(a: &[String], b: &[String]) -> bool {

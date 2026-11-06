@@ -5,8 +5,35 @@ use zipzi_core::SceneTrackEvaluation;
 
 pub use zipzi_contract::document::DrawOrderGroup;
 
+pub(crate) trait DrawingModel {
+    fn get_part(&self, id: &str) -> Option<&crate::Part>;
+    fn get_mesh(&self, id: &str) -> Option<&crate::Mesh>;
+    fn mesh_order(&self) -> &[String];
+}
+impl DrawingModel for Document {
+    fn get_part(&self, id: &str) -> Option<&crate::Part> {
+        self.get_part(id)
+    }
+    fn get_mesh(&self, id: &str) -> Option<&crate::Mesh> {
+        self.get_mesh(id)
+    }
+    fn mesh_order(&self) -> &[String] {
+        self.mesh_order()
+    }
+}
+impl DrawingModel for crate::model_validation::Model<'_> {
+    fn get_part(&self, id: &str) -> Option<&crate::Part> {
+        self.get_part(id)
+    }
+    fn get_mesh(&self, id: &str) -> Option<&crate::Mesh> {
+        self.get_mesh(id)
+    }
+    fn mesh_order(&self) -> &[String] {
+        self.mesh_order()
+    }
+}
 pub(crate) fn validate_groups(
-    doc: &Document,
+    doc: &impl DrawingModel,
     groups: &[DrawOrderGroup],
 ) -> Result<Vec<DrawOrderGroup>, Status> {
     let fail = |message| Status::error("INVALID_DRAW_GROUP", message);

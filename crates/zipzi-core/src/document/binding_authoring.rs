@@ -4,7 +4,7 @@ use super::*;
 use crate::{BindingAxis, ParameterKind, Vec2};
 use serde::{Deserialize, Serialize};
 
-pub(super) mod identity;
+pub(crate) mod identity;
 pub use identity::{BindingIdentity, BindingIdentityKind};
 mod report;
 pub use report::{

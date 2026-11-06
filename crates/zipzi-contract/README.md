@@ -5,6 +5,11 @@ wire codecs and copy-on-write sequences. Core, SDK and Runtime re-export these
 same types; operation declarations are bound to Runtime handlers with matching
 input and output types. This crate does not depend on execution packages.
 
+`kernel` contains the new authoring kernel's content/resource identities, publication
+and candidate sources, and path-independent image records. These preparatory values
+are not yet exported by the current wire/schema; protocol and clients will switch
+with the SDK/Runtime implementation. They do not own sessions or resource leases.
+
 The `authoring-schema` binary selects the Python projections and emits their
 schema. `crates/zipzi-python/tools/generate.py` always exports the current
 contract before rendering and uses a checkout-local Cargo target and lock.

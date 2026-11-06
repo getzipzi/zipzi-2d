@@ -2,6 +2,15 @@
 
 Project persistence, asset management, and import and publication of model and animation resources.
 
+The new `resource_store` module prepares immutable image versions independently
+of any document/session. `ResourceView` retains those versions and checks the new
+Core `DocumentState` image references before snapshot pairing. Files are captured
+into owned, budgeted image content; retaining an external path is insufficient.
+Views survive their originating store, and the last pixel/resource holder controls
+reclamation. This is preparatory kernel work: production load/save and SDK wiring
+have not switched yet. Focused check:
+`cargo test --locked -p zipzi-project --lib resource_store::tests`.
+
 ## Filesystem guarantees
 
 Saves synchronize new file contents before publication. Unix additionally attempts

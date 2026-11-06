@@ -2,6 +2,21 @@
 
 Core data model for Zipzi 2D, including documents, geometry, deformers, parameter bindings, and scene evaluation.
 
+The new `state` module completes the preparatory authoring kernel foundation.
+`DocumentState` covers every persistent model domain, including scene/geometry,
+bindings, organization, EditorState, animation, pose, physics and attachments.
+`OwnedDocument` constructs a complete state without an old `Document` intermediary;
+`DocumentBuilder` provides isolated typed writes and validated freezing. Shared
+read-only model rules live in `model_validation`, without session or save state.
+Directories, records, orders and metadata roots share independently. Geometry and
+binding payloads currently share at record granularity; existing shared animation
+curves and attachment buffers remain shared. Failed writes prevent freezing;
+net-zero writes retain the original content identity. `WriteSet` records net
+changes and a fixed conservative step estimate, deduplicating shared blocks only
+within that step. Core stores resource keys only. Production consumers still use
+`Document`; see the [implementation status](../../docs/plans/authoring-architecture.md).
+Focused check: `cargo test --locked -p zipzi-core --lib state::`.
+
 Rotation bone display baselines capture the evaluated inherited scale at parameter
 defaults, including ordinary/BlendShape bindings and hidden ancestors. Existing
 display preferences stay frozen through later shape edits and project reopening.

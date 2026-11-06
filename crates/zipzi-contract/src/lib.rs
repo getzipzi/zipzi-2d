@@ -8,6 +8,7 @@ pub mod binary_wire;
 pub mod changes;
 pub mod document;
 pub mod evaluation;
+pub mod kernel;
 pub mod model;
 pub mod operations;
 pub mod physics;

@@ -57,6 +57,15 @@ Runtime consume the same types; their algorithms and resource leases stay in
 the implementation crates. The dependency/freshness checks live in
 `tools/tests/test_python_codegen.py`.
 
+The [authoring kernel rewrite](docs/plans/authoring-architecture.md) has completed
+its preparatory foundation: Contract `kernel` owns identity/source
+values, Core `state` owns frozen model roots and typed builders, and Project
+`resource_store` owns resource preparation and immutable views. All persistent
+domains have explicit shared storage, owned construction inputs, validation and
+net-write cost summaries. Core's read-only `model_validation` rules are shared
+with the existing Document callers. SDK publication and production load/save have
+not switched; the production responsibilities above still describe those entrypoints.
+
 `zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU
 geometry through `zipzi-render`: native Metal on macOS and WGPU on other
