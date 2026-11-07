@@ -548,7 +548,8 @@ impl DocumentBuilder {
             return Ok(());
         }
         self.write(|this| {
-            let mut share_layout = this.validate_frame_payload()?;
+            let mut share_layout =
+                this.validate_metadata_payload()? || this.validate_frame_payload()?;
             if !share_layout {
                 this.normalize_touched()?;
                 this.content.validate(&this.base.content)?;

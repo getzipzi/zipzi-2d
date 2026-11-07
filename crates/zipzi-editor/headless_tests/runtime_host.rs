@@ -3,6 +3,96 @@ use super::{Harness, setup};
 use crate::host::DesktopHost;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 
+#[gpui_kit::test]
+fn ipc_burst_yields_without_timers_and_runs_ui_work(cx: &mut TestAppContext) {
+    use std::{cell::Cell, rc::Rc};
+
+    let start = cx.background_executor.now();
+    let processed = Rc::new(Cell::new(0));
+    let progress = processed.clone();
+    cx.foreground_executor
+        .spawn(async move {
+            for _ in 0..128 {
+                progress.set(progress.get() + 1);
+                crate::ipc::yield_between_requests().await;
+            }
+        })
+        .detach();
+    let ui_progress = Rc::new(Cell::new(None));
+    let ui = ui_progress.clone();
+    let progress = processed.clone();
+    cx.foreground_executor
+        .spawn(async move { ui.set(Some(progress.get())) })
+        .detach();
+    cx.run_until_parked();
+    assert_eq!(processed.get(), 128);
+    assert!(ui_progress.get().is_some_and(|count| count < 128));
+    assert_eq!(cx.background_executor.now(), start);
+}
+
+#[gpui_kit::test]
+fn runtime_activity_tracks_clients_and_jobs_but_not_idle_residency(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        let host = DesktopHost::new(true, cx);
+        host.sync_runtime_activity(cx);
+        assert!(!host.has_runtime_activity(), "idle resident hosts may nap");
+        let (first, first_connection) = connect_peer(&host);
+        let (second, second_connection) = connect_peer(&host);
+        host.sync_runtime_activity(cx);
+        assert!(host.has_runtime_activity());
+        host.protocol
+            .borrow_mut()
+            .disconnect(first, first_connection, std::time::Instant::now());
+        host.sync_runtime_activity(cx);
+        assert!(
+            host.has_runtime_activity(),
+            "second client is still connected"
+        );
+
+        let client = host.runtime.client_id();
+        let session = host
+            .runtime
+            .write()
+            .create_session(
+                client,
+                &uuid::Uuid::new_v4().to_string(),
+                Default::default(),
+            )
+            .unwrap();
+        let version = host
+            .runtime
+            .read()
+            .session_read(client, session)
+            .unwrap()
+            .version();
+        let job = host
+            .runtime
+            .write()
+            .request_read(
+                client,
+                zipzi_sdk::QuerySource::Published(version),
+                Default::default(),
+                |_, _| Ok(Vec::new()),
+            )
+            .unwrap();
+        host.protocol
+            .borrow_mut()
+            .disconnect(second, second_connection, std::time::Instant::now());
+        host.sync_runtime_activity(cx);
+        assert!(
+            host.has_runtime_activity(),
+            "admitted jobs outlive client connections"
+        );
+        let work = host.runtime.write().take_work(job).unwrap();
+        host.runtime.write().complete(work.run()).unwrap();
+        host.sync_runtime_activity(cx);
+        assert!(
+            !host.has_runtime_activity(),
+            "last task completed and both clients disconnected"
+        );
+    });
+}
+
 fn request_save(
     host: &DesktopHost,
     client: zipzi_runtime::ClientId,

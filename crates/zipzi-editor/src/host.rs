@@ -19,6 +19,7 @@ pub(super) struct DesktopHost {
     pub(super) pending_quit: Rc<Cell<bool>>,
     outcomes: Rc<RefCell<std::collections::VecDeque<zipzi_editor_core::RuntimeJobInfo>>>,
     notices: Rc<RefCell<Vec<String>>>,
+    runtime_activity: Rc<RefCell<Option<ActivityGuard>>>,
 }
 impl Global for DesktopHost {}
 impl DesktopHost {
@@ -53,7 +54,30 @@ impl DesktopHost {
             pending_quit: Default::default(),
             outcomes: Default::default(),
             notices: Default::default(),
+            runtime_activity: Default::default(),
         }
+    }
+    /// A connected SDK client or admitted task is user-requested work even
+    /// without a visible window. Prevent App Nap throttling until both finish;
+    /// the platform activity still allows normal system idle sleep.
+    pub(super) fn sync_runtime_activity(&self, cx: &App) {
+        let active = self.protocol.borrow().has_connected_clients()
+            || self.runtime.read().outstanding_jobs() > 0;
+        let mut activity = self.runtime_activity.borrow_mut();
+        if active {
+            if activity.is_none() {
+                *activity = Some(
+                    cx.background_executor()
+                        .prevent_app_nap("Serving Zipzi SDK clients and jobs"),
+                );
+            }
+        } else {
+            activity.take();
+        }
+    }
+    #[cfg(test)]
+    pub(super) fn has_runtime_activity(&self) -> bool {
+        self.runtime_activity.borrow().is_some()
     }
     pub(super) fn keep_running_without_windows(&self) -> bool {
         self.resident

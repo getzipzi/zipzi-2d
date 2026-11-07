@@ -61,8 +61,13 @@ impl Default for ImageMemoryBudget {
     }
 }
 impl State {
-    fn usage(&mut self) -> ImageMemoryUsage {
+    fn collect_unused(&mut self) -> usize {
+        let before = self.buffers.len();
         self.buffers.retain(|_, b| b.data.strong_count() > 0);
+        before - self.buffers.len()
+    }
+    fn usage(&mut self) -> ImageMemoryUsage {
+        self.collect_unused();
         let mut usage = ImageMemoryUsage {
             allocations: self.buffers.len(),
             preparing_bytes: self.preparing,
@@ -109,6 +114,16 @@ impl ImageMemoryBudget {
     }
     pub fn usage(&self) -> ImageMemoryUsage {
         self.0.lock().unwrap_or_else(|p| p.into_inner()).usage()
+    }
+    /// Release registrations without a remaining pixel owner. Weak slice Arcs
+    /// still retain the inline allocation after the final strong owner drops;
+    /// cleanup boundaries must sweep them even if no further allocation follows.
+    /// Returns the number of retired registrations.
+    pub fn collect_unused(&self) -> usize {
+        self.0
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .collect_unused()
     }
     /// Owner-thread document/queue estimates share admission with resource and
     /// off-thread transport allocations. Binding never prevents cleanup.
@@ -402,6 +417,19 @@ pub fn rgba_copy_bytes(reset: bool) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn explicit_sweep_keeps_live_pixels_and_retires_weak_slice_allocations() {
+        let budget = ImageMemoryBudget::new(1024);
+        let image = crate::PreparedImageContent::from_rgba_bytes(1, 1, vec![1, 2, 3, 255], &budget)
+            .unwrap();
+        let pixels = image.texture();
+        drop(image);
+        assert_eq!(budget.collect_unused(), 0);
+        assert_eq!(pixels.rgba.as_ref(), &[1, 2, 3, 255]);
+        drop(pixels);
+        assert_eq!(budget.collect_unused(), 1);
+        assert_eq!(budget.collect_unused(), 0);
+    }
     #[test]
     fn worker_reservation_growth_shares_admission_and_releases_the_full_peak() {
         let budget = ImageMemoryBudget::new(1024);

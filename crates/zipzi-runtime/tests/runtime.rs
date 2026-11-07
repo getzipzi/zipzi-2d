@@ -244,6 +244,52 @@ fn failed_open_releases_the_destination_for_a_different_session() {
 }
 
 #[test]
+fn default_budget_admits_large_decode_alongside_other_reservations() {
+    let (mut rt, client, version) = setup();
+    let source = QuerySource::Published(version);
+    // Admission only: do not allocate GiBs in CI. These reservations model a
+    // ~1.2 GiB native decoder alongside resident resources/other work.
+    let mut jobs = Vec::new();
+    for bytes in [384 << 20, 1200 << 20] {
+        jobs.push(
+            rt.request_read(
+                client,
+                source,
+                TaskBudget {
+                    workspace_bytes: bytes,
+                    result_bytes: 0,
+                },
+                |_, _| Ok(Vec::new()),
+            )
+            .unwrap(),
+        );
+    }
+    let reserved = rt.task_bytes();
+    let limit = rt.limits().task_bytes;
+    assert!(rt
+        .request_read(
+            client,
+            source,
+            TaskBudget {
+                workspace_bytes: limit,
+                result_bytes: 0
+            },
+            |_, _| Ok(Vec::new()),
+        )
+        .is_err());
+    assert_eq!(
+        rt.task_bytes(),
+        reserved,
+        "refusal must release partial reservations"
+    );
+    for job in jobs {
+        finish(&mut rt, client, job).unwrap();
+        rt.release_job(client, job).unwrap();
+    }
+    assert_eq!(rt.task_bytes(), 0);
+}
+
+#[test]
 fn native_open_checks_expanded_archive_budget_before_replacing_content() {
     let mut rt = Runtime::new(RuntimeLimits {
         task_bytes: 96 << 20,

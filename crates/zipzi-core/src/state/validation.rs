@@ -220,10 +220,28 @@ impl Content {
             checked(model.validate_parameter(value))?;
         }
         for value in self.bindings.shared_map().values().map(Arc::as_ref) {
-            checked(model.validate_admitted_binding(value))?;
+            // Admitted keyform payloads are immutable. Revalidate them only if
+            // their collection or a validation dependency changed; cloning all
+            // keyforms on unrelated edits creates substantial allocation churn.
+            let reusable = self.bindings.shares_values(&base.bindings)
+                && self.binding_domains_unchanged(base, &value.axes)
+                && self
+                    .meshes
+                    .get(&value.mesh_id)
+                    .zip(base.meshes.get(&value.mesh_id))
+                    .is_some_and(|(new, old)| new.vertex_ids.len() == old.vertex_ids.len());
+            if !reusable {
+                checked(model.validate_admitted_binding(value))?;
+            }
         }
         for value in self.scene_bindings.shared_map().values().map(Arc::as_ref) {
-            checked(model.validate_admitted_scene_binding(value))?;
+            let reusable = self.scene_bindings.shares_values(&base.scene_bindings)
+                && self.offscreens.shares_values(&base.offscreens)
+                && self.binding_domains_unchanged(base, &value.axes)
+                && self.scene_binding_target_unchanged(base, value.target_id());
+            if !reusable {
+                checked(model.validate_admitted_scene_binding(value))?;
+            }
         }
         for value in self.blend_key_tables.shared_map().values().map(Arc::as_ref) {
             checked(model.validate_blend_key_table(value))?;
@@ -285,6 +303,34 @@ impl Content {
             crate::draw_order::validate_groups(&model, groups)?;
         }
         Ok(())
+    }
+
+    fn binding_domains_unchanged(&self, base: &Content, axes: &[BindingAxis]) -> bool {
+        axes.iter()
+            .filter(|axis| !axis.parameter_id.is_empty())
+            .all(|axis| {
+                self.parameters
+                    .get(&axis.parameter_id)
+                    .zip(base.parameters.get(&axis.parameter_id))
+                    .is_some_and(|(new, old)| {
+                        new.minimum == old.minimum
+                            && new.maximum == old.maximum
+                            && new.kind == old.kind
+                    })
+            })
+    }
+
+    fn scene_binding_target_unchanged(&self, base: &Content, id: &str) -> bool {
+        match (self.transforms.get(id), base.transforms.get(id)) {
+            (Some(new), Some(old)) => {
+                new.kind() == old.kind()
+                    && new.warp().map(|w| w.points.len()) == old.warp().map(|w| w.points.len())
+                    && new.warp_authoring.as_ref().and_then(|w| w.bezier_grid)
+                        == old.warp_authoring.as_ref().and_then(|w| w.bezier_grid)
+            }
+            (None, None) => self.parts.get(id).is_some() && base.parts.get(id).is_some(),
+            _ => false,
+        }
     }
 }
 fn checked(status: Status) -> Result<(), Status> {

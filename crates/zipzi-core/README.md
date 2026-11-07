@@ -43,6 +43,12 @@ independent oracle, then compare records and evaluated frames through cold/warm
 caches and snapshot restoration. Run the focused gate with
 `cargo test --locked -p zipzi-core --lib state::frame_payload::tests`.
 
+Label/default-value edits validate only their local payload and reuse evaluation
+layout. Whole-graph admission reuses ordinary binding validation only while the
+binding collection and its parameter domains, target shape and Offscreen mapping
+dependencies remain unchanged. This avoids cloning admitted keyforms during
+unrelated edits; dependency changes still trigger validation.
+
 ```sh
 cargo test --locked -p zipzi-core
 cargo check --locked -p zipzi-core --all-targets

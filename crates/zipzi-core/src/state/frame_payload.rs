@@ -5,6 +5,91 @@ use super::*;
 mod tests;
 
 impl DocumentBuilder {
+    /// Labels and parameter defaults cannot change graph references or sample
+    /// grids. Avoid rebuilding/validating the complete scene for these edits.
+    pub(super) fn validate_metadata_payload(&self) -> Result<bool, Status> {
+        if self.setup_touched
+            || !self.roots_touched.is_empty()
+            || !self.scene_initializations.is_empty()
+        {
+            return Ok(false);
+        }
+        if !self.content.assets.shares_order(&self.base.content.assets)
+            || !self
+                .content
+                .parameters
+                .shares_order(&self.base.content.parameters)
+        {
+            return Ok(false);
+        }
+        for id in &self.touched_assets {
+            let Some((old, new)) = self.base.asset(id).zip(self.asset(id)) else {
+                return Ok(false);
+            };
+            let mut original = new.clone();
+            original.name.clone_from(&old.name);
+            if original != *old {
+                return Ok(false);
+            }
+        }
+        for id in &self.touched_parameters {
+            let Some((old, new)) = self.base.parameter(id).zip(self.parameter(id)) else {
+                return Ok(false);
+            };
+            let mut original = new.clone();
+            original.name.clone_from(&old.name);
+            original.default_value = old.default_value;
+            if original != *old {
+                return Ok(false);
+            }
+            if crate::document::validate_parameter_range(
+                new.minimum,
+                new.maximum,
+                new.default_value,
+            )
+            .is_err()
+            {
+                return Err(Status::error(
+                    "INVALID_PARAMETER",
+                    format!(
+                        "{}: require finite minimum < maximum and default in range",
+                        new.id
+                    ),
+                ));
+            }
+        }
+        for (domain, ids) in &self.touched {
+            macro_rules! labels {
+                ($records:ident, $get:ident) => {{
+                    if !self
+                        .content
+                        .$records
+                        .shares_order(&self.base.content.$records)
+                    {
+                        return Ok(false);
+                    }
+                    for id in ids {
+                        let Some((old, new)) = self.base.$get(id).zip(self.$get(id)) else {
+                            return Ok(false);
+                        };
+                        let mut original = new.clone();
+                        original.name.clone_from(&old.name);
+                        if original != *old {
+                            return Ok(false);
+                        }
+                    }
+                }};
+            }
+            match domain {
+                RecordDomain::Mesh => labels!(meshes, mesh),
+                RecordDomain::Transform => labels!(transforms, transform),
+                RecordDomain::Part => labels!(parts, part),
+                _ => return Ok(false),
+            }
+        }
+        Ok(true)
+    }
+
     /// Check only touched records when all changes are to frame payloads. These
     /// fields leave identities, dependencies, sample grids, static geometry and
     /// drawing order bounds unchanged. Other edits use whole-graph validation.

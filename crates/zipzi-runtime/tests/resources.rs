@@ -88,6 +88,27 @@ fn draft_snapshots_and_history_keep_distinct_pixels_until_the_last_owner() {
 }
 
 #[test]
+fn close_and_cancel_sweep_pixel_allocations_without_a_followup_budget_query() {
+    let (mut rt, client, version) = setup();
+    let budget = rt.transfer_budget();
+    for commit in [false, true] {
+        let draft = rt.begin_draft(client, version).unwrap();
+        let (draft, _) = rt
+            .commands(client, draft, vec![create(), replace([1, 2, 3, 255])])
+            .unwrap();
+        if commit {
+            rt.publish(client, draft, "Image").unwrap();
+            rt.close_session(client, version.session, true).unwrap();
+        } else {
+            rt.cancel_draft(client, draft.draft).unwrap();
+        }
+        // A stale Weak<[u8]> would pin its inline RGBA allocation until this
+        // explicit sweep. Lifecycle cleanup must already have removed it.
+        assert_eq!(budget.collect_unused(), 0);
+    }
+}
+
+#[test]
 fn foreign_blob_admission_keeps_the_candidate_and_owners_bytes_intact() {
     let (mut rt, client, version) = setup();
     let other = rt.register_client().unwrap();

@@ -117,6 +117,164 @@ fn fixture(bound: bool) -> DocumentState {
     DocumentState::from_owned(input).unwrap()
 }
 
+#[test]
+fn unchanged_binding_payloads_are_not_revalidated_for_unrelated_edits() {
+    use crate::model_validation::bindings::take_validation_counts;
+    for edit in [
+        (|b: &mut DocumentBuilder| {
+            let mut mesh = b.mesh(&id(6)).unwrap().clone();
+            mesh.name = "Renamed".into();
+            b.replace_mesh(mesh)
+        }) as fn(&mut DocumentBuilder) -> Result<(), Status>,
+        |b| {
+            let mut parameter = b.parameter(&id(3)).unwrap().clone();
+            parameter.default_value = 0.5;
+            b.replace_parameter(parameter)
+        },
+        |b| {
+            b.create_parameter(Parameter {
+                id: id(40),
+                runtime_id: "unrelated".into(),
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            })
+        },
+    ] {
+        let base = fixture(true);
+        take_validation_counts();
+        let mut builder = base.builder();
+        edit(&mut builder).unwrap();
+        let state = builder.freeze().unwrap().state;
+        assert_eq!(take_validation_counts(), (0, 0));
+        let mut old = FrameEvaluator::default();
+        let mut new = FrameEvaluator::default();
+        let before = frame(&mut old, &base, 0.5);
+        let after = frame(&mut new, &state, 0.5);
+        assert_eq!(before.drawables, after.drawables);
+        assert_eq!(before.deformers, after.deformers);
+    }
+}
+
+#[test]
+fn metadata_edits_share_warm_evaluation_without_skipping_invalid_defaults() {
+    let base = fixture(true);
+    let expected = frame(&mut FrameEvaluator::default(), &base, 0.5);
+    let mut builder = base.builder();
+    let mut mesh = builder.mesh(&id(6)).unwrap().clone();
+    mesh.name = "Renamed mesh".into();
+    builder.replace_mesh(mesh).unwrap();
+    let mut transform = builder.transform(&id(5)).unwrap().clone();
+    transform.name = "Renamed warp".into();
+    builder.replace_transform(transform).unwrap();
+    let mut parameter = builder.parameter(&id(3)).unwrap().clone();
+    parameter.default_value = 0.5;
+    builder.replace_parameter(parameter).unwrap();
+    assert!(builder.validate_metadata_payload().unwrap());
+    let full = freeze_full(builder.clone()).unwrap();
+    let edited = builder.freeze().unwrap().state;
+    assert!(Arc::ptr_eq(&base.read_cache, &edited.read_cache));
+    assert_eq!(
+        frame(&mut FrameEvaluator::default(), &edited, 0.5),
+        expected
+    );
+    assert_eq!(frame(&mut FrameEvaluator::default(), &full, 0.5), expected);
+    assert_eq!(edited.parameter(&id(3)).unwrap().default_value, 0.5);
+    assert_eq!(edited.mesh(&id(6)).unwrap().name, "Renamed mesh");
+    let mut evaluator = FrameEvaluator::default();
+    let mut output = DrawableFrame::default();
+    assert!(evaluator
+        .evaluate(&base, &PreviewValues::default(), &mut output)
+        .is_ok());
+    assert!(evaluator
+        .evaluate(&edited, &PreviewValues::default(), &mut output)
+        .is_ok());
+    assert_eq!(output.drawables, expected.drawables);
+    for value in [f32::NAN, -1., 2.] {
+        let mut builder = base.builder();
+        let mut parameter = builder.parameter(&id(3)).unwrap().clone();
+        parameter.default_value = value;
+        assert!(builder
+            .replace_parameter(parameter)
+            .and_then(|_| builder.freeze())
+            .is_err());
+    }
+    // Mixing a label with a structural/reference edit must still validate the graph.
+    let mut builder = base.builder();
+    let mut mesh = builder.mesh(&id(6)).unwrap().clone();
+    mesh.name = "Renamed".into();
+    mesh.texture_asset_id = id(99).into();
+    builder.replace_mesh(mesh).unwrap();
+    assert!(!builder.validate_metadata_payload().unwrap());
+    assert!(builder.freeze().is_err());
+}
+
+#[test]
+fn cached_binding_validation_is_invalidated_by_domains_targets_and_ownership() {
+    use crate::model_validation::bindings::take_validation_counts;
+    let base = fixture(true);
+    for edit in [
+        (|b: &mut DocumentBuilder| {
+            let mut parameter = b.parameter(&id(3)).unwrap().clone();
+            parameter.maximum = 0.75;
+            b.replace_parameter(parameter)
+        }) as fn(&mut DocumentBuilder) -> Result<(), Status>,
+        |b| b.remove_parameter(&id(3)),
+        |b| {
+            let mut mesh = b.mesh(&id(6)).unwrap().clone();
+            mesh.vertex_ids.pop();
+            mesh.base_positions.pop();
+            mesh.uvs.pop();
+            mesh.triangles.clear();
+            b.replace_mesh(mesh)
+        },
+        |b| {
+            let mut binding = b.binding(&id(7)).unwrap().clone();
+            binding.id = id(40);
+            binding.axes[0].id = id(41);
+            for (index, sample) in binding.axes[0].samples.iter_mut().enumerate() {
+                sample.id = id(42 + index as u32);
+                binding.keyforms[index].samples = vec![sample.id.clone()];
+            }
+            b.create_binding(binding)
+        },
+    ] {
+        let mut builder = base.builder();
+        edit(&mut builder).unwrap();
+        take_validation_counts();
+        let error = builder.freeze().unwrap_err();
+        assert!(
+            matches!(
+                error.code.as_str(),
+                "INVALID_KEYS" | "MISSING_PARAMETER" | "INVALID_LENGTH" | "BINDING_CONFLICT"
+            ),
+            "{error:?}"
+        );
+        let counts = take_validation_counts();
+        // Missing references / duplicate ownership can be rejected during
+        // identity admission or normalization before payload validation.
+        if matches!(error.code.as_str(), "INVALID_KEYS" | "INVALID_LENGTH") {
+            assert!(counts.0 > 0);
+        }
+    }
+    let mut builder = base.builder();
+    let mut warp = builder.transform(&id(5)).unwrap().clone();
+    let grid = warp.warp_mut().unwrap();
+    grid.columns = 2;
+    grid.points = vec![
+        Vec2::new(0., 0.),
+        Vec2::new(5., 0.),
+        Vec2::new(10., 0.),
+        Vec2::new(0., 10.),
+        Vec2::new(5., 10.),
+        Vec2::new(10., 10.),
+    ];
+    builder.replace_transform(warp).unwrap();
+    take_validation_counts();
+    assert_eq!(builder.freeze().unwrap_err().code, "INVALID_LENGTH");
+    assert!(take_validation_counts().1 > 0);
+}
+
 /// Independent oracle: deliberately bypass payload admission and validation reuse.
 fn freeze_full(mut builder: DocumentBuilder) -> Result<DocumentState, Status> {
     builder.normalize_touched()?;
@@ -326,7 +484,7 @@ fn validation_proofs_survive_only_validated_physics_patches() {
         let mut b = base.builder();
         if structural {
             let mut mesh = b.mesh(&id(6)).unwrap().clone();
-            mesh.name = "renamed".into();
+            mesh.enabled = !mesh.enabled;
             b.replace_mesh(mesh).unwrap();
         }
         b.validate_candidate().unwrap();

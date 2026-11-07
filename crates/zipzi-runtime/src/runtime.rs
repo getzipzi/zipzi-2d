@@ -333,6 +333,7 @@ impl Runtime {
         if let DraftState::Working(job) = self.drafts.remove(&draft).unwrap().state {
             self.cancel_job(client, job)?;
         }
+        self.budget.collect_unused();
         Ok(())
     }
     pub fn undo(&mut self, client: ClientId, expected: Version) -> Result<Publication> {
@@ -752,6 +753,7 @@ impl Runtime {
             return Err(error("JOB_BUSY", "Completion is outstanding"));
         }
         self.jobs.remove(&job);
+        self.budget.collect_unused();
         Ok(())
     }
     pub fn release_client(&mut self, client: ClientId) {
@@ -772,6 +774,7 @@ impl Runtime {
             entry.info.state = JobState::Cancelling;
             true
         });
+        self.budget.collect_unused();
     }
     pub fn close_session(
         &mut self,
@@ -796,6 +799,7 @@ impl Runtime {
         self.sessions.remove(&session);
         self.drafts.retain(|_, d| d.source.base.session != session);
         self.paths.retain(|_, owner| *owner != session);
+        self.budget.collect_unused();
         Ok(())
     }
     pub fn task_bytes(&self) -> usize {
@@ -860,6 +864,7 @@ impl Runtime {
         if self.clients.contains(&identity.client) {
             self.jobs.insert(identity.job, entry);
         }
+        self.budget.collect_unused();
         Ok(())
     }
     fn install(

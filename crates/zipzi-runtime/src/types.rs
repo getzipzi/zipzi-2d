@@ -30,7 +30,10 @@ impl Default for RuntimeLimits {
             jobs: 256,
             running_jobs: 4,
             events_per_session: 256,
-            task_bytes: 1024 * 1024 * 1024,
+            // Includes resident resources and native JSON decode workspace at the
+            // same time. Large imported models (e.g. DeepSeek) need more than
+            // 1 GiB of admitted workspace just to reopen their saved document.
+            task_bytes: 2 * 1024 * 1024 * 1024,
             result_bytes: 64 * 1024 * 1024,
         }
     }
@@ -71,6 +74,9 @@ pub struct ReadResult {
 impl ReadResult {
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
+    }
+    pub(crate) fn blob_parts(&self) -> (Arc<Vec<u8>>, Arc<TransferReservation>) {
+        (self.bytes.clone(), self._lease.clone())
     }
     pub(crate) fn new(
         source: QuerySource,

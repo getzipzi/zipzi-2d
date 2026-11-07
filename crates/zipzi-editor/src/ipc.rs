@@ -89,6 +89,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                     .complete(completion)
                     .expect("worker completion belongs to DesktopHost");
                 host.completed();
+                host.sync_runtime_activity(cx);
                 dispatch(host, &returning_workers);
             });
         }
@@ -128,6 +129,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                 expiry
                     .borrow_mut()
                     .expire(&mut host.runtime.write(), Instant::now());
+                host.sync_runtime_activity(cx);
                 dispatch(host, &expiry_workers);
             });
         }
@@ -189,16 +191,32 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                         dispatch(host, &workers);
                     }
                 }
+                cx.global::<host::DesktopHost>().sync_runtime_activity(cx);
             });
-            // Yield between requests so a busy socket cannot monopolize UI input.
-            cx.background_executor()
-                .timer(Duration::from_millis(1))
-                .await;
+            yield_between_requests().await;
         }
     })
     .detach();
     Ok(())
 }
+
+/// Requeue on the foreground executor so pending UI input can run. A timer here
+/// imposes a delay on every IPC round trip and can be coalesced/throttled while
+/// the Editor is in the background, multiplying latency across SDK calls.
+pub(super) async fn yield_between_requests() {
+    let mut yielded = false;
+    std::future::poll_fn(move |cx| {
+        if yielded {
+            std::task::Poll::Ready(())
+        } else {
+            yielded = true;
+            cx.waker().wake_by_ref();
+            std::task::Poll::Pending
+        }
+    })
+    .await;
+}
+
 fn show_session(session: Option<zipzi_runtime::SessionKey>, cx: &mut App) {
     host::open_window(cx, true);
     for window in cx.windows() {

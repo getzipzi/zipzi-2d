@@ -20,10 +20,7 @@ pub(super) struct BlobEntry {
 }
 impl Runtime {
     pub fn create_blob(&mut self, client: ClientId, length: usize) -> Result<BlobId> {
-        self.client(client)?;
-        if length > 256 << 20 || self.blobs.values().filter(|b| b.owner == client).count() >= 64 {
-            return Err(error("RESOURCE_LIMIT", "Bulk length/count limit"));
-        }
+        self.admit_blob(client, length)?;
         let lease = Arc::new(self.reserve_transfer(length)?);
         let mut data = Vec::new();
         data.try_reserve_exact(length)
@@ -40,6 +37,13 @@ impl Runtime {
             },
         );
         Ok(blob)
+    }
+    fn admit_blob(&self, client: ClientId, length: usize) -> Result<()> {
+        self.client(client)?;
+        if length > 256 << 20 || self.blobs.values().filter(|b| b.owner == client).count() >= 64 {
+            return Err(error("RESOURCE_LIMIT", "Bulk length/count limit"));
+        }
+        Ok(())
     }
     fn owned_blob(&self, client: ClientId, blob: BlobId) -> Result<&BlobEntry> {
         self.client(client)?;
@@ -198,7 +202,23 @@ impl Runtime {
         let JobValue::Read(read) = result else {
             return Err(error("INVALID_JOB_RESULT", "Job has no byte result"));
         };
-        let blob = self.copy_blob(client, read.bytes())?;
+        // Read results are immutable and already leased. A Blob owns another
+        // handle to that same allocation, rather than copying every full sample
+        // or observation result onto the owner thread. Chunk recovery still
+        // retains only bounded copies through read_blob_range().
+        self.admit_blob(client, read.bytes().len())?;
+        let (data, lease) = read.blob_parts();
+        let blob = BlobId::new();
+        self.blobs.insert(
+            blob,
+            BlobEntry {
+                owner: client,
+                length: read.bytes().len(),
+                data,
+                lease,
+                sealed: true,
+            },
+        );
         Ok(serde_json::json!({"source":read.source,"blob":blob,"length":read.bytes().len()}))
     }
 }

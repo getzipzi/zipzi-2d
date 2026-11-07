@@ -50,6 +50,12 @@ Work through execution; result leases follow ReadResult clones after job release
 Cancellation alone releases neither entered task slots nor allocations. These
 bounds do not estimate document/history size or claim to measure process RSS.
 
+The default shared admission budget is 2 GiB. Native document decoding must fit
+alongside resident resources; a saved DeepSeek model alone admits about 1.2 GiB
+of JSON workspace. Hosts can set `RuntimeLimits::task_bytes` explicitly for a
+smaller or larger workload. Exceeding that limit still rejects the job before
+replacing resident content.
+
 `subscribe` captures a snapshot, history state and publication cursor together.
 `publications_since` reads bounded receipts without draining other consumers.
 Evicted cursors return EVENT_GAP; resubscribe to recover. Clients and sessions,
@@ -103,12 +109,16 @@ requests. Cached reads retain just their requested chunk and its allocation
 lease. Image replacement consumes sealed RGBA inside one ordinary Draft batch;
 source pixels remain valid after the upload is released. Job byte results are
 retrieved through `ReadJobBlob`, rather than embedded in control frames.
+Job readback handles share the immutable result allocation and its lease; closing
+the Job leaves a Blob/escaped reader valid. Recovery still caches only bounded
+chunk copies, and the per-client Blob handle limit applies to shared readbacks.
 
 ## Focused tests
 
 ```sh
 ./tools/test-sdk.sh runtime
 cargo test --locked -p zipzi-runtime --features gpu-observation --lib
+cargo test --locked -p zipzi-runtime --test deepseek_roundtrip -- --ignored
 env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test authoring_kernel
 ```
 
@@ -116,3 +126,20 @@ The CPU gate covers resident ownership, isolated Drafts, immutable source
 identity, cancellation, binary recovery, private transport, native project work
 and CPU sampling. The GPU gate requires a usable device. Track the remaining
 integration migrations in the [authoring plan](../../docs/plans/authoring-architecture.md).
+
+The optional `deepseek_roundtrip` target requires `models/local/DeepSeek`. It
+imports, saves and reopens the full model under default limits while retaining
+the original snapshot, comparing geometry, bindings and every image's pixels.
+
+For allocator attribution of fixed-target editing, run the optional probe:
+
+```sh
+cargo run --locked --release -p zipzi-runtime --example retention_probe \
+  --features bench-instrumentation -- models/local/DeepSeek/大肥鱼.model3.json 1200
+```
+
+It reports requested live/peak/cumulative Rust allocations, then closes the
+Session and drops Runtime separately. Instrumented CPU time is not a UI/IPC
+latency measurement. Cleanup boundaries sweep retired image-budget weak slice
+registrations so they do not retain unowned pixel allocations until the next
+budget query; escaped snapshots/textures keep their existing ownership.

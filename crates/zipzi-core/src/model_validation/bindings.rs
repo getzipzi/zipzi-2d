@@ -1,4 +1,13 @@
 use super::*;
+
+#[cfg(test)]
+thread_local! {
+    static VALIDATION_COUNTS: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
+}
+#[cfg(test)]
+pub(crate) fn take_validation_counts() -> (usize, usize) {
+    VALIDATION_COUNTS.with(|counts| counts.replace((0, 0)))
+}
 impl Model<'_> {
     // Touched bindings are normalized before whole-document identity admission.
     // The admitted path still checks references and keyforms against the candidate.
@@ -17,6 +26,11 @@ impl Model<'_> {
     }
 
     pub(crate) fn validate_admitted_binding(&self, binding: &MeshBinding) -> Status {
+        #[cfg(test)]
+        VALIDATION_COUNTS.with(|counts| {
+            let (mesh, scene) = counts.get();
+            counts.set((mesh + 1, scene));
+        });
         self.canonicalize_binding_forms(&mut binding.clone(), true)
     }
 
@@ -185,6 +199,11 @@ impl Model<'_> {
     }
 
     pub(crate) fn validate_admitted_scene_binding(&self, binding: &SceneBinding) -> Status {
+        #[cfg(test)]
+        VALIDATION_COUNTS.with(|counts| {
+            let (mesh, scene) = counts.get();
+            counts.set((mesh, scene + 1));
+        });
         self.canonicalize_scene_binding_forms(&mut binding.clone(), true)
     }
 
