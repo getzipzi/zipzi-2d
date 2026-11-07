@@ -421,8 +421,18 @@ pub fn run() {
     let owner = match endpoint.inherit_or_claim().expect("Runtime owner lock") {
         Some(owner) => owner,
         None => {
-            let host_pid =
-                ipc::reopen(&endpoint, &options.projects).expect("reopen resident Editor host");
+            let host_pid = match ipc::reopen(&endpoint, &options.projects) {
+                Ok(pid) => pid,
+                Err(error) => {
+                    eprintln!(
+                        "Could not reopen the Editor on the selected Runtime endpoint: {error}"
+                    );
+                    eprintln!(
+                        "Quit the Editor using that endpoint, or select another ZIPZI_RUNTIME_PROFILE for the Editor and its SDK clients."
+                    );
+                    std::process::exit(1);
+                }
+            };
             if let Some(pid_file) = std::env::var_os("ZIPZI_DEV_PID_FILE") {
                 let _ = std::fs::write(pid_file, format!("reused:{host_pid}"));
             }

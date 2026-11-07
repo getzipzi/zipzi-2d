@@ -23,6 +23,18 @@ def save(path, value):
         temporary.unlink(missing_ok=True)
 
 
+def launch_error(log, start, message):
+    try:
+        with log.open('rb') as stream:
+            end = stream.seek(0, os.SEEK_END)
+            stream.seek(max(start, end - 4096))
+            output = stream.read(4096).decode('utf-8', errors='replace').strip()
+    except OSError:
+        output = ''
+    message = f'{message} (log: {log})'
+    return RuntimeError(f'{message}\n{output}' if output else message)
+
+
 class Lifecycle:
     def __init__(self, directory):
         self.directory = Path(directory).resolve()
@@ -85,12 +97,16 @@ class Lifecycle:
             ready_file = record.with_suffix('.ready')
             environment = dict(env, ZIPZI_DEV_PID_FILE=str(pid_file),
                                ZIPZI_DEV_READY_FILE=str(ready_file))
-            child = launch(command, cwd=cwd, env=environment, log=self.directory / 'run.log')
+            log = self.directory / 'run.log'
+            log.touch(exist_ok=True)
+            log_start = log.stat().st_size
+            child = launch(command, cwd=cwd, env=environment, log=log)
             try:
                 identity = Identity.capture(child.pid)
             except psutil.NoSuchProcess:
                 child.wait()
-                raise RuntimeError(f'Development process exited before ownership capture: {child.returncode}')
+                raise launch_error(log, log_start,
+                    f'Development process exited before ownership capture: {child.returncode}') from None
             try:
                 save(record, {'identity': identity.json()})
             except BaseException:
@@ -111,7 +127,7 @@ class Lifecycle:
                     # or terminate the resident which handled its request.
                     child.wait(timeout=max(.01, deadline - time.monotonic()))
                     if child.returncode:
-                        raise RuntimeError('Resident handoff process failed')
+                        raise launch_error(log, log_start, 'Resident handoff process failed')
                     record.unlink()
                     pid_file.unlink(missing_ok=True)
                     ready_file.unlink(missing_ok=True)
@@ -119,7 +135,8 @@ class Lifecycle:
                 if published == str(child.pid) and ready_file.exists() and ready_file.stat().st_size and identity.process() is not None:
                     return {'owned': identity}
                 if child.poll() is not None:
-                    raise RuntimeError(f'Development process exited before readiness: {child.returncode}')
+                    raise launch_error(log, log_start,
+                        f'Development process exited before readiness: {child.returncode}')
                 if time.monotonic() >= deadline:
                     raise TimeoutError('Development readiness timed out; launch record retained for recovery')
                 time.sleep(.025)
