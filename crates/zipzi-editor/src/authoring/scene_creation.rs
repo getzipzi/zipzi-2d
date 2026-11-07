@@ -16,7 +16,10 @@ pub(crate) const DEFORMATION_COMMANDS: [CommandId; 3] = [
     CommandId::CreateDeformationRotation,
 ];
 pub(crate) fn all_commands() -> impl Iterator<Item = CommandId> {
-    COMMANDS.into_iter().chain(DEFORMATION_COMMANDS)
+    COMMANDS
+        .into_iter()
+        .chain(DEFORMATION_COMMANDS)
+        .chain([CommandId::CreateOffscreen])
 }
 
 pub(crate) fn default_name(kind: SceneObjectType) -> String {

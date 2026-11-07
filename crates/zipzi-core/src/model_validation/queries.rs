@@ -157,15 +157,22 @@ impl Model<'_> {
             .map(|g| g.id.as_str())
     }
     pub fn motion_identity_exists(&self, id: &str) -> bool {
-        self.content.motions.contains_key(id)
-            || self.get_motion_group(id).is_some()
-            || self.get_motion_registration(id).is_some()
-            || self.content.motions.values().any(|c| {
-                c.tracks
-                    .iter()
-                    .any(|t| t.id == id || t.keys().any(|k| k.id == id))
-                    || c.events.iter().any(|e| e.id == id)
+        self.motion_ids
+            .get_or_init(|| {
+                let mut ids = HashSet::new();
+                ids.extend(self.content.motions.keys().cloned());
+                ids.extend(self.content.motion_groups.iter().map(|g| g.id.clone()));
+                ids.extend(self.motion_registrations().map(|r| r.id.clone()));
+                for clip in self.content.motions.values() {
+                    for track in &clip.tracks {
+                        ids.insert(track.id.clone());
+                        ids.extend(track.keys().map(|key| key.id.clone()));
+                    }
+                    ids.extend(clip.events.iter().map(|event| event.id.clone()));
+                }
+                ids
             })
+            .contains(id)
     }
 
     pub fn reference_identities(&self) -> &[ReferenceIdentity] {
@@ -208,7 +215,15 @@ impl Model<'_> {
             .get_or_init(|| self.build_binding_identities())
     }
     pub fn binding_identity(&self, id: &str) -> Option<&BindingIdentity> {
-        self.binding_identities().iter().find(|r| r.id == id)
+        let identities = self.binding_identities();
+        let index = self.binding_id_index.get_or_init(|| {
+            let mut index = HashMap::with_capacity(identities.len());
+            for (slot, identity) in identities.iter().enumerate() {
+                index.entry(identity.id.clone()).or_insert(slot);
+            }
+            index
+        });
+        index.get(id).map(|&slot| &identities[slot])
     }
     pub fn contains_id(&self, id: &str) -> bool {
         self.base_identity_set().contains(id)
@@ -239,48 +254,60 @@ impl Model<'_> {
         }
         Ok(())
     }
-    pub(crate) fn base_identity_set(&self) -> std::collections::HashSet<&str> {
+    pub(crate) fn base_identity_set(&self) -> &HashSet<String> {
+        self.base_ids.get_or_init(|| self.build_base_identity_set())
+    }
+
+    fn build_base_identity_set(&self) -> HashSet<String> {
         let c = &self.content;
         let mut ids = std::collections::HashSet::new();
-        ids.insert(c.id.as_str());
-        ids.extend(c.assets.keys().map(String::as_str));
-        ids.extend(c.parts.keys().map(String::as_str));
-        ids.extend(c.transforms.keys().map(String::as_str));
-        ids.extend(c.meshes.keys().map(String::as_str));
-        ids.extend(c.parameters.keys().map(String::as_str));
-        ids.extend(c.bindings.keys().map(String::as_str));
-        ids.extend(c.scene_bindings.keys().map(String::as_str));
-        ids.extend(c.blend_key_tables.keys().map(String::as_str));
-        ids.extend(c.blend_constraints.keys().map(String::as_str));
-        ids.extend(c.blend_bindings.keys().map(String::as_str));
-        ids.extend(c.glues.keys().map(String::as_str));
-        ids.extend(c.offscreens.keys().map(String::as_str));
-        ids.extend(c.expressions.keys().map(String::as_str));
-        ids.extend(c.motions.keys().map(String::as_str));
+        ids.insert(c.id.clone());
+        ids.extend(c.assets.0.iter().cloned());
+        ids.extend(c.parts.keys().cloned());
+        ids.extend(c.transforms.keys().cloned());
+        ids.extend(c.meshes.keys().cloned());
+        ids.extend(c.parameters.keys().cloned());
+        ids.extend(c.bindings.keys().cloned());
+        ids.extend(c.scene_bindings.keys().cloned());
+        ids.extend(c.blend_key_tables.keys().cloned());
+        ids.extend(c.blend_constraints.keys().cloned());
+        ids.extend(c.blend_bindings.keys().cloned());
+        ids.extend(c.glues.keys().cloned());
+        ids.extend(c.offscreens.keys().cloned());
+        ids.extend(c.expressions.keys().cloned());
+        ids.extend(c.motions.keys().cloned());
         ids.extend(
             c.display_info
                 .parameter_groups
                 .iter()
                 .flatten()
-                .map(|g| g.id.as_str()),
+                .map(|g| g.id.clone()),
         );
         ids.extend(
             c.display_info
                 .combined_parameters
                 .iter()
                 .flatten()
-                .map(|s| s.id.as_str()),
+                .map(|s| s.id.clone()),
         );
         ids.extend(
             c.expressions
                 .values()
-                .flat_map(|e| e.entries.iter().map(|e| e.id.as_str())),
+                .flat_map(|e| e.entries.iter().map(|e| e.id.clone())),
         );
-        ids.extend(c.motion_groups.iter().map(|g| g.id.as_str()));
-        ids.extend(self.motion_registrations().map(|r| r.id.as_str()));
-        ids.extend(c.package_attachments.iter().map(|a| a.id.as_str()));
-        ids.extend(c.pose.iter().flat_map(|p| p.entity_ids()));
-        ids.extend(c.physics.iter().flat_map(|p| p.entity_ids()));
+        ids.extend(c.motion_groups.iter().map(|g| g.id.clone()));
+        ids.extend(self.motion_registrations().map(|r| r.id.clone()));
+        ids.extend(c.package_attachments.iter().map(|a| a.id.clone()));
+        ids.extend(
+            c.pose
+                .iter()
+                .flat_map(|p| p.entity_ids().map(str::to_owned)),
+        );
+        ids.extend(
+            c.physics
+                .iter()
+                .flat_map(|p| p.entity_ids().map(str::to_owned)),
+        );
         #[cfg(feature = "bench-instrumentation")]
         crate::benchmark::count("core.motion_validation_reserved_ids", ids.len());
         ids

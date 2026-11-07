@@ -868,6 +868,7 @@ impl Document {
                         .name
                         .clone();
                     Arc::make_mut(topology).rename(object, &name);
+                    self.canvas_topology_source.get_mut().unwrap().take();
                 }
             }
             if presentation_only {

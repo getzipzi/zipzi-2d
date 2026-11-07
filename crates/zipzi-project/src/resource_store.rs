@@ -65,7 +65,7 @@ impl ResourceStore {
     /// existing image-budget responsibilities in the store's configured pool.
     pub fn adopt_image(&self, image: PreparedImageContent) -> Result<ImageResource, Status> {
         let image = image.with_budget(&self.budget)?;
-        image.verified_texture()?;
+        image.validate_metadata()?;
         Ok(ImageResource(Arc::new(Resource {
             key: ResourceKey::new(),
             image,

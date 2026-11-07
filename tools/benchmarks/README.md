@@ -748,8 +748,32 @@ Mesh opacity numeric drag and a separate RGB continuous color drag with 30 sampl
 and playback runs for 5 seconds. Timeline and dual viewport/background-client
 probes use 60 measured samples. It checks existing reporter completeness gates,
 records `/usr/bin/time -l`, and fingerprints executables/models for safe resume.
+For deformation fixtures that need an explicit Mesh, pass `--mesh` with the
+UUID shared by both runs. It selects the Mesh for both vertex workloads.
+Additional native modes include `navigation` (canvas pan/zoom),
+`parameter-track`, `parameter-number`, `parameter-pad` (linked two-axis pad),
+`parameter-selected` (track dragging with all visible unlocked Meshes selected),
+and `physics` (the 12-case inspector suite, with 5 warmups and 40 measured inputs).
+Parameter modes use 10 warmups and 120 measured inputs, verify changed displayed
+meshes and unchanged authored history, and retain their parameter/overlay audits.
+The probe uses the first visible parameter. Prepare the same fixture with the
+requested parameter and its group first in both runs, then pass `--parameter-id`
+to require its UUID in every audit. For the pad, put its linked partner next.
+`--physics-case` isolates one inspector case while retaining the same correctness
+and Undo checks. Report failed checks separately from valid latency samples.
+Physics comparisons retain the outer interaction wall time, including property
+effects flushed after native event dispatch. Inspector edits may produce no
+model preview, so their UI timings remain separate from correlated model
+input-to-presentation timings.
 It needs macOS, an unlocked native desktop, Metal and the local model. It does not
 relax existing timing limits or accept incomplete native traces.
+
+For a paired first-frame comparison, pass `first-frame` with the same Model3
+path or native ZIP on both sides. Each process summary includes load-to-GPU and
+load-to-presentation times, the viewport extent, and model draw calls. Compare
+the median and range across processes because each launch contributes one first
+frame. Use `editor_benchmark_report.py --modes properties deformations animation`
+for interaction comparisons based on per-process P50/P95.
 
 For R5 comparisons, `--read-batches` adds continuous CPU, independent Preview and
 GPU observation cases to `interaction`. Copy the same interaction driver and its

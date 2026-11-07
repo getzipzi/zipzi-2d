@@ -1,5 +1,6 @@
 //! Native single-file project container, resource leases and atomic publication.
 
+mod decode_workspace;
 mod progress;
 mod publication;
 mod reader;
@@ -24,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 use zipzi_core::Status;
 
-use crate::{content_sha256, read_project_texture_bounded};
+use crate::content_sha256;
 
 pub use stream::{read_fingerprint, IoCounts, MeteredIo, ProjectFingerprint};
 

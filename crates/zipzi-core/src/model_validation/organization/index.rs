@@ -9,7 +9,19 @@ pub(crate) struct OrganizationIndex {
     pub(super) collections: HashMap<(u8, Option<String>), Vec<String>>,
     pub(super) children: HashMap<String, Vec<String>>,
 }
+impl OrganizationIndex {
+    pub(crate) fn parameter_ids(&self) -> &[String] {
+        &self.parameters
+    }
+    pub(crate) fn owner(&self, id: &str) -> Option<&str> {
+        self.owners.get(id).and_then(Option::as_deref)
+    }
+}
 impl Model<'_> {
+    pub(crate) fn shared_organization_index(&self) -> Arc<OrganizationIndex> {
+        self.organization_index();
+        self.organization_index.get().unwrap().clone()
+    }
     pub(crate) fn organization_index(&self) -> &OrganizationIndex {
         self.organization_index
             .get_or_init(|| {

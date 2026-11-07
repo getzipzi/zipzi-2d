@@ -264,12 +264,14 @@ fn native_open_checks_expanded_archive_budget_before_replacing_content() {
     save(&mut rt, a, before.version, &io, &path);
     assert!(fs::metadata(&path).unwrap().len() < 10 << 10);
     let edited = add_parameter(&mut rt, a, before.version, 3);
+    // Leave room for archive admission, but too little for expanded JSON.
+    let pressure_bytes = 92 << 20;
     let pressure = rt
         .request_read(
             a,
             QuerySource::Published(edited.version),
             TaskBudget {
-                workspace_bytes: 88 << 20,
+                workspace_bytes: pressure_bytes,
                 result_bytes: 0,
             },
             |_, _| Ok(Vec::new()),
@@ -292,7 +294,7 @@ fn native_open_checks_expanded_archive_budget_before_replacing_content() {
         rt.subscribe(a, base.session).unwrap().cursor,
         edited.version
     );
-    assert_eq!(rt.task_bytes(), 88 << 20);
+    assert_eq!(rt.task_bytes(), pressure_bytes);
     finish(&mut rt, a, pressure).unwrap();
     let job = rt
         .request_open(

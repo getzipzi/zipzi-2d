@@ -31,6 +31,7 @@ pub(crate) use cost::{expression_entries_bytes, scene_payload};
 mod attachments;
 mod domains;
 mod expressions;
+mod frame_payload;
 mod motions;
 mod physics;
 mod pose;
@@ -97,6 +98,7 @@ pub struct DocumentState {
     read_cache: Arc<StateReadCache>,
     content_id: ContentId,
     frame_input_id: ContentId,
+    evaluation_layout_id: ContentId,
     content: Arc<Content>,
 }
 
@@ -120,6 +122,7 @@ impl DocumentState {
             read_cache: Arc::default(),
             content_id,
             frame_input_id: content_id,
+            evaluation_layout_id: content_id,
             content: Arc::new(Content {
                 id,
                 setup,
@@ -162,6 +165,10 @@ impl DocumentState {
     pub(crate) fn frame_input_id(&self) -> ContentId {
         self.frame_input_id
     }
+    /// Identity of the structural inputs shared by prepared evaluation and canvas topology.
+    pub fn evaluation_layout_id(&self) -> ContentId {
+        self.evaluation_layout_id
+    }
     pub fn id(&self) -> &str {
         &self.content.id
     }
@@ -201,6 +208,16 @@ impl DocumentState {
     }
 }
 
+/// Proof for the current candidate, always relative to the builder's base.
+/// Ordinary writes discard it; a validated, identity-preserving Physics patch
+/// can retain it because Physics does not participate in scene evaluation layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CandidateValidation {
+    NeedsValidation,
+    ValidatedWithNewLayout,
+    ValidatedWithSharedLayout,
+}
+
 /// Exclusive candidate workspace. All writes are typed and automatically tracked.
 /// A failed command poisons this workspace, so earlier candidate writes cannot
 /// accidentally be frozen after a batch failure. SDK owns the Draft lifecycle.
@@ -214,6 +231,7 @@ pub struct DocumentBuilder {
     touched: BTreeMap<RecordDomain, BTreeSet<String>>,
     roots_touched: BTreeSet<RootDomain>,
     scene_initializations: BTreeSet<String>,
+    validation: CandidateValidation,
     failure: Option<Status>,
 }
 
@@ -235,6 +253,7 @@ impl DocumentBuilder {
             touched: BTreeMap::new(),
             roots_touched: BTreeSet::new(),
             scene_initializations: BTreeSet::new(),
+            validation: CandidateValidation::NeedsValidation,
             failure: None,
         }
     }
@@ -262,6 +281,7 @@ impl DocumentBuilder {
         if let Some(failure) = &self.failure {
             return Err(failure.clone());
         }
+        self.validation = CandidateValidation::NeedsValidation;
         let result = command(self);
         if let Err(failure) = &result {
             self.failure = Some(failure.clone());
@@ -436,13 +456,23 @@ impl DocumentBuilder {
             self.base
         } else {
             let content_id = ContentId::new();
+            let share_layout = self.validation == CandidateValidation::ValidatedWithSharedLayout;
             DocumentState {
-                read_cache: Arc::default(),
+                read_cache: if share_layout {
+                    self.base.read_cache.clone()
+                } else {
+                    Arc::default()
+                },
                 content_id,
                 frame_input_id: if frame_changed {
                     content_id
                 } else {
                     self.base.frame_input_id
+                },
+                evaluation_layout_id: if share_layout {
+                    self.base.evaluation_layout_id
+                } else {
+                    content_id
                 },
                 content: Arc::new(self.content),
             }
@@ -514,11 +544,25 @@ impl DocumentBuilder {
     /// Normalize in place and validate a completed batch, retaining generated
     /// identities for subsequent commands and queries. Failure ends the builder.
     pub fn validate_candidate(&mut self) -> Result<(), Status> {
+        if self.validation != CandidateValidation::NeedsValidation {
+            return Ok(());
+        }
         self.write(|this| {
-            this.normalize_touched()?;
-            this.content.validate()?;
-            this.finish_scene_initializations()?;
-            this.content.validate()
+            let mut share_layout = this.validate_frame_payload()?;
+            if !share_layout {
+                this.normalize_touched()?;
+                this.content.validate(&this.base.content)?;
+            }
+            if this.finish_scene_initializations()? {
+                this.content.validate(&this.base.content)?;
+                share_layout = false;
+            }
+            this.validation = if share_layout {
+                CandidateValidation::ValidatedWithSharedLayout
+            } else {
+                CandidateValidation::ValidatedWithNewLayout
+            };
+            Ok(())
         })
     }
 

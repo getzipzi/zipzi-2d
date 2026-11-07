@@ -591,7 +591,11 @@ impl PropertiesPanel {
                     && state.editor.editing_context()
                         == Some(zipzi_editor_core::EditingContext::Modeling)
                 {
-                    state.complete_preview_edit(Ok(()), cx);
+                    if id.is_mesh_appearance() {
+                        state.refresh_modeling_preview(Ok(()), cx);
+                    } else {
+                        state.complete_preview_edit(Ok(()), cx);
+                    }
                 } else {
                     state.redraw(cx);
                 }

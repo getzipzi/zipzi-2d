@@ -147,6 +147,7 @@ fn command_failure_even_when_ignored_ends_the_entire_draft_and_preserves_redo() 
     assert_eq!(session.read_snapshot().source, before.source);
     assert_eq!(session.history_state(), history);
     let mut invalid = session.begin_draft();
+    rename(&mut invalid, "valid first batch");
     assert!(invalid
         .batch(invalid.source(), |c| c.create_mesh(Mesh {
             id: id(99),

@@ -143,7 +143,7 @@ pub struct ParametersPanel {
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
     document_id: Option<DocumentId>,
-    visual_revision: Option<u64>,
+    visual_revision: Option<zipzi_core::state::ContentId>,
     visual_selection: Option<String>,
     show_indirect: bool,
     only_related: bool,

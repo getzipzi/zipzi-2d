@@ -17,6 +17,9 @@ pub struct PropertyKey {
     entity: Option<uuid::Uuid>,
 }
 impl PropertyKey {
+    pub fn is_mesh_appearance(self) -> bool {
+        [mesh::OPACITY.key, mesh::MULTIPLY.key, mesh::SCREEN.key].contains(&self)
+    }
     pub const fn new(object: ObjectKind, name: &'static str) -> Self {
         Self {
             object,
@@ -758,7 +761,11 @@ impl crate::Editor {
         session
             .document
             .update_property_edit(&token.object, token.serial, patch)?;
-        session.invalidate_scene();
+        if token.property.is_mesh_appearance() {
+            session.invalidate_scene_appearance();
+        } else {
+            session.invalidate_scene();
+        }
         session.animation.playback.property_preview_changed();
         Ok(())
     }

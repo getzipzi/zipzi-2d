@@ -45,132 +45,132 @@ impl Content {
             package_attachments: &self.package_attachments,
         })
     }
-    pub(super) fn validate(&self) -> Result<(), Status> {
+    pub(super) fn validate(&self, base: &Content) -> Result<(), Status> {
         let model = self.model();
         model.validate_attachment_records()?;
         let mut ids = std::collections::HashSet::new();
-        let mut admit = |id: &str| {
+        let mut admit = |id| {
             if !valid_uuid(id) {
                 Err(Status::error("INVALID_ID", id))
-            } else if !ids.insert(id.to_owned()) {
+            } else if !ids.insert(id) {
                 Err(Status::error("DUPLICATE_ID", id))
             } else {
                 Ok(())
             }
         };
-        admit(&self.id)?;
+        admit(self.id.as_str())?;
         for id in self.assets.order() {
-            admit(id)?;
+            admit(id.as_str())?;
             validate_asset(self.assets.get(id).unwrap())?;
         }
         for (id, record) in self.parameters.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.parts.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.transforms.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.meshes.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.bindings.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.scene_bindings.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.blend_key_tables.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.blend_constraints.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.blend_bindings.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.glues.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.offscreens.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.expressions.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
         for (id, record) in self.motions.shared_map() {
-            admit(id)?;
+            admit(id.as_str())?;
             if id != &record.id {
                 return Err(Status::error("INVALID_ID", id));
             }
         }
 
         for identity in model.binding_identities() {
-            admit(&identity.id)?;
+            admit(identity.id.as_str())?;
         }
         for identity in model.reference_identities() {
-            admit(&identity.id)?;
+            admit(identity.id.as_str())?;
         }
         for group in self.display_info.parameter_groups.iter().flatten() {
-            admit(&group.id)?;
+            admit(group.id.as_str())?;
         }
         for group in self.motion_groups.iter() {
-            admit(&group.id)?;
+            admit(group.id.as_str())?;
         }
         for entry in model.motion_registrations() {
-            admit(&entry.id)?;
+            admit(entry.id.as_str())?;
         }
         for expression in self.expressions.shared_map().values() {
             for entry in &expression.entries {
-                admit(&entry.id)?;
+                admit(entry.id.as_str())?;
             }
         }
         for clip in self.motions.shared_map().values() {
             for track in &clip.tracks {
-                admit(&track.id)?;
+                admit(track.id.as_str())?;
                 for key in track.keys() {
-                    admit(&key.id)?;
+                    admit(key.id.as_str())?;
                 }
             }
             for event in &clip.events {
-                admit(&event.id)?;
+                admit(event.id.as_str())?;
             }
         }
         for pose in self.pose.iter() {
@@ -185,12 +185,12 @@ impl Content {
         }
         for glue in self.glues.shared_map().values() {
             for pair in &glue.pairs {
-                admit(&pair.id)?;
+                admit(pair.id.as_str())?;
             }
         }
         let mut paths = std::collections::HashSet::new();
         for attachment in self.package_attachments.iter() {
-            admit(&attachment.id)?;
+            admit(attachment.id.as_str())?;
             if !valid_attachment_path(&attachment.path) || !paths.insert(&attachment.path) {
                 return Err(Status::error("INVALID_ATTACHMENT_PATH", &attachment.path));
             }
@@ -206,17 +206,24 @@ impl Content {
         for value in self.transforms.shared_map().values().map(Arc::as_ref) {
             checked(model.validate_transform(value))?;
         }
-        for value in self.meshes.shared_map().values().map(Arc::as_ref) {
-            checked(model.validate_mesh_snapshot(value, false))?;
+        for (id, value) in self.meshes.shared_map() {
+            // Geometry depends only on the immutable mesh record. References
+            // and properties still need validation against the candidate.
+            let geometry_validated = base
+                .meshes
+                .shared_map()
+                .get(id)
+                .is_some_and(|previous| Arc::ptr_eq(previous, value));
+            checked(model.validate_mesh_snapshot(value, geometry_validated))?;
         }
         for value in self.parameters.shared_map().values().map(Arc::as_ref) {
             checked(model.validate_parameter(value))?;
         }
         for value in self.bindings.shared_map().values().map(Arc::as_ref) {
-            checked(model.canonicalize_binding(&mut value.clone()))?;
+            checked(model.validate_admitted_binding(value))?;
         }
         for value in self.scene_bindings.shared_map().values().map(Arc::as_ref) {
-            checked(model.canonicalize_scene_binding(&mut value.clone()))?;
+            checked(model.validate_admitted_scene_binding(value))?;
         }
         for value in self.blend_key_tables.shared_map().values().map(Arc::as_ref) {
             checked(model.validate_blend_key_table(value))?;
@@ -242,7 +249,7 @@ impl Content {
             checked(model.validate_expression(value))?;
         }
         for value in self.motions.shared_map().values().map(Arc::as_ref) {
-            checked(model.validate_motion(value))?;
+            checked(model.validate_admitted_motion(value))?;
         }
         let mut runtime = std::collections::HashSet::new();
         for value in self.glues.shared_map().values() {

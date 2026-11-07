@@ -1,21 +1,35 @@
+use super::decode_workspace::{document_decode_workspace, document_freeze_workspace};
 use super::*;
+use crate::{ImageBufferKind, ImageResource, PreparedImageContent, ResourceStore};
 use std::collections::BTreeSet;
+use zipzi_core::image::{decode_png_bounded, png_decode_workspace_bytes, png_dimensions};
 
 fn entry_bytes<R: Read + Seek>(
     zip: &mut ZipArchive<R>,
     name: &str,
     limit: u64,
+    memory: Option<&crate::TransferReservation>,
+    index_workspace: usize,
     keep_going: &mut impl FnMut() -> bool,
 ) -> Result<Vec<u8>> {
     let mut entry = zip.by_name(name)?;
     if entry.size() > limit {
         return Err(ArchiveError::Limit("JSON bytes"));
     }
-    let size = entry.size();
-    let mut bytes = Vec::new();
-    stream::copy_exact(&mut entry, &mut bytes, size, keep_going)?;
+    let size = usize::try_from(entry.size()).map_err(|_| ArchiveError::Limit("JSON bytes"))?;
+    if let Some(memory) = memory {
+        let scale = if name == "format.json" { 64 } else { 1 };
+        memory.ensure_at_least(
+            size.checked_mul(scale)
+                .and_then(|n| index_workspace.checked_add(n))
+                .ok_or(ArchiveError::Limit("JSON workspace overflow"))?,
+        )?;
+    }
+    let mut bytes = Vec::with_capacity(size);
+    stream::copy_exact(&mut entry, &mut bytes, size as u64, keep_going)?;
     Ok(bytes)
 }
+
 fn unsupported(code: &str, message: &str) -> ArchiveError {
     Status::error(code, message).into()
 }
@@ -26,9 +40,11 @@ pub(super) fn open_content(
     limits: ArchiveIoLimits,
     disk_budget: ProjectDiskBudget,
     memory: Option<&crate::TransferReservation>,
+    resources: &ResourceStore,
     mut keep_going: impl FnMut() -> bool,
 ) -> Result<OpenedContent> {
     check(&mut keep_going)?;
+    let reservation_floor = memory.map_or(0, crate::TransferReservation::reserved_bytes);
     if let Some(memory) = memory {
         memory.ensure_at_least(2 << 20)?;
     }
@@ -61,14 +77,13 @@ pub(super) fn open_content(
     if before.len() != after.len() || before.modified()? != after.modified()? {
         return Err(invalid("Source changed during copy; retry opening"));
     }
-    let names = structure::validate_budgeted(
+    let (names, index_workspace) = structure::validate_budgeted(
         &mut copy,
         fingerprint.length,
         limits,
         &mut keep_going,
         memory,
     )?;
-    let decode_workspace = memory.map_or(0, crate::TransferReservation::reserved_bytes);
     let mut zip = ZipArchive::new(copy)?;
     // Verify the library indexed exactly the admitted raw paths; no name override
     // extra field can redirect a lookup after preflight.
@@ -83,6 +98,8 @@ pub(super) fn open_content(
         &mut zip,
         "format.json",
         limits.format_bytes,
+        memory,
+        index_workspace,
         &mut keep_going,
     )?;
     crate::codec::validate_json_syntax(
@@ -114,16 +131,37 @@ pub(super) fn open_content(
         &mut zip,
         "project.json",
         limits.document_bytes,
+        memory,
+        index_workspace,
         &mut keep_going,
     )?;
     if content_sha256(&bytes) != format.document_sha256 {
         return Err(invalid("Document hash mismatch"));
+    }
+    if let Some(memory) = memory {
+        memory.ensure_at_least(
+            index_workspace
+                .checked_add(document_decode_workspace(&bytes, &mut keep_going)?)
+                .ok_or(ArchiveError::Limit("document workspace overflow"))?,
+        )?;
     }
     let document = crate::codec::decode_state(
         std::str::from_utf8(&bytes).map_err(|_| invalid("Invalid UTF-8 document"))?,
     )?;
     drop(bytes);
     check(&mut keep_going)?;
+    // Keep the owned model and headroom for freezing it, then reuse the rest
+    // of the budget for image decoding and captured pixels.
+    let model_workspace = match memory {
+        Some(memory) => {
+            let workspace =
+                index_workspace.saturating_add(document_freeze_workspace(&document.model));
+            memory.ensure_at_least(workspace)?;
+            memory.shrink_to(workspace.max(reservation_floor));
+            workspace
+        }
+        None => 0,
+    };
     let mut assets = BTreeMap::<String, Vec<&zipzi_core::ImageAsset>>::new();
     let mut diagnostics = Vec::new();
     for asset in &document.images {
@@ -152,8 +190,7 @@ pub(super) fn open_content(
         return Err(invalid("Unreferenced ZIP resource"));
     }
     let mut asset_bytes = 0;
-    let mut decoded_read_bytes = 0;
-    let mut unique_assets = 0;
+    let mut images = BTreeMap::new();
     for (name, references) in &assets {
         check(&mut keep_going)?;
         let mut report = |code: &str, message: &str| {
@@ -176,9 +213,10 @@ pub(super) fn open_content(
             report("ENCODED_READ_LIMIT", "Image exceeds encoded PNG limit");
             continue;
         }
-        let reservation = working_set.reserve(size)?;
-        let mut candidate = tempfile::NamedTempFile::new_in(working_set.path())?;
-        let actual = match stream::copy_exact(&mut entry, &mut candidate, size, &mut keep_going) {
+        let budget = resources.budget();
+        let encoded = budget.reserve(size as usize * 2)?;
+        let mut bytes = Vec::with_capacity(size as usize);
+        let actual = match stream::copy_exact(&mut entry, &mut bytes, size, &mut keep_going) {
             Ok(actual) => actual,
             Err(ArchiveError::Io(e))
                 if matches!(
@@ -188,8 +226,8 @@ pub(super) fn open_content(
                         | std::io::ErrorKind::Other
                 ) =>
             {
-                // zip's CRC/deflate readers use InvalidData or Other. Disk write
-                // failures (ENOSPC, access denied, etc.) retain their OS error.
+                // ZIP CRC/deflate readers use InvalidData or Other. Preserve
+                // underlying OS I/O failures.
                 if e.raw_os_error().is_some() {
                     return Err(e.into());
                 }
@@ -208,48 +246,65 @@ pub(super) fn open_content(
             );
             continue;
         }
-        let mut valid = false;
-        // A private extracted PNG has immutable, verified bytes. Reuse only a
+        // The entry now has immutable, verified encoded bytes. Reuse only a
         // successful decode with these exact declared dimensions; mismatched
         // references still pass through bounded acquisition and diagnostics.
-        let mut verified_dimensions = None;
+        let mut decoded = None;
+        let dimensions = png_dimensions(&bytes);
         for asset in references {
             check(&mut keep_going)?;
             let content = asset.content.as_ref().unwrap();
-            if verified_dimensions == Some((content.width, content.height)) {
-                valid = true;
+            let expected = (content.width, content.height);
+            if decoded.is_some() && dimensions.as_ref().is_ok_and(|&actual| actual == expected) {
                 continue;
             }
+            let admission =
+                png_decode_workspace_bytes(content.width, content.height, size as usize).and_then(
+                    |required| {
+                        if required > png_limits.max_workspace_bytes {
+                            return Err(Status::error(
+                                "DECODE_WORKSPACE_LIMIT",
+                                format!(
+                                    "{}: PNG decode requires {required} bytes, limit {}",
+                                    asset.id, png_limits.max_workspace_bytes
+                                ),
+                            ));
+                        }
+                        let actual = *dimensions.as_ref().map_err(Clone::clone)?;
+                        if actual != expected {
+                            return Err(Status::error(
+                                "RESOURCE_DIMENSIONS",
+                                format!(
+                                    "PNG is {}x{}, expected {}x{}",
+                                    actual.0, actual.1, expected.0, expected.1
+                                ),
+                            ));
+                        }
+                        Ok(required)
+                    },
+                );
+            let required = match admission {
+                Ok(required) => required,
+                Err(status) => {
+                    diagnostics.push(crate::ResourceDiagnostic {
+                        asset_id: asset.id.to_string(),
+                        code: status.code,
+                        message: status.message,
+                    });
+                    continue;
+                }
+            };
             if let Some(memory) = memory {
-                if let Ok(required) = zipzi_core::image::png_decode_workspace_bytes(
-                    content.width,
-                    content.height,
-                    size as usize,
-                ) {
-                    if required <= png_limits.max_workspace_bytes {
-                        memory.ensure_at_least(
-                            decode_workspace
-                                .checked_add(required)
-                                .ok_or(ArchiveError::Limit("PNG workspace overflow"))?,
-                        )?;
-                    }
-                }
+                memory.ensure_at_least(
+                    model_workspace
+                        .checked_add(required)
+                        .ok_or(ArchiveError::Limit("PNG workspace overflow"))?,
+                )?;
             }
-            let mut temporary = (*asset).clone();
-            temporary.content.as_mut().unwrap().source =
-                candidate.path().to_string_lossy().into_owned();
-            match read_project_texture_bounded(
-                working_set.path(),
-                &temporary,
-                png_limits,
-                &mut keep_going,
-            ) {
-                Ok(_) => {
-                    verified_dimensions = Some((content.width, content.height));
-                    valid = true;
-                    decoded_read_bytes += size;
-                }
-                Err(status) if status.code == "CANCELLED" => return Err(ArchiveError::Cancelled),
+            let pixels =
+                budget.reserve(crate::store::rgba_size(content.width, content.height)? * 2)?;
+            match decode_png_bounded(&bytes, expected, png_limits) {
+                Ok(image) => decoded = Some((image, pixels)),
                 Err(status) => diagnostics.push(crate::ResourceDiagnostic {
                     asset_id: asset.id.to_string(),
                     code: status.code,
@@ -257,19 +312,29 @@ pub(super) fn open_content(
                 }),
             }
         }
-        if valid {
-            candidate
-                .persist_noclobber(working_set.path().join(name))
-                .map_err(|e| e.error)?;
-            working_set.retain(reservation);
+        if let Some((image, pixels)) = decoded {
+            check(&mut keep_going)?;
+            let bytes: Arc<[u8]> = bytes.into();
+            let rgba: Arc<[u8]> = image.rgba.into();
+            encoded.commit(&bytes, ImageBufferKind::Png)?;
+            pixels.commit(&rgba, ImageBufferKind::Rgba)?;
+            let image = PreparedImageContent::from_decoded_png(
+                bytes,
+                actual.sha256,
+                image.width,
+                image.height,
+                rgba,
+                budget,
+            );
+            images.insert(name.clone(), resources.adopt_image(image)?);
             asset_bytes += size;
-            unique_assets += 1;
+        }
+        if let Some(memory) = memory {
+            memory.shrink_to(model_workspace.max(reservation_floor));
         }
     }
     let copy = zip.into_inner();
-    let mut counts = source.counts() + copy.counts();
-    counts.read_bytes += decoded_read_bytes;
-    counts.write_bytes += asset_bytes;
+    let counts = source.counts() + copy.counts();
     drop(assets);
     drop(copy);
     fs::remove_file(copy_path)?;
@@ -279,11 +344,11 @@ pub(super) fn open_content(
         document,
         fingerprint: fingerprint.clone(),
         counts,
-        unique_assets,
+        unique_assets: images.len(),
         asset_bytes,
-        peak_working_bytes: fingerprint.length + asset_bytes,
+        peak_working_bytes: fingerprint.length,
         diagnostics,
-        working_set,
+        images,
     })
 }
 
@@ -295,5 +360,5 @@ pub(super) struct OpenedContent {
     pub asset_bytes: u64,
     pub peak_working_bytes: u64,
     pub diagnostics: Vec<crate::ResourceDiagnostic>,
-    pub working_set: ProjectResourceLease,
+    pub images: BTreeMap<String, ImageResource>,
 }

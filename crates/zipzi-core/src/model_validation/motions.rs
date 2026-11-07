@@ -2,26 +2,37 @@ use super::*;
 use zipzi_contract::document::MotionSourceRange;
 impl Model<'_> {
     pub(crate) fn validate_motion(&self, clip: &MotionClip) -> Status {
+        self.validate_motion_clip(clip, false)
+    }
+
+    /// The complete document has already checked all record and nested IDs.
+    pub(crate) fn validate_admitted_motion(&self, clip: &MotionClip) -> Status {
+        self.validate_motion_clip(clip, true)
+    }
+
+    fn validate_motion_clip(&self, clip: &MotionClip, identities_validated: bool) -> Status {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.validate_motion");
         if !valid_uuid(&clip.id) {
             return Status::error("INVALID_MOTION_ID", &clip.id);
         }
         let mut nested_elsewhere = HashSet::new();
-        for other in self
-            .content
-            .motions
-            .values()
-            .filter(|other| other.id != clip.id)
-        {
-            for track in &other.tracks {
-                nested_elsewhere.insert(track.id.as_str());
-                nested_elsewhere.extend(track.keys().map(|key| key.id.as_str()));
+        if !identities_validated {
+            for other in self
+                .content
+                .motions
+                .values()
+                .filter(|other| other.id != clip.id)
+            {
+                for track in &other.tracks {
+                    nested_elsewhere.insert(track.id.as_str());
+                    nested_elsewhere.extend(track.keys().map(|key| key.id.as_str()));
+                }
+                nested_elsewhere.extend(other.events.iter().map(|event| event.id.as_str()));
             }
-            nested_elsewhere.extend(other.events.iter().map(|event| event.id.as_str()));
-        }
-        if nested_elsewhere.contains(clip.id.as_str()) {
-            return Status::error("DUPLICATE_ID", &clip.id);
+            if nested_elsewhere.contains(clip.id.as_str()) {
+                return Status::error("DUPLICATE_ID", &clip.id);
+            }
         }
         if clip.name.is_empty() || clip.name.contains('\0') {
             return Status::error("INVALID_MOTION_NAME", &clip.id);
@@ -56,27 +67,32 @@ impl Model<'_> {
             return Status::error("INVALID_TRACK_ORDER", &clip.id);
         }
         let mut ids = HashSet::new();
-        let base_ids = self.base_identity_set();
+        let base_ids = (!identities_validated).then(|| self.base_identity_set());
         for (index, track) in clip.tracks.iter().enumerate() {
-            if !valid_uuid(&track.id) || !ids.insert(track.id.as_str()) || track.id == clip.id {
+            if !identities_validated
+                && (!valid_uuid(&track.id) || !ids.insert(track.id.as_str()) || track.id == clip.id)
+            {
                 return Status::error(
                     "INVALID_MOTION_TRACK_ID",
                     format!("{}.tracks[{index}]", clip.id),
                 );
             }
-            if base_ids.contains(track.id.as_str()) || nested_elsewhere.contains(track.id.as_str())
+            if base_ids.is_some_and(|ids| ids.contains(track.id.as_str()))
+                || nested_elsewhere.contains(track.id.as_str())
             {
                 return Status::error("DUPLICATE_ID", &track.id);
             }
-            for key in track.keys() {
-                if !valid_uuid(&key.id) || !ids.insert(key.id.as_str()) {
-                    return Status::error("INVALID_MOTION_KEY_ID", &key.id);
-                }
-                if key.id == clip.id
-                    || base_ids.contains(key.id.as_str())
-                    || nested_elsewhere.contains(key.id.as_str())
-                {
-                    return Status::error("DUPLICATE_ID", &key.id);
+            if let Some(base_ids) = base_ids {
+                for key in track.keys() {
+                    if !valid_uuid(&key.id) || !ids.insert(key.id.as_str()) {
+                        return Status::error("INVALID_MOTION_KEY_ID", &key.id);
+                    }
+                    if key.id == clip.id
+                        || base_ids.contains(key.id.as_str())
+                        || nested_elsewhere.contains(key.id.as_str())
+                    {
+                        return Status::error("DUPLICATE_ID", &key.id);
+                    }
                 }
             }
             if [track.fade_in, track.fade_out]
@@ -171,13 +187,16 @@ impl Model<'_> {
             }
         }
         for (index, event) in clip.events.iter().enumerate() {
-            if !valid_uuid(&event.id) || !ids.insert(event.id.as_str()) || event.id == clip.id {
+            if !identities_validated
+                && (!valid_uuid(&event.id) || !ids.insert(event.id.as_str()) || event.id == clip.id)
+            {
                 return Status::error(
                     "INVALID_MOTION_EVENT_ID",
                     format!("{}.events[{index}]", clip.id),
                 );
             }
-            if base_ids.contains(event.id.as_str()) || nested_elsewhere.contains(event.id.as_str())
+            if base_ids.is_some_and(|ids| ids.contains(event.id.as_str()))
+                || nested_elsewhere.contains(event.id.as_str())
             {
                 return Status::error("DUPLICATE_ID", &event.id);
             }

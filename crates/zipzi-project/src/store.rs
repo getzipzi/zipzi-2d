@@ -2,6 +2,7 @@
 mod assets;
 mod import;
 mod manifest;
+pub(crate) use assets::rgba_size;
 pub use assets::{
     prepare_image_content, prepare_image_content_with_budget, prepare_png_content,
     prepare_project_image, read_project_asset, read_project_asset_if_changed,

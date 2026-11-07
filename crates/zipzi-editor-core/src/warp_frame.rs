@@ -126,6 +126,9 @@ impl crate::tools::ToolController {
         viewport: ViewportId,
         object: &ObjectRef,
     ) -> Option<&WarpFrameState> {
+        if self.warp_frames.is_empty() {
+            return None;
+        }
         let target = self.warp_frame_target(document, object)?;
         let state = self.warp_frames.get(&(viewport, target.object.clone()))?;
         (target == state.target && state.selection == document.context().selections)

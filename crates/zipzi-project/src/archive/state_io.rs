@@ -71,11 +71,10 @@ impl ProjectIo {
             self.archive.limits,
             self.archive.disk_budget.clone(),
             self.archive.open_memory.as_deref(),
+            &self.resources,
             &mut keep_going,
         )?;
         let mut decoded = loaded.document;
-        let mut resources = ResourceView::default();
-        let mut captured = BTreeMap::new();
         for (record, descriptor) in decoded.model.assets.iter_mut().zip(&decoded.images) {
             check(&mut keep_going)?;
             let Some(content) = &descriptor.content else {
@@ -90,14 +89,10 @@ impl ProjectIo {
             {
                 continue;
             }
-            let image = if let Some(image) = captured.get(&content.source) {
-                image
-            } else {
-                let image = self
-                    .resources
-                    .import_image(&loaded.working_set.path().join(&content.source))?;
-                captured.entry(content.source.clone()).or_insert(image)
-            };
+            let image = loaded
+                .images
+                .get(&content.source)
+                .ok_or_else(|| Status::error("MISSING_RESOURCE", &descriptor.id))?;
             if (image.width(), image.height()) != (content.width, content.height) {
                 return Err(Status::error("RESOURCE_DIMENSIONS", &descriptor.id).into());
             }
@@ -107,7 +102,7 @@ impl ProjectIo {
                 height: image.height(),
             };
         }
-        resources = resources.with_images(captured.into_values());
+        let resources = ResourceView::default().with_images(loaded.images.into_values());
         let document = DocumentState::from_owned(decoded.model)?;
         let resources = resources.for_state(&document)?;
         check(&mut keep_going)?;

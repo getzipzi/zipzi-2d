@@ -156,7 +156,7 @@ impl std::fmt::Debug for PreparedImageContent {
 }
 impl PreparedImageContent {
     pub(crate) fn encoded_png(&self) -> Result<(Arc<[u8]>, String), Status> {
-        self.verified_texture()?;
+        self.validate_metadata()?;
         let png = self.memory.encoded_png()?;
         Ok((png.bytes.clone(), png.sha256.clone()))
     }
@@ -287,26 +287,42 @@ pub fn prepare_png_content(
     let rgba: Arc<[u8]> = data.rgba.into();
     pixels.commit(&rgba, crate::ImageBufferKind::Rgba)?;
     let sha256 = content_sha256(&bytes);
-    Ok(PreparedImageContent {
-        content: zipzi_core::ImageContent {
-            source: format!("assets/.memory-loaded/{sha256}.png"),
-            width,
-            height,
-            sha256: sha256.clone(),
-        },
-        memory: Arc::new(MemoryAsset {
-            texture: TextureData {
-                rgba,
+    Ok(PreparedImageContent::from_decoded_png(
+        bytes, sha256, width, height, rgba, budget,
+    ))
+}
+
+impl PreparedImageContent {
+    /// Assemble the owned result of PNG validation and budget admission.
+    pub(crate) fn from_decoded_png(
+        bytes: Arc<[u8]>,
+        sha256: String,
+        width: u32,
+        height: u32,
+        rgba: Arc<[u8]>,
+        budget: &crate::ImageMemoryBudget,
+    ) -> Self {
+        Self {
+            content: zipzi_core::ImageContent {
+                source: format!("assets/.memory-loaded/{sha256}.png"),
                 width,
                 height,
-                cache_key: format!("png:{sha256}"),
+                sha256: sha256.clone(),
             },
-            png: Mutex::new(Some(Arc::new(VerifiedAsset { bytes, sha256 }))),
-            budget: budget.clone(),
-        }),
-    })
+            memory: Arc::new(MemoryAsset {
+                texture: TextureData {
+                    rgba,
+                    width,
+                    height,
+                    cache_key: format!("png:{sha256}"),
+                },
+                png: Mutex::new(Some(Arc::new(VerifiedAsset { bytes, sha256 }))),
+                budget: budget.clone(),
+            }),
+        }
+    }
 }
-fn rgba_size(width: u32, height: u32) -> Result<usize, Status> {
+pub(crate) fn rgba_size(width: u32, height: u32) -> Result<usize, Status> {
     let size = (width as usize)
         .checked_mul(height as usize)
         .and_then(|n| n.checked_mul(4));

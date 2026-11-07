@@ -36,9 +36,6 @@ impl AssetIds<'_> {
     pub fn contains_key(&self, id: &str) -> bool {
         self.0.iter().any(|v| v == id)
     }
-    pub fn keys(&self) -> impl Iterator<Item = &String> {
-        self.0.iter()
-    }
 }
 #[derive(Clone)]
 pub(crate) struct ModelContent<'a> {

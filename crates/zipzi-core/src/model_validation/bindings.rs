@@ -1,18 +1,36 @@
 use super::*;
 impl Model<'_> {
-    pub(crate) fn canonicalize_binding(&self, b: &mut MeshBinding) -> Status {
+    // Touched bindings are normalized before whole-document identity admission.
+    // The admitted path still checks references and keyforms against the candidate.
+    fn normalize_binding_ids(&self, owner: &str, axes: &mut [BindingAxis]) -> Result<(), Status> {
+        self.normalize_owner_axes(owner, axes)?;
+        self.check_binding_ids(
+            owner,
+            axes.iter().flat_map(|axis| {
+                std::iter::once(axis.id.clone()).chain(axis.samples.iter().map(|s| s.id.clone()))
+            }),
+        )
+    }
+
+    pub(crate) fn canonicalize_binding(&self, binding: &mut MeshBinding) -> Status {
+        self.canonicalize_binding_forms(binding, false)
+    }
+
+    pub(crate) fn validate_admitted_binding(&self, binding: &MeshBinding) -> Status {
+        self.canonicalize_binding_forms(&mut binding.clone(), true)
+    }
+
+    fn canonicalize_binding_forms(
+        &self,
+        b: &mut MeshBinding,
+        identities_validated: bool,
+    ) -> Status {
         #[cfg(feature = "bench-instrumentation")]
         let _span = crate::benchmark::span("core.canonicalize_binding");
-        if let Err(s) = self.normalize_owner_axes(&b.id, &mut b.axes) {
-            return s;
-        }
-        if let Err(s) = self.check_binding_ids(
-            &b.id,
-            b.axes.iter().flat_map(|a| {
-                std::iter::once(a.id.clone()).chain(a.samples.iter().map(|s| s.id.clone()))
-            }),
-        ) {
-            return s;
+        if !identities_validated {
+            if let Err(status) = self.normalize_binding_ids(&b.id, &mut b.axes) {
+                return status;
+            }
         }
         if !valid_uuid(&b.id) {
             return Status::error(
@@ -162,19 +180,25 @@ impl Model<'_> {
         b.keyforms = ordered;
         Status::ok()
     }
-    pub(crate) fn canonicalize_scene_binding(&self, b: &mut SceneBinding) -> Status {
+    pub(crate) fn canonicalize_scene_binding(&self, binding: &mut SceneBinding) -> Status {
+        self.canonicalize_scene_binding_forms(binding, false)
+    }
+
+    pub(crate) fn validate_admitted_scene_binding(&self, binding: &SceneBinding) -> Status {
+        self.canonicalize_scene_binding_forms(&mut binding.clone(), true)
+    }
+
+    fn canonicalize_scene_binding_forms(
+        &self,
+        b: &mut SceneBinding,
+        identities_validated: bool,
+    ) -> Status {
         #[cfg(feature = "bench-instrumentation")]
         let _span = crate::benchmark::span("core.canonicalize_scene_binding");
-        if let Err(s) = self.normalize_owner_axes(&b.id, &mut b.axes) {
-            return s;
-        }
-        if let Err(s) = self.check_binding_ids(
-            &b.id,
-            b.axes.iter().flat_map(|a| {
-                std::iter::once(a.id.clone()).chain(a.samples.iter().map(|s| s.id.clone()))
-            }),
-        ) {
-            return s;
+        if !identities_validated {
+            if let Err(status) = self.normalize_binding_ids(&b.id, &mut b.axes) {
+                return status;
+            }
         }
         if !valid_uuid(&b.id) {
             return Status::error("INVALID_ID", &b.id);

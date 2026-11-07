@@ -540,8 +540,8 @@ impl ToolController {
             };
             let adjusting_frame = control.kind == ControlKind::Warp
                 && self
-                    .warp_frame_info(document, frame, &control.object)
-                    .is_some_and(|i| i.adjusting);
+                    .warp_frame_state(document, frame.version.binding.viewport, &control.object)
+                    .is_some_and(|state| state.info.adjusting);
             if let Some(bezier) = selected.then(|| scene.bezier(&control.object.id)).flatten() {
                 out.bezier_lines.extend(
                     bezier

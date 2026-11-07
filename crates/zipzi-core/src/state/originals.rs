@@ -2,7 +2,7 @@ use super::*;
 impl DocumentBuilder {
     /// Run after the complete candidate graph is valid, so forward references in
     /// a batch never expose an incomplete model to geometry evaluation.
-    pub(super) fn finish_scene_initializations(&mut self) -> Result<(), Status> {
+    pub(super) fn finish_scene_initializations(&mut self) -> Result<bool, Status> {
         let ids = std::mem::take(&mut self.scene_initializations)
             .into_iter()
             .filter(|id| self.transform(id).is_some())
@@ -35,6 +35,7 @@ impl DocumentBuilder {
                 .extend(model.initial_rotation_bone_lengths(&ids, &editor));
             self.set_editor_state(editor)?;
         }
+        let mut changed = !ids.is_empty();
         let mut targets = BTreeSet::new();
         if let Some(ids) = self.touched.get(&RecordDomain::Transform) {
             targets.extend(ids.iter().cloned());
@@ -82,8 +83,9 @@ impl DocumentBuilder {
             }
             t.original_shape = Some(record);
             self.replace_transform(t)?;
+            changed = true;
         }
-        Ok(())
+        Ok(changed)
     }
 }
 
@@ -91,7 +93,7 @@ impl DocumentBuilder {
     pub fn initialize_rotation_bone_reference_scales(&mut self) -> Result<(), Status> {
         self.write(|this| {
             this.normalize_touched()?;
-            this.content.validate()?;
+            this.content.validate(&this.base.content)?;
             let mut editor = this.editor_state().clone();
             let ids = this.transform_order().to_vec();
             let scales = this

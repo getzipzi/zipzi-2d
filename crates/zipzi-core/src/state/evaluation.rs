@@ -4,31 +4,63 @@ use std::sync::OnceLock;
 pub(super) struct StateReadCache {
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
     projection: OnceLock<Arc<SceneProjection>>,
+    mesh_bindings: OnceLock<HashMap<String, String>>,
+    scene_bindings: OnceLock<HashMap<String, String>>,
+    blend_bindings: OnceLock<HashMap<String, Vec<String>>>,
+    part_offscreens: OnceLock<HashMap<String, String>>,
+    pub(super) organization:
+        OnceLock<Arc<crate::model_validation::organization::OrganizationIndex>>,
 }
 impl DocumentState {
+    pub(crate) fn blend_binding_ids_for_target(&self, target: &str) -> &[String] {
+        let index = self.read_cache.blend_bindings.get_or_init(|| {
+            let mut index = HashMap::<String, Vec<String>>::new();
+            for id in self.blend_binding_order() {
+                let binding = self.blend_binding(id).unwrap();
+                index
+                    .entry(binding.target_id.clone())
+                    .or_default()
+                    .push(id.clone());
+            }
+            index
+        });
+        index.get(target).map_or(&[], Vec::as_slice)
+    }
     pub fn binding_for_mesh(&self, id: &str) -> Option<&MeshBinding> {
-        self.content
-            .bindings
-            .shared_map()
-            .values()
-            .map(Arc::as_ref)
-            .find(|b| b.mesh_id == id)
+        let index = self.read_cache.mesh_bindings.get_or_init(|| {
+            self.binding_order()
+                .iter()
+                .filter_map(|id| {
+                    let b = self.binding(id)?;
+                    Some((b.mesh_id.clone(), id.clone()))
+                })
+                .collect()
+        });
+        self.binding(index.get(id)?)
     }
     pub fn binding_for_scene(&self, id: &str) -> Option<&SceneBinding> {
-        self.content
-            .scene_bindings
-            .shared_map()
-            .values()
-            .map(Arc::as_ref)
-            .find(|b| b.target_id() == id)
+        let index = self.read_cache.scene_bindings.get_or_init(|| {
+            self.scene_binding_order()
+                .iter()
+                .filter_map(|id| {
+                    let b = self.scene_binding(id)?;
+                    Some((b.target_id().to_owned(), id.clone()))
+                })
+                .collect()
+        });
+        self.scene_binding(index.get(id)?)
     }
     pub fn offscreen_for_part(&self, id: &str) -> Option<&Offscreen> {
-        self.content
-            .offscreens
-            .shared_map()
-            .values()
-            .map(Arc::as_ref)
-            .find(|o| o.part_id == id)
+        let index = self.read_cache.part_offscreens.get_or_init(|| {
+            self.offscreen_order()
+                .iter()
+                .filter_map(|id| {
+                    let o = self.offscreen(id)?;
+                    Some((o.part_id.clone(), id.clone()))
+                })
+                .collect()
+        });
+        self.offscreen(index.get(id)?)
     }
     pub fn parent_offscreen_for_part(&self, id: &str) -> Option<&Offscreen> {
         let mut next = id;

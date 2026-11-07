@@ -52,6 +52,8 @@ class MeasuredInputs(unittest.TestCase):
             self.assertEqual(directory.stat().st_mode & 0o777, 0o700)
             self.assertLess(len(str(directory / 'benchmark.sock').encode()), 104)
             self.assertEqual(first['ZIPZI_RUNTIME_PROFILE'], 'benchmark')
+            self.assertEqual(first['ZIPZI_CACHE_DIR'], str(directory / 'cache'))
+            self.assertEqual(first['TMPDIR'], str(directory))
             self.assertNotIn('ZIPZI_RUNTIME_OWNER_FD', first)
             self.assertEqual(first['ZIPZI_RUNTIME_INTERACTION_SAMPLES'], '60')
         self.assertFalse(directory.exists())
@@ -63,6 +65,23 @@ class MeasuredInputs(unittest.TestCase):
         rows = dict(metrics_ms=dict(input_handler_ms=sample, input_to_present_ms=sample))
         result = normalized('deformations', dict(modes=dict(manual=rows, mesh_multi_vertex=rows)))
         self.assertEqual(set(result), {'deformations/mesh_multi_vertex/input_handler_ms', 'deformations/mesh_multi_vertex/input_to_present_ms'})
+
+    def test_expanded_native_modes_keep_distinct_timing_boundaries(self):
+        from editor_benchmark_report import normalized
+        sample = dict(count=40, p50=1., p95=2.)
+        rows = dict(metrics_ms=dict(ui_draw_ms=sample, input_to_present_ms=sample))
+        for mode in ('navigation', 'parameter-track', 'parameter-number', 'parameter-pad', 'parameter-selected'):
+            result = normalized(mode, dict(modes=dict(manual=rows, drag=rows)))
+            self.assertEqual(set(result), {f'{mode}/drag/ui_draw_ms', f'{mode}/drag/input_to_present_ms'})
+            self.assertEqual(result[f'{mode}/drag/ui_draw_ms']['kind'], 'cpu')
+            self.assertEqual(result[f'{mode}/drag/input_to_present_ms']['kind'], 'display')
+        physics_rows = dict(metrics_ms={**rows['metrics_ms'], 'interaction_wall_ms': sample})
+        result = normalized('physics', dict(cases=dict(physics_idle=physics_rows, physics_node_mobility_drag=physics_rows)))
+        self.assertEqual(set(result), {
+            'physics/physics_node_mobility_drag/ui_draw_ms',
+            'physics/physics_node_mobility_drag/input_to_present_ms',
+            'physics/physics_node_mobility_drag/interaction_wall_ms',
+        })
 
 
 if __name__ == '__main__':

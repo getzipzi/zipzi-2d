@@ -36,6 +36,13 @@ The unit and integration tests exercise Builder validation, snapshot isolation,
 parameter and keyform evaluation, Glue and Offscreen behavior, and warmed
 evaluation storage.
 
+Candidate validation explicitly distinguishes pending work, a valid candidate
+requiring new evaluation layout, and a valid candidate sharing the base layout.
+The payload differential tests force full normalization/graph validation as an
+independent oracle, then compare records and evaluated frames through cold/warm
+caches and snapshot restoration. Run the focused gate with
+`cargo test --locked -p zipzi-core --lib state::frame_payload::tests`.
+
 ```sh
 cargo test --locked -p zipzi-core
 cargo check --locked -p zipzi-core --all-targets

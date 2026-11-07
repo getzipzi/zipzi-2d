@@ -82,6 +82,19 @@ expanded JSON/codec workspace and PNG decode against the supplied memory budget.
 ProjectSaveProgress reports preparation, actual uncompressed payload bytes,
 finalization and publication independently of cancellation results.
 
+Document JSON admission uses structural allowances in
+`src/archive/decode_workspace.rs`. They cover input, parser/serde temporary
+storage and decoded records; freezing reserves three times retained model storage
+plus 16 KiB for fixed roots/indexes and validation scratch. The coefficients are
+calibrated estimates, not an allocator-enforced hard memory limit.
+`cargo test --locked -p zipzi-project --lib archive::decode_workspace -- --nocapture`
+reports estimates and measured requested-byte peaks for numeric arrays, escaped
+strings, metadata, geometry, keyforms, motions and rejected documents. Cases
+include both sides of Vec capacity growth boundaries. The test-only allocator
+forwards to System and isolates measurements by thread; its conservative realloc
+peak includes both old and new buffers. It excludes allocator overhead, RSS,
+stacks and other threads. Re-run this gate when codec or serde layouts change.
+
 Native load and save project resource keys into archive entries at the file boundary.
 
 ## Import artwork

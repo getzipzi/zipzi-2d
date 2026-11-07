@@ -154,6 +154,14 @@ impl DocumentSession {
         self.appearance_geometry = None;
         self.modeling.tools.reconcile(&mut self.document);
     }
+    pub(crate) fn invalidate_scene_appearance(&mut self) {
+        let reusable = self
+            .geometry
+            .clone()
+            .or_else(|| self.appearance_geometry.take());
+        self.invalidate_scene();
+        self.appearance_geometry = reusable;
+    }
     pub fn cancel_gesture(&mut self) {
         if self.modeling.tools.cancel(&mut self.document) {
             self.invalidate_scene();

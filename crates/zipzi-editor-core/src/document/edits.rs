@@ -192,7 +192,8 @@ impl Document {
                 let old_source = self.canvas_topology_source.get_mut().unwrap().take();
                 if let Some(old) = old {
                     *self.previous_canvas_topology.get_mut().unwrap() = Some(old);
-                    *self.previous_canvas_source.get_mut().unwrap() = old_source;
+                    *self.previous_canvas_source.get_mut().unwrap() =
+                        old_source.map(|(source, _)| source);
                 }
                 *self.changed_canvas_meshes.get_mut().unwrap() = None;
             }

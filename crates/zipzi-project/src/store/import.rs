@@ -1033,9 +1033,11 @@ impl ProjectImporter {
     ) -> Result<ImportedProject, Status> {
         let mut b = state.builder();
         let mut images = Vec::new();
+        let mut cropped = HashMap::new();
         let mut protected_paths = Vec::new();
+        let mut pages = Vec::new();
         for id in state.asset_order() {
-            let mut record = state.asset(id).unwrap().clone();
+            let record = state.asset(id).unwrap();
             let zipzi_core::state::AssetContent::Unresolved { source } = &record.content else {
                 continue;
             };
@@ -1048,6 +1050,14 @@ impl ProjectImporter {
             else {
                 continue;
             };
+            pages.push((record, source, descriptor));
+        }
+        // Decode larger pages before retained crops consume the decode workspace.
+        pages.sort_by_key(|(_, _, descriptor)| {
+            std::cmp::Reverse(u64::from(descriptor.width) * u64::from(descriptor.height))
+        });
+        let users = crate::atlas::mesh_texture_users(&state);
+        for (record, source, descriptor) in pages {
             let captured = crate::prepare_image_content_with_budget(
                 Path::new(source),
                 self.resources.budget(),
@@ -1064,12 +1074,24 @@ impl ProjectImporter {
             match captured {
                 Ok(image) => {
                     protected_paths.push(io::local_path(Path::new(source))?);
-                    record.content = image_content(&image);
-                    b.replace_asset(record)?;
-                    images.push(image);
+                    if let Some(meshes) = users.get(&record.id) {
+                        crate::atlas::unpack_atlas_page(
+                            &mut b,
+                            &record.id,
+                            meshes,
+                            &image.texture(),
+                            &self.resources,
+                            &mut cropped,
+                        )?;
+                    } else {
+                        let mut record = record.clone();
+                        record.content = image_content(&image);
+                        b.replace_asset(record)?;
+                        images.push(image);
+                    }
                 }
                 Err(status) => diagnostics.push(ResourceDiagnostic {
-                    asset_id: id.clone(),
+                    asset_id: record.id.clone(),
                     code: status.code,
                     message: status.message,
                 }),
@@ -1077,15 +1099,95 @@ impl ProjectImporter {
         }
         let document = b.freeze()?.state;
         let resources = crate::ResourceView::default()
-            .with_images(images)
+            .with_images(images.into_iter().chain(cropped.into_values()))
             .for_state(&document)?;
-        let atlases = document.asset_order().iter().cloned().collect();
-        let (document, resources) =
-            crate::atlas::unpack_atlas_images(&document, &resources, &self.resources, &atlases)?;
+        // Reap the final page's weak buffer entries even if no more allocations follow.
+        self.resources.budget().usage();
         Ok(ImportedProject {
             document,
             resources,
             protected_paths,
         })
+    }
+}
+
+#[cfg(test)]
+mod atlas_capture_tests {
+    use super::*;
+    use zipzi_core::state::{AssetContent, AssetRecord};
+    use zipzi_core::{Mesh, Vec2};
+
+    #[test]
+    fn captures_multiple_atlases_under_a_single_page_decode_budget() {
+        let directory = tempfile::tempdir().unwrap();
+        let store = crate::ResourceStore::new(crate::ImageMemoryBudget::new(40 << 10));
+        let importer = ProjectImporter {
+            resources: store.clone(),
+        };
+        let mut builder = DocumentState::new(
+            uuid::Uuid::new_v4().to_string(),
+            zipzi_core::Canvas::new(64., 64., Vec2::default(), 1.).into(),
+        )
+        .unwrap()
+        .builder();
+        let mut descriptors = Vec::new();
+        for slot in 0..2 {
+            let path = directory.path().join(format!("{slot}.png"));
+            let mut encoder = png::Encoder::new(fs::File::create(&path).unwrap(), 64, 64);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            encoder
+                .write_header()
+                .unwrap()
+                .write_image_data(&vec![100 + slot as u8; 64 * 64 * 4])
+                .unwrap();
+            let asset_id = uuid::Uuid::new_v4().to_string();
+            let source = path.to_str().unwrap().to_owned();
+            builder
+                .create_asset(AssetRecord {
+                    id: asset_id.clone(),
+                    name: format!("Page {slot}"),
+                    content: AssetContent::Unresolved {
+                        source: source.clone(),
+                    },
+                })
+                .unwrap();
+            builder
+                .create_mesh(Mesh {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    runtime_id: format!("Mesh{slot}"),
+                    texture_asset_id: asset_id.clone().into(),
+                    vertex_ids: vec![0, 1, 2],
+                    base_positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+                    uvs: vec![
+                        Vec2::new(0.25, 0.25),
+                        Vec2::new(0.5, 0.25),
+                        Vec2::new(0.25, 0.5),
+                    ],
+                    triangles: vec![[0, 1, 2]],
+                    ..Default::default()
+                })
+                .unwrap();
+            descriptors.push(zipzi_moc3::TextureSlotInfo {
+                slot,
+                asset_id,
+                name: String::new(),
+                source,
+                width: 64,
+                height: 64,
+                sha256: String::new(),
+            });
+        }
+        let state = builder.freeze().unwrap().state;
+        let mut diagnostics = Vec::new();
+        let project = importer
+            .capture_files(state, &descriptors, &mut diagnostics)
+            .unwrap();
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        assert_eq!(project.resources.len(), 2);
+        assert_eq!(project.document.asset_order().len(), 2);
+        let usage = store.budget().usage();
+        assert_eq!(usage.png_bytes, 0);
+        assert!(usage.rgba_bytes < 16 << 10);
     }
 }

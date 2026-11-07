@@ -42,7 +42,10 @@ pub(crate) struct Model<'a> {
     prepared: OnceLock<Result<crate::evaluation::PreparedEvaluation, Status>>,
     projection: OnceLock<Arc<SceneProjection>>,
     binding_ids: OnceLock<Vec<BindingIdentity>>,
+    binding_id_index: OnceLock<HashMap<String, usize>>,
     reference_ids: OnceLock<Vec<ReferenceIdentity>>,
+    base_ids: OnceLock<HashSet<String>>,
+    motion_ids: OnceLock<HashSet<String>>,
 }
 impl<'a> Model<'a> {
     pub fn new(content: ModelContent<'a>) -> Self {
@@ -54,7 +57,10 @@ impl<'a> Model<'a> {
             prepared: OnceLock::new(),
             projection: OnceLock::new(),
             binding_ids: OnceLock::new(),
+            binding_id_index: OnceLock::new(),
             reference_ids: OnceLock::new(),
+            base_ids: OnceLock::new(),
+            motion_ids: OnceLock::new(),
         }
     }
 }

@@ -8,6 +8,13 @@ pub struct OrganizationOutcome {
     pub effects: OrganizationEffects,
 }
 impl DocumentState {
+    pub(super) fn organization_index(
+        &self,
+    ) -> &crate::model_validation::organization::OrganizationIndex {
+        self.read_cache
+            .organization
+            .get_or_init(|| self.content.model().shared_organization_index())
+    }
     pub fn organization_collection(
         &self,
         collection: &OrganizationCollection,
@@ -18,7 +25,7 @@ impl DocumentState {
         self.content.model().organization_subtree(ids)
     }
     pub fn ordered_parameter_ids(&self) -> Vec<String> {
-        self.content.model().ordered_parameter_ids()
+        self.organization_index().parameter_ids().to_vec()
     }
     pub fn resolved_drawing_groups(&self) -> Vec<DrawOrderGroup> {
         self.content.model().resolved_drawing_groups()

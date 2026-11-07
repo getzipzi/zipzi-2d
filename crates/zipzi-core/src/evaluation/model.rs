@@ -212,6 +212,15 @@ impl EvaluationModel for crate::model_validation::Model<'_> {
     }
 }
 impl EvaluationModel for crate::state::DocumentState {
+    fn iter_active_blend_bindings_for_target<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> impl Iterator<Item = &'a BlendShapeBinding> {
+        self.blend_binding_ids_for_target(id)
+            .iter()
+            .map(|key| self.blend_binding(key).unwrap())
+            .filter(|binding| self.blend_binding_active(binding))
+    }
     fn get_parameter(&self, id: &str) -> Option<&Parameter> {
         self.parameter(id)
     }
@@ -305,6 +314,12 @@ impl EvaluationModel for crate::state::DocumentState {
 }
 
 impl<T: EvaluationModel> EvaluationModel for Arc<T> {
+    fn iter_active_blend_bindings_for_target<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> impl Iterator<Item = &'a BlendShapeBinding> {
+        self.as_ref().iter_active_blend_bindings_for_target(id)
+    }
     fn get_parameter(&self, id: &str) -> Option<&Parameter> {
         self.as_ref().get_parameter(id)
     }
@@ -407,6 +422,12 @@ impl<T: EvaluationModel> EvaluationModel for Arc<T> {
 }
 
 impl<T: EvaluationModel + Clone> EvaluationModel for std::borrow::Cow<'_, T> {
+    fn iter_active_blend_bindings_for_target<'a>(
+        &'a self,
+        id: &'a str,
+    ) -> impl Iterator<Item = &'a BlendShapeBinding> {
+        self.as_ref().iter_active_blend_bindings_for_target(id)
+    }
     fn get_parameter(&self, id: &str) -> Option<&Parameter> {
         self.as_ref().get_parameter(id)
     }

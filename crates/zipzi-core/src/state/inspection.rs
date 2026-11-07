@@ -116,11 +116,7 @@ impl DocumentState {
             })
     }
     pub fn organization_owner(&self, id: &str) -> Option<&str> {
-        let model = self.content.model();
-        let owner = model.organization_owner(id)?;
-        self.part(owner)
-            .map(|part| part.id.as_str())
-            .or_else(|| self.parameter_group(owner).map(|group| group.id.as_str()))
+        self.organization_index().owner(id)
     }
     pub fn scene_deformer_parent(&self, id: &str) -> Option<&str> {
         self.mesh(id)
@@ -149,11 +145,9 @@ impl DocumentState {
         &'a self,
         id: &str,
     ) -> impl Iterator<Item = &'a BlendShapeBinding> {
-        let id = id.to_owned();
-        self.blend_binding_order()
+        self.blend_binding_ids_for_target(id)
             .iter()
-            .filter_map(|key| self.blend_binding(key))
-            .filter(move |binding| binding.target_id == id)
+            .map(|key| self.blend_binding(key).unwrap())
     }
     pub fn glues_for_mesh<'a>(&'a self, id: &str) -> Vec<&'a Glue> {
         self.glue_order()

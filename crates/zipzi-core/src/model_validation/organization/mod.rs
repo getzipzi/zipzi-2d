@@ -153,13 +153,7 @@ impl Model<'_> {
         Ok(())
     }
     pub fn organization_owner(&self, id: &str) -> Option<&str> {
-        self.organization_index()
-            .owners
-            .get(id)
-            .and_then(|owner| owner.as_deref())
-    }
-    pub fn ordered_parameter_ids(&self) -> Vec<String> {
-        self.organization_index().parameters.clone()
+        self.organization_index().owner(id)
     }
     pub fn organization_collection(
         &self,

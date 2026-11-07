@@ -27,6 +27,9 @@ impl<T> Records<T> {
     pub fn order_vec(&self) -> &Vec<String> {
         &self.order
     }
+    pub(super) fn shares_order(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.order, &other.order)
+    }
     pub fn set_order(&mut self, order: Vec<String>) -> Result<(), crate::Status> {
         if order.len() != self.values.len()
             || order.iter().collect::<BTreeSet<_>>().len() != order.len()

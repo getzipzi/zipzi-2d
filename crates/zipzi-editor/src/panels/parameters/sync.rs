@@ -18,7 +18,7 @@ impl ParametersPanel {
             (
                 owner.editor.active_id(),
                 doc.map_or_else(Vec::new, |doc| doc.parameters()),
-                doc.map(|doc| doc.parameter_model_revision()),
+                doc.map(|doc| doc.evaluation_layout_id()),
                 doc.map(|doc| {
                     format!(
                         "{:?}/{:?}",

@@ -237,6 +237,25 @@ fields! {
  crate::DeformerOriginalSnapshot=>[shape];
  WarpKeyform=>[samples,keys,positions,bezier];
  PackageAttachment=>[id,path,bytes];
+ OwnedDocument=>[
+     id, assets, parameters, parts, transforms, meshes, bindings, scene_bindings,
+     blend_key_tables, blend_constraints, blend_bindings, glues, offscreens,
+     expressions, motions, draw_order_groups, display_info, hierarchy_order,
+     editor_state, motion_groups, motion_roots, pose, physics, missing_attachments,
+     model3_settings, package_attachments,
+ ];
+}
+
+impl OwnedDocument {
+    /// Approximate storage of the decoded records, including shared payloads once.
+    pub fn estimated_bytes(&self) -> usize {
+        let mut cost = Footprint::default();
+        self.retained(&mut cost);
+        cost.shared.values().fold(
+            cost.owned.saturating_add(size_of::<Self>()),
+            |total, bytes| total.saturating_add(*bytes),
+        )
+    }
 }
 impl<T: Retained> Retained for ReferenceEntry<T> {
     fn retained(&self, cost: &mut Footprint) {

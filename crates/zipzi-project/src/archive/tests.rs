@@ -802,23 +802,12 @@ fn expanded_json_is_admitted_before_decoding_and_failed_candidates_are_reclaimed
         .unwrap()
         .read_to_end(&mut padded)
         .unwrap();
-    let hash = content_sha256(&padded);
-    let bytes = repack(&original, |name, data| {
-        Some(match name {
-            "project.json" => padded.clone(),
-            "format.json" => {
-                let mut format: Format = serde_json::from_slice(&data).unwrap();
-                format.document_sha256 = hash.clone();
-                serde_json::to_vec(&format).unwrap()
-            }
-            _ => data,
-        })
-    });
+    let bytes = replace_archive_document(&original, &padded);
     assert!(bytes.len() < 10 << 10);
     let path = root.path().join("compressed.zipzi");
     fs::write(&path, &bytes).unwrap();
     let budget = crate::ImageMemoryBudget::default();
-    budget.bind_host_budget(0, 8 << 20);
+    budget.bind_host_budget(0, 3 << 20);
     let lease = Arc::new(budget.reserve_transfer(4096).unwrap());
     let cache = root.path().join("private");
     let mut store = io(&cache);
@@ -827,7 +816,7 @@ fn expanded_json_is_admitted_before_decoding_and_failed_candidates_are_reclaimed
     assert!(matches!(error, ArchiveError::Document { ref code, .. } if code == "BUDGET_EXCEEDED"));
     assert_eq!(fs::read_dir(&cache).unwrap().count(), 0);
     assert_eq!(fs::read(&path).unwrap(), bytes);
-    budget.bind_host_budget(0, 128 << 20);
+    budget.bind_host_budget(0, 8 << 20);
     let opened = store.load(&path, || true).unwrap();
     assert!(equivalent(
         &document.document,
@@ -835,8 +824,19 @@ fn expanded_json_is_admitted_before_decoding_and_failed_candidates_are_reclaimed
         &opened.document,
         &opened.resources
     ));
-    assert!(budget.usage().transfer_bytes >= padded.len() * 64);
+    assert!(budget.usage().transfer_bytes < 3 << 20);
     drop(opened);
+
+    // A smaller but structurally dense document needs room for decoded values.
+    let mut dense = br#"{"extra":["#.to_vec();
+    dense.extend(b"0,".repeat(1 << 17));
+    dense.extend_from_slice(b"0]}");
+    let bytes = replace_archive_document(&original, &dense);
+    fs::write(&path, &bytes).unwrap();
+    let error = store.load(&path, || true).err().unwrap();
+    assert!(matches!(error, ArchiveError::Document { ref code, .. } if code == "BUDGET_EXCEEDED"));
+    assert_eq!(fs::read_dir(&cache).unwrap().count(), 0);
+
     drop(store);
     drop(lease);
     assert_eq!(budget.usage().transfer_bytes, 0);

@@ -3,7 +3,7 @@ impl Model<'_> {
     /// Locks inherit through organizational owners. Deformation parents protect
     /// their own fields; reparent/conversion operations check affected parents explicitly.
     pub(crate) fn authoring_unlocked(&self, id: &str) -> Result<(), Status> {
-        if self.editor_state().is_empty() {
+        if !self.editor_state().objects.values().any(|flags| flags.locked) {
             return Ok(());
         }
         let mut pending = vec![id];

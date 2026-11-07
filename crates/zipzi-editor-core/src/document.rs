@@ -188,7 +188,8 @@ pub struct Document {
     object_index_builds: std::sync::atomic::AtomicUsize,
     pub(crate) animation_catalog: std::sync::Mutex<Option<(u64, Arc<crate::AnimationCatalog>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
-    canvas_topology_source: std::sync::Mutex<Option<zipzi_sdk::QuerySource>>,
+    canvas_topology_source:
+        std::sync::Mutex<Option<(zipzi_sdk::QuerySource, zipzi_core::state::ContentId)>>,
     previous_canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
     previous_canvas_source: std::sync::Mutex<Option<zipzi_sdk::QuerySource>>,
     changed_canvas_meshes: std::sync::Mutex<Option<std::collections::HashSet<String>>>,
@@ -294,7 +295,7 @@ impl Document {
         let known_changes = self.changed_canvas_meshes.get_mut().unwrap();
         if let Some(old) = old {
             *previous = Some(old);
-            *self.previous_canvas_source.get_mut().unwrap() = old_source;
+            *self.previous_canvas_source.get_mut().unwrap() = old_source.map(|(source, _)| source);
             *known_changes = changed;
         } else if previous.is_some() {
             *known_changes = match (known_changes.take(), changed) {
@@ -651,6 +652,10 @@ impl Document {
     pub fn properties_revision(&self) -> u64 {
         self.projection_revision
     }
+    /// Structural scene queries can share results across pose and appearance candidates.
+    pub fn evaluation_layout_id(&self) -> zipzi_core::state::ContentId {
+        self.model().evaluation_layout_id()
+    }
 
     pub fn object_index(&self) -> Arc<crate::ObjectIndex> {
         let model = self.model();
@@ -820,20 +825,23 @@ impl Document {
         };
         let source = snapshot.source;
         let model = snapshot.snapshot.document();
+        let layout = model.evaluation_layout_id();
         let mut current = self.canvas_topology.lock().unwrap();
         let mut cached_source = self.canvas_topology_source.lock().unwrap();
         if let Some(value) = current.as_mut() {
             // A source includes the candidate sequence as well as its base.
             // Recheck structural equality before sharing geometry from another
             // source; a local invalidation hint alone cannot prove equivalence.
-            if *cached_source != Some(source) {
+            if !cached_source
+                .is_some_and(|(cached, cached_layout)| cached == source || cached_layout == layout)
+            {
                 let next =
                     crate::canvas_topology::CanvasTopology::with_previous(model, Some(value), None);
                 if !next.same_geometry(value) || !Arc::ptr_eq(&next.index, &value.index) {
                     *value = Arc::new(next);
                 }
             }
-            *cached_source = Some(source);
+            *cached_source = Some((source, layout));
             return value.clone();
         }
         let previous = self.previous_canvas_topology.lock().unwrap().take();
@@ -861,7 +869,7 @@ impl Document {
         };
         let built = Arc::new(built);
         *current = Some(built.clone());
-        *cached_source = Some(source);
+        *cached_source = Some((source, layout));
         built
     }
 
@@ -878,30 +886,24 @@ impl Document {
                 .replace(document, 0, self.session.preview_values().clone())?;
             pending.preview.frame(document, 0)?
         } else if let Some(pending) = &mut self.manual_pending {
+            let document = pending.edit.candidate_document();
             pending
                 .preview
-                .replace(
-                    &pending.edit.candidate_document(),
-                    0,
-                    self.session.preview_values().clone(),
-                )
+                .replace(&document, 0, self.session.preview_values().clone())
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
             pending
                 .preview
-                .frame(&pending.edit.candidate_document(), 0)
+                .frame(&document, 0)
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
         } else if let Some(pending) = &mut self.pending {
+            let document = pending.edit.candidate_document();
             pending
                 .preview
-                .replace(
-                    &pending.edit.candidate_document(),
-                    0,
-                    self.session.preview_values().clone(),
-                )
+                .replace(&document, 0, self.session.preview_values().clone())
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
             pending
                 .preview
-                .frame(&pending.edit.candidate_document(), 0)
+                .frame(&document, 0)
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
         } else {
             self.session.preview_frame()?

@@ -113,8 +113,25 @@ impl PreparedImageContent {
         mut keep_going: impl FnMut() -> bool,
     ) -> Result<VerifiedTexture, Status> {
         check(&mut keep_going)?;
+        self.validate_metadata()?;
         let texture = &self.memory.texture;
-        if (self.content.width, self.content.height) != (texture.width, texture.height) {
+        let hash = rgba8_sha256_with_control(
+            texture.width,
+            texture.height,
+            &texture.rgba,
+            &mut keep_going,
+        )?;
+        Ok(VerifiedTexture {
+            texture: texture.clone(),
+            source_content_identity: ObservationContentIdentity::Rgba8Sha256 { hash },
+        })
+    }
+
+    pub(crate) fn validate_metadata(&self) -> Result<(), Status> {
+        let texture = &self.memory.texture;
+        if (self.content.width, self.content.height) != (texture.width, texture.height)
+            || rgba_size(texture.width, texture.height).ok() != Some(texture.rgba.len())
+        {
             return Err(Status::error(
                 "RESOURCE_DIMENSIONS",
                 "Memory texture dimensions differ from captured metadata",
@@ -132,16 +149,7 @@ impl PreparedImageContent {
                 ));
             }
         }
-        let hash = rgba8_sha256_with_control(
-            texture.width,
-            texture.height,
-            &texture.rgba,
-            &mut keep_going,
-        )?;
-        Ok(VerifiedTexture {
-            texture: texture.clone(),
-            source_content_identity: ObservationContentIdentity::Rgba8Sha256 { hash },
-        })
+        Ok(())
     }
 }
 

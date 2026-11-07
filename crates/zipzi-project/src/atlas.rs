@@ -1,8 +1,8 @@
 //! Normalize packed pages using captured immutable resource versions.
-use crate::{ResourceStore, ResourceView, TextureData};
+use crate::{ImageResource, ResourceStore, ResourceView, TextureData};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use zipzi_core::{
-    state::{AssetContent, AssetRecord, DocumentState},
+    state::{AssetContent, AssetRecord, DocumentBuilder, DocumentState},
     Mesh, Status, Vec2,
 };
 pub(crate) fn unpack_atlas_images(
@@ -11,16 +11,9 @@ pub(crate) fn unpack_atlas_images(
     store: &ResourceStore,
     known_atlases: &HashSet<String>,
 ) -> Result<(DocumentState, ResourceView), Status> {
-    let mut users = BTreeMap::<String, Vec<String>>::new();
-    for id in state.mesh_order() {
-        let mesh = state.mesh(id).unwrap();
-        if let Some(asset) = mesh.texture_asset_id.resolved_id() {
-            users.entry(asset.into()).or_default().push(id.clone());
-        }
-    }
     let mut builder = state.builder();
-    let mut images = Vec::new();
-    for (source_id, mesh_ids) in users {
+    let mut images = HashMap::new();
+    for (source_id, mesh_ids) in mesh_texture_users(state) {
         if mesh_ids.len() == 1 && !known_atlases.contains(&source_id) {
             continue;
         }
@@ -31,38 +24,68 @@ pub(crate) fn unpack_atlas_images(
             .image(resource)
             .ok_or_else(|| Status::error("MISSING_RESOURCE", &source_id))?
             .texture();
-        for id in mesh_ids {
-            let mut mesh = builder.mesh(&id).unwrap().clone();
-            let crop = Crop::new(&mesh, texture.width, texture.height)?;
-            let size = crop.width as usize * crop.height as usize * 4;
-            let reservation = store.budget().reserve(size.saturating_mul(2))?;
-            let pixels: std::sync::Arc<[u8]> = crop.extract(&mesh, &texture)?.into();
-            reservation.commit(&pixels, crate::ImageBufferKind::Rgba)?;
-            let image = store.prepare_rgba(crop.width, crop.height, pixels)?;
-            let asset_id = uuid::Uuid::new_v4().to_string();
-            builder.create_asset(AssetRecord {
-                id: asset_id.clone(),
-                name: mesh.name.clone(),
-                content: AssetContent::Image {
-                    resource: image.key(),
-                    width: image.width(),
-                    height: image.height(),
-                },
-            })?;
-            crop.rebase(&mut mesh.uvs, texture.width, texture.height);
-            mesh.texture_asset_id = asset_id.into();
-            builder.replace_mesh(mesh)?;
-            images.push(image);
-        }
-        if !builder.mesh_order().iter().any(|id| {
-            builder.mesh(id).unwrap().texture_asset_id.resolved_id() == Some(source_id.as_str())
-        }) {
-            builder.remove_asset(&source_id)?;
-        }
+        unpack_atlas_page(
+            &mut builder,
+            &source_id,
+            &mesh_ids,
+            &texture,
+            store,
+            &mut images,
+        )?;
     }
     let document = builder.freeze()?.state;
-    let resources = resources.with_images(images).for_state(&document)?;
+    let resources = resources
+        .with_images(images.into_values())
+        .for_state(&document)?;
     Ok((document, resources))
+}
+
+pub(crate) fn mesh_texture_users(state: &DocumentState) -> BTreeMap<String, Vec<String>> {
+    let mut users = BTreeMap::<String, Vec<String>>::new();
+    for id in state.mesh_order() {
+        let mesh = state.mesh(id).unwrap();
+        if let Some(asset) = mesh.texture_asset_id.resolved_id() {
+            users.entry(asset.into()).or_default().push(id.clone());
+        }
+    }
+    users
+}
+
+pub(crate) fn unpack_atlas_page(
+    builder: &mut DocumentBuilder,
+    source_id: &str,
+    mesh_ids: &[String],
+    texture: &TextureData,
+    store: &ResourceStore,
+    images: &mut HashMap<String, ImageResource>,
+) -> Result<(), Status> {
+    for id in mesh_ids {
+        let mut mesh = builder.mesh(id).unwrap().clone();
+        let crop = Crop::new(&mesh, texture.width, texture.height)?;
+        let size = crop.width as usize * crop.height as usize * 4;
+        let reservation = store.budget().reserve(size.saturating_mul(2))?;
+        let pixels: std::sync::Arc<[u8]> = crop.extract(&mesh, texture)?.into();
+        reservation.commit(&pixels, crate::ImageBufferKind::Rgba)?;
+        let image = store.prepare_rgba(crop.width, crop.height, pixels)?;
+        // Generated texture keys include dimensions and the pixel digest.
+        // Distinct asset records can retain the same immutable image.
+        let image = images.entry(image.texture().cache_key).or_insert(image);
+        let asset_id = uuid::Uuid::new_v4().to_string();
+        builder.create_asset(AssetRecord {
+            id: asset_id.clone(),
+            name: mesh.name.clone(),
+            content: AssetContent::Image {
+                resource: image.key(),
+                width: image.width(),
+                height: image.height(),
+            },
+        })?;
+        crop.rebase(&mut mesh.uvs, texture.width, texture.height);
+        mesh.texture_asset_id = asset_id.into();
+        builder.replace_mesh(mesh)?;
+    }
+    // mesh_ids contains all users of this source page.
+    builder.remove_asset(source_id)
 }
 fn invalid(message: &str) -> Status {
     Status::error("ATLAS_EXTRACTION", message)
@@ -343,5 +366,17 @@ mod tests {
             view.read_asset(&asset).unwrap().rgba.as_slice(),
             image.texture().rgba.as_ref()
         );
+
+        let mut builder = document.builder();
+        let mut copy = document.mesh(&document.mesh_order()[0]).unwrap().clone();
+        copy.id = uuid::Uuid::new_v4().to_string();
+        copy.runtime_id = "OtherPiece".into();
+        copy.name = "Other piece".into();
+        builder.create_mesh(copy).unwrap();
+        let document = builder.freeze().unwrap().state;
+        let (next, view) =
+            unpack_atlas_images(&document, &resources, &store, &HashSet::new()).unwrap();
+        assert_eq!(next.asset_order().len(), 2);
+        assert_eq!(view.len(), 1);
     }
 }

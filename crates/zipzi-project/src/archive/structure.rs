@@ -77,7 +77,7 @@ pub(super) fn validate(
     limits: ArchiveIoLimits,
     keep_going: &mut impl FnMut() -> bool,
 ) -> Result<BTreeSet<String>> {
-    validate_budgeted(input, length, limits, keep_going, None)
+    validate_budgeted(input, length, limits, keep_going, None).map(|(names, _)| names)
 }
 
 pub(super) fn validate_budgeted(
@@ -86,7 +86,7 @@ pub(super) fn validate_budgeted(
     limits: ArchiveIoLimits,
     keep_going: &mut impl FnMut() -> bool,
     memory: Option<&crate::TransferReservation>,
-) -> Result<BTreeSet<String>> {
+) -> Result<(BTreeSet<String>, usize)> {
     if length > limits.archive_bytes {
         return Err(ArchiveError::Limit("archive bytes"));
     }
@@ -155,15 +155,14 @@ pub(super) fn validate_budgeted(
         return Err(invalid("Invalid central directory region"));
     }
     // Both indexes, path sets and streaming buffers are admitted before allocation.
-    let mut workspace = directory_size
+    let workspace = directory_size
         .checked_mul(8)
         .and_then(|n| count.checked_mul(2048)?.checked_add(n))
         .and_then(|n| n.checked_add(2 << 20))
+        .and_then(|n| usize::try_from(n).ok())
         .ok_or(ArchiveError::Limit("index workspace overflow"))?;
     if let Some(memory) = memory {
-        memory.ensure_at_least(
-            usize::try_from(workspace).map_err(|_| ArchiveError::Limit("index workspace"))?,
-        )?;
+        memory.ensure_at_least(workspace)?;
     }
     let mut entries = Vec::with_capacity(count as usize);
     let mut names = BTreeSet::new();
@@ -247,19 +246,6 @@ pub(super) fn validate_budgeted(
         };
         if expanded > json_limit {
             return Err(ArchiveError::Limit("JSON bytes"));
-        }
-        if matches!(name_text, "format.json" | "project.json") {
-            // Input, syntax/Value/wire decoding and the resulting frozen model.
-            workspace = expanded
-                .checked_mul(64)
-                .and_then(|n| workspace.checked_add(n))
-                .ok_or(ArchiveError::Limit("document workspace overflow"))?;
-            if let Some(memory) = memory {
-                memory.ensure_at_least(
-                    usize::try_from(workspace)
-                        .map_err(|_| ArchiveError::Limit("document workspace"))?,
-                )?;
-            }
         }
         entries.push(Entry {
             name,
@@ -369,5 +355,5 @@ pub(super) fn validate_budgeted(
         return Err(invalid("Unaccounted ZIP data before central directory"));
     }
     input.rewind()?;
-    Ok(names)
+    Ok((names, workspace))
 }

@@ -275,6 +275,146 @@ fn complete() -> DocumentState {
 }
 
 #[test]
+fn blend_binding_index_follows_retargeting_through_evaluation_wrappers() {
+    use crate::evaluation::EvaluationModel;
+
+    let base = Arc::new(complete());
+    let source = id(6);
+    let target = id(7);
+    let binding_id = id(12);
+    assert_eq!(
+        base.iter_active_blend_bindings_for_target(&source)
+            .next()
+            .unwrap()
+            .id,
+        binding_id
+    );
+    let mut binding = base.blend_binding(&binding_id).unwrap().clone();
+    binding.target_id = target.clone();
+    let mut builder = base.builder();
+    builder.replace_blend_binding(binding).unwrap();
+    let state: std::borrow::Cow<'_, DocumentState> =
+        std::borrow::Cow::Owned(builder.freeze().unwrap().state);
+    assert_eq!(
+        state.iter_active_blend_bindings_for_target(&source).count(),
+        0
+    );
+    assert_eq!(
+        state
+            .iter_active_blend_bindings_for_target(&target)
+            .next()
+            .unwrap()
+            .id,
+        binding_id
+    );
+}
+
+#[test]
+fn frame_payload_shares_layout_and_keeps_distinct_frame_inputs() {
+    let base = complete();
+    let mesh_id = id(6);
+    assert_eq!(base.ordered_parameter_ids(), vec![id(4), id(5)]);
+    assert_eq!(base.organization_owner(&mesh_id), Some(id(2).as_str()));
+    let mut mesh = base.mesh(&mesh_id).unwrap().clone();
+    mesh.base_positions[0].x += 0.25;
+    let mut builder = base.builder();
+    builder.replace_mesh(mesh.clone()).unwrap();
+    let edited = builder.freeze().unwrap().state;
+    assert!(Arc::ptr_eq(&base.read_cache, &edited.read_cache));
+    assert_eq!(base.evaluation_layout_id(), edited.evaluation_layout_id());
+    assert_ne!(base.frame_input_id(), edited.frame_input_id());
+    assert_eq!(edited.organization_owner(&mesh_id), Some(id(2).as_str()));
+    assert_eq!(edited.ordered_parameter_ids(), base.ordered_parameter_ids());
+
+    let mut info = edited.display_info().clone();
+    info.parameters = Some(
+        [id(5), id(4)]
+            .into_iter()
+            .map(|parameter_id| CdiParameterEntry::Resolved {
+                parameter_id,
+                group_id: None,
+                extensions: Default::default(),
+            })
+            .collect(),
+    );
+    let mut builder = edited.builder();
+    builder.set_display_info(info).unwrap();
+    let reordered_parameters = builder.freeze().unwrap().state;
+    assert_eq!(
+        reordered_parameters.ordered_parameter_ids(),
+        vec![id(5), id(4)]
+    );
+    assert_eq!(base.ordered_parameter_ids(), vec![id(4), id(5)]);
+    assert!(!Arc::ptr_eq(
+        &base.read_cache,
+        &reordered_parameters.read_cache
+    ));
+
+    let mut moved = edited.mesh(&mesh_id).unwrap().clone();
+    moved.part_id.clear();
+    let mut builder = edited.builder();
+    builder.replace_mesh(moved).unwrap();
+    let moved = builder.freeze().unwrap().state;
+    assert_eq!(moved.organization_owner(&mesh_id), None);
+    assert_eq!(base.organization_owner(&mesh_id), Some(id(2).as_str()));
+
+    let mut builder = base.builder();
+    mesh.base_positions[0].x = f32::NAN;
+    builder.replace_mesh(mesh).unwrap();
+    assert!(builder.freeze().is_err());
+
+    let mut builder = base.builder();
+    let mesh = base.mesh(&mesh_id).unwrap().clone();
+    builder.remove_mesh(&mesh_id).unwrap();
+    builder.create_mesh(mesh).unwrap();
+    let reordered = builder.freeze().unwrap().state;
+    assert_ne!(base.mesh_order(), reordered.mesh_order());
+    assert_ne!(
+        base.evaluation_layout_id(),
+        reordered.evaluation_layout_id()
+    );
+}
+
+#[test]
+fn physics_payload_shares_scene_indexes_and_validates_changed_settings() {
+    let base = complete();
+    let mut builder = base.builder();
+    builder
+        .patch_physics(&PhysicsPatch {
+            asset_id: id(25),
+            asset_changes: vec![PhysicsAssetProperty::Fps(Some(60.))],
+            rig: None,
+        })
+        .unwrap();
+    let frozen = builder.freeze().unwrap();
+    assert!(frozen.writes.animation_inputs_changed);
+    let edited = frozen.state;
+    assert!(Arc::ptr_eq(&base.read_cache, &edited.read_cache));
+    assert_eq!(base.evaluation_layout_id(), edited.evaluation_layout_id());
+    assert_eq!(base.frame_input_id(), edited.frame_input_id());
+    assert_ne!(base.content_id(), edited.content_id());
+    let mut invalid = edited.physics().as_ref().unwrap().as_ref().clone();
+    invalid.data.meta.fps = Some(f32::NAN);
+    let mut builder = edited.builder();
+    builder.set_physics(Some(Arc::new(invalid))).unwrap();
+    assert!(builder.freeze().is_err());
+
+    let mut builder = edited.builder();
+    builder.validate_candidate().unwrap();
+    let mut mesh = edited.mesh(&id(6)).unwrap().clone();
+    mesh.base_positions[0].x = f32::NAN;
+    builder.replace_mesh(mesh).unwrap();
+    builder
+        .patch_physics(&PhysicsPatch {
+            asset_id: id(25),
+            asset_changes: vec![PhysicsAssetProperty::Fps(Some(120.))],
+            rig: None,
+        })
+        .unwrap();
+    assert!(builder.freeze().is_err());
+}
+
+#[test]
 fn owned_construction_covers_every_persistent_domain_and_moves_geometry() {
     let input = owned();
     let positions = input.meshes[0].base_positions.as_ptr();
@@ -444,9 +584,11 @@ fn metadata_only_order_changes_and_net_zero_roots_are_tracked() {
         result.state.editor_state()
     ));
     let mut builder = base.builder();
-    assert!(builder
-        .reorder(RecordDomain::Mesh, vec![id(6), id(6)])
-        .is_err());
+    assert!(
+        builder
+            .reorder(RecordDomain::Mesh, vec![id(6), id(6)])
+            .is_err()
+    );
     assert!(builder.freeze().is_err());
 }
 

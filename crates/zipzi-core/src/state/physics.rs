@@ -32,7 +32,8 @@ impl DocumentBuilder {
         })
     }
     pub fn patch_physics(&mut self, patch: &PhysicsPatch) -> Result<(), Status> {
-        self.write(|this| {
+        let validation = self.validation;
+        let result = self.write(|this| {
             let prepared = this.content.model().prepare_physics_patch(patch)?;
             if !prepared.changed() {
                 return Ok(());
@@ -40,7 +41,13 @@ impl DocumentBuilder {
             let mut asset = this.physics().as_ref().unwrap().as_ref().clone();
             prepared.apply(&mut asset, patch);
             this.set_physics(Some(Arc::new(asset)))
-        })
+        });
+        if result.is_ok() {
+            // Typed patches preserve entity identities and validate the changed
+            // rig and metadata. Other builder writes clear this proof as usual.
+            self.validation = validation;
+        }
+        result
     }
     pub fn edit_physics(&mut self, edit: PhysicsEdit) -> Result<(), Status> {
         self.write(|this| {
