@@ -214,6 +214,18 @@ impl Runtime {
         }
         Ok(())
     }
+    /// Capture lifecycle on the owner thread without constructing a snapshot.
+    /// Never disclose a candidate owned by another client.
+    pub(crate) fn draft_state(&self, client: ClientId, id: DraftId) -> Option<&'static str> {
+        match self.draft(client, id) {
+            Ok(entry) => Some(match entry.state {
+                DraftState::Ready(_) => "ready",
+                DraftState::Working(_) => "working",
+            }),
+            Err(e) if e.code == "DRAFT_ENDED" => Some("ended"),
+            Err(_) => None,
+        }
+    }
     pub fn read_draft(&self, client: ClientId, expected: DraftSource) -> Result<SourcedSnapshot> {
         let entry = self.draft(client, expected.draft)?;
         if entry.source != expected {

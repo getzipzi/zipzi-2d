@@ -13,6 +13,13 @@ isolated; one working Draft does not block other Drafts or published reads.
 Ownership/busy/resource admission rejection leaves the Draft intact. An accepted
 command failure (including ignored command errors or panic) ends the Draft.
 
+`Protocol::execute_response` is the shared Local/Connected response boundary.
+Errors for owned Draft operations carry `draft_state` (`ready`, `working`, or
+`ended`), captured after execution on the owner thread and cached with the
+original response. Clients must not infer admission from an error code alone.
+Bounded `Query::Metadata` reads document roots without geometry or image bytes;
+all query responses preserve their exact source and content identity.
+
 `publish` or `request_publish` consumes the candidate. Runtime checks the exact
 Session, generation, revision, Draft, sequence and job ownership before installing
 worker results through SDK publication. Undo/Redo restore existing history nodes

@@ -15,6 +15,7 @@ to decode object payloads into generated values with attribute access.
 - [zipzi.results.Objects](results.md#zipzi-results-objects)
 - [zipzi.results.Collection](results.md#zipzi-results-collection)
 - [zipzi.results.Summary](results.md#zipzi-results-summary)
+- [zipzi.results.Metadata](results.md#zipzi-results-metadata)
 - [zipzi.results.CapabilityReason](results.md#zipzi-results-capabilityreason)
 - [zipzi.results.CapabilityUnsupported](results.md#zipzi-results-capabilityunsupported)
 - [zipzi.results.CapabilityUnavailable](results.md#zipzi-results-capabilityunavailable)
@@ -124,6 +125,27 @@ Document identity, setup and counts; contains no geometry or image bytes.
 | `meshes` | `ReadOnly[int]` |
 | `parameters` | `ReadOnly[int]` |
 | `assets` | `ReadOnly[int]` |
+
+<a id="zipzi-results-metadata"></a>
+
+## zipzi.results.Metadata
+
+```python
+class Metadata(TypedDict)
+```
+
+Document roots; decode each mapping with its generated value's from_wire.
+
+The source guards read/modify/write of EditorState, DisplayInfo and Model3Settings.
+Like other queries, the response is bounded and contains no geometry or image bytes.
+
+| Field | Type |
+| --- | --- |
+| `editor_state` | `ReadOnly[Mapping[str, object]]` |
+| `display_info` | `ReadOnly[Mapping[str, object]]` |
+| `model3_settings` | `ReadOnly[Mapping[str, object]]` |
+| `hierarchy_order` | `ReadOnly[Mapping[str, object]]` |
+| `missing_attachments` | `ReadOnly[tuple[str, ...]]` |
 
 <a id="zipzi-results-capabilityreason"></a>
 

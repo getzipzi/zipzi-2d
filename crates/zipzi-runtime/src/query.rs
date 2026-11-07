@@ -141,6 +141,13 @@ fn records(s: &DocumentState, kind: ObjectKind) -> Box<dyn Iterator<Item = &dyn 
                     .iter()
                     .filter_map(|id| s.scene_binding(id))
                     .flat_map(|b| b.axes.iter())
+            )
+            .chain(
+                s.glue_order()
+                    .iter()
+                    .filter_map(|id| s.glue(id))
+                    .filter_map(|g| g.binding.as_ref())
+                    .flat_map(|b| b.axes.iter())
             )),
         ObjectKind::BindingSample => Box::new(
             s.binding_order()
@@ -153,6 +160,15 @@ fn records(s: &DocumentState, kind: ObjectKind) -> Box<dyn Iterator<Item = &dyn 
                     s.scene_binding_order()
                         .iter()
                         .filter_map(|id| s.scene_binding(id))
+                        .flat_map(|b| b.axes.iter())
+                        .flat_map(|a| a.samples.iter())
+                        .map(|v| v as &dyn Record),
+                )
+                .chain(
+                    s.glue_order()
+                        .iter()
+                        .filter_map(|id| s.glue(id))
+                        .filter_map(|g| g.binding.as_ref())
                         .flat_map(|b| b.axes.iter())
                         .flat_map(|a| a.samples.iter())
                         .map(|v| v as &dyn Record),
@@ -284,6 +300,26 @@ pub(crate) fn read(
         }
         Query::Summary => {
             json!({"id":s.id(),"setup":s.setup(),"meshes":s.mesh_order().len(),"parameters":s.parameter_order().len(),"assets":s.asset_order().len()})
+        }
+        Query::Metadata => {
+            #[derive(Serialize)]
+            struct Metadata<'a> {
+                editor_state: &'a EditorState,
+                display_info: &'a DisplayInfo,
+                model3_settings: &'a Model3Settings,
+                hierarchy_order: &'a HierarchyOrder,
+                missing_attachments: &'a [String],
+            }
+            bounded(
+                &Metadata {
+                    editor_state: s.editor_state(),
+                    display_info: s.display_info(),
+                    model3_settings: s.model3_settings(),
+                    hierarchy_order: s.hierarchy_order(),
+                    missing_attachments: s.missing_attachments(),
+                },
+                &mut remaining,
+            )?
         }
         Query::Objects { addresses } => {
             if addresses.len() > 256 {

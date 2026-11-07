@@ -52,6 +52,8 @@ pub enum Query {
         target: CollectionTarget,
     },
     Summary,
+    /// Document-level settings and organization, without geometry or image bytes.
+    Metadata,
     Objects {
         addresses: Vec<ObjectAddress>,
     },

@@ -342,10 +342,7 @@ impl Protocol {
             return failure("CLIENT_RELEASED", "Client ownership has been released");
         }
         let result = match serde_json::from_value::<Operation>(request.operation) {
-            Ok(op) => self
-                .execute(runtime, client, op)
-                .map(success)
-                .unwrap_or_else(status),
+            Ok(op) => self.execute_response(runtime, client, op),
             Err(e) => failure("INVALID_REQUEST", &e.to_string()),
         };
         // Advance even when output cannot be retained. Never re-execute a mutation
@@ -394,6 +391,34 @@ impl Protocol {
             self.clients.get_mut(&oldest).unwrap().records.pop_front();
         }
         result
+    }
+    /// Response envelope shared by Local and Connected clients. Draft errors carry
+    /// the post-operation lifecycle, which is retained with replayable responses.
+    pub fn execute_response(&mut self, rt: &mut Runtime, client: ClientId, op: Operation) -> Value {
+        let draft = match &op {
+            Operation::Batch { expected, .. }
+            | Operation::Preview { expected, .. }
+            | Operation::BatchJob { expected, .. }
+            | Operation::Publish { expected, .. }
+            | Operation::PublishJob { expected, .. }
+            | Operation::ReplaceImageBlob { expected, .. } => Some(expected.draft),
+            Operation::Query {
+                source: QuerySource::Draft(expected),
+                ..
+            } => Some(expected.draft),
+            Operation::CancelDraft { draft } => Some(*draft),
+            _ => None,
+        };
+        match self.execute(rt, client, op) {
+            Ok(value) => success(value),
+            Err(error) => {
+                let mut response = status(error);
+                if let Some(state) = draft.and_then(|id| rt.draft_state(client, id)) {
+                    response["error"]["draft_state"] = json!(state);
+                }
+                response
+            }
+        }
     }
     pub fn execute(&mut self, rt: &mut Runtime, client: ClientId, op: Operation) -> Result<Value> {
         use Operation::*;

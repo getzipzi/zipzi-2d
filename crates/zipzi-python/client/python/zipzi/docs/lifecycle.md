@@ -52,6 +52,7 @@ changes.
 | Successful `apply(...)` or `preview(...)` | `ready`, with an updated candidate source |
 | Rejected gesture `preview(...)` | Last valid candidate retained, normally `ready` |
 | Ordinary accepted `apply(...)` failure | `ended`; candidate changes are not published |
+| Admission refusal (oversized batch, missing or unsealed Blob) | Candidate retained; `draft.state` reflects the host state |
 | Accepted `apply_async(...)` | `working`; wait for that Job before using the Draft again |
 | Successful async `job.wait()` | `ready`, with the worker's returned candidate source |
 | Failed/cancelled async Job resolved by `wait()` | `ended` |
@@ -60,6 +61,9 @@ changes.
 Admission refusals such as a busy resource are distinct from accepted command
 failures. Inspect the error and `draft.state`; do not assume every exception
 means the same transition. `OutcomeUnknown` needs recovery before that decision.
+Draft operation errors include `error.details['draft_state']` when the host can
+identify the owned candidate's state. Recovery applies that original state update
+just as receiving the response immediately would.
 
 Normal Draft context exit publishes the ready candidate as one history step
 (a no-op need not add a step). An exception cancels an unended candidate.
@@ -78,6 +82,24 @@ verification before and after publication.
 A Snapshot contains `source`, `content` and an immutable `value`. Decode object
 records with `snapshot.records(values.Parameter)` or another matching type.
 There is no refresh operation: query again for new data.
+
+`QueryMetadata()` reads document roots that are needed for safe replacement:
+EditorState, DisplayInfo, Model3Settings, HierarchyOrder and missing attachment
+paths. It returns a bounded response without geometry or image bytes. Decode a
+root and replace only the intended fields, retaining unrelated fields and opaque
+extensions:
+
+```python
+from dataclasses import replace
+from zipzi import values as v
+
+with session.draft('Adjust model layout') as draft:
+    metadata = draft.query(v.QueryMetadata())
+    settings = v.Model3Settings.from_wire(metadata.value['model3_settings'])
+    draft.apply(v.CommandModelSettings(value=replace(
+        settings, layout={**(settings.layout or {}), 'CenterX': 0.},
+    )))
+```
 
 Reuse the original `source` for all pages or related reads. A published source
 identifies an exact Version; later publication, Undo or Redo invalidates it for

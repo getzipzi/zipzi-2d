@@ -179,11 +179,11 @@ impl NativeRuntime {
         let outcome = py.detach(move || {
             host.call(move |rt| {
                 let _lease = lease;
-                Protocol::default().execute(rt, client, operation)
+                Ok(Protocol::default().execute_response(rt, client, operation))
             })
         });
         let response = match outcome {
-            Ok(value) => zipzi_runtime::protocol::success(value),
+            Ok(value) => value,
             Err(zipzi_runtime::host::HostError::Runtime(e)) => failure(&e.code, &e.message),
             Err(e) => failure("HOST_FAILURE", &e.to_string()),
         };

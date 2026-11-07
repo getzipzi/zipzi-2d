@@ -104,12 +104,12 @@ impl Protocol {
             let op = serde_json::from_value(operation)
                 .map_err(|e| error("INVALID_REQUEST", &e.to_string()))?;
             self.binary_input = Some(bytes);
-            self.execute(runtime, client, op)
+            Ok(self.execute_response(runtime, client, op))
         });
         self.binary_input = None;
         BinaryReply {
             transfer: None,
-            value: result.map(success).unwrap_or_else(status),
+            value: result.unwrap_or_else(status),
             payload: self.binary_output.take(),
         }
     }

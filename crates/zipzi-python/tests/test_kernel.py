@@ -1,6 +1,6 @@
 """V4 Local/Connected parity and recovery against a real Runtime process."""
 from contextlib import contextmanager
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 import os
 from pathlib import Path
 import subprocess
@@ -218,6 +218,136 @@ class Values(unittest.TestCase):
 
 class Lifecycle:
     factory = staticmethod(zipzi.local)
+
+    def test_metadata_read_modify_write_preserves_other_root_fields(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            part = str(uuid4())
+            with session.draft() as draft:
+                draft.apply(v.CommandCreatePart(value=v.Part(
+                    id=part, runtime_id=part, name='owner', parent_id='', enabled=True, draw_order=0)))
+                roots = draft.query(v.QueryMetadata()).value
+                draft.apply(
+                    v.CommandEditorState(value=v.EditorState(objects={part: v.ObjectEditorState(hidden_in_editor=True)})),
+                    v.CommandDisplayInfo(value=replace(v.DisplayInfo.from_wire(roots['display_info']),
+                        parameters=(), extensions={'vendor': {'keep': True}})),
+                    v.CommandModelSettings(value=replace(v.Model3Settings.from_wire(roots['model3_settings']),
+                        layout={'CenterX': 1., 'Width': 2.}, extensions={'vendor': 'keep'})),
+                )
+            published = session.query(v.QueryMetadata())
+            with session.draft() as draft:
+                snapshot = draft.query(v.QueryMetadata())
+                self.assertEqual(snapshot.source, v.QuerySourceDraft(value=draft.source))
+                editor = v.EditorState.from_wire(snapshot.value['editor_state'])
+                display = v.DisplayInfo.from_wire(snapshot.value['display_info'])
+                model = v.Model3Settings.from_wire(snapshot.value['model3_settings'])
+                draft.apply(
+                    v.CommandEditorState(value=replace(editor, objects={part: replace(editor.objects[part], locked=True)})),
+                    v.CommandDisplayInfo(value=replace(display, parts=())),
+                    v.CommandModelSettings(value=replace(model, layout={**model.layout, 'CenterX': 3.})),
+                )
+                after = draft.query(v.QueryMetadata())
+                self.assertEqual(session.query(v.QueryMetadata()).value, published.value)
+                with self.assertRaises(zipzi.SdkFailure) as stale:
+                    session.query(v.QueryMetadata(), source=snapshot.source)
+                self.assertEqual(stale.exception.code, 'STALE_SOURCE')
+            result = session.query(v.QueryMetadata())
+            self.assertEqual(result.value, after.value)
+            editor = v.EditorState.from_wire(result.value['editor_state'])
+            self.assertTrue(editor.objects[part].locked)
+            self.assertTrue(editor.objects[part].hidden_in_editor)
+            display = v.DisplayInfo.from_wire(result.value['display_info'])
+            self.assertEqual(display.parameters, ())
+            self.assertEqual(display.parts, ())
+            self.assertEqual(display.extensions, {'vendor': {'keep': True}})
+            model = v.Model3Settings.from_wire(result.value['model3_settings'])
+            self.assertEqual(model.layout, {'CenterX': 3., 'Width': 2.})
+            self.assertEqual(model.extensions, {'vendor': 'keep'})
+            with self.assertRaises(TypeError):
+                result.value['editor_state']['objects'][part]['locked'] = False
+            with self.assertRaises(zipzi.SdkFailure) as stale:
+                session.query(v.QueryMetadata(), source=published.source)
+            self.assertEqual(stale.exception.code, 'STALE_SOURCE')
+
+    def test_rejected_batch_admission_keeps_draft_usable_and_cancellable(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            for method in ('apply', 'apply_async'):
+                with self.subTest(method=method):
+                    draft = session.draft()
+                    source = draft.source
+                    with self.assertRaises(zipzi.SdkFailure) as rejected:
+                        getattr(draft, method)(*([create()] * 4097))
+                    self.assertEqual(rejected.exception.code, 'RESOURCE_LIMIT')
+                    self.assertEqual(draft.state, 'ready')
+                    self.assertEqual(draft.source, source)
+                    draft.apply(create())
+                    live_source = v.QuerySourceDraft(value=draft.source)
+                    draft.cancel()
+                    with self.assertRaises(zipzi.SdkFailure) as ended:
+                        session.query(v.QuerySummary(), source=live_source)
+                    self.assertEqual(ended.exception.code, 'DRAFT_ENDED')
+            self.assertEqual(session.query(v.QuerySummary()).value['parameters'], 0)
+
+    def test_incomplete_and_released_blob_admission_preserve_candidate(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            asset = str(uuid4())
+            with session.draft() as draft, runtime.blob(4) as blob:
+                draft.apply(v.CommandCreateAsset(id=asset, name='pixel'))
+                source = draft.source
+                with self.assertRaises(zipzi.SdkFailure) as rejected:
+                    draft.replace_image_blob(asset, blob, width=1, height=1)
+                self.assertEqual(rejected.exception.code, 'INCOMPLETE_BLOB')
+                self.assertEqual(draft.state, 'ready')
+                self.assertEqual(draft.source, source)
+                blob.append(0, b'\xff\x00\x00\xff')
+                blob.seal()
+                draft.replace_image_blob(asset, blob, width=1, height=1)
+                source = draft.source
+                blob.close()
+                with self.assertRaises(zipzi.SdkFailure) as rejected:
+                    draft.replace_image_blob(asset, blob, width=1, height=1)
+                self.assertEqual(rejected.exception.code, 'BLOB_NOT_FOUND')
+                self.assertEqual(draft.state, 'ready')
+                self.assertEqual(draft.source, source)
+            with session.image_blob(asset) as blob:
+                self.assertEqual(blob.read(0, 4), b'\xff\x00\x00\xff')
+
+    def test_accepted_failure_ends_candidate_on_host_and_client(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            draft = session.draft()
+            source = v.QuerySourceDraft(value=draft.source)
+            id = str(uuid4())
+            with self.assertRaises(zipzi.SdkFailure) as rejected:
+                draft.apply(create(id), create(id))
+            self.assertEqual(rejected.exception.details['draft_state'], 'ended')
+            self.assertEqual(draft.state, 'ended')
+            draft.cancel()
+            with self.assertRaises(zipzi.SdkFailure) as ended:
+                session.query(v.QuerySummary(), source=source)
+            self.assertEqual(ended.exception.code, 'DRAFT_ENDED')
+            self.assertEqual(session.query(v.QuerySummary()).value['parameters'], 0)
+
+    def test_draft_operations_observe_candidates_ended_by_detach(self):
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            candidates = [session.draft() for _ in range(3)]
+            session.detach()
+            operations = (
+                lambda draft: draft.preview(create()),
+                lambda draft: draft.query(v.QuerySummary()),
+                lambda draft: draft.cancel(),
+            )
+            for draft, operation in zip(candidates, operations):
+                with self.subTest(operation=operation):
+                    with self.assertRaises(zipzi.SdkFailure) as ended:
+                        operation(draft)
+                    self.assertEqual(ended.exception.code, 'DRAFT_ENDED')
+                    self.assertEqual(draft.state, 'ended')
+                    draft.cancel()
+
     def test_motion_recipe_samples_at_reported_playback_local_time(self):
         from zipzi.docs import recipes
         with self.factory() as runtime:
@@ -541,6 +671,39 @@ class ConnectedLifecycle(Lifecycle,unittest.TestCase):
 
 
 class Recovery(unittest.TestCase):
+    def test_recovered_rejection_retains_authoritative_draft_state(self):
+        for oversized in (True, False):
+            with self.subTest(oversized=oversized), connected('batch') as runtime:
+                session = runtime.sessions.create()
+                draft = session.draft()
+                command = create(str(uuid4()))
+                commands = [command] * (4097 if oversized else 2)
+                with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                    draft.apply(*commands)
+                with self.assertRaises(zipzi.SdkFailure) as recovered:
+                    zipzi.recover_call(lost.exception)
+                state = 'ready' if oversized else 'ended'
+                self.assertEqual(recovered.exception.details['draft_state'], state)
+                self.assertEqual(draft.state, state)
+                if oversized:
+                    draft.apply(create())
+                    draft.publish()
+                else:
+                    draft.cancel()
+
+    def test_recovered_job_release_is_idempotent_and_context_safe(self):
+        with connected('release_job') as runtime:
+            session = runtime.sessions.create()
+            with session.draft() as draft:
+                with draft.apply_async(create()) as job:
+                    job.wait(timeout=5)
+                    with self.assertRaises(zipzi.OutcomeUnknown) as lost:
+                        job.close()
+                    self.assertIsNone(zipzi.recover_call(lost.exception))
+                    job.close()
+                self.assertEqual(draft.state, 'ready')
+            self.assertEqual(session.query(v.QuerySummary()).value['parameters'], 1)
+
     def test_batch_recovery_updates_one_candidate_sequence_and_publishes_once(self):
         with connected('batch') as runtime:
             session = runtime.sessions.create()

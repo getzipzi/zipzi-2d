@@ -52,6 +52,20 @@ class Summary(TypedDict):
     assets: ReadOnly[int]
 
 
+class Metadata(TypedDict):
+    """Document roots; decode each mapping with its generated value's from_wire.
+
+    The source guards read/modify/write of EditorState, DisplayInfo and Model3Settings.
+    Like other queries, the response is bounded and contains no geometry or image bytes.
+    """
+
+    editor_state: ReadOnly[Mapping[str, object]]
+    display_info: ReadOnly[Mapping[str, object]]
+    model3_settings: ReadOnly[Mapping[str, object]]
+    hierarchy_order: ReadOnly[Mapping[str, object]]
+    missing_attachments: ReadOnly[tuple[str, ...]]
+
+
 class CapabilityReason(TypedDict):
     """Stable reason why an operation is unavailable or unsupported."""
 
@@ -153,6 +167,7 @@ __all__ = [
     "Objects",
     "Collection",
     "Summary",
+    "Metadata",
     "Capability",
     "CapabilityReason",
     "CapabilityUnsupported",

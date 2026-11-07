@@ -292,6 +292,10 @@ class Session:
     ) -> Snapshot[r.Summary]: ...
     @overload
     def query(
+        self, query: v.QueryMetadata, *, source: v.QuerySource | None = None
+    ) -> Snapshot[r.Metadata]: ...
+    @overload
+    def query(
         self,
         query: v.QueryCollectionCapabilities,
         *,
@@ -306,6 +310,7 @@ class Session:
 
         Object and collection queries support snapshot.records(values.Mesh) for typed
         payloads. Summary returns counts; capabilities returns permission reasons.
+        Metadata returns document roots for read/modify/write using from_wire.
         Pass the original source for dependent reads and subsequent pages."""
         return self.runtime._call(
             v.OperationQuery(source=source or self.source, input=query), Snapshot.read
@@ -468,7 +473,7 @@ class Session:
 class Draft:
     """An isolated candidate. Normal context exit publishes one undo step.
 
-    apply failure ends the candidate; preview rejection preserves it. Wait for
+    Accepted apply failure ends the candidate; preview rejection preserves it. Wait for
     apply_async jobs before further commands or leaving the context.
     """
 
@@ -501,13 +506,10 @@ class Draft:
             )
 
     def _failure(self, error: SdkFailure) -> None:
-        if error.code not in (
-            "DRAFT_BUSY",
-            "PROJECT_BUSY",
-            "NOT_OWNER",
-            "CLIENT_NOT_FOUND",
-            "RECOVERY_REQUIRED",
-        ):
+        state = error.details.get("draft_state")
+        if state in ("ready", "working", "ended"):
+            self._state = cast(Literal["ready", "working", "ended"], state)
+        elif error.code == "DRAFT_ENDED":
             self._state = "ended"
 
     def _updated(self, value: WireMap) -> tuple[WireMap, ...]:
@@ -547,7 +549,9 @@ class Draft:
         """Prepare a gesture position; rejection preserves the last valid Draft."""
         self._ready()
         return self.session.runtime._call(
-            v.OperationPreview(expected=self._source, commands=commands), self._updated
+            v.OperationPreview(expected=self._source, commands=commands),
+            self._updated,
+            self._failure,
         )
 
     def apply_async(self, *commands: v.Command) -> Job[v.DraftSource]:
@@ -570,14 +574,10 @@ class Draft:
 
             return Job(self.session.runtime, job, completed, failed)
 
-        def refused(error: SdkFailure) -> None:
-            if error.code != "RESOURCE_LIMIT":
-                self._failure(error)
-
         return self.session.runtime._call(
             v.OperationBatchJob(expected=self._source, commands=commands),
             accepted,
-            refused,
+            self._failure,
         )
 
     @overload
@@ -586,6 +586,8 @@ class Draft:
     def query(self, query: v.QueryCollection) -> Snapshot[r.Collection]: ...
     @overload
     def query(self, query: v.QuerySummary) -> Snapshot[r.Summary]: ...
+    @overload
+    def query(self, query: v.QueryMetadata) -> Snapshot[r.Metadata]: ...
     @overload
     def query(
         self, query: v.QueryCollectionCapabilities
@@ -598,7 +600,11 @@ class Draft:
         Returns the same typed shapes as Session.query; records(Type) decodes payloads.
         Formal Session reads continue to see published content."""
         self._ready()
-        return self.session.query(query, source=v.QuerySourceDraft(value=self._source))
+        return self.session.runtime._call(
+            v.OperationQuery(source=v.QuerySourceDraft(value=self._source), input=query),
+            Snapshot.read,
+            self._failure,
+        )
 
     def publish(self) -> WireMap:
         """Publish as one undo step and return the publication receipt.
@@ -624,7 +630,7 @@ class Draft:
                 self._state = "ended"
 
             self.session.runtime._call(
-                v.OperationCancelDraft(draft=self._source.draft), done
+                v.OperationCancelDraft(draft=self._source.draft), done, self._failure
             )
 
     def __enter__(self) -> Self:
@@ -739,8 +745,10 @@ class Job[T]:
             except SdkFailure:
                 if not self._resolved:
                     raise
-        self.runtime._call(v.OperationReleaseJob(job=self.id))
-        self._closed = True
+        def done(_: Any) -> None:
+            self._closed = True
+
+        self.runtime._call(v.OperationReleaseJob(job=self.id), done)
 
     def __enter__(self) -> Self:
         return self

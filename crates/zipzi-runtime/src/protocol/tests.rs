@@ -30,6 +30,54 @@ fn request(
         Instant::now(),
     )
 }
+
+#[test]
+fn draft_error_lifecycle_is_owned_and_cached_with_the_original_result() {
+    let mut rt = Runtime::default();
+    let mut p = Protocol::default();
+    let (client, connection, _) = connect(&mut rt, &mut p);
+    let session = rt
+        .create_session(
+            client,
+            &uuid::Uuid::new_v4().to_string(),
+            Default::default(),
+        )
+        .unwrap();
+    let version = rt.session_read(client, session).unwrap().version();
+    let draft = rt.begin_draft(client, version).unwrap();
+    let command =
+        json!({"command":"create_asset","id":uuid::Uuid::new_v4().to_string(),"name":"asset"});
+    let op = json!({"op":"batch","expected":draft,"commands":vec![command;4097]});
+    let refused = request(&mut rt, &mut p, client, connection, 1, op.clone());
+    assert_eq!(refused["error"]["code"], "RESOURCE_LIMIT");
+    assert_eq!(refused["error"]["draft_state"], "ready");
+    rt.cancel_draft(client, draft.draft).unwrap();
+    // Replaying the response must not consult the current state of the candidate.
+    assert_eq!(request(&mut rt, &mut p, client, connection, 1, op), refused);
+    let ended = p.execute_response(
+        &mut rt,
+        client,
+        Operation::Batch {
+            expected: draft,
+            commands: vec![],
+        },
+    );
+    assert_eq!(ended["error"]["draft_state"], "ended");
+
+    let owned = rt.begin_draft(client, version).unwrap();
+    let other = rt.register_client().unwrap();
+    let forbidden = p.execute_response(
+        &mut rt,
+        other,
+        Operation::Batch {
+            expected: owned,
+            commands: vec![],
+        },
+    );
+    assert_eq!(forbidden["error"]["code"], "NOT_OWNER");
+    assert!(forbidden["error"].get("draft_state").is_none());
+    assert!(rt.read_draft(client, owned).is_ok());
+}
 #[test]
 fn v4_rejects_old_protocol_before_registration_and_checks_resume_ownership() {
     let mut rt = Runtime::default();

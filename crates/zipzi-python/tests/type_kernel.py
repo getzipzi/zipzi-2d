@@ -16,6 +16,7 @@ def workflow(runtime: zipzi.Runtime) -> None:
         assert_type(job, zipzi.Job[v.DraftSource])
         assert_type(job.wait(), v.DraftSource)
         assert_type(draft.query(v.QuerySummary()), zipzi.Snapshot[zipzi.results.Summary])
+        assert_type(draft.query(v.QueryMetadata()), zipzi.Snapshot[zipzi.results.Metadata])
         page = draft.query(v.QueryCollection(kind=v.ObjectKind.PARAMETER, offset=0, limit=2))
         assert_type(page.value['next_offset'], int | None)
         assert_type(page.records(v.Parameter), tuple[v.Parameter, ...])
@@ -25,3 +26,4 @@ def workflow(runtime: zipzi.Runtime) -> None:
     assert_type(session.save(Path('/tmp/test.zipzi')).wait()['published'], bool)
     assert_type(session.info()['dirty'], bool)
     assert_type(session.query(v.QuerySummary()).value['parameters'], int)
+    assert_type(session.query(v.QueryMetadata()), zipzi.Snapshot[zipzi.results.Metadata])

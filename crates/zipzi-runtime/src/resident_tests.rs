@@ -19,6 +19,163 @@ fn setup() -> (Runtime, ClientId, SessionKey) {
     let s = r.create_session(c, &id(1), ModelSetup::default()).unwrap();
     (r, c, s)
 }
+
+#[test]
+fn glue_axes_and_samples_support_address_reads_and_pagination() {
+    use zipzi_contract::{
+        authoring::ObjectKind, kernel_commands::ObjectAddress, kernel_wire::Query,
+    };
+    use zipzi_core::{
+        state::{DocumentState, OwnedDocument},
+        BindingAxis, BindingAxisEditing, Glue, GlueBinding, GlueKeyform,
+    };
+    let state = DocumentState::from_owned(OwnedDocument {
+        id: id(1),
+        parameters: vec![Parameter {
+            id: id(2),
+            runtime_id: "P".into(),
+            ..Default::default()
+        }],
+        glues: (3..5)
+            .map(|n| Glue {
+                id: id(n),
+                runtime_id: format!("G{n}"),
+                binding: Some(GlueBinding {
+                    axes: vec![BindingAxis::new(id(2), vec![0.])],
+                    keyforms: vec![GlueKeyform {
+                        samples: vec![],
+                        intensity: 1.,
+                    }],
+                }),
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    })
+    .unwrap();
+    let axes: Vec<_> = (3..5)
+        .map(|n| state.glue(&id(n)).unwrap().binding.as_ref().unwrap().axes[0].clone())
+        .collect();
+    let mut r = Runtime::default();
+    let c = r.register_client().unwrap();
+    let s = r
+        .adopt_session(
+            c,
+            AuthoringSession::new(Snapshot::new(state, Default::default()).unwrap()),
+        )
+        .unwrap();
+    let published = QuerySource::Published(version(&r, c, s));
+    let candidate = QuerySource::Draft(draft(&mut r, c, s));
+    for source in [published, candidate] {
+        for (kind, expected) in [
+            (
+                ObjectKind::BindingAxis,
+                axes.iter()
+                    .map(|a| serde_json::to_value(a).unwrap())
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                ObjectKind::BindingSample,
+                axes.iter()
+                    .map(|a| serde_json::to_value(&a.samples[0]).unwrap())
+                    .collect(),
+            ),
+        ] {
+            let addresses: Vec<_> = expected
+                .iter()
+                .map(|value| ObjectAddress {
+                    kind,
+                    id: value["id"].as_str().unwrap().into(),
+                })
+                .collect();
+            let selected = r.query(c, source, Query::Objects { addresses }).unwrap();
+            assert_eq!(selected["source"], serde_json::to_value(source).unwrap());
+            for (offset, value) in expected.iter().enumerate() {
+                let page = r
+                    .query(
+                        c,
+                        source,
+                        Query::Collection {
+                            kind,
+                            offset,
+                            limit: 1,
+                        },
+                    )
+                    .unwrap();
+                assert_eq!(page["source"], selected["source"]);
+                assert_eq!(page["content"], selected["content"]);
+                assert_eq!(
+                    page["value"]["records"][0],
+                    selected["value"]["records"][offset]
+                );
+                assert_eq!(page["value"]["records"][0]["value"], *value);
+                assert_eq!(
+                    page["value"]["next_offset"],
+                    if offset == 0 {
+                        serde_json::json!(1)
+                    } else {
+                        serde_json::Value::Null
+                    }
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn metadata_query_bounds_all_roots_and_preserves_source() {
+    use zipzi_contract::kernel_wire::Query;
+    use zipzi_core::{
+        document::*,
+        state::{DocumentState, OwnedDocument},
+    };
+    let state = DocumentState::from_owned(OwnedDocument {
+        id: id(1),
+        display_info: DisplayInfo {
+            extensions: [("vendor".into(), serde_json::json!({"keep": [1, 2]}))].into(),
+            ..Default::default()
+        },
+        model3_settings: Model3Settings {
+            layout: Some([("Width".into(), 2.)].into()),
+            source_content: Some("opaque".into()),
+            ..Default::default()
+        },
+        missing_attachments: vec!["missing.bin".into()],
+        ..Default::default()
+    })
+    .unwrap();
+    let expected = serde_json::json!({
+        "editor_state": state.editor_state(),
+        "display_info": state.display_info(),
+        "model3_settings": state.model3_settings(),
+        "hierarchy_order": state.hierarchy_order(),
+        "missing_attachments": state.missing_attachments(),
+    });
+    let length = serde_json::to_vec(&expected).unwrap().len();
+    let mut r = Runtime::default();
+    let c = r.register_client().unwrap();
+    let s = r
+        .adopt_session(
+            c,
+            AuthoringSession::new(Snapshot::new(state, Default::default()).unwrap()),
+        )
+        .unwrap();
+    let snapshot = r.read_snapshot(c, s).unwrap();
+    let response = crate::query::read(&snapshot, Query::Metadata, length).unwrap();
+    assert_eq!(response["value"], expected);
+    assert_eq!(
+        response["source"],
+        serde_json::to_value(snapshot.source).unwrap()
+    );
+    assert_eq!(
+        response["content"],
+        serde_json::to_value(snapshot.snapshot.content_id()).unwrap()
+    );
+    assert_eq!(
+        code(crate::query::read(&snapshot, Query::Metadata, length - 1)),
+        "RESOURCE_LIMIT"
+    );
+}
 fn version(r: &Runtime, c: ClientId, s: SessionKey) -> Version {
     r.session_read(c, s).unwrap().version()
 }

@@ -14749,6 +14749,13 @@
           "rust_name": "Summary"
         },
         {
+          "doc": "Document-level settings and organization, without geometry or image bytes.",
+          "fields": [],
+          "form": "unit",
+          "name": "metadata",
+          "rust_name": "Metadata"
+        },
+        {
           "fields": [
             {
               "doc": "",

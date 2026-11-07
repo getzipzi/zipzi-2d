@@ -478,6 +478,12 @@ class QuerySummary(Query):
     _variant = 'summary'
 
 @dataclass(frozen=True, kw_only=True, repr=False)
+class QueryMetadata(Query):
+    """Document-level settings and organization, without geometry or image bytes.
+    """
+    _variant = 'metadata'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
 class QueryObjects(Query):
     """Objects variant of Query.
     """
@@ -510,5 +516,5 @@ __all__ = [
     'OperationReleaseJob', 'OperationSubscribe', 'OperationEvents', 'OperationReleaseClient',
     'OperationRequestStatus', 'OperationEditorMeshGenerate', 'OperationOpenProjects', 'OperationShowWindow',
     'ProjectFingerprint', 'Query', 'QueryCollectionCapabilities', 'QuerySummary',
-    'QueryObjects', 'QueryCollection',
+    'QueryMetadata', 'QueryObjects', 'QueryCollection',
 ]

@@ -330,6 +330,9 @@ def query(self, query: v.QueryCollection, *, source: v.QuerySource | None=None) 
 def query(self, query: v.QuerySummary, *, source: v.QuerySource | None=None) -> Snapshot[r.Summary]:
     ...
 @overload
+def query(self, query: v.QueryMetadata, *, source: v.QuerySource | None=None) -> Snapshot[r.Metadata]:
+    ...
+@overload
 def query(self, query: v.QueryCollectionCapabilities, *, source: v.QuerySource | None=None) -> Snapshot[r.CollectionCapabilities]:
     ...
 @overload
@@ -343,6 +346,7 @@ Read a typed response without changing content or history.
 
 Object and collection queries support snapshot.records(values.Mesh) for typed
 payloads. Summary returns counts; capabilities returns permission reasons.
+Metadata returns document roots for read/modify/write using from_wire.
 Pass the original source for dependent reads and subsequent pages.
 
 Related: [zipzi.Snapshot](runtime.md#zipzi-snapshot), [zipzi.values.Query](values-operations.md#zipzi-values-query), [zipzi.values.QuerySource](values-common.md#zipzi-values-querysource)
@@ -553,7 +557,7 @@ Close the document; rejects unsaved work or other attachments.
 
 Set discard_modified=True only when discarding edits is intended.
 
-Related: [zipzi.Blob](runtime.md#zipzi-blob), [zipzi.Draft](runtime.md#zipzi-draft), [zipzi.Job](runtime.md#zipzi-job), [zipzi.Runtime](runtime.md#zipzi-runtime), [zipzi.Snapshot](runtime.md#zipzi-snapshot), [zipzi.results.Collection](results.md#zipzi-results-collection), [zipzi.results.CollectionCapabilities](results.md#zipzi-results-collectioncapabilities), [zipzi.results.Objects](results.md#zipzi-results-objects), [zipzi.results.SaveReceipt](results.md#zipzi-results-savereceipt), [zipzi.results.SessionInfo](results.md#zipzi-results-sessioninfo), [zipzi.results.Summary](results.md#zipzi-results-summary), [zipzi.values.ExportFormat](values-operations.md#zipzi-values-exportformat), [zipzi.values.ImportFormat](values-operations.md#zipzi-values-importformat), [zipzi.values.ObservationView](values-sampling.md#zipzi-values-observationview), [zipzi.values.ProjectFingerprint](values-operations.md#zipzi-values-projectfingerprint), [zipzi.values.Query](values-operations.md#zipzi-values-query), [zipzi.values.QueryCollection](values-operations.md#zipzi-values-querycollection), [zipzi.values.QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [zipzi.values.QueryObjects](values-operations.md#zipzi-values-queryobjects), [zipzi.values.QuerySource](values-common.md#zipzi-values-querysource), [zipzi.values.QuerySummary](values-operations.md#zipzi-values-querysummary), [zipzi.values.SampleInput](values-sampling.md#zipzi-values-sampleinput), [zipzi.values.SampleRequest](values-sampling.md#zipzi-values-samplerequest), [zipzi.values.Version](values-common.md#zipzi-values-version)
+Related: [zipzi.Blob](runtime.md#zipzi-blob), [zipzi.Draft](runtime.md#zipzi-draft), [zipzi.Job](runtime.md#zipzi-job), [zipzi.Runtime](runtime.md#zipzi-runtime), [zipzi.Snapshot](runtime.md#zipzi-snapshot), [zipzi.results.Collection](results.md#zipzi-results-collection), [zipzi.results.CollectionCapabilities](results.md#zipzi-results-collectioncapabilities), [zipzi.results.Metadata](results.md#zipzi-results-metadata), [zipzi.results.Objects](results.md#zipzi-results-objects), [zipzi.results.SaveReceipt](results.md#zipzi-results-savereceipt), [zipzi.results.SessionInfo](results.md#zipzi-results-sessioninfo), [zipzi.results.Summary](results.md#zipzi-results-summary), [zipzi.values.ExportFormat](values-operations.md#zipzi-values-exportformat), [zipzi.values.ImportFormat](values-operations.md#zipzi-values-importformat), [zipzi.values.ObservationView](values-sampling.md#zipzi-values-observationview), [zipzi.values.ProjectFingerprint](values-operations.md#zipzi-values-projectfingerprint), [zipzi.values.Query](values-operations.md#zipzi-values-query), [zipzi.values.QueryCollection](values-operations.md#zipzi-values-querycollection), [zipzi.values.QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [zipzi.values.QueryMetadata](values-operations.md#zipzi-values-querymetadata), [zipzi.values.QueryObjects](values-operations.md#zipzi-values-queryobjects), [zipzi.values.QuerySource](values-common.md#zipzi-values-querysource), [zipzi.values.QuerySummary](values-operations.md#zipzi-values-querysummary), [zipzi.values.SampleInput](values-sampling.md#zipzi-values-sampleinput), [zipzi.values.SampleRequest](values-sampling.md#zipzi-values-samplerequest), [zipzi.values.Version](values-common.md#zipzi-values-version)
 
 <a id="zipzi-draft"></a>
 
@@ -565,7 +569,7 @@ class Draft
 
 An isolated candidate. Normal context exit publishes one undo step.
 
-apply failure ends the candidate; preview rejection preserves it. Wait for
+Accepted apply failure ends the candidate; preview rejection preserves it. Wait for
 apply_async jobs before further commands or leaving the context.
 
 | Field | Type |
@@ -674,6 +678,9 @@ def query(self, query: v.QueryCollection) -> Snapshot[r.Collection]:
 def query(self, query: v.QuerySummary) -> Snapshot[r.Summary]:
     ...
 @overload
+def query(self, query: v.QueryMetadata) -> Snapshot[r.Metadata]:
+    ...
+@overload
 def query(self, query: v.QueryCollectionCapabilities) -> Snapshot[r.CollectionCapabilities]:
     ...
 @overload
@@ -714,7 +721,7 @@ def cancel(self) -> None:
 
 Discard this candidate; cancelling an ended Draft does nothing.
 
-Related: [zipzi.Blob](runtime.md#zipzi-blob), [zipzi.Job](runtime.md#zipzi-job), [zipzi.SdkFailure](errors.md#zipzi-sdkfailure), [zipzi.Session](runtime.md#zipzi-session), [zipzi.Snapshot](runtime.md#zipzi-snapshot), [zipzi.results.Collection](results.md#zipzi-results-collection), [zipzi.results.CollectionCapabilities](results.md#zipzi-results-collectioncapabilities), [zipzi.results.Objects](results.md#zipzi-results-objects), [zipzi.results.Summary](results.md#zipzi-results-summary), [zipzi.values.Command](values-commands.md#zipzi-values-command), [zipzi.values.DraftSource](values-common.md#zipzi-values-draftsource), [zipzi.values.Query](values-operations.md#zipzi-values-query), [zipzi.values.QueryCollection](values-operations.md#zipzi-values-querycollection), [zipzi.values.QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [zipzi.values.QueryObjects](values-operations.md#zipzi-values-queryobjects), [zipzi.values.QuerySummary](values-operations.md#zipzi-values-querysummary)
+Related: [zipzi.Blob](runtime.md#zipzi-blob), [zipzi.Job](runtime.md#zipzi-job), [zipzi.SdkFailure](errors.md#zipzi-sdkfailure), [zipzi.Session](runtime.md#zipzi-session), [zipzi.Snapshot](runtime.md#zipzi-snapshot), [zipzi.results.Collection](results.md#zipzi-results-collection), [zipzi.results.CollectionCapabilities](results.md#zipzi-results-collectioncapabilities), [zipzi.results.Metadata](results.md#zipzi-results-metadata), [zipzi.results.Objects](results.md#zipzi-results-objects), [zipzi.results.Summary](results.md#zipzi-results-summary), [zipzi.values.Command](values-commands.md#zipzi-values-command), [zipzi.values.DraftSource](values-common.md#zipzi-values-draftsource), [zipzi.values.Query](values-operations.md#zipzi-values-query), [zipzi.values.QueryCollection](values-operations.md#zipzi-values-querycollection), [zipzi.values.QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [zipzi.values.QueryMetadata](values-operations.md#zipzi-values-querymetadata), [zipzi.values.QueryObjects](values-operations.md#zipzi-values-queryobjects), [zipzi.values.QuerySummary](values-operations.md#zipzi-values-querysummary)
 
 <a id="zipzi-job"></a>
 

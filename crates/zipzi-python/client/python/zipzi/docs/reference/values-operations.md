@@ -72,6 +72,7 @@ Import from `zipzi.values.operations` or `zipzi.values`; both expose the same cl
 - [zipzi.values.Query](values-operations.md#zipzi-values-query)
 - [zipzi.values.QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities)
 - [zipzi.values.QuerySummary](values-operations.md#zipzi-values-querysummary)
+- [zipzi.values.QueryMetadata](values-operations.md#zipzi-values-querymetadata)
 - [zipzi.values.QueryObjects](values-operations.md#zipzi-values-queryobjects)
 - [zipzi.values.QueryCollection](values-operations.md#zipzi-values-querycollection)
 
@@ -1044,7 +1045,7 @@ class Query(Value)
 
 Query variants; inspect subclasses for constructors.
 
-Variants: [QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [QuerySummary](values-operations.md#zipzi-values-querysummary), [QueryObjects](values-operations.md#zipzi-values-queryobjects), [QueryCollection](values-operations.md#zipzi-values-querycollection)
+Variants: [QueryCollectionCapabilities](values-operations.md#zipzi-values-querycollectioncapabilities), [QuerySummary](values-operations.md#zipzi-values-querysummary), [QueryMetadata](values-operations.md#zipzi-values-querymetadata), [QueryObjects](values-operations.md#zipzi-values-queryobjects), [QueryCollection](values-operations.md#zipzi-values-querycollection)
 
 <a id="zipzi-values-querycollectioncapabilities"></a>
 
@@ -1071,6 +1072,18 @@ class QuerySummary(Query)
 ```
 
 Summary variant of Query.
+
+Related: [zipzi.values.Query](values-operations.md#zipzi-values-query)
+
+<a id="zipzi-values-querymetadata"></a>
+
+## zipzi.values.QueryMetadata
+
+```python
+class QueryMetadata(Query)
+```
+
+Document-level settings and organization, without geometry or image bytes.
 
 Related: [zipzi.values.Query](values-operations.md#zipzi-values-query)
 
