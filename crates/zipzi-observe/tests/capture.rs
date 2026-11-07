@@ -3,7 +3,8 @@ use zipzi_observe::{
     ModelRoi, ObservationInput, Observer, ObserverConfig, RenderRequest, ResolvedObservation,
 };
 use zipzi_sdk::{
-    prepare_png_asset, rectangle_mesh, AuthoringSession, AuthoringSnapshot, ConversionControl,
+    rectangle_mesh, AuthoringSession, Commands, ConversionControl, ResourceStore, ResourceView,
+    Snapshot, SourcedSnapshot, Status,
 };
 
 const DOCUMENT: &str = "00000000-0000-4000-8000-000000000001";
@@ -11,30 +12,51 @@ const ASSET: &str = "00000000-0000-4000-8000-000000000002";
 const MESH: &str = "00000000-0000-4000-8000-000000000003";
 const PARAMETER: &str = "00000000-0000-4000-8000-000000000004";
 
-fn fixture(path: &std::path::Path) -> AuthoringSession {
-    let mut session =
-        AuthoringSession::new(DOCUMENT, Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
-    let asset = prepare_png_asset(ASSET, "texture", path).unwrap();
+fn edit(
+    session: &mut AuthoringSession,
+    description: &str,
+    run: impl FnOnce(&mut Commands<'_>) -> Result<(), Status>,
+) {
+    let mut draft = session.begin_draft();
+    draft.batch(draft.source(), run).unwrap();
     session
-        .edit("fixture", None, |edit| {
-            edit.create_asset(asset)?;
-            edit.create_mesh(
-                rectangle_mesh(
-                    MESH,
-                    "face",
-                    ASSET,
-                    Vec2::new(40., 40.),
-                    Vec2::new(60., 60.),
-                )
-                .unwrap(),
-            )?;
-            edit.create_parameter(Parameter {
-                id: PARAMETER.into(),
-                name: "Shift".into(),
-                ..Default::default()
-            })
-        })
+        .publish(draft.prepare(description).unwrap())
         .unwrap();
+}
+fn motion_preview(session: &AuthoringSession) -> zipzi_animation::MotionPreview {
+    let input = session.read_snapshot();
+    let mut preview = zipzi_animation::MotionPreview::new(input.snapshot.document());
+    preview.bind_source(input.source);
+    preview
+}
+fn fixture(path: &std::path::Path) -> AuthoringSession {
+    let state = zipzi_core::state::DocumentState::new(
+        DOCUMENT,
+        Canvas::new(100., 100., Vec2::new(50., 50.), 10.).into(),
+    )
+    .unwrap();
+    let mut session = AuthoringSession::new(Snapshot::new(state, ResourceView::default()).unwrap());
+    let image = ResourceStore::default().import_image(path).unwrap();
+    edit(&mut session, "fixture", |edit| {
+        edit.create_empty_asset(ASSET.into(), "texture".into())?;
+        edit.replace_image(ASSET, image)?;
+        edit.create_mesh(
+            rectangle_mesh(
+                MESH,
+                "face",
+                ASSET,
+                Vec2::new(40., 40.),
+                Vec2::new(60., 60.),
+            )
+            .unwrap(),
+        )?;
+        edit.create_parameter(Parameter {
+            id: PARAMETER.into(),
+            runtime_id: "Shift".into(),
+            name: "Shift".into(),
+            ..Default::default()
+        })
+    });
     session
 }
 
@@ -42,7 +64,7 @@ fn texture_path() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png")
 }
 
-fn capture(snapshot: &AuthoringSnapshot) -> ResolvedObservation {
+fn capture(snapshot: &SourcedSnapshot) -> ResolvedObservation {
     resolve(ObservationInput::capture_from_snapshot(snapshot, &PreviewValues::new()).unwrap())
 }
 
@@ -78,7 +100,7 @@ fn fit_budget_gpu_cache_uses_actual_render_content() {
             ObservationTexturePolicy::FitBudget { max_rgba_bytes }
         });
         let ObservationTexturePlanning::Ready { plan } = plan_textures(
-            texture_sources(snapshot.document()).unwrap(),
+            texture_sources(snapshot.snapshot.document()).unwrap(),
             policy,
             DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,
         )
@@ -118,45 +140,28 @@ fn fit_budget_gpu_cache_uses_actual_render_content() {
 }
 
 #[test]
-fn candidate_animation_uses_snapshot_identity_not_formal_or_branch_revision_counters() {
-    let session =
-        AuthoringSession::new(DOCUMENT, Canvas::new(100., 100., Vec2::new(50., 50.), 10.)).unwrap();
-    let mut left = session.begin_owned_edit("left", None).unwrap();
-    left.create_part(zipzi_core::Part {
-        id: ASSET.into(),
-        name: "Left".into(),
-        ..Default::default()
-    })
-    .unwrap();
-    let a = session.candidate_snapshot(&left).unwrap();
-    assert_ne!(a.version().revision, a.document().revision());
-    let mut preview = zipzi_sdk::MotionPreview::new(a.document());
-    preview.bind_session_identity(a.version().session_id, a.version().generation);
+fn candidate_animation_checks_draft_identity_sequence_and_content() {
+    let session = fixture(&texture_path());
+    let mut left = session.begin_draft();
+    let a = left.read_snapshot().unwrap();
+    let mut preview = zipzi_animation::MotionPreview::new(a.snapshot.document());
+    preview.bind_source(a.source);
     ObservationInput::capture_motion_from_snapshot(&a, &preview).unwrap();
-    let mut right = session.begin_owned_edit("right", None).unwrap();
-    right
-        .create_part(zipzi_core::Part {
-            id: ASSET.into(),
-            name: "Right".into(),
-            ..Default::default()
-        })
-        .unwrap();
-    let b = session.candidate_snapshot(&right).unwrap();
-    assert_eq!(a.version(), b.version());
-    assert_eq!(a.document().revision(), b.document().revision());
+    let right = session.begin_draft();
+    let b = right.read_snapshot().unwrap();
+    // Same ContentId and base Version still have different candidate identities.
+    assert_eq!(a.snapshot.content_id(), b.snapshot.content_id());
+    assert_ne!(a.source, b.source);
     assert_eq!(
         ObservationInput::capture_motion_from_snapshot(&b, &preview)
             .unwrap_err()
             .code,
         "STALE_ANIMATION_PREVIEW"
     );
-    left.create_part(zipzi_core::Part {
-        id: MESH.into(),
-        name: "Later".into(),
-        ..Default::default()
-    })
-    .unwrap();
-    let later = session.candidate_snapshot(&left).unwrap();
+    left.batch(left.source(), |_| Ok(())).unwrap();
+    let later = left.read_snapshot().unwrap();
+    assert_eq!(a.snapshot.content_id(), later.snapshot.content_id());
+    assert_ne!(a.source, later.source);
     assert_eq!(
         ObservationInput::capture_motion_from_snapshot(&later, &preview)
             .unwrap_err()
@@ -193,11 +198,9 @@ fn batch_samples_one_document_snapshot_and_reuses_capture_identity() {
         PreviewValues::from([(PARAMETER.into(), 0.)]),
         PreviewValues::from([(PARAMETER.into(), 0.5)]),
     ];
-    session
-        .edit("move after snapshot", None, |edit| {
-            edit.update_positions(MESH, &[0], &[Vec2::new(50., 40.)])
-        })
-        .unwrap();
+    edit(&mut session, "move after snapshot", |edit| {
+        edit.set_vertex_positions(MESH, &[(0, Vec2::new(50., 40.))])
+    });
     let inputs = requested
         .iter()
         .map(|values| ObservationInput::capture_from_snapshot(&snapshot, values).unwrap())
@@ -246,10 +249,10 @@ fn capture_rejects_empty_and_oversized_batches() {
 fn captures_animation_frame_and_rejects_stale_preview() {
     let mut session = fixture(&texture_path());
     let snapshot = session.read_snapshot();
-    let mut preview = session.motion_preview();
+    let mut preview = motion_preview(&session);
     let scene =
         resolve(ObservationInput::capture_motion_from_snapshot(&snapshot, &preview).unwrap());
-    let second_preview = session.motion_preview();
+    let second_preview = motion_preview(&session);
     let second = resolve(
         ObservationInput::capture_motion_from_snapshot(&snapshot, &second_preview).unwrap(),
     );
@@ -259,11 +262,9 @@ fn captures_animation_frame_and_rejects_stale_preview() {
     let reset =
         resolve(ObservationInput::capture_motion_from_snapshot(&snapshot, &preview).unwrap());
     assert_eq!(scene.scene_digest(), reset.scene_digest());
-    session
-        .edit("move", None, |edit| {
-            edit.update_positions(MESH, &[0], &[Vec2::new(50., 40.)])
-        })
-        .unwrap();
+    edit(&mut session, "move", |edit| {
+        edit.set_vertex_positions(MESH, &[(0, Vec2::new(50., 40.))])
+    });
     assert_eq!(
         ObservationInput::capture_motion_from_snapshot(&session.read_snapshot(), &preview)
             .unwrap_err()
@@ -294,20 +295,17 @@ fn renders_unsaved_snapshot_and_reuses_gpu_across_changes() {
         first.png_bytes().unwrap()[..8],
         [137, 80, 78, 71, 13, 10, 26, 10]
     );
-    session
-        .edit("move", None, |edit| {
-            edit.update_positions(
-                MESH,
-                &[0, 1, 2, 3],
-                &[
-                    Vec2::new(50., 40.),
-                    Vec2::new(70., 40.),
-                    Vec2::new(70., 60.),
-                    Vec2::new(50., 60.),
-                ],
-            )
-        })
-        .unwrap();
+    edit(&mut session, "move", |edit| {
+        edit.set_vertex_positions(
+            MESH,
+            &[
+                (0, Vec2::new(50., 40.)),
+                (1, Vec2::new(70., 40.)),
+                (2, Vec2::new(70., 60.)),
+                (3, Vec2::new(50., 60.)),
+            ],
+        )
+    });
     let second = observer
         .render(&capture(&session.read_snapshot()), view())
         .unwrap();
@@ -315,15 +313,14 @@ fn renders_unsaved_snapshot_and_reuses_gpu_across_changes() {
     assert_ne!(first.input_sha256, second.input_sha256);
     assert_eq!(first.textures, second.textures);
     assert_eq!(first.view, second.view);
-    let replacement = prepare_png_asset(
-        ASSET,
-        "texture",
-        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/texture_00.png"),
-    )
-    .unwrap();
-    session
-        .edit("texture", None, |edit| edit.replace_asset(replacement))
+    let replacement = ResourceStore::default()
+        .import_image(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/texture_00.png"),
+        )
         .unwrap();
+    edit(&mut session, "texture", |edit| {
+        edit.replace_image(ASSET, replacement)
+    });
     let scene = capture(&session.read_snapshot());
     let third = observer.render(&scene, view()).unwrap();
     assert_ne!(third.textures[0].sha256, first.textures[0].sha256);
@@ -401,11 +398,12 @@ fn resolved_capture_renders_after_source_disappears() {
 #[test]
 fn in_memory_image_content_survives_session_drop_in_a_readonly_capture() {
     let mut session = fixture(&texture_path());
-    let image = zipzi_sdk::prepare_image_load(&texture_path()).unwrap();
-    let token = session.image_load_token(ASSET).unwrap();
-    session
-        .replace_prepared_image_content(&token, &image)
+    let image = ResourceStore::default()
+        .import_image(&texture_path())
         .unwrap();
+    edit(&mut session, "image", |edit| {
+        edit.replace_image(ASSET, image.clone())
+    });
     let snapshot = session.read_snapshot();
     let input = ObservationInput::capture_from_snapshot(&snapshot, &PreviewValues::new()).unwrap();
     drop(snapshot);
@@ -423,29 +421,23 @@ fn in_memory_image_content_survives_session_drop_in_a_readonly_capture() {
 }
 
 #[test]
-fn archive_observation_input_retains_working_set_until_bytes_are_captured() {
+fn archive_observation_keeps_pixels_after_session_and_all_files_are_removed() {
     let directory = tempfile::tempdir().unwrap();
     let source = directory.path().join("source.png");
     std::fs::copy(texture_path(), &source).unwrap();
     let mut session = fixture(&source);
-    session.configure_project_io(zipzi_project::archive::ProjectArchiveStore::new(
-        directory.path().join("cache"),
-    ));
+    let io =
+        zipzi_project::ProjectIo::new(directory.path().join("cache"), ResourceStore::default());
     let project = directory.path().join("角色 observation.zipzi");
-    session.save_project(&project, None).unwrap();
-    let working = session.asset_root();
-    let snapshot = session.read_snapshot();
-    let input = ObservationInput::capture_from_snapshot(&snapshot, &PreviewValues::new()).unwrap();
-    drop(snapshot);
-    session
-        .new_project(DOCUMENT, Canvas::default(), None)
-        .unwrap();
+    session.save_as(&io, &project, None, || true).unwrap();
+    let (session, _) = AuthoringSession::open(&io, &project, || true).unwrap();
+    let input =
+        ObservationInput::capture_from_snapshot(&session.read_snapshot(), &PreviewValues::new())
+            .unwrap();
     drop(session);
-    std::fs::remove_file(source).unwrap();
-    std::fs::remove_file(project).unwrap();
-    assert!(working.is_dir());
+    drop(io);
+    drop(directory);
     let scene = resolve(input);
-    assert!(working.is_dir());
     let mut observer = Observer::new(ObserverConfig {
         width: 64,
         height: 64,
@@ -454,14 +446,19 @@ fn archive_observation_input_retains_working_set_until_bytes_are_captured() {
     let frame = observer.render(&scene, view()).unwrap();
     assert_eq!(frame.textures.len(), 1);
     assert!(frame.rgba.as_chunks::<4>().0.iter().any(|p| p[3] > 0));
-    drop(scene);
-    assert!(!working.exists());
 }
 
 #[test]
 fn static_project_preview_has_pixels_preserves_pose_and_observes_cancellation() {
-    let mut session = fixture(&texture_path());
-    session.set_preview_parameter(PARAMETER, 0.75).unwrap();
+    let session = fixture(&texture_path());
+    let mut preview = zipzi_core::preview::PreviewState::default();
+    preview
+        .replace(
+            session.snapshot().document(),
+            session.version().generation,
+            [(PARAMETER.into(), 0.75)].into(),
+        )
+        .unwrap();
     let snapshot = session.read_snapshot();
     let version = session.version();
     let image = zipzi_observe::render_project_preview(&snapshot, &ConversionControl::default())
@@ -478,7 +475,7 @@ fn static_project_preview_has_pixels_preserves_pose_and_observes_cancellation() 
     png.next_frame(&mut pixels).unwrap();
     assert!(pixels.chunks_exact(4).any(|p| p[3] > 0));
     assert_eq!(session.version(), version);
-    assert_eq!(session.preview_values().get(PARAMETER), Some(&0.75));
+    assert_eq!(preview.values().get(PARAMETER), Some(&0.75));
     let flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
     assert_eq!(
         zipzi_observe::render_project_preview(

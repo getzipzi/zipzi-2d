@@ -13,8 +13,8 @@ use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::fmt;
 use std::io::Cursor;
-use zipzi_core::types::{Appearance, BlendMode, Canvas, ImageAsset, Mesh, Offscreen, Part, Vec2};
-use zipzi_core::Document;
+use zipzi_core::state::{AssetContent, AssetRecord, DocumentBuilder, DocumentState};
+use zipzi_core::types::{Appearance, BlendMode, Canvas, Mesh, Offscreen, Part, Vec2};
 
 const MAX_FILE_BYTES: usize = 512 * 1024 * 1024;
 // Layer pixels accumulate across the document, independently of canvas size.
@@ -64,7 +64,7 @@ pub struct ImportReport {
 }
 
 pub struct ImportBundle {
-    pub document: Document,
+    pub document: DocumentState,
     pub assets: Vec<PngAsset>,
     pub report: ImportReport,
 }
@@ -78,7 +78,7 @@ pub struct PixelAsset {
 }
 
 pub struct PixelImportBundle {
-    pub document: Document,
+    pub document: DocumentState,
     pub assets: Vec<PixelAsset>,
     pub report: ImportReport,
 }
@@ -88,7 +88,13 @@ pub struct PixelImportBundle {
 pub fn import_psd(bytes: &[u8]) -> Result<ImportBundle, ImportError> {
     let builder = parse_psd(bytes, true, DECODED_WARNING_BYTES)?;
     Ok(ImportBundle {
-        document: builder.document,
+        document: builder
+            .document
+            .freeze()
+            .map_err(|e| {
+                ImportError::new("INVALID_DOCUMENT", format!("{}: {}", e.code, e.message))
+            })?
+            .state,
         assets: builder.assets,
         report: builder.report,
     })
@@ -99,7 +105,13 @@ pub fn import_psd(bytes: &[u8]) -> Result<ImportBundle, ImportError> {
 pub fn import_psd_pixels(bytes: &[u8]) -> Result<PixelImportBundle, ImportError> {
     let builder = parse_psd(bytes, false, DECODED_WARNING_BYTES)?;
     Ok(PixelImportBundle {
-        document: builder.document,
+        document: builder
+            .document
+            .freeze()
+            .map_err(|e| {
+                ImportError::new("INVALID_DOCUMENT", format!("{}: {}", e.code, e.message))
+            })?
+            .state,
         assets: builder.pixels,
         report: builder.report,
     })
@@ -113,7 +125,13 @@ pub fn import_psd_pixels_with_limit(
 ) -> Result<PixelImportBundle, ImportError> {
     let builder = parse_psd_limited(bytes, false, DECODED_WARNING_BYTES, Some(limit))?;
     Ok(PixelImportBundle {
-        document: builder.document,
+        document: builder
+            .document
+            .freeze()
+            .map_err(|e| {
+                ImportError::new("INVALID_DOCUMENT", format!("{}: {}", e.code, e.message))
+            })?
+            .state,
         assets: builder.pixels,
         report: builder.report,
     })
@@ -165,17 +183,18 @@ fn parse_psd_limited(
     }
 
     let fingerprint: [u8; 32] = Sha256::digest(bytes).into();
-    let mut document = Document::new();
-    let status = document.initialize(
+    let document = DocumentState::new(
         stable_id(&fingerprint, "document", 0),
         Canvas::new(
             width as f32,
             height as f32,
             Vec2::new(width as f32 / 2.0, height as f32 / 2.0),
             100.0,
-        ),
-    );
-    check(status.code, status.message)?;
+        )
+        .into(),
+    )
+    .map_err(|e| ImportError::new("INVALID_DOCUMENT", e.message))?
+    .builder();
     let mut builder = Builder {
         document,
         assets: Vec::new(),
@@ -201,12 +220,10 @@ fn parse_psd_limited(
             "PSD contains no raster layers",
         ));
     }
-    if let Some(issue) = builder.document.validate_structure().into_iter().next() {
-        return Err(ImportError::new(
-            "INVALID_DOCUMENT",
-            format!("{}: {}", issue.status.code, issue.status.message),
-        ));
-    }
+    builder
+        .document
+        .validate_candidate()
+        .map_err(|e| ImportError::new("INVALID_DOCUMENT", e.message))?;
     if builder.decoded_bytes > decoded_warning_bytes {
         builder.report.warnings.push(format!(
             "PSD layer pixels use {:.1} MiB, exceeding the {:.1} MiB recommended budget; import continued",
@@ -264,15 +281,8 @@ fn coordinate(value: Option<f64>, field: &str) -> Result<f32, ImportError> {
     Ok(value as f32)
 }
 
-fn check(code: String, message: String) -> Result<(), ImportError> {
-    if code.is_empty() {
-        Ok(())
-    } else {
-        Err(ImportError::new(
-            "INVALID_DOCUMENT",
-            format!("{code}: {message}"),
-        ))
-    }
+fn check(result: Result<(), zipzi_core::Status>) -> Result<(), ImportError> {
+    result.map_err(|e| ImportError::new("INVALID_DOCUMENT", format!("{}: {}", e.code, e.message)))
 }
 
 fn stable_id(fingerprint: &[u8; 32], kind: &str, ordinal: usize) -> String {
@@ -296,7 +306,7 @@ fn stable_id(fingerprint: &[u8; 32], kind: &str, ordinal: usize) -> String {
 }
 
 struct Builder {
-    document: Document,
+    document: DocumentBuilder,
     assets: Vec<PngAsset>,
     pixels: Vec<PixelAsset>,
     encode_pngs: bool,
@@ -379,7 +389,7 @@ impl Builder {
             draw_order: self.report.raster_layers as f32,
             ..Part::default()
         });
-        check(result.status.code, result.status.message)?;
+        check(result)?;
         let group_name = format!("{name} (Clipping)");
         let base_is_group = base.children.is_some();
         let base_id = self.visit(base, &part_id, None)?;
@@ -390,20 +400,20 @@ impl Builder {
             let result = self.document.create_offscreen(Offscreen {
                 runtime_id: format!("Offscreen_{}", id.replace('-', "")),
                 id,
-                name: self.document.get_part(&base_id).unwrap().name.clone(),
+                name: self.document.part(&base_id).unwrap().name.clone(),
                 part_id: base_id.clone(),
                 ..Offscreen::default()
             });
-            check(result.status.code, result.status.message)?;
+            check(result)?;
             0
         } else {
-            let mut mesh = self.document.get_mesh(&base_id).unwrap().clone();
+            let mut mesh = self.document.mesh(&base_id).unwrap().clone();
             // The base's alpha and opacity seed the group. Its color blend applies
             // once, when the entire clipping group is composited onto its parent.
             let mode = extended_color_mode(mesh.blend_mode);
             mesh.blend_mode = BlendMode::Normal;
             let result = self.document.replace_mesh(mesh);
-            check(result.status.code, result.status.message)?;
+            check(result)?;
             mode
         };
         for layer in clipped {
@@ -418,7 +428,7 @@ impl Builder {
             blend_mode,
             ..Offscreen::default()
         });
-        check(result.status.code, result.status.message)
+        check(result)
     }
 
     fn visit(
@@ -503,7 +513,7 @@ impl Builder {
                 ..Part::default()
             };
             let result = self.document.create_part(part);
-            check(result.status.code, result.status.message)?;
+            check(result)?;
             self.report.groups += 1;
             self.visit_layers(children, &id)?;
             return Ok(id);
@@ -590,29 +600,14 @@ impl Builder {
         let asset_id = self.id("asset");
         let source = format!("assets/{asset_id}.png");
         let png = self.encode_pngs.then(|| encode_png(&image)).transpose()?;
-        let sha256 = png
-            .as_ref()
-            .map(|bytes| {
-                use std::fmt::Write;
-                let mut hex = String::with_capacity(64);
-                for byte in Sha256::digest(bytes) {
-                    write!(&mut hex, "{byte:02x}").unwrap();
-                }
-                hex
-            })
-            .unwrap_or_default();
-        let result = self.document.add_asset(ImageAsset {
-            unresolved_source: None,
+        let result = self.document.create_asset(AssetRecord {
             id: asset_id.clone(),
             name: name.into(),
-            content: Some(zipzi_core::ImageContent {
+            content: AssetContent::Unresolved {
                 source: source.clone(),
-                width: image.width,
-                height: image.height,
-                sha256,
-            }),
+            },
         });
-        check(result.status.code, result.status.message)?;
+        check(result)?;
         if let Some(bytes) = png {
             self.assets.push(PngAsset {
                 id: asset_id.clone(),
@@ -630,7 +625,7 @@ impl Builder {
 
         let mesh_id = self.id("mesh");
         let runtime_id = self.mesh_runtime_id(name, &mesh_id);
-        let origin = self.document.source_canvas().unwrap().origin;
+        let origin = self.document.setup().source_canvas.unwrap().origin;
         let point = |x, y| Vec2::new(x - origin.x, origin.y - y);
         let mesh = Mesh {
             id: mesh_id.clone(),
@@ -665,7 +660,7 @@ impl Builder {
             ..Mesh::default()
         };
         let result = self.document.create_mesh(mesh);
-        check(result.status.code, result.status.message)?;
+        check(result)?;
         self.report.raster_layers += 1;
         self.decoded_bytes = self.decoded_bytes.saturating_add(expected);
         Ok(mesh_id)

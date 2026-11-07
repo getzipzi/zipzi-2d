@@ -62,43 +62,45 @@ fn mesh_properties_revisit_interpolated_and_stored_meshes(cx: &mut TestAppContex
     let saved = doc
         .save(&assets.path().join("selection-scopes.zipzi"))
         .unwrap();
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )
-    .unwrap();
-    session.open_project(&saved.path, None).unwrap();
-    let mesh = session.mesh(&other.id).unwrap();
+    let mut session = crate::test_fixture::open_fixture(&saved.path).unwrap();
+    let mesh = session
+        .snapshot()
+        .document()
+        .mesh(&other.id)
+        .unwrap()
+        .clone();
     let other_parameter = uuid::Uuid::new_v4().to_string();
-    session
-        .edit("Bind second mesh", None, |edit| {
-            edit.create_parameter(zipzi_core::Parameter {
+    crate::test_fixture::publish_fixture(&mut session, "Bind second mesh", |edit| {
+        crate::test_fixture::insert_fixture_parameter(
+            edit,
+            zipzi_core::Parameter {
                 id: other_parameter.clone(),
                 name: "Other Pose".into(),
                 minimum: 0.,
                 maximum: 1.,
                 ..Default::default()
-            })?;
-            edit.create_binding(zipzi_core::MeshBinding {
-                id: uuid::Uuid::new_v4().to_string(),
-                mesh_id: mesh.id.clone(),
-                axes: vec![zipzi_core::BindingAxis {
-                    parameter_id: other_parameter.clone(),
-                    keys: vec![0., 1.],
+            },
+        )?;
+        edit.create_binding(zipzi_core::MeshBinding {
+            id: uuid::Uuid::new_v4().to_string(),
+            mesh_id: mesh.id.clone(),
+            axes: vec![zipzi_core::BindingAxis {
+                parameter_id: other_parameter.clone(),
+                keys: vec![0., 1.],
+                ..Default::default()
+            }],
+            keyforms: [0., 1.]
+                .into_iter()
+                .map(|key| zipzi_core::MeshKeyform {
+                    keys: vec![key],
+                    positions: mesh.base_positions.clone(),
                     ..Default::default()
-                }],
-                keyforms: [0., 1.]
-                    .into_iter()
-                    .map(|key| zipzi_core::MeshKeyform {
-                        keys: vec![key],
-                        positions: mesh.base_positions.clone(),
-                        ..Default::default()
-                    })
-                    .collect(),
-            })
+                })
+                .collect(),
         })
-        .unwrap();
-    session.save_project(&saved.path, None).unwrap();
+    })
+    .unwrap();
+    crate::test_fixture::save_fixture(&mut session, &saved.path).unwrap();
     let doc = zipzi_editor_core::Document::open(&saved.path).unwrap();
     let h = setup_with_document(cx, doc, assets);
     command(
@@ -709,27 +711,26 @@ fn mesh_properties_many_masks_virtualize_and_keep_the_last_reference_reachable(
     let (mut doc, assets) = document_fixture::sample_document_with_two_layers().unwrap();
     let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);
     let saved = doc.save(&assets.path().join("many-masks.zipzi")).unwrap();
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )
-    .unwrap();
-    session.open_project(&saved.path, None).unwrap();
-    let template = session.mesh(&object.id).unwrap();
+    let mut session = crate::test_fixture::open_fixture(&saved.path).unwrap();
+    let template = session
+        .snapshot()
+        .document()
+        .mesh(&object.id)
+        .unwrap()
+        .clone();
     let ids: Vec<_> = (0..80).map(|_| uuid::Uuid::new_v4().to_string()).collect();
-    session
-        .edit("Mask sources", None, |edit| {
-            for (slot, id) in ids.iter().enumerate() {
-                let mut source = template.clone();
-                source.id = id.clone();
-                source.runtime_id = format!("Mask{slot}");
-                source.name = format!("Mask {slot}");
-                edit.create_mesh(source)?;
-            }
-            Ok(())
-        })
-        .unwrap();
-    session.save_project(&saved.path, None).unwrap();
+    crate::test_fixture::publish_fixture(&mut session, "Mask sources", |edit| {
+        for (slot, id) in ids.iter().enumerate() {
+            let mut source = template.clone();
+            source.id = id.clone();
+            source.runtime_id = format!("Mask{slot}");
+            source.name = format!("Mask {slot}");
+            crate::test_fixture::insert_fixture_mesh(edit, source)?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    crate::test_fixture::save_fixture(&mut session, &saved.path).unwrap();
     let mut doc = zipzi_editor_core::Document::open(&saved.path).unwrap();
     doc.set_object_property(&object, "masks", serde_json::json!(ids))
         .unwrap();

@@ -6,29 +6,31 @@ impl Document {
     /// stays in the native plan; this list is only an inspection preference.
     pub fn authoring_neighbors(&self, object: &ObjectRef) -> Vec<ObjectRef> {
         let collection = match object.kind {
-            ObjectKind::Parameter => Some(zipzi_sdk::OrganizationCollection::Parameters {
-                group_id: self
-                    .model()
-                    .organization_owner(&object.id)
-                    .map(str::to_owned),
-            }),
-            ObjectKind::ParameterGroup => {
-                Some(zipzi_sdk::OrganizationCollection::ParameterGroups {
+            ObjectKind::Parameter => Some(
+                zipzi_contract::document::OrganizationCollection::Parameters {
+                    group_id: self
+                        .model()
+                        .organization_owner(&object.id)
+                        .map(str::to_owned),
+                },
+            ),
+            ObjectKind::ParameterGroup => Some(
+                zipzi_contract::document::OrganizationCollection::ParameterGroups {
                     parent_id: self
                         .model()
                         .organization_owner(&object.id)
                         .map(str::to_owned),
-                })
-            }
+                },
+            ),
             _ => None,
         };
         if let Some(collection) = collection {
-            if let Ok(members) = self.session.organization_collection(collection) {
-                if let Some(at) = members.iter().position(|h| h.id() == object.id) {
+            if let Ok(members) = self.model().organization_collection(&collection) {
+                if let Some(at) = members.iter().position(|h| h == &object.id) {
                     let mut result: Vec<_> = members[at + 1..]
                         .iter()
                         .chain(members[..at].iter().rev())
-                        .map(|h| ObjectRef::new(ObjectKind::from_sdk(h.kind()), h.id()))
+                        .map(|id| ObjectRef::new(object.kind, id))
                         .collect();
                     if let Some(owner) = self.model().organization_owner(&object.id) {
                         result.push(ObjectRef::new(ObjectKind::ParameterGroup, owner));
@@ -61,68 +63,69 @@ impl Document {
             .chain(parent)
             .collect()
     }
-    pub(crate) fn authoring_result(&self, receipt: zipzi_sdk::EditReceipt) -> OperationResult {
-        let reference = |entity: &zipzi_sdk::EntityRef| {
-            ObjectRef::new(ObjectKind::from_sdk(entity.kind), &entity.id)
+    pub(crate) fn authoring_result(&self, receipt: zipzi_sdk::Publication) -> OperationResult {
+        use zipzi_core::state::{RecordChange, RecordDomain, RootDomain};
+        let reference = |record: &zipzi_core::state::RecordWrite| {
+            let kind = match record.domain {
+                RecordDomain::Asset => ObjectKind::Texture,
+                RecordDomain::Parameter => ObjectKind::Parameter,
+                RecordDomain::Part => ObjectKind::Part,
+                RecordDomain::Transform => ObjectKind::Deformer,
+                RecordDomain::Mesh => ObjectKind::Mesh,
+                RecordDomain::Binding => ObjectKind::MeshBinding,
+                RecordDomain::SceneBinding => ObjectKind::SceneBinding,
+                RecordDomain::BlendKeyTable => ObjectKind::BlendKeyTable,
+                RecordDomain::BlendConstraint => ObjectKind::BlendConstraint,
+                RecordDomain::BlendBinding => ObjectKind::BlendBinding,
+                RecordDomain::Glue => ObjectKind::Glue,
+                RecordDomain::Offscreen => ObjectKind::Offscreen,
+                RecordDomain::Expression => ObjectKind::Expression,
+                RecordDomain::Motion => ObjectKind::Motion,
+            };
+            ObjectRef::new(kind, &record.id)
         };
-        let suggested_selection: Vec<_> = receipt.changes.created.iter().map(reference).collect();
-        let mut locations = suggested_selection.clone();
-        locations.extend(receipt.changes.modified.iter().map(reference));
-        for change in &receipt.changes.organization_references {
-            locations.push(reference(&change.entity));
-            if let Some(id) = &change.after {
-                locations.push(ObjectRef::new(
-                    if matches!(
-                        change.entity.kind,
-                        zipzi_sdk::ObjectKind::Parameter | zipzi_sdk::ObjectKind::CdiParameterGroup
-                    ) {
-                        ObjectKind::ParameterGroup
-                    } else {
-                        ObjectKind::Part
-                    },
-                    id,
-                ));
+        let suggested_selection: Vec<_> = receipt
+            .writes
+            .records()
+            .iter()
+            .filter(|r| r.change == RecordChange::Created)
+            .map(reference)
+            .collect();
+        let mut locations: Vec<_> = receipt
+            .writes
+            .records()
+            .iter()
+            .filter(|r| r.change != RecordChange::Deleted)
+            .map(reference)
+            .collect();
+        let index = self.object_index();
+        let changed = locations.clone();
+        for object in changed {
+            locations.extend(
+                index
+                    .incoming(&object)
+                    .filter(|r| r.kind == crate::RelationKind::Contains)
+                    .map(|r| r.source.clone()),
+            );
+            locations.extend(index.outgoing(&object).filter_map(|relation| {
+                matches!(
+                    relation.kind,
+                    crate::RelationKind::PartOwner
+                        | crate::RelationKind::DeformParent
+                        | crate::RelationKind::ParameterGroup
+                )
+                .then(|| relation.target.clone())
+            }));
+        }
+        let model = self.model();
+        if receipt.writes.root_changed(RootDomain::Pose) {
+            if let Some(pose) = model.pose() {
+                locations.push(ObjectRef::new(ObjectKind::Pose, &pose.id));
             }
         }
-        // IDs in collection receipts are globally unique. Resolve their typed
-        // projection once rather than teaching every domain result adapter a
-        // second identity table.
-        let index = self.object_index();
-        for collection in &receipt.changes.collections {
-            use zipzi_sdk::{
-                CollectionRef as C, OrganizationCollection as O, ReferenceCollection as R,
-                SceneCollection as S,
-            };
-            let owner = match collection {
-                C::ExpressionEntries { expression_id, .. } => Some(expression_id),
-                C::SceneContent { owner_id, .. } => Some(owner_id),
-                C::BindingGrid { binding_id, .. } => Some(binding_id),
-                C::DeformationChildren { parent_id, .. } => Some(parent_id),
-                C::Pose { owner, .. } | C::Physics { owner, .. } | C::Motion { owner, .. } => {
-                    owner.as_ref()
-                }
-                C::Organization { collection, .. } => match collection {
-                    O::Parameters { group_id } => group_id.as_ref(),
-                    O::ParameterGroups { parent_id } => parent_id.as_ref(),
-                    O::PartMembers { part_id } => part_id.as_ref(),
-                },
-                C::Scene { collection, .. } => match collection {
-                    S::Organization { part_id } => part_id.as_ref(),
-                    S::Deformation { parent_id } => parent_id.as_ref(),
-                    S::Drawing { owner } => Some(owner),
-                    S::Glues | S::DrawingGroups => None,
-                },
-                C::References { collection, .. } => match collection {
-                    R::ModelParameterMembers { group_id } => Some(group_id),
-                    R::CdiCombinedMembers { set_id } => Some(set_id),
-                    R::ModelParameterGroups | R::ModelHitAreas | R::CdiCombinedSets => None,
-                },
-                C::Resources { .. } | C::Expressions { .. } => None,
-            };
-            if let Some(owner) = owner {
-                if let Some(info) = index.objects.iter().find(|i| i.reference.id == *owner) {
-                    locations.push(info.reference.clone());
-                }
+        if receipt.writes.root_changed(RootDomain::Physics) {
+            if let Some(physics) = model.physics() {
+                locations.push(ObjectRef::new(ObjectKind::Physics, &physics.id));
             }
         }
         let mut seen = std::collections::HashSet::new();

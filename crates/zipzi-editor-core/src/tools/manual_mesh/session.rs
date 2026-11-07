@@ -488,7 +488,7 @@ impl ManualMeshSession {
                         let mode = &self.modes[*index];
                         let targets = pose.move_targets_with_selection(starts, delta, &selected)?;
                         let model = document.model();
-                        let mesh = model.get_mesh(&mode.target.object.id).unwrap();
+                        let mesh = model.mesh(&mode.target.object.id).unwrap();
                         let current: HashMap<_, _> = mesh
                             .vertex_ids
                             .iter()

@@ -4,7 +4,7 @@ use zipzi_editor_core::{Document, ObjectKind, ObjectRef, SceneObjectType as T, T
 fn create(d: &mut Document, kind: T, selection: &[ObjectRef]) -> anyhow::Result<ObjectRef> {
     let plan = d.plan_scene_object_creation(kind, "Created".into(), selection)?;
     let result = d.execute_scene_object_creation(&plan)?;
-    assert!(result.receipt.changed);
+    assert!(result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
     let object = result.suggested_selection[0].clone();
     assert_eq!(object.kind, kind.object_kind());
     Ok(object)

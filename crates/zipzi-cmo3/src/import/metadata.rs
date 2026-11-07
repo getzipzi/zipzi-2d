@@ -15,9 +15,9 @@ use zipzi_core::{
     },
     draw_order::DrawOrderGroup,
     physics::PhysicsDefinition,
-    Document,
+    state::DocumentBuilder,
 };
-pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()> {
+pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut DocumentBuilder) -> Result<()> {
     if let Some(effect_set) = g.field(g.req(root, "modelInfo")?, "_effectParameterGroups")? {
         let mut groups = Vec::new();
         for entry in g.list(effect_set, "_parameterGroups")? {
@@ -113,7 +113,7 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()
         part: &str,
         parts: &HashMap<String, Node<'_>>,
         owners: &HashSet<String>,
-        doc: &Document,
+        doc: &DocumentBuilder,
         visited: &mut HashSet<String>,
     ) -> Result<Vec<String>> {
         if !visited.insert(part.into()) {
@@ -131,9 +131,9 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()
             .rev()
         {
             let guid = n.attribute("uuid").unwrap_or("");
-            if doc.get_mesh(guid).is_some() {
+            if doc.mesh(guid).is_some() {
                 items.push(guid.into());
-            } else if doc.get_part(guid).is_some() {
+            } else if doc.part(guid).is_some() {
                 if owners.contains(guid) {
                     items.push(guid.into());
                 } else {
@@ -165,10 +165,10 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()
             max_order: 32767,
         });
     }
-    edit(document.replace_draw_order_groups(draw_groups))?;
+    edit(document.set_draw_order_groups(Some(draw_groups)))?;
     physics(g, root, document)
 }
-fn physics(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()> {
+fn physics(g: &Graph<'_>, root: Node<'_>, document: &mut DocumentBuilder) -> Result<()> {
     let set = g.req(root, "physicsSettingsSourceSet")?;
     let settings = g.list(set, "_sourceCubismPhysics")?;
     if settings.is_empty() {
@@ -196,7 +196,7 @@ fn physics(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()>
         for input in g.list(n, "inputs")? {
             let guid = g.guid(input, "source")?;
             let p = document
-                .get_parameter(&guid)
+                .parameter(&guid)
                 .ok_or_else(|| invalid("Physics source identity mismatch"))?;
             parameter_bindings.insert(p.runtime_id.clone(), guid);
             inputs.push(json!({"Source":{"Target":"Parameter","Id":p.runtime_id},"Weight":g.number::<f32>(input,"weight")?,"Type":kind(input)?,"Reflect":g.optional(input,"isReverse",false)?}));
@@ -204,7 +204,7 @@ fn physics(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()>
         for output in g.list(n, "outputs")? {
             let guid = g.guid(output, "destination")?;
             let p = document
-                .get_parameter(&guid)
+                .parameter(&guid)
                 .ok_or_else(|| invalid("Physics destination identity mismatch"))?;
             parameter_bindings.insert(p.runtime_id.clone(), guid);
             let axis = kind(output)?;
@@ -244,11 +244,11 @@ fn physics(g: &Graph<'_>, root: Node<'_>, document: &mut Document) -> Result<()>
         serde_json::from_value(json!({"Version":3,"Meta":meta,"PhysicsSettings":rigs}))
             .map_err(|e| invalid(e.to_string()))?;
     edit(
-        document.set_physics(
+        document.replace_physics(Some(
             PhysicsAsset::from_wire(id(), data, |runtime| {
                 parameter_bindings.get(runtime).cloned()
             })
             .map_err(|s| invalid(s.message))?,
-        ),
+        )),
     )
 }

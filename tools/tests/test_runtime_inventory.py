@@ -12,13 +12,13 @@ class RuntimeInventoryTests(unittest.TestCase):
     def test_owners_split_impls_free_functions_and_literal_braces(self):
         source = '''
 // impl Fake { pub fn ghost() {}}
-impl EditSession<'_> {
+impl Draft<'_> {
     pub fn first(&mut self, values: Vec<(u32, f32)>) -> Result<(), SdkError> {
         let text = r##"{ impl Fake { pub fn ghost() {} } }"##;
     }
 }
 /* outer /* pub fn ghost() {} */ comment */
-impl crate::AuthoringSnapshot {
+impl crate::Snapshot {
     pub fn read<T>(&self, f: impl FnOnce(&Document) -> T) -> T { f(self.document()) }
     pub(crate) fn internal(&self) {}
 }
@@ -26,43 +26,22 @@ pub fn helper() -> &'static str { "{" }
 '''
         methods = rust_methods(source)
         self.assertEqual([(row["owner"], row["name"]) for row in methods], [
-            ("EditSession", "first"), ("AuthoringSnapshot", "read"), ("free", "helper")])
+            ("Draft", "first"), ("Snapshot", "read"), ("free", "helper")])
         self.assertIn("Vec<(u32, f32)>", methods[0]["signature"])
         self.assertEqual(len(mask_rust(source)), len(source))
 
-    def test_real_catalog_includes_split_modules_facade_reexports_and_intents(self):
+    def test_current_catalog_contains_native_draft_and_session_boundaries(self):
         catalog = collect()
         apis = {row["id"]: row for row in catalog["apis"]}
-        for name in ["sdk::EditSession.edit_motion", "sdk::AuthoringSession.plan_document_edit",
-                     "sdk::MotionPreview.seek", "python::Session.plan_binding_authoring",
-                     "python::Edit.__exit__", "python::_native.capabilities", "python::SdkFailure",
-                     "python::ObjectHandle.id"]:
+        self.assertEqual(catalog["scope"], "sdk_source_declarations")
+        self.assertEqual(len(apis), len(catalog["apis"]))
+        for name in ["sdk::Draft.batch", "sdk::Draft.prepare",
+                     "sdk::Commands.edit_motion", "sdk::AuthoringSession.begin_draft",
+                     "sdk::AuthoringSession.publish", "sdk::AuthoringSession.undo"]:
             self.assertIn(name, apis)
-        self.assertNotIn("sdk::Occupied.new", apis)
-        self.assertEqual(apis["sdk::ImageLoadToken.cancel"]["classification"], "connected")
-        self.assertEqual(apis["sdk::ObjectHandle.id"]["classification"], "local-value")
-        self.assertEqual(apis["python::_session.open_project"]["classification"], "connected")
-        for name, domain in [("create_image_spec", "resources-project"),
-                             ("create_mesh_spec", "geometry-binding"),
-                             ("create_mesh_binding_spec", "geometry-binding"),
-                             ("create_parameter_spec", "scene-document"),
-                             ("patch_parameter", "scene-document")]:
-            row = apis[f"sdk::EditSession.{name}"]
-            self.assertEqual(row["domain"], domain)
-            self.assertEqual(row["classification"], "connected")
-            self.assertEqual(row["source_ref"], "edit + candidate sequence")
-        self.assertEqual(apis["sdk::EditSession.memory_image"]["effect"], "read-only candidate")
-        for owner in ("MeshOperation", "MeshBindingOperation", "ParameterOperation"):
-            row = apis[f"sdk::{owner}.apply"]
-            self.assertEqual(row["classification"], "connected")
-            self.assertEqual(row["source_ref"], "edit + candidate sequence")
-        self.assertIn("replacement", apis["sdk::AuthoringSession.new_project"]["effect"])
-        self.assertTrue(any(row["name"] == "MotionEdit" for row in catalog["domain_intents"]))
-        self.assertTrue(any(row["name"] == "NativeBindingPlan" for row in catalog["native_types"]))
-        for row in catalog["apis"]:
-            self.assertIn(row["classification"], {"connected", "host-only", "local-helper", "local-value"})
-            self.assertTrue(row["acceptance"])
-            self.assertEqual(row["implementation"], "not-connected")
+        self.assertNotIn("sdk::EditSession.edit_motion", apis)
+        self.assertEqual(apis["sdk::AuthoringSession.publish"]["location"],
+                         "crates/zipzi-sdk/src/authoring/session.rs")
 
     def test_baseline_rejects_incomplete_duplicate_debug_and_false_validation(self):
         records = [dict(type="metadata", debug_assertions=False, samples=32, warmup=4)]

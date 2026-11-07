@@ -60,6 +60,7 @@ fn deformer_properties_original_actions_and_auto_toggle_are_persistent_and_undoa
 fn deformer_properties_original_restore_reviews_shared_density_and_cancel_is_unchanged(
     cx: &mut TestAppContext,
 ) {
+    cx.update(|cx| cx.set_reduce_motion(true));
     let (mut document, assets, object) = warp_grid_document();
     document
         .set_object_property(&object, "warp.rows", serde_json::json!(3))

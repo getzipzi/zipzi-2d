@@ -51,6 +51,7 @@ fn timeline_dock_size_and_hidden_state_restore_in_new_windows(cx: &mut TestAppCo
             Some(px(330.))
         );
         second.update(cx, |view, cx| {
+            view.dismiss_welcome(window, cx);
             view.run_command(CommandId::AnimationTimeline, window, cx)
         });
         window.render_frame(cx);
@@ -79,6 +80,7 @@ fn timeline_dock_size_and_hidden_state_restore_in_new_windows(cx: &mut TestAppCo
         );
         assert!(window.try_find("animation-timeline").is_none());
         third.update(cx, |view, cx| {
+            view.dismiss_welcome(window, cx);
             view.run_command(CommandId::AnimationTimeline, window, cx)
         });
         window.render_frame(cx);
@@ -511,6 +513,7 @@ fn workspace_and_layout_restore_in_a_new_window_and_transport_fits_small_windows
     cx.update_window(window, |_, window, cx| {
         window.render_frame(cx);
         assert_eq!(view.read(cx).editor.workspace(), WorkspaceKind::Animation);
+        view.update(cx, |view, cx| view.dismiss_welcome(window, cx));
         view.read_with(cx, |view, cx| {
             let dock = view.dock.as_ref().unwrap();
             let area = dock.area.read(cx);

@@ -14,8 +14,8 @@ mod types;
 
 use properties::deformer_properties;
 use std::{collections::HashMap, sync::Arc};
-use zipzi_core::Document as Model;
 use zipzi_core::SharedVec;
+use zipzi_core::state::DocumentState as Model;
 
 pub use bindings::BindingInfo;
 pub use context::{NavigationContext, PanelContext};
@@ -98,7 +98,7 @@ impl ObjectIndex {
     /// Control drags only change pose data, never bindings or relationships.
     /// Refresh the inspector payload without rebuilding the influence graph.
     pub(crate) fn refresh_deformer(&mut self, model: &Model, object: &ObjectRef) {
-        if let Some(transform) = model.get_transform(&object.id) {
+        if let Some(transform) = model.transform(&object.id) {
             if let Some(&slot) = self.structure.slots.get(object) {
                 self.objects[slot].properties = deformer_properties(transform);
             }

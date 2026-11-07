@@ -186,8 +186,8 @@ fn reference_copy_delete_and_selection_patch_refresh_the_shared_projection() -> 
         destination: C::ModelParameterGroups,
         before: None,
     })?;
-    let child = p.copied_ids()[&member].clone();
-    let copied = p.copied_ids()[&g].clone();
+    let child = p.outcome.copied_ids[&member].clone();
+    let copied = p.outcome.copied_ids[&g].clone();
     let result = d.execute_reference_authoring(&p)?;
     assert!(
         result

@@ -10,5 +10,6 @@ mod packaging_export;
 mod resources_codec;
 #[path = "project_tests/session_lifecycle.rs"]
 mod session_lifecycle;
+mod support;
 #[path = "project_tests/version_migration.rs"]
 mod version_migration;

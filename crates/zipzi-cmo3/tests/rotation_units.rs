@@ -1,7 +1,7 @@
 mod common;
 use common::*;
 use zipzi_cmo3::*;
-use zipzi_core::{Document, DrawableFrame, evaluation::evaluate_frame_including_hidden, types::*};
+use zipzi_core::{evaluation::evaluate_frame_including_hidden, state::*, types::*, DrawableFrame};
 
 fn id(n: u32) -> String {
     format!("ca030002-0000-4000-8000-{n:012x}")
@@ -29,21 +29,20 @@ fn rotation(origin: Vec2, scale: f32) -> TransformData {
     })
 }
 
-fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document, Vec<u8>) {
-    let (mut doc, png) = fixture();
-    assert!(
-        doc.replace_model_setup(Canvas::with_flag(400., 400., Vec2::default(), 5800., flag))
-            .status
-            .is_ok()
-    );
-    let mut parameter = doc.get_parameter(PARAM).unwrap().clone();
+fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (DocumentState, Vec<u8>) {
+    let (source, png) = fixture();
+    let mut doc = source.builder();
+    doc.set_setup(Canvas::with_flag(400., 400., Vec2::default(), 5800., flag).into())
+        .unwrap();
+    let mut parameter = doc.parameter(PARAM).unwrap().clone();
     parameter.repeat = false;
     parameter.default_value = 0.25;
-    assert!(doc.replace_parameter(parameter).status.is_ok());
+    assert!(doc.replace_parameter(parameter).is_ok());
     if root_warp {
-        assert!(
-            doc.create_imported_transform(Transform {
+        assert!(doc
+            .create_transform(Transform {
                 id: id(1),
+                runtime_id: id(1),
                 data: warp(vec![
                     Vec2::new(-100., -80.),
                     Vec2::new(100., -80.),
@@ -52,9 +51,7 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
                 ]),
                 ..Default::default()
             })
-            .status
-            .is_ok()
-        );
+            .is_ok());
     }
     for (n, parent, unit, origin, scale) in [
         (
@@ -80,19 +77,18 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
             0.5,
         ),
     ] {
-        assert!(
-            doc.create_imported_transform(Transform {
+        assert!(doc
+            .create_transform(Transform {
                 id: id(n),
+                runtime_id: id(n),
                 parent_id: parent.map(Into::into),
                 rotation_scale_unit: Some(unit),
                 data: rotation(origin, scale),
                 ..Default::default()
             })
-            .status
-            .is_ok()
-        );
-        assert!(
-            doc.create_scene_binding(SceneBinding {
+            .is_ok());
+        assert!(doc
+            .create_scene_binding(SceneBinding {
                 id: id(n + 10),
                 axes: vec![BindingAxis::new(PARAM, vec![-1., 0., 1.])],
                 track: SceneTrack::Rotation {
@@ -113,13 +109,12 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
                         .collect()
                 }
             })
-            .status
-            .is_ok()
-        );
+            .is_ok());
         if n == 2 && nested_warp {
-            assert!(
-                doc.create_imported_transform(Transform {
+            assert!(doc
+                .create_transform(Transform {
                     id: id(3),
+                    runtime_id: id(3),
                     parent_id: Some(id(2).into()),
                     data: warp(vec![
                         Vec2::new(-0.02, -0.01),
@@ -129,18 +124,16 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
                     ]),
                     ..Default::default()
                 })
-                .status
-                .is_ok()
-            );
+                .is_ok());
             let points = doc
-                .get_transform(&id(3))
+                .transform(&id(3))
                 .unwrap()
                 .warp()
                 .unwrap()
                 .points
                 .clone();
-            assert!(
-                doc.create_scene_binding(SceneBinding {
+            assert!(doc
+                .create_scene_binding(SceneBinding {
                     id: id(13),
                     axes: vec![BindingAxis::new(PARAM, vec![-1., 0., 1.])],
                     track: SceneTrack::Warp {
@@ -158,31 +151,31 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
                             .collect()
                     }
                 })
-                .status
-                .is_ok()
-            );
+                .is_ok());
         }
     }
     // A native child shares the accumulated units without owning a conversion.
-    assert!(
-        doc.create_imported_transform(Transform {
+    assert!(doc
+        .create_transform(Transform {
             id: id(5),
+            runtime_id: id(5),
             parent_id: Some(id(4).into()),
             data: rotation(Vec2::new(0.003, -0.002), 0.8),
             ..Default::default()
         })
-        .status
-        .is_ok()
-    );
-    let mut mesh = doc.get_mesh(MESH).unwrap().clone();
+        .is_ok());
+    let mut mesh = doc.mesh(MESH).unwrap().clone();
     mesh.deformer_id = id(5);
     mesh.base_positions = vec![
         Vec2::new(-0.004, -0.003),
         Vec2::new(0.004, -0.003),
         Vec2::new(-0.004, 0.003),
     ];
-    assert!(doc.replace_mesh(mesh.clone()).status.is_ok());
-    let mut binding = doc.binding_for_mesh(MESH).unwrap().clone();
+    assert!(doc.replace_mesh(mesh.clone()).is_ok());
+    let mut binding = doc
+        .binding("00000000-0000-4000-8000-000000000005")
+        .unwrap()
+        .clone();
     for form in &mut binding.keyforms {
         form.positions = mesh
             .base_positions
@@ -190,19 +183,17 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
             .map(|p| Vec2::new(p.x + form.keys[0] * 0.001, p.y))
             .collect();
     }
-    assert!(doc.replace_binding(binding).status.is_ok());
-    assert!(
-        doc.create_parameter(Parameter {
+    assert!(doc.replace_binding(binding).is_ok());
+    assert!(doc
+        .create_parameter(Parameter {
             id: id(20),
             runtime_id: "Blend".into(),
             kind: ParameterKind::BlendShape,
             ..Default::default()
         })
-        .status
-        .is_ok()
-    );
-    assert!(
-        doc.create_blend_key_table(BlendShapeKeyTable {
+        .is_ok());
+    assert!(doc
+        .create_blend_key_table(BlendShapeKeyTable {
             id: id(21),
             parameter_id: id(20),
             keys: vec![-1., 0., 1.],
@@ -210,12 +201,10 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
             samples: Default::default(),
             base_sample_id: Default::default()
         })
-        .status
-        .is_ok()
-    );
+        .is_ok());
     for n in [2, 4] {
-        assert!(
-            doc.create_blend_binding(BlendShapeBinding {
+        assert!(doc
+            .create_blend_binding(BlendShapeBinding {
                 id: id(n + 30),
                 target_id: id(n),
                 target_kind: BlendShapeTargetKind::Rotation,
@@ -235,13 +224,11 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
                     }
                 ])
             })
-            .status
-            .is_ok()
-        );
+            .is_ok());
     }
     if nested_warp {
-        assert!(
-            doc.create_blend_binding(BlendShapeBinding {
+        assert!(doc
+            .create_blend_binding(BlendShapeBinding {
                 id: id(33),
                 target_id: id(3),
                 target_kind: BlendShapeTargetKind::Warp,
@@ -257,12 +244,10 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
                         .collect()
                 )
             })
-            .status
-            .is_ok()
-        );
+            .is_ok());
     }
-    assert!(
-        doc.create_blend_binding(BlendShapeBinding {
+    assert!(doc
+        .create_blend_binding(BlendShapeBinding {
             id: id(36),
             target_id: MESH.into(),
             target_kind: BlendShapeTargetKind::Mesh,
@@ -278,10 +263,8 @@ fn fixture_with_units(root_warp: bool, nested_warp: bool, flag: u8) -> (Document
                     .collect()
             )
         })
-        .status
-        .is_ok()
-    );
-    (doc, png)
+        .is_ok());
+    (doc.freeze().unwrap().state, png)
 }
 
 #[test]
@@ -295,7 +278,7 @@ fn normalized_rotation_units_preserve_cmo3_geometry_and_both_blend_clamps() {
                 for pass in 0..2 {
                     let artifact = encode_cmo3(
                         &current,
-                        &|_: &ImageAsset| Ok(png.clone()),
+                        &|_: &AssetRecord| Ok(png.clone()),
                         &Default::default(),
                     )
                     .unwrap();
@@ -306,30 +289,38 @@ fn normalized_rotation_units_preserve_cmo3_geometry_and_both_blend_clamps() {
                         std::str::from_utf8(&entries.last().unwrap().3).unwrap(),
                     )
                     .unwrap();
-                    assert!(
-                        xml.descendants()
-                            .filter(|n| n.has_tag_name("CRotationDeformerForm"))
-                            .filter_map(|n| n.attribute("scale"))
-                            .filter_map(|s| s.parse::<f32>().ok())
-                            .any(|s| (s - 1. / 5800.).abs() < 1e-8)
-                    );
-                    current = import_model(&artifact.bytes).unwrap().document;
+                    assert!(xml
+                        .descendants()
+                        .filter(|n| n.has_tag_name("CRotationDeformerForm"))
+                        .filter_map(|n| n.attribute("scale"))
+                        .filter_map(|s| s.parse::<f32>().ok())
+                        .any(|s| (s - 1. / 5800.).abs() < 1e-8));
+                    let imported = import_model(&artifact.bytes).unwrap();
+                    let mut builder = imported.document.builder();
+                    for asset_id in imported.document.asset_order() {
+                        let mut asset = imported.document.asset(asset_id).unwrap().clone();
+                        if let AssetContent::Unresolved { source } = &asset.content {
+                            let image =
+                                zipzi_core::image::decode_png(&imported.images[source]).unwrap();
+                            asset.content = AssetContent::Image {
+                                resource: ResourceKey::new(),
+                                width: image.width,
+                                height: image.height,
+                            };
+                            builder.replace_asset(asset).unwrap();
+                        }
+                    }
+                    current = builder.freeze().unwrap().state;
                     assert!(current.transform_order().iter().all(|id| {
-                        current
-                            .get_transform(id)
-                            .unwrap()
-                            .rotation_scale_unit
-                            .is_none()
+                        current.transform(id).unwrap().rotation_scale_unit.is_none()
                     }));
                     for normal in [-1., -0.37, 0.25, 1.] {
                         for blend in [-1., -0.4, 0., 0.37, 1.] {
                             let values = [(PARAM.into(), normal), (id(20), blend)].into();
-                            let frame = |doc: &Document| {
+                            let frame = |doc: &DocumentState| {
                                 let mut frame = DrawableFrame::default();
-                                assert!(
-                                    evaluate_frame_including_hidden(doc, &values, &mut frame)
-                                        .is_ok()
-                                );
+                                assert!(evaluate_frame_including_hidden(doc, &values, &mut frame)
+                                    .is_ok());
                                 frame
                             };
                             let (expected, actual) = (frame(&source), frame(&current));
@@ -369,8 +360,7 @@ fn normalized_rotation_units_preserve_cmo3_geometry_and_both_blend_clamps() {
                         }
                     }
                 }
-                assert_eq!(source.revision(), before.revision());
-                assert!(source.same_content(&before));
+                assert_eq!(source.content_id(), before.content_id());
             }
         }
     }

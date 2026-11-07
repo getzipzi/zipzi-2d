@@ -1,8 +1,13 @@
+mod support;
+
 use std::collections::HashMap;
+use support::{image, prepare};
+use zipzi_core::document::{SceneContentEdit, ShapeTarget, VertexContentPatch};
+use zipzi_core::state::{DocumentState, RecordDomain};
 
 use zipzi_core::{
-    evaluate_frame, BindingAxis, Canvas, Document, DrawableFrame, ImageAsset, Mesh, MeshBinding,
-    MeshKeyform, Parameter, Vec2, VertexId,
+    evaluate_frame, BindingAxis, Canvas, DrawableFrame, Mesh, MeshBinding, MeshKeyform, Parameter,
+    Vec2, VertexId,
 };
 
 fn id(n: i32) -> String {
@@ -11,28 +16,13 @@ fn id(n: i32) -> String {
 
 #[test]
 fn test_keyform_data_editing_and_evaluation() {
-    let mut d = Document::new();
-    assert!(d
-        .initialize(
-            id(1),
-            Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 100.0)
-        )
-        .is_ok());
-
-    assert!(d
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: id(2),
-            name: "asset".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "memory://unloaded".to_string(),
-                width: 8,
-                height: 8,
-                ..Default::default()
-            }),
-        })
-        .status
-        .is_ok());
+    let base = DocumentState::new(
+        id(1),
+        Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 100.0).into(),
+    )
+    .unwrap();
+    let mut builder = base.builder();
+    builder.create_asset(image(id(2), "asset", 8, 8)).unwrap();
 
     let m = Mesh {
         id: id(3),
@@ -53,19 +43,20 @@ fn test_keyform_data_editing_and_evaluation() {
         runtime_id: "Mesh".to_string(),
         ..Default::default()
     };
-    assert!(d.create_mesh(m.clone()).status.is_ok());
+    builder.create_mesh(m.clone()).unwrap();
 
-    let e = d.create_parameter(Parameter {
-        id: id(4),
-        name: "Param".to_string(),
-        runtime_id: "parameter".to_string(),
-        minimum: -1.0,
-        maximum: 1.0,
-        default_value: 0.0,
-        decimal_places: 6,
-        ..Default::default()
-    });
-    assert!(e.status.is_ok() && e.changes.object_ids == vec![id(4)]);
+    builder
+        .create_parameter(Parameter {
+            id: id(4),
+            name: "Param".to_string(),
+            runtime_id: "parameter".to_string(),
+            minimum: -1.0,
+            maximum: 1.0,
+            default_value: 0.0,
+            decimal_places: 6,
+            ..Default::default()
+        })
+        .unwrap();
 
     let mut b = MeshBinding {
         id: id(5),
@@ -89,18 +80,23 @@ fn test_keyform_data_editing_and_evaluation() {
             ..Default::default()
         });
     }
-    assert!(d.create_binding(b).status.is_ok());
-    assert_eq!(d.get_binding(&id(5)).unwrap().keyforms[0].keys[0], -1.0);
+    builder.create_binding(b).unwrap();
+    let prepared = builder.freeze().unwrap();
+    assert!(prepared
+        .writes
+        .records()
+        .iter()
+        .any(|w| w.domain == RecordDomain::Parameter && w.id == id(4)));
+    let d = prepared.state;
+    assert_eq!(d.binding(&id(5)).unwrap().keyforms[0].keys[0], -1.0);
 
-    d.mark_saved();
-    let rev = d.revision();
+    let content = d.content_id();
     let mut frame = DrawableFrame::default();
     let mut preview = HashMap::new();
     preview.insert(id(4), 0.5f32);
     assert!(evaluate_frame(&d, &preview, &mut frame).is_ok());
     assert!((frame.drawables[0].positions[0].x - 20.).abs() < 1e-6);
-    assert_eq!(d.revision(), rev);
-    assert!(!d.modified());
+    assert_eq!(d.content_id(), content);
 
     let preserved = frame.drawables[0].positions.clone();
     let mut bad_preview = HashMap::new();
@@ -119,38 +115,56 @@ fn test_keyform_data_editing_and_evaluation() {
 
     let vertex: VertexId = 9;
     let changed_base = Vec2::new(999.0, 10.0);
-    assert!(d
-        .set_vertex_positions(&id(3), &[vertex], &[changed_base])
-        .status
-        .is_ok());
+    let d = prepare(&d, |builder| {
+        builder.edit_scene_content(
+            SceneContentEdit::MeshVertices {
+                mesh_id: id(3),
+                target: ShapeTarget::Base,
+                updates: vec![VertexContentPatch {
+                    vertex_id: vertex,
+                    position: Some(changed_base),
+                    uv: None,
+                }],
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        Ok(())
+    })
+    .unwrap()
+    .state;
     assert!(evaluate_frame(&d, &preview, &mut frame).is_ok());
     assert_eq!(frame.drawables[0].positions, preserved);
 
-    let mut invalid = d.get_binding(&id(5)).unwrap().clone();
+    let binding = d.binding(&id(5)).unwrap();
+    let mut invalid = binding.clone();
     invalid.axes[0].keys = vec![-1.0, 0.0, 0.0];
-    let rev2 = d.revision();
-    assert!(!d.replace_binding(invalid).status.is_ok());
-    assert_eq!(d.revision(), rev2);
-
-    let mut invalid = d.get_binding(&id(5)).unwrap().clone();
+    assert!(prepare(&d, |b| b.replace_binding(invalid)).is_err());
+    let mut invalid = binding.clone();
     invalid.keyforms[1].positions.pop();
-    assert_eq!(d.replace_binding(invalid).status.code, "INVALID_LENGTH");
+    assert_eq!(
+        prepare(&d, |b| b.replace_binding(invalid))
+            .unwrap_err()
+            .code,
+        "INVALID_LENGTH"
+    );
 
-    assert_eq!(d.erase_object(&id(2)).referrers, vec![id(3)]);
-    assert_eq!(d.erase_object(&id(3)).referrers, vec![id(5)]);
-    assert_eq!(d.erase_object(&id(4)).referrers, vec![id(5)]);
+    assert!(prepare(&d, |b| b.remove_asset(&id(2))).is_err());
+    assert!(prepare(&d, |b| b.remove_mesh(&id(3))).is_err());
+    assert!(prepare(&d, |b| b.remove_parameter(&id(4))).is_err());
+    assert_eq!(d.binding(&id(5)), Some(binding));
 
-    assert!(d.begin_transaction().is_ok());
-    assert!(!d.erase_object(&id(5)).status.is_ok());
-    assert!(d.cancel_transaction().is_ok());
-
-    assert!(d.erase_object(&id(5)).status.is_ok());
-    assert!(evaluate_frame(&d, &HashMap::new(), &mut frame).is_ok());
+    let unbound = prepare(&d, |b| b.remove_binding(&id(5))).unwrap().state;
+    assert!(evaluate_frame(&unbound, &HashMap::new(), &mut frame).is_ok());
     assert!((frame.drawables[0].positions[0].x - 999.).abs() < 1e-5);
 
-    assert!(d.erase_object(&id(4)).status.is_ok());
-    assert!(d.erase_object(&id(3)).status.is_ok());
-    assert!(d.erase_object(&id(2)).status.is_ok());
-    assert!(evaluate_frame(&d, &HashMap::new(), &mut frame).is_ok());
+    let empty = prepare(&unbound, |b| {
+        b.remove_parameter(&id(4))?;
+        b.remove_mesh(&id(3))?;
+        b.remove_asset(&id(2))
+    })
+    .unwrap()
+    .state;
+    assert!(evaluate_frame(&empty, &HashMap::new(), &mut frame).is_ok());
     assert!(frame.drawables.is_empty());
 }

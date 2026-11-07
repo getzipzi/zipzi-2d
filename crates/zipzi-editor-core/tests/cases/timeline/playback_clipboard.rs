@@ -1,8 +1,9 @@
 use super::common::*;
 use std::sync::Arc;
+use zipzi_animation::{CompiledCurve, MotionPreview, sample_motion_curve};
+use zipzi_contract::kernel_commands::MotionInterpolation;
 use zipzi_core::document::MotionSegment;
 use zipzi_editor_core::*;
-use zipzi_sdk::{CompiledCurve, MotionInterpolation, MotionPreview, sample_motion_curve};
 
 #[test]
 fn multi_key_moves_snap_only_anchor_keep_rhythm_and_reject_collisions_atomically()
@@ -23,7 +24,7 @@ fn multi_key_moves_snap_only_anchor_keep_rhythm_and_reject_collisions_atomically
         },
     )?;
     let legal = e.timeline_edit().unwrap().candidate.clone();
-    let track = &legal.clip().tracks[0];
+    let track = &legal.tracks[0];
     assert!((track.initial.time - 7. / 30.).abs() < 1e-6);
     assert!(((track.segments[0].end().time - track.initial.time) - (0.6 - 0.1137)).abs() < 1e-6);
     assert!(
@@ -96,7 +97,7 @@ fn editing_preview_uses_raw_clip_result_preview_matches_sdk_and_keeps_expression
     e.set_animation_preview_mode(d, AnimationPreviewMode::Result)?;
     let request = e.animation_request().unwrap();
     let result = evaluator.evaluate(&request, |_, _| true)?;
-    let mut sdk = MotionPreview::new(request.source.materialized_snapshot().unwrap().document());
+    let mut sdk = MotionPreview::new(request.source.evaluation_snapshot().document());
     sdk.schedule_motion(&id(4), 0.)?;
     let expected = sdk.seek(request.identity.time)?;
     assert_eq!(result.snapshot.as_ref(), expected);

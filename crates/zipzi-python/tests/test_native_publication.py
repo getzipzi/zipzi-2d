@@ -1,5 +1,6 @@
 """Real loaded-extension publication. Run through tools/dev.py python."""
 import importlib.util
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -7,6 +8,7 @@ import tempfile
 import time
 import unittest
 
+sys.path.insert(0, os.environ["ZIPZI_KERNEL_NATIVE"])
 import zipzi_native._native as native
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -17,14 +19,15 @@ spec.loader.exec_module(launcher)
 CHILD = '''
 import site,sys,time
 from pathlib import Path
-site.addsitedir(sys.argv[1])
+sys.path.insert(0, sys.argv[1])
+site.addsitedir(sys.argv[2])
 import zipzi,zipzi_native._native
 with zipzi.local() as runtime:
     assert len(runtime.sessions.list()) == 0
-    Path(sys.argv[2]).write_text(zipzi_native._native.__file__, encoding='utf-8')
-    if len(sys.argv) > 3:
+    Path(sys.argv[3]).write_text(zipzi_native._native.__file__, encoding='utf-8')
+    if len(sys.argv) > 4:
         deadline=time.monotonic()+30
-        while not Path(sys.argv[3]).exists():
+        while not Path(sys.argv[4]).exists():
             assert time.monotonic() < deadline
             time.sleep(.01)
         assert len(runtime.sessions.list()) == 0
@@ -42,7 +45,7 @@ class NativePublication(unittest.TestCase):
             site = state / 'site'
             first = launcher.publish_native(state, site, initializer, library, suffix)
             ready, release = state / 'ready', state / 'release'
-            child = subprocess.Popen([sys.executable, '-I', '-c', CHILD, str(site), str(ready), str(release)],
+            child = subprocess.Popen([sys.executable, '-I', '-c', CHILD, os.environ['ZIPZI_KERNEL_SOURCE_CLIENT'], str(site), str(ready), str(release)],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
                 deadline = time.monotonic() + 15
@@ -55,7 +58,7 @@ class NativePublication(unittest.TestCase):
                 second = launcher.publish_native(state, site, initializer, library, suffix)
                 self.assertNotEqual(first, second)
                 second_ready = state / 'second'
-                result = subprocess.run([sys.executable, '-I', '-c', CHILD, str(site), str(second_ready)],
+                result = subprocess.run([sys.executable, '-I', '-c', CHILD, os.environ['ZIPZI_KERNEL_SOURCE_CLIENT'], str(site), str(second_ready)],
                     capture_output=True, timeout=15)
                 self.assertEqual(result.returncode, 0, result.stderr.decode(errors='replace'))
                 self.assertEqual(Path(second_ready.read_text(encoding='utf-8')).parent, second)

@@ -1,17 +1,25 @@
+mod support;
 use std::path::PathBuf;
-use zipzi_project::{encode_project_cmo3, publish_cmo3, Cmo3Options, DocumentSession};
+use support::*;
+use zipzi_core::state::*;
+use zipzi_project::{encode_project_cmo3, publish_cmo3, Cmo3Options};
+use zipzi_project::{ProjectImporter, ProjectIo, ResourceStore, ResourceView};
 
 #[test]
 fn imported_models_and_saved_projects_share_the_codec() {
     let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures");
     for model in ["external_v42", "external_cyclic", "external_v50_bs_glue"] {
-        let mut session = DocumentSession::new();
-        let (result, _) =
-            session.import_model3_authoring(&fixtures.join(model).join("model.model3.json"));
+        let importer = ProjectImporter::default();
+        let (result, imported, _) =
+            importer.import_model3(&fixtures.join(model).join("model.model3.json"));
         assert!(result.status.is_ok(), "{model}: {:?}", result);
-        let artifact = session
-            .encode_cmo3(&Cmo3Options::default())
-            .unwrap_or_else(|error| panic!("{model}: {error:?}"));
+        let imported = imported.unwrap();
+        let artifact = zipzi_project::encode_document_cmo3(
+            &imported.document,
+            &imported.resources,
+            &Cmo3Options::default(),
+        )
+        .unwrap_or_else(|error| panic!("{model}: {error:?}"));
         assert!(!artifact.report.has_loss());
         assert_eq!(&artifact.bytes[..4], b"CAFF");
         let temp = std::env::temp_dir().join(format!(
@@ -20,9 +28,16 @@ fn imported_models_and_saved_projects_share_the_codec() {
             uuid::Uuid::new_v4()
         ));
         std::fs::create_dir(&temp).unwrap();
-        let project = temp.join("source");
-        let result = session.save(&project);
-        assert!(result.status.is_ok(), "{result:?}");
+        let project = temp.join("source.zipzi");
+        ProjectIo::new(&temp, ResourceStore::default())
+            .save(
+                &imported.document,
+                &imported.resources,
+                &project,
+                None,
+                || true,
+            )
+            .unwrap();
         let saved = encode_project_cmo3(&project, &Cmo3Options::default()).unwrap();
         assert_eq!(saved.bytes, artifact.bytes);
         let output = temp.join("model.cmo3");
@@ -30,20 +45,20 @@ fn imported_models_and_saved_projects_share_the_codec() {
         publish_cmo3(&artifact, &output).unwrap();
         assert_eq!(std::fs::read(&output).unwrap(), artifact.bytes);
         let mut cases = Vec::new();
-        let doc = session.document();
+        let doc = &imported.document;
         let mut poses = vec![std::collections::HashMap::new()];
         for id in doc.parameter_order().iter().take(3) {
-            let p = doc.get_parameter(id).unwrap();
+            let p = doc.parameter(id).unwrap();
             poses.push(std::collections::HashMap::from([(id.clone(), p.minimum)]));
             poses.push(std::collections::HashMap::from([(id.clone(), p.maximum)]));
         }
         for pose in poses {
             let mut frame = zipzi_core::DrawableFrame::default();
             assert!(zipzi_core::evaluation::evaluate_frame(doc, &pose, &mut frame).is_ok());
-            let canvas = doc.source_canvas().unwrap();
+            let canvas = doc.setup().source_canvas.unwrap();
             let params: std::collections::BTreeMap<_, _> = pose
                 .iter()
-                .map(|(id, value)| (doc.get_parameter(id).unwrap().runtime_id.clone(), *value))
+                .map(|(id, value)| (doc.parameter(id).unwrap().runtime_id.clone(), *value))
                 .collect();
             let positions: std::collections::BTreeMap<_, Vec<[f32; 2]>> = frame
                 .drawables
@@ -93,34 +108,35 @@ fn failed_publication_preserves_existing_output() {
 
 #[test]
 fn editable_physics_uses_bound_parameter_guids() {
-    use zipzi_core::{Canvas, Document, Parameter, Vec2};
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            "00000000-0000-4000-8000-000000002001",
-            Canvas::new(128., 128., Vec2::new(64., 64.), 64.)
-        )
-        .is_ok());
+    use zipzi_core::{Canvas, Parameter, Vec2};
+    let mut doc = DocumentState::new(
+        "00000000-0000-4000-8000-000000002001",
+        Canvas::new(128., 128., Vec2::new(64., 64.), 64.).into(),
+    )
+    .unwrap();
     for (id, runtime) in [
         ("00000000-0000-4000-8000-000000002002", "ParamX"),
         ("00000000-0000-4000-8000-000000002003", "ParamY"),
     ] {
-        assert!(doc
-            .create_parameter(Parameter {
+        doc = prepare(&doc, |builder| {
+            builder.create_parameter(Parameter {
                 id: id.into(),
                 runtime_id: runtime.into(),
                 name: runtime.into(),
                 ..Default::default()
             })
-            .status
-            .is_ok());
+        });
     }
     let source = include_str!("../../../fixtures/animation_cpu/thirty.physics3.json");
     let imported =
         zipzi_project::import_physics3(&doc, "00000000-0000-4000-8000-000000002004", source)
             .unwrap();
-    let session = DocumentSession::from_authoring_document(imported.candidate);
-    let artifact = session.encode_cmo3(&Default::default()).unwrap();
+    let artifact = zipzi_project::encode_document_cmo3(
+        &imported.candidate,
+        &ResourceView::default(),
+        &Default::default(),
+    )
+    .unwrap();
     assert!(!artifact.report.has_loss());
     let target = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/cmo3-acceptance");
     std::fs::create_dir_all(&target).unwrap();

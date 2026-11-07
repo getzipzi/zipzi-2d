@@ -10,7 +10,7 @@ mod spatial;
 mod support;
 mod triangulate;
 
-use crate::{MeshGeometry, SdkError};
+use crate::{MeshGeometry, Status};
 pub use triangulate::{EdgeLayout, InteriorSites};
 
 /// Tightly packed, top-to-bottom, one-byte alpha samples (not RGBA).
@@ -98,7 +98,7 @@ impl AlphaMeshOptions {
         }
     }
 
-    pub fn validate(&self) -> Result<(), SdkError> {
+    pub fn validate(&self) -> Result<(), Status> {
         if [self.outside_spacing, self.inside_spacing]
             .iter()
             .any(|n| !n.is_finite() || *n <= 0.0 || *n > 1_000_000.0)
@@ -115,11 +115,11 @@ impl AlphaMeshOptions {
     }
 }
 
-pub(super) fn error(code: &'static str, message: &str) -> SdkError {
-    SdkError::new(code, message, "alpha_mesh_geometry")
+pub(super) fn error(code: &'static str, message: &str) -> Status {
+    Status::error(code, message)
 }
 
-pub(super) fn limit() -> SdkError {
+pub(super) fn limit() -> Status {
     error("ALPHA_MESH_LIMIT", "Alpha mesh exceeds its vertex or preprocessing budget; increase spacing or simplify the source image")
 }
 
@@ -140,7 +140,7 @@ pub(super) fn limit() -> SdkError {
 pub fn alpha_mesh_geometry(
     mask: AlphaMask<'_>,
     options: &AlphaMeshOptions,
-) -> Result<MeshGeometry, SdkError> {
+) -> Result<MeshGeometry, Status> {
     triangulate_constrained(sample_interior(build_edge_layout(mask, options)?)?)
 }
 
@@ -149,7 +149,7 @@ pub fn alpha_mesh_geometry(
 pub fn build_edge_layout(
     mask: AlphaMask<'_>,
     options: &AlphaMeshOptions,
-) -> Result<EdgeLayout, SdkError> {
+) -> Result<EdgeLayout, Status> {
     options.validate()?;
     let count = (mask.width as usize).checked_mul(mask.height as usize);
     if mask.width == 0 || mask.height == 0 || count != Some(mask.alpha.len()) {
@@ -176,11 +176,11 @@ pub fn build_edge_layout(
 }
 
 /// Add interior sites while preserving the edge layout's perimeter and support.
-pub fn sample_interior(layout: EdgeLayout) -> Result<InteriorSites, SdkError> {
+pub fn sample_interior(layout: EdgeLayout) -> Result<InteriorSites, Status> {
     triangulate::sample_interior(layout)
 }
 
 /// Publish the full constrained triangulation after interior sampling.
-pub fn triangulate_constrained(sites: InteriorSites) -> Result<MeshGeometry, SdkError> {
+pub fn triangulate_constrained(sites: InteriorSites) -> Result<MeshGeometry, Status> {
     triangulate::triangulate_constrained(sites)
 }

@@ -9,12 +9,14 @@ fn mesh() -> ObjectRef {
     ObjectRef::new(ObjectKind::Mesh, id(902))
 }
 fn saved_mesh_has_meshing(manifest: &std::path::Path) -> anyhow::Result<bool> {
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &id(920),
-        zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(manifest, None)?;
-    Ok(session.mesh(&mesh().id).unwrap().meshing.is_some())
+    let session = crate::support::open_fixture(manifest)?;
+    Ok(session
+        .snapshot()
+        .document()
+        .mesh(&mesh().id)
+        .unwrap()
+        .meshing
+        .is_some())
 }
 fn generate(editor: &mut Editor, columns: usize, rows: usize) -> anyhow::Result<()> {
     let expected_revision = editor.document().unwrap().mesh_generation_revision();
@@ -421,12 +423,8 @@ fn manual_mesh_saving_drag_commits_the_last_valid_candidate() -> anyhow::Result<
     let saved = editor.finish_save(&mut save.run())?;
     assert!(!editor.document().unwrap().has_pending_edit());
     assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &id(920),
-        zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&saved.path, None)?;
-    let saved_mesh = session.mesh(&mesh().id).unwrap();
+    let session = crate::support::open_fixture(&saved.path)?;
+    let saved_mesh = session.snapshot().document().mesh(&mesh().id).unwrap();
     let slot = saved_mesh
         .vertex_ids
         .iter()
@@ -501,20 +499,29 @@ fn bound_generation_migrates_keyforms_blends_and_glue_atomically() -> anyhow::Re
         false,
     )?;
     let saved = editor.finish_save(&mut task.run())?;
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &id(920),
-        zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&saved.path, None)?;
-    let binding = session.binding_for_mesh(&id(902)).unwrap();
+    let session = crate::support::open_fixture(&saved.path)?;
+    let binding = session
+        .snapshot()
+        .document()
+        .binding_for_mesh(&id(902))
+        .unwrap();
     assert!(binding.keyforms.iter().all(|f| f.positions.len() == 25));
     assert_eq!(binding.keyforms[1].positions[12], Vec2::new(138., 133.));
-    let DeltaKeyforms::Mesh(forms) = session.blend_binding(&id(908)).unwrap().keyforms else {
+    let DeltaKeyforms::Mesh(forms) = &session
+        .snapshot()
+        .document()
+        .blend_binding(&id(908))
+        .unwrap()
+        .keyforms
+    else {
         panic!()
     };
     assert!(forms.iter().all(|f| f.positions.len() == 25));
     assert_eq!(forms[1].positions[12], Vec2::new(2., 3.));
-    assert_eq!(session.glue(&id(910)).unwrap().pairs[0].vertex_a, Some(0));
+    assert_eq!(
+        session.snapshot().document().glue(&id(910)).unwrap().pairs[0].vertex_a,
+        Some(0)
+    );
     Ok(())
 }
 
@@ -595,12 +602,8 @@ fn previews_are_isolated_repeatable_and_match_application() -> anyhow::Result<()
     doc.apply_mesh_generation(&candidate)?;
     assert_eq!(doc.history_lengths(), (1, 0));
     let saved = doc.save(&dir.path().join("preview-applied.zipzi"))?;
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &id(920),
-        zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&saved.path, None)?;
-    let applied = session.mesh(&mesh().id).unwrap();
+    let session = crate::support::open_fixture(&saved.path)?;
+    let applied = session.snapshot().document().mesh(&mesh().id).unwrap();
     assert_eq!(applied.base_positions, candidate.geometry().positions);
     assert_eq!(applied.uvs, candidate.geometry().uvs);
     assert_eq!(applied.triangles, candidate.geometry().triangles);
@@ -719,12 +722,8 @@ fn alpha_preview_maps_source_pixels_and_survives_regeneration_history_and_save()
     )?;
     let saved = editor.finish_save(&mut save.run())?;
     let reopened = Document::open(&saved.path)?;
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &id(920),
-        zipzi_core::Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&saved.path, None)?;
-    let applied = session.mesh(&mesh().id).unwrap();
+    let session = crate::support::open_fixture(&saved.path)?;
+    let applied = session.snapshot().document().mesh(&mesh().id).unwrap();
     assert_eq!(applied.base_positions, geometry.positions);
     assert_eq!(applied.uvs, geometry.uvs);
     assert_eq!(applied.triangles, geometry.triangles);
@@ -1306,11 +1305,10 @@ fn manual_mesh_sparse_interior_is_a_valid_noop_on_an_untouched_mesh() -> anyhow:
 fn edited_mesh(editor: &Editor) -> zipzi_core::Mesh {
     let document = editor.document().unwrap();
     let host = document.runtime_host();
-    let runtime = host.read();
-    runtime
-        .document(document.runtime_session_id())
+    support::published_snapshot(&host, document.runtime_session_id())
         .unwrap()
-        .get_mesh(&mesh().id)
+        .document()
+        .mesh(&mesh().id)
         .unwrap()
         .clone()
 }
@@ -1422,11 +1420,9 @@ fn manual_mesh_source_padding_preserves_texels_and_allows_outline_outside_origin
     let reopened_target = reopened.manual_mesh_target()?;
     assert_eq!(reopened_target.texture.rgba, image.rgba);
     assert_eq!(
-        reopened
-            .runtime_host()
-            .read()
-            .document(reopened.runtime_session_id())?
-            .get_mesh(&mesh().id)
+        support::published_snapshot(&reopened.runtime_host(), reopened.runtime_session_id())?
+            .document()
+            .mesh(&mesh().id)
             .unwrap()
             .uvs,
         extended.uvs
@@ -1440,21 +1436,25 @@ fn manual_mesh_source_padding_retains_bound_shapes_glue_and_rejects_stale_target
     let (mut document, _dir) = mixed_dependency_document()?;
     let target = document.manual_mesh_target()?;
     let host = document.runtime_host();
-    let before = host.read().document(document.runtime_session_id())?.clone();
+    let before = support::published_snapshot(&host, document.runtime_session_id())?
+        .document()
+        .clone();
     let before_pose = document.snapshot()?.runtime_frame;
     assert!(!document.pad_manual_mesh_source(&target, 0)?);
     assert!(document.pad_manual_mesh_source(&target, u32::MAX).is_err());
     assert_eq!(document.history_lengths(), (0, 0));
     assert!(document.pad_manual_mesh_source(&target, 32)?);
-    let after = host.read().document(document.runtime_session_id())?.clone();
+    let after = support::published_snapshot(&host, document.runtime_session_id())?
+        .document()
+        .clone();
     for id in before.binding_order() {
-        assert_eq!(after.get_binding(id), before.get_binding(id));
+        assert_eq!(after.binding(id), before.binding(id));
     }
     for id in before.blend_binding_order() {
-        assert_eq!(after.get_blend_binding(id), before.get_blend_binding(id));
+        assert_eq!(after.blend_binding(id), before.blend_binding(id));
     }
     for id in before.glue_order() {
-        assert_eq!(after.get_glue(id), before.get_glue(id));
+        assert_eq!(after.glue(id), before.glue(id));
     }
     let after_pose = document.snapshot()?.runtime_frame;
     for (a, b) in before_pose.drawables.iter().zip(&after_pose.drawables) {
@@ -1471,10 +1471,10 @@ fn manual_mesh_source_padding_retains_bound_shapes_glue_and_rejects_stale_target
     document.undo()?;
     document.undo()?;
     assert_eq!(
-        host.read()
-            .document(document.runtime_session_id())?
-            .get_mesh(&target.object.id),
-        before.get_mesh(&target.object.id)
+        support::published_snapshot(&host, document.runtime_session_id())?
+            .document()
+            .mesh(&target.object.id),
+        before.mesh(&target.object.id)
     );
     assert_eq!(
         document.manual_mesh_target()?.texture.rgba,
@@ -1511,9 +1511,9 @@ fn manual_mesh_padded_bound_non_affine_outline_drags_beyond_original_image_in_bo
         let doc = editor.document().unwrap();
         let host = doc.runtime_host();
         let sid = doc.runtime_session_id();
-        let before = host.read().document(sid)?.clone();
+        let before = support::published_snapshot(&host, sid)?.document().clone();
         let mesh_id = dependency_fixture::id(2);
-        let mesh = before.get_mesh(&mesh_id).unwrap();
+        let mesh = before.mesh(&mesh_id).unwrap();
         let uv = zipzi_core::Vec2::new(
             (16. + 0.7 * original_texture.width as f32) / target.texture.width as f32,
             8. / target.texture.height as f32,
@@ -1561,8 +1561,8 @@ fn manual_mesh_padded_bound_non_affine_outline_drags_beyond_original_image_in_bo
             },
         )?;
         crate::support::pointer_input(&mut editor, CanvasInput::Up { point: to })?;
-        let after = host.read().document(sid)?.clone();
-        let moved = after.get_mesh(&mesh_id).unwrap();
+        let after = support::published_snapshot(&host, sid)?.document().clone();
+        let moved = after.mesh(&mesh_id).unwrap();
         assert!(
             (moved.uvs[1].x - uv.x).hypot(moved.uvs[1].y - uv.y) < 1e-5,
             "source view {source_view}: {:?}",
@@ -1571,23 +1571,27 @@ fn manual_mesh_padded_bound_non_affine_outline_drags_beyond_original_image_in_bo
         assert!(moved.uvs[1].y * (target.texture.height as f32) < 16.);
         assert_eq!(editor.document().unwrap().history_lengths(), (5, 0));
         for id in before.glue_order() {
-            assert_eq!(before.get_glue(id), after.get_glue(id));
+            assert_eq!(before.glue(id), after.glue(id));
         }
         editor.dispatch(editor.command(CommandId::Undo))?;
         assert_eq!(
-            host.read().document(sid)?.get_mesh(&mesh_id),
-            before.get_mesh(&mesh_id)
+            support::published_snapshot(&host, sid)?
+                .document()
+                .mesh(&mesh_id),
+            before.mesh(&mesh_id)
         );
         assert_eq!(
-            host.read()
-                .document(sid)?
-                .get_binding(&dependency_fixture::id(6)),
-            before.get_binding(&dependency_fixture::id(6))
+            support::published_snapshot(&host, sid)?
+                .document()
+                .binding(&dependency_fixture::id(6)),
+            before.binding(&dependency_fixture::id(6))
         );
         editor.dispatch(editor.command(CommandId::Redo))?;
         assert_eq!(
-            host.read().document(sid)?.get_mesh(&mesh_id),
-            after.get_mesh(&mesh_id)
+            support::published_snapshot(&host, sid)?
+                .document()
+                .mesh(&mesh_id),
+            after.mesh(&mesh_id)
         );
     }
     Ok(())
@@ -2295,38 +2299,40 @@ fn manual_mesh_mixed_generation_preserves_glue_and_rejects_rebuild() -> anyhow::
             .is_err()
     );
     let host = doc.runtime_host();
-    let original = host.read().document(doc.runtime_session_id())?.clone();
+    let original = support::published_snapshot(&host, doc.runtime_session_id())?
+        .document()
+        .clone();
     let preview = source.generate(MeshGenerationOptions::ManualInterior(settings))?;
     assert!(
         preview
             .geometry()
             .vertex_ids
-            .starts_with(&original.get_mesh(&id(2)).unwrap().vertex_ids)
+            .starts_with(&original.mesh(&id(2)).unwrap().vertex_ids)
     );
     doc.preview_mesh_generation(&preview)?;
     doc.finish_edit()?; // saving/settling must not apply a generation preview
     assert_eq!(doc.history_lengths(), (0, 0));
     doc.clear_mesh_generation_preview();
     doc.apply_mesh_generation(&preview)?;
-    let model = host.read().document(doc.runtime_session_id())?.clone();
-    assert_eq!(original.get_glue(&id(30)), model.get_glue(&id(30)));
-    assert_eq!(original.get_glue(&id(32)), model.get_glue(&id(32)));
+    let model = support::published_snapshot(&host, doc.runtime_session_id())?
+        .document()
+        .clone();
+    assert_eq!(original.glue(&id(30)), model.glue(&id(30)));
+    assert_eq!(original.glue(&id(32)), model.glue(&id(32)));
     assert_eq!(
-        original.get_binding(&id(6)).unwrap().axes,
-        model.get_binding(&id(6)).unwrap().axes
+        original.binding(&id(6)).unwrap().axes,
+        model.binding(&id(6)).unwrap().axes
     );
     assert_eq!(
-        model.get_binding(&id(6)).unwrap().keyforms[0]
-            .positions
-            .len(),
-        model.get_mesh(&id(2)).unwrap().vertex_ids.len()
+        model.binding(&id(6)).unwrap().keyforms[0].positions.len(),
+        model.mesh(&id(2)).unwrap().vertex_ids.len()
     );
     doc.undo()?;
     assert_eq!(
-        host.read()
-            .document(doc.runtime_session_id())?
-            .get_mesh(&id(2)),
-        original.get_mesh(&id(2))
+        support::published_snapshot(&host, doc.runtime_session_id())?
+            .document()
+            .mesh(&id(2)),
+        original.mesh(&id(2))
     );
     Ok(())
 }
@@ -2431,18 +2437,14 @@ fn manual_mesh_source_resize_refits_uv_camera_and_rejects_old_generation() -> an
     let sid = d.runtime_session_id();
     let host = d.runtime_host();
     let client = host.write().register_client()?;
-    let image = host.read().session(sid)?.prepare_rgba_image(
+    let image = host.read().resources().prepare_rgba(
         192,
         64,
         std::sync::Arc::from(vec![255u8; 192 * 64 * 4]),
     )?;
-    let edit = host
-        .write()
-        .begin_edit(client, sid, "Replace image", None)?;
-    host.write().apply_edit(client, edit, |e| {
-        e.replace_prepared_image(&dependency_fixture::id(40), &image)
+    support::publish_host(&host, client, sid, "Replace image", |e| {
+        e.replace_image(&dependency_fixture::id(40), image)
     })?;
-    host.write().commit_edit(client, edit)?;
     editor.sync_runtime()?;
     let frame = editor.preview()?;
     let target = editor.manual_target().unwrap();
@@ -2479,14 +2481,17 @@ fn manual_mesh_alpha_rebuild_transfers_bound_shapes_and_enforces_domain() -> any
     let host = editor.runtime_host();
     let sid = editor.document().unwrap().runtime_session_id();
     let client = host.write().register_client()?;
-    let edit = host
-        .write()
-        .begin_edit(client, sid, "Release seams", None)?;
-    host.write().apply_edit(client, edit, |e| {
-        e.erase_object(&dependency_fixture::id(30))?;
-        e.erase_object(&dependency_fixture::id(32))
+    support::publish_host(&host, client, sid, "Release seams", |e| {
+        e.edit_scene(
+            zipzi_core::document::SceneEdit::Delete {
+                ids: vec![dependency_fixture::id(30), dependency_fixture::id(32)],
+                scope: Default::default(),
+            },
+            Default::default(),
+            &Default::default(),
+        )
+        .map(|_| ())
     })?;
-    host.write().commit_edit(client, edit)?;
     editor.sync_runtime()?;
     let object = ObjectRef::new(ObjectKind::Mesh, dependency_fixture::id(2));
     let doc = editor.document().unwrap();
@@ -2504,16 +2509,13 @@ fn manual_mesh_alpha_rebuild_transfers_bound_shapes_and_enforces_domain() -> any
     // must report a transfer-domain refusal rather than discard the bindings.
     assert!(preview.is_err());
     assert!(
-        host.read()
-            .document(sid)?
+        support::published_snapshot(&host, sid)?
+            .document()
             .binding_for_mesh(&object.id)
             .is_some()
     );
-    let edit = host
-        .write()
-        .begin_edit(client, sid, "Full image fixture coverage", None)?;
-    host.write().apply_edit(client, edit, |e| {
-        let mut mesh = e.candidate_document().get_mesh(&object.id).unwrap().clone();
+    support::publish_host(&host, client, sid, "Full image fixture coverage", |e| {
+        let mut mesh = e.read_document()?.mesh(&object.id).unwrap().clone();
         mesh.uvs[..4].copy_from_slice(&[
             Vec2::new(0., 0.),
             Vec2::new(1., 0.),
@@ -2522,7 +2524,6 @@ fn manual_mesh_alpha_rebuild_transfers_bound_shapes_and_enforces_domain() -> any
         ]);
         e.replace_mesh(mesh)
     })?;
-    host.write().commit_edit(client, edit)?;
     editor.sync_runtime()?;
     let doc = editor.document().unwrap();
     let source = doc.mesh_generation_source(&object)?;
@@ -2546,8 +2547,8 @@ fn manual_mesh_alpha_rebuild_transfers_bound_shapes_and_enforces_domain() -> any
         preview,
     )))?;
     assert_eq!(
-        host.read()
-            .document(sid)?
+        support::published_snapshot(&host, sid)?
+            .document()
             .binding_for_mesh(&object.id)
             .unwrap()
             .keyforms[1]
@@ -2558,12 +2559,11 @@ fn manual_mesh_alpha_rebuild_transfers_bound_shapes_and_enforces_domain() -> any
     Ok(())
 }
 
-fn model_mesh_document(editor: &Editor) -> zipzi_core::Document {
+fn model_mesh_document(editor: &Editor) -> zipzi_core::state::DocumentState {
     let d = editor.document().unwrap();
-    d.runtime_host()
-        .read()
-        .document(d.runtime_session_id())
+    support::published_snapshot(&d.runtime_host(), d.runtime_session_id())
         .unwrap()
+        .document()
         .clone()
 }
 
@@ -2581,15 +2581,11 @@ fn pose_editor() -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let host = editor.runtime_host();
     let sid = editor.document().unwrap().runtime_session_id();
     let client = host.write().register_client()?;
-    let edit = host
-        .write()
-        .begin_edit(client, sid, "Activate seam", None)?;
-    host.write().apply_edit(client, edit, |e| {
-        let mut g = e.candidate_document().get_glue(&id(30)).unwrap().clone();
+    support::publish_host(&host, client, sid, "Activate seam", |e| {
+        let mut g = e.read_document()?.glue(&id(30)).unwrap().clone();
         g.intensity = 0.6;
         e.replace_glue(g)
     })?;
-    host.write().commit_edit(client, edit)?;
     editor.sync_runtime()?;
     editor.enter_manual_mesh(editor.active_id().unwrap())?;
     Ok((editor, dir))
@@ -2615,33 +2611,32 @@ fn manual_mesh_model_edits_invert_small_rotations_at_large_origins() -> anyhow::
         let host = editor.runtime_host();
         let sid = editor.document().unwrap().runtime_session_id();
         let client = host.write().register_client()?;
-        let edit = host
-            .write()
-            .begin_edit(client, sid, "Small rotation", None)?;
-        host.write().apply_edit(client, edit, |e| {
-            e.create_transform(zipzi_core::Transform {
-                id: id(990),
-                data: zipzi_core::TransformData::Rotation(zipzi_core::RotationTransform {
-                    pose: zipzi_core::RotationPose {
-                        origin: Vec2::new(10_000., 10_000.).into(),
-                        angle,
-                        scale: 0.1,
-                        reflect_x,
-                        reflect_y,
-                    },
+        support::publish_host(&host, client, sid, "Small rotation", |e| {
+            crate::support::insert_transform(
+                e,
+                zipzi_core::Transform {
+                    id: id(990),
+                    data: zipzi_core::TransformData::Rotation(zipzi_core::RotationTransform {
+                        pose: zipzi_core::RotationPose {
+                            origin: Vec2::new(10_000., 10_000.).into(),
+                            angle,
+                            scale: 0.1,
+                            reflect_x,
+                            reflect_y,
+                        },
+                        ..Default::default()
+                    }),
                     ..Default::default()
-                }),
-                ..Default::default()
-            })?;
-            let mut m = e.candidate_document().get_mesh(&mesh().id).unwrap().clone();
+                },
+            )?;
+            let mut m = e.read_document()?.mesh(&mesh().id).unwrap().clone();
             m.deformer_id = id(990);
             e.replace_mesh(m)
         })?;
-        host.write().commit_edit(client, edit)?;
         editor.sync_runtime()?;
         editor.enter_manual_mesh(editor.active_id().unwrap())?;
         let original = model_mesh_document(&editor)
-            .get_mesh(&mesh().id)
+            .mesh(&mesh().id)
             .unwrap()
             .clone();
         let history = editor.document().unwrap().history_lengths();
@@ -2681,7 +2676,7 @@ fn manual_mesh_model_edits_invert_small_rotations_at_large_origins() -> anyhow::
         );
         crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
         let dragged = model_mesh_document(&editor)
-            .get_mesh(&mesh().id)
+            .mesh(&mesh().id)
             .unwrap()
             .clone();
         assert!((dragged.uvs[0].x - 0.2).hypot(dragged.uvs[0].y - 0.2) < 1e-4);
@@ -2698,7 +2693,7 @@ fn manual_mesh_model_edits_invert_small_rotations_at_large_origins() -> anyhow::
         };
         manual_click(&mut editor, frame.transform.to_viewport(target))?;
         let inserted = model_mesh_document(&editor)
-            .get_mesh(&mesh().id)
+            .mesh(&mesh().id)
             .unwrap()
             .clone();
         assert_eq!(inserted.vertex_ids.len(), 5, "{:?}", editor.canvas_notice());
@@ -2717,14 +2712,14 @@ fn manual_mesh_model_edits_invert_small_rotations_at_large_origins() -> anyhow::
         for expected in [&dragged, &original] {
             editor.execute(EditorCommand::Undo)?;
             assert_eq!(
-                model_mesh_document(&editor).get_mesh(&mesh().id),
+                model_mesh_document(&editor).mesh(&mesh().id),
                 Some(expected)
             );
         }
         for expected in [&dragged, &inserted] {
             editor.execute(EditorCommand::Redo)?;
             assert_eq!(
-                model_mesh_document(&editor).get_mesh(&mesh().id),
+                model_mesh_document(&editor).mesh(&mesh().id),
                 Some(expected)
             );
         }
@@ -2753,16 +2748,11 @@ fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -
             .collect();
         let local =
             zipzi_core::evaluation::authoring_mesh_positions(&before, &id(2), &values).unwrap();
-        let r = before
-            .get_transform(&id(3))
-            .unwrap()
-            .rotation()
-            .unwrap()
-            .pose;
+        let r = before.transform(&id(3)).unwrap().rotation().unwrap().pose;
         let (sin, cos) = r.angle.to_radians().sin_cos();
         let x = (local[4].x - local[0].x) * 0.15;
         let y = (local[4].y - local[0].y) * 0.15;
-        let gain = 1. - before.get_glue(&id(30)).unwrap().intensity * 0.3;
+        let gain = 1. - before.glue(&id(30)).unwrap().intensity * 0.3;
         let delta = ModelVector {
             x: (x * cos - y * sin) * r.scale * gain,
             y: (x * sin + y * cos) * r.scale * gain,
@@ -2808,8 +2798,8 @@ fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -
                 },
             )?;
             assert_eq!(
-                model_mesh_document(&editor).get_mesh(&id(2)),
-                valid.get_mesh(&id(2))
+                model_mesh_document(&editor).mesh(&id(2)),
+                valid.mesh(&id(2))
             );
             assert!(editor.canvas_notice().is_some());
         }
@@ -2829,21 +2819,21 @@ fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -
         );
         crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
         let after = model_mesh_document(&editor);
-        let m = after.get_mesh(&id(2)).unwrap();
+        let m = after.mesh(&id(2)).unwrap();
         let expected = Vec2::new(0.145, 0.1525);
         assert!(
             (m.uvs[0].x - expected.x).hypot(m.uvs[0].y - expected.y) < 2e-5,
             "{:?}",
             m.uvs[0]
         );
-        assert_eq!(before.get_glue(&id(30)), after.get_glue(&id(30)));
-        assert_eq!(before.get_glue(&id(32)), after.get_glue(&id(32)));
-        assert_eq!(before.get_transform(&id(3)), after.get_transform(&id(3)));
+        assert_eq!(before.glue(&id(30)), after.glue(&id(30)));
+        assert_eq!(before.glue(&id(32)), after.glue(&id(32)));
+        assert_eq!(before.transform(&id(3)), after.transform(&id(3)));
         for n in [12, 22] {
-            let DeltaKeyforms::Mesh(a) = &before.get_blend_binding(&id(n)).unwrap().keyforms else {
+            let DeltaKeyforms::Mesh(a) = &before.blend_binding(&id(n)).unwrap().keyforms else {
                 panic!()
             };
-            let DeltaKeyforms::Mesh(b) = &after.get_blend_binding(&id(n)).unwrap().keyforms else {
+            let DeltaKeyforms::Mesh(b) = &after.blend_binding(&id(n)).unwrap().keyforms else {
                 panic!()
             };
             for (a, b) in a.iter().zip(b) {
@@ -2854,15 +2844,15 @@ fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -
             }
         }
         assert_eq!(
-            before.get_binding(&id(6)).unwrap().axes,
-            after.get_binding(&id(6)).unwrap().axes
+            before.binding(&id(6)).unwrap().axes,
+            after.binding(&id(6)).unwrap().axes
         );
         for (a, b) in before
-            .get_binding(&id(6))
+            .binding(&id(6))
             .unwrap()
             .keyforms
             .iter()
-            .zip(&after.get_binding(&id(6)).unwrap().keyforms)
+            .zip(&after.binding(&id(6)).unwrap().keyforms)
         {
             assert_eq!(
                 (&a.keys, &a.samples, a.appearance, a.draw_order),
@@ -2875,36 +2865,33 @@ fn manual_mesh_model_drag_inverts_mixed_pose_and_glue_from_one_frozen_source() -
         );
         editor.execute(EditorCommand::Undo)?;
         assert_eq!(
-            model_mesh_document(&editor).get_mesh(&id(2)),
-            before.get_mesh(&id(2))
+            model_mesh_document(&editor).mesh(&id(2)),
+            before.mesh(&id(2))
         );
         editor.execute(EditorCommand::Redo)?;
         assert_eq!(
-            model_mesh_document(&editor).get_mesh(&id(2)),
-            after.get_mesh(&id(2))
+            model_mesh_document(&editor).mesh(&id(2)),
+            after.mesh(&id(2))
         );
         final_models.push(after);
     }
-    assert_eq!(
-        final_models[0].get_mesh(&id(2)),
-        final_models[1].get_mesh(&id(2))
-    );
+    assert_eq!(final_models[0].mesh(&id(2)), final_models[1].mesh(&id(2)));
     // Each independently installed fixture owns fresh sample identities.
     for (a, b) in final_models[0]
-        .get_binding(&id(6))
+        .binding(&id(6))
         .unwrap()
         .keyforms
         .iter()
-        .zip(&final_models[1].get_binding(&id(6)).unwrap().keyforms)
+        .zip(&final_models[1].binding(&id(6)).unwrap().keyforms)
     {
         assert_eq!(a.positions, b.positions);
     }
     for n in [12, 22] {
-        let DeltaKeyforms::Mesh(a) = &final_models[0].get_blend_binding(&id(n)).unwrap().keyforms
+        let DeltaKeyforms::Mesh(a) = &final_models[0].blend_binding(&id(n)).unwrap().keyforms
         else {
             panic!()
         };
-        let DeltaKeyforms::Mesh(b) = &final_models[1].get_blend_binding(&id(n)).unwrap().keyforms
+        let DeltaKeyforms::Mesh(b) = &final_models[1].blend_binding(&id(n)).unwrap().keyforms
         else {
             panic!()
         };
@@ -2929,7 +2916,7 @@ fn manual_mesh_model_insertion_maps_displayed_pose_back_to_uv() -> anyhow::Resul
     };
     manual_click(&mut editor, frame.transform.to_viewport(target))?;
     let after = model_mesh_document(&editor);
-    let mesh = after.get_mesh(&id(2)).unwrap();
+    let mesh = after.mesh(&id(2)).unwrap();
     assert_eq!(mesh.vertex_ids.len(), 6, "{:?}", editor.canvas_notice());
     let expected = Vec2::new((0.9 + 0.1 + 0.4) / 3., (0.9 + 0.9 + 0.45) / 3.);
     assert!((mesh.uvs[5].x - expected.x).hypot(mesh.uvs[5].y - expected.y) < 2e-5);
@@ -2938,16 +2925,14 @@ fn manual_mesh_model_insertion_maps_displayed_pose_back_to_uv() -> anyhow::Resul
     assert!((actual.x - target.x).hypot(actual.y - target.y) < 0.002);
     assert_eq!(frame.geometry.meshes.len(), 2);
     for n in [30, 32] {
-        assert_eq!(before.get_glue(&id(n)), after.get_glue(&id(n)));
+        assert_eq!(before.glue(&id(n)), after.glue(&id(n)));
     }
     assert_eq!(
-        after.get_binding(&id(6)).unwrap().keyforms[1]
-            .positions
-            .len(),
+        after.binding(&id(6)).unwrap().keyforms[1].positions.len(),
         6
     );
     for n in [12, 22] {
-        let DeltaKeyforms::Mesh(forms) = &after.get_blend_binding(&id(n)).unwrap().keyforms else {
+        let DeltaKeyforms::Mesh(forms) = &after.blend_binding(&id(n)).unwrap().keyforms else {
             panic!()
         };
         assert!(forms.iter().all(|f| f.positions.len() == 6));
@@ -2968,30 +2953,31 @@ fn manual_mesh_model_drag_and_insertion_invert_nonlinear_parent() -> anyhow::Res
     let host = editor.runtime_host();
     let sid = editor.document().unwrap().runtime_session_id();
     let client = host.write().register_client()?;
-    let edit = host.write().begin_edit(client, sid, "Warp fixture", None)?;
-    host.write().apply_edit(client, edit, |e| {
-        e.create_transform(zipzi_core::Transform {
-            id: id(990),
-            data: zipzi_core::TransformData::Warp(zipzi_core::WarpTransform {
-                rows: 1,
-                columns: 1,
-                quad: true,
-                bezier: None,
-                points: vec![
-                    Vec2::new(0., 0.),
-                    Vec2::new(200., 0.),
-                    Vec2::new(0., 200.),
-                    Vec2::new(260., 240.),
-                ],
-            }),
-            ..Default::default()
-        })?;
-        let mut m = e.candidate_document().get_mesh(&mesh().id).unwrap().clone();
+    support::publish_host(&host, client, sid, "Warp fixture", |e| {
+        crate::support::insert_transform(
+            e,
+            zipzi_core::Transform {
+                id: id(990),
+                data: zipzi_core::TransformData::Warp(zipzi_core::WarpTransform {
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    bezier: None,
+                    points: vec![
+                        Vec2::new(0., 0.),
+                        Vec2::new(200., 0.),
+                        Vec2::new(0., 200.),
+                        Vec2::new(260., 240.),
+                    ],
+                }),
+                ..Default::default()
+            },
+        )?;
+        let mut m = e.read_document()?.mesh(&mesh().id).unwrap().clone();
         m.base_positions = m.uvs.clone();
         m.deformer_id = id(990);
         e.replace_mesh(m)
     })?;
-    host.write().commit_edit(client, edit)?;
     editor.sync_runtime()?;
     editor.enter_manual_mesh(editor.active_id().unwrap())?;
     let frame = crate::support::present_canvas(&mut editor)?;
@@ -3002,7 +2988,7 @@ fn manual_mesh_model_drag_and_insertion_invert_nonlinear_parent() -> anyhow::Res
     };
     manual_click(&mut editor, frame.transform.to_viewport(target))?;
     let m = model_mesh_document(&editor)
-        .get_mesh(&mesh().id)
+        .mesh(&mesh().id)
         .unwrap()
         .clone();
     assert_eq!(m.vertex_ids.len(), 5, "{:?}", editor.canvas_notice());
@@ -3044,7 +3030,7 @@ fn manual_mesh_model_drag_and_insertion_invert_nonlinear_parent() -> anyhow::Res
         editor.canvas_notice()
     );
     let m = model_mesh_document(&editor)
-        .get_mesh(&mesh().id)
+        .mesh(&mesh().id)
         .unwrap()
         .clone();
     assert!((m.uvs[4].x - 0.4).hypot(m.uvs[4].y - 0.3) < 2e-5);
@@ -3065,9 +3051,8 @@ fn manual_mesh_folded_pose_refuses_ambiguous_click_and_source_view_recovers() ->
     let host = editor.runtime_host();
     let sid = editor.document().unwrap().runtime_session_id();
     let client = host.write().register_client()?;
-    let edit = host.write().begin_edit(client, sid, "Fold fixture", None)?;
-    host.write().apply_edit(client, edit, |e| {
-        let mut m = e.candidate_document().get_mesh(&mesh().id).unwrap().clone();
+    support::publish_host(&host, client, sid, "Fold fixture", |e| {
+        let mut m = e.read_document()?.mesh(&mesh().id).unwrap().clone();
         m.base_positions = vec![
             Vec2::new(0., 0.),
             Vec2::new(100., 0.),
@@ -3076,7 +3061,6 @@ fn manual_mesh_folded_pose_refuses_ambiguous_click_and_source_view_recovers() ->
         ];
         e.replace_mesh(m)
     })?;
-    host.write().commit_edit(client, edit)?;
     editor.sync_runtime()?;
     let before = model_mesh_document(&editor);
     let history = editor.document().unwrap().history_lengths();
@@ -3087,8 +3071,8 @@ fn manual_mesh_folded_pose_refuses_ambiguous_click_and_source_view_recovers() ->
         frame.transform.to_viewport(ModelPoint { x: 65., y: 30. }),
     )?;
     assert_eq!(
-        model_mesh_document(&editor).get_mesh(&mesh().id),
-        before.get_mesh(&mesh().id)
+        model_mesh_document(&editor).mesh(&mesh().id),
+        before.mesh(&mesh().id)
     );
     assert_eq!(editor.document().unwrap().history_lengths(), history);
     assert!(editor.canvas_notice().unwrap().contains("overlap"));
@@ -3103,7 +3087,7 @@ fn manual_mesh_folded_pose_refuses_ambiguous_click_and_source_view_recovers() ->
     )?;
     assert_eq!(
         model_mesh_document(&editor)
-            .get_mesh(&mesh().id)
+            .mesh(&mesh().id)
             .unwrap()
             .vertex_ids
             .len(),
@@ -3216,8 +3200,8 @@ fn manual_mesh_drag_reuses_panel_records_and_unchanged_connectivity() -> anyhow:
     );
     editor.cancel_gesture();
     assert_eq!(
-        model_mesh_document(&editor).get_mesh(&id(2)),
-        original.get_mesh(&id(2))
+        model_mesh_document(&editor).mesh(&id(2)),
+        original.mesh(&id(2))
     );
     // Inspect the candidate before commit, when retained panels must stay shared.
     let (mut document, _assets) = mixed_dependency_document()?;

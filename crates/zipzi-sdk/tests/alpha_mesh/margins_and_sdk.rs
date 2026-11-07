@@ -67,58 +67,77 @@ fn representative_padded_fragmented_masks_do_not_create_degenerate_meshes() {
 
 #[test]
 fn generated_geometry_is_accepted_by_sdk_and_undo_redo_restores_it() {
-    use zipzi_core::Canvas;
-    use zipzi_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, TopologyReplacement};
+    use zipzi_core::{state::DocumentState, ModelSetup};
+    use zipzi_sdk::{rectangle_mesh, AuthoringSession, ResourceStore, ResourceView, Snapshot};
     const DOCUMENT: &str = "00000000-0000-4000-8000-000000000701";
     const ASSET: &str = "00000000-0000-4000-8000-000000000702";
     const MESH: &str = "00000000-0000-4000-8000-000000000703";
     let path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
-    let asset = prepare_png_asset(ASSET, "source", &path).unwrap();
-    let original = rectangle_mesh(
-        MESH,
-        "source",
-        ASSET,
-        Vec2::new(0.0, 0.0),
-        Vec2::new(2.0, 2.0),
-    )
-    .unwrap();
-    let mut session =
-        AuthoringSession::new(DOCUMENT, Canvas::new(2.0, 2.0, Vec2::new(1.0, 1.0), 1.0)).unwrap();
-    session
-        .edit("source", None, |edit| {
-            edit.create_asset(asset)?;
-            edit.create_mesh(original.clone())
+    let image = ResourceStore::default().import_image(&path).unwrap();
+    let original =
+        rectangle_mesh(MESH, "source", ASSET, Vec2::new(0., 0.), Vec2::new(2., 2.)).unwrap();
+    let mut session = AuthoringSession::new(
+        Snapshot::new(
+            DocumentState::new(DOCUMENT, ModelSetup::default()).unwrap(),
+            ResourceView::default(),
+        )
+        .unwrap(),
+    );
+    let mut draft = session.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            c.create_empty_asset(ASSET.into(), "source".into())?;
+            c.replace_image(ASSET, image)?;
+            c.create_mesh(original.clone())
         })
         .unwrap();
-    let original = session.mesh(MESH).unwrap();
-    let snapshot = session.geometry(MESH).unwrap();
-    let geometry = generate(2, 2, &[255, 0, 255, 255], &options());
-    let mut replacement = original.clone();
-    replacement.vertex_ids = geometry.vertex_ids;
-    replacement.base_positions = geometry.positions;
-    replacement.uvs = geometry.uvs;
-    replacement.triangles = geometry.triangles;
-    session
-        .edit("alpha topology", Some(snapshot.version), |edit| {
-            edit.replace_topology(
-                &snapshot,
-                TopologyReplacement {
-                    mesh: replacement.clone(),
-                    binding: None,
-                    blend_bindings: vec![],
-                    glues: vec![],
-                    vertex_mapping: snapshot.vertex_ids.iter().map(|&id| (id, None)).collect(),
-                },
-            )
+    session.publish(draft.prepare("source").unwrap()).unwrap();
+    let mut geometry = generate(2, 2, &[255, 0, 255, 255], &options());
+    // A rebuilt mesh uses fresh vertex identities, even if generator slots coincide.
+    let ids: std::collections::HashMap<_, _> = geometry
+        .vertex_ids
+        .iter()
+        .enumerate()
+        .map(|(i, id)| (*id, 100 + i as u32))
+        .collect();
+    for id in &mut geometry.vertex_ids {
+        *id = ids[id];
+    }
+    for triangle in &mut geometry.triangles {
+        for id in triangle {
+            *id = ids[id];
+        }
+    }
+    if let Some(topology) = &mut geometry.meshing {
+        for id in &mut topology.boundary {
+            *id = ids[id];
+        }
+        for edge in &mut topology.constraints {
+            for id in &mut edge.endpoints {
+                *id = ids[id];
+            }
+        }
+    }
+    let mut draft = session.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            c.remesh(MESH, geometry, Default::default(), &Default::default())?;
+            Ok(())
         })
         .unwrap();
-    assert!(session.validate_structure().is_empty());
-    assert_eq!(session.mesh(MESH).unwrap(), replacement);
-    session.undo().unwrap();
-    assert_eq!(session.mesh(MESH).unwrap(), original);
-    session.redo().unwrap();
-    assert_eq!(session.mesh(MESH).unwrap(), replacement);
+    session
+        .publish(draft.prepare("alpha topology").unwrap())
+        .unwrap();
+    let replacement = session.snapshot().document().mesh(MESH).unwrap().clone();
+    assert_ne!(replacement.vertex_ids, original.vertex_ids);
+    session.undo(session.version()).unwrap();
+    assert_eq!(session.snapshot().document().mesh(MESH).unwrap(), &original);
+    session.redo(session.version()).unwrap();
+    assert_eq!(
+        session.snapshot().document().mesh(MESH).unwrap(),
+        &replacement
+    );
 }
 
 #[test]

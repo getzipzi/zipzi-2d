@@ -2,8 +2,8 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::Status;
-use zipzi_core::Document;
 
 use crate::filesystem::{self as io, FileSystem, NativeFileSystem, Publication};
 
@@ -48,7 +48,7 @@ impl PackageValidation {
 pub type PackageValidator = Box<dyn Fn(&ExportPlan) -> Result<PackageValidation, Status>>;
 
 pub struct PackageOptions {
-    pub asset_root: PathBuf,
+    pub resources: crate::ResourceView,
     pub destination: PathBuf,
     pub validate: Option<PackageValidator>,
 }
@@ -60,12 +60,15 @@ pub use plan::{
     PackageReference,
 };
 
-pub fn publish_package(doc: &Document, options: &PackageOptions) -> Result<Publication, Status> {
+pub fn publish_package(
+    doc: &DocumentState,
+    options: &PackageOptions,
+) -> Result<Publication, Status> {
     publish_with_filesystem(doc, options, &NativeFileSystem)
 }
 
 pub(crate) fn publish_with_filesystem(
-    doc: &Document,
+    doc: &DocumentState,
     options: &PackageOptions,
     files: &dyn FileSystem,
 ) -> Result<Publication, Status> {
@@ -75,26 +78,7 @@ pub(crate) fn publish_with_filesystem(
             "Package publication requires an explicit validation gate",
         )
     })?;
-    let plan = build_export_plan(doc, &options.asset_root)?;
-    publish_plan_with_filesystem(&plan, &options.destination, validate.as_ref(), files, false)
-}
-
-/// Session publication resolves both extracted drafts and on-disk resources.
-pub(crate) fn publish_with_resources(
-    doc: &Document,
-    options: &PackageOptions,
-    files: &dyn FileSystem,
-    read: &dyn Fn(&zipzi_core::ImageAsset) -> Result<crate::AssetData, Status>,
-    protected: &[PathBuf],
-) -> Result<Publication, Status> {
-    let validate = options.validate.as_ref().ok_or_else(|| {
-        Status::error(
-            "MISSING_VALIDATOR",
-            "Package publication requires an explicit validation gate",
-        )
-    })?;
-    let mut plan = build_export_plan_with(doc, &options.asset_root, read)?;
-    plan.source_paths.extend_from_slice(protected);
+    let plan = build_export_plan(doc, &options.resources)?;
     publish_plan_with_filesystem(&plan, &options.destination, validate.as_ref(), files, false)
 }
 
@@ -298,3 +282,6 @@ mod path_tests {
         assert!(directories.contains("motions/audio"));
     }
 }
+
+#[cfg(test)]
+mod publication_tests;

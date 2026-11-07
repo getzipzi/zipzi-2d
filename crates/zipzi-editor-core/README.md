@@ -1,8 +1,9 @@
 # zipzi-editor-core
 
-UI-independent Editor coordination built on `zipzi-sdk`, `zipzi-core` and
-`zipzi-project`. This crate owns open documents, editing sessions, previews,
-selection, tools and workspace state. It has no GPUI or Metal dependency.
+UI-independent Editor coordination built on the resident `zipzi-runtime`
+host. This crate owns document views, previews, selection, tools and workspace
+state. Runtime owns the formal SDK sessions and their history. EditorCore has
+no GPUI or Metal dependency.
 
 The public `Editor` coordinates documents and load/save work. `Document` exposes
 Editor authoring operations backed by SDK sessions. `SceneSnapshot`, `ViewState`
@@ -51,11 +52,23 @@ Licensed **GPL-3.0-only**; not published to crates.io. See
 
 ## Runtime ownership
 
-`RuntimeHost` owns the sole formal SDK/history. `Document` holds a SessionId
+`RuntimeHost` owns the sole formal SDK/history. `Document` holds a SessionKey
 adapter, view projections, selection and preview state; formal writes and event
 consumption pass through Runtime. `Editor::with_runtime` attaches a workspace to
 an application host. `detach_document` retains resident content/history, while
 explicit close releases it after save/discard coordination.
+
+View reads capture immutable snapshots. Gestures use Runtime `DraftSource`
+values, and another client can publish and invalidate a captured candidate.
+Save admission can hold a gesture for retry. Textures come from the captured
+resource version. A confirmation owns the Draft snapshot it displays, and
+field captures contain stable IDs, expected values and the full Version.
+Conversion, deletion and mesh workers prepare candidates, and publication
+invalidates projections through the WriteSet.
+
+The `authoring_kernel` target covers native confirmation and resource workflows.
+The `integration` target covers synthetic Editor workflows. The `acceptance`
+target adds import, export, and licensed-model cases.
 
 Background load/save tasks carry Runtime Work, never Editor view state. Publish
 a Completion into Runtime before attempting a weak view callback.
@@ -66,5 +79,5 @@ workers prepare textures/object indexes before returning to the UI.
 Focused lifecycle regressions:
 
 ```sh
-env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration runtime::
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test authoring_kernel
 ```

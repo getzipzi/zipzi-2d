@@ -1345,24 +1345,25 @@ fn native_rotation_scale_in_a_mixed_selection_never_writes_the_mesh() -> anyhow:
 fn rotation_steps_follow_canvas_motion_under_a_reflected_parent() -> anyhow::Result<()> {
     let (mut document, dir, warp, rotation, _) = rich_document()?;
     let saved = document.save(&dir.path().join("reflection"))?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let mut parent = sdk.transform(&warp).unwrap();
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    let mut parent = sdk.snapshot().document().transform(&warp).unwrap().clone();
     for p in &mut parent.warp_mut().unwrap().points {
         p.x = 256. - p.x;
     }
-    let mut child = sdk.transform(&rotation).unwrap();
+    let mut child = sdk
+        .snapshot()
+        .document()
+        .transform(&rotation)
+        .unwrap()
+        .clone();
     child.parent_id = Some(warp.clone().into());
     child.rotation_mut().unwrap().pose.origin = zipzi_core::PreciseVec2::new(0.5, 0.5);
-    sdk.edit("Reflected fixture", None, |e| {
+    crate::support::publish_fixture(&mut sdk, "Reflected fixture", |e| {
         e.replace_transform(parent)?;
         e.replace_transform(child)?;
         Ok(())
     })?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     for axis in [false, true] {
         let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
         editor.set_canvas_metrics(ViewportMetrics {

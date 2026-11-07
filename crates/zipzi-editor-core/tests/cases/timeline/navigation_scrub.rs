@@ -1,7 +1,7 @@
 use super::common::*;
 use std::sync::Arc;
+use zipzi_animation::MotionPreview;
 use zipzi_editor_core::*;
-use zipzi_sdk::MotionPreview;
 
 #[test]
 fn navigation_and_selection_share_rows_but_visibility_changes_rebuild_them() -> anyhow::Result<()> {
@@ -81,8 +81,9 @@ fn channel_value_scrubs_share_model_rows_and_unchanged_tracks_without_mutating_o
             request
                 .source
                 .snapshot
+                .snapshot
                 .document()
-                .get_motion(&id(4))
+                .motion(&id(4))
                 .unwrap()
                 .tracks[0]
                 .segments[0]
@@ -150,7 +151,7 @@ fn first_channel_key_updates_layout_once_then_reuses_it_during_scrubbing() -> an
 }
 
 #[test]
-fn result_candidate_uses_its_immutable_overlay_and_materializes_only_once() -> anyhow::Result<()> {
+fn result_candidate_uses_its_captured_draft_snapshot() -> anyhow::Result<()> {
     let (mut editor, _assets) = fixture(false, false)?;
     let document = editor.active_id().unwrap();
     editor.set_animation_preview_mode(document, AnimationPreviewMode::Result)?;
@@ -164,12 +165,9 @@ fn result_candidate_uses_its_immutable_overlay_and_materializes_only_once() -> a
     let mut evaluator = AnimationEvaluator::default();
     for request in &requests {
         let actual = evaluator.evaluate(request, |_, _| true)?;
-        let snapshot = request.source.materialized_snapshot()?;
-        assert!(Arc::ptr_eq(
-            &snapshot,
-            &request.source.materialized_snapshot()?
-        ));
-        assert!(!Arc::ptr_eq(&snapshot, &request.source.snapshot));
+        let snapshot = request.source.evaluation_snapshot();
+        assert!(std::ptr::eq(snapshot, request.source.evaluation_snapshot()));
+        assert!(!std::ptr::eq(snapshot, &request.source.snapshot.snapshot));
         let mut expected = MotionPreview::new(snapshot.document());
         expected.schedule_motion(&id(4), 0.)?;
         assert_eq!(
@@ -178,13 +176,33 @@ fn result_candidate_uses_its_immutable_overlay_and_materializes_only_once() -> a
         );
     }
     assert_eq!(
-        requests[0].source.candidate.as_ref().unwrap().clip().tracks[0].segments[0]
+        requests[0]
+            .source
+            .candidate
+            .as_ref()
+            .unwrap()
+            .snapshot
+            .document()
+            .motion(&id(4))
+            .unwrap()
+            .tracks[0]
+            .segments[0]
             .end()
             .value,
         0.7
     );
     assert_eq!(
-        requests[1].source.candidate.as_ref().unwrap().clip().tracks[0].segments[0]
+        requests[1]
+            .source
+            .candidate
+            .as_ref()
+            .unwrap()
+            .snapshot
+            .document()
+            .motion(&id(4))
+            .unwrap()
+            .tracks[0]
+            .segments[0]
             .end()
             .value,
         1.1
@@ -192,9 +210,9 @@ fn result_candidate_uses_its_immutable_overlay_and_materializes_only_once() -> a
     editor.cancel_timeline_edit();
     let restored = editor.animation_request().unwrap();
     assert!(restored.source.candidate.is_none());
-    assert!(Arc::ptr_eq(
-        &restored.source.snapshot,
-        &restored.source.materialized_snapshot()?
+    assert!(std::ptr::eq(
+        &restored.source.snapshot.snapshot,
+        restored.source.evaluation_snapshot()
     ));
     Ok(())
 }
@@ -247,10 +265,10 @@ fn camera_navigation_preserves_candidate_identity_and_history_boundary() -> anyh
         },
     )?;
     let identity = editor.timeline_edit().unwrap().identity;
-    let candidate = editor.timeline_edit().unwrap().candidate.clip().clone();
+    let candidate = editor.timeline_edit().unwrap().candidate.clone();
     editor.navigate_timeline_view(document, (0.2, 0.7), 26.)?;
     assert_eq!(editor.timeline_edit().unwrap().identity, identity);
-    assert_eq!(editor.timeline_edit().unwrap().candidate.clip(), &candidate);
+    assert_eq!(&editor.timeline_edit().unwrap().candidate, &candidate);
     assert_eq!(
         editor
             .document()

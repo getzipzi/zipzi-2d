@@ -1,5 +1,9 @@
 use zipzi_core::SceneTrackEvaluation;
 mod evaluator;
+mod model;
+mod projection;
+pub use model::EvaluationModel;
+pub(crate) use projection::build_scene_projection;
 mod glue;
 mod glue_controls;
 mod meshes;
@@ -16,7 +20,7 @@ pub use evaluator::{
     evaluate_frame, evaluate_frame_including_hidden, EvaluationTimings, FrameEvaluator,
 };
 pub use glue_controls::{evaluated_glue_operations, GlueOperation};
-pub(crate) use prepared::PreparedEvaluation;
+pub use prepared::PreparedEvaluation;
 pub use selection::evaluate_blend_binding;
 pub use types::{
     parent_origin, parent_positions, Drawable, DrawableFrame, EvaluatedDeformer,
@@ -25,7 +29,7 @@ pub use types::{
 
 /// Native parameter-only edit snapshot, before parent inheritance and Glue.
 pub(crate) fn authoring_rotation_pose(
-    doc: &crate::Document,
+    doc: &impl EvaluationModel,
     id: &str,
     values: &PreviewValues,
 ) -> crate::RotationPose {
@@ -83,7 +87,7 @@ pub(crate) fn authoring_rotation_pose(
 
 /// Native Warp lattice at fixed parameter inputs, before parent inheritance.
 pub(crate) fn authoring_warp_positions(
-    doc: &crate::Document,
+    doc: &impl EvaluationModel,
     id: &str,
     values: &PreviewValues,
 ) -> Result<Vec<crate::Vec2>, crate::Status> {
@@ -121,7 +125,10 @@ pub(crate) fn authoring_warp_positions(
 pub(crate) fn normalize_authoring_parameter(parameter: &crate::Parameter, value: f32) -> f32 {
     parameters::normalize(parameter, value).0
 }
-fn normalized_authoring_values(doc: &crate::Document, values: &PreviewValues) -> PreviewValues {
+fn normalized_authoring_values(
+    doc: &impl EvaluationModel,
+    values: &PreviewValues,
+) -> PreviewValues {
     values
         .iter()
         .map(|(id, &v)| {
@@ -134,7 +141,7 @@ fn normalized_authoring_values(doc: &crate::Document, values: &PreviewValues) ->
 }
 /// Geometry inspection does not require texture content or renderability.
 pub fn authoring_mesh_positions(
-    doc: &crate::Document,
+    doc: &impl EvaluationModel,
     id: &str,
     values: &PreviewValues,
 ) -> Result<Vec<crate::Vec2>, crate::Status> {

@@ -15,13 +15,26 @@ fn external_io_restores_a_paused_animation_target_without_changing_its_clock() -
     let session = editor.document().unwrap().runtime_session_id();
     let client = host.write().register_client()?;
     let folder = tempfile::tempdir()?;
-    let job = host
-        .write()
-        .request_save(client, session, &folder.path().join("project.zipzi"))?;
+    let (expected, io) = {
+        let runtime = host.read();
+        (
+            runtime.session_read(host.client_id(), session)?.version(),
+            runtime.project_io().clone(),
+        )
+    };
+    host.write().attach(client, session)?;
+    let job = host.write().request_save_as(
+        client,
+        expected,
+        &io,
+        &folder.path().join("project.zipzi"),
+        None,
+        Default::default(),
+    )?;
     let work = host.write().take_work(job)?;
     assert!(editor.sync_runtime()?);
     assert!(editor.animation_request().is_none());
-    assert!(host.write().complete(work.run()));
+    host.write().complete(work.run()).unwrap();
     assert!(editor.sync_runtime()?);
     let restored = editor
         .animation_request()

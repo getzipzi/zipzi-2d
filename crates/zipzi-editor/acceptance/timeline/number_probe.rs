@@ -81,7 +81,6 @@ pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
         let mut sampling = Vec::new();
         let mut geometry = Vec::new();
         let mut cached_geometry = Vec::new();
-        let mut snapshot_copy = Vec::new();
         let mut projection_build = Vec::new();
         let mut evaluator = AnimationEvaluator::default();
         let mut candidate_evaluate = Vec::new();
@@ -104,15 +103,6 @@ pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
             let start = Instant::now();
             evaluator.evaluate(&request, |_, _| true)?;
             candidate_evaluate.push(elapsed(start));
-            let current_candidate = h.view.read_with(&h.cx, |v, _| {
-                v.editor.timeline_edit().unwrap().candidate.clone()
-            });
-            let start = Instant::now();
-            request
-                .source
-                .snapshot
-                .with_motion_candidate(&current_candidate)?;
-            snapshot_copy.push(elapsed(start));
             let start = Instant::now();
             h.view.read_with(&h.cx, |v, _| {
                 zipzi_editor_core::TimelineProjection::new(
@@ -122,16 +112,16 @@ pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
             })?;
             projection_build.push(elapsed(start));
             let start = Instant::now();
-            let mut preview =
-                zipzi_sdk::MotionEditingPreview::new(request.source.snapshot.document());
+            let mut preview = zipzi_animation::MotionEditingPreview::new(request.source.document());
             creation.push(elapsed(start));
             let start = Instant::now();
             preview.sample_clip(
-                request
-                    .source
-                    .candidate
-                    .as_ref()
-                    .map(|candidate| candidate.clip()),
+                request.source.candidate.as_ref().and_then(|candidate| {
+                    request
+                        .motion
+                        .as_ref()
+                        .and_then(|motion| candidate.snapshot.document().motion(&motion.clip_id))
+                }),
                 request.identity.time,
             )?;
             sampling.push(elapsed(start));
@@ -153,7 +143,6 @@ pub(super) fn run(h: &mut Harness, samples: usize) -> anyhow::Result<Value> {
                 "candidate_update":stats(&candidate), "editing_preview_new":stats(&creation),
                 "motion_sample":stats(&sampling), "first_geometry":stats(&geometry),
                 "repeated_geometry_same_preview":stats(&cached_geometry),
-                "isolated_snapshot_candidate_copy":stats(&snapshot_copy),
                 "committed_projection_rebuild":stats(&projection_build),
                 "cached_candidate_evaluate":stats(&candidate_evaluate),
             }),

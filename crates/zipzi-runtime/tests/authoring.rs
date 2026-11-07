@@ -1,943 +1,663 @@
-use zipzi_core::{ModelSetup, Vec2};
-use zipzi_runtime::authoring::{EditOperation, ParameterQuery};
-use zipzi_runtime::authoring::{MeshBindingQuery, ModelingSampleQuery};
+use serde_json::{json, Value};
+use zipzi_contract::{
+    authoring::ObjectKind,
+    kernel_commands::{Command, ObjectAddress},
+    kernel_tasks::{SampleInput, SampleRequest},
+    kernel_wire::{Operation, Query},
+};
+use zipzi_core::{MeshConstraint, MeshConstraintKind, MeshMeshing, Vec2};
 use zipzi_runtime::*;
-use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation};
-use zipzi_sdk::{ParameterCreateSpec, ParameterOperation, ParameterPatch};
-
-#[test]
-fn manual_mesh_command_requires_exact_candidate_identity_and_sequence() {
-    use zipzi_core::Mesh;
-    use zipzi_runtime::modeling::ModelingCommand;
-    use zipzi_sdk::ManualMeshOperation;
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let create = rt.begin_edit(client, session, "create mesh", None).unwrap();
-    rt.apply_edit(client, create, |edit| {
-        edit.create_mesh(Mesh {
-            id: id(2),
-            vertex_ids: vec![0, 1, 2, 3],
-            base_positions: vec![
-                Vec2::new(0., 0.),
-                Vec2::new(1., 0.),
-                Vec2::new(1., 1.),
-                Vec2::new(0., 1.),
-            ],
-            uvs: vec![
-                Vec2::new(0., 0.),
-                Vec2::new(1., 0.),
-                Vec2::new(1., 1.),
-                Vec2::new(0., 1.),
-            ],
-            triangles: vec![[0, 1, 2], [0, 2, 3]],
-            ..Default::default()
-        })
-    })
-    .unwrap();
-    rt.commit_edit(client, create).unwrap();
-    let a = rt.begin_edit(client, session, "manual", None).unwrap();
-    let other = rt.register_client().unwrap();
-    let b = rt.begin_edit(other, session, "other", None).unwrap();
-    let source_a = rt.edit_snapshot(client, a).unwrap().source;
-    let source_b = rt.edit_snapshot(other, b).unwrap().source;
-    let command = |expected, operation| ModelingCommand::ManualMesh {
-        mesh_id: id(2),
-        expected,
-        operation,
-    };
-    assert_eq!(
-        rt.apply_modeling(
-            client,
-            a,
-            vec![command(
-                source_b,
-                ManualMeshOperation::ConstrainEdge { a: 0, b: 2 }
-            )]
-        ),
-        Err(RuntimeError::InvalidReference)
-    );
-    assert_eq!(rt.edit_sequence(client, a).unwrap(), 0);
-    rt.apply_modeling(
-        client,
-        a,
-        vec![command(
-            source_a,
-            ManualMeshOperation::ConstrainEdge { a: 0, b: 2 },
-        )],
-    )
-    .unwrap();
-    assert_eq!(rt.edit_sequence(client, a).unwrap(), 1);
-    let candidate = rt.mesh_snapshot(client, session, Some(a), &id(2)).unwrap();
-    assert_eq!(
-        candidate.geometry.meshing.as_ref().unwrap().constraints[0].endpoints,
-        [0, 2]
-    );
-    assert!(rt
-        .mesh_snapshot(client, session, None, &id(2))
-        .unwrap()
-        .geometry
-        .meshing
-        .is_none());
-    assert_eq!(
-        rt.apply_modeling(
-            client,
-            a,
-            vec![command(
-                source_a,
-                ManualMeshOperation::ReleaseConstraint { a: 0, b: 2 }
-            )]
-        ),
-        Err(RuntimeError::InvalidReference)
-    );
-    assert_eq!(rt.edit_sequence(client, a).unwrap(), 1);
-    let source_next = rt.edit_snapshot(client, a).unwrap().source;
-    rt.apply_modeling(
-        client,
-        a,
-        vec![command(
-            source_next,
-            ManualMeshOperation::ReleaseConstraint { a: 0, b: 2 },
-        )],
-    )
-    .unwrap();
-    assert_eq!(rt.edit_sequence(client, a).unwrap(), 2);
-    rt.commit_edit(client, a).unwrap();
-    assert!(rt
-        .mesh_snapshot(client, session, None, &id(2))
-        .unwrap()
-        .geometry
-        .meshing
-        .is_some());
-}
-
-#[test]
-fn manual_mesh_candidate_and_formal_reads_preserve_constraints_in_borrowed_output() {
-    use zipzi_core::{MeshConstraint, MeshConstraintKind, MeshMeshing};
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "manual mesh", None).unwrap();
-    let structure = MeshMeshing {
-        boundary: vec![7, 99, 42],
-        constraints: vec![],
-    };
-    let geometry = MeshGeometry {
-        vertex_ids: vec![42, 7, 99],
-        positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-        uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-        triangles: vec![[42, 7, 99]],
-        meshing: Some(structure.clone()),
-    };
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Mesh {
-            operation: MeshOperation::Create {
-                spec: MeshCreateSpec {
-                    name: "mesh".repeat(4096),
-                    geometry,
-                    texture_asset_id: String::new(),
-                    id: Some(id(2)),
-                },
-            },
-        }],
-    )
-    .unwrap();
-    let preview = rt
-        .mesh_snapshot(client, session, Some(edit), &id(2))
-        .unwrap();
-    assert_eq!(preview.geometry.meshing, Some(structure));
-    let borrowed = rt
-        .mesh_response(client, session, Some(edit), vec![id(2)], true)
-        .unwrap()
-        .unwrap();
-    let blob = serde_json::from_value(borrowed["blob"].clone()).unwrap();
-    assert_eq!(
-        &*rt.blob(client, blob).unwrap(),
-        zipzi_core::binary_wire::encode(&vec![preview]).unwrap()
-    );
-    rt.release_blob(client, blob).unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    let formal = rt.mesh_snapshot(client, session, None, &id(2)).unwrap();
-    let edit = rt
-        .begin_edit(client, session, "invalid constraint", None)
-        .unwrap();
-    let mut mesh = rt.session(session).unwrap().mesh(&id(2)).unwrap();
-    mesh.meshing
-        .as_mut()
-        .unwrap()
-        .constraints
-        .push(MeshConstraint {
-            endpoints: [7, 99],
-            kind: MeshConstraintKind::User,
-        });
-    assert!(rt
-        .apply_authoring(
-            client,
-            edit,
-            vec![EditOperation::Modeling {
-                operation: Box::new(modeling::ModelingCommand::ReplaceMesh { mesh })
-            }]
-        )
-        .is_err());
-    assert_eq!(
-        rt.mesh_snapshot(client, session, None, &id(2))
-            .unwrap()
-            .geometry,
-        formal.geometry
-    );
-}
-
-#[test]
-fn manual_mesh_constraint_only_publication_has_history_and_source_sequence() {
-    use zipzi_core::{Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing};
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let mut mesh = Mesh {
-        id: id(2),
-        name: "mesh".repeat(4096),
-        vertex_ids: vec![0, 1, 2, 3],
-        base_positions: vec![
-            Vec2::new(0., 0.),
-            Vec2::new(1., 0.),
-            Vec2::new(1., 1.),
-            Vec2::new(0., 1.),
-        ],
-        uvs: vec![
-            Vec2::new(0., 0.),
-            Vec2::new(1., 0.),
-            Vec2::new(1., 1.),
-            Vec2::new(0., 1.),
-        ],
-        triangles: vec![[0, 1, 2], [0, 2, 3]],
-        meshing: Some(MeshMeshing {
-            boundary: vec![0, 1, 2, 3],
-            constraints: vec![],
-        }),
-        ..Default::default()
-    };
-    let edit = rt.begin_edit(client, session, "create", None).unwrap();
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Modeling {
-            operation: Box::new(modeling::ModelingCommand::CreateMesh { mesh: mesh.clone() }),
-        }],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    let evaluation = rt.session(session).unwrap().evaluation_revision();
-    mesh = rt.session(session).unwrap().mesh(&id(2)).unwrap();
-    let bytes_before = rt.mesh_read_bytes(client, session, None, &[id(2)]).unwrap();
-    let edit = rt.begin_edit(client, session, "constrain", None).unwrap();
-    mesh.meshing
-        .as_mut()
-        .unwrap()
-        .constraints
-        .push(MeshConstraint {
-            endpoints: [0, 2],
-            kind: MeshConstraintKind::EdgeSupport,
-        });
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Modeling {
-            operation: Box::new(modeling::ModelingCommand::ReplaceMesh { mesh }),
-        }],
-    )
-    .unwrap();
-    let support = rt
-        .mesh_snapshot(client, session, Some(edit), &id(2))
-        .unwrap();
-    let mut mesh = rt
-        .edit_snapshot(client, edit)
-        .unwrap()
-        .snapshot
-        .document()
-        .get_mesh(&id(2))
-        .unwrap()
-        .clone();
-    mesh.meshing.as_mut().unwrap().constraints[0].kind = MeshConstraintKind::User;
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Modeling {
-            operation: Box::new(modeling::ModelingCommand::ReplaceMesh { mesh }),
-        }],
-    )
-    .unwrap();
-    let user = rt
-        .mesh_snapshot(client, session, Some(edit), &id(2))
-        .unwrap();
-    assert_ne!(user.source, support.source);
-    assert!(
-        rt.mesh_read_bytes(client, session, Some(edit), &[id(2)])
-            .unwrap()
-            > bytes_before
-    );
-    let borrowed = rt
-        .mesh_response(client, session, Some(edit), vec![id(2)], true)
-        .unwrap()
-        .unwrap();
-    let blob = serde_json::from_value(borrowed["blob"].clone()).unwrap();
-    assert_eq!(
-        &*rt.blob(client, blob).unwrap(),
-        zipzi_core::binary_wire::encode(&vec![user.clone()]).unwrap()
-    );
-    rt.release_blob(client, blob).unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (2, 0));
-    assert_eq!(
-        rt.session(session).unwrap().evaluation_revision(),
-        evaluation
-    );
-    assert_eq!(
-        rt.mesh_snapshot(client, session, None, &id(2))
-            .unwrap()
-            .geometry,
-        user.geometry
-    );
-}
-
-#[test]
-fn modeling_sample_admission_checks_exact_source_before_snapshot_and_keeps_edit_usable() {
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let other = rt
-        .create_session(client, &id(2), ModelSetup::default())
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "sample", None).unwrap();
-    let write = rt
-        .apply_authoring(
-            client,
-            edit,
-            vec![EditOperation::Parameter {
-                operation: ParameterOperation::Create { spec: parameter() },
-            }],
-        )
-        .unwrap();
-    let query = |session, expected, count| ModelingSampleQuery {
-        session,
-        edit: Some(edit),
-        parameters: vec![Default::default(); count],
-        checks: Default::default(),
-        expected,
-    };
-    let sampled = rt
-        .sample_modeling(client, query(session, Some(write.source), 2))
-        .unwrap();
-    assert_eq!(sampled.source, write.source);
-    assert_eq!(sampled.samples.frames.len(), 2);
-    assert!(matches!(
-        rt.sample_modeling(client, query(other, None, 1)),
-        Err(RuntimeError::InvalidReference)
-    ));
-    assert!(matches!(
-        rt.sample_modeling(client, query(session, None, 65)),
-        Err(RuntimeError::Budget(_))
-    ));
-    let mut oversized = query(session, None, 1);
-    oversized.parameters[0] = (0..257).map(|n| (id(n), 0.)).collect();
-    assert!(matches!(
-        rt.sample_modeling(client, oversized),
-        Err(RuntimeError::Budget(_))
-    ));
-    rt.apply_authoring(client, edit, vec![]).unwrap();
-    assert!(matches!(
-        rt.sample_modeling(client, query(session, Some(write.source), 1)),
-        Err(RuntimeError::InvalidReference)
-    ));
-    let mut invalid_checks = query(session, None, 1);
-    invalid_checks.checks.min_triangle_area = -1.;
-    assert!(matches!(
-        rt.sample_modeling(client, invalid_checks),
-        Err(RuntimeError::Sdk(_))
-    ));
-    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 2);
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
-}
-
-#[test]
-fn sampling_keeps_its_reservation_through_serialization_and_releases_on_drop_or_error() {
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let budget = rt.transport_budget();
-    let before = budget.usage().transfer_bytes;
-    let query = || ModelingSampleQuery {
-        session,
-        edit: None,
-        parameters: vec![Default::default()],
-        checks: Default::default(),
-        expected: None,
-    };
-    let sampled = rt.sample_modeling(client, query()).unwrap();
-    let reserved = budget.usage().transfer_bytes;
-    assert!(reserved > before);
-    let json = serde_json::to_value(&sampled).unwrap();
-    assert!(json.get("source").is_some());
-    assert!(json.get("state").is_some());
-    assert!(json.get("samples").is_some());
-    assert!(json.get("lease").is_none());
-    assert!(json.get("data").is_none());
-    assert_eq!(budget.usage().transfer_bytes, reserved);
-    drop(sampled);
-    assert_eq!(budget.usage().transfer_bytes, before);
-    let mut invalid = query();
-    invalid.checks.min_triangle_area = -1.;
-    assert!(rt.sample_modeling(client, invalid).is_err());
-    assert_eq!(budget.usage().transfer_bytes, before);
-}
-
-#[test]
-fn binding_and_sample_response_expansion_refused_without_poisoning_candidate() {
-    let mut rt = Runtime::new(RuntimeLimits {
-        accounted_bytes: 1 << 20,
-        ..Default::default()
-    });
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "admission", None).unwrap();
-    let mut spec = parameter();
-    spec.name = "large".repeat(10000);
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Parameter {
-            operation: ParameterOperation::Create { spec },
-        }],
-    )
-    .unwrap();
-    // Typed frames no longer pay the former JSON expansion multiplier. A
-    // concurrent transfer still consumes the same aggregate ceiling.
-    rt.refresh_memory_budget();
-    let competing = rt
-        .reserve_transfer(
-            (1usize << 20)
-                .saturating_sub(rt.accounted_bytes())
-                .saturating_sub(4096),
-        )
-        .unwrap();
-    assert!(matches!(
-        rt.sample_modeling(
-            client,
-            ModelingSampleQuery {
-                session,
-                edit: Some(edit),
-                parameters: vec![Default::default()],
-                checks: Default::default(),
-                expected: None
-            }
-        ),
-        Err(RuntimeError::Budget(_))
-    ));
-    drop(competing);
-    assert!(matches!(
-        rt.mesh_binding_snapshot(
-            client,
-            MeshBindingQuery {
-                session,
-                edit: Some(edit),
-                ids: Some(vec![id(99); 257])
-            }
-        ),
-        Err(RuntimeError::Budget(_))
-    ));
-    assert!(matches!(
-        rt.mesh_binding_snapshot(
-            client,
-            MeshBindingQuery {
-                session,
-                edit: Some(edit),
-                ids: Some(vec![id(99)])
-            }
-        ),
-        Err(RuntimeError::Sdk(_))
-    ));
-    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 1);
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
-}
+use zipzi_sdk::{
+    ManualMeshOperation, ManualVertexTarget, MeshCreateSpec, MeshGeometry, ParameterCreateSpec,
+    ParameterPatch,
+};
 
 fn id(n: u32) -> String {
     format!("79100000-0000-4000-8000-{n:012x}")
 }
 
-fn parameter() -> ParameterCreateSpec {
-    ParameterCreateSpec {
-        id: Some(id(4)),
-        name: "Angle".into(),
-        minimum: -30.,
-        maximum: 30.,
-        default_value: 0.,
-        runtime_id: None,
-        kind: None,
-        decimal_places: None,
-        repeat: None,
+fn fixture(limits: RuntimeLimits) -> (Runtime, ClientId, Version) {
+    let mut rt = Runtime::new(limits);
+    let client = rt.register_client().unwrap();
+    let session = rt
+        .create_session(client, &id(1), Default::default())
+        .unwrap();
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    (rt, client, version)
+}
+
+fn quad() -> MeshGeometry {
+    let points = vec![
+        Vec2::new(0., 0.),
+        Vec2::new(1., 0.),
+        Vec2::new(1., 1.),
+        Vec2::new(0., 1.),
+    ];
+    MeshGeometry {
+        vertex_ids: vec![0, 1, 2, 3],
+        positions: points.clone(),
+        uvs: points,
+        triangles: vec![[0, 1, 2], [0, 2, 3]],
+        meshing: None,
     }
 }
 
-#[test]
-fn typed_parameter_queries_admit_count_bytes_and_exact_source_before_cloning() {
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let other = rt
-        .create_session(client, &id(2), ModelSetup::default())
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "parameters", None).unwrap();
-    let write = rt
-        .apply_authoring(
-            client,
-            edit,
-            vec![
-                EditOperation::Parameter {
-                    operation: ParameterOperation::Create { spec: parameter() },
-                },
-                EditOperation::Parameter {
-                    operation: ParameterOperation::Patch {
-                        id: id(4),
-                        patch: ParameterPatch {
-                            name: Some("Final".into()),
-                            ..Default::default()
-                        },
-                    },
-                },
-            ],
-        )
-        .unwrap();
-    assert_eq!(write.ids, [id(4), id(4)]);
-    let query = |session, ids| ParameterQuery {
-        session,
-        edit: Some(edit),
-        ids,
+fn mesh(geometry: MeshGeometry) -> Command {
+    Command::CreateMesh {
+        spec: MeshCreateSpec {
+            id: Some(id(2)),
+            name: "Quad".into(),
+            texture_asset_id: String::new(),
+            geometry,
+        },
+    }
+}
+
+fn parameter() -> Command {
+    Command::CreateParameter {
+        spec: ParameterCreateSpec {
+            id: Some(id(4)),
+            name: "Angle".into(),
+            minimum: -30.,
+            maximum: 30.,
+            default_value: 0.,
+            runtime_id: None,
+            kind: None,
+            decimal_places: None,
+            repeat: None,
+        },
+    }
+}
+
+fn patch_parameter(name: String) -> Command {
+    Command::PatchParameter {
+        id: id(4),
+        patch: ParameterPatch {
+            name: Some(name),
+            ..Default::default()
+        },
+    }
+}
+
+fn query(kind: ObjectKind, ids: impl IntoIterator<Item = String>) -> Query {
+    Query::Objects {
+        addresses: ids
+            .into_iter()
+            .map(|id| ObjectAddress { kind, id })
+            .collect(),
+    }
+}
+
+fn sample(values: Vec<zipzi_core::PreviewValues>) -> SampleRequest {
+    SampleRequest {
+        input: SampleInput::Parameters { values },
+        queries: vec![],
+        quality: false,
+    }
+}
+
+fn complete_read(rt: &mut Runtime, client: ClientId, job: JobId) -> Result<ReadResult> {
+    while !rt.job(client, job).unwrap().state.is_terminal() {
+        let work = rt.take_work(job).unwrap();
+        rt.complete(work.run()).unwrap();
+    }
+    let result = rt.job(client, job).unwrap().result.clone().unwrap();
+    rt.release_job(client, job).unwrap();
+    let JobValue::Read(result) = result? else {
+        panic!("expected read result")
     };
-    let batch = rt
-        .parameter_snapshot(client, query(session, Some(vec![id(4), id(4)])))
-        .unwrap();
-    assert_eq!(batch.source, write.source);
-    assert_eq!(batch.parameters.len(), 2);
-    assert_eq!(batch.parameters[0].runtime_id, id(4));
-    assert_eq!(batch.parameters[0].decimal_places, 6);
-    assert!(matches!(
-        rt.parameter_snapshot(client, query(other, None)),
-        Err(RuntimeError::InvalidReference)
-    ));
-    assert!(matches!(
-        rt.parameter_snapshot(client, query(session, Some(vec![id(4); 257]))),
-        Err(RuntimeError::Budget(_))
-    ));
-    assert!(matches!(
-        rt.parameter_snapshot(client, query(session, Some(vec![id(4), id(99)]))),
-        Err(RuntimeError::Sdk(_))
-    ));
-    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 1);
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Parameter {
-            operation: ParameterOperation::Patch {
-                id: id(4),
-                patch: ParameterPatch {
-                    name: Some("x".repeat(1 << 20)),
-                    ..Default::default()
-                },
-            },
-        }],
-    )
-    .unwrap();
-    assert!(matches!(
-        rt.parameter_snapshot(client, query(session, None)),
-        Err(RuntimeError::Budget(_))
-    ));
-    assert_eq!(rt.edit_state(client, edit).unwrap(), EditState::Editing);
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Parameter {
-            operation: ParameterOperation::Patch {
-                id: id(4),
-                patch: ParameterPatch {
-                    name: Some("Admitted".into()),
-                    ..Default::default()
-                },
-            },
-        }],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(
-        rt.document(session)
-            .unwrap()
-            .get_parameter(&id(4))
-            .unwrap()
-            .name,
-        "Admitted"
-    );
+    Ok(result)
 }
 
 #[test]
-fn typed_event_pages_are_non_consuming_and_metadata_cursor_can_resync() {
-    let mut rt = Runtime::new(RuntimeLimits {
-        session_events: 2,
-        ..Default::default()
-    });
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let initial = rt.subscribe_info(session).unwrap();
-    let other_reader = rt.subscribe_info(session).unwrap();
-    let edit = rt.begin_edit(client, session, "parameter", None).unwrap();
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Parameter {
-            operation: ParameterOperation::Create { spec: parameter() },
-        }],
-    )
-    .unwrap();
-    assert!(rt.events_page(initial.cursor, 1).unwrap().is_empty());
-    rt.commit_edit(client, edit).unwrap();
-    let first = rt.events_page(initial.cursor, 1).unwrap();
-    let same = rt.events_page(other_reader.cursor, 1).unwrap();
-    assert!(std::sync::Arc::ptr_eq(&first[0], &same[0]));
-    let EventKind::Published(receipt) = &first[0].kind else {
-        panic!()
+fn manual_mesh_preview_requires_the_exact_candidate_owner_and_sequence() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let create = rt.begin_draft(client, version).unwrap();
+    let (create, _) = rt.commands(client, create, vec![mesh(quad())]).unwrap();
+    let version = rt.publish(client, create, "Mesh").unwrap().version;
+    let draft = rt.begin_draft(client, version).unwrap();
+    let peer = rt.register_client().unwrap();
+    rt.attach(peer, version.session).unwrap();
+    let constrain = || {
+        vec![Command::ManualMesh {
+            mesh: id(2),
+            operation: ManualMeshOperation::ConstrainEdge { a: 0, b: 2 },
+        }]
     };
-    assert_eq!(receipt.before, initial.info.version);
-    for i in 0..3 {
-        let edit = rt.begin_edit(client, session, "patch", None).unwrap();
-        rt.apply_authoring(
+    assert_eq!(
+        rt.preview_commands(peer, draft, constrain())
+            .unwrap_err()
+            .code,
+        "NOT_OWNER"
+    );
+    let (current, _) = rt.preview_commands(client, draft, constrain()).unwrap();
+    assert_eq!(current.sequence, 1);
+    let candidate = rt.read_draft(client, current).unwrap();
+    let constraints = &candidate
+        .snapshot
+        .document()
+        .mesh(&id(2))
+        .unwrap()
+        .meshing
+        .as_ref()
+        .unwrap()
+        .constraints;
+    assert_eq!(constraints[0].endpoints, [0, 2]);
+    assert!(rt
+        .read_snapshot(client, version.session)
+        .unwrap()
+        .snapshot
+        .document()
+        .mesh(&id(2))
+        .unwrap()
+        .meshing
+        .is_none());
+    assert_eq!(
+        rt.preview_commands(client, draft, constrain())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        rt.read_draft(client, current).unwrap().source,
+        QuerySource::Draft(current)
+    );
+    let (current, _) = rt
+        .preview_commands(
             client,
-            edit,
-            vec![EditOperation::Parameter {
-                operation: ParameterOperation::Patch {
-                    id: id(4),
-                    patch: ParameterPatch {
-                        name: Some(format!("value {i}")),
-                        ..Default::default()
-                    },
-                },
+            current,
+            vec![Command::ManualMesh {
+                mesh: id(2),
+                operation: ManualMeshOperation::ReleaseConstraint { a: 0, b: 2 },
             }],
         )
         .unwrap();
-        rt.commit_edit(client, edit).unwrap();
-    }
-    assert!(matches!(
-        rt.events_page(initial.cursor, 1),
-        Err(RuntimeError::ResyncRequired)
-    ));
-    let fresh = rt.subscribe_info(session).unwrap();
-    assert_eq!(
-        fresh.info.version,
-        rt.session_info(session).unwrap().version
-    );
-    assert!(rt.events_page(fresh.cursor, 1).unwrap().is_empty());
-    for limit in [0, 257] {
-        assert!(matches!(
-            rt.events_page(fresh.cursor, limit),
-            Err(RuntimeError::Budget(_))
-        ));
-    }
-    let mut future = fresh.cursor;
-    future.sequence += 1;
-    assert!(matches!(
-        rt.events_page(future, 1),
-        Err(RuntimeError::ResyncRequired)
-    ));
-    let foreign = Runtime::default().subscribe_registry().cursor;
-    assert!(matches!(
-        rt.events_page(foreign, 1),
-        Err(RuntimeError::ResyncRequired)
-    ));
-    let mut foreign = Runtime::default();
-    let owner = foreign.register_client().unwrap();
-    let s = foreign
-        .create_session(owner, &id(2), ModelSetup::default())
-        .unwrap();
-    assert!(matches!(
-        rt.events_page(foreign.subscribe_info(s).unwrap().cursor, 1),
-        Err(RuntimeError::ResyncRequired)
-    ));
-}
-
-#[test]
-fn typed_event_expansion_refuses_a_large_payload_before_adapter_conversion() {
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let initial = rt.subscribe_info(session).unwrap();
-    let edit = rt
-        .begin_edit(client, session, &"large label".repeat(120_000), None)
-        .unwrap();
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![EditOperation::Parameter {
-            operation: ParameterOperation::Create { spec: parameter() },
-        }],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    assert!(matches!(
-        rt.events_page(initial.cursor, 1),
-        Err(RuntimeError::Budget(_))
-    ));
-    let fresh = rt.subscribe_info(session).unwrap();
-    assert_eq!(fresh.info.history_lengths, (1, 0));
-    assert!(rt.events_page(fresh.cursor, 1).unwrap().is_empty());
-}
-
-#[test]
-fn selected_mesh_batch_admits_total_expansion_before_any_snapshot_copy() {
-    use zipzi_runtime::authoring::MeshBatchQuery;
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "mesh batch", None).unwrap();
-    let geometry = MeshGeometry {
-        vertex_ids: vec![0, 1, 2],
-        positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-        uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-        triangles: vec![[0, 1, 2]],
-        meshing: None,
-    };
-    rt.edit_meshes(
-        client,
-        edit,
-        vec![MeshOperation::Create {
-            spec: MeshCreateSpec {
-                name: "A".into(),
-                geometry,
-                id: Some(id(5)),
-                texture_asset_id: String::new(),
-            },
-        }],
-    )
-    .unwrap();
-    let query = |ids| MeshBatchQuery {
-        session,
-        edit: Some(edit),
-        ids,
-    };
-    let values = rt
-        .mesh_snapshots(client, query(vec![id(5), id(5)]))
-        .unwrap();
-    assert_eq!(values[0].source, values[1].source);
-    assert_eq!(
-        rt.mesh_snapshots(client, query(vec![id(5); 256]))
-            .unwrap()
-            .len(),
-        256
-    );
-    rt.refresh_memory_budget();
-    let competing = rt
-        .reserve_transfer(
-            RuntimeLimits::default()
-                .accounted_bytes
-                .saturating_sub(rt.accounted_bytes())
-                .saturating_sub(4096),
-        )
-        .unwrap();
-    assert!(matches!(
-        rt.mesh_snapshots(client, query(vec![id(5); 256])),
-        Err(RuntimeError::Budget(_))
-    ));
-    drop(competing);
-    assert!(matches!(
-        rt.mesh_snapshots(client, query(vec![id(5), id(99)])),
-        Err(RuntimeError::Sdk(_))
-    ));
-    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 1);
-    rt.edit_meshes(
-        client,
-        edit,
-        vec![MeshOperation::Rename {
-            expected_name: None,
-            id: id(5),
-            name: "After refusal".into(),
-        }],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(
-        rt.mesh_snapshot(client, session, None, &id(5))
-            .unwrap()
-            .name,
-        "After refusal"
-    );
-}
-
-#[test]
-fn selected_mesh_query_checks_exact_session_and_admits_before_copy_without_poisoning() {
-    let mut rt = Runtime::default();
-    let client = rt.register_client().unwrap();
-    let session = rt
-        .create_session(client, &id(1), ModelSetup::default())
-        .unwrap();
-    let other = rt
-        .create_session(client, &id(2), ModelSetup::default())
-        .unwrap();
-    let edit = rt.begin_edit(client, session, "large", None).unwrap();
-    let base = MeshGeometry {
-        vertex_ids: vec![0, 1, 2, 3],
-        positions: vec![
-            Vec2::new(0., 0.),
-            Vec2::new(1., 0.),
-            Vec2::new(1., 1.),
-            Vec2::new(0., 1.),
-        ],
-        uvs: vec![
-            Vec2::new(0., 0.),
-            Vec2::new(1., 0.),
-            Vec2::new(1., 1.),
-            Vec2::new(0., 1.),
-        ],
-        triangles: vec![[0, 1, 2], [0, 2, 3]],
-        meshing: None,
-    };
-    let geometry = zipzi_sdk::rectangle_grid_geometry(&base, 100, 100).unwrap();
-    rt.edit_meshes(
-        client,
-        edit,
-        vec![MeshOperation::Create {
-            spec: MeshCreateSpec {
-                id: Some(id(3)),
-                name: "Grid".into(),
-                texture_asset_id: String::new(),
-                geometry,
-            },
-        }],
-    )
-    .unwrap();
-    assert!(matches!(
-        rt.mesh_snapshot(client, other, Some(edit), &id(3)),
-        Err(RuntimeError::InvalidReference)
-    ));
+    assert_eq!(current.sequence, 2);
+    rt.publish(client, current, "Manual mesh").unwrap();
     assert!(rt
-        .mesh_snapshot(client, session, Some(edit), &id(3))
-        .is_ok());
-    rt.refresh_memory_budget();
-    let competing = rt
-        .reserve_transfer(
-            RuntimeLimits::default()
-                .accounted_bytes
-                .saturating_sub(rt.accounted_bytes())
-                .saturating_sub(4096),
+        .read_snapshot(client, version.session)
+        .unwrap()
+        .snapshot
+        .document()
+        .mesh(&id(2))
+        .unwrap()
+        .meshing
+        .as_ref()
+        .unwrap()
+        .constraints
+        .is_empty());
+}
+
+#[test]
+fn selected_mesh_queries_keep_constraints_and_frozen_candidate_sources() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let draft = rt.begin_draft(client, version).unwrap();
+    let mut geometry = quad();
+    geometry.meshing = Some(MeshMeshing {
+        boundary: vec![0, 1, 2, 3],
+        constraints: vec![MeshConstraint {
+            endpoints: [0, 2],
+            kind: MeshConstraintKind::User,
+        }],
+    });
+    let (draft, _) = rt.commands(client, draft, vec![mesh(geometry)]).unwrap();
+    let source = QuerySource::Draft(draft);
+    let selected = rt
+        .query(client, source, query(ObjectKind::Mesh, [id(2)]))
+        .unwrap();
+    assert_eq!(selected["source"], serde_json::to_value(source).unwrap());
+    assert_eq!(
+        selected["value"]["records"][0]["value"]["meshing"]["constraints"][0]["endpoints"],
+        json!([0, 2])
+    );
+    assert_eq!(
+        rt.query(
+            client,
+            QuerySource::Published(version),
+            query(ObjectKind::Mesh, [id(2)])
+        )
+        .unwrap_err()
+        .code,
+        "MISSING_OBJECT"
+    );
+    let publication = rt.publish(client, draft, "Mesh").unwrap();
+    let formal = rt
+        .query(
+            client,
+            QuerySource::Published(publication.version),
+            query(ObjectKind::Mesh, [id(2)]),
         )
         .unwrap();
-    assert!(matches!(
-        rt.mesh_snapshot(client, session, Some(edit), &id(3)),
-        Err(RuntimeError::Budget(_))
-    ));
-    drop(competing);
-    assert_eq!(rt.edit_sequence(client, edit).unwrap(), 1);
-    rt.edit_meshes(
-        client,
-        edit,
-        vec![MeshOperation::Rename {
-            expected_name: None,
-            id: id(3),
-            name: "Renamed".into(),
-        }],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
+    assert_eq!(formal["value"], selected["value"]);
     assert_eq!(
-        rt.document(session).unwrap().get_mesh(&id(3)).unwrap().name,
-        "Renamed"
+        rt.query(client, source, query(ObjectKind::Mesh, [id(2)]))
+            .unwrap_err()
+            .code,
+        "DRAFT_ENDED"
     );
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+}
+
+#[test]
+fn manual_mesh_constraint_only_publication_has_history_and_no_geometry_change() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let draft = rt.begin_draft(client, version).unwrap();
+    let mut geometry = quad();
+    geometry.meshing = Some(MeshMeshing {
+        boundary: vec![0, 1, 2, 3],
+        constraints: vec![],
+    });
+    let (draft, _) = rt.commands(client, draft, vec![mesh(geometry)]).unwrap();
+    let original = rt.publish(client, draft, "Mesh").unwrap();
+    let before = rt.read_snapshot(client, version.session).unwrap();
+    let draft = rt.begin_draft(client, original.version).unwrap();
+    let (draft, _) = rt
+        .preview_commands(
+            client,
+            draft,
+            vec![Command::ManualMesh {
+                mesh: id(2),
+                operation: ManualMeshOperation::ConstrainEdge { a: 0, b: 2 },
+            }],
+        )
+        .unwrap();
+    let candidate = rt.read_draft(client, draft).unwrap();
+    let a = before.snapshot.document().mesh(&id(2)).unwrap();
+    let b = candidate.snapshot.document().mesh(&id(2)).unwrap();
+    assert_eq!(a.base_positions, b.base_positions);
+    assert_eq!(a.triangles, b.triangles);
+    assert_ne!(a.meshing, b.meshing);
+    let published = rt.publish(client, draft, "Constraint").unwrap();
+    assert_eq!(published.history.undo_steps, 2);
+    rt.undo(client, published.version).unwrap();
+    assert_eq!(
+        rt.read_snapshot(client, version.session)
+            .unwrap()
+            .snapshot
+            .document()
+            .mesh(&id(2))
+            .unwrap(),
+        a
+    );
+}
+
+#[test]
+fn sample_admission_checks_source_and_bounds_without_poisoning_the_draft() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![parameter()]).unwrap();
+    let source = QuerySource::Draft(draft);
+    let request = sample(vec![Default::default(); 2]);
+    let job = rt.request_samples(client, source, request.clone()).unwrap();
+    let result = complete_read(&mut rt, client, job).unwrap();
+    assert_eq!(result.source, source);
+    let data: Value = serde_json::from_slice(result.bytes()).unwrap();
+    assert_eq!(data["frames"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        rt.request_samples(client, source, sample(vec![Default::default(); 65]))
+            .unwrap_err()
+            .code,
+        "RESOURCE_LIMIT"
+    );
+    let values = (0..257).map(|n| (id(n), 0.)).collect();
+    assert_eq!(
+        rt.request_samples(client, source, sample(vec![values]))
+            .unwrap_err()
+            .code,
+        "INVALID_SAMPLES"
+    );
+    let (current, _) = rt.commands(client, draft, vec![]).unwrap();
+    assert_eq!(
+        rt.request_samples(client, source, request)
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        rt.publish(client, current, "Parameter")
+            .unwrap()
+            .history
+            .undo_steps,
+        1
+    );
+}
+
+#[test]
+fn sample_result_retains_its_lease_through_decoding_and_errors_release_budget() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let source = QuerySource::Published(version);
+    let job = rt
+        .request_samples(client, source, sample(vec![Default::default()]))
+        .unwrap();
+    let result = complete_read(&mut rt, client, job).unwrap();
+    let reserved = rt.task_bytes();
+    assert!(reserved > 0);
+    let value: Value = serde_json::from_slice(result.bytes()).unwrap();
+    assert_eq!(value["source"], serde_json::to_value(source).unwrap());
+    assert_eq!(value["frames"].as_array().unwrap().len(), 1);
+    assert_eq!(rt.task_bytes(), reserved);
+    drop(result);
+    let job = rt
+        .request_samples(client, source, sample(vec![[(id(99), 0.)].into()]))
+        .unwrap();
+    assert!(complete_read(&mut rt, client, job).is_err());
+    assert_eq!(rt.task_bytes(), 0);
+}
+
+#[test]
+fn binding_selection_and_sample_reservations_refuse_without_ending_the_draft() {
+    let (mut rt, client, version) = fixture(RuntimeLimits {
+        task_bytes: 256 << 20,
+        ..Default::default()
+    });
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![parameter()]).unwrap();
+    let source = QuerySource::Draft(draft);
+    let competing = rt.reserve_transfer(200 << 20).unwrap();
+    assert_eq!(
+        rt.request_samples(client, source, sample(vec![Default::default()]))
+            .unwrap_err()
+            .code,
+        "BUDGET_EXCEEDED"
+    );
+    drop(competing);
+    assert_eq!(rt.task_bytes(), 0);
+    assert_eq!(
+        rt.query(
+            client,
+            source,
+            query(ObjectKind::MeshBinding, vec![id(99); 257])
+        )
+        .unwrap_err()
+        .code,
+        "RESOURCE_LIMIT"
+    );
+    assert_eq!(
+        rt.query(client, source, query(ObjectKind::MeshBinding, [id(99)]))
+            .unwrap_err()
+            .code,
+        "MISSING_OBJECT"
+    );
+    assert_eq!(
+        rt.publish(client, draft, "Parameter")
+            .unwrap()
+            .history
+            .undo_steps,
+        1
+    );
+}
+
+#[test]
+fn typed_parameter_queries_check_counts_bytes_and_exact_source() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, outcomes) = rt
+        .commands(
+            client,
+            draft,
+            vec![parameter(), patch_parameter("Final".into())],
+        )
+        .unwrap();
+    assert_eq!(outcomes[0].created.as_deref(), Some(id(4).as_str()));
+    let select = |ids| query(ObjectKind::Parameter, ids);
+    let source = QuerySource::Draft(draft);
+    let value = rt
+        .query(client, source, select(vec![id(4), id(4)]))
+        .unwrap();
+    assert_eq!(value["value"]["records"][0], value["value"]["records"][1]);
+    let parameter = &value["value"]["records"][0]["value"];
+    assert_eq!(parameter["runtime_id"], id(4));
+    assert_eq!(parameter["decimal_places"], 6);
+    assert_eq!(
+        rt.query(client, source, select(vec![id(4); 257]))
+            .unwrap_err()
+            .code,
+        "RESOURCE_LIMIT"
+    );
+    assert_eq!(
+        rt.query(client, source, select(vec![id(99)]))
+            .unwrap_err()
+            .code,
+        "MISSING_OBJECT"
+    );
+    let (large, _) = rt
+        .commands(client, draft, vec![patch_parameter("x".repeat(1 << 20))])
+        .unwrap();
+    assert_eq!(
+        rt.query(client, source, select(vec![id(4)]))
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
+    );
+    assert_eq!(
+        rt.query(client, QuerySource::Draft(large), select(vec![id(4)]))
+            .unwrap_err()
+            .code,
+        "RESOURCE_LIMIT"
+    );
+    let (valid, _) = rt
+        .commands(client, large, vec![patch_parameter("Admitted".into())])
+        .unwrap();
+    let published = rt.publish(client, valid, "Parameter").unwrap();
+    let value = rt
+        .query(
+            client,
+            QuerySource::Published(published.version),
+            select(vec![id(4)]),
+        )
+        .unwrap();
+    assert_eq!(value["value"]["records"][0]["value"]["name"], "Admitted");
+}
+
+#[test]
+fn publication_reads_are_non_consuming_and_old_cursors_require_resubscription() {
+    let (mut rt, client, initial) = fixture(RuntimeLimits {
+        events_per_session: 2,
+        ..Default::default()
+    });
+    let peer = rt.register_client().unwrap();
+    rt.attach(peer, initial.session).unwrap();
+    let draft = rt.begin_draft(client, initial).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![parameter()]).unwrap();
+    assert!(rt.publications_since(client, initial).unwrap().is_empty());
+    let first = rt.publish(client, draft, "Parameter").unwrap();
+    let a = rt.publications_since(client, initial).unwrap();
+    let b = rt.publications_since(peer, initial).unwrap();
+    assert_eq!(a[0].version, first.version);
+    assert!(std::sync::Arc::ptr_eq(&a[0].writes, &b[0].writes));
+    let mut version = first.version;
+    for n in 0..3 {
+        let draft = rt.begin_draft(client, version).unwrap();
+        let (draft, _) = rt
+            .commands(client, draft, vec![patch_parameter(format!("Label {n}"))])
+            .unwrap();
+        version = rt.publish(client, draft, "Name").unwrap().version;
+    }
+    assert_eq!(
+        rt.publications_since(peer, initial).unwrap_err().code,
+        "EVENT_GAP"
+    );
+    let fresh = rt.subscribe(peer, initial.session).unwrap();
+    assert_eq!(fresh.cursor, version);
+    assert!(rt
+        .publications_since(client, fresh.cursor)
+        .unwrap()
+        .is_empty());
+    let mut future = version;
+    future.revision += 1;
+    assert_eq!(
+        rt.publications_since(client, future).unwrap_err().code,
+        "INVALID_CURSOR"
+    );
+}
+
+#[test]
+fn wire_event_page_refuses_expansion_and_allows_resynchronizing() {
+    let (mut rt, client, version) = fixture(RuntimeLimits {
+        result_bytes: 1024,
+        ..Default::default()
+    });
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![parameter()]).unwrap();
+    let publication = rt.publish(client, draft, "label".repeat(16_384)).unwrap();
+    let mut protocol = zipzi_runtime::protocol::Protocol::default();
+    let error = protocol
+        .execute(&mut rt, client, Operation::Events { cursor: version })
+        .unwrap_err();
+    assert_eq!(error.code, "RESOURCE_LIMIT");
+    assert_eq!(
+        rt.subscribe(client, version.session)
+            .unwrap()
+            .history
+            .undo_steps,
+        1
+    );
+    assert_eq!(
+        protocol
+            .execute(
+                &mut rt,
+                client,
+                Operation::Events {
+                    cursor: publication.version
+                }
+            )
+            .unwrap(),
+        json!([])
+    );
+}
+
+#[test]
+fn selected_mesh_query_bounds_the_whole_result_and_keeps_candidate_usable() {
+    let (mut rt, client, version) = fixture(RuntimeLimits {
+        result_bytes: 32 << 10,
+        ..Default::default()
+    });
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![mesh(quad())]).unwrap();
+    let source = QuerySource::Draft(draft);
+    let value = rt
+        .query(client, source, query(ObjectKind::Mesh, [id(2), id(2)]))
+        .unwrap();
+    assert_eq!(value["value"]["records"][0], value["value"]["records"][1]);
+    assert_eq!(
+        rt.query(client, source, query(ObjectKind::Mesh, vec![id(2); 256]))
+            .unwrap_err()
+            .code,
+        "RESOURCE_LIMIT"
+    );
+    assert_eq!(
+        rt.query(client, source, query(ObjectKind::Mesh, [id(2), id(99)]))
+            .unwrap_err()
+            .code,
+        "MISSING_OBJECT"
+    );
+    assert_eq!(
+        rt.publish(client, draft, "Quad")
+            .unwrap()
+            .history
+            .undo_steps,
+        1
+    );
+}
+
+#[test]
+fn a_large_grid_can_be_published_after_its_query_exceeds_the_result_bound() {
+    let (mut rt, client, version) = fixture(RuntimeLimits {
+        result_bytes: 64 << 10,
+        ..Default::default()
+    });
+    let draft = rt.begin_draft(client, version).unwrap();
+    let grid = zipzi_sdk::rectangle_grid_geometry(&quad(), 100, 100).unwrap();
+    let (draft, _) = rt.commands(client, draft, vec![mesh(grid)]).unwrap();
+    assert_eq!(
+        rt.query(
+            client,
+            QuerySource::Draft(draft),
+            query(ObjectKind::Mesh, [id(2)])
+        )
+        .unwrap_err()
+        .code,
+        "RESOURCE_LIMIT"
+    );
+    assert_eq!(
+        rt.read_draft(client, draft)
+            .unwrap()
+            .snapshot
+            .document()
+            .mesh(&id(2))
+            .unwrap()
+            .vertex_ids
+            .len(),
+        10_201
+    );
+    assert_eq!(
+        rt.publish(client, draft, "Grid")
+            .unwrap()
+            .history
+            .undo_steps,
+        1
+    );
 }
 
 #[path = "../../../fixtures/mesh-edit-dependencies.rs"]
 mod mesh_dependencies;
+
 #[test]
-fn manual_mesh_mixed_candidate_rejection_preserves_sequence_baseline_and_history() {
-    use zipzi_runtime::modeling::ModelingCommand;
-    use zipzi_sdk::{ManualMeshOperation as Op, ManualVertexTarget};
-    let mut rt = Runtime::default();
-    let c = rt.register_client().unwrap();
-    let id = mesh_dependencies::id;
-    let s = rt.create_session(c, &id(1), ModelSetup::default()).unwrap();
-    let e = rt.begin_edit(c, s, "fixture", None).unwrap();
-    rt.apply_edit(c, e, mesh_dependencies::install).unwrap();
-    rt.commit_edit(c, e).unwrap();
-    let history = rt.session(s).unwrap().history_lengths();
-    let e = rt.begin_edit(c, s, "drag", None).unwrap();
-    for (uv, ok) in [
+fn baseline_preview_retains_the_last_valid_candidate_and_transfers_all_shapes() {
+    let (mut rt, client, version) = fixture(Default::default());
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, ()) = rt.batch(client, draft, mesh_dependencies::install).unwrap();
+    let version = rt.publish(client, draft, "Fixture").unwrap().version;
+    let mut draft = rt.begin_draft(client, version).unwrap();
+    let preview = |c: &mut zipzi_sdk::Commands<'_>, uv| {
+        c.edit_manual_mesh(
+            &mesh_dependencies::id(2),
+            ManualMeshOperation::MoveVertices {
+                targets: vec![ManualVertexTarget { id: 120, uv }],
+                motion_from: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    };
+    let mut last = rt.read_draft(client, draft).unwrap();
+    for (uv, accepted) in [
         (Vec2::new(0.3, 0.4), true),
         (Vec2::new(1.1, 0.5), false),
         (Vec2::new(0.7, 0.6), true),
     ] {
-        let source = rt.edit_snapshot(c, e).unwrap().source;
-        let sequence = rt.edit_sequence(c, e).unwrap();
-        let result = rt.apply_authoring(
-            c,
-            e,
-            vec![EditOperation::Modeling {
-                operation: Box::new(ModelingCommand::ManualMesh {
-                    mesh_id: id(2),
-                    expected: source,
-                    operation: Op::MoveVertices {
-                        targets: vec![ManualVertexTarget { id: 120, uv }],
-                        motion_from: None,
-                    },
-                }),
-            }],
-        );
-        assert_eq!(result.is_ok(), ok);
-        if let Ok(r) = result {
-            assert_eq!(r.mesh_transfer.unwrap().shape_count, 7);
-        } else {
-            assert_eq!(rt.edit_sequence(c, e).unwrap(), sequence);
+        match rt.preview_from_baseline(client, draft, |c| preview(c, uv)) {
+            Ok((updated, outcome)) => {
+                assert!(accepted);
+                assert_eq!(outcome.report.shape_count, 7);
+                draft = updated;
+                last = rt.read_draft(client, draft).unwrap();
+            }
+            Err(_) => {
+                assert!(!accepted);
+                assert_eq!(
+                    rt.read_draft(client, draft).unwrap().snapshot.content_id(),
+                    last.snapshot.content_id()
+                );
+            }
         }
     }
-    let candidate = rt.edit_snapshot(c, e).unwrap();
-    let mut expected = rt
-        .session(s)
-        .unwrap()
-        .begin_owned_edit("direct", None)
+    let direct = rt.begin_draft(client, version).unwrap();
+    let (direct, _) = rt
+        .preview_from_baseline(client, direct, |c| preview(c, Vec2::new(0.7, 0.6)))
         .unwrap();
-    expected
-        .edit_manual_mesh(
-            &id(2),
-            Op::MoveVertices {
-                targets: vec![ManualVertexTarget {
-                    id: 120,
-                    uv: Vec2::new(0.7, 0.6),
-                }],
-                motion_from: None,
-            },
-        )
-        .unwrap();
+    let expected = rt.read_draft(client, direct).unwrap();
     assert_eq!(
-        candidate.snapshot.document().get_binding(&id(6)),
-        expected.candidate_document().get_binding(&id(6))
+        last.snapshot.document().binding(&mesh_dependencies::id(6)),
+        expected
+            .snapshot
+            .document()
+            .binding(&mesh_dependencies::id(6))
     );
-    rt.commit_edit(c, e).unwrap();
-    assert_eq!(rt.session(s).unwrap().history_lengths(), (history.0 + 1, 0));
+    assert_eq!(
+        rt.publish(client, draft, "Drag")
+            .unwrap()
+            .history
+            .undo_steps,
+        2
+    );
 }

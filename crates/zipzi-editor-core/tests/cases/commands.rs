@@ -337,7 +337,7 @@ fn tree_cache_revision_and_visibility_follow_edits_not_navigation() -> anyhow::R
 #[test]
 fn prefetched_authoring_state_keeps_context_guards_and_dispatch_revalidates() -> anyhow::Result<()>
 {
-    use zipzi_sdk::CapabilityState as C;
+    use zipzi_contract::authoring::CapabilityState as C;
     let mut doc = Document::new_blank()?;
     let plan = doc.plan_scene_object_creation(SceneObjectType::Part, "Owner".into(), &[])?;
     let owner = doc

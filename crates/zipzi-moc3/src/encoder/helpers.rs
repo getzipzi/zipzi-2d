@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use zipzi_core::evaluation::parent_positions;
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::{Appearance, Status, Vec2, VertexId};
-use zipzi_core::Document;
 
 use crate::layout::{checked, Layout};
 
@@ -105,17 +105,13 @@ pub(super) fn write_bs_colors(
 
 /// Invert the scale-channel normalization along the entire parent chain.
 /// Warps pass Rotation scale through, while their own input coordinates stay UVs.
-fn coordinate_unit(doc: &Document, parent: &str) -> f64 {
-    if !parent.is_empty()
-        && doc
-            .get_transform(parent)
-            .is_some_and(|t| t.warp().is_some())
-    {
+fn coordinate_unit(doc: &DocumentState, parent: &str) -> f64 {
+    if !parent.is_empty() && doc.transform(parent).is_some_and(|t| t.warp().is_some()) {
         return 1.;
     }
-    let mut unit = 1. / f64::from(doc.export_settings().pixels_per_unit);
+    let mut unit = 1. / f64::from(doc.setup().export.pixels_per_unit);
     let mut ancestor = parent;
-    while let Some(transform) = doc.get_transform(ancestor) {
+    while let Some(transform) = doc.transform(ancestor) {
         if transform.rotation().is_some() {
             unit *= f64::from(transform.rotation_scale_unit());
         }
@@ -139,17 +135,17 @@ fn convert_units(point: Vec2, unit: f64) -> Result<Vec2, Status> {
 }
 
 /// Convert authoring coordinates to runtime units only at the format boundary.
-pub(super) fn format_units(doc: &Document, parent: &str, point: Vec2) -> Result<Vec2, Status> {
+pub(super) fn format_units(doc: &DocumentState, parent: &str, point: Vec2) -> Result<Vec2, Status> {
     convert_units(point, coordinate_unit(doc, parent))
 }
 
-pub(super) fn format_delta(doc: &Document, parent: &str, point: Vec2) -> Result<Vec2, Status> {
+pub(super) fn format_delta(doc: &DocumentState, parent: &str, point: Vec2) -> Result<Vec2, Status> {
     format_units(doc, parent, point)
 }
 
 pub(super) fn write_positions(
     l: &mut Layout,
-    doc: &Document,
+    doc: &DocumentState,
     prefix: &str,
     parent: &str,
     positions: &[Vec2],
@@ -168,7 +164,7 @@ pub(super) fn write_positions(
 
 pub(super) fn write_delta_positions(
     l: &mut Layout,
-    doc: &Document,
+    doc: &DocumentState,
     prefix: &str,
     parent: &str,
     positions: &[Vec2],

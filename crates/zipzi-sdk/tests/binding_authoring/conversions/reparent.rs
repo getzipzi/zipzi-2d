@@ -10,22 +10,31 @@ fn static_affine_reparent_preserves_unbound_and_bound_mesh_over_domain() {
         ] {
             let mut s = if bound_mesh { bound() } else { fixture() };
             if !bound_mesh {
-                s.edit("parameter", None, |e| e.create_parameter(parameter(false)))
-                    .unwrap();
+                {
+                    let mut draft = s.begin_draft();
+                    draft
+                        .batch(draft.source(), |e| e.create_parameter(parameter(false)))
+                        .and_then(|value| {
+                            let prepared = draft.prepare("parameter")?;
+                            s.publish(prepared).map(|receipt| (value, receipt))
+                        })
+                }
+                .unwrap();
             }
             rotation(&mut s, 1.75);
             let original: Vec<_> = (0..=16)
                 .map(|i| frame(&s, i as f32 / 16., 0.).drawables[0].positions.clone())
                 .collect();
-            let plan = s.plan_binding_authoring(parent_edit(strategy, R)).unwrap();
-            let BindingConversion::Reparent(p) = plan.conversion() else {
-                panic!()
-            };
-            assert!(p.guarantee().error_bound <= 0.001);
-            assert!(!p.guarantee().effects.is_empty());
-            let receipt = s.execute_binding_plan(&plan).unwrap();
-            assert!(receipt.changed);
-            assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, R);
+            let plan = crate::support::binding(&s, parent_edit(strategy, R)).unwrap();
+            let p = plan.0.report.reparent_guarantee.as_ref().unwrap();
+            assert!(p.error_bound <= 0.001);
+            assert!(!p.effects.is_empty());
+            let receipt = s.publish(plan.1).unwrap();
+            assert!(!receipt.writes.is_empty());
+            assert_eq!(
+                s.snapshot().document().mesh(MESH_ID).unwrap().deformer_id,
+                R
+            );
             for (i, positions) in original.iter().enumerate() {
                 for (a, b) in frame(&s, i as f32 / 16., 0.).drawables[0]
                     .positions
@@ -43,12 +52,16 @@ fn static_affine_reparent_preserves_unbound_and_bound_mesh_over_domain() {
             {
                 assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
             }
-            s.undo().unwrap();
-            assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, R);
-            s.undo().unwrap();
+            s.undo(s.version()).unwrap();
+            assert_eq!(
+                s.snapshot().document().mesh(MESH_ID).unwrap().deformer_id,
+                R
+            );
+            s.undo(s.version()).unwrap();
             assert!(s
+                .snapshot()
                 .document()
-                .get_mesh(MESH_ID)
+                .mesh(MESH_ID)
                 .unwrap()
                 .deformer_id
                 .is_empty());
@@ -63,57 +76,85 @@ fn singular_driven_and_nonlinear_parents_reject_without_mutation() {
     rotation(&mut s, 0.0);
     let version = s.version();
     assert_eq!(
-        s.plan_binding_authoring(parent_edit(ReparentStrategy::PreserveParameterDomain, R))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        crate::support::binding(
+            &s,
+            parent_edit(ReparentStrategy::PreserveParameterDomain, R)
+        )
+        .unwrap_err()
+        .code
+        .as_str(),
         "SINGULAR_PARENT"
     );
     assert_eq!(s.version(), version);
-    let mut t = s.document().get_transform(R).unwrap().clone();
+    let mut t = s.snapshot().document().transform(R).unwrap().clone();
     t.rotation_mut().unwrap().pose.scale = 1.0;
-    s.edit("scale", None, |e| e.replace_transform(t)).unwrap();
-    s.edit("drive", None, |e| {
-        e.create_scene_binding(zipzi_core::SceneBinding {
-            id: T.into(),
-            axes: vec![BindingAxis {
-                id: Default::default(),
-                samples: Default::default(),
-                parameter_id: PARAMETER_ID.into(),
-                keys: vec![0.0, 1.0],
-            }],
-            track: zipzi_core::SceneTrack::Rotation {
-                target_id: R.into(),
-                keyforms: vec![
-                    zipzi_core::RotationKeyform {
-                        keys: vec![0.0],
-                        ..Default::default()
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_transform(t))
+            .and_then(|value| {
+                let prepared = draft.prepare("scale")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_scene_binding(zipzi_core::SceneBinding {
+                    id: T.into(),
+                    axes: vec![BindingAxis {
+                        id: Default::default(),
+                        samples: Default::default(),
+                        parameter_id: PARAMETER_ID.into(),
+                        keys: vec![0.0, 1.0],
+                    }],
+                    track: zipzi_core::SceneTrack::Rotation {
+                        target_id: R.into(),
+                        keyforms: vec![
+                            zipzi_core::RotationKeyform {
+                                keys: vec![0.0],
+                                ..Default::default()
+                            },
+                            zipzi_core::RotationKeyform {
+                                keys: vec![1.0],
+                                rotation: RotationPose {
+                                    angle: 30.0,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                        ],
                     },
-                    zipzi_core::RotationKeyform {
-                        keys: vec![1.0],
-                        rotation: RotationPose {
-                            angle: 30.0,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                ],
-            },
-        })
-    })
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("drive")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let version = s.version();
     assert_eq!(
-        s.plan_binding_authoring(parent_edit(ReparentStrategy::PreserveParameterDomain, R))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        crate::support::binding(
+            &s,
+            parent_edit(ReparentStrategy::PreserveParameterDomain, R)
+        )
+        .unwrap_err()
+        .code
+        .as_str(),
         "PARAMETER_DOMAIN_UNPROVEN"
     );
     assert_eq!(s.version(), version);
     apply(&mut s, parent_edit(ReparentStrategy::KeepLocalData, R));
     assert_eq!(
-        s.document().get_mesh(MESH_ID).unwrap().base_positions[0].x,
+        s.snapshot()
+            .document()
+            .mesh(MESH_ID)
+            .unwrap()
+            .base_positions[0]
+            .x,
         40.0
     );
 }
@@ -123,21 +164,32 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
     use zipzi_core::*;
     let mut s = bound();
     rotation(&mut s, 1.25);
-    s.edit("child rotation", None, |e| {
-        e.create_transform(Transform {
-            id: T.into(),
-            parent_id: Some(R.into()),
-            data: TransformData::Rotation(RotationTransform {
-                pose: RotationPose {
-                    angle: -32.0,
-                    scale: 0.75,
-                    ..Default::default()
-                },
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: T.into(),
+                        parent_id: Some(R.into()),
+                        data: TransformData::Rotation(RotationTransform {
+                            pose: RotationPose {
+                                angle: -32.0,
+                                scale: 0.75,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("child rotation")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let original = frame(&s, 0.3, 0.0).drawables[0].positions.clone();
     apply(
@@ -162,11 +214,14 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
         tolerance: 0.0,
     });
     assert_eq!(
-        s.plan_binding_authoring(cycle).unwrap_err().code.as_ref(),
+        crate::support::binding(&s, cycle)
+            .unwrap_err()
+            .code
+            .as_str(),
         "RELATION_CYCLE"
     );
     assert_eq!(s.version(), before);
-    let mut flags = s.document().editor_state().clone();
+    let mut flags = s.snapshot().document().editor_state().clone();
     flags.objects.insert(
         MESH_ID.into(),
         zipzi_core::document::ObjectEditorState {
@@ -174,49 +229,71 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
             ..Default::default()
         },
     );
-    s.edit("lock descendant", None, |e| e.replace_editor_state(flags))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_editor_state(flags))
+            .and_then(|value| {
+                let prepared = draft.prepare("lock descendant")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     assert_eq!(
-        s.plan_binding_authoring(E::Reparent(ReparentEdit {
-            placement: None,
-            sources: vec![T.into()],
-            parent_id: "".into(),
-            strategy: ReparentStrategy::KeepLocalData,
-            relative_tolerance: 1e-6,
-            context: None,
-            tolerance: 0.0
-        }))
+        crate::support::binding(
+            &s,
+            E::Reparent(ReparentEdit {
+                placement: None,
+                sources: vec![T.into()],
+                parent_id: "".into(),
+                strategy: ReparentStrategy::KeepLocalData,
+                relative_tolerance: 1e-6,
+                context: None,
+                tolerance: 0.0
+            })
+        )
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "OBJECT_LOCKED"
     );
-    s.undo().unwrap();
-    s.edit("warp", None, |e| {
-        e.create_transform(Transform {
-            id: Q.into(),
-            data: TransformData::Warp(WarpTransform {
-                rows: 1,
-                columns: 1,
-                quad: true,
-                points: vec![
-                    Vec2::new(0.0, 0.0),
-                    Vec2::new(1.0, 0.0),
-                    Vec2::new(0.0, 1.0),
-                    Vec2::new(1.0, 1.1),
-                ],
-                bezier: None,
-            }),
-            ..Default::default()
-        })
-    })
+    s.undo(s.version()).unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: Q.into(),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 1,
+                            columns: 1,
+                            quad: true,
+                            points: vec![
+                                Vec2::new(0.0, 0.0),
+                                Vec2::new(1.0, 0.0),
+                                Vec2::new(0.0, 1.0),
+                                Vec2::new(1.0, 1.1),
+                            ],
+                            bezier: None,
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("warp")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let before = s.version();
     assert_eq!(
-        s.plan_binding_authoring(parent_edit(ReparentStrategy::PreserveEditState, Q))
+        crate::support::binding(&s, parent_edit(ReparentStrategy::PreserveEditState, Q))
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "NONLINEAR_PARENT_UNPROVEN"
     );
     assert_eq!(s.version(), before);
@@ -226,60 +303,70 @@ fn parent_cycle_descendant_lock_nonlinear_and_nested_rotation_are_covered() {
 #[test]
 fn grid_and_parent_changes_are_directional_on_undo_redo() {
     let mut s = bound();
-    rotation(&mut s, 1.0);
-    s.drain_events();
+    rotation(&mut s, 1.);
+    s.take_events();
     let receipt = apply(
         &mut s,
         parent_edit(ReparentStrategy::PreserveParameterDomain, R),
     );
-    let edge = receipt
-        .changes
-        .binding_references
-        .iter()
-        .find(|r| r.entity.id == MESH_ID)
-        .unwrap();
-    assert_eq!(edge.before.as_deref(), Some(""));
-    assert_eq!(edge.after.as_deref(), Some(R));
-    s.undo().unwrap();
-    let events = s.drain_events();
-    let edge = events
-        .last()
-        .unwrap()
-        .changes
-        .binding_references
-        .iter()
-        .find(|r| r.entity.id == MESH_ID)
-        .unwrap();
-    assert_eq!(edge.before.as_deref(), Some(R));
-    assert_eq!(edge.after.as_deref(), Some(""));
-    s.redo().unwrap();
-    let receipt = apply(
-        &mut s,
-        E::MeshGrid(G::InsertSample {
-            binding_id: BINDING_ID.into(),
-            parameter_id: PARAMETER_ID.into(),
-            value: 0.5,
-        }),
+    assert!(receipt.writes.records().iter().any(|w| w.id == MESH_ID));
+    assert_eq!(
+        s.snapshot().document().mesh(MESH_ID).unwrap().deformer_id,
+        R
     );
-    assert!(receipt.changes.collections.iter().any(|c| matches!(c, zipzi_sdk::CollectionRef::BindingGrid { binding_id, .. } if binding_id == BINDING_ID)));
-    assert!(!receipt.changes.full_invalidation);
+    s.undo(s.version()).unwrap();
+    assert!(s
+        .snapshot()
+        .document()
+        .mesh(MESH_ID)
+        .unwrap()
+        .deformer_id
+        .is_empty());
+    let events = s.take_events();
+    assert_eq!(
+        events.back().unwrap().kind,
+        zipzi_sdk::PublicationKind::Undo
+    );
+    s.redo(s.version()).unwrap();
+    let intent = E::Grid(zipzi_sdk::BindingGridEdit::Edit {
+        owner: BINDING_ID.into(),
+        operation: zipzi_sdk::GridOperation::InsertSample {
+            axis_id: crate::support::axis(&s, BINDING_ID, PARAMETER_ID),
+            id: uuid::Uuid::new_v4().to_string(),
+            value: 0.5,
+        },
+    });
+    let receipt = apply(&mut s, intent);
+    assert!(receipt.writes.records().iter().any(|w| w.id == BINDING_ID));
 }
 
 #[test]
 fn keep_local_multi_selection_moves_only_roots_and_undoes_together() {
     let mut s = bound();
     rotation(&mut s, 1.0);
-    s.edit("destination", None, |e| {
-        e.create_transform(Transform {
-            id: T.into(),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: T.into(),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("destination")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     apply(&mut s, parent_edit(ReparentStrategy::KeepLocalData, R));
     let base = s
+        .snapshot()
         .document()
-        .get_mesh(MESH_ID)
+        .mesh(MESH_ID)
         .unwrap()
         .base_positions
         .clone();
@@ -296,40 +383,79 @@ fn keep_local_multi_selection_moves_only_roots_and_undoes_together() {
             tolerance: 0.0,
         }),
     );
-    assert_eq!(receipt.after.revision, before.revision + 1);
-    assert!(receipt.object_ids.iter().any(|id| id == MESH_ID));
-    assert!(receipt.object_ids.iter().any(|id| id == BINDING_ID));
-    assert_eq!(s.document().get_transform(R).unwrap().parent(), T);
-    assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, R);
-    assert_eq!(s.document().get_mesh(MESH_ID).unwrap().base_positions, base);
-    assert!(receipt.changes.collections.iter().any(|c| matches!(c, zipzi_sdk::CollectionRef::DeformationChildren { parent_id, .. } if parent_id == T)));
-    s.undo().unwrap();
-    assert!(s.document().get_transform(R).unwrap().parent().is_empty());
-    assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, R);
-    assert!(s.document().validate_structure().is_empty());
+    assert_eq!(receipt.version.revision, before.revision + 1);
+    assert!(receipt.writes.records().iter().any(|w| w.id == R));
+    assert_eq!(s.snapshot().document().transform(R).unwrap().parent(), T);
+    assert_eq!(
+        s.snapshot().document().mesh(MESH_ID).unwrap().deformer_id,
+        R
+    );
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .mesh(MESH_ID)
+            .unwrap()
+            .base_positions,
+        base
+    );
+
+    s.undo(s.version()).unwrap();
+    assert!(s
+        .snapshot()
+        .document()
+        .transform(R)
+        .unwrap()
+        .parent()
+        .is_empty());
+    assert_eq!(
+        s.snapshot().document().mesh(MESH_ID).unwrap().deformer_id,
+        R
+    );
+    assert!(s.snapshot().document().builder().freeze().is_ok());
 }
 
 #[test]
 fn pending_rotation_axes_do_not_block_static_reparent() {
     let mut s = bound();
     rotation(&mut s, 1.75);
-    s.edit("pending parent binding", None, |e| {
-        e.create_scene_binding(zipzi_core::SceneBinding {
-            id: T.into(),
-            axes: vec![BindingAxis::new("", vec![])],
-            track: zipzi_core::SceneTrack::Rotation {
-                target_id: R.into(),
-                keyforms: vec![],
-            },
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_scene_binding(zipzi_core::SceneBinding {
+                    id: T.into(),
+                    axes: vec![BindingAxis::new("", vec![])],
+                    track: zipzi_core::SceneTrack::Rotation {
+                        target_id: R.into(),
+                        keyforms: vec![],
+                    },
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("pending parent binding")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let mut binding = s.binding(BINDING_ID).unwrap();
+    let mut binding = s
+        .snapshot()
+        .document()
+        .binding(BINDING_ID)
+        .cloned()
+        .unwrap();
     binding
         .axes
         .extend((0..15).map(|_| BindingAxis::new("", vec![])));
-    s.edit("pending mesh axes", None, |e| e.replace_binding(binding))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_binding(binding))
+            .and_then(|value| {
+                let prepared = draft.prepare("pending mesh axes")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     apply(
         &mut s,
         E::Blend(zipzi_sdk::BlendAuthoringEdit::CreateBinding {
@@ -353,9 +479,12 @@ fn pending_rotation_axes_do_not_block_static_reparent() {
     }
     // Configured singleton dimensions do not create interpolation corners or
     // inflate its error envelope, even at the native 16-axis boundary.
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let pending: Vec<_> = s
+        .snapshot()
+        .document()
         .binding(BINDING_ID)
+        .cloned()
         .unwrap()
         .axes
         .iter()
@@ -365,15 +494,27 @@ fn pending_rotation_axes_do_not_block_static_reparent() {
     let drivers: Vec<_> = (0..pending.len())
         .map(|i| format!("00000000-0000-4000-8000-{:012x}", 3000 + i))
         .collect();
-    s.edit("singleton drivers", None, |e| {
-        for id in &drivers {
-            e.create_parameter(Parameter {
-                id: id.clone(),
-                ..Default::default()
-            })?;
-        }
-        Ok(())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                for id in &drivers {
+                    e.create_parameter({
+                        let mut value = Parameter {
+                            id: id.clone(),
+                            ..Default::default()
+                        };
+                        value.runtime_id = value.id.clone();
+                        value
+                    })?;
+                }
+                Ok(())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("singleton drivers")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     for (i, (axis, driver)) in pending.iter().zip(&drivers).enumerate() {
         for operation in [
@@ -417,41 +558,53 @@ fn pending_rotation_axes_do_not_block_static_reparent() {
 
 fn driven_rotation(s: &mut AuthoringSession) {
     rotation(s, 1.0);
-    s.edit("driver", None, |e| {
-        e.create_parameter(Parameter {
-            id: Q.into(),
-            minimum: 0.,
-            maximum: 1.,
-            ..Default::default()
-        })?;
-        e.create_scene_binding(zipzi_core::SceneBinding {
-            id: T.into(),
-            axes: vec![BindingAxis::new(Q, vec![0., 1.])],
-            track: zipzi_core::SceneTrack::Rotation {
-                target_id: R.into(),
-                keyforms: vec![
-                    zipzi_core::RotationKeyform {
-                        keys: vec![0.],
-                        rotation: RotationPose {
-                            angle: -15.,
-                            scale: 0.8,
-                            ..Default::default()
-                        },
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: Q.into(),
+                        minimum: 0.,
+                        maximum: 1.,
                         ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.create_scene_binding(zipzi_core::SceneBinding {
+                    id: T.into(),
+                    axes: vec![BindingAxis::new(Q, vec![0., 1.])],
+                    track: zipzi_core::SceneTrack::Rotation {
+                        target_id: R.into(),
+                        keyforms: vec![
+                            zipzi_core::RotationKeyform {
+                                keys: vec![0.],
+                                rotation: RotationPose {
+                                    angle: -15.,
+                                    scale: 0.8,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            zipzi_core::RotationKeyform {
+                                keys: vec![1.],
+                                rotation: RotationPose {
+                                    angle: 35.,
+                                    scale: 1.4,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                        ],
                     },
-                    zipzi_core::RotationKeyform {
-                        keys: vec![1.],
-                        rotation: RotationPose {
-                            angle: 35.,
-                            scale: 1.4,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                ],
-            },
-        })
-    })
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("driver")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 
@@ -468,25 +621,13 @@ fn driven_edit_snapshot_succeeds_without_claiming_a_varying_domain() {
         .parameter_values
         .insert(Q.into(), 0.37);
     let original = frame(&s, 0.5, 0.37).drawables[0].positions.clone();
-    assert_eq!(
-        s.reparent_support(&edit).unwrap(),
-        zipzi_sdk::ReparentSupport::RequiresConversionPlan
-    );
-    let plan = s.plan_binding_authoring(E::Reparent(edit.clone())).unwrap();
-    let BindingConversion::Reparent(p) = plan.conversion() else {
-        panic!()
-    };
-    assert_eq!(
-        p.guarantee().context.as_ref().unwrap().parameter_values[Q],
-        0.37
-    );
-    assert!(p.guarantee().reference_scale > 1.);
-    assert!(
-        p.guarantee().error_bound
-            <= p.guarantee().tolerance
-                + p.guarantee().relative_tolerance * p.guarantee().reference_scale
-    );
-    s.execute_binding_plan(&plan).unwrap();
+
+    let plan = crate::support::binding(&s, E::Reparent(edit.clone())).unwrap();
+    let p = plan.0.report.reparent_guarantee.as_ref().unwrap();
+    assert_eq!(p.context.as_ref().unwrap().parameter_values[Q], 0.37);
+    assert!(p.reference_scale > 1.);
+    assert!(p.error_bound <= p.tolerance + p.relative_tolerance * p.reference_scale);
+    s.publish(plan.1).unwrap();
     for (a, b) in frame(&s, 0.5, 0.37).drawables[0]
         .positions
         .iter()
@@ -495,7 +636,7 @@ fn driven_edit_snapshot_succeeds_without_claiming_a_varying_domain() {
         assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
     }
     assert!((frame(&s, 0.5, 0.9).drawables[0].positions[0].x - original[0].x).abs() > 0.1);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     edit.strategy = ReparentStrategy::PreserveParameterDomain;
     edit.context
         .as_mut()
@@ -509,14 +650,17 @@ fn driven_edit_snapshot_succeeds_without_claiming_a_varying_domain() {
     let version = s.version();
     let history = s.history_state();
     assert_eq!(
-        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        crate::support::binding(&s, E::Reparent(edit.clone()))
+            .unwrap_err()
+            .code
+            .as_str(),
         "PARAMETER_DOMAIN_UNPROVEN"
     );
     assert_eq!(
-        s.plan_binding_authoring(E::Reparent(edit))
+        crate::support::binding(&s, E::Reparent(edit))
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "PARAMETER_DOMAIN_UNPROVEN"
     );
     assert_eq!(s.version(), version);
@@ -532,12 +676,18 @@ fn preservation_requires_complete_finite_context_and_does_not_relax_tolerance() 
     };
     let context = edit.context.take();
     assert_eq!(
-        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        crate::support::binding(&s, E::Reparent(edit.clone()))
+            .unwrap_err()
+            .code
+            .as_str(),
         "REPARENT_CONTEXT_REQUIRED"
     );
     edit.context = Some(zipzi_sdk::ReparentContext::default());
     assert_eq!(
-        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        crate::support::binding(&s, E::Reparent(edit.clone()))
+            .unwrap_err()
+            .code
+            .as_str(),
         "MISSING_EDIT_PARAMETER"
     );
     edit.context = context;
@@ -547,7 +697,10 @@ fn preservation_requires_complete_finite_context_and_does_not_relax_tolerance() 
         .parameter_values
         .insert(PARAMETER_ID.into(), f32::NAN);
     assert_eq!(
-        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        crate::support::binding(&s, E::Reparent(edit.clone()))
+            .unwrap_err()
+            .code
+            .as_str(),
         "INVALID_EDIT_PARAMETER"
     );
     edit.context
@@ -560,10 +713,10 @@ fn preservation_requires_complete_finite_context_and_does_not_relax_tolerance() 
     let version = s.version();
     let history = s.history_state();
     assert_eq!(
-        s.plan_binding_authoring(E::Reparent(edit))
+        crate::support::binding(&s, E::Reparent(edit))
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "REPARENT_TOLERANCE_EXCEEDED"
     );
     assert_eq!(s.version(), version);
@@ -574,42 +727,47 @@ fn preservation_requires_complete_finite_context_and_does_not_relax_tolerance() 
 fn support_matrix_includes_rotation_warp_subtrees_and_same_parent_noop() {
     let mut s = bound();
     rotation(&mut s, 1.0);
-    s.edit("warp", None, |e| {
-        e.create_transform(Transform {
-            id: T.into(),
-            data: TransformData::Warp(zipzi_core::WarpTransform {
-                rows: 1,
-                columns: 1,
-                quad: true,
-                points: vec![
-                    Vec2::new(0., 0.),
-                    Vec2::new(1., 0.),
-                    Vec2::new(0., 1.),
-                    Vec2::new(1., 1.),
-                ],
-                bezier: None,
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: T.into(),
+                        data: TransformData::Warp(zipzi_core::WarpTransform {
+                            rows: 1,
+                            columns: 1,
+                            quad: true,
+                            points: vec![
+                                Vec2::new(0., 0.),
+                                Vec2::new(1., 0.),
+                                Vec2::new(0., 1.),
+                                Vec2::new(1., 1.),
+                            ],
+                            bezier: None,
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("warp")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     for id in [R, T] {
         let mut edit =
             ReparentEdit::keep_local(vec![id.into()], if id == R { T.into() } else { R.into() });
-        assert_eq!(
-            s.reparent_support(&edit).unwrap(),
-            zipzi_sdk::ReparentSupport::Available
-        );
+
         let receipt = apply(&mut s, E::Reparent(edit.clone()));
-        assert!(receipt.changed);
-        assert_eq!(
-            s.reparent_support(&edit).unwrap(),
-            zipzi_sdk::ReparentSupport::NoChange
-        );
+        assert!(!receipt.writes.is_empty());
+
         let history = s.history_state();
-        assert!(!apply(&mut s, E::Reparent(edit.clone())).changed);
+        assert!(apply(&mut s, E::Reparent(edit.clone())).writes.is_empty());
         assert_eq!(s.history_state(), history);
-        s.undo().unwrap();
+        s.undo(s.version()).unwrap();
         for strategy in [
             ReparentStrategy::PreserveEditState,
             ReparentStrategy::PreserveParameterDomain,
@@ -617,13 +775,10 @@ fn support_matrix_includes_rotation_warp_subtrees_and_same_parent_noop() {
             edit.strategy = strategy;
             edit.context = Some(Default::default());
             edit.tolerance = 0.001;
-            assert_eq!(
-                s.reparent_support(&edit).unwrap(),
-                zipzi_sdk::ReparentSupport::RequiresConversionPlan
-            );
-            let plan = s.plan_binding_authoring(E::Reparent(edit.clone())).unwrap();
-            s.execute_binding_plan(&plan).unwrap();
-            s.undo().unwrap();
+
+            let plan = crate::support::binding(&s, E::Reparent(edit.clone())).unwrap();
+            s.publish(plan.1).unwrap();
+            s.undo(s.version()).unwrap();
         }
     }
 }
@@ -657,14 +812,20 @@ fn domain_can_fix_an_ancestor_driver_and_dynamic_singularity_requires_a_plan() {
             assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
         }
     }
-    s.undo().unwrap();
-    let mut binding = s.document().get_scene_binding(T).unwrap().clone();
+    s.undo(s.version()).unwrap();
+    let mut binding = s.snapshot().document().scene_binding(T).unwrap().clone();
     if let zipzi_core::SceneTrack::Rotation { keyforms, .. } = &mut binding.track {
         keyforms[0].rotation.scale = 0.;
     }
-    s.edit("singular sample", None, |e| {
-        e.replace_scene_binding(binding)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_scene_binding(binding))
+            .and_then(|value| {
+                let prepared = draft.prepare("singular sample")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveEditState, R) else {
         panic!()
@@ -674,15 +835,12 @@ fn domain_can_fix_an_ancestor_driver_and_dynamic_singularity_requires_a_plan() {
         .unwrap()
         .parameter_values
         .insert(Q.into(), 0.);
+
     assert_eq!(
-        s.reparent_support(&edit).unwrap(),
-        zipzi_sdk::ReparentSupport::RequiresConversionPlan
-    );
-    assert_eq!(
-        s.plan_binding_authoring(E::Reparent(edit))
+        crate::support::binding(&s, E::Reparent(edit))
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "SINGULAR_PARENT"
     );
 }
@@ -692,40 +850,72 @@ fn snapshot_uses_runtime_blend_driver_normalization_and_rotation_clamps() {
     use zipzi_core::*;
     let mut s = bound();
     rotation(&mut s, 1.0);
-    s.edit("blend parent", None, |e| {
-        e.create_parameter(Parameter {
-            id: Q.into(),
-            kind: ParameterKind::BlendShape,
-            repeat: true,
-            ..Default::default()
-        })?;
-        e.create_blend_key_table(BlendShapeKeyTable {
-            id: T.into(),
-            parameter_id: Q.into(),
-            keys: vec![-1., 0., 1.],
-            base_key_idx: 1,
-            samples: vec![],
-            base_sample_id: String::new(),
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: "00000000-0000-4000-8000-000000000499".into(),
-            target_id: R.into(),
-            target_kind: BlendShapeTargetKind::Rotation,
-            key_table_id: T.into(),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Rotation(
-                [-0.5, 0., 0.5]
-                    .into_iter()
-                    .map(|v| DeltaRotationKeyform {
-                        angle: Some(v * 30.),
-                        scale: Some(v),
-                        origin: Some(Vec2::new(v, v)),
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: Q.into(),
+                        kind: ParameterKind::BlendShape,
+                        repeat: true,
                         ..Default::default()
-                    })
-                    .collect(),
-            ),
-        })
-    })
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateTable {
+                        table: BlendShapeKeyTable {
+                            id: T.into(),
+                            parameter_id: Q.into(),
+                            keys: vec![-1., 0., 1.],
+                            base_key_idx: 1,
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                        },
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                {
+                    let binding = BlendShapeBinding {
+                        id: "00000000-0000-4000-8000-000000000499".into(),
+                        target_id: R.into(),
+                        target_kind: BlendShapeTargetKind::Rotation,
+                        key_table_id: T.into(),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Rotation(
+                            [-0.5, 0., 0.5]
+                                .into_iter()
+                                .map(|v| DeltaRotationKeyform {
+                                    angle: Some(v * 30.),
+                                    scale: Some(v),
+                                    origin: Some(Vec2::new(v, v)),
+                                    ..Default::default()
+                                })
+                                .collect(),
+                        ),
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("blend parent")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     for value in [0.37, 1.] {
         let before = frame(&s, 0.5, value).drawables[0].positions.clone();
@@ -737,9 +927,10 @@ fn snapshot_uses_runtime_blend_driver_normalization_and_rotation_clamps() {
             .unwrap()
             .parameter_values
             .insert(Q.into(), value);
-        let plan = s.plan_binding_authoring(E::Reparent(edit)).unwrap();
+        let plan = crate::support::binding(&s, E::Reparent(edit)).unwrap();
         assert_eq!(
-            plan.report()
+            plan.0
+                .report
                 .reparent_guarantee
                 .as_ref()
                 .unwrap()
@@ -749,7 +940,7 @@ fn snapshot_uses_runtime_blend_driver_normalization_and_rotation_clamps() {
                 .parameter_values[Q],
             value
         );
-        s.execute_binding_plan(&plan).unwrap();
+        s.publish(plan.1).unwrap();
         for (a, b) in frame(&s, 0.5, value).drawables[0]
             .positions
             .iter()
@@ -757,7 +948,7 @@ fn snapshot_uses_runtime_blend_driver_normalization_and_rotation_clamps() {
         {
             assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
         }
-        s.undo().unwrap();
+        s.undo(s.version()).unwrap();
     }
 }
 
@@ -775,44 +966,50 @@ fn reparent_budget_includes_driven_ancestor_sampling() {
         }),
         ..ReparentEdit::keep_local(vec![MESH_ID.into()], R.into())
     };
-    let plan = s.plan_binding_authoring(E::Reparent(edit.clone())).unwrap();
-    assert_eq!(plan.cost().sample_combinations, 2);
+    let plan = crate::support::binding(&s, E::Reparent(edit.clone())).unwrap();
+    assert_eq!(plan.0.work.sample_combinations, 2);
     let version = s.version();
     let history = s.history_state();
-    s.set_authoring_limits(AuthoringLimits {
-        max_sample_combinations: 1,
-        ..Default::default()
-    })
-    .unwrap();
     assert_eq!(
-        s.reparent_support(&edit).unwrap(),
-        zipzi_sdk::ReparentSupport::RequiresConversionPlan
-    );
-    assert_eq!(
-        s.plan_binding_authoring(E::Reparent(edit))
-            .unwrap_err()
-            .code
-            .as_ref(),
-        "AUTHORING_GRID_LIMIT"
-    );
-    assert_eq!(
-        s.execute_binding_plan(&plan).unwrap_err().code.as_ref(),
+        crate::support::binding_with_control(
+            &s,
+            E::Reparent(edit),
+            ConversionLimits {
+                max_sample_combinations: 1,
+                ..Default::default()
+            },
+            &Default::default()
+        )
+        .unwrap_err()
+        .code,
         "AUTHORING_GRID_LIMIT"
     );
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
+    s.publish(plan.1).unwrap();
 }
 
 #[test]
 fn snapshot_scene_reparent_combines_conversion_and_exact_order_in_one_history_entry() {
-    use zipzi_sdk::{ConversionControl, ReparentPlacement, SceneCollection as C, SceneEdit};
+    use zipzi_core::document::SceneCollection as C;
+    use zipzi_core::document::SceneEdit;
+    use zipzi_sdk::ReparentPlacement;
     let mut s = bound();
     rotation(&mut s, 1.75);
-    let mut sibling = s.document().get_mesh(MESH_ID).unwrap().clone();
+    let mut sibling = s.snapshot().document().mesh(MESH_ID).unwrap().clone();
     sibling.id = T.into();
     sibling.runtime_id = "sibling".into();
     sibling.deformer_id = R.into();
-    s.edit("Sibling", None, |e| e.create_mesh(sibling)).unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.create_mesh(sibling))
+            .and_then(|value| {
+                let prepared = draft.prepare("Sibling")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveParameterDomain, R) else {
         panic!()
     };
@@ -820,47 +1017,53 @@ fn snapshot_scene_reparent_combines_conversion_and_exact_order_in_one_history_en
     let original = (0..=8)
         .map(|i| frame(&s, i as f32 / 8., 0.).drawables[0].positions.clone())
         .collect::<Vec<_>>();
-    let snapshot = s.read_snapshot();
     let history = s.history_state();
-    let plan = snapshot
-        .plan_scene_edit_with_control(
+    let plan = crate::support::prepared(&s, |c| {
+        c.edit_scene(
             SceneEdit::Reparent { edit: edit.clone() },
-            s.authoring_limits(),
-            &ConversionControl::default(),
+            Default::default(),
+            &Default::default(),
         )
-        .unwrap();
+    })
+    .unwrap();
     assert!(plan
-        .conversion_report()
+        .0
+        .conversion
+        .as_ref()
         .unwrap()
+        .report
         .reparent_guarantee
         .is_some());
-    let order_before = s.document().hierarchy_order().clone();
+    let stale = s.begin_draft();
+    let order_before = s.snapshot().document().hierarchy_order().clone();
     let intent = SceneEdit::Reparent { edit: edit.clone() };
     let encoded = serde_json::to_string(&intent).unwrap();
     assert_eq!(serde_json::from_str::<SceneEdit>(&encoded).unwrap(), intent);
-    assert!(s
-        .edit("Failed batch", Some(plan.version()), |e| {
-            e.apply_scene_plan(&plan)?;
-            e.create_parameter(parameter(false))
-        })
-        .is_err());
+    assert!(crate::support::prepared(&s, |c| {
+        c.edit_scene(intent.clone(), Default::default(), &Default::default())?;
+        c.create_parameter(parameter(false))
+    })
+    .is_err());
     assert_eq!(s.history_state(), history);
-    assert_eq!(s.document().hierarchy_order(), &order_before);
+    assert_eq!(s.snapshot().document().hierarchy_order(), &order_before);
     assert!(s
+        .snapshot()
         .document()
-        .get_mesh(MESH_ID)
+        .mesh(MESH_ID)
         .unwrap()
         .deformer_id
         .is_empty());
-    s.execute_scene_plan(&plan).unwrap();
+    s.publish(plan.1).unwrap();
     let order = || C::Deformation {
         parent_id: Some(R.into()),
     };
     assert_eq!(
-        s.scene_collection(&order())
+        s.snapshot()
+            .document()
+            .scene_collection(&order())
             .unwrap()
             .iter()
-            .map(|h| h.id())
+            .map(String::as_str)
             .collect::<Vec<_>>(),
         [T, MESH_ID]
     );
@@ -878,72 +1081,90 @@ fn snapshot_scene_reparent_combines_conversion_and_exact_order_in_one_history_en
             assert!((a.x - b.x).hypot(a.y - b.y) < 0.001);
         }
     }
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert!(s
+        .snapshot()
         .document()
-        .get_mesh(MESH_ID)
+        .mesh(MESH_ID)
         .unwrap()
         .deformer_id
         .is_empty());
     assert_eq!(
-        s.scene_collection(&order())
+        s.snapshot()
+            .document()
+            .scene_collection(&order())
             .unwrap()
             .iter()
-            .map(|h| h.id())
+            .map(String::as_str)
             .collect::<Vec<_>>(),
         [T]
     );
     // An immutable old snapshot can still compute, but it cannot publish after Undo.
-    let old = snapshot
-        .plan_scene_edit_with_control(
-            SceneEdit::Reparent { edit },
-            s.authoring_limits(),
-            &ConversionControl::default(),
-        )
-        .unwrap();
+    let old = stale.prepare("old snapshot").unwrap();
     let undone = s.history_state();
-    assert!(s.execute_scene_plan(&old).is_err());
+    assert!(s.publish(old).is_err());
     assert_eq!(s.history_state(), undone);
-    s.redo().unwrap();
-    assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, R);
+    s.redo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().mesh(MESH_ID).unwrap().deformer_id,
+        R
+    );
     assert!(s.history_state() != history);
     grid_roundtrip(&s);
 }
 
 #[test]
 fn reparent_placement_rejects_foreign_anchor_and_cancelled_worker_without_discarding_redo() {
-    use zipzi_sdk::{ConversionControl, ReparentPlacement, SceneEdit};
+    use zipzi_core::document::SceneEdit;
+    use zipzi_sdk::{ConversionControl, ReparentPlacement};
     let mut s = bound();
     rotation(&mut s, 1.75);
     let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveParameterDomain, R) else {
         panic!()
     };
     edit.placement = Some(ReparentPlacement { before: None });
-    let plan = s
-        .plan_scene_edit(SceneEdit::Reparent { edit: edit.clone() })
-        .unwrap();
-    s.execute_scene_plan(&plan).unwrap();
-    s.undo().unwrap();
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Reparent { edit: edit.clone() },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    s.publish(plan.1).unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let version = s.version();
     let control = ConversionControl::default();
-    let plan = s
-        .read_snapshot()
-        .plan_scene_edit_with_control(
+    let plan = crate::support::prepared(&s, |c| {
+        c.edit_scene(
             SceneEdit::Reparent { edit: edit.clone() },
-            s.authoring_limits(),
+            Default::default(),
             &control,
         )
-        .unwrap();
+    })
+    .unwrap();
     control.cancel();
-    assert!(s.execute_scene_plan(&plan).is_err());
+    assert!(s
+        .publish_with_control(plan.1, || control.check().is_ok())
+        .is_err());
     edit.placement.as_mut().unwrap().before = Some(MESH_ID.into());
     assert_eq!(
-        s.reparent_support(&edit).unwrap_err().code.as_ref(),
+        crate::support::binding(&s, E::Reparent(edit.clone()))
+            .unwrap_err()
+            .code
+            .as_str(),
         "INVALID_PLACEMENT"
     );
-    assert!(s.plan_scene_edit(SceneEdit::Reparent { edit }).is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            SceneEdit::Reparent { edit },
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err()
+    );
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
-    s.redo().unwrap();
+    s.redo(s.version()).unwrap();
 }

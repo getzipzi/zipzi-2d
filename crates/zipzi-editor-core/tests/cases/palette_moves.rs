@@ -143,7 +143,7 @@ fn no_op_and_stale_plans_never_consume_redo() -> anyhow::Result<()> {
     let history = d.history_lengths();
     let noop = d.plan_palette_step(V::Parameters, first, false)?;
     assert!(noop.is_noop());
-    assert!(!d.execute_palette_move(&noop)?.receipt.changed);
+    assert!(d.execute_palette_move(&noop)?.receipt.kind == zipzi_sdk::PublicationKind::Unchanged);
     assert_eq!(d.history_lengths(), history);
     // Even Undo back to the same content cannot revive an old SDK plan.
     assert!(d.execute_palette_move(&plan).is_err());

@@ -14,7 +14,7 @@ impl ObjectIndex {
                 )
             }
             ObjectKind::PoseGroup => {
-                let Some(g) = model.get_pose_group(&object.id) else {
+                let Some(g) = model.pose_group(&object.id) else {
                     return false;
                 };
                 (g.name.clone(), json!({"name":g.name}))

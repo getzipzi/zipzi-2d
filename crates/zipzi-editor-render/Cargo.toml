@@ -12,6 +12,8 @@ wgpu-backend = ["dep:zipzi-render-wgpu", "dep:wgpu"]
 bench-instrumentation = ["zipzi-core/bench-instrumentation"]
 
 [dependencies]
+zipzi-animation.workspace = true
+zipzi-contract.workspace = true
 anyhow.workspace = true
 zipzi-editor-core.workspace = true
 zipzi-core.workspace = true

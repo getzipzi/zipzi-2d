@@ -1,5 +1,7 @@
+use zipzi_contract::authoring::CapabilityState;
+use zipzi_core::state::{PoseDisabledReason, RootDomain};
 use zipzi_core::{document::*, Canvas, Part, Vec2};
-use zipzi_sdk::{AuthoringSession, CapabilityState, ChangeCategory, ObjectKind};
+use zipzi_sdk::{AuthoringSession, PreparedChange, Publication, Status};
 fn id() -> String {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     format!(
@@ -7,23 +9,47 @@ fn id() -> String {
         NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     )
 }
-fn run(s: &mut AuthoringSession, edit: PoseEdit) -> zipzi_sdk::EditReceipt {
-    let p = s.plan_pose_edit(edit).unwrap();
-    s.execute_pose_plan(&p).unwrap()
+fn run(s: &mut AuthoringSession, edit: PoseEdit) -> Publication {
+    s.publish(prepare(&s, edit).unwrap()).unwrap()
+}
+fn prepare(s: &AuthoringSession, edit: PoseEdit) -> Result<PreparedChange, Status> {
+    let mut draft = s.begin_draft();
+    draft.batch(draft.source(), |candidate_commands| {
+        candidate_commands.edit_pose(edit)
+    })?;
+    draft.prepare("Pose")
 }
 fn setup() -> (AuthoringSession, String, String, String, String, String) {
-    let mut s = AuthoringSession::new(&id(), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap();
+    let mut s = AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(),
+                (Canvas::new(100., 100., Vec2::default(), 1.)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    );
     let (p, g, h, a, b) = (id(), id(), id(), id(), id());
-    s.edit("Parts", None, |e| {
-        for (id, runtime) in [(&a, "PartA"), (&b, "PartB")] {
-            e.create_part(Part {
-                id: id.clone(),
-                runtime_id: runtime.into(),
-                ..Default::default()
-            })?;
-        }
-        Ok(())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                for (id, runtime) in [(&a, "PartA"), (&b, "PartB")] {
+                    e.create_part(Part {
+                        id: id.clone(),
+                        runtime_id: runtime.into(),
+                        ..Default::default()
+                    })?;
+                }
+                Ok(())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Parts")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     for group in [&g, &h] {
         run(
@@ -62,24 +88,34 @@ fn link(s: &mut AuthoringSession, e: &str) -> String {
     );
     id
 }
-fn patch(s: &mut AuthoringSession, id: &str, fields: PoseFields) -> zipzi_sdk::EditReceipt {
-    let a = s.pose_field_address(id).unwrap();
-    let p = s.plan_pose_field_patch(&a, fields).unwrap();
-    s.execute_pose_plan(&p).unwrap()
+fn patch(s: &mut AuthoringSession, id: &str, fields: PoseFields) -> Publication {
+    let expected = s.snapshot().document().pose_fields(id).unwrap();
+    run(
+        s,
+        PoseEdit::Patch {
+            id: id.into(),
+            expected,
+            fields,
+        },
+    )
 }
 fn part(id: &str) -> PosePartRef {
     PosePartRef::Resolved { part_id: id.into() }
 }
 #[test]
 fn empty_group_creates_singleton_in_one_history_and_persists_all_identities() {
-    let mut s = AuthoringSession::new(&id(), Canvas::new(10., 10., Vec2::default(), 1.)).unwrap();
+    let mut s = AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(),
+                (Canvas::new(10., 10., Vec2::default(), 1.)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    );
     let (p, g) = (id(), id());
-    assert!(matches!(
-        s.pose_collection_capabilities(&PoseCollection::Groups)
-            .unwrap()
-            .create,
-        CapabilityState::Available
-    ));
     let r = run(
         &mut s,
         PoseEdit::CreateGroup {
@@ -89,52 +125,64 @@ fn empty_group_creates_singleton_in_one_history_and_persists_all_identities() {
             before: None,
         },
     );
-    assert_eq!(r.changes.created.len(), 2);
-    let old = s.handle(ObjectKind::PoseGroup, &g).unwrap();
+    assert!(r.writes.root_changed(RootDomain::Pose));
+    assert_eq!(s.snapshot().document().pose().as_ref().unwrap().id, p);
+    assert_eq!(
+        s.snapshot().document().pose().as_ref().unwrap().groups[0].id,
+        g
+    );
+    let old = s.begin_draft().prepare("old pose").unwrap();
     assert!(matches!(
-        s.pose_capabilities(&old).unwrap().dissolve,
+        s.snapshot()
+            .document()
+            .pose_capabilities(&g)
+            .unwrap()
+            .dissolve,
         CapabilityState::Unavailable {
             code: "POSE_RECEIVING_GROUP_REQUIRED"
         }
     ));
-    s.undo().unwrap();
-    assert!(s.document().pose().is_none());
-    s.redo().unwrap();
-    assert!(s.resolve_handle(&old).is_err());
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().pose().is_none());
+    s.redo(s.version()).unwrap();
+    assert_eq!(s.publish(old).unwrap_err().code, "STALE_SOURCE");
     let e = entry(&mut s, &g);
     let l = link(&mut s, &e);
-    let d = zipzi_project::decode_project(&zipzi_project::encode_project(s.document()).unwrap())
-        .unwrap();
-    assert_eq!(d.pose(), s.document().pose());
-    assert!(d.validate_structure().is_empty());
-    assert!(d.get_pose_link(&l).is_some());
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("pose.zipzi");
+    let io = zipzi_sdk::ProjectIo::new(tmp.path(), zipzi_sdk::ResourceStore::default());
+    s.save_as(&io, &path, None, || true).unwrap();
+    let d = io.load(&path, || true).unwrap().document;
+    assert_eq!(d.pose(), s.snapshot().document().pose());
+    assert!(d.builder().freeze().is_ok());
+    assert!(d.pose_link(&l).is_some());
     let proj = d.pose_projection().unwrap().unwrap();
     assert!(proj.groups[0].entries.is_empty());
     assert_eq!(proj.disabled.len(), 2);
 }
 #[test]
-fn fields_follow_ids_after_reorder_but_expire_after_cross_owner_roundtrip() {
+fn stable_ids_survive_moves_but_old_sources_never_revive_after_owner_roundtrip_or_undo() {
     let (mut s, _, g, h, a, _) = setup();
     let e = entry(&mut s, &g);
     let x = entry(&mut s, &g);
-    let handle = s.handle(ObjectKind::PoseEntry, &e).unwrap();
-    let address = s.pose_field_address(&e).unwrap();
+    let stale = s.begin_draft().prepare("before reorder").unwrap();
     run(
         &mut s,
         PoseEdit::Move {
-            ids: vec![x.clone()],
+            ids: vec![x],
             destination: PoseCollection::Entries {
                 group_id: g.clone(),
             },
             before: Some(e.clone()),
         },
     );
-    let p = s
-        .plan_pose_field_patch(&address, PoseFields::Entry { part: part(&a) })
-        .unwrap();
-    s.execute_pose_plan(&p).unwrap();
-    assert_eq!(s.document().get_pose_entry(&e).unwrap().1.part, part(&a));
-    let address = s.pose_field_address(&e).unwrap();
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    patch(&mut s, &e, PoseFields::Entry { part: part(&a) });
+    assert_eq!(
+        s.snapshot().document().pose_entry(&e).unwrap().1.part,
+        part(&a)
+    );
+    let stale = s.begin_draft().prepare("before owner moves").unwrap();
     for group in [&h, &g] {
         run(
             &mut s,
@@ -147,26 +195,18 @@ fn fields_follow_ids_after_reorder_but_expire_after_cross_owner_roundtrip() {
             },
         );
     }
-    assert!(s.resolve_handle(&handle).is_ok());
-    assert_eq!(
-        s.plan_pose_field_patch(&address, address.expected().clone())
-            .unwrap_err()
-            .code
-            .as_ref(),
-        "STALE_FIELD_ADDRESS"
-    );
-    let address = s.pose_field_address(&e).unwrap();
+    assert_eq!(s.snapshot().document().pose_entry(&e).unwrap().0.id, g);
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    let stale = s.begin_draft().prepare("before deletion").unwrap();
     run(
         &mut s,
         PoseEdit::Delete {
             ids: vec![e.clone()],
         },
     );
-    s.undo().unwrap();
-    assert!(s.resolve_handle(&handle).is_err());
-    assert!(s
-        .plan_pose_field_patch(&address, address.expected().clone())
-        .is_err());
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().pose_entry(&e).is_some());
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
 }
 #[test]
 fn copy_remaps_owned_ids_and_dissolve_preserves_shared_targets_and_handles() {
@@ -183,14 +223,14 @@ fn copy_remaps_owned_ids_and_dissolve_preserves_shared_targets_and_handles() {
             before: None,
         },
     );
-    assert_eq!(r.changes.created.len(), 3);
-    let d = s.document();
-    let copied = &d.pose().unwrap().groups[2];
+    assert!(r.writes.root_changed(RootDomain::Pose));
+    let d = s.snapshot().document();
+    let copied = &d.pose().as_ref().unwrap().groups[2];
     assert_ne!(copied.id, g);
     assert_ne!(copied.entries[0].id, e);
     assert_ne!(copied.entries[0].links.as_ref().unwrap()[0].id, l);
     assert_eq!(copied.entries[0].part, part(&a));
-    let handle = s.handle(ObjectKind::PoseEntry, &e).unwrap();
+    let original_entry = s.snapshot().document().pose_entry(&e).unwrap().1.clone();
     let r = run(
         &mut s,
         PoseEdit::DissolveGroup {
@@ -199,17 +239,53 @@ fn copy_remaps_owned_ids_and_dissolve_preserves_shared_targets_and_handles() {
             before: None,
         },
     );
-    assert_eq!(r.changes.deleted.len(), 1);
-    assert_eq!(s.document().pose_owner(&e), Some(h.as_str()));
-    assert!(s.resolve_handle(&handle).is_ok());
-    assert_eq!(s.document().get_pose_link(&l).unwrap().1.target, part(&b));
-    assert!(s
-        .edit("Referenced Part", None, |e| e.erase_object(&a))
-        .is_err());
+    assert!(r.writes.root_changed(RootDomain::Pose));
+    assert!(s.snapshot().document().pose_group(&g).is_none());
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .pose_entry(&e)
+            .map(|(g, _)| g.id.as_str()),
+        Some(h.as_str())
+    );
+    assert_eq!(
+        &original_entry,
+        s.snapshot().document().pose_entry(&e).unwrap().1
+    );
+    assert_eq!(
+        s.snapshot().document().pose_link(&l).unwrap().1.target,
+        part(&b)
+    );
+    let before = s.read_snapshot();
+    let mut deletion = s.begin_draft();
+    let outcome = deletion
+        .batch(deletion.source(), |c| {
+            c.review_deletion(
+                &zipzi_contract::document::DeletionRequest {
+                    roots: vec![c
+                        .read_document()?
+                        .deletion_target(zipzi_contract::authoring::ObjectKind::Part, &a)?],
+                    ..Default::default()
+                },
+                Default::default(),
+                &Default::default(),
+            )
+        })
+        .unwrap();
+    assert!(
+        outcome.report.rewritten.iter().any(|r| r.owner.id == e)
+            || outcome.report.removed.iter().any(|r| r.object.id == e)
+    );
+    assert_eq!(s.read_snapshot().source, before.source);
+    assert_eq!(
+        s.snapshot().document().pose_entry(&e).unwrap().1.part,
+        part(&a)
+    );
+    deletion.cancel();
     run(&mut s, PoseEdit::Delete { ids: vec![p] });
-    assert!(s.document().get_part(&a).is_some());
-    s.undo().unwrap();
-    assert!(s.document().pose().is_some());
+    assert!(s.snapshot().document().part(&a).is_some());
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().pose().is_some());
 }
 #[test]
 fn invalid_joint_moves_duplicate_targets_and_stale_plans_are_atomic() {
@@ -221,123 +297,195 @@ fn invalid_joint_moves_duplicate_targets_and_stale_plans_are_atomic() {
     let v = s.version();
     let history = s.history_state();
     assert_eq!(
-        s.plan_pose_edit(PoseEdit::Move {
-            ids: vec![e.clone()],
-            destination: PoseCollection::Entries {
-                group_id: h.clone()
-            },
-            before: None
-        })
+        prepare(
+            &s,
+            PoseEdit::Move {
+                ids: vec![e.clone()],
+                destination: PoseCollection::Entries {
+                    group_id: h.clone()
+                },
+                before: None
+            }
+        )
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "DUPLICATE_POSE_PART"
     );
     assert_eq!(s.version(), v);
     assert_eq!(s.history_state(), history);
-    let p = s
-        .plan_pose_edit(PoseEdit::Delete {
+    let p = prepare(
+        &s,
+        PoseEdit::Delete {
             ids: vec![e.clone()],
-        })
-        .unwrap();
+        },
+    )
+    .unwrap();
     entry(&mut s, &g);
     let v = s.version();
-    assert!(s.execute_pose_plan(&p).is_err());
+    assert!(s.publish(p).is_err());
     assert_eq!(s.version(), v);
     let v = s.version();
-    assert!(s
-        .edit("Joint invalid", None, |edit| {
-            edit.edit_pose(PoseEdit::Delete {
-                ids: vec![e.clone()],
-            })?;
-            edit.edit_pose(PoseEdit::Move {
-                ids: vec![x.clone()],
-                destination: PoseCollection::Links {
-                    entry_id: x.clone(),
-                },
-                before: None,
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                edit.edit_pose(PoseEdit::Delete {
+                    ids: vec![e.clone()],
+                })?;
+                edit.edit_pose(PoseEdit::Move {
+                    ids: vec![x.clone()],
+                    destination: PoseCollection::Links {
+                        entry_id: x.clone(),
+                    },
+                    before: None,
+                })
             })
-        })
-        .is_err());
+            .and_then(|value| {
+                let prepared = draft.prepare("Joint invalid")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
     assert_eq!(s.version(), v);
-    assert!(s.document().get_pose_entry(&e).is_some());
+    assert!(s.snapshot().document().pose_entry(&e).is_some());
 }
 #[test]
 fn direct_replacement_and_generic_delete_obey_descendant_locks() {
     let (mut s, p, g, _, a, _) = setup();
     let e = entry(&mut s, &g);
     let l = link(&mut s, &e);
-    s.edit("Lock", None, |edit| {
-        let mut state = edit.candidate_document().editor_state().clone();
-        state.objects.insert(
-            l.clone(),
-            ObjectEditorState {
-                locked: true,
-                ..Default::default()
-            },
-        );
-        edit.replace_editor_state(state)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                let mut state = edit.read_document().unwrap().editor_state().clone();
+                state.objects.insert(
+                    l.clone(),
+                    ObjectEditorState {
+                        locked: true,
+                        ..Default::default()
+                    },
+                );
+                edit.replace_editor_state(state)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Lock")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let h = s.handle(ObjectKind::PoseGroup, &g).unwrap();
+
     assert!(matches!(
-        s.pose_capabilities(&h).unwrap().delete,
+        s.snapshot()
+            .document()
+            .pose_capabilities(&g)
+            .unwrap()
+            .delete,
         CapabilityState::Unavailable {
             code: "OBJECT_LOCKED"
         }
     ));
     assert_eq!(
-        s.plan_pose_edit(PoseEdit::Delete { ids: vec![g] })
+        prepare(&s, PoseEdit::Delete { ids: vec![g] })
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "OBJECT_LOCKED"
     );
-    let mut replacement = s.pose().unwrap();
+    let mut replacement = s
+        .snapshot()
+        .document()
+        .pose()
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .clone();
     replacement.groups.clear();
-    assert!(s
-        .edit("Replace", None, |edit| edit.set_pose(replacement))
-        .is_err());
-    assert!(s
-        .edit("Delete", None, |edit| edit.erase_object(&p))
-        .is_err());
-    s.edit("Unlock", None, |edit| {
-        let mut state = edit.candidate_document().editor_state().clone();
-        state.objects.remove(&l);
-        edit.replace_editor_state(state)
-    })
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| edit.replace_pose(Some(replacement)))
+            .and_then(|value| {
+                let prepared = draft.prepare("Replace")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                edit.edit_pose(PoseEdit::Delete {
+                    ids: vec![p.clone()],
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Delete")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                let mut state = edit.read_document().unwrap().editor_state().clone();
+                state.objects.remove(&l);
+                edit.replace_editor_state(state)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Unlock")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     patch(&mut s, &l, PoseFields::Link { target: part(&a) });
-    let handle = s.handle(ObjectKind::PoseLink, &l).unwrap();
-    let original = s.pose().unwrap();
+    let before = s.read_snapshot();
+    let original = s
+        .snapshot()
+        .document()
+        .pose()
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .clone();
     let mut without = original.clone();
     without.groups[0].entries[0].links = None;
-    s.edit("Replace and restore", None, |edit| {
-        edit.set_pose(without)?;
-        edit.set_pose(original)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                edit.replace_pose(Some(without))?;
+                edit.replace_pose(Some(original))
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Replace and restore")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    assert!(s.resolve_handle(&handle).is_err());
+    assert_eq!(s.read_snapshot().source, before.source);
+    assert_eq!(s.snapshot().content_id(), before.snapshot.content_id());
 }
 #[test]
-fn no_op_keeps_redo_and_label_changes_do_not_invalidate_evaluation() {
+fn no_op_keeps_redo_and_label_changes_preserve_evaluated_geometry() {
     let (mut s, _, g, _, _, _) = setup();
     let e = entry(&mut s, &g);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
-    let v = s.version();
-    let address = s.pose_field_address(&g).unwrap();
-    let p = s
-        .plan_pose_field_patch(&address, address.expected().clone())
-        .unwrap();
-    let r = s.execute_pose_plan(&p).unwrap();
-    assert!(!r.changed);
-    assert_eq!(s.version(), v);
+    let version = s.version();
+    let fields = s.snapshot().document().pose_fields(&g).unwrap();
+    let r = patch(&mut s, &g, fields);
+    assert!(r.writes.is_empty());
+    assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
-    s.redo().unwrap();
-    assert!(s.document().get_pose_entry(&e).is_some());
-    let evaluation = s.evaluation_revision();
-    let frame = s.preview_frame().unwrap();
+    s.redo(s.version()).unwrap();
+    assert!(s.snapshot().document().pose_entry(&e).is_some());
+    let before = s.snapshot().clone();
+    let mut a = zipzi_core::DrawableFrame::default();
+    let mut b = zipzi_core::DrawableFrame::default();
+    assert!(zipzi_core::evaluate_frame(before.document(), &Default::default(), &mut a).is_ok());
     let r = patch(
         &mut s,
         &g,
@@ -345,17 +493,19 @@ fn no_op_keeps_redo_and_label_changes_do_not_invalidate_evaluation() {
             name: "Renamed".into(),
         },
     );
-    assert!(r.changes.categories.contains(&ChangeCategory::Labels));
-    assert!(!r
-        .changes
-        .categories
-        .contains(&ChangeCategory::EvaluationInputs));
-    assert_eq!(s.evaluation_revision(), evaluation);
-    assert!(std::sync::Arc::ptr_eq(&frame, &s.preview_frame().unwrap()));
-    s.undo().unwrap();
-    assert_eq!(s.evaluation_revision(), evaluation);
-    s.redo().unwrap();
-    assert_eq!(s.evaluation_revision(), evaluation);
+    assert!(r.writes.root_changed(RootDomain::Pose));
+    assert_ne!(s.snapshot().content_id(), before.content_id());
+    assert!(
+        zipzi_core::evaluate_frame(s.snapshot().document(), &Default::default(), &mut b).is_ok()
+    );
+    assert_eq!(a.drawables, b.drawables);
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), before.content_id());
+    s.redo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().pose_group(&g).unwrap().name,
+        "Renamed"
+    );
 }
 #[test]
 fn projection_compacts_entries_and_links_and_export_uses_identical_omissions() {
@@ -368,7 +518,7 @@ fn projection_compacts_entries_and_links_and_export_uses_identical_omissions() {
     let unlinked = link(&mut s, &e);
     let l = link(&mut s, &e);
     patch(&mut s, &l, PoseFields::Link { target: part(&b) });
-    let p = s.document().pose_projection().unwrap().unwrap();
+    let p = s.snapshot().document().pose_projection().unwrap().unwrap();
     assert_eq!(p.slots[&e], vec![0, 0]);
     assert_eq!(p.slots[&l], vec![0, 0, 0]);
     assert!(!p.slots.contains_key(&unready));
@@ -379,21 +529,39 @@ fn projection_compacts_entries_and_links_and_export_uses_identical_omissions() {
         .any(|v| v.id == dependent
             && matches!(v.reason, PoseDisabledReason::OwnerUnavailable { .. })));
     assert_eq!(
-        s.export_pose3().unwrap_err().code.as_ref(),
+        zipzi_project::export_pose3(s.snapshot().document())
+            .unwrap_err()
+            .code
+            .as_str(),
         "UNCONFIGURED_PART"
     );
-    let export = s.plan_available_pose_export().unwrap();
-    assert_eq!(export.omitted.len(), 3);
-    let text = s.export_pose_plan(&export).unwrap().unwrap();
+    let export = s.read_snapshot();
+    assert_eq!(p.disabled.len(), 3);
+    let stale = s.begin_draft().prepare("available export source").unwrap();
+    let text = zipzi_project::export_available_pose3(export.snapshot.document())
+        .unwrap()
+        .unwrap();
     assert!(!text.contains(&e));
     assert!(!text.contains(&l));
     assert!(text.contains("PartA"));
-    let imported = zipzi_project::import_pose3(s.document(), &s.pose().unwrap().id, &text).unwrap();
+    let imported = zipzi_project::import_pose3(
+        s.snapshot().document(),
+        &s.snapshot()
+            .document()
+            .pose()
+            .as_ref()
+            .unwrap()
+            .as_ref()
+            .clone()
+            .id,
+        &text,
+    )
+    .unwrap();
     assert_ne!(
-        imported.candidate.pose().unwrap().groups[0].entries[0].id,
+        imported.candidate.pose().as_ref().unwrap().groups[0].entries[0].id,
         e
     );
-    let mut preview = s.motion_preview();
+    let mut preview = zipzi_animation::MotionPreview::new(s.snapshot().document());
     let snapshot = preview.advance(0.1).unwrap();
     assert_eq!(snapshot.part_opacities[&a], 1.);
     assert_eq!(snapshot.part_opacities[&b], 1.);
@@ -406,37 +574,55 @@ fn projection_compacts_entries_and_links_and_export_uses_identical_omissions() {
             },
         },
     );
-    assert!(s.export_pose_plan(&export).is_err());
-    let p = s.document().pose_projection().unwrap().unwrap();
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    assert_eq!(
+        zipzi_project::export_available_pose3(export.snapshot.document())
+            .unwrap()
+            .unwrap(),
+        text
+    );
+    let p = s.snapshot().document().pose_projection().unwrap().unwrap();
     assert!(p.disabled.iter().any(|v|matches!(&v.reason,PoseDisabledReason::Unresolved { runtime_id } if runtime_id=="Missing")));
 }
 #[test]
-fn link_repair_changesets_are_directional_for_direct_edits_and_history() {
+fn link_repair_and_history_restore_reference_values_and_keep_sources_stale() {
     let (mut s, _, g, _, a, _) = setup();
     let e = entry(&mut s, &g);
     let l = link(&mut s, &e);
-    let r = patch(&mut s, &l, PoseFields::Link { target: part(&a) });
-    let edge = &r.changes.pose_references[0];
-    assert_eq!(edge.before, Some(PosePartRef::Unspecified));
-    assert_eq!(edge.after, Some(part(&a)));
-    let r = s.undo().unwrap();
-    assert_eq!(r.changes.pose_references[0].before, Some(part(&a)));
+    let before = s.read_snapshot();
     assert_eq!(
-        r.changes.pose_references[0].after,
-        Some(PosePartRef::Unspecified)
+        before.snapshot.document().pose_link(&l).unwrap().1.target,
+        PosePartRef::Unspecified
     );
-    s.redo().unwrap();
-    let address = s.pose_field_address(&l).unwrap();
+    let r = patch(&mut s, &l, PoseFields::Link { target: part(&a) });
+    assert!(r.writes.root_changed(RootDomain::Pose));
+    assert_eq!(
+        s.snapshot().document().pose_link(&l).unwrap().1.target,
+        part(&a)
+    );
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().pose_link(&l).unwrap().1.target,
+        PosePartRef::Unspecified
+    );
+    s.redo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().pose_link(&l).unwrap().1.target,
+        part(&a)
+    );
+    let stale = s.begin_draft().prepare("before deletion").unwrap();
     run(
         &mut s,
         PoseEdit::Delete {
             ids: vec![l.clone()],
         },
     );
-    s.undo().unwrap();
-    assert!(s
-        .plan_pose_field_patch(&address, PoseFields::Link { target: part(&a) })
-        .is_err());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    assert_eq!(
+        s.snapshot().document().pose_link(&l).unwrap().1.target,
+        part(&a)
+    );
 }
 #[test]
 fn field_patches_share_unrelated_pose_storage_and_publish_extension_changes() {
@@ -444,23 +630,29 @@ fn field_patches_share_unrelated_pose_storage_and_publish_extension_changes() {
     let first = entry(&mut s, &g);
     let second = entry(&mut s, &h);
     let l = link(&mut s, &second);
-    let before = s.document().clone();
+    let before = s.snapshot().document().clone();
     patch(&mut s, &second, PoseFields::Entry { part: part(&a) });
     assert_eq!(
-        before.get_pose_group(&g).unwrap().entries.as_ptr(),
-        s.document().get_pose_group(&g).unwrap().entries.as_ptr()
+        before.pose_group(&g).unwrap().entries.as_ptr(),
+        s.snapshot()
+            .document()
+            .pose_group(&g)
+            .unwrap()
+            .entries
+            .as_ptr()
     );
     assert_eq!(
         before
-            .get_pose_entry(&second)
+            .pose_entry(&second)
             .unwrap()
             .1
             .links
             .as_ref()
             .unwrap()
             .as_ptr(),
-        s.document()
-            .get_pose_entry(&second)
+        s.snapshot()
+            .document()
+            .pose_entry(&second)
             .unwrap()
             .1
             .links
@@ -469,59 +661,86 @@ fn field_patches_share_unrelated_pose_storage_and_publish_extension_changes() {
             .as_ptr()
     );
     assert_eq!(
-        before.get_pose_entry(&second).unwrap().1.part,
+        before.pose_entry(&second).unwrap().1.part,
         PosePartRef::Unspecified
     );
-    let mut replacement = s.pose().unwrap();
+    let mut replacement = s
+        .snapshot()
+        .document()
+        .pose()
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .clone();
     replacement.groups[0].entries[0]
         .extensions
         .insert("Future".into(), serde_json::json!({"keep":true}));
-    let (_, receipt) = s
-        .edit("Explicit extensions", None, |e| e.set_pose(replacement))
-        .unwrap();
-    assert!(receipt.changes.modified.iter().any(|e| e.id == first));
-    assert!(receipt
-        .changes
-        .categories
-        .contains(&ChangeCategory::Content));
-    assert!(receipt
-        .changes
-        .categories
-        .contains(&ChangeCategory::EvaluationInputs));
-    assert!(s.document().get_pose_link(&l).is_some());
+    let (_, receipt) = {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_pose(Some(replacement)))
+            .and_then(|value| {
+                let prepared = draft.prepare("Explicit extensions")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    assert!(receipt.writes.root_changed(RootDomain::Pose));
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .pose_entry(&first)
+            .unwrap()
+            .1
+            .extensions["Future"],
+        serde_json::json!({"keep":true})
+    );
+    assert!(s.snapshot().document().pose_link(&l).is_some());
 }
 #[test]
 fn identity_collisions_and_missing_resolved_targets_cannot_be_saved() {
     let (mut s, _, g, _, a, _) = setup();
     let e = entry(&mut s, &g);
     let v = s.version();
-    assert!(s
-        .plan_pose_edit(PoseEdit::CreateEntry {
+    assert!(prepare(
+        &s,
+        PoseEdit::CreateEntry {
             group_id: g.clone(),
             id: a,
             before: None
-        })
-        .is_err());
-    let mut replacement = s.pose().unwrap();
+        }
+    )
+    .is_err());
+    let mut replacement = s
+        .snapshot()
+        .document()
+        .pose()
+        .as_ref()
+        .unwrap()
+        .as_ref()
+        .clone();
     replacement.groups[0].entries[0].id = replacement.groups[0].id.clone();
-    assert!(s
-        .edit("Duplicate ID", None, |e| e.set_pose(replacement))
-        .is_err());
-    let address = s.pose_field_address(&e).unwrap();
-    assert!(s
-        .plan_pose_field_patch(&address, PoseFields::Entry { part: part(&id()) })
-        .is_err());
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_pose(Some(replacement)))
+            .and_then(|value| {
+                let prepared = draft.prepare("Duplicate ID")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
+    let expected = s.snapshot().document().pose_fields(&e).unwrap();
+    assert!(prepare(
+        &s,
+        PoseEdit::Patch {
+            id: e,
+            expected,
+            fields: PoseFields::Entry { part: part(&id()) }
+        }
+    )
+    .is_err());
     assert_eq!(s.version(), v);
-    let mut wire: serde_json::Value =
-        serde_json::from_str(&zipzi_project::encode_project(s.document()).unwrap()).unwrap();
-    assert_eq!(wire["format_version"], 21);
-    wire["format_version"] = 15.into();
-    assert_eq!(
-        zipzi_project::decode_project(&wire.to_string())
-            .unwrap_err()
-            .code,
-        "UNSUPPORTED_VERSION"
-    );
 }
 #[test]
 fn multi_source_moves_use_native_order_and_no_op_reordering_preserves_redo() {
@@ -540,8 +759,9 @@ fn multi_source_moves_use_native_order_and_no_op_reordering_preserves_redo() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_pose_group(&h)
+        s.snapshot()
+            .document()
+            .pose_group(&h)
             .unwrap()
             .entries
             .iter()
@@ -550,7 +770,7 @@ fn multi_source_moves_use_native_order_and_no_op_reordering_preserves_redo() {
         vec![&a, &b, &c]
     );
     let l = link(&mut s, &c);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let v = s.version();
     let r = run(
@@ -561,9 +781,9 @@ fn multi_source_moves_use_native_order_and_no_op_reordering_preserves_redo() {
             before: None,
         },
     );
-    assert!(!r.changed);
+    assert!(r.writes.is_empty());
     assert_eq!(s.history_state(), history);
     assert_eq!(s.version(), v);
-    s.redo().unwrap();
-    assert!(s.document().get_pose_link(&l).is_some());
+    s.redo(s.version()).unwrap();
+    assert!(s.snapshot().document().pose_link(&l).is_some());
 }

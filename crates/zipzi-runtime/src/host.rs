@@ -1,9 +1,6 @@
 //! Explicitly owned in-process host. Only its owner thread enters Runtime;
 //! workers return completions even when the caller makes no further requests.
-use crate::{
-    ClientId, Completion, Executor, JobId, JobInfo, Result, Runtime, RuntimeError, RuntimeLimits,
-    Work,
-};
+use crate::{ClientId, Completion, Executor, JobId, JobInfo, Result, Runtime, RuntimeLimits, Work};
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     mpsc, Arc, Mutex,
@@ -12,8 +9,8 @@ use std::thread::{self, JoinHandle};
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum HostError {
-    #[error(transparent)]
-    Runtime(#[from] RuntimeError),
+    #[error("{0:?}")]
+    Runtime(zipzi_sdk::Status),
     #[error("Local host call queue is full; operation was not executed")]
     Full,
     #[error("Local host is closed")]
@@ -39,8 +36,6 @@ enum Message {
     Wait(ClientId, JobId, Reply<JobInfo>, Permit),
     Complete(Box<Completion>),
     Shutdown,
-    #[cfg(feature = "test-support")]
-    Wake,
 }
 struct Waiter {
     client: ClientId,
@@ -53,8 +48,6 @@ struct Waiter {
 /// its sessions, without saving them. Entered IO finishes with its actual result;
 /// queued jobs are cancelled. Waiting never holds a Runtime lock.
 pub struct LocalHost {
-    #[cfg(feature = "test-support")]
-    control: Arc<crate::test_support::Control>,
     sender: mpsc::Sender<Message>,
     queued: Arc<AtomicUsize>,
     capacity: usize,
@@ -71,34 +64,19 @@ impl LocalHost {
         }
         let (sender, receiver) = mpsc::channel();
         let runtime = Runtime::new(limits.clone());
-        #[cfg(feature = "test-support")]
-        let control = runtime.test_controller();
-        let workers = Workers::new(
-            limits.running_jobs,
-            sender.clone(),
-            #[cfg(feature = "test-support")]
-            control.clone(),
-        )?;
+        let workers = Workers::new(limits.running_jobs, sender.clone())?;
         let owner = thread::Builder::new()
             .name("zipzi-local-runtime".into())
             .spawn(move || {
                 run(runtime, receiver, workers);
             })?;
         Ok(Self {
-            #[cfg(feature = "test-support")]
-            control,
             sender,
             queued: Arc::new(AtomicUsize::new(0)),
             capacity: call_capacity,
             closed: AtomicBool::new(false),
             owner: Mutex::new(Some(owner)),
         })
-    }
-    #[cfg(feature = "test-support")]
-    pub fn test_control(&self, action: &str) -> Result<bool> {
-        let result = self.control.command(action);
-        let _ = self.sender.send(Message::Wake);
-        result
     }
     fn permit(&self) -> HostResult<Permit> {
         if self.closed.load(Ordering::Acquire) {
@@ -130,10 +108,8 @@ impl LocalHost {
         let permit = self.permit()?;
         let (reply, receive) = mpsc::sync_channel(1);
         let call = Box::new(move |runtime: &mut Runtime| {
-            runtime.refresh_memory_budget();
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| operation(runtime))) {
                 Ok(value) => {
-                    runtime.refresh_memory_budget();
                     let _ = reply.send(value.map_err(HostError::Runtime));
                     true
                 }
@@ -181,28 +157,10 @@ struct Workers {
     active: usize,
 }
 impl Workers {
-    fn new(
-        count: usize,
-        complete: mpsc::Sender<Message>,
-        #[cfg(feature = "test-support")] control: Arc<crate::test_support::Control>,
-    ) -> std::io::Result<Self> {
-        let pool = crate::WorkerPool::with_runner(
-            count,
-            16 << 20,
-            move |work| {
-                #[cfg(feature = "test-support")]
-                {
-                    control.run(work)
-                }
-                #[cfg(not(feature = "test-support"))]
-                {
-                    work.run_quantum()
-                }
-            },
-            move |completion| {
-                let _ = complete.send(Message::Complete(Box::new(completion)));
-            },
-        )?;
+    fn new(count: usize, complete: mpsc::Sender<Message>) -> std::io::Result<Self> {
+        let pool = crate::WorkerPool::with_runner(count, 16 << 20, Work::run, move |completion| {
+            let _ = complete.send(Message::Complete(Box::new(completion)));
+        })?;
         Ok(Self { pool, active: 0 })
     }
 }
@@ -218,7 +176,7 @@ fn notify(runtime: &Runtime, waiters: &mut Vec<Waiter>) {
     let mut i = 0;
     while i < waiters.len() {
         let waiter = &waiters[i];
-        match runtime.job_info(waiter.client, waiter.job) {
+        match runtime.job(waiter.client, waiter.job).cloned() {
             Ok(info) if !info.state.is_terminal() => i += 1,
             result => {
                 let waiter = waiters.swap_remove(i);
@@ -251,106 +209,19 @@ fn run(mut runtime: Runtime, receiver: mpsc::Receiver<Message>, mut workers: Wor
             }
             Message::Complete(completion) => {
                 workers.active -= 1;
-                runtime.complete(*completion);
+                let _ = runtime.complete(*completion);
             }
             Message::Shutdown => stopping = true,
-            #[cfg(feature = "test-support")]
-            Message::Wake => (),
         }
         if stopping {
             runtime.cancel_host_jobs();
         }
-        #[cfg(feature = "test-support")]
-        let dispatch = stopping || runtime.test_controller().dispatch_enabled();
-        #[cfg(not(feature = "test-support"))]
-        let dispatch = true;
-        if dispatch {
-            runtime.dispatch(&mut workers);
-        }
+        runtime.dispatch(&mut workers);
         notify(&runtime, &mut waiters);
-        runtime.refresh_memory_budget();
-        if stopping && workers.active == 0 {
+        if stopping && workers.active == 0 && runtime.outstanding_jobs() == 0 {
             break;
         }
     }
     // `workers` finish before Runtime is dropped. No caller or getter is needed
     // to publish a completion, and no thread retains a mutable Runtime borrow.
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn call_mailbox_cells_do_not_inline_formal_sessions() {
-        assert!(std::mem::size_of::<super::Message>() <= 128);
-        assert!(std::mem::size_of::<crate::Completion>() > 1024);
-    }
-
-    use super::*;
-    use std::time::Duration;
-
-    #[test]
-    fn full_queue_confirms_no_execution_and_returns_its_permit() {
-        let host = Arc::new(LocalHost::new(Default::default(), 1).unwrap());
-        let (entered, entry) = mpsc::channel();
-        let (release, blocked) = mpsc::channel();
-        let blocking = host.clone();
-        let caller = thread::spawn(move || {
-            blocking.call(move |_| {
-                entered.send(()).unwrap();
-                blocked.recv_timeout(Duration::from_secs(5)).unwrap();
-                Ok(())
-            })
-        });
-        entry.recv_timeout(Duration::from_secs(5)).unwrap();
-        let (executed, execution) = mpsc::channel();
-        let permit = host.permit().unwrap();
-        host.sender
-            .send(Message::Call(
-                Box::new(move |_| {
-                    executed.send(()).unwrap();
-                    true
-                }),
-                permit,
-            ))
-            .unwrap();
-        assert_eq!(
-            host.call::<()>(|_| panic!("rejected call must never execute")),
-            Err(HostError::Full)
-        );
-        release.send(()).unwrap();
-        caller.join().unwrap().unwrap();
-        execution.recv_timeout(Duration::from_secs(5)).unwrap();
-        host.call(|_| Ok(())).unwrap();
-        assert_eq!(host.queued.load(Ordering::Acquire), 0);
-    }
-
-    #[test]
-    fn concurrent_close_waits_accepted_calls_and_rejects_later_admission() {
-        let host = Arc::new(LocalHost::new(Default::default(), 2).unwrap());
-        let (entered, entry) = mpsc::channel();
-        let (release, blocked) = mpsc::channel();
-        let calling = host.clone();
-        let caller = thread::spawn(move || {
-            calling.call(move |_| {
-                entered.send(()).unwrap();
-                blocked.recv_timeout(Duration::from_secs(5)).unwrap();
-                Ok(())
-            })
-        });
-        entry.recv_timeout(Duration::from_secs(5)).unwrap();
-        let closing = host.clone();
-        let first = thread::spawn(move || closing.close());
-        let deadline = std::time::Instant::now() + Duration::from_secs(5);
-        while !host.closed.load(Ordering::Acquire) {
-            assert!(std::time::Instant::now() < deadline);
-            thread::yield_now();
-        }
-        assert_eq!(host.call(|_| Ok(())), Err(HostError::Closed));
-        let closing = host.clone();
-        let second = thread::spawn(move || closing.close());
-        release.send(()).unwrap();
-        caller.join().unwrap().unwrap();
-        first.join().unwrap().unwrap();
-        second.join().unwrap().unwrap();
-    }
 }

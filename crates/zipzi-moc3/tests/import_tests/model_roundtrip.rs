@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use zipzi_core::state::*;
 
 use super::helpers::*;
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
@@ -9,7 +10,7 @@ use zipzi_moc3::{encode_moc3, import_from_bare_moc3, inspect_moc3, Moc3Version};
 #[test]
 fn test_import_m1_roundtrip() {
     let doc_orig = create_m1_fixture_doc();
-    let encoded = encode_moc3(&doc_orig).expect("Export failed");
+    let encoded = encode_moc3(&capture_images(&doc_orig).0).expect("Export failed");
     assert!(!encoded.bytes.is_empty());
 
     // Import back via bare moc3
@@ -24,18 +25,14 @@ fn test_import_m1_roundtrip() {
     assert!(!doc_imported.transform_order().is_empty());
     for id in doc_imported.transform_order() {
         assert!(
-            doc_imported
-                .get_transform(id)
-                .unwrap()
-                .original_shape
-                .is_none(),
+            doc_imported.transform(id).unwrap().original_shape.is_none(),
             "{id}"
         );
     }
 
     // Import initializes model origin/units from the exported finite rectangle.
     let inspection = inspect_moc3(&encoded.bytes).unwrap();
-    let canvas = doc_imported.source_canvas().unwrap();
+    let canvas = doc_imported.setup().source_canvas.unwrap();
     assert_eq!(canvas.width, inspection.canvas.width);
     assert_eq!(canvas.height, inspection.canvas.height);
     assert_eq!(
@@ -46,18 +43,18 @@ fn test_import_m1_roundtrip() {
         )
     );
     assert_eq!(
-        doc_imported.export_settings().pixels_per_unit,
+        doc_imported.setup().export.pixels_per_unit,
         canvas.pixels_per_unit
     );
     assert_eq!(
         canvas.pixels_per_unit,
-        doc_orig.source_canvas().unwrap().pixels_per_unit
+        doc_orig.setup().source_canvas.unwrap().pixels_per_unit
     );
 
     // Verify parameters count and values
     assert_eq!(doc_imported.parameter_order().len(), 1);
     let p_imp_id = &doc_imported.parameter_order()[0];
-    let p_imp = doc_imported.get_parameter(p_imp_id).unwrap();
+    let p_imp = doc_imported.parameter(p_imp_id).unwrap();
     assert_eq!(p_imp.runtime_id, "ParamAngle");
     assert_eq!(p_imp.minimum, -30.0);
     assert_eq!(p_imp.maximum, 30.0);
@@ -91,7 +88,7 @@ fn test_import_m1_roundtrip() {
     }
 
     // Re-export imported document to MOC3 and verify in PurismCore
-    let re_encoded = encode_moc3(doc_imported).expect("Re-export failed");
+    let re_encoded = encode_moc3(&capture_images(&doc_imported).0).expect("Re-export failed");
     let mut purism = PurismModelInstance::new(&re_encoded.bytes);
     purism.set_parameter("ParamAngle", 15.0);
     purism.update();
@@ -113,7 +110,7 @@ fn test_post_import_editing() {
 
     let mut binding = doc.binding_for_mesh(&mesh_id).unwrap().clone();
     binding.keyforms[1].positions[0].x += 0.17;
-    assert!(doc.replace_binding(binding).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_binding(binding));
     let mesh_edited = exported_drawable(&doc);
     assert_ne!(
         mesh_edited.positions, before.positions,
@@ -121,9 +118,9 @@ fn test_post_import_editing() {
     );
 
     let warp_id = doc.sorted_transforms()[0].clone();
-    let mut warp = doc.get_transform(&warp_id).unwrap().clone();
+    let mut warp = doc.transform(&warp_id).unwrap().clone();
     warp.warp_mut().unwrap().points[0].x += 30.0;
-    assert!(doc.replace_transform(warp).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_transform(warp));
     let warp_edited = exported_drawable(&doc);
     assert_ne!(
         warp_edited.positions, mesh_edited.positions,
@@ -135,19 +132,19 @@ fn test_post_import_editing() {
         keyform.appearance.opacity = 0.42;
         keyform.draw_order = Some(42.0);
     }
-    assert!(doc.replace_binding(binding).status.is_ok());
-    let mut mesh = doc.get_mesh(&mesh_id).unwrap().clone();
+    doc = prepare(&doc, |builder| builder.replace_binding(binding));
+    let mut mesh = doc.mesh(&mesh_id).unwrap().clone();
     mesh.blend_mode = BlendMode::Additive;
-    assert!(doc.replace_mesh(mesh).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(mesh));
     let draw_edited = exported_drawable(&doc);
     near(draw_edited.opacity, 0.42, 1.0);
     assert_eq!(draw_edited.draw_order, 42);
-    let artifact = encode_moc3(&doc).unwrap();
+    let artifact = encode_moc3(&capture_images(&doc).0).unwrap();
     let reimported = import_from_bare_moc3(&artifact.bytes, &fixture_textures()).unwrap();
     assert_eq!(
         reimported
             .document
-            .get_mesh(&reimported.document.mesh_order()[0])
+            .mesh(&reimported.document.mesh_order()[0])
             .unwrap()
             .blend_mode,
         BlendMode::Additive
@@ -162,7 +159,7 @@ fn test_post_import_editing() {
 #[test]
 fn test_structural_editing() {
     let doc_orig = create_m1_fixture_doc();
-    let encoded = encode_moc3(&doc_orig).expect("Export failed");
+    let encoded = encode_moc3(&capture_images(&doc_orig).0).expect("Export failed");
     let mut tex_map = HashMap::new();
     tex_map.insert(
         0,
@@ -182,7 +179,7 @@ fn test_structural_editing() {
         decimal_places: 2,
         ..Default::default()
     };
-    assert!(doc.create_parameter(new_p).status.is_ok());
+    *doc = prepare(doc, |builder| builder.create_parameter(new_p));
 
     // Add new mesh
     let new_m = Mesh {
@@ -204,10 +201,23 @@ fn test_structural_editing() {
         triangles: vec![[1, 2, 3]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(new_m).status.is_ok());
+    *doc = prepare(doc, |builder| {
+        let mesh_id = new_m.id.clone();
+        builder.create_mesh(new_m)?;
+        if let Some(mut groups) = builder.draw_order_groups().clone() {
+            groups
+                .iter_mut()
+                .find(|group| group.owner.is_empty())
+                .unwrap()
+                .items
+                .push(mesh_id);
+            builder.set_draw_order_groups(Some(groups))?;
+        }
+        Ok(())
+    });
 
     // Re-export and verify both meshes exist in PurismCore
-    let re_export = encode_moc3(doc).expect("Re-export with new mesh failed");
+    let re_export = encode_moc3(&capture_images(&doc).0).expect("Re-export with new mesh failed");
     let mut purism = PurismModelInstance::new(&re_export.bytes);
     purism.update();
 
@@ -229,7 +239,7 @@ fn import_regressions_match_document_and_runtime() {
         assert_eq!(
             imported
                 .document
-                .get_binding(&imported.document.binding_order()[0])
+                .binding(&imported.document.binding_order()[0])
                 .unwrap()
                 .keyforms
                 .len(),
@@ -248,13 +258,13 @@ fn rotation_edit_rebinding_and_deletion_change_export() {
     let rot_id = doc
         .sorted_transforms()
         .into_iter()
-        .find(|id| doc.get_transform(id).unwrap().kind() == TransformKind::Rotation)
+        .find(|id| doc.transform(id).unwrap().kind() == TransformKind::Rotation)
         .unwrap();
-    let mut rot = doc.get_transform(&rot_id).unwrap().clone();
+    let mut rot = doc.transform(&rot_id).unwrap().clone();
     rot.rotation_mut().unwrap().pose.angle = 23.0;
     rot.rotation_mut().unwrap().pose.scale = 0.7;
-    assert!(doc.replace_transform(rot).status.is_ok());
-    let changed = encode_moc3(&doc).unwrap();
+    doc = prepare(&doc, |builder| builder.replace_transform(rot));
+    let changed = encode_moc3(&capture_images(&doc).0).unwrap();
     let mut before = PurismModelInstance::new(&bytes);
     let mut after = PurismModelInstance::new(&changed.bytes);
     before.update();
@@ -266,22 +276,22 @@ fn rotation_edit_rebinding_and_deletion_change_export() {
     assert_runtime_matches(&doc, &changed.bytes, &[vec![0.0, 0.0], vec![0.5, 1.0]]);
 
     let old_param = doc.parameter_order()[0].clone();
-    let mut param = doc.get_parameter(&old_param).unwrap().clone();
+    let mut param = doc.parameter(&old_param).unwrap().clone();
     param.id = id(200);
     param.runtime_id = "ReboundParameter".into();
-    assert!(doc.create_parameter(param).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_parameter(param));
     let mesh_id = doc.mesh_order()[0].clone();
     let mut binding = doc.binding_for_mesh(&mesh_id).unwrap().clone();
     binding.axes[0].parameter_id = id(200);
-    assert!(doc.replace_binding(binding).status.is_ok());
-    assert!(doc.erase_object(&old_param).status.is_ok());
-    let rebound = encode_moc3(&doc).unwrap();
+    doc = prepare(&doc, |builder| builder.replace_binding(binding));
+    doc = prepare(&doc, |builder| builder.remove_parameter(&old_param));
+    let rebound = encode_moc3(&capture_images(&doc).0).unwrap();
     let reimported = import_from_bare_moc3(&rebound.bytes, &fixture_textures())
         .unwrap()
         .document;
     assert_eq!(reimported.parameter_order().len(), 2);
     assert!(reimported.parameter_order().iter().any(|p| reimported
-        .get_parameter(p)
+        .parameter(p)
         .unwrap()
         .runtime_id
         == "ReboundParameter"));
@@ -293,14 +303,36 @@ fn rotation_edit_rebinding_and_deletion_change_export() {
     runtime.update();
     assert_ne!(left, runtime.get_drawable("MeshQuad").unwrap().positions);
 
-    let mut survivor = doc.get_mesh(&mesh_id).unwrap().clone();
+    let mut survivor = doc.mesh(&mesh_id).unwrap().clone();
     survivor.id = id(201);
     survivor.runtime_id = "SurvivingMesh".into();
-    assert!(doc.create_mesh(survivor).status.is_ok());
+    doc = prepare(&doc, |builder| {
+        let mesh_id = survivor.id.clone();
+        builder.create_mesh(survivor)?;
+        if let Some(mut groups) = builder.draw_order_groups().clone() {
+            groups
+                .iter_mut()
+                .find(|group| group.owner.is_empty())
+                .unwrap()
+                .items
+                .push(mesh_id);
+            builder.set_draw_order_groups(Some(groups))?;
+        }
+        Ok(())
+    });
     let binding_id = doc.binding_for_mesh(&mesh_id).unwrap().id.clone();
-    assert!(doc.erase_object(&binding_id).status.is_ok());
-    assert!(doc.erase_object(&mesh_id).status.is_ok());
-    let empty = encode_moc3(&doc).unwrap();
+    doc = prepare(&doc, |builder| builder.remove_binding(&binding_id));
+    doc = prepare(&doc, |builder| {
+        builder.remove_mesh(&mesh_id)?;
+        if let Some(mut groups) = builder.draw_order_groups().clone() {
+            for group in &mut groups {
+                group.items.retain(|id| id != &mesh_id);
+            }
+            builder.set_draw_order_groups(Some(groups))?;
+        }
+        Ok(())
+    });
+    let empty = encode_moc3(&capture_images(&doc).0).unwrap();
     assert_eq!(inspect_moc3(&empty.bytes).unwrap().counts.art_meshes, 1);
     assert!(PurismModelInstance::new(&empty.bytes)
         .get_drawable("MeshQuad")
@@ -328,14 +360,12 @@ fn test_import_mao_full() {
     let warps_count = doc
         .transform_order()
         .iter()
-        .filter(|t| doc.get_transform(t).unwrap().kind() == zipzi_core::types::TransformKind::Warp)
+        .filter(|t| doc.transform(t).unwrap().kind() == zipzi_core::types::TransformKind::Warp)
         .count();
     let rotations_count = doc
         .transform_order()
         .iter()
-        .filter(|t| {
-            doc.get_transform(t).unwrap().kind() == zipzi_core::types::TransformKind::Rotation
-        })
+        .filter(|t| doc.transform(t).unwrap().kind() == zipzi_core::types::TransformKind::Rotation)
         .count();
     assert_eq!(warps_count, 116, "Warps count");
     assert_eq!(rotations_count, 59, "Rotations count");
@@ -361,7 +391,7 @@ fn test_import_mao_full() {
     let total_glue_pairs: usize = doc
         .glue_order()
         .iter()
-        .map(|g| doc.get_glue(g).unwrap().pairs.len())
+        .map(|g| doc.glue(g).unwrap().pairs.len())
         .sum();
     assert_eq!(total_glue_pairs, 161, "Total Glue pairs count");
 
@@ -371,7 +401,7 @@ fn test_import_mao_full() {
     let mut mesh_bb = 0;
     let mut glue_bb = 0;
     for b_id in doc.blend_binding_order() {
-        let b = doc.get_blend_binding(b_id).unwrap();
+        let b = doc.blend_binding(b_id).unwrap();
         match b.keyforms {
             zipzi_core::types::DeltaKeyforms::Part(_) => part_bb += 1,
             zipzi_core::types::DeltaKeyforms::Warp(_) => warp_bb += 1,
@@ -398,7 +428,7 @@ fn test_import_mao_full() {
     let mut checked_meshes = 0;
 
     for mesh_id in doc.mesh_order() {
-        let mesh = doc.get_mesh(mesh_id).unwrap();
+        let mesh = doc.mesh(mesh_id).unwrap();
         if let Some(purism_drawable) = runtime.get_drawable(&mesh.runtime_id) {
             let doc_drawable = frame
                 .drawables
@@ -415,9 +445,10 @@ fn test_import_mao_full() {
                 .iter()
                 .zip(&purism_drawable.positions)
             {
-                let err = ((p_doc.x / doc.source_canvas().unwrap().pixels_per_unit - p_purism.x)
+                let err = ((p_doc.x / doc.setup().source_canvas.unwrap().pixels_per_unit
+                    - p_purism.x)
                     .powi(2)
-                    + (p_doc.y / doc.source_canvas().unwrap().pixels_per_unit - p_purism.y)
+                    + (p_doc.y / doc.setup().source_canvas.unwrap().pixels_per_unit - p_purism.y)
                         .powi(2))
                 .sqrt();
                 if err > mesh_err {
@@ -439,8 +470,8 @@ fn test_import_mao_full() {
     for d in &frame.drawables {
         let p = runtime.get_drawable(&d.runtime_id).unwrap();
         let is_ok = d.positions.iter().zip(&p.positions).all(|(a, b)| {
-            ((a.x / doc.source_canvas().unwrap().pixels_per_unit - b.x).powi(2)
-                + (a.y / doc.source_canvas().unwrap().pixels_per_unit - b.y).powi(2))
+            ((a.x / doc.setup().source_canvas.unwrap().pixels_per_unit - b.x).powi(2)
+                + (a.y / doc.setup().source_canvas.unwrap().pixels_per_unit - b.y).powi(2))
             .sqrt()
                 <= 0.05
         });
@@ -480,28 +511,9 @@ fn test_mao_roundtrip_export_and_detached_reopening() {
     let orig_bytes = std::fs::read(&path).expect("failed to read mao_pro.moc3");
     let orig_res =
         import_from_bare_moc3(&orig_bytes, &model_textures(&path)).expect("initial import failed");
-    let mut orig_doc = orig_res.document;
-    // The JSON codec expects package-relative asset descriptors. Keep the real
-    // imported dimensions/hash, rebasing only the source paths for this fixture.
-    for id in orig_doc.asset_order().to_vec() {
-        let mut asset = orig_doc.get_asset(&id).unwrap().clone();
-        let content = asset.content.as_mut().unwrap();
-        content.source = format!(
-            "assets/{}",
-            std::path::Path::new(&content.source)
-                .strip_prefix(path.parent().unwrap())
-                .unwrap()
-                .to_str()
-                .unwrap()
-        );
-        assert!(orig_doc.replace_asset(asset).status.is_ok());
-    }
-
-    // 1. Serialize the complete native authoring document.
-    let project_json = zipzi_project::encode_project(&orig_doc).expect("encode_project failed");
-
-    // 2. Load into a fresh, completely detached Document (no orig_bytes reference)
-    let detached_doc = zipzi_project::decode_project(&project_json).expect("decode_project failed");
+    let orig_doc = orig_res.document;
+    // Native save/reopen captures resources without rebasing model paths.
+    let detached_doc = native_roundtrip(&orig_doc);
 
     assert_eq!(detached_doc.mesh_order().len(), 260);
     assert_eq!(detached_doc.parameter_order().len(), 128);
@@ -512,7 +524,7 @@ fn test_mao_roundtrip_export_and_detached_reopening() {
     assert_eq!(detached_doc.blend_constraint_order().len(), 7);
 
     // 3. Export to 5.0 MOC3 binary
-    let exported = encode_moc3(&detached_doc).expect("encode_moc3 failed");
+    let exported = encode_moc3(&capture_images(&detached_doc).0).expect("encode_moc3 failed");
     let exp_bytes = exported.bytes;
 
     // 4. Verify csmHasMocConsistency on exported bytes
@@ -538,7 +550,7 @@ fn test_mao_roundtrip_export_and_detached_reopening() {
     // 6. Verify numerical parity between original Mao and re-exported Mao in PurismCore
     let mut max_err = 0.0f32;
     for mesh_id in detached_doc.mesh_order() {
-        let mesh = detached_doc.get_mesh(mesh_id).unwrap();
+        let mesh = detached_doc.mesh(mesh_id).unwrap();
         let orig_d = orig_runtime.get_drawable(&mesh.runtime_id).unwrap();
         let exp_d = exp_runtime.get_drawable(&mesh.runtime_id).unwrap();
         assert_eq!(orig_d.positions.len(), exp_d.positions.len());
@@ -559,7 +571,7 @@ fn test_mao_roundtrip_export_and_detached_reopening() {
         max_err
     );
 
-    // 7. Re-import the exported MOC3 binary into a 3rd Document and verify lossless roundtrip
+    // 7. Re-import the exported MOC3 binary into a 3rd DocumentState and verify lossless roundtrip
     let reimported_res = import_from_bare_moc3(&exp_bytes, &model_textures(&path))
         .expect("re-import of exported MOC3 failed");
     let reimported_doc = &reimported_res.document;
@@ -570,7 +582,7 @@ fn test_mao_roundtrip_export_and_detached_reopening() {
     let total_reimported_glue_pairs: usize = reimported_doc
         .glue_order()
         .iter()
-        .map(|g| reimported_doc.get_glue(g).unwrap().pairs.len())
+        .map(|g| reimported_doc.glue(g).unwrap().pairs.len())
         .sum();
     assert_eq!(total_reimported_glue_pairs, 161);
     assert_eq!(reimported_doc.blend_binding_order().len(), 124);
@@ -600,7 +612,7 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
         .expect("failed to import Hiyori.moc3");
     let doc = &decoded.document;
 
-    // Verify the 4 zero-triangle meshes exist in Document
+    // Verify the 4 zero-triangle meshes exist in DocumentState
     let zero_triangle_rids = ["ArtMesh116", "ArtMesh123", "ArtMesh130", "ArtMesh137"];
     let mut zero_mesh_ids = Vec::new();
     for rid in &zero_triangle_rids {
@@ -610,7 +622,7 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
             .meshes
             .get(*rid)
             .expect("mesh mapping found");
-        let mesh = doc.get_mesh(m_id).expect("mesh exists in document");
+        let mesh = doc.mesh(m_id).expect("mesh exists in document");
         assert!(
             mesh.triangles.is_empty(),
             "Mesh {} must have zero triangles",
@@ -629,7 +641,7 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
     assert_eq!(glues.len(), 26);
     let mut zero_mesh_glues = 0;
     for g_id in glues {
-        let g = doc.get_glue(g_id).unwrap();
+        let g = doc.glue(g_id).unwrap();
         if zero_mesh_ids
             .iter()
             .any(|id| g.mesh_a_id == *id || g.mesh_b_id == *id)
@@ -660,10 +672,10 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
         if let Some(core_d) = runtime.get_drawable(&d.runtime_id) {
             assert_eq!(d.positions.len(), core_d.positions.len());
             for p in 0..d.positions.len() {
-                let dx = (d.positions[p].x / doc.source_canvas().unwrap().pixels_per_unit
+                let dx = (d.positions[p].x / doc.setup().source_canvas.unwrap().pixels_per_unit
                     - core_d.positions[p].x)
                     .abs();
-                let dy = (d.positions[p].y / doc.source_canvas().unwrap().pixels_per_unit
+                let dy = (d.positions[p].y / doc.setup().source_canvas.unwrap().pixels_per_unit
                     - core_d.positions[p].y)
                     .abs();
                 max_pos_error = max_pos_error.max(dx).max(dy);
@@ -676,7 +688,7 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
     );
 
     // Export to MOC3 v5 and verify roundtrip
-    let encoded = encode_moc3(doc).expect("failed to encode Hiyori");
+    let encoded = encode_moc3(&capture_images(&doc).0).expect("failed to encode Hiyori");
     let reimport = import_from_bare_moc3(&encoded.bytes, &model_textures(&moc_path))
         .expect("failed to reimport Hiyori");
     assert_eq!(reimport.document.mesh_order().len(), 134);
@@ -690,7 +702,7 @@ fn test_import_hiyori_zero_triangle_meshes_and_glue() {
             .meshes
             .get(*rid)
             .expect("mesh mapping in reimport");
-        let mesh = reimport.document.get_mesh(m_id).expect("mesh in reimport");
+        let mesh = reimport.document.mesh(m_id).expect("mesh in reimport");
         assert!(mesh.triangles.is_empty());
     }
 }
@@ -743,10 +755,12 @@ fn test_import_rice_and_mark_v3() {
             if let Some(core_d) = runtime.get_drawable(&d.runtime_id) {
                 assert_eq!(d.positions.len(), core_d.positions.len());
                 for p in 0..d.positions.len() {
-                    let dx = (d.positions[p].x / doc.source_canvas().unwrap().pixels_per_unit
+                    let dx = (d.positions[p].x
+                        / doc.setup().source_canvas.unwrap().pixels_per_unit
                         - core_d.positions[p].x)
                         .abs();
-                    let dy = (d.positions[p].y / doc.source_canvas().unwrap().pixels_per_unit
+                    let dy = (d.positions[p].y
+                        / doc.setup().source_canvas.unwrap().pixels_per_unit
                         - core_d.positions[p].y)
                         .abs();
                     max_pos_error = max_pos_error.max(dx).max(dy);
@@ -759,7 +773,7 @@ fn test_import_rice_and_mark_v3() {
         );
 
         // Encode and roundtrip
-        let encoded = encode_moc3(doc).expect("encode failed");
+        let encoded = encode_moc3(&capture_images(&doc).0).expect("encode failed");
         let reimport = import_from_bare_moc3(&encoded.bytes, &model_textures(&moc_path))
             .expect("reimport failed");
         assert_eq!(reimport.document.mesh_order().len(), expected_meshes);
@@ -781,7 +795,7 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
         part_id: String::new(),
         deformer_id: id(4),
         texture_asset_id: doc
-            .get_mesh(&doc.mesh_order()[0])
+            .mesh(&doc.mesh_order()[0])
             .unwrap()
             .texture_asset_id
             .clone(),
@@ -807,7 +821,7 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
         raw_blend_mode: None,
         meshing: None,
     };
-    assert!(doc.create_mesh(base_mesh.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(base_mesh.clone()));
 
     // Evaluate frame with zero-triangle mesh present
     let mut frame = DrawableFrame::default();
@@ -823,7 +837,7 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
     // Edit 1: Add a triangle (zero-triangle -> renderable)
     let mut with_triangle = base_mesh.clone();
     with_triangle.triangles = vec![[vid1, vid2, vid3]];
-    assert!(doc.replace_mesh(with_triangle).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(with_triangle));
 
     let mut frame2 = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame2).is_ok());
@@ -837,7 +851,7 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
     // Edit 2: Remove triangle again (renderable -> zero-triangle)
     let mut without_triangle = base_mesh.clone();
     without_triangle.triangles = vec![];
-    assert!(doc.replace_mesh(without_triangle).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(without_triangle));
 
     let mut frame3 = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame3).is_ok());
@@ -849,12 +863,12 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
     assert!(z2_drawable.indices.is_empty());
 
     // Encode to MOC3 and verify zero triangles survive serialization
-    let encoded = encode_moc3(&doc).expect("encode failed");
+    let encoded = encode_moc3(&capture_images(&doc).0).expect("encode failed");
     let reimport =
         import_from_bare_moc3(&encoded.bytes, &fixture_textures()).expect("reimport failed");
     let re_mesh = reimport
         .document
-        .get_mesh(&reimport.report.id_mapping.meshes["ZeroTriMesh"])
+        .mesh(&reimport.report.id_mapping.meshes["ZeroTriMesh"])
         .unwrap();
     assert!(re_mesh.triangles.is_empty());
     assert_eq!(re_mesh.vertex_ids.len(), 3);
@@ -863,31 +877,26 @@ fn test_zero_triangle_mesh_editing_and_lifecycle() {
 #[test]
 fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
     use zipzi_core::{
-        Canvas, Document, ImageAsset, PreciseVec2, RotationPose, RotationTransform, Transform,
-        TransformData, WarpTransform,
+        Canvas, PreciseVec2, RotationPose, RotationTransform, Transform, TransformData,
+        WarpTransform,
     };
     for root_warp in [false, true] {
-        let mut doc = Document::new();
-        assert!(doc
-            .initialize(
-                id(800),
-                Canvas::new(800., 600., Vec2::new(211., -77.), 37.5)
-            )
-            .is_ok());
-        assert!(doc
-            .add_asset(ImageAsset {
-                unresolved_source: None,
+        let mut doc = DocumentState::new(
+            id(800),
+            Canvas::new(800., 600., Vec2::new(211., -77.), 37.5).into(),
+        )
+        .unwrap();
+        doc = prepare(&doc, |builder| {
+            builder.create_asset(zipzi_core::state::AssetRecord {
                 id: id(801),
                 name: "texture".into(),
-                content: Some(zipzi_core::ImageContent {
-                    source: "textures/0.png".into(),
-                    sha256: "0".repeat(64),
+                content: zipzi_core::state::AssetContent::Image {
+                    resource: Default::default(),
                     width: 8,
                     height: 8,
-                }),
+                },
             })
-            .status
-            .is_ok());
+        });
         let mut parent = String::new();
         for depth in 0..4 {
             let transform_id = id(810 + depth);
@@ -906,9 +915,7 @@ fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
                     ],
                 })
             } else {
-                let in_warp = doc
-                    .get_transform(&parent)
-                    .is_some_and(|t| t.warp().is_some());
+                let in_warp = doc.transform(&parent).is_some_and(|t| t.warp().is_some());
                 TransformData::Rotation(RotationTransform {
                     base_angle: 17.,
                     pose: RotationPose {
@@ -924,16 +931,15 @@ fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
                     },
                 })
             };
-            assert!(doc
-                .create_transform(Transform {
+            doc = prepare(&doc, |builder| {
+                builder.create_transform(Transform {
                     id: transform_id.clone(),
                     runtime_id: format!("Transform{depth}"),
                     parent_id: zipzi_core::TransformId::optional(parent),
                     data,
                     ..Default::default()
                 })
-                .status
-                .is_ok());
+            });
             let positions = if warp {
                 vec![
                     Vec2::new(0.2, 0.3),
@@ -943,8 +949,8 @@ fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
             } else {
                 vec![Vec2::new(-4., -3.), Vec2::new(8., -3.), Vec2::new(-4., 9.)]
             };
-            assert!(doc
-                .create_mesh(Mesh {
+            doc = prepare(&doc, |builder| {
+                builder.create_mesh(Mesh {
                     id: id(820 + depth),
                     runtime_id: format!("Mesh{depth}"),
                     texture_asset_id: (id(801)).into(),
@@ -954,16 +960,15 @@ fn alternate_file_axis_normalizes_nested_rotation_and_warp_spaces() {
                     uvs: vec![
                         Vec2::new(0.1, 0.2),
                         Vec2::new(0.9, 0.2),
-                        Vec2::new(0.1, 0.8)
+                        Vec2::new(0.1, 0.8),
                     ],
                     triangles: vec![[1, 2, 3]],
                     ..Default::default()
                 })
-                .status
-                .is_ok());
+            });
             parent = transform_id;
         }
-        let bytes = encode_moc3(&doc).unwrap().bytes;
+        let bytes = encode_moc3(&capture_images(&doc).0).unwrap().bytes;
         for bytes in [bytes.clone(), import_cases::variant(&bytes, "canvas_y")] {
             let imported = import_from_bare_moc3(&bytes, &fixture_textures()).unwrap();
             assert_runtime_matches(&imported.document, &bytes, &[vec![]]);

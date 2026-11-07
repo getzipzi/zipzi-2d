@@ -1,6 +1,6 @@
 //! Invert the displayed pose without changing unselected authored vertices.
 use crate::{ModelPoint, ModelVector};
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -312,18 +312,20 @@ mod tests {
         assert_eq!(solved, vec![d(10., 4.); 2]);
         let one = map.solve(&[((id(1), 0), d(10., 4.))])?;
         assert_eq!(one, vec![d(20., 8.)]);
-        assert!(map
-            .solve(&[((id(1), 0), d(10., 4.)), ((id(1), 1), d(-10., 4.))])
-            .is_err());
+        assert!(
+            map.solve(&[((id(1), 0), d(10., 4.)), ((id(1), 1), d(-10., 4.))])
+                .is_err()
+        );
         for amount in [1., 0.99] {
             let map = GlueMap::new(&[op(0, 1, amount, 0.)]);
             assert!(map.solve(&[((id(1), 0), d(1., 0.))]).is_err());
         }
         let map = GlueMap::new(&[op(0, 1, 1., 0.)]);
         assert!(map.check_drag(&[((id(1), 0), 1.)], false).is_err());
-        assert!(map
-            .check_drag(&[((id(1), 0), 1.), ((id(1), 1), 1.)], false)
-            .is_ok());
+        assert!(
+            map.check_drag(&[((id(1), 0), 1.), ((id(1), 1), 1.)], false)
+                .is_ok()
+        );
         assert!(map.check_drag(&[((id(1), 0), 1.)], true).is_ok());
         Ok(())
     }
@@ -371,32 +373,35 @@ mod tests {
         amount: f32,
         blend: bool,
         parent: bool,
-        setup: impl FnOnce(&mut zipzi_sdk::EditSession<'_>) -> Result<(), zipzi_sdk::SdkError>,
+        setup: impl FnOnce(&mut zipzi_sdk::Commands<'_>) -> Result<(), zipzi_core::Status>,
     ) -> anyhow::Result<(Document, tempfile::TempDir)> {
         let dir = tempfile::tempdir()?;
-        let mut s = zipzi_sdk::AuthoringSession::new(
+        let mut s = crate::test_sdk::fixture_session(
             &id(90),
             Canvas::new(256., 256., Vec2::default(), 1.),
         )?;
-        s.edit("fixture", None, |e| {
+        crate::test_sdk::publish_fixture(&mut s, "fixture", |e| {
             if parent {
-                e.create_transform(Transform {
-                    id: id(12),
-                    name: "Parent".into(),
-                    data: TransformData::Warp(WarpTransform {
-                        rows: 1,
-                        columns: 1,
-                        quad: false,
-                        bezier: None,
-                        points: vec![
-                            Vec2::new(0., 0.),
-                            Vec2::new(200., 0.),
-                            Vec2::new(0., 100.),
-                            Vec2::new(250., 220.),
-                        ],
-                    }),
-                    ..Default::default()
-                })?;
+                crate::test_sdk::insert_transform(
+                    e,
+                    Transform {
+                        id: id(12),
+                        name: "Parent".into(),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 1,
+                            columns: 1,
+                            quad: false,
+                            bezier: None,
+                            points: vec![
+                                Vec2::new(0., 0.),
+                                Vec2::new(200., 0.),
+                                Vec2::new(0., 100.),
+                                Vec2::new(250., 220.),
+                            ],
+                        }),
+                        ..Default::default()
+                    },
+                )?;
             }
             let positions = vec![
                 Vec2::new(10., 10.),
@@ -404,60 +409,69 @@ mod tests {
                 Vec2::new(10., 110.),
             ];
             for n in [1, 2] {
-                e.create_mesh(Mesh {
-                    id: id(n),
-                    name: format!("Mesh {n}"),
-                    runtime_id: format!("mesh{n}"),
-                    vertex_ids: vec![10, 20, 30],
-                    base_positions: if parent && n == 1 {
-                        vec![
-                            Vec2::new(0.1, 0.1),
-                            Vec2::new(0.8, 0.1),
-                            Vec2::new(0.1, 0.8),
-                        ]
-                    } else {
-                        positions.clone()
+                crate::test_sdk::insert_fixture_mesh(
+                    e,
+                    Mesh {
+                        id: id(n),
+                        name: format!("Mesh {n}"),
+                        runtime_id: format!("mesh{n}"),
+                        vertex_ids: vec![10, 20, 30],
+                        base_positions: if parent && n == 1 {
+                            vec![
+                                Vec2::new(0.1, 0.1),
+                                Vec2::new(0.8, 0.1),
+                                Vec2::new(0.1, 0.8),
+                            ]
+                        } else {
+                            positions.clone()
+                        },
+                        deformer_id: if parent && n == 1 {
+                            id(12)
+                        } else {
+                            String::new()
+                        },
+                        uvs: vec![Vec2::default(); 3],
+                        triangles: vec![[10, 20, 30]],
+                        ..Default::default()
                     },
-                    deformer_id: if parent && n == 1 {
-                        id(12)
-                    } else {
-                        String::new()
-                    },
-                    uvs: vec![Vec2::default(); 3],
-                    triangles: vec![[10, 20, 30]],
-                    ..Default::default()
-                })?;
+                )?;
             }
-            e.create_glue(Glue {
-                id: id(3),
-                runtime_id: "seam".into(),
-                name: "Seam".into(),
-                mesh_a_id: id(1).into(),
-                mesh_b_id: id(2).into(),
-                intensity: 1.,
-                binding: None,
-                pairs: vec![GlueVertexPair {
-                    vertex_a: Some(10),
-                    vertex_b: Some(10),
-                    weight_a: amount,
-                    weight_b: 0.,
-                    ..Default::default()
-                }],
-            })?;
+            crate::test_sdk::insert_glue(
+                e,
+                Glue {
+                    id: id(3),
+                    runtime_id: "seam".into(),
+                    name: "Seam".into(),
+                    mesh_a_id: id(1).into(),
+                    mesh_b_id: id(2).into(),
+                    intensity: 1.,
+                    binding: None,
+                    pairs: vec![GlueVertexPair {
+                        vertex_a: Some(10),
+                        vertex_b: Some(10),
+                        weight_a: amount,
+                        weight_b: 0.,
+                        ..Default::default()
+                    }],
+                },
+            )?;
             if blend {
                 for (n, name, kind) in [
                     (4, "Pose", ParameterKind::Normal),
                     (5, "Smile", ParameterKind::BlendShape),
                     (8, "Constraint", ParameterKind::Normal),
                 ] {
-                    e.create_parameter(Parameter {
-                        id: id(n),
-                        name: name.into(),
-                        minimum: 0.,
-                        maximum: 1.,
-                        kind,
-                        ..Default::default()
-                    })?;
+                    crate::test_sdk::insert_fixture_parameter(
+                        e,
+                        Parameter {
+                            id: id(n),
+                            name: name.into(),
+                            minimum: 0.,
+                            maximum: 1.,
+                            kind,
+                            ..Default::default()
+                        },
+                    )?;
                 }
                 e.create_binding(MeshBinding {
                     id: id(9),
@@ -483,42 +497,55 @@ mod tests {
                         },
                     ],
                 })?;
-                e.create_blend_key_table(BlendShapeKeyTable {
-                    id: id(6),
-                    parameter_id: id(5),
-                    keys: vec![0., 1.],
-                    base_key_idx: 0,
-                    samples: Default::default(),
-                    base_sample_id: Default::default(),
-                })?;
-                e.create_blend_constraint(BlendShapeConstraint {
-                    id: id(11),
-                    parameter_id: id(8),
-                    keys: vec![0., 1.],
-                    weights: vec![1., 0.],
-                    samples: vec![],
-                })?;
-                e.create_blend_binding(BlendShapeBinding {
-                    id: id(7),
-                    target_id: id(1),
-                    target_kind: BlendShapeTargetKind::Mesh,
-                    key_table_id: id(6),
-                    constraint_ids: vec![id(11)],
-                    keyforms: DeltaKeyforms::Mesh(vec![
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::default(); 3],
-                            ..Default::default()
+                crate::test_sdk::insert_blend_table(
+                    e,
+                    BlendShapeKeyTable {
+                        id: id(6),
+                        parameter_id: id(5),
+                        keys: vec![0., 1.],
+                        base_key_idx: 0,
+                        samples: Default::default(),
+                        base_sample_id: Default::default(),
+                    },
+                )?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateConstraint {
+                        constraint: BlendShapeConstraint {
+                            id: id(11),
+                            parameter_id: id(8),
+                            keys: vec![0., 1.],
+                            weights: vec![1., 0.],
+                            samples: vec![],
                         },
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::new(2., 3.); 3],
-                            ..Default::default()
-                        },
-                    ]),
-                })?;
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                crate::test_sdk::insert_blend_binding(
+                    e,
+                    BlendShapeBinding {
+                        id: id(7),
+                        target_id: id(1),
+                        target_kind: BlendShapeTargetKind::Mesh,
+                        key_table_id: id(6),
+                        constraint_ids: vec![id(11)],
+                        keyforms: DeltaKeyforms::Mesh(vec![
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::default(); 3],
+                                ..Default::default()
+                            },
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::new(2., 3.); 3],
+                                ..Default::default()
+                            },
+                        ]),
+                    },
+                )?;
             }
             setup(e)
         })?;
-        let receipt = s.save_project(&dir.path().join("fixture.zipzi"), None)?;
+        let receipt = crate::test_sdk::save_fixture(&mut s, &dir.path().join("fixture.zipzi"))?;
         let mut doc = Document::open(&receipt.path)?;
         doc.select(&id(1))?;
         Ok((doc, dir))
@@ -549,17 +576,17 @@ mod tests {
         for cancel in [false, true] {
             let (mut doc, _dir) = fixture(0.5, false)?;
             let scene = capture_scene(&mut doc)?;
-            let original = doc.model().get_mesh(&id(1)).unwrap().clone();
-            let peer = doc.model().get_mesh(&id(2)).unwrap().clone();
+            let original = doc.model().mesh(&id(1)).unwrap().clone();
+            let peer = doc.model().mesh(&id(2)).unwrap().clone();
             let edit = ControlEdit::prepare(&doc, &scene, &target())?;
             doc.begin_control_edit(std::slice::from_ref(&edit))?;
             for dx in [3., 6., 12.] {
                 preview(&mut doc, &edit, dx)?;
             }
-            let accepted = doc.model().get_mesh(&id(1)).unwrap().clone();
+            let accepted = doc.model().mesh(&id(1)).unwrap().clone();
             let failure = preview(&mut doc, &edit, f32::MAX).unwrap_err();
             assert!(failure.is::<PreviewConstraint>());
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&accepted));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&accepted));
             let actual = doc
                 .snapshot()?
                 .viewport_frame
@@ -570,12 +597,12 @@ mod tests {
                 .positions[0];
             close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 12.);
             close(
-                doc.model().get_mesh(&id(1)).unwrap().base_positions[0].x,
+                doc.model().mesh(&id(1)).unwrap().base_positions[0].x,
                 original.base_positions[0].x + 24.,
             );
-            assert_eq!(doc.model().get_mesh(&id(2)), Some(&peer));
+            assert_eq!(doc.model().mesh(&id(2)), Some(&peer));
             assert_eq!(
-                doc.model().get_mesh(&id(1)).unwrap().base_positions[1..],
+                doc.model().mesh(&id(1)).unwrap().base_positions[1..],
                 original.base_positions[1..]
             );
             if cancel {
@@ -586,7 +613,7 @@ mod tests {
                 assert_eq!(doc.history_lengths(), (1, 0));
                 doc.undo()?;
             }
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&original));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&original));
         }
         Ok(())
     }
@@ -631,8 +658,8 @@ mod tests {
     }
 
     #[test]
-    fn blend_delta_inverse_composes_glue_constraints_and_interpolated_ordinary_pose(
-    ) -> anyhow::Result<()> {
+    fn blend_delta_inverse_composes_glue_constraints_and_interpolated_ordinary_pose()
+    -> anyhow::Result<()> {
         let (mut doc, _dir) = fixture(0.5, true)?;
         doc.focus_parameter(&id(5))?;
         doc.set_preview_parameters(&[(id(4), 0.35), (id(5), 1.), (id(8), 0.5)])?;
@@ -641,9 +668,9 @@ mod tests {
             ControlEdit::describe(&doc, &scene, &target())?,
             ControlDescription::Writable(_)
         ));
-        let original = doc.model().get_blend_binding(&id(7)).unwrap().clone();
-        let ordinary = doc.model().get_binding(&id(9)).unwrap().clone();
-        let base = doc.model().get_mesh(&id(1)).unwrap().clone();
+        let original = doc.model().blend_binding(&id(7)).unwrap().clone();
+        let ordinary = doc.model().binding(&id(9)).unwrap().clone();
+        let base = doc.model().mesh(&id(1)).unwrap().clone();
         let edit = ControlEdit::prepare(&doc, &scene, &target())?;
         doc.begin_control_edit(std::slice::from_ref(&edit))?;
         preview(&mut doc, &edit, 10.)?;
@@ -657,18 +684,18 @@ mod tests {
             .positions[0];
         close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
         close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-        let binding = doc.model().get_blend_binding(&id(7)).unwrap().clone();
+        let binding = doc.model().blend_binding(&id(7)).unwrap().clone();
         let DeltaKeyforms::Mesh(forms) = binding.keyforms else {
             panic!()
         };
         close(forms[1].positions[0].x, 42.); // delta 10 / Glue .5 / constraint .5
         assert_eq!(forms[0].positions, vec![Vec2::default(); 3]);
         assert_eq!(forms[1].positions[1..], vec![Vec2::new(2., 3.); 2]);
-        assert_eq!(doc.model().get_binding(&id(9)), Some(&ordinary));
-        assert_eq!(doc.model().get_mesh(&id(1)), Some(&base));
+        assert_eq!(doc.model().binding(&id(9)), Some(&ordinary));
+        assert_eq!(doc.model().mesh(&id(1)), Some(&base));
         doc.finish_edit()?;
         doc.undo()?;
-        assert_eq!(doc.model().get_blend_binding(&id(7)), Some(&original));
+        assert_eq!(doc.model().blend_binding(&id(7)), Some(&original));
         // Zero effective weight cannot be inverted, and the hint names the parameter.
         doc.set_preview_parameter(&id(8), 1.)?;
         let scene = capture_scene(&mut doc)?;
@@ -694,14 +721,8 @@ mod tests {
         edit.mesh.as_mut().unwrap().original_points = true;
         doc.begin_control_edit(std::slice::from_ref(&edit))?;
         preview(&mut doc, &edit, 10.)?;
-        close(
-            doc.model().get_mesh(&id(1)).unwrap().base_positions[0].x,
-            20.,
-        );
-        close(
-            doc.model().get_mesh(&id(2)).unwrap().base_positions[0].x,
-            10.,
-        );
+        close(doc.model().mesh(&id(1)).unwrap().base_positions[0].x, 20.);
+        close(doc.model().mesh(&id(2)).unwrap().base_positions[0].x, 10.);
         close(
             doc.snapshot()?.viewport_frame.drawables[0].positions[0].x,
             10.,
@@ -726,19 +747,13 @@ mod tests {
         doc.begin_control_edit(&edits)?;
         doc.preview_control_edit(&edits, &selected, ControlChange::Translate(d(10., 4.)))?;
         for n in [1, 2] {
-            close(
-                doc.model().get_mesh(&id(n)).unwrap().base_positions[0].x,
-                20.,
-            );
+            close(doc.model().mesh(&id(n)).unwrap().base_positions[0].x, 20.);
         }
         doc.finish_edit()?;
         assert_eq!(doc.history_lengths(), (1, 0));
         doc.undo()?;
         for n in [1, 2] {
-            close(
-                doc.model().get_mesh(&id(n)).unwrap().base_positions[0].x,
-                10.,
-            );
+            close(doc.model().mesh(&id(n)).unwrap().base_positions[0].x, 10.);
         }
         Ok(())
     }
@@ -746,14 +761,14 @@ mod tests {
     fn glue_inverse_composes_with_a_nonlinear_parent_warp() -> anyhow::Result<()> {
         let (mut doc, _dir) = fixture_with_parent(0.5, false, true)?;
         let scene = capture_scene(&mut doc)?;
-        let parent = doc.model().get_transform(&id(12)).unwrap().clone();
+        let parent = doc.model().transform(&id(12)).unwrap().clone();
         let edit = ControlEdit::prepare(&doc, &scene, &target())?;
         doc.begin_control_edit(std::slice::from_ref(&edit))?;
         preview(&mut doc, &edit, 10.)?;
         let actual = doc.snapshot()?.viewport_frame.drawables[0].positions[0];
         close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
         close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-        assert_eq!(doc.model().get_transform(&id(12)), Some(&parent));
+        assert_eq!(doc.model().transform(&id(12)), Some(&parent));
         doc.cancel_edit();
         Ok(())
     }
@@ -761,39 +776,48 @@ mod tests {
     fn blend_zero_base_keyform_edits_with_other_blends_and_glue() -> anyhow::Result<()> {
         for through_binding in [false, true] {
             let (mut doc, _dir) = fixture_with_setup(0.5, true, false, |e| {
-                e.create_parameter(Parameter {
-                    id: id(14),
-                    name: "Other blend".into(),
-                    minimum: 0.,
-                    maximum: 1.,
-                    kind: ParameterKind::BlendShape,
-                    ..Default::default()
-                })?;
-                e.create_blend_key_table(BlendShapeKeyTable {
-                    id: id(15),
-                    parameter_id: id(14),
-                    keys: vec![0., 1.],
-                    base_key_idx: 0,
-                    samples: vec![],
-                    base_sample_id: String::new(),
-                })?;
-                e.create_blend_binding(BlendShapeBinding {
-                    id: id(16),
-                    target_id: id(1),
-                    target_kind: BlendShapeTargetKind::Mesh,
-                    key_table_id: id(15),
-                    constraint_ids: vec![],
-                    keyforms: DeltaKeyforms::Mesh(vec![
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::default(); 3],
-                            ..Default::default()
-                        },
-                        DeltaMeshKeyform {
-                            positions: vec![Vec2::new(6., 8.); 3],
-                            ..Default::default()
-                        },
-                    ]),
-                })
+                crate::test_sdk::insert_fixture_parameter(
+                    e,
+                    Parameter {
+                        id: id(14),
+                        name: "Other blend".into(),
+                        minimum: 0.,
+                        maximum: 1.,
+                        kind: ParameterKind::BlendShape,
+                        ..Default::default()
+                    },
+                )?;
+                crate::test_sdk::insert_blend_table(
+                    e,
+                    BlendShapeKeyTable {
+                        id: id(15),
+                        parameter_id: id(14),
+                        keys: vec![0., 1.],
+                        base_key_idx: 0,
+                        samples: vec![],
+                        base_sample_id: String::new(),
+                    },
+                )?;
+                crate::test_sdk::insert_blend_binding(
+                    e,
+                    BlendShapeBinding {
+                        id: id(16),
+                        target_id: id(1),
+                        target_kind: BlendShapeTargetKind::Mesh,
+                        key_table_id: id(15),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Mesh(vec![
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::default(); 3],
+                                ..Default::default()
+                            },
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::new(6., 8.); 3],
+                                ..Default::default()
+                            },
+                        ]),
+                    },
+                )
             })?;
             if through_binding {
                 let binding = ObjectRef::new(ObjectKind::BlendBinding, id(7));
@@ -809,11 +833,11 @@ mod tests {
                 ControlEdit::describe(&doc, &scene, &target())?,
                 ControlDescription::Writable(_)
             ));
-            let ordinary = doc.model().get_binding(&id(9)).unwrap().clone();
-            let mesh = doc.model().get_mesh(&id(1)).unwrap().clone();
+            let ordinary = doc.model().binding(&id(9)).unwrap().clone();
+            let mesh = doc.model().mesh(&id(1)).unwrap().clone();
             let blends: Vec<_> = [7, 16]
                 .into_iter()
-                .map(|n| doc.model().get_blend_binding(&id(n)).unwrap().clone())
+                .map(|n| doc.model().blend_binding(&id(n)).unwrap().clone())
                 .collect();
             let edit = ControlEdit::prepare(&doc, &scene, &target())?;
             assert!(matches!(
@@ -825,20 +849,20 @@ mod tests {
             let actual = doc.snapshot()?.viewport_frame.drawables[0].positions[0];
             close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
             close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&mesh));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&mesh));
             for b in &blends {
-                assert_eq!(doc.model().get_blend_binding(&b.id), Some(b));
+                assert_eq!(doc.model().blend_binding(&b.id), Some(b));
             }
             assert_eq!(
-                doc.model().get_binding(&id(9)).unwrap().keyforms[1],
+                doc.model().binding(&id(9)).unwrap().keyforms[1],
                 ordinary.keyforms[1]
             );
             doc.finish_edit()?;
             assert_eq!(doc.history_lengths(), (1, 0));
             doc.undo()?;
-            assert_eq!(doc.model().get_binding(&id(9)), Some(&ordinary));
+            assert_eq!(doc.model().binding(&id(9)), Some(&ordinary));
             doc.redo()?;
-            let moved = doc.model().get_binding(&id(9)).unwrap().keyforms[0].positions[0];
+            let moved = doc.model().binding(&id(9)).unwrap().keyforms[0].positions[0];
             close(moved.x, ordinary.keyforms[0].positions[0].x + 20.);
             close(moved.y, ordinary.keyforms[0].positions[0].y + 8.);
             // The ordinary destination still has to be an actual stored form.
@@ -866,53 +890,59 @@ mod tests {
                     Vec2::new(10., 110.),
                     Vec2::new(110., 110.),
                 ];
-                e.create_transform(Transform {
-                    id: id(20),
-                    name: "Blend deformer".into(),
-                    data: if rotation {
-                        TransformData::Rotation(RotationTransform::default())
-                    } else {
-                        TransformData::Warp(WarpTransform {
-                            rows: 1,
-                            columns: 1,
-                            quad: true,
-                            bezier: None,
-                            points: points.clone(),
-                        })
+                crate::test_sdk::insert_transform(
+                    e,
+                    Transform {
+                        id: id(20),
+                        name: "Blend deformer".into(),
+                        data: if rotation {
+                            TransformData::Rotation(RotationTransform::default())
+                        } else {
+                            TransformData::Warp(WarpTransform {
+                                rows: 1,
+                                columns: 1,
+                                quad: true,
+                                bezier: None,
+                                points: points.clone(),
+                            })
+                        },
+                        ..Default::default()
                     },
-                    ..Default::default()
-                })?;
-                e.create_blend_binding(BlendShapeBinding {
-                    id: id(21),
-                    target_id: id(20),
-                    key_table_id: id(6),
-                    constraint_ids: vec![],
-                    target_kind: if rotation {
-                        BlendShapeTargetKind::Rotation
-                    } else {
-                        BlendShapeTargetKind::Warp
+                )?;
+                crate::test_sdk::insert_blend_binding(
+                    e,
+                    BlendShapeBinding {
+                        id: id(21),
+                        target_id: id(20),
+                        key_table_id: id(6),
+                        constraint_ids: vec![],
+                        target_kind: if rotation {
+                            BlendShapeTargetKind::Rotation
+                        } else {
+                            BlendShapeTargetKind::Warp
+                        },
+                        keyforms: if rotation {
+                            DeltaKeyforms::Rotation(vec![
+                                DeltaRotationKeyform::default(),
+                                DeltaRotationKeyform {
+                                    origin: Some(Vec2::new(2., 3.)),
+                                    ..Default::default()
+                                },
+                            ])
+                        } else {
+                            DeltaKeyforms::Warp(vec![
+                                DeltaWarpKeyform {
+                                    points: vec![Vec2::default(); 4],
+                                    ..Default::default()
+                                },
+                                DeltaWarpKeyform {
+                                    points: vec![Vec2::new(2., 3.); 4],
+                                    ..Default::default()
+                                },
+                            ])
+                        },
                     },
-                    keyforms: if rotation {
-                        DeltaKeyforms::Rotation(vec![
-                            DeltaRotationKeyform::default(),
-                            DeltaRotationKeyform {
-                                origin: Some(Vec2::new(2., 3.)),
-                                ..Default::default()
-                            },
-                        ])
-                    } else {
-                        DeltaKeyforms::Warp(vec![
-                            DeltaWarpKeyform {
-                                points: vec![Vec2::default(); 4],
-                                ..Default::default()
-                            },
-                            DeltaWarpKeyform {
-                                points: vec![Vec2::new(2., 3.); 4],
-                                ..Default::default()
-                            },
-                        ])
-                    },
-                })
+                )
             })?;
             let object = ObjectRef::new(ObjectKind::Deformer, id(20));
             doc.select_object(object.clone())?;
@@ -923,8 +953,8 @@ mod tests {
                 ControlEdit::describe(&doc, &scene, &object)?,
                 ControlDescription::Writable(_)
             ));
-            let base = doc.model().get_transform(&id(20)).unwrap().clone();
-            let blend = doc.model().get_blend_binding(&id(21)).unwrap().clone();
+            let base = doc.model().transform(&id(20)).unwrap().clone();
+            let blend = doc.model().blend_binding(&id(21)).unwrap().clone();
             let edit = ControlEdit::prepare(&doc, &scene, &object)?;
             doc.begin_control_edit(std::slice::from_ref(&edit))?;
             doc.preview_control_edit(
@@ -932,12 +962,12 @@ mod tests {
                 &[],
                 ControlChange::MoveAll(d(10., 4.)),
             )?;
-            assert_ne!(doc.model().get_transform(&id(20)), Some(&base));
-            assert_eq!(doc.model().get_blend_binding(&id(21)), Some(&blend));
+            assert_ne!(doc.model().transform(&id(20)), Some(&base));
+            assert_eq!(doc.model().blend_binding(&id(21)), Some(&blend));
             doc.finish_edit()?;
             assert_eq!(doc.history_lengths(), (1, 0));
             doc.undo()?;
-            assert_eq!(doc.model().get_transform(&id(20)), Some(&base));
+            assert_eq!(doc.model().transform(&id(20)), Some(&base));
             if !rotation {
                 // Bezier handles refine the conversion lattice. Existing blend
                 // deltas must follow that topology, including undo/cancel.
@@ -955,10 +985,10 @@ mod tests {
                         ControlChange::Translate(d(10., 4.)),
                     )?;
                     let model = doc.model();
-                    let warp = model.get_transform(&id(20)).unwrap().warp().unwrap();
+                    let warp = model.transform(&id(20)).unwrap().warp().unwrap();
                     assert_eq!((warp.rows, warp.columns), (1, 1));
                     let DeltaKeyforms::Warp(forms) =
-                        &model.get_blend_binding(&id(21)).unwrap().keyforms
+                        &model.blend_binding(&id(21)).unwrap().keyforms
                     else {
                         panic!()
                     };
@@ -974,8 +1004,8 @@ mod tests {
                         doc.finish_edit()?;
                         doc.undo()?;
                     }
-                    assert_eq!(doc.model().get_transform(&id(20)), Some(&base));
-                    assert_eq!(doc.model().get_blend_binding(&id(21)), Some(&blend));
+                    assert_eq!(doc.model().transform(&id(20)), Some(&base));
+                    assert_eq!(doc.model().blend_binding(&id(21)), Some(&blend));
                 }
             }
         }
@@ -985,57 +1015,58 @@ mod tests {
     fn blend_initial_target_uses_only_an_unambiguous_stored_keyform() -> anyhow::Result<()> {
         for state in ["stored", "between_keys", "ambiguous", "constrained"] {
             let (mut doc, _dir) = fixture_with_setup(0.5, true, false, |e| {
-                let mut p = e
-                    .candidate_document()
-                    .get_parameter(&id(5))
-                    .unwrap()
-                    .clone();
+                let mut p = e.read_document()?.parameter(&id(5)).unwrap().clone();
                 p.default_value = if state == "between_keys" { 0.5 } else { 1. };
                 e.replace_parameter(p)?;
                 if state == "constrained" {
-                    let mut p = e
-                        .candidate_document()
-                        .get_parameter(&id(8))
-                        .unwrap()
-                        .clone();
+                    let mut p = e.read_document()?.parameter(&id(8)).unwrap().clone();
                     p.default_value = 0.99;
                     e.replace_parameter(p)?;
                 }
                 if state == "ambiguous" {
-                    e.create_parameter(Parameter {
-                        id: id(14),
-                        name: "Other blend".into(),
-                        minimum: 0.,
-                        maximum: 1.,
-                        default_value: 1.,
-                        kind: ParameterKind::BlendShape,
-                        ..Default::default()
-                    })?;
-                    e.create_blend_key_table(BlendShapeKeyTable {
-                        id: id(15),
-                        parameter_id: id(14),
-                        keys: vec![0., 1.],
-                        base_key_idx: 0,
-                        samples: vec![],
-                        base_sample_id: String::new(),
-                    })?;
-                    e.create_blend_binding(BlendShapeBinding {
-                        id: id(16),
-                        target_id: id(1),
-                        target_kind: BlendShapeTargetKind::Mesh,
-                        key_table_id: id(15),
-                        constraint_ids: vec![],
-                        keyforms: DeltaKeyforms::Mesh(vec![
-                            DeltaMeshKeyform {
-                                positions: vec![Vec2::default(); 3],
-                                ..Default::default()
-                            },
-                            DeltaMeshKeyform {
-                                positions: vec![Vec2::new(6., 8.); 3],
-                                ..Default::default()
-                            },
-                        ]),
-                    })?;
+                    crate::test_sdk::insert_fixture_parameter(
+                        e,
+                        Parameter {
+                            id: id(14),
+                            name: "Other blend".into(),
+                            minimum: 0.,
+                            maximum: 1.,
+                            default_value: 1.,
+                            kind: ParameterKind::BlendShape,
+                            ..Default::default()
+                        },
+                    )?;
+                    crate::test_sdk::insert_blend_table(
+                        e,
+                        BlendShapeKeyTable {
+                            id: id(15),
+                            parameter_id: id(14),
+                            keys: vec![0., 1.],
+                            base_key_idx: 0,
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                        },
+                    )?;
+                    crate::test_sdk::insert_blend_binding(
+                        e,
+                        BlendShapeBinding {
+                            id: id(16),
+                            target_id: id(1),
+                            target_kind: BlendShapeTargetKind::Mesh,
+                            key_table_id: id(15),
+                            constraint_ids: vec![],
+                            keyforms: DeltaKeyforms::Mesh(vec![
+                                DeltaMeshKeyform {
+                                    positions: vec![Vec2::default(); 3],
+                                    ..Default::default()
+                                },
+                                DeltaMeshKeyform {
+                                    positions: vec![Vec2::new(6., 8.); 3],
+                                    ..Default::default()
+                                },
+                            ]),
+                        },
+                    )?;
                 }
                 Ok(())
             })?;
@@ -1071,19 +1102,19 @@ mod tests {
             assert!(
                 matches!(ControlEdit::describe(&doc,&scene,&target())?,ControlDescription::Writable(w) if w.label.contains("Smile = 1"))
             );
-            let base = doc.model().get_mesh(&id(1)).unwrap().clone();
-            let ordinary = doc.model().get_binding(&id(9)).unwrap().clone();
+            let base = doc.model().mesh(&id(1)).unwrap().clone();
+            let ordinary = doc.model().binding(&id(9)).unwrap().clone();
             doc.begin_control_edit(std::slice::from_ref(&edit))?;
             preview(&mut doc, &edit, 10.)?;
             let actual = doc.snapshot()?.viewport_frame.drawables[0].positions[0];
             close(actual.x, scene.mesh(&id(1)).unwrap().vertices[0].1.x + 10.);
             close(actual.y, scene.mesh(&id(1)).unwrap().vertices[0].1.y + 4.);
-            assert_eq!(doc.model().get_mesh(&id(1)), Some(&base));
-            assert_eq!(doc.model().get_binding(&id(9)), Some(&ordinary));
+            assert_eq!(doc.model().mesh(&id(1)), Some(&base));
+            assert_eq!(doc.model().binding(&id(9)), Some(&ordinary));
             doc.finish_edit()?;
             assert_eq!(doc.history_lengths(), (1, 0));
             doc.undo()?;
-            assert_eq!(doc.model().get_blend_binding(&id(7)), Some(original));
+            assert_eq!(doc.model().blend_binding(&id(7)), Some(original));
             doc.focus_parameter(&id(5))?;
             let explicit = ControlEdit::prepare(&doc, &scene, &target())?;
             assert_eq!(explicit.original.id(), edit.original.id());

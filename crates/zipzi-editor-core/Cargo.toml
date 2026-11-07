@@ -11,6 +11,8 @@ publish = false
 bench-instrumentation = ["zipzi-core/bench-instrumentation", "zipzi-sdk/bench-instrumentation"]
 
 [dependencies]
+zipzi-animation.workspace = true
+zipzi-contract.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
@@ -28,3 +30,4 @@ thiserror.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 zipzi-cmo3 = { version = "=0.1.0-alpha.8", path = "../zipzi-cmo3", features = ["test-support"] }
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }

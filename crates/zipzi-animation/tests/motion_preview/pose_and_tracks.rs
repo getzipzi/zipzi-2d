@@ -1,68 +1,64 @@
 use super::common::*;
 use std::sync::Arc;
 use zipzi_animation::MotionPreview;
-use zipzi_core::{Document, ImageAsset, Mesh, Parameter, Part, Vec2};
+use zipzi_core::{Mesh, Parameter, Part, Vec2};
 use zipzi_project::{import_motion3, import_pose3};
 
 #[test]
 fn pose_virtual_controls_follow_official_motion_and_pose_frames() {
-    let mut doc = document();
-    assert!(doc
+    let mut builder = document().builder();
+    builder
         .create_parameter(Parameter {
             id: "00000000-0000-4000-8000-000000000d05".into(),
             runtime_id: "ParamY".into(),
             name: "Y".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     let part0 = "00000000-0000-4000-8000-000000000d06";
     let part1 = "00000000-0000-4000-8000-000000000d07";
     for (id, runtime) in [(part0, "Part0"), (part1, "Part1")] {
-        assert!(doc
+        builder
             .create_part(Part {
                 id: id.into(),
                 runtime_id: runtime.into(),
                 name: runtime.into(),
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
     let asset = "00000000-0000-4000-8000-000000000d09";
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+    builder
+        .create_asset(zipzi_core::state::AssetRecord {
             id: asset.into(),
             name: String::new(),
-            content: Some(zipzi_core::ImageContent {
-                source: "memory://test".into(),
+            content: zipzi_core::state::AssetContent::Image {
+                resource: Default::default(),
                 width: 8,
                 height: 8,
-                ..Default::default()
-            }),
+            },
         })
-        .status
-        .is_ok());
+        .unwrap();
     for (index, part_id) in [part0, part1].iter().enumerate() {
-        assert!(doc
+        builder
             .create_mesh(Mesh {
                 id: format!("00000000-0000-4000-8000-000000000d1{index}"),
+                runtime_id: format!("Mesh{index}"),
                 texture_asset_id: asset.into(),
                 part_id: (*part_id).into(),
                 vertex_ids: vec![1, 2, 3],
                 base_positions: vec![
                     Vec2::new(0.0, 0.0),
                     Vec2::new(1.0, 0.0),
-                    Vec2::new(0.0, 1.0)
+                    Vec2::new(0.0, 1.0),
                 ],
                 uvs: vec![Vec2::new(0.0, 0.0); 3],
                 triangles: vec![[1, 2, 3]],
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
+    let doc = builder.freeze().unwrap().state;
     let imported = import_motion3(&doc, MOTION, "Swap", MINIMAL_MOTION3).unwrap();
     assert!(imported.diagnostics.is_empty());
     let imported = import_pose3(
@@ -95,11 +91,11 @@ fn pose_virtual_controls_follow_official_motion_and_pose_frames() {
 
 #[test]
 fn pose_uses_real_parameter_when_part_runtime_id_matches() {
-    let mut doc = document();
+    let mut builder = document().builder();
     let part0 = "00000000-0000-4000-8000-000000000d06";
     let part1 = "00000000-0000-4000-8000-000000000d07";
     let control = "00000000-0000-4000-8000-000000000d05";
-    assert!(doc
+    builder
         .create_parameter(Parameter {
             id: control.into(),
             runtime_id: "Part0".into(),
@@ -109,19 +105,18 @@ fn pose_uses_real_parameter_when_part_runtime_id_matches() {
             default_value: 0.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     for (id, runtime) in [(part0, "Part0"), (part1, "Part1")] {
-        assert!(doc
+        builder
             .create_part(Part {
                 id: id.into(),
                 runtime_id: runtime.into(),
                 name: runtime.into(),
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
+    let doc = builder.freeze().unwrap().state;
     let imported = import_motion3(&doc, MOTION, "Swap", MINIMAL_MOTION3).unwrap();
     let imported = import_pose3(
         &imported.candidate,
@@ -161,20 +156,20 @@ fn non_looping_motion_uses_natural_end_for_clip_and_track_fades() {
 
 #[test]
 fn part_opacity_tracks_clamp_real_parameters() {
-    let mut doc = document();
+    let mut builder = document().builder();
     let part = "00000000-0000-4000-8000-000000000d06";
-    assert!(doc
+    builder
         .create_part(Part {
             id: part.into(),
             runtime_id: "ParamX".into(),
             name: "Part".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     let mut source: serde_json::Value = serde_json::from_str(LOOP_MOTION3).unwrap();
     source["Curves"][0]["Target"] = "PartOpacity".into();
     source["Curves"][0]["Segments"] = serde_json::json!([0, 2, 0, 1, 2]);
+    let doc = builder.freeze().unwrap().state;
     let imported = import_motion3(&doc, MOTION, "Clamp", &source.to_string()).unwrap();
     let mut preview = MotionPreview::new(&imported.candidate);
     preview.schedule_motion(MOTION, 0.0).unwrap();
@@ -205,8 +200,8 @@ fn loop_events_survive_multiple_cycles_and_failed_advance_is_atomic() {
 #[test]
 fn editing_one_track_preserves_shared_snapshots_and_other_track_storage() {
     let imported = import_motion3(&document(), MOTION, "Shared", LOOP_MOTION3).unwrap();
-    let mut original = imported.candidate;
-    let mut clip = original.get_motion(MOTION).unwrap().clone();
+    let original = imported.candidate;
+    let mut clip = original.motion(MOTION).unwrap().clone();
     let mut second = clip.tracks[0].clone();
     second.id = "00000000-0000-4000-8000-000000000d99".into();
     second.initial.id = uuid::Uuid::new_v4().to_string();
@@ -214,15 +209,16 @@ fn editing_one_track_preserves_shared_snapshots_and_other_track_storage() {
         segment.end_mut().id = uuid::Uuid::new_v4().to_string();
     }
     clip.tracks.push(second);
-    assert!(original.replace_motion(clip).status.is_ok());
-    let saved = original.checkpoint();
-    let mut candidate = original.fork_candidate();
+    let mut builder = original.builder();
+    builder.replace_motion(clip).unwrap();
+    let original = builder.freeze().unwrap().state;
+    let mut candidate = original.builder();
     assert!(std::ptr::eq(
-        original.get_motion(MOTION).unwrap(),
-        candidate.get_motion(MOTION).unwrap()
+        original.motion(MOTION).unwrap(),
+        candidate.motion(MOTION).unwrap()
     ));
-    let mut clip = candidate.get_motion(MOTION).unwrap().clone();
-    let before = original.get_motion(MOTION).unwrap();
+    let mut clip = candidate.motion(MOTION).unwrap().clone();
+    let before = original.motion(MOTION).unwrap();
     let segment = &mut Arc::make_mut(&mut clip.tracks[0].segments)[0];
     let key_id = segment.end().id.clone();
     *segment = zipzi_core::document::MotionSegment::Linear {
@@ -240,23 +236,25 @@ fn editing_one_track_preserves_shared_snapshots_and_other_track_storage() {
         &clip.tracks[1].segments,
         &before.tracks[1].segments
     ));
-    assert!(candidate.replace_motion(clip).status.is_ok());
+    candidate.replace_motion(clip).unwrap();
+    let candidate = candidate.freeze().unwrap();
+    assert_eq!(candidate.writes.records().len(), 1);
+    let candidate = candidate.state;
     assert_eq!(
-        original.get_motion(MOTION).unwrap().tracks[0].segments[0]
+        original.motion(MOTION).unwrap().tracks[0].segments[0]
             .end()
             .value,
         1.0
     );
     assert_eq!(
-        candidate.get_motion(MOTION).unwrap().tracks[0].segments[0]
+        candidate.motion(MOTION).unwrap().tracks[0].segments[0]
             .end()
             .value,
         0.25
     );
-    assert!(saved.estimated_bytes() > 0);
 }
 
-fn registered_document(track_fades: bool) -> Document {
+fn registered_document(track_fades: bool) -> DocumentState {
     use zipzi_core::document::{MotionGroup, MotionRegistration};
     let mut curve =
         serde_json::json!({"Target":"Parameter", "Id":"ParamX", "Segments":[0,1,0,4,1]});
@@ -267,17 +265,18 @@ fn registered_document(track_fades: bool) -> Document {
     let source = serde_json::json!({"Version":3,"Meta":{"Duration":4,"Fps":30,"Loop":true,
         "AreBeziersRestricted":true,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,
         "FadeInTime":2,"FadeOutTime":2,"UserDataCount":0,"TotalUserDataSize":0},"Curves":[curve]});
-    let mut doc = import_motion3(&document(), MOTION, "Registered", &source.to_string())
+    let doc = import_motion3(&document(), MOTION, "Registered", &source.to_string())
         .unwrap()
         .candidate;
-    assert!(doc
+    let mut builder = doc.builder();
+    builder
         .set_motion_groups(vec![MotionGroup {
             id: uuid::Uuid::new_v4().to_string(),
             name: "Idle".into(),
             entries: [
                 (None, None),
                 (Some(0.0), Some(0.0)),
-                (Some(1.0), Some(0.25))
+                (Some(1.0), Some(0.25)),
             ]
             .into_iter()
             .map(|(fade_in, fade_out)| MotionRegistration {
@@ -288,11 +287,10 @@ fn registered_document(track_fades: bool) -> Document {
                 sound: None,
                 extensions: Default::default(),
             })
-            .collect()
+            .collect(),
         }])
-        .status
-        .is_ok());
-    doc
+        .unwrap();
+    builder.freeze().unwrap().state
 }
 
 #[test]
@@ -303,7 +301,7 @@ fn registration_fades_are_per_activation_and_track_fades_take_precedence() {
         preview.schedule_motion_entry("Idle", entry, 0.0).unwrap();
         preview.advance(0.0).unwrap();
         assert!((preview.advance(0.5).unwrap().parameters[PARAM] - expected).abs() < 1e-6);
-        assert_eq!(doc.get_motion(MOTION).unwrap().fade_in, Some(2.0));
+        assert_eq!(doc.motion(MOTION).unwrap().fade_in, Some(2.0));
     }
     let mut preview = MotionPreview::new(&registered_document(true));
     preview.schedule_motion_entry("Idle", 2, 0.0).unwrap();

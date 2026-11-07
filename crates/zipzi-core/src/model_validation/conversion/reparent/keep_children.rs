@@ -1,0 +1,430 @@
+//! Constant coordinate conversion for static Warp and Rotation edits, including
+//! every stored child channel. Nonlinear maps never use node-only inversion.
+use super::*;
+use crate::model_validation::organization::Delta;
+use crate::{DeltaKeyforms, SceneTrack, TransformData, WarpTransform};
+use std::collections::HashMap;
+
+impl ParentMap {
+    pub(super) fn warp(w: &WarpTransform, parent: Self) -> Result<Self, Status> {
+        require_ok(crate::geometry::validate_positions(&w.points))?;
+        let o = w.points[0];
+        let x = w.points[w.columns as usize];
+        let y = w.points[(w.rows * (w.columns + 1)) as usize];
+        let x = Vec2::new(x.x - o.x, x.y - o.y);
+        let y = Vec2::new(y.x - o.x, y.y - o.y);
+        // Allow the float32 construction envelope of an affine lattice. Actual
+        // native mappings and converted child outputs are checked below.
+        let magnitude = w
+            .points
+            .iter()
+            .fold(1f32, |m, p| m.max(p.x.abs()).max(p.y.abs()));
+        for row in 0..=w.rows {
+            for col in 0..=w.columns {
+                let u = f64::from(col) / f64::from(w.columns);
+                let v = f64::from(row) / f64::from(w.rows);
+                let expected = Vec2::new(
+                    (f64::from(o.x) + f64::from(x.x) * u + f64::from(y.x) * v) as f32,
+                    (f64::from(o.y) + f64::from(x.y) * u + f64::from(y.y) * v) as f32,
+                );
+                let p = w.points[(row * (w.columns + 1) + col) as usize];
+                if (p.x - expected.x).abs().max((p.y - expected.y).abs())
+                    > 8. * f32::EPSILON * magnitude
+                {
+                    return Err(Status::error(
+                        "NONLINEAR_WARP_PRESERVATION_UNPROVEN",
+                        "Keep children requires affine old and new Warp maps; nonlinear control edits are unsupported",
+                    ));
+                }
+            }
+        }
+        let origin = parent.point(o);
+        let linear = Self {
+            origin: PsmVec2::default(),
+            ..parent
+        };
+        let mut result = Self {
+            base: 0.,
+            angle: 0.,
+            scale: parent.scale,
+            origin: PsmVec2::new(origin.x, origin.y),
+            rx: false,
+            ry: false,
+            warp_basis: Some([linear.point(x), linear.point(y)]),
+            residual: ParentResidual::default(),
+        };
+        result.residual = ParentResidual::warp(w, parent, result);
+        result.inverse(origin)?;
+        Ok(result)
+    }
+}
+
+impl Model<'_> {
+    pub(crate) fn deformer_keep_children_delta(
+        &self,
+        id: &str,
+        next: &TransformData,
+        control: &ConversionControl,
+    ) -> Result<(Delta, Vec<String>, f64, usize), Status> {
+        self.authoring_unlocked(id)?;
+        let transform = self
+            .get_transform(id)
+            .ok_or_else(|| Status::error("MISSING_TRANSFORM", id))?;
+        let kind = match (&transform.data, next) {
+            (TransformData::Warp(old), TransformData::Warp(next)) => {
+                if (old.rows, old.columns, old.quad) != (next.rows, next.columns, next.quad) {
+                    return Err(Status::error(
+                        "WARP_PRESERVATION_TOPOLOGY",
+                        "Keep children cannot change conversion density or interpolation",
+                    ));
+                }
+                if next.points.len() != ((old.rows + 1) * (old.columns + 1)) as usize {
+                    return Err(Status::error(
+                        "INVALID_WARP_POINTS",
+                        "Warp lattice point count changed",
+                    ));
+                }
+                if let Some(controller) = &next.bezier {
+                    require_ok(controller.validate())?;
+                }
+                "WARP"
+            }
+            (TransformData::Rotation(_), TransformData::Rotation(_)) => "ROTATION",
+            _ => return Err(Status::error("WRONG_SHAPE_TARGET", id)),
+        };
+        let mut replacement = transform.clone();
+        replacement.data = next.clone();
+        require_ok(self.validate_transform(&replacement))?;
+        let mut ancestor = id;
+        while !ancestor.is_empty() {
+            if self.binding_for_scene(ancestor).is_some()
+                || !self.blend_bindings_for_target(ancestor).is_empty()
+            {
+                return Err(Status::error(
+                    format!("DRIVEN_{kind}_PRESERVATION_UNPROVEN"),
+                    format!(
+                        "{ancestor}: keep children requires a static deformer and static ancestor spaces"
+                    ),
+                ));
+            }
+            ancestor = self.get_transform(ancestor).unwrap().parent();
+        }
+        let context = ReparentContext::default();
+        let parent = self.reparent_parent_map(transform.parent(), &context, false, true)?;
+        let (old_map, new_map) = match (&transform.data, next) {
+            (TransformData::Warp(old), TransformData::Warp(next)) => (
+                ParentMap::warp(old, parent)?,
+                ParentMap::warp(next, parent)?,
+            ),
+            _ => {
+                let mut candidate = SceneWorkspace::new(self);
+                require_ok({
+                    candidate
+                        .transforms
+                        .insert(replacement.id.clone(), Arc::new(replacement.clone()));
+                    Status::ok()
+                })?;
+                (
+                    self.reparent_parent_map(id, &context, false, true)?,
+                    candidate
+                        .model()
+                        .reparent_parent_map(id, &context, false, true)?,
+                )
+            }
+        };
+        let descendants: Vec<_> = self
+            .mesh_order()
+            .iter()
+            .chain(self.transform_order())
+            .filter(|child| {
+                let mut parent = self.scene_deformer_parent(child).unwrap_or("");
+                while !parent.is_empty() && parent != id {
+                    parent = self.scene_deformer_parent(parent).unwrap_or("");
+                }
+                parent == id
+            })
+            .cloned()
+            .collect();
+        let mut affected = vec![id.to_owned()];
+        let mut drivers = Vec::new();
+        for child in &descendants {
+            control.checkpoint()?;
+            self.authoring_unlocked(child)?;
+            affected.push(child.clone());
+            drivers.extend(self.reparent_drivers(child));
+            let binding_ids: Vec<_> = self
+                .binding_for_mesh(child)
+                .map(|b| &b.id)
+                .into_iter()
+                .chain(self.binding_for_scene(child).map(|b| &b.id))
+                .chain(self.blend_bindings_for_target(child).iter().map(|b| &b.id))
+                .cloned()
+                .collect();
+            for binding in binding_ids {
+                self.authoring_unlocked(&binding)?;
+                affected.push(binding);
+            }
+        }
+        if transform.data == *next
+            || matches!((&transform.data, next),
+            (TransformData::Warp(old), TransformData::Warp(next)) if old.points == next.points)
+        {
+            let mut delta = Delta::default();
+            if transform.data != *next {
+                delta.transforms.push(replacement);
+            }
+            return Ok((delta, affected, 0., 0));
+        }
+        let mut measured = 0f64;
+        let mut samples = 0usize;
+        let mut convert = |points: &mut [Vec2], delta: bool| -> Result<(), Status> {
+            let old = ParentMap {
+                origin: if delta {
+                    PsmVec2::default()
+                } else {
+                    old_map.origin
+                },
+                ..old_map
+            };
+            let new = ParentMap {
+                origin: if delta {
+                    PsmVec2::default()
+                } else {
+                    new_map.origin
+                },
+                ..new_map
+            };
+            for p in points {
+                let world = old.point(*p);
+                *p = new.inverse(world)?;
+                let after = new.point(*p);
+                measure_error(&mut measured, world, after)?;
+                samples += 1;
+            }
+            Ok(())
+        };
+        let mut delta = Delta::default();
+        let mut rotation_error = 0f64;
+        delta.transforms.push(replacement);
+        for child in descendants
+            .iter()
+            .filter(|child| self.scene_deformer_parent(child) == Some(id))
+        {
+            control.checkpoint()?;
+            if let Some(mesh) = self.get_mesh(child) {
+                let mut mesh = mesh.clone();
+                convert(&mut mesh.base_positions, false)?;
+                delta.meshes.push(mesh);
+                if let Some(binding) = self.binding_for_mesh(child) {
+                    let mut binding = binding.clone();
+                    for form in &mut binding.keyforms {
+                        convert(&mut form.positions, false)?;
+                    }
+                    delta.bindings.push(binding);
+                }
+            } else if let Some(warp) = self.get_transform(child).and_then(Transform::warp) {
+                let mut transform = self.get_transform(child).unwrap().clone();
+                let mut warp = warp.clone();
+                convert(&mut warp.points, false)?;
+                convert_controller(&mut warp.bezier, &mut convert)?;
+                *transform.warp_mut().unwrap() = warp;
+                delta.transforms.push(transform);
+                if let Some(binding) = self.binding_for_scene(child) {
+                    let mut binding = binding.clone();
+                    if let SceneTrack::Warp { keyforms, .. } = &mut binding.track {
+                        for form in keyforms {
+                            convert(&mut form.positions, false)?;
+                            convert_controller(&mut form.bezier, &mut convert)?;
+                        }
+                    }
+                    delta.scene_bindings.push(binding);
+                }
+            } else {
+                // Native Rotation inherits direction and scalar Rotation scale,
+                // not the Warp basis lengths. Reuse the shared channel plan.
+                let changed = self.convert_rotation_parent(child, id, old_map, new_map, control)?;
+                if !changed.error.is_finite() {
+                    return Err(Status::error(
+                        format!("{kind}_PRESERVATION_TOLERANCE"),
+                        "Non-finite preservation error",
+                    ));
+                }
+                rotation_error = rotation_error.max(changed.error);
+                delta.transforms.push(changed.transform);
+                delta.scene_bindings.extend(changed.binding);
+                delta.blends.extend(changed.blends);
+                continue;
+            }
+            for blend in self.blend_bindings_for_target(child) {
+                let mut blend = blend.clone();
+                match &mut blend.keyforms {
+                    DeltaKeyforms::Mesh(forms) => {
+                        for f in forms {
+                            convert(&mut f.positions, true)?;
+                        }
+                    }
+                    DeltaKeyforms::Warp(forms) => {
+                        for f in forms {
+                            convert(&mut f.points, true)?;
+                        }
+                    }
+                    _ => return Err(Status::error("DEFORMER_CHILD_CHANNEL_UNSUPPORTED", child)),
+                }
+                delta.blends.push(blend);
+            }
+        }
+        // Independent interior/exterior samples exercise native bilinear/triangle
+        // mapping, not just the control nodes used to derive the affine basis.
+        drop(convert);
+        measured = measured.max(rotation_error);
+        if let (TransformData::Warp(old), TransformData::Warp(next)) = (&transform.data, next) {
+            let flat =
+                |w: &WarpTransform| w.points.iter().flat_map(|p| [p.x, p.y]).collect::<Vec<_>>();
+            let old_flat = flat(old);
+            let new_flat = flat(next);
+            for v in [-3., -1.7, -0.1, 0.07, 0.29, 0.53, 0.81, 0.97, 1., 1.4, 3.2] {
+                for u in [-3., -1.7, -0.1, 0.07, 0.29, 0.53, 0.81, 0.97, 1., 1.4, 3.2] {
+                    control.checkpoint()?;
+                    let p = Vec2::new(u, v);
+                    let q = new_map.inverse(old_map.point(p))?;
+                    let mut a = [0.; 2];
+                    let mut b = [0.; 2];
+                    crate::deformers::warp_points(
+                        old.rows as i32,
+                        old.columns as i32,
+                        old.quad,
+                        &old_flat,
+                        &[u, v],
+                        &mut a,
+                        1,
+                    );
+                    crate::deformers::warp_points(
+                        next.rows as i32,
+                        next.columns as i32,
+                        next.quad,
+                        &new_flat,
+                        &[q.x, q.y],
+                        &mut b,
+                        1,
+                    );
+                    let a = parent.point(Vec2::new(a[0], a[1]));
+                    let b = parent.point(Vec2::new(b[0], b[1]));
+                    measure_error(&mut measured, a, b)?;
+                    samples += 1;
+                }
+            }
+        }
+        let mut candidate = SceneWorkspace::new(self);
+        candidate.apply(&delta);
+        drivers.sort();
+        drivers.dedup();
+        // Verification at default and each driver's endpoints/key midpoints.
+        // The constant affine channel conversion commutes with interpolation;
+        // these checks supplement that structural argument, not a domain proof.
+        let mut inputs = vec![HashMap::new()];
+        for driver in drivers {
+            let p = self.get_parameter(&driver).unwrap();
+            let mut keys = vec![p.minimum, p.default_value, p.maximum];
+            for child in &descendants {
+                for axis in self
+                    .binding_for_mesh(child)
+                    .into_iter()
+                    .flat_map(|b| &b.axes)
+                    .chain(
+                        self.binding_for_scene(child)
+                            .into_iter()
+                            .flat_map(|b| &b.axes),
+                    )
+                {
+                    if axis.parameter_id == driver {
+                        keys.extend(&axis.keys);
+                    }
+                }
+                for blend in self.blend_bindings_for_target(child) {
+                    let table = self.get_blend_key_table(&blend.key_table_id).unwrap();
+                    if table.parameter_id == driver {
+                        keys.extend(&table.keys);
+                    }
+                }
+            }
+            keys.sort_by(f32::total_cmp);
+            keys.dedup();
+            let mids: Vec<_> = keys.windows(2).map(|w| (w[0] + w[1]) * 0.5).collect();
+            keys.extend(mids);
+            inputs.extend(
+                keys.into_iter()
+                    .map(|v| HashMap::from([(driver.clone(), v)])),
+            );
+        }
+        if inputs.len() > 4096 {
+            return Err(Status::error(
+                format!("{kind}_PRESERVATION_CAPACITY"),
+                "Too many parameter verification poses",
+            ));
+        }
+        for input in inputs {
+            control.checkpoint()?;
+            let mut before = crate::DrawableFrame::default();
+            let mut after = crate::DrawableFrame::default();
+            require_ok(crate::evaluation::evaluate_frame_including_hidden(
+                self,
+                &input,
+                &mut before,
+            ))?;
+            require_ok(crate::evaluation::evaluate_frame_including_hidden(
+                &candidate.model(),
+                &input,
+                &mut after,
+            ))?;
+            for a in before
+                .drawables
+                .iter()
+                .filter(|d| descendants.contains(&d.id))
+            {
+                let b = after.drawables.iter().find(|d| d.id == a.id).unwrap();
+                for (a, b) in a.positions.iter().zip(&b.positions) {
+                    measure_error(&mut measured, *a, *b)?;
+                    samples += 1;
+                }
+            }
+        }
+        // Check the measured error of actual float32 mappings and child outputs.
+        // Absolute coordinate magnitudes, especially exterior probe locations,
+        // are not displacement errors and must not consume this tolerance.
+        // Structural affine checks above still govern the supported domain;
+        // these samples do not claim a global floating-point error bound.
+        if measured > 0.01 {
+            return Err(Status::error(
+                format!("{kind}_PRESERVATION_TOLERANCE"),
+                format!("Measured preservation error {measured:.6} exceeds 0.01 canvas units"),
+            ));
+        }
+        Ok((delta, affected, measured, samples))
+    }
+}
+
+pub(super) fn measure_error(maximum: &mut f64, before: Vec2, after: Vec2) -> Result<(), Status> {
+    let error =
+        (f64::from(before.x) - f64::from(after.x)).hypot(f64::from(before.y) - f64::from(after.y));
+    if !error.is_finite() {
+        return Err(Status::error(
+            "DEFORMER_PRESERVATION_TOLERANCE",
+            "Preservation produced a non-finite canvas position",
+        ));
+    }
+    *maximum = maximum.max(error);
+    Ok(())
+}
+
+pub(super) fn convert_controller(
+    controller: &mut Option<crate::WarpBezier>,
+    convert: &mut impl FnMut(&mut [Vec2], bool) -> Result<(), Status>,
+) -> Result<(), Status> {
+    if let Some(controller) = controller {
+        for node in &mut controller.nodes {
+            convert(std::slice::from_mut(&mut node.position), false)?;
+            convert(&mut node.handles, false)?;
+        }
+    }
+    Ok(())
+}

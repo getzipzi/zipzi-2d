@@ -11,9 +11,9 @@ impl<'a> Moc3EncoderContext<'a> {
         self.l.counts[20] = checked(self.doc.glue_order().len(), "glues")? as u32;
         let mut glue_info_count = 0;
         for g_id in self.doc.glue_order() {
-            let g = self.doc.get_glue(g_id).unwrap();
-            let mesh_a = self.doc.get_mesh(&g.mesh_a_id).unwrap();
-            let mesh_b = self.doc.get_mesh(&g.mesh_b_id).unwrap();
+            let g = self.doc.glue(g_id).unwrap();
+            let mesh_a = self.doc.mesh(&g.mesh_a_id).unwrap();
+            let mesh_b = self.doc.mesh(&g.mesh_b_id).unwrap();
             let ma_idx = index_of(&self.mesh_indices, &g.mesh_a_id);
             let mb_idx = index_of(&self.mesh_indices, &g.mesh_b_id);
             let b_idx = if g.binding.is_some() {

@@ -1,63 +1,172 @@
-"""Offline public API descriptions; importing or describing never starts a host."""
-from dataclasses import dataclass
-from functools import lru_cache
-from ._presentation import CompactValue
+"""Bounded offline help derived from the installed public Python objects."""
 
-@dataclass(frozen=True,repr=False)
-class ApiDescription(CompactValue):
-    'One installed offline API entry; it describes the client package rather than probing host support.\n\nFields:\npath: Canonical public API path under zipzi.\nkind: Directory entry category such as module, type, callable or value.\nsignature: Rendered public signature; empty for entries without a callable/type signature.\ndocumentation: Entry-specific semantics; rules contains the directly referenced shared explanations.\nfields: Ordered pairs of public field name and semantic description; empty when no value fields are declared.\nchildren: Canonical child entry paths for further bounded describe queries.\ntype_refs: Referenced public type paths resolved from source annotations.\nexample: Package-relative workflow/example reference; empty when no example is assigned.\nrule_refs: Direct shared rule identities; rules are leaves and never query children or referenced types.\nrules: Resolved title/text pairs for the directly referenced rules, expanded once by format().\nfield_roles: Field name, projection display role and fixed value for explicitly declared projections.'
-    __module__='zipzi'
-    path:str
-    kind:str
-    signature:str
-    documentation:str
-    fields:tuple[tuple[str,str],...]=()
-    children:tuple[str,...]=()
-    example:str=''
-    type_refs:tuple[str,...]=()
-    rule_refs:tuple[str,...]=()
-    rules:tuple[tuple[str,str],...]=()
-    field_roles:tuple[tuple[str,str,str],...]=()
+from dataclasses import dataclass
+from collections.abc import Mapping
+from enum import Enum
+import inspect
+import sys
+from types import ModuleType
+from typing import Any, TypeAliasType, cast, is_typeddict
+
+
+@dataclass(frozen=True)
+class _Field:
+    annotation: Any
+
+
+def _members(target: Any) -> Mapping[str, Any]:
+    if isinstance(target, type):
+        members = {
+            name: member
+            for base in reversed(target.__mro__)
+            for name, member in vars(base).items()
+        }
+        # Expose typed instance namespaces without constructing a Runtime.
+        module = vars(sys.modules[target.__module__])
+        for name, annotation in inspect.get_annotations(target).items():
+            member = (
+                module.get(annotation) if isinstance(annotation, str) else annotation
+            )
+            if name not in members:
+                members[name] = (
+                    member if isinstance(member, type) else _Field(annotation)
+                )
+        return members
+    if isinstance(target, ModuleType):
+        return vars(target)
+    return {}
+
+
+@dataclass(frozen=True)
+class ApiDescription:
+    """One help entry and a page of child paths; format() performs no host IO."""
+
+    path: str
+    signature: str
+    documentation: str
+    children: tuple[str, ...]
+    next_offset: int | None
 
     def format(self) -> str:
-        """Return complete help text without truncation or IO.
-
-        Use print(description.format()) for full help. repr, str and summary
-        remain bounded previews. Direct shared rules expand once; children and
-        type references remain paths and are never recursively queried.
-        """
-        lines=[self.path+' ('+self.kind+')']
-        if self.signature:lines.extend(('',self.signature))
-        if self.documentation:lines.extend(('',self.documentation))
-        if self.fields:
-            lines.extend(('', 'Fields:'))
-            lines.extend(name+': '+text for name,text in self.fields)
-        for title,text in self.rules:
-            lines.extend(('',title+':',text))
+        """Render this entry without expanding children or referenced types."""
+        lines = [self.path + self.signature, "", self.documentation]
         if self.children:
-            lines.extend(('', 'Children:', *self.children))
-        if self.type_refs:lines.extend(('', 'Types:', *self.type_refs))
-        if self.example:lines.extend(('', 'Example: '+self.example))
-        return '\n'.join(lines)
+            lines += ["", "Children:", *self.children]
+        if self.next_offset is not None:
+            lines += [
+                "",
+                f"More children: describe({self.path!r}, offset={self.next_offset})",
+            ]
+        return "\n".join(lines)
 
 
-def describe(path:str)->ApiDescription:
-    """Look up an exact public path, e.g. Session.meshes.list, without IO or eval.
+def describe(
+    path: str = "zipzi", *, offset: int = 0, limit: int = 32
+) -> ApiDescription:
+    """Read installed help without a host, native backend or network.
 
-    Unknown paths raise KeyError. Short paths are normalized under zipzi.
-    The root description links the bundled short guide and executable recipes.
-    Use print(describe(path).format()) for complete help; direct printing is a
-    bounded preview. Fields and child paths are also available individually.
-    This describes the installed API, while runtime.capabilities() describes
-    the connected host. No resource is constructed or RPC sent by this query.
+    Paths include Session.query, Snapshot.records, results.SaveReceipt and
+    values.CommandCreateParameter. Enumerate values or a union's subclasses
+    using children; next_offset continues the same entry. Each page has at most
+    64 children. Ordinary help(object) and inspect.signature(object) also work.
     """
-    if not isinstance(path,str):raise TypeError('Expected a public API path')
-    key=path if path=='zipzi' or path.startswith('zipzi.') else 'zipzi.'+path
-    return _describe(key)
+    import zipzi
 
-
-@lru_cache(maxsize=512)
-def _describe(key:str)->ApiDescription:
-    from ._generated.catalog import lookup
-    raw=lookup(key)
-    return ApiDescription(key,raw['kind'],raw.get('signature',''),raw.get('documentation',''),tuple(raw.get('fields',())),tuple(raw.get('children',())),raw.get('example',''),tuple(raw.get('type_refs',())),raw.get('rule_refs',()),raw.get('rules',()),raw.get('field_roles',()))
+    if not isinstance(path, str):
+        raise TypeError("Expected a public API path")
+    if (
+        type(offset) is not int
+        or offset < 0
+        or type(limit) is not int
+        or not 1 <= limit <= 64
+    ):
+        raise ValueError("Expected offset >= 0 and limit in 1..64")
+    parts = path.split(".")
+    if parts[0] != "zipzi":
+        parts.insert(0, "zipzi")
+    target: Any = zipzi
+    visited = ["zipzi"]
+    for part in parts[1:]:
+        if not part or part.startswith("_"):
+            raise KeyError(
+                f"Unknown public API path {path!r}; use describe({'.'.join(visited)!r}).format() to list public children."
+            )
+        namespace = _members(target)
+        allowed: Any = namespace.get("__all__")
+        if part not in namespace or (allowed is not None and part not in allowed):
+            raise KeyError(
+                f"Unknown public API path {path!r}; use describe({'.'.join(visited)!r}).format() to list public children."
+            )
+        target = namespace[part]
+        visited.append(part)
+    canonical = ".".join(parts)
+    namespace = _members(target)
+    if isinstance(target, ModuleType):
+        names = list(namespace.get("__all__", ()))
+    elif isinstance(target, type) and issubclass(target, Enum):
+        names = list(target.__members__)
+    elif is_typeddict(cast(Any, target)):
+        # Responses are immutable mappings, so dict mutation methods are not API entries.
+        names = []
+    elif isinstance(target, type):
+        names = [
+            name
+            for name, member in namespace.items()
+            if not name.startswith("_")
+            and (
+                callable(member) or isinstance(member, (property, classmethod, _Field))
+            )
+        ]
+        # Sum types expose concrete constructors without a parallel API catalog.
+        names += [
+            name
+            for name in zipzi.values.__all__
+            if isinstance(child := vars(zipzi.values)[name], type)
+            and target in child.__bases__
+        ]
+    else:
+        names = []
+    children = sorted(
+        {
+            (
+                "zipzi.values." + name
+                if name not in namespace
+                else canonical + "." + name
+            )
+            for name in names
+        }
+    )
+    target = cast(Any, target)
+    try:
+        signature = str(inspect.signature(target)) if callable(target) else ""
+    except (TypeError, ValueError):
+        signature = ""
+    # A classmethod descriptor is resolved only after lookup in an allowed namespace.
+    if isinstance(target, classmethod):
+        target = cast(Any, target).__func__
+        signature = str(inspect.signature(target))
+    documentation = (
+        inspect.getdoc(target) or "See the installed guide and related value types."
+    )
+    if isinstance(target, Enum):
+        documentation = f"Value: {target.value!r}\n\n" + documentation
+    elif isinstance(target, TypeAliasType):
+        documentation = f"{target.__name__} = {target.__value__}"
+    elif isinstance(target, _Field):
+        documentation = f"Instance attribute. Type: {target.annotation}"
+    if isinstance(target, type) and "__annotations__" in namespace:
+        annotations = inspect.get_annotations(target)
+        if annotations:
+            documentation += "\n\nField types:\n" + "\n".join(
+                f"{name}: {annotation}"
+                for name, annotation in annotations.items()
+                if not name.startswith("_")
+            )
+    end = offset + limit
+    return ApiDescription(
+        canonical,
+        signature,
+        documentation,
+        tuple(children[offset:end]),
+        end if end < len(children) else None,
+    )

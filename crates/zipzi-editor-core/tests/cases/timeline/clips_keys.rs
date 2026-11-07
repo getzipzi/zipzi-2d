@@ -140,7 +140,7 @@ fn first_write_creates_only_current_key_and_candidates_are_detached_cancelable()
     assert_eq!(first_frame.snapshot.parameters[&id(3)], 0.8);
     e.update_timeline_edit(d, e.timeline_edit().unwrap().identity, write(3, None, 0.9))?;
     assert!(e.present_animation(first_frame.identity, first_frame.snapshot));
-    let candidate = e.timeline_edit().unwrap().candidate.clip();
+    let candidate = &e.timeline_edit().unwrap().candidate;
     let track = candidate.tracks.last().unwrap();
     assert_eq!(track.keys().count(), 1);
     assert_eq!(track.initial.time, 0.7137);

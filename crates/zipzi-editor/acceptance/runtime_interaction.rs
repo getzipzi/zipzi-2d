@@ -83,42 +83,51 @@ pub(super) fn run() -> anyhow::Result<()> {
         })
     })?;
     ready(&mut h, &ids, None)?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )?;
-    sdk.import_model3(model, None)?;
-    let mesh = sdk.mesh_ids()[0].clone();
-    // R1/R2 adapters differ only in ownership/admission; measured input driver
-    // and SDK rename/commit workload are identical. The candidate uses the same
-    // application Runtime as the two visible surfaces, with a separate client.
+    let (imported, _) = crate::test_fixture::import_model3_fixture(model)?;
+    let mesh = imported.document.mesh_order()[0].clone();
+    let sdk = zipzi_sdk::AuthoringSession::new(zipzi_sdk::Snapshot::new(
+        imported.document,
+        imported.resources,
+    )?);
     let runtime = h
         .view
         .read_with(&h.cx, |view, _| view.editor.runtime_host());
     let client = runtime.write().register_client()?;
     let session = runtime.write().adopt_session(client, sdk)?;
     let batch = |index: usize| -> anyhow::Result<FinishBatch> {
-        let edit = runtime
-            .write()
-            .begin_edit(client, session, "background batch", None)?;
-        runtime.write().apply_edit(client, edit, |edit| {
-            edit.rename_mesh(&mesh, format!("batch {index}"))
+        let mesh = mesh.clone();
+        let mut host = runtime.write();
+        let version = host.session_read(client, session)?.version();
+        let draft = host.begin_draft(client, version)?;
+        let job = host.request_batch(client, draft, Default::default(), move |edit, _| {
+            edit.rename(
+                zipzi_sdk::NameTarget::Mesh(&mesh),
+                (format!("batch {index}")).into(),
+            )
         })?;
-        let job = runtime.write().request_commit(client, edit)?;
-        let work = runtime.write().take_work(job)?;
+        let work = host.take_work(job)?;
+        drop(host);
         let thread = std::thread::spawn(move || work.run());
         let runtime = runtime.clone();
         Ok(Box::new(move || {
             let completion = thread
                 .join()
                 .map_err(|_| anyhow::anyhow!("batch thread panicked"))?;
+            let mut host = runtime.write();
             ensure!(
-                runtime.write().complete(completion),
+                host.complete(completion).is_ok(),
                 "batch completion rejected"
             );
-            let info = runtime.read().job_info(client, job)?;
-            runtime.write().release_job(client, job)?;
-            info.result.context("batch still running")??;
+            let result = host
+                .job(client, job)?
+                .result
+                .clone()
+                .context("batch still running")?;
+            host.release_job(client, job)?;
+            let zipzi_runtime::JobValue::DraftUpdated(draft) = result? else {
+                anyhow::bail!("batch did not update the draft");
+            };
+            host.publish(client, draft, "background batch")?;
             Ok(())
         }))
     };

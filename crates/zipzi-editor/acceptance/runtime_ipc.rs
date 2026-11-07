@@ -6,8 +6,58 @@ use std::{
     process::{Child, Command, Stdio},
     time::{Duration, Instant},
 };
-use zipzi_core::SceneTrackEvaluation;
 use zipzi_editor_core::{Editor, EditorCommand};
+
+const PYTHON_HELPERS: &str = r#"
+import json, sys
+from pathlib import Path
+import zipzi
+from zipzi import values as v
+
+def address(kind, id):
+    return v.ObjectAddress(kind=kind, id=id)
+
+def record(owner, kind, id):
+    return owner.query(v.QueryObjects(addresses=(address(kind, id),))).value['records'][0]['value']
+
+def rename(id, name):
+    return v.CommandRename(target=address(v.ObjectKind.MESH, id), name=name)
+
+def mesh_record(owner, id):
+    return v.Mesh.from_wire(record(owner, v.ObjectKind.MESH, id))
+
+def history(session):
+    h = session.info()['history']
+    return h['undo_steps'], h['redo_steps']
+
+def replace_image(runtime, draft, id, rgba, width=1, height=1):
+    with runtime.blob(len(rgba)) as image:
+        image.append(0, rgba)
+        image.seal()
+        draft.replace_image_blob(id, image, width=width, height=height)
+
+def read_pixels(session, id):
+    with session.image_blob(id) as image:
+        return image.read(0, image.length)
+def make_part(id, name):
+    return v.Part(id=id, name=name, runtime_id='Part'+id.replace('-',''), parent_id='', enabled=True, draw_order=0.)
+
+def make_group(id, name):
+    return v.CdiParameterGroup(id=id,name=name,runtime_id='Group'+id.replace('-',''),extensions={})
+
+def move_to_part(ids, part):
+    return v.CommandOrganization(edit=v.OrganizationEditMove(ids=ids,
+        destination=v.OrganizationCollectionPartMembers(part_id=part)))
+
+def sample_x(session, mesh, values, source=None):
+    request=v.SampleRequest(input=v.SampleInputParameters(values=values))
+    with session.samples(request,source=source) as job:
+        job.wait()
+        with job.blob() as blob:
+            frames=json.loads(blob.read(0,blob.length))['frames']
+    return [next(d for d in frame['geometry']['drawables'] if d['id']==mesh)['positions'][0]['x']
+            for frame in frames]
+"#;
 
 pub(super) fn client(
     h: &mut Harness,
@@ -17,7 +67,7 @@ pub(super) fn client(
     args: &[String],
 ) -> anyhow::Result<()> {
     let mut child = Command::new(python)
-        .args(["-I", "-c", script])
+        .args(["-I", "-c", &format!("{PYTHON_HELPERS}\n{script}")])
         .args(args)
         .env_remove("PYTHONPATH")
         .env("ZIPZI_RUNTIME_DIR", endpoint)
@@ -66,65 +116,58 @@ pub(super) fn run() -> anyhow::Result<()> {
             document.properties_revision(),
         )
     });
-    let event_cursor = runtime.read().subscribe_info(session)?.cursor;
+    let event_cursor = runtime
+        .read()
+        .subscribe(runtime.client_id(), session)?
+        .cursor;
     client(
         &mut h,
         python,
         endpoint.path(),
         r#"
-import sys,zipzi
-from zipzi import bindings,events,meshes,parameters,scene
-from importlib.metadata import version
 from importlib.util import find_spec
-assert 'Package '+version('zipzi')+';' in zipzi.describe('zipzi').documentation
 assert '/site-packages/zipzi/' in zipzi.__file__
 assert find_spec('zipzi_native') is None
+parameter='79700000-0000-4000-8000-000000000001'
+binding='79700000-0000-4000-8000-000000000002'
+group='79700000-0000-4000-8000-000000000003'
+part='79700000-0000-4000-8000-000000000004'
 with zipzi.connect() as c:
- s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- assert s.id in {info.id for info in c.sessions.list()}
- stream=s.subscribe()
- geometry=s.meshes.get(sys.argv[3]).value.geometry
- parameter='79700000-0000-4000-8000-000000000001'
- binding='79700000-0000-4000-8000-000000000002'
- with s.edit('external Python') as e:
-  e.apply_many((meshes.Rename(sys.argv[3],'Python changed this mesh'),
-   parameters.Create(parameters.ParameterSpec('External Angle',-30.,30.,0.,id='79700000-0000-4000-8000-000000000001',runtime_id='ParamExternal',decimal_places=3)),
-   bindings.Create(bindings.MeshBindingSpec(sys.argv[3],(bindings.Axis(parameter,(-30.,30.)),),(
-    bindings.Keyform((-30.,),geometry.positions),
-    bindings.Keyform((30.,),tuple((x+10.,y) for x,y in geometry.positions))),id=binding))))
-  candidate=e.bindings.get(binding)
-  assert candidate.source.sequence==1
-  sampled=e.modeling.sample(({parameter:15.},),expected=candidate.source)
-  assert abs(sampled.value.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
-  assert e.parameters.get_many((parameter,)).source.sequence==1
-  group='79700000-0000-4000-8000-000000000003'
-  part='79700000-0000-4000-8000-000000000004'
-  e.apply_many((scene.CreatePart(scene.PartSpec('External folder',id=part)),
-   scene.CreateParameterGroup(scene.ParameterGroupSpec('External controls',id=group)),
-   scene.MoveParameters((parameter,),group_id=group),
-   scene.MoveToPart((sys.argv[3],),part_id=part)))
-  assert e.scene.get(sys.argv[3]).value.part_id==part
- before=s.info()
- formal=s.modeling.sample(({parameter:-30.},{parameter:0.},{parameter:30.}))
- assert [round(f.drawables[0].positions[0][0]-geometry.positions[0][0],5) for f in formal.value.frames]==[0.,5.,10.]
- assert s.info()==before
- assert s.meshes.get(sys.argv[3]).value.name=='Python changed this mesh'
- assert s.meshes.get_many((sys.argv[3],)).items[0].name=='Python changed this mesh'
- with s.reference('mesh',sys.argv[3]) as reference:
-  assert reference.resolve().version==s.info().version
-  assert reference.scene_capabilities().patch.state=='available'
-  with reference.label() as address:
-   assert address.expected=='Python changed this mesh'
-   with address.plan(address.expected) as plan: assert plan.report.no_op
- published=[e for e in stream.poll() if isinstance(e,events.Published)]
- assert len(published)==1 and published[0].receipt.before==stream.initial.version
- assert published[0].receipt.after==s.info().version
+    s=c.sessions.attach(sys.argv[1])
+    mesh=sys.argv[2]
+    assert s.id in {info['session'] for info in c.sessions.list()}
+    cursor=v.Version.from_wire(s.subscribe()['cursor'])
+    positions=mesh_record(s,mesh).base_positions
+    base=positions[0].x
+    with s.draft('external Python') as e:
+        e.apply(rename(mesh,'Python changed this mesh'),
+            v.CommandCreateParameter(spec=v.ParameterCreateSpec(id=parameter, name='External Angle',
+                minimum=-30.,maximum=30.,default_value=0.,runtime_id='ParamExternal',decimal_places=3)),
+            v.CommandCreateBinding(spec=v.MeshBindingCreateSpec(id=binding, mesh_id=mesh,
+                axes=(v.MeshBindingAxisSpec(parameter_id=parameter,keys=(-30.,30.)),),
+                keyforms=(v.MeshKeyformSpec(keys=(-30.,),positions=positions),
+                    v.MeshKeyformSpec(keys=(30.,),positions=tuple(v.Vec2(x=p.x+10.,y=p.y) for p in positions))))))
+        assert e.source.sequence==1
+        assert record(e,v.ObjectKind.MESH_BINDING,binding)['mesh_id']==mesh
+        assert abs(sample_x(s,mesh,({parameter:15.},),source=v.QuerySourceDraft(value=e.source))[0]-base-7.5)<1e-5
+        e.apply(
+            v.CommandCreatePart(value=make_part(part,'External folder')),
+            v.CommandOrganization(edit=v.OrganizationEditCreateGroup(group=make_group(group,'External controls'))),
+            v.CommandOrganization(edit=v.OrganizationEditSetParameterGroup(parameter_id=parameter,group_id=group)),
+            move_to_part((mesh,),part))
+        assert mesh_record(e,mesh).part_id==part
+    before=s.info()
+    assert [round(x-base,5) for x in sample_x(s,mesh,tuple({parameter:x} for x in (-30.,0.,30.)))]==[0.,5.,10.]
+    assert s.info()==before
+    assert mesh_record(s,mesh).name=='Python changed this mesh'
+    with s.draft('Confirm unchanged name') as e:
+        e.preview(rename(mesh,'Python changed this mesh'))
+        assert e.publish()['kind']=='unchanged'
+    published=s.events(cursor)
+    assert len(published)==1 and published[0]['kind']=='commit'
+    assert published[0]['version']==s.info()['version']
 "#,
-        &[
-            session.runtime_instance().to_string(),
-            session.serial().to_string(),
-            mesh.clone(),
-        ],
+        &[session.to_string(), mesh.clone()],
     )?;
     h.cx.run_until_parked();
     h.view.read_with(&h.cx, |view, _| {
@@ -183,40 +226,43 @@ with zipzi.connect() as c:
     let preview_revision = h.view.read_with(&h.cx, |view, _| {
         view.editor.document().unwrap().preview_revision()
     });
-    let version = runtime.read().session_info(session)?.version;
+    let version = runtime
+        .read()
+        .session_read(runtime.client_id(), session)?
+        .version();
     client(
         &mut h,
         python,
         endpoint.path(),
         r#"
-import sys,zipzi
-from zipzi import bindings
+parameter='79700000-0000-4000-8000-000000000001'
+binding='79700000-0000-4000-8000-000000000002'
 with zipzi.connect() as c:
- s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- parameter='79700000-0000-4000-8000-000000000001'
- binding='79700000-0000-4000-8000-000000000002'
- geometry=s.meshes.get(sys.argv[3]).value.geometry
- before=s.info()
- stream=s.subscribe()
- sampled=s.modeling.sample(({parameter:15.},))
- assert abs(sampled.value.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-7.5)<1e-5
- edit=s.edit('temporary CPU sample')
- try:
-  edit.bindings.set_keyform(binding,bindings.Keyform((30.,),tuple((x+20.,y) for x,y in geometry.positions)))
-  candidate=edit.modeling.sample(({parameter:15.},))
-  assert abs(candidate.value.frames[0].drawables[0].positions[0][0]-geometry.positions[0][0]-15.)<1e-5
- finally: edit.cancel()
- assert s.info()==before
- assert stream.poll()==()
+    s=c.sessions.attach(sys.argv[1])
+    mesh=sys.argv[2]
+    positions=mesh_record(s,mesh).base_positions
+    base=positions[0].x
+    before=s.info()
+    cursor=s.version
+    assert abs(sample_x(s,mesh,({parameter:15.},))[0]-base-7.5)<1e-5
+    e=s.draft('temporary CPU sample')
+    try:
+        e.apply(v.CommandMeshKeyform(binding=binding,value=v.MeshKeyformSpec(
+            keys=(30.,),positions=tuple(v.Vec2(x=p.x+20.,y=p.y) for p in positions))))
+        assert abs(sample_x(s,mesh,({parameter:15.},),source=v.QuerySourceDraft(value=e.source))[0]-base-15.)<1e-5
+    finally:
+        e.cancel()
+    assert s.info()==before
+    assert s.events(cursor)==()
 "#,
-        &[
-            session.runtime_instance().to_string(),
-            session.serial().to_string(),
-            mesh.clone(),
-        ],
+        &[session.to_string(), mesh.clone()],
     )?;
     ensure!(
-        runtime.read().session_info(session)?.version == version,
+        runtime
+            .read()
+            .session_read(runtime.client_id(), session)?
+            .version()
+            == version,
         "sampling changed formal version"
     );
     h.view.read_with(&h.cx, |view, _| {
@@ -248,27 +294,22 @@ with zipzi.connect() as c:
         python,
         endpoint.path(),
         r#"
-import json,sys,zipzi
-from zipzi import events
 with zipzi.connect() as c:
- s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- assert s.meshes.get(sys.argv[3]).value.name!='Python changed this mesh'
- assert s.info().history[1]==1
- cursor=json.loads(sys.argv[4])
- published=[e for e in c.events_since(events.Cursor(cursor['runtime'],zipzi.SessionId(**cursor['session']),cursor['sequence'])) if isinstance(e,events.Published)]
- assert len(published)==2
- assert published[0].receipt.after==published[1].receipt.before
- assert published[1].receipt.after==s.info().version
- try: s.parameters.get('79700000-0000-4000-8000-000000000001')
- except zipzi.SdkFailure as error: assert error.code=='MISSING_PARAMETER'
- else: raise AssertionError('UI Undo retained the new parameter')
- try: s.bindings.get('79700000-0000-4000-8000-000000000002')
- except zipzi.SdkFailure as error: assert error.code=='MISSING_BINDING'
- else: raise AssertionError('UI Undo retained the new binding')
+    s=c.sessions.attach(sys.argv[1])
+    assert mesh_record(s,sys.argv[2]).name!='Python changed this mesh'
+    assert history(s)==(0,1)
+    published=s.events(v.Version.from_wire(json.loads(sys.argv[3])))
+    assert [event['kind'] for event in published]==['commit','undo']
+    assert published[0]['version']['revision']+1==published[1]['version']['revision']
+    assert published[-1]['version']==s.info()['version']
+    for kind,id in ((v.ObjectKind.PARAMETER,'79700000-0000-4000-8000-000000000001'),
+                    (v.ObjectKind.MESH_BINDING,'79700000-0000-4000-8000-000000000002')):
+        try: record(s,kind,id)
+        except zipzi.SdkFailure as error: assert error.code=='MISSING_OBJECT'
+        else: raise AssertionError('UI Undo retained '+id)
 "#,
         &[
-            session.runtime_instance().to_string(),
-            session.serial().to_string(),
+            session.to_string(),
             mesh.clone(),
             serde_json::to_string(&event_cursor)?,
         ],
@@ -286,12 +327,14 @@ with zipzi.connect() as c:
         python,
         endpoint.path(),
         r#"
-import sys,uuid,zipzi
 with zipzi.connect() as c:
- s=c.sessions.create(str(uuid.uuid4()))
- try: s.project.save(__import__('pathlib').Path(sys.argv[1])).wait()
- except zipzi.Busy: pass
- else: raise AssertionError('cross-session target reservation bypassed')
+    s=c.sessions.create()
+    try:
+        s.save(Path(sys.argv[1]))
+    except zipzi.Busy:
+        pass
+    else:
+        raise AssertionError('cross-session target reservation bypassed')
 "#,
         &[target.to_string_lossy().into_owned()],
     )?;
@@ -306,7 +349,11 @@ with zipzi.connect() as c:
         view.redraw(cx);
     })?;
     ensure!(
-        runtime.read().session_info(session)?.state == zipzi_runtime::SessionState::Ready,
+        runtime
+            .read()
+            .session_catalog(runtime.client_id())?
+            .iter()
+            .any(|info| info.session == session && !info.saving),
         "save stayed busy"
     );
     // Extend the actual UI projection across every R4 scene/resource family.
@@ -334,53 +381,65 @@ with zipzi.connect() as c:
         python,
         endpoint.path(),
         r#"
-import sys,time,zipzi
+import time
 from dataclasses import replace
-from zipzi import scene,meshes,parameters,modeling as m
 u=lambda n:f'79800000-0000-4000-8000-{n:012x}'
+def scene(n,name,object,part=None,parent=None):
+    return v.CommandScene(edit=v.SceneEditCreate(id=u(n),name=name,object=object,part_id=part,parent_id=parent))
+def content(edit):
+    return v.CommandSceneContent(edit=edit)
+def blend(edit):
+    return v.CommandBlendShape(edit=edit)
+def ref(id):
+    return v.SceneReferenceResolved(object_id=id)
+
 with zipzi.connect() as c:
- s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- mesh=sys.argv[3]
- context=s.editor_context().value
- assert context is not None and context.version==s.info().version
- assert mesh in context.selected_ids
- geometry=s.meshes.get(mesh).value.geometry
- with c.resources.prepare_image(2,2,bytes((45,80,130,255))*4) as image:
-  with s.edit('R4 complete projection') as e:
-   e.apply_many((scene.CreatePart(scene.PartSpec('R4 Part',id=u(1))),
-    scene.CreateParameterGroup(scene.ParameterGroupSpec('R4 Controls',id=u(2))),
-    parameters.Create(parameters.ParameterSpec('R4 Blend',0.,1.,0.,id=u(3),kind=parameters.Kind.BLEND_SHAPE)),
-    scene.MoveParameters((u(3),),group_id=u(2)),
-    meshes.Create(meshes.MeshSpec('R4 Second',geometry,id=u(4))),
-    scene.MoveToPart((mesh,u(4)),part_id=u(1)),
-    scene.CreateWarp('R4 Warp',scene.Placement(part_id=u(1)),(-10.,-10.,20.,20.),id=u(5)),
-    scene.CreateRotation('R4 Rotation',scene.Placement(part_id=u(1),parent_id=u(5)),id=u(6)),
-    scene.CreateGlue('R4 Glue',mesh,u(4),id=u(7)),
-    scene.InsertGluePair(u(7),scene.GluePair(.5,.5,id=u(8),vertex_a=geometry.vertex_ids[0],vertex_b=geometry.vertex_ids[1])),
-    scene.CreateOffscreen('R4 Offscreen',u(1),id=u(9)),
-    scene.InsertOffscreenKeyform(u(9),scene.OffscreenForm(.75)),
-    scene.SetOffscreenStaticKeyform(u(9),0),
-    scene.CreateBlendTable(u(3),(scene.Sample(u(10),0.),scene.Sample(u(11),1.)),u(10),id=u(12)),
-    scene.CreateMeshBlend(mesh,u(12),id=u(13))))
-   asset=e.resources.create_image('R4 memory texture',image,id=u(14))
-   value=e.modeling.records(m.ModelingQuery(meshes=(mesh,))).value.meshes[0]
-   e.apply(m.commands.ModelingCommandReplaceMesh(mesh=replace(value,name='R4 property name',texture_asset_id=m.scene.SceneReferenceResolved(object_id=asset))))
-   e.apply(m.commands.ModelingCommandAttachment(intent=m.scene.AttachmentEditCreate(id=u(15),path='extras/projection.bin')))
- deadline=time.monotonic()+5
- while True:
-  context=s.editor_context().value
-  if context is not None and context.version==s.info().version:break
-  assert time.monotonic()<deadline
-  time.sleep(.01)
- assert mesh in context.selected_ids
- assert s.resources.get(u(14)).value.pixels.rgba==bytes((45,80,130,255))*4
- assert s.info().history==(1,0)
+    s=c.sessions.attach(sys.argv[1])
+    mesh=sys.argv[2]
+    context=s.editor_context()
+    assert context is not None and context['version']==s.info()['version']
+    assert mesh in context['selected_ids']
+    value=mesh_record(s,mesh)
+    geometry=v.MeshGeometry(vertex_ids=value.vertex_ids,positions=value.base_positions,uvs=value.uvs,triangles=value.triangles)
+    pixels=bytes((45,80,130,255))*4
+    with s.draft('Complete scene projection') as e:
+        e.apply(v.CommandCreatePart(value=make_part(u(1),'External Part')),
+            v.CommandOrganization(edit=v.OrganizationEditCreateGroup(group=make_group(u(2),'External controls'))),
+            v.CommandCreateParameter(spec=v.ParameterCreateSpec(id=u(3),name='External Blend',
+                minimum=0.,maximum=1.,default_value=0.,kind=v.ParameterKind.BLEND_SHAPE)),
+            v.CommandOrganization(edit=v.OrganizationEditSetParameterGroup(parameter_id=u(3),group_id=u(2))),
+            v.CommandCreateMesh(spec=v.MeshCreateSpec(name='Second',geometry=geometry,id=u(4))),
+            move_to_part((mesh,u(4)),u(1)),
+            scene(5,'Warp',v.SceneCreateWarp(bounds=(-10.,-10.,20.,20.)),u(1)),
+            scene(6,'Rotation',v.SceneCreateRotation(),u(1),u(5)),
+            scene(7,'Glue',v.SceneCreateGlue(a=ref(mesh),b=ref(u(4)))),
+            content(v.SceneContentEditInsertGluePair(glue_id=u(7),pair=v.GlueVertexPair(
+                id=u(8),weight_a=.5,weight_b=.5,vertex_a=value.vertex_ids[0],vertex_b=value.vertex_ids[1]))),
+            scene(9,'Offscreen',v.SceneCreateOffscreen(),u(1)),
+            content(v.SceneContentEditInsertOffscreenKeyform(offscreen_id=u(9),value=v.OffscreenKeyform(opacity=.75))),
+            content(v.SceneContentEditSetOffscreenMapping(offscreen_id=u(9),updates=(
+                v.OffscreenMappingPatch(slot=v.PartKeyformSlotStatic(),keyform=0),))),
+            blend(v.BlendAuthoringEditCreateTable(table=v.BlendShapeKeyTable(id=u(12),parameter_id=u(3),
+                samples=(v.BindingSample(id=u(10),value=0.),v.BindingSample(id=u(11),value=1.)),base_sample_id=u(10)))),
+            blend(v.BlendAuthoringEditCreateBinding(id=u(13),target_id=mesh,target_kind=v.BlendShapeTargetKind.MESH,
+                key_table_id=u(12))),
+            v.CommandCreateAsset(id=u(14),name='Memory texture'),
+            v.CommandAttachment(edit=v.AttachmentEditCreate(id=u(15),path='extras/projection.bin')))
+        replace_image(c,e,u(14),pixels,2,2)
+        e.apply(v.CommandPutMesh(value=replace(mesh_record(e,mesh),
+            name='R4 property name',texture_asset_id=ref(u(14)))))
+    deadline=time.monotonic()+5
+    while True:
+        context=s.editor_context()
+        if context is not None and context['version']==s.info()['version']:
+            break
+        assert time.monotonic()<deadline
+        time.sleep(.01)
+    assert mesh in context['selected_ids']
+    assert read_pixels(s,u(14))==pixels
+    assert history(s)==(1,0)
 "#,
-        &[
-            session.runtime_instance().to_string(),
-            session.serial().to_string(),
-            mesh.clone(),
-        ],
+        &[session.to_string(), mesh.clone()],
     )?;
     h.cx.run_until_parked();
     h.view.read_with(&h.cx, |view, _| {
@@ -440,51 +499,46 @@ with zipzi.connect() as c:
         );
         Ok::<_, anyhow::Error>(())
     })?;
-    // A real UI opacity gesture remains owned by the human. The public Python
-    // candidate can compute, receives Busy, then rejects its obsolete base.
+    // A foreign publication wins against an unpublished human candidate. Both
+    // clients observe the new version, and neither stale candidate can publish.
     let ready = endpoint.path().join("gesture-ready");
-    let busy = endpoint.path().join("gesture-busy");
+    let published = endpoint.path().join("gesture-published");
     let retry = endpoint.path().join("gesture-retry");
     let finish = endpoint.path().join("gesture-finished");
-    let mut child = Command::new(python)
-        .args([
-            "-I",
-            "-c",
-            r#"
-import sys,time,zipzi
-from pathlib import Path
-from zipzi import meshes,modeling as m
-ready,busy,retry,finish=map(Path,sys.argv[4:])
+    let script = r#"
+import time
+ready,published,retry,finish=map(Path,sys.argv[3:])
 def wait(path):
- deadline=time.monotonic()+15
- while not path.exists():
-  assert time.monotonic()<deadline
-  time.sleep(.005)
+    deadline=time.monotonic()+15
+    while not path.exists():
+        assert time.monotonic()<deadline
+        time.sleep(.005)
 with zipzi.connect() as c:
- s=c.sessions.attach(zipzi.SessionId(sys.argv[1],int(sys.argv[2])))
- e=s.edit('obsolete external candidate')
- e.apply(meshes.Rename(sys.argv[3],'must never publish'))
- ready.write_text('candidate prepared')
- wait(retry)
- try:e.commit()
- except zipzi.Busy:pass
- else:raise AssertionError('human gesture was not protected')
- busy.write_text('Busy preserves candidate')
- wait(finish)
- try:e.commit().wait()
- except zipzi.SdkFailure as error:assert error.code=='STALE_VERSION',error.code
- else:raise AssertionError('obsolete candidate committed')
- assert s.meshes.get(sys.argv[3]).value.name=='R4 property name'
- value=s.modeling.records(m.ModelingQuery(meshes=(sys.argv[3],))).value.meshes[0]
- assert abs(value.appearance.opacity-.61)<1e-6
-"#,
-        ])
+    s=c.sessions.attach(sys.argv[1])
+    mesh=sys.argv[2]
+    stale=s.draft('obsolete external candidate')
+    stale.apply(rename(mesh,'must never publish'))
+    ready.write_text('candidate prepared')
+    wait(retry)
+    assert mesh_record(s,mesh).appearance.opacity==1.
+    with s.draft('external edit during gesture') as winner:
+        winner.apply(rename(mesh,'External winner'))
+    published.write_text('external publication installed')
+    wait(finish)
+    try: stale.publish()
+    except zipzi.SdkFailure as error: assert error.code=='STALE_SOURCE',error.code
+    else: raise AssertionError('obsolete candidate committed')
+    value=mesh_record(s,mesh)
+    assert value.name=='External winner'
+    assert abs(value.appearance.opacity-.61)<1e-6
+"#;
+    let mut child = Command::new(python)
+        .args(["-I", "-c", &format!("{PYTHON_HELPERS}\n{script}")])
         .args([
-            session.runtime_instance().to_string(),
-            session.serial().to_string(),
+            session.to_string(),
             mesh.clone(),
             ready.to_string_lossy().into_owned(),
-            busy.to_string_lossy().into_owned(),
+            published.to_string_lossy().into_owned(),
             retry.to_string_lossy().into_owned(),
             finish.to_string_lossy().into_owned(),
         ])
@@ -519,16 +573,22 @@ with zipzi.connect() as c:
         view.redraw(cx);
     })?;
     std::fs::write(&retry, "UI interaction active")?;
-    wait_file(&mut h, &busy)?;
+    wait_file(&mut h, &published)?;
     ensure!(
-        h.view.read_with(&h.cx, |view, _| view
-            .editor
-            .document()
-            .unwrap()
-            .has_pending_edit()),
-        "Busy cancelled the human gesture"
+        h.view.read_with(&h.cx, |view, _| {
+            let document = view.editor.document().unwrap();
+            !document.has_pending_edit()
+                && document
+                    .layers()
+                    .iter()
+                    .any(|layer| layer.id == mesh && layer.name == "External winner")
+        }),
+        "foreign publication did not invalidate the stale gesture"
     );
     update(&mut h, |view, _, cx| {
+        view.editor
+            .execute(EditorCommand::PreviewOpacity(0.61))
+            .unwrap();
         view.editor.execute(EditorCommand::FinishEdit).unwrap();
         view.redraw(cx);
     })?;
@@ -547,7 +607,7 @@ with zipzi.connect() as c:
         "native render missing"
     );
     println!(
-        "R4 native IPC: installed zipzi -> mesh/parameter/binding/scene/group -> SDK reference/address -> candidate/formal CPU sweep -> human preview unchanged -> cursor events/UI Undo -> path reservation -> Metal render passed"
+        "R4 native IPC: installed zipzi -> mesh/parameter/binding/scene/group -> typed Draft preview -> candidate/formal CPU sweep -> human preview unchanged -> cursor events/UI Undo -> path reservation -> Metal render passed"
     );
     Ok(())
 }

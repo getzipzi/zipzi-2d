@@ -53,6 +53,7 @@ gpui-kit = { git = "https://github.com/longbridge/gpui-kit", rev = "507e82b8115a
 gpui-fps = { git = "https://github.com/longbridge/gpui-kit", rev = "507e82b8115ac73af92b7d3856501f9d7b73b2c9", features = ["gpui-fast"] }
 async-channel = "2"
 zipzi-contract = { version = "=0.1.0-alpha.8", path = "crates/zipzi-contract" }
+zipzi-animation = { version = "=0.1.0-alpha.8", path = "crates/zipzi-animation" }
 zipzi-core = { version = "=0.1.0-alpha.8", path = "crates/zipzi-core" }
 zipzi-sdk = { version = "=0.1.0-alpha.8", path = "crates/zipzi-sdk" }
 zipzi-runtime = { version = "=0.1.0-alpha.8", path = "crates/zipzi-runtime" }

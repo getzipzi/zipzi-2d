@@ -40,7 +40,7 @@ fn shared_layered_fixture_is_generated_and_imported_here() {
     let bundle = import_psd(fixture).unwrap();
     assert_eq!((bundle.report.width, bundle.report.height), (8, 8));
     assert_eq!(
-        bundle.document.source_canvas().unwrap().origin,
+        bundle.document.setup().source_canvas.unwrap().origin,
         zipzi_core::Vec2::new(4., 4.)
     );
     assert_eq!(bundle.report.raster_layers, 1);
@@ -56,20 +56,20 @@ fn imports_cropped_layers_as_a_valid_document_and_pngs() {
     let bundle = import_psd(&bytes).unwrap();
     assert_eq!((bundle.report.width, bundle.report.height), (8, 8));
     assert_eq!(bundle.report.raster_layers, 2);
-    assert_eq!(bundle.document.validate_structure().len(), 0);
+    assert!(bundle.document.builder().freeze().is_ok());
     assert_eq!(bundle.document.mesh_order().len(), 2);
     assert_eq!(bundle.assets.len(), 2);
     assert_eq!(
         bundle
             .document
-            .get_mesh(&bundle.document.mesh_order()[0])
+            .mesh(&bundle.document.mesh_order()[0])
             .unwrap()
             .name,
         "背面"
     );
     let front = bundle
         .document
-        .get_mesh(&bundle.document.mesh_order()[1])
+        .mesh(&bundle.document.mesh_order()[1])
         .unwrap();
     assert_eq!(front.base_positions[0].x, -1.0);
     assert_eq!(front.base_positions[0].y, -2.0);
@@ -94,39 +94,31 @@ fn pixel_import_preserves_png_pixels_ids_and_clipping_structure() {
     let pngs = import_psd(&bytes).unwrap();
     let pixels = import_psd_pixels(&bytes).unwrap();
     assert_eq!(pixels.report, pngs.report);
-    assert!(pixels.document.validate_structure().is_empty());
+    assert!(pixels.document.builder().freeze().is_ok());
     assert_eq!(pixels.document.mesh_order(), pngs.document.mesh_order());
     for id in pixels.document.mesh_order() {
-        assert_eq!(pixels.document.get_mesh(id), pngs.document.get_mesh(id));
+        assert_eq!(pixels.document.mesh(id), pngs.document.mesh(id));
     }
     assert_eq!(pixels.document.part_order(), pngs.document.part_order());
     for id in pixels.document.part_order() {
-        assert_eq!(pixels.document.get_part(id), pngs.document.get_part(id));
+        assert_eq!(pixels.document.part(id), pngs.document.part(id));
     }
     assert_eq!(
         pixels.document.offscreen_order(),
         pngs.document.offscreen_order()
     );
     for id in pixels.document.offscreen_order() {
-        assert_eq!(
-            pixels.document.get_offscreen(id),
-            pngs.document.get_offscreen(id)
-        );
+        assert_eq!(pixels.document.offscreen(id), pngs.document.offscreen(id));
     }
     for (pixel, png) in pixels.assets.iter().zip(&pngs.assets) {
         assert_eq!(pixel.id, png.id);
         let decoded = decode_png(&png.bytes).unwrap();
         assert_eq!((pixel.width, pixel.height), (decoded.width, decoded.height));
         assert_eq!(pixel.rgba, decoded.rgba);
-        assert!(pixels
-            .document
-            .get_asset(&pixel.id)
-            .unwrap()
-            .content
-            .as_ref()
-            .unwrap()
-            .sha256
-            .is_empty());
+        assert!(matches!(
+            pixels.document.asset(&pixel.id).unwrap().content,
+            zipzi_core::state::AssetContent::Unresolved { .. }
+        ));
     }
 }
 
@@ -141,7 +133,7 @@ fn unique_identifier_layer_names_survive_as_runtime_ids() {
     let ids = bundle.document.mesh_order();
     let runtime_ids: Vec<_> = ids
         .iter()
-        .map(|id| bundle.document.get_mesh(id).unwrap().runtime_id.as_str())
+        .map(|id| bundle.document.mesh(id).unwrap().runtime_id.as_str())
         .collect();
     assert_eq!(runtime_ids[0], "ArtMesh15");
     assert!(runtime_ids[1].starts_with("ArtMesh_"));
@@ -166,10 +158,10 @@ fn imports_groups_and_hidden_layers() {
     assert_eq!(bundle.report.groups, 1);
     let mesh = bundle
         .document
-        .get_mesh(&bundle.document.mesh_order()[0])
+        .mesh(&bundle.document.mesh_order()[0])
         .unwrap();
     assert!(!mesh.enabled);
-    assert_eq!(bundle.document.get_part(&mesh.part_id).unwrap().name, "头");
+    assert_eq!(bundle.document.part(&mesh.part_id).unwrap().name, "头");
 }
 
 #[test]
@@ -191,7 +183,12 @@ fn nested_groups_keep_psd_stacking_between_raster_siblings() {
     ]))
     .unwrap();
     let mut frame = zipzi_core::DrawableFrame::default();
-    assert!(zipzi_core::evaluate_frame(&bundle.document, &Default::default(), &mut frame).is_ok());
+    assert!(zipzi_core::evaluate_frame(
+        &resolved_document(&bundle),
+        &Default::default(),
+        &mut frame
+    )
+    .is_ok());
     frame
         .drawables
         .sort_by_key(|drawable| drawable.render_order);
@@ -210,22 +207,19 @@ fn clipping_layers_share_an_isolated_group_with_the_nearest_raster_base() {
     let outline = raster("眼球线", 0.0, 0.0, [0, 0, 0, 255]);
     let bundle = import_psd(&psd(vec![base, shadow, highlight, outline])).unwrap();
     let ids = bundle.document.mesh_order();
-    assert!(bundle.document.get_mesh(&ids[0]).unwrap().masks.is_empty());
-    let base = bundle.document.get_mesh(&ids[0]).unwrap();
+    assert!(bundle.document.mesh(&ids[0]).unwrap().masks.is_empty());
+    let base = bundle.document.mesh(&ids[0]).unwrap();
     let offscreen = bundle.document.offscreen_for_part(&base.part_id).unwrap();
     assert_eq!(offscreen.blend_mode, 0);
     for (id, mode) in ids[1..3].iter().zip([262, 256]) {
-        let clipped = bundle.document.get_mesh(id).unwrap();
+        let clipped = bundle.document.mesh(id).unwrap();
         assert_eq!(clipped.part_id, base.part_id);
         assert_eq!(clipped.raw_blend_mode, Some(mode));
         assert!(clipped.masks.is_empty());
     }
-    assert_ne!(
-        bundle.document.get_mesh(&ids[3]).unwrap().part_id,
-        base.part_id
-    );
-    assert!(bundle.document.get_mesh(&ids[3]).unwrap().masks.is_empty());
-    assert!(bundle.document.validate_structure().is_empty());
+    assert_ne!(bundle.document.mesh(&ids[3]).unwrap().part_id, base.part_id);
+    assert!(bundle.document.mesh(&ids[3]).unwrap().masks.is_empty());
+    assert!(bundle.document.builder().freeze().is_ok());
     assert_eq!(decode_png(&bundle.assets[0].bytes).unwrap().rgba[3], 128);
 }
 
@@ -247,9 +241,14 @@ fn clipping_groups_preserve_raster_order_inside_nested_psd_groups() {
     ]))
     .unwrap();
     assert_eq!(bundle.report.groups, 1); // Synthetic clipping Parts aren't PSD groups.
-    assert_eq!(bundle.document.offscreen_count(), 2);
+    assert_eq!(bundle.document.offscreen_order().len(), 2);
     let mut frame = zipzi_core::DrawableFrame::default();
-    assert!(zipzi_core::evaluate_frame(&bundle.document, &Default::default(), &mut frame).is_ok());
+    assert!(zipzi_core::evaluate_frame(
+        &resolved_document(&bundle),
+        &Default::default(),
+        &mut frame
+    )
+    .is_ok());
     let drawn: Vec<_> = frame
         .render_plan
         .iter()
@@ -324,5 +323,23 @@ fn imports_psd_created_by_the_existing_moc3_exporter() {
     let bundle = import_psd(&bytes).unwrap();
     assert_eq!(bundle.report.raster_layers, exported.layers);
     assert_eq!(bundle.assets.len(), exported.layers);
-    assert!(bundle.document.validate_structure().is_empty());
+    assert!(bundle.document.builder().freeze().is_ok());
+}
+
+// Standalone import returns unresolved descriptors plus captured PNGs; attach
+// those pixels before asking evaluation for the visible drawing plan.
+fn resolved_document(bundle: &zipzi_psd::ImportBundle) -> zipzi_core::state::DocumentState {
+    use zipzi_core::state::{AssetContent, ResourceKey};
+    let mut builder = bundle.document.builder();
+    for input in &bundle.assets {
+        let pixels = zipzi_core::image::decode_png(&input.bytes).unwrap();
+        let mut asset = builder.asset(&input.id).unwrap().clone();
+        asset.content = AssetContent::Image {
+            resource: ResourceKey::new(),
+            width: pixels.width,
+            height: pixels.height,
+        };
+        builder.replace_asset(asset).unwrap();
+    }
+    builder.freeze().unwrap().state
 }

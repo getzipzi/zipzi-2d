@@ -200,10 +200,10 @@ fn diagnostics_are_available_before_play_and_do_not_duplicate_sdk_coverage() -> 
 
 #[test]
 fn runtime_failures_remain_typed_for_localized_display() {
-    let error: anyhow::Error = zipzi_sdk::AnimationError::SeekLimit.into();
+    let error: anyhow::Error = zipzi_animation::AnimationError::SeekLimit.into();
     assert_eq!(
         AnimationFailure::from_error(&error),
-        AnimationFailure::Runtime(zipzi_sdk::AnimationError::SeekLimit)
+        AnimationFailure::Runtime(zipzi_animation::AnimationError::SeekLimit)
     );
     assert_eq!(
         AnimationFailure::from_error(&anyhow::anyhow!("GPU unavailable")),

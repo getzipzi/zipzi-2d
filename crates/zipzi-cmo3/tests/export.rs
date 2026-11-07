@@ -1,12 +1,12 @@
 mod common;
 use common::*;
 use zipzi_cmo3::*;
-use zipzi_core::{types::*, Document};
+use zipzi_core::{state::*, types::*};
 
-fn encode(doc: &Document, png: &[u8], key: i32) -> Cmo3Artifact {
+fn encode(doc: &DocumentState, png: &[u8], key: i32) -> Cmo3Artifact {
     encode_cmo3(
         doc,
-        &|_: &ImageAsset| Ok(png.to_vec()),
+        &|_: &AssetRecord| Ok(png.to_vec()),
         &Cmo3Options {
             obfuscation_key: key,
             model_name: "模型".repeat(100),
@@ -28,13 +28,15 @@ fn runtime_model_name_maps_to_native_label_but_unknown_metadata_stays_strict() {
     settings
         .extensions
         .insert("Name".into(), serde_json::json!("Original label"));
-    assert!(doc.set_model3_settings(settings.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| {
+        builder.set_model3_settings(settings.clone())
+    });
     for explicit in [None, Some("Chosen label")] {
         let mut options = Cmo3Options::default();
         if let Some(name) = explicit {
             options.model_name = name.into();
         }
-        let artifact = encode_cmo3(&doc, &|_: &ImageAsset| Ok(png.clone()), &options).unwrap();
+        let artifact = encode_cmo3(&doc, &|_: &AssetRecord| Ok(png.clone()), &options).unwrap();
         assert!(!artifact.report.has_loss());
         let imported = import_model(&artifact.bytes).unwrap();
         let expected = serde_json::json!(explicit.unwrap_or("Original label"));
@@ -42,10 +44,16 @@ fn runtime_model_name_maps_to_native_label_but_unknown_metadata_stays_strict() {
             imported.document.model3_settings().extensions.get("Name"),
             Some(&expected)
         );
+        let resolved = resolve_images(&imported);
         let reexported = encode_cmo3(
-            &imported.document,
-            &|asset: &ImageAsset| {
-                Ok(imported.images[&asset.content.as_ref().unwrap().source].clone())
+            &resolved,
+            &|asset: &AssetRecord| {
+                let AssetContent::Unresolved { source } =
+                    &imported.document.asset(&asset.id).unwrap().content
+                else {
+                    panic!("imported image source missing")
+                };
+                Ok(imported.images[source].clone())
             },
             &Cmo3Options::default(),
         )
@@ -78,11 +86,11 @@ fn runtime_model_name_maps_to_native_label_but_unknown_metadata_stays_strict() {
     settings
         .extensions
         .insert("Unknown".into(), serde_json::json!(true));
-    assert!(doc.set_model3_settings(settings).status.is_ok());
+    doc = prepare(&doc, |builder| builder.set_model3_settings(settings));
     assert!(matches!(
         encode_cmo3(
             &doc,
-            &|_: &ImageAsset| panic!("metadata rejection must precede image I/O"),
+            &|_: &AssetRecord| panic!("metadata rejection must precede image I/O"),
             &Cmo3Options::default()
         ),
         Err(Cmo3Error::Unsupported(_))
@@ -128,7 +136,7 @@ fn assert_translated_positions(
 fn self_contained_graph_and_signed_xor_keys() {
     let (d, png) = fixture();
     let original = d.clone();
-    let revision = d.revision();
+    let revision = d.content_id();
     for key in [0, 0x4b617361, -1, i32::MIN + 91] {
         let artifact = encode(&d, &png, key);
         assert!(!artifact.report.has_loss());
@@ -181,7 +189,7 @@ fn self_contained_graph_and_signed_xor_keys() {
         );
         let name = xml.descendants().find(|n| {
             n.attribute("xs.n") == Some("localName")
-                && n.text() == Some(d.get_mesh(MESH).unwrap().name.as_str())
+                && n.text() == Some(d.mesh(MESH).unwrap().name.as_str())
         });
         assert!(name.is_some());
         let forms: Vec<_> = xml
@@ -203,8 +211,8 @@ fn self_contained_graph_and_signed_xor_keys() {
             1
         );
     }
-    assert_eq!(d.revision(), revision);
-    assert!(original.same_content(&d));
+    assert_eq!(d.content_id(), revision);
+    assert_eq!(original.content_id(), d.content_id());
 }
 
 #[test]
@@ -213,14 +221,14 @@ fn reproducible_and_resource_errors() {
     assert_eq!(encode(&d, &png, 1).bytes, encode(&d, &png, 1).bytes);
     let error = encode_cmo3(
         &d,
-        &|_: &ImageAsset| Ok(b"invalid PNG".to_vec()),
+        &|_: &AssetRecord| Ok(b"invalid PNG".to_vec()),
         &Default::default(),
     )
     .unwrap_err();
     assert!(matches!(error, Cmo3Error::Asset { .. }));
     let error = encode_cmo3(
         &d,
-        &|_: &ImageAsset| {
+        &|_: &AssetRecord| {
             Err(Cmo3Error::Asset {
                 asset_id: ASSET.into(),
                 message: "missing".into(),
@@ -230,21 +238,19 @@ fn reproducible_and_resource_errors() {
     )
     .unwrap_err();
     assert!(matches!(error, Cmo3Error::Asset { .. }));
-    assert!(matches!(
-        inspect_export(&Document::new()),
-        Err(Cmo3Error::InvalidDocument(_))
-    ));
+    // Invalid document identities are rejected before an exportable state exists.
+    assert!(DocumentState::new("", ModelSetup::default()).is_err());
 }
 
 #[test]
 fn loss_is_rejected_before_reading_assets() {
     let (mut d, png) = fixture();
-    let mut m = d.get_mesh(MESH).unwrap().clone();
+    let mut m = d.mesh(MESH).unwrap().clone();
     m.draw_order = Some(12.25);
-    assert!(d.replace_mesh(m).status.is_ok());
+    d = prepare(&d, |builder| builder.replace_mesh(m));
     let error = encode_cmo3(
         &d,
-        &|_: &ImageAsset| panic!("Must inspect losses before resource IO"),
+        &|_: &AssetRecord| panic!("Must inspect losses before resource IO"),
         &Default::default(),
     )
     .unwrap_err();
@@ -257,7 +263,7 @@ fn loss_is_rejected_before_reading_assets() {
         .any(|d| d.code == "FRACTIONAL_DRAW_ORDER"));
     let artifact = encode_cmo3(
         &d,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &Cmo3Options {
             loss_policy: LossPolicy::Allow,
             ..Default::default()
@@ -273,8 +279,8 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
     let driver = "00000000-0000-4000-8000-000000000010";
     let table = "00000000-0000-4000-8000-000000000011";
     let constraint = "00000000-0000-4000-8000-000000000012";
-    assert!(d
-        .create_parameter(Parameter {
+    d = prepare(&d, |builder| {
+        builder.create_parameter(Parameter {
             id: driver.into(),
             runtime_id: "Blend".into(),
             kind: ParameterKind::BlendShape,
@@ -283,31 +289,28 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
             default_value: 0.,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(d
-        .create_blend_key_table(BlendShapeKeyTable {
+    });
+    d = prepare(&d, |builder| {
+        builder.create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
             id: table.into(),
             parameter_id: driver.into(),
             keys: vec![0., 1.],
-            base_key_idx: 0
+            base_key_idx: 0,
         })
-        .status
-        .is_ok());
-    assert!(d
-        .create_blend_constraint(BlendShapeConstraint {
+    });
+    d = prepare(&d, |builder| {
+        builder.create_blend_constraint(BlendShapeConstraint {
             samples: Default::default(),
             id: constraint.into(),
             parameter_id: PARAM.into(),
             keys: vec![-1., 1.],
-            weights: vec![0., 1.]
+            weights: vec![0., 1.],
         })
-        .status
-        .is_ok());
-    assert!(d
-        .create_blend_binding(BlendShapeBinding {
+    });
+    d = prepare(&d, |builder| {
+        builder.create_blend_binding(BlendShapeBinding {
             id: "00000000-0000-4000-8000-000000000013".into(),
             target_id: MESH.into(),
             target_kind: BlendShapeTargetKind::Mesh,
@@ -323,11 +326,10 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
                     opacity: Some(-0.25),
                     draw_order: Some(10.),
                     ..Default::default()
-                }
-            ])
+                },
+            ]),
         })
-        .status
-        .is_ok());
+    });
     let artifact = encode(&d, &png, 1);
     write_probe_artifact("advanced-morph", &artifact);
     let entries = archive(&artifact.bytes);
@@ -361,9 +363,9 @@ fn morph_forms_use_the_ordinary_default_pose_and_keep_constraints() {
     );
     assert!(text.contains("<?version KeyFormMorphTarget:2?>"));
 
-    let mut canvas = d.source_canvas().unwrap();
+    let mut canvas = d.setup().source_canvas.unwrap();
     canvas.flag = 0;
-    assert!(d.replace_model_setup(canvas).status.is_ok());
+    d = prepare(&d, |builder| builder.set_setup((canvas).into()));
     let reversed = encode(&d, &png, 1);
     write_probe_artifact("reversed-morph", &reversed);
     let entries = archive(&reversed.bytes);
@@ -394,25 +396,24 @@ fn offscreen_material_and_keyed_glue_remain_editable() {
     let (mut d, png) = fixture();
     let part = "00000000-0000-4000-8000-000000000020";
     let other = "00000000-0000-4000-8000-000000000021";
-    assert!(d
-        .create_part(Part {
+    d = prepare(&d, |builder| {
+        builder.create_part(Part {
             id: part.into(),
             runtime_id: "Part".into(),
             name: "Part".into(),
             draw_order: 500.,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    let mut mesh = d.get_mesh(MESH).unwrap().clone();
+    });
+    let mut mesh = d.mesh(MESH).unwrap().clone();
     mesh.part_id = part.into();
     mesh.raw_blend_mode = Some(3 | (1 << 8));
-    assert!(d.replace_mesh(mesh.clone()).status.is_ok());
+    d = prepare(&d, |builder| builder.replace_mesh(mesh.clone()));
     mesh.id = other.into();
     mesh.runtime_id = "Other".into();
-    assert!(d.create_mesh(mesh).status.is_ok());
-    assert!(d
-        .create_glue(Glue {
+    d = prepare(&d, |builder| builder.create_mesh(mesh));
+    d = prepare(&d, |builder| {
+        builder.create_glue(Glue {
             id: "00000000-0000-4000-8000-000000000022".into(),
             runtime_id: "Glue".into(),
             name: "Glue".into(),
@@ -431,24 +432,23 @@ fn offscreen_material_and_keyed_glue_remain_editable() {
                     id: Default::default(),
                     samples: Default::default(),
                     parameter_id: PARAM.into(),
-                    keys: vec![-1., 1.]
+                    keys: vec![-1., 1.],
                 }],
                 keyforms: vec![
                     GlueKeyform {
                         samples: Default::default(),
-                        intensity: 0.
+                        intensity: 0.,
                     },
                     GlueKeyform {
                         samples: Default::default(),
-                        intensity: 1.
-                    }
-                ]
-            })
+                        intensity: 1.,
+                    },
+                ],
+            }),
         })
-        .status
-        .is_ok());
-    assert!(d
-        .create_offscreen(Offscreen {
+    });
+    d = prepare(&d, |builder| {
+        builder.create_offscreen(Offscreen {
             id: "00000000-0000-4000-8000-000000000023".into(),
             runtime_id: "Offscreen".into(),
             name: "Offscreen".into(),
@@ -459,12 +459,11 @@ fn offscreen_material_and_keyed_glue_remain_editable() {
             keyforms: vec![OffscreenKeyform {
                 opacity: 0.6,
                 multiply: Some([0.5, 0.75, 1.]),
-                screen: None
+                screen: None,
             }],
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let artifact = encode(&d, &png, 1);
     write_probe_artifact("advanced-offscreen-glue", &artifact);
     let entries = archive(&artifact.bytes);
@@ -524,7 +523,7 @@ fn invalid_xml_text_is_reported() {
     let (d, png) = fixture();
     let error = encode_cmo3(
         &d,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &Cmo3Options {
             model_name: "bad\0name".into(),
             ..Default::default()
@@ -545,59 +544,57 @@ fn write_probe_artifact(name: &str, artifact: &Cmo3Artifact) {
 fn parts_panel_reverses_nested_render_ties_without_reversing_draw_order_values() {
     use zipzi_core::draw_order::DrawOrderGroup;
     let (mut d, png) = fixture();
-    let mut parameter = d.get_parameter(PARAM).unwrap().clone();
+    let mut parameter = d.parameter(PARAM).unwrap().clone();
     parameter.repeat = false;
-    assert!(d.replace_parameter(parameter).status.is_ok());
+    d = prepare(&d, |builder| builder.replace_parameter(parameter));
     let group = "00000000-0000-4000-8000-000000000030";
     let folder = "00000000-0000-4000-8000-000000000031";
     let other = "00000000-0000-4000-8000-000000000032";
     let outer = "00000000-0000-4000-8000-000000000033";
     let floor = "00000000-0000-4000-8000-000000000034";
     for (id, parent) in [(group, ""), (folder, group)] {
-        assert!(d
-            .create_part(Part {
+        d = prepare(&d, |builder| {
+            builder.create_part(Part {
                 id: id.into(),
                 runtime_id: id.into(),
                 parent_id: parent.into(),
                 draw_order: 5.,
                 ..Default::default()
             })
-            .status
-            .is_ok());
+        });
     }
-    let mut mesh = d.get_mesh(MESH).unwrap().clone();
+    let mut mesh = d.mesh(MESH).unwrap().clone();
     mesh.part_id = folder.into();
     mesh.draw_order = Some(5.);
-    assert!(d.replace_mesh(mesh.clone()).status.is_ok());
+    d = prepare(&d, |builder| builder.replace_mesh(mesh.clone()));
     for (id, part, order) in [(other, folder, 5.), (outer, group, 20.), (floor, "", 5.)] {
         mesh.id = id.into();
         mesh.runtime_id = id.into();
         mesh.part_id = part.into();
         mesh.draw_order = Some(order);
-        assert!(d.create_mesh(mesh.clone()).status.is_ok());
+        d = prepare(&d, |builder| builder.create_mesh(mesh.clone()));
     }
     let mut binding = d.binding_for_mesh(MESH).unwrap().clone();
     for (form, order) in binding.keyforms.iter_mut().zip([0., 5., 10.]) {
         form.draw_order = Some(order);
     }
-    assert!(d.replace_binding(binding).status.is_ok());
-    assert!(d
-        .replace_draw_order_groups(vec![
+    d = prepare(&d, |builder| builder.replace_binding(binding));
+    d = prepare(&d, |builder| {
+        builder.set_draw_order_groups(Some(vec![
             DrawOrderGroup {
                 owner: "".into(),
                 items: vec![floor.into(), group.into()],
                 min_order: 0,
-                max_order: 1000
+                max_order: 1000,
             },
             DrawOrderGroup {
                 owner: group.into(),
                 items: vec![MESH.into(), other.into(), outer.into()],
                 min_order: 0,
-                max_order: 1000
+                max_order: 1000,
             },
-        ])
-        .status
-        .is_ok());
+        ]))
+    });
     let artifact = encode(&d, &png, 1);
     write_probe_artifact("nested-draw-order", &artifact);
     let entries = archive(&artifact.bytes);
@@ -641,7 +638,7 @@ fn parts_panel_reverses_nested_render_ties_without_reversing_draw_order_values()
         );
         let canvas = Canvas {
             origin: exported_origin(&xml),
-            ..d.source_canvas().unwrap()
+            ..d.setup().source_canvas.unwrap()
         };
         let positions: std::collections::BTreeMap<_, Vec<_>> = frame
             .drawables
@@ -672,9 +669,9 @@ fn parts_panel_reverses_nested_render_ties_without_reversing_draw_order_values()
 #[test]
 fn canvas_reversal_matches_runtime_geometry_texture_uvs_and_triangle_orientation() {
     let (mut doc, png) = fixture();
-    let mut canvas = doc.source_canvas().unwrap();
+    let mut canvas = doc.setup().source_canvas.unwrap();
     canvas.flag = 0;
-    assert!(doc.replace_model_setup(canvas).status.is_ok());
+    doc = prepare(&doc, |builder| builder.set_setup((canvas).into()));
     let before = doc.clone();
     let artifact = encode(&doc, &png, 1);
     let entries = archive(&artifact.bytes);
@@ -718,25 +715,23 @@ fn canvas_reversal_matches_runtime_geometry_texture_uvs_and_triangle_orientation
         .map(|v| v.parse().unwrap())
         .collect();
     assert_eq!(actual, expected);
-    assert!(doc.same_content(&before));
+    assert_eq!(doc.content_id(), before.content_id());
 }
 
 #[test]
 fn an_unused_empty_image_is_reported_by_identity_before_reading_pixels() {
     let (mut document, png) = fixture();
     let id = "00000000-0000-4000-8000-000000000099";
-    assert!(document
-        .add_asset(ImageAsset {
+    document = prepare(&document, |builder| {
+        builder.create_asset(AssetRecord {
             id: id.into(),
             name: "Draft".into(),
-            content: None,
-            unresolved_source: None
+            content: AssetContent::Empty,
         })
-        .status
-        .is_ok());
+    });
     let error = encode_cmo3(
         &document,
-        &|_: &ImageAsset| Ok(png.clone()),
+        &|_: &AssetRecord| Ok(png.clone()),
         &Cmo3Options::default(),
     )
     .unwrap_err();
@@ -747,12 +742,14 @@ fn an_unused_empty_image_is_reported_by_identity_before_reading_pixels() {
 fn texture_coordinates_survive_cubism_padding_and_original_shape_uv_rebuild() {
     for (width, height) in [(2, 2), (64, 128), (67, 129)] {
         let (mut doc, _) = fixture();
-        let mut asset = doc.get_asset(ASSET).unwrap().clone();
-        let content = asset.content.as_mut().unwrap();
-        content.width = width;
-        content.height = height;
-        assert!(doc.replace_asset(asset).status.is_ok());
-        let mut mesh = doc.get_mesh(MESH).unwrap().clone();
+        let mut asset = doc.asset(ASSET).unwrap().clone();
+        asset.content = AssetContent::Image {
+            resource: ResourceKey::new(),
+            width,
+            height,
+        };
+        doc = prepare(&doc, |builder| builder.replace_asset(asset));
+        let mut mesh = doc.mesh(MESH).unwrap().clone();
         mesh.id = "00000000-0000-4000-8000-000000000080".into();
         mesh.runtime_id = "NonAffine".into();
         mesh.vertex_ids = vec![0, 1, 2, 3];
@@ -769,11 +766,11 @@ fn texture_coordinates_survive_cubism_padding_and_original_shape_uv_rebuild() {
             Vec2::new(0., 1.),
         ];
         mesh.triangles = vec![[0, 1, 2], [0, 2, 3]];
-        assert!(doc.create_mesh(mesh.clone()).status.is_ok());
+        doc = prepare(&doc, |builder| builder.create_mesh(mesh.clone()));
         mesh.id = "00000000-0000-4000-8000-000000000081".into();
         mesh.runtime_id = "Collapsed".into();
         mesh.base_positions.fill(Vec2::new(10., 20.));
-        assert!(doc.create_mesh(mesh).status.is_ok());
+        doc = prepare(&doc, |builder| builder.create_mesh(mesh));
         let mut png = Vec::new();
         let mut encoder = png::Encoder::new(&mut png, width, height);
         encoder.set_color(png::ColorType::Rgba);
@@ -786,12 +783,12 @@ fn texture_coordinates_survive_cubism_padding_and_original_shape_uv_rebuild() {
         let artifact = encode(&doc, &png, 1);
         write_probe_artifact(&format!("texture-padding-{width}-{height}"), &artifact);
         let imported = import_model(&artifact.bytes).unwrap();
-        for original in doc.mesh_order().iter().map(|id| doc.get_mesh(id).unwrap()) {
+        for original in doc.mesh_order().iter().map(|id| doc.mesh(id).unwrap()) {
             let actual = imported
                 .document
                 .mesh_order()
                 .iter()
-                .map(|id| imported.document.get_mesh(id).unwrap())
+                .map(|id| imported.document.mesh(id).unwrap())
                 .find(|m| m.runtime_id == original.runtime_id)
                 .unwrap();
             for (a, b) in actual.uvs.iter().zip(&original.uvs) {
@@ -822,7 +819,7 @@ fn texture_coordinates_survive_cubism_padding_and_original_shape_uv_rebuild() {
             let original = doc
                 .mesh_order()
                 .iter()
-                .map(|id| doc.get_mesh(id).unwrap())
+                .map(|id| doc.mesh(id).unwrap())
                 .find(|m| m.runtime_id == id)
                 .unwrap();
             let positions = floats(field(source, "positions"));

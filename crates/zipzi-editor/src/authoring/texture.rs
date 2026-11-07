@@ -1,7 +1,7 @@
 //! PNG preparation runs off-thread; native tokens own resource incarnation and
 //! content epochs, while the host guards document/workspace lifetimes.
 use super::*;
-use zipzi_sdk::{ImageLoadToken, ResourceEdit};
+use zipzi_contract::document::ResourceEdit;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Control {
@@ -30,14 +30,7 @@ impl Control {
 pub(crate) struct TextureLoad {
     context: AuthoringContext,
     serial: uuid::Uuid,
-    token: Option<ImageLoadToken>,
-}
-impl Drop for TextureLoad {
-    fn drop(&mut self) {
-        if let Some(t) = &self.token {
-            t.cancel();
-        }
-    }
+    token: Option<zipzi_editor_core::FieldCapture<zipzi_core::state::AssetRecord>>,
 }
 impl EditorView {
     pub(crate) fn pending_texture_imports(&self) -> Vec<String> {
@@ -161,6 +154,13 @@ impl EditorView {
         });
         self.modal = true;
         self.redraw(cx);
+        let budget = self
+            .editor
+            .runtime_host()
+            .read()
+            .resources()
+            .budget()
+            .clone();
         cx.spawn_in(window, async move |this, cx| {
             let picked = picker.await;
             let path = this
@@ -189,7 +189,9 @@ impl EditorView {
                 .unwrap_or_default();
             let image = cx
                 .background_executor()
-                .spawn(async move { zipzi_sdk::prepare_image_load(&path) })
+                .spawn(
+                    async move { zipzi_project::prepare_image_content_with_budget(&path, &budget) },
+                )
                 .await;
             let _ = this.update_in(cx, |v, window, cx| {
                 v.finish_texture_load(
@@ -210,7 +212,7 @@ impl EditorView {
         key: &str,
         serial: uuid::Uuid,
         imported_name: Option<String>,
-        image: anyhow::Result<zipzi_sdk::PreparedImageContent>,
+        image: anyhow::Result<zipzi_project::PreparedImageContent>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -223,7 +225,7 @@ impl EditorView {
         }
         let request = self.texture_loads.remove(key).unwrap();
         // Import has no existing resource token: conservatively reject intervening
-        // edits too. Existing resources use the narrower native content epoch.
+        // edits too. Existing resources carry the exact captured publication.
         if self.editor.editing_context_token() != Some(request.context.editing)
             || (request.token.is_none()
                 && AuthoringContext::capture(&self.editor) != Some(request.context))

@@ -11,13 +11,13 @@ pub mod test_support;
 mod workspace;
 use crate::Cmo3Error;
 use std::collections::HashMap;
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 type Result<T> = std::result::Result<T, Cmo3Error>;
 fn invalid(message: impl Into<String>) -> Cmo3Error {
     Cmo3Error::InvalidDocument(message.into())
 }
 pub struct ImportedModel {
-    pub document: Document,
+    pub document: DocumentState,
     /// PNG bytes keyed by the document's draft source paths.
     pub images: HashMap<String, Vec<u8>>,
     /// Image asset IDs whose active texture input is a packed atlas region.
@@ -52,7 +52,16 @@ pub fn import_model_with_budget(bytes: &[u8], workspace: usize) -> Result<Import
         &resources,
         (workspace / 8).min(512 << 20),
     )?;
-    if model.document.estimated_content_bytes() > workspace / 8 {
+    if model.document.scene_payload_bytes(
+        &model
+            .document
+            .mesh_order()
+            .iter()
+            .chain(model.document.transform_order())
+            .cloned()
+            .collect::<Vec<_>>(),
+    ) > workspace / 8
+    {
         return Err(invalid("Cubism document workspace budget exceeded"));
     }
     Ok(model)
@@ -60,7 +69,7 @@ pub fn import_model_with_budget(bytes: &[u8], workspace: usize) -> Result<Import
 pub fn animation_model_paths(bytes: &[u8]) -> Result<Vec<String>> {
     animation::paths(bytes)
 }
-pub fn import_animation(bytes: &[u8], document: &mut Document) -> Result<()> {
+pub fn import_animation(bytes: &[u8], document: &DocumentState) -> Result<DocumentState> {
     animation::read(bytes, document)
 }
 
@@ -70,8 +79,8 @@ pub fn animation_model_paths_with_budget(bytes: &[u8], workspace: usize) -> Resu
 }
 pub fn import_animation_with_budget(
     bytes: &[u8],
-    document: &mut Document,
+    document: &DocumentState,
     workspace: usize,
-) -> Result<()> {
+) -> Result<DocumentState> {
     animation::read_with_budget(bytes, document, workspace)
 }

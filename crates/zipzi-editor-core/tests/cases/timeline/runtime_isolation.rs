@@ -1,7 +1,8 @@
 use super::common::*;
 use std::collections::VecDeque;
+use zipzi_contract::kernel_tasks::{ParameterActivation, SampleInput, SampleRequest};
 use zipzi_editor_core::*;
-use zipzi_runtime::{Executor, Work, preview::PreviewCommand as C};
+use zipzi_runtime::{Executor, QuerySource, Work};
 
 #[derive(Default)]
 struct Manual(VecDeque<Work>);
@@ -46,7 +47,8 @@ fn r5_agent_batches_do_not_change_human_playback_physics_sliders_or_two_viewport
         let host = editor.runtime_host();
         let session = editor.document().unwrap().runtime_session_id();
         let client = host.write().register_client()?;
-        let before = host.read().session_info(session)?;
+        host.write().attach(client, session)?;
+        let before = host.read().subscribe(client, session)?;
         let sliders = editor
             .document()
             .unwrap()
@@ -55,37 +57,25 @@ fn r5_agent_batches_do_not_change_human_playback_physics_sliders_or_two_viewport
             .map(|p| (p.id, p.value))
             .collect::<Vec<_>>();
         let physics = editor.animation().unwrap().physics_preview.clone();
-        let (remote, _) = host.write().create_preview(client, session, None, None)?;
-        host.write().apply_preview(
+        let job = host.write().request_samples(
             client,
-            remote,
-            C::ScheduleMotion {
-                id: motion.clip_id,
-                time: 0.,
+            QuerySource::Published(before.cursor),
+            SampleRequest {
+                input: SampleInput::Animation {
+                    times: vec![1.5, 0.1, 0.75],
+                    motions: vec![(motion.clip_id, 0.)],
+                    expressions: vec![],
+                    inputs: vec![ParameterActivation {
+                        id: parameter,
+                        time: 0.,
+                        value: 0.9,
+                    }],
+                    physics: false,
+                    stabilized_start: false,
+                },
+                queries: vec![],
+                quality: false,
             },
-        )?;
-        host.write().apply_preview(
-            client,
-            remote,
-            C::SetParameter {
-                id: parameter,
-                value: 0.9,
-            },
-        )?;
-        host.write().apply_preview(
-            client,
-            remote,
-            C::SetPhysics {
-                enabled: false,
-                stabilized_start: false,
-            },
-        )?;
-        let job = host.write().request_preview_samples(
-            client,
-            remote,
-            vec![1.5, 0.1, 0.75],
-            true,
-            false,
         )?;
         let mut workers = Manual::default();
         let mut evaluator = AnimationEvaluator::default();
@@ -104,8 +94,9 @@ fn r5_agent_batches_do_not_change_human_playback_physics_sliders_or_two_viewport
                 .unwrap()
                 .0;
             host.write().dispatch(&mut workers);
-            let completion = workers.0.pop_front().unwrap().run_quantum();
-            assert!(host.write().complete(completion));
+            if let Some(work) = workers.0.pop_front() {
+                host.write().complete(work.run()).unwrap();
+            }
             assert!(!editor.sync_runtime()?);
             assert_eq!(editor.animation().unwrap().time, time);
             assert!(editor.animation().unwrap().playing);
@@ -133,10 +124,18 @@ fn r5_agent_batches_do_not_change_human_playback_physics_sliders_or_two_viewport
                 expected.snapshot.parameters
             );
         }
-        assert!(host.read().job_info(client, job)?.state.is_terminal());
-        assert_eq!(host.read().session_info(session)?, before);
+        while !host.read().job(client, job)?.state.is_terminal() {
+            let work = host.write().take_work(job)?;
+            host.write().complete(work.run()).unwrap();
+        }
+        assert_eq!(
+            host.read().job(client, job)?.state,
+            zipzi_runtime::JobState::Succeeded
+        );
+        let after = host.read().subscribe(client, session)?;
+        assert_eq!(after.cursor, before.cursor);
+        assert_eq!(after.history, before.history);
         host.write().release_job(client, job)?;
-        host.write().release_preview(client, remote)?;
     }
     Ok(())
 }
@@ -157,18 +156,14 @@ fn r5_external_motion_publication_refreshes_timeline_catalog_and_rejects_old_cpu
     let host = editor.runtime_host();
     let session = editor.document().unwrap().runtime_session_id();
     let agent = host.write().register_client()?;
-    let edit = host
-        .write()
-        .begin_edit(agent, session, "external animation", None)?;
-    host.write().apply_edit(agent, edit, |e| {
-        let mut clip = e.candidate_document().get_motion(&id(4)).unwrap().clone();
+    crate::support::publish_host(&host, agent, session, "External animation", |e| {
+        let mut clip = e.read_document()?.motion(&id(4)).unwrap().clone();
         clip.name = "External clip".into();
         std::sync::Arc::make_mut(&mut clip.tracks[0].segments)[0]
             .end_mut()
             .value = 0.9;
         e.replace_motion(clip)
     })?;
-    host.write().commit_edit(agent, edit)?;
     assert!(editor.sync_runtime()?);
     assert_eq!(
         editor.document().unwrap().motion_resources()[0].name,

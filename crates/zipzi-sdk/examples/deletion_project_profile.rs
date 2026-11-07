@@ -1,32 +1,35 @@
 //! Default-budget/allocation probe for a local native project; never saves it.
 //! cargo run --locked -p zipzi-sdk --example deletion_project_profile -- PROJECT
 use std::{path::Path, sync::atomic::Ordering};
-use zipzi_core::{document::*, ModelSetup};
-use zipzi_sdk::{AuthoringSession, DeletionIntent, DeletionOptions};
+use zipzi_core::document::*;
+use zipzi_sdk::{AuthoringSession, Snapshot};
 #[path = "support/allocation.rs"]
 mod allocation;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::env::args().nth(1).expect("native project path");
-    let mut session = AuthoringSession::new(
-        "00000000-0000-4000-8000-000000000001",
-        ModelSetup::default(),
-    )?;
-    session.open_project(Path::new(&path), None)?;
-    println!(
-        "document_bytes={} snapshot_bytes={} limits={:?}",
-        session.document().estimated_content_bytes(),
-        session.document().estimated_snapshot_bytes(),
-        session.authoring_limits()
-    );
-    let mut meshes = session.mesh_ids().to_vec();
-    meshes.sort_by_key(|id| session.document().get_mesh(id).unwrap().vertex_ids.len());
+    let path = Path::new(&path);
+    let io =
+        zipzi_project::ProjectIo::new(path.parent().unwrap_or(Path::new(".")), Default::default());
+    let loaded = io.load(path, || true)?;
+    let mut session = AuthoringSession::new(Snapshot::new(loaded.document, loaded.resources)?);
+    let mut meshes = session.snapshot().document().mesh_order().to_vec();
+    meshes.sort_by_key(|id| {
+        session
+            .snapshot()
+            .document()
+            .mesh(id)
+            .unwrap()
+            .vertex_ids
+            .len()
+    });
     let mut targets = vec![
         DeletionTarget::Mesh(meshes.first().unwrap().clone()),
         DeletionTarget::Mesh(meshes.last().unwrap().clone()),
     ];
     targets.extend(
         session
+            .snapshot()
             .document()
             .part_order()
             .first()
@@ -35,6 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     targets.extend(
         session
+            .snapshot()
             .document()
             .transform_order()
             .first()
@@ -48,42 +52,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         let snapshot = session.read_snapshot();
         let base = allocation::reset_peak();
-        let review = snapshot.prepare_deletion_review(
-            DeletionIntent {
-                request: request.clone(),
-                ..Default::default()
-            },
-            session.authoring_limits(),
-            &ConversionControl::default(),
-        )?;
+        let mut draft = session.begin_draft();
+        let review = draft.batch(draft.source(), |c| {
+            c.review_deletion(&request, Default::default(), &Default::default())
+        })?;
         let peak = allocation::PEAK
             .load(Ordering::Relaxed)
             .saturating_sub(base);
         println!(
-            "target={target:?} review_peak_bytes={peak} cost={:?} summary={:?}",
-            review.cost(),
-            review.summary()
+            "target={target:?} review_peak_bytes={peak} work={:?}",
+            review.work
         );
-        assert!(peak <= review.cost().temporary_bytes);
-        let analysis = session.analyze_deletion(&request)?;
-        let plan = session.plan_deletion(
-            &request,
-            &DeletionOptions {
-                accepted_export_failures: analysis.new_export_failures,
-            },
-        )?;
+        if !review.report.blockers.is_empty()
+            || !review.report.structural_blockers.is_empty()
+            || !review.report.decisions.is_empty()
+        {
+            println!("blocked: {:?}", review.report);
+            continue;
+        }
+        let prepared = draft.prepare("Profile deletion")?;
         let base = allocation::reset_peak();
-        session.execute_deletion_plan(&plan)?;
+        session.publish(prepared)?;
         let peak = allocation::PEAK
             .load(Ordering::Relaxed)
             .saturating_sub(base);
         println!("target={target:?} commit_peak_bytes={peak}");
-        assert!(peak <= review.cost().temporary_bytes);
-        session.undo()?;
-        assert!(session.document().same_content(snapshot.document()));
-        session.redo()?;
-        session.undo()?;
-        session.drain_events();
+        session.undo(session.version())?;
+        assert_eq!(
+            session.snapshot().content_id(),
+            snapshot.snapshot.content_id()
+        );
+        session.redo(session.version())?;
+        session.undo(session.version())?;
+        session.take_events();
     }
     Ok(())
 }

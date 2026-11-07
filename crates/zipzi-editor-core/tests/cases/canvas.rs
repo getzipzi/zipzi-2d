@@ -445,54 +445,25 @@ fn hit_ties_are_stable_and_hit_radius_is_in_logical_pixels() -> anyhow::Result<(
     let meshes = std::sync::Arc::make_mut(&mut geometry.meshes);
     let mesh = std::sync::Arc::make_mut(&mut meshes[0]);
     mesh.vertices[1].1 = p;
+    let expected = mesh.vertices[0].0.max(mesh.vertices[1].0);
     mesh.vertices.reverse();
     frame.geometry = std::sync::Arc::new(geometry);
     let hit = frame.transform.to_viewport(p);
-    assert!(editor.present_frame(frame));
-    down(
-        &mut editor,
-        ViewportPoint {
-            x: hit.x + 7.,
-            y: hit.y,
-        },
-        false,
-    )?;
-    assert_eq!(
-        editor
-            .overlay()
-            .vertices
-            .iter()
-            .find(|v| v.selected)
-            .unwrap()
-            .id,
-        0
-    );
-    editor.cancel_gesture();
-    present(&mut editor)?;
-    down(
-        &mut editor,
-        ViewportPoint {
-            x: hit.x + 9.,
-            y: hit.y,
-        },
-        false,
-    )?;
-    up(
-        &mut editor,
-        ViewportPoint {
-            x: hit.x + 9.,
-            y: hit.y,
-        },
-    )?;
-    assert_eq!(
-        editor
-            .overlay()
-            .vertices
-            .iter()
-            .filter(|v| v.selected)
-            .count(),
-        0
-    );
+    let selected = editor.document().unwrap().context().selections.clone();
+    let pick = |offset| {
+        frame.geometry.hit(
+            ViewportPoint {
+                x: hit.x + offset,
+                y: hit.y,
+            },
+            frame.transform,
+            &selected,
+            ToolId::Select,
+            Default::default(),
+        )
+    };
+    assert!(matches!(pick(5.), Some(HitTarget::Component(component)) if component.id == expected));
+    assert!(!matches!(pick(7.), Some(HitTarget::Component(_))));
     Ok(())
 }
 

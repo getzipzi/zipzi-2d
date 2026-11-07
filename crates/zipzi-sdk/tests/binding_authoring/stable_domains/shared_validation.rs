@@ -31,11 +31,17 @@ fn pending_blend_constraint_entries_pair_weights_by_id_and_export_explicitly() {
     let original = frame(&s, 0.5, 0.).drawables[0].positions.clone();
     assert_eq!(frame(&s, 0.5, 0.).drawables[0].positions, original);
     roundtrip(&s);
-    let plan = s.plan_available_binding_export();
-    assert!(plan.omitted.iter().any(|o| o.object_id == b));
-    let out = s
-        .export_binding_plan(&plan, &zipzi_sdk::Cmo3Options::default())
-        .unwrap();
+    let projection = s.snapshot().document().available_binding_export().unwrap();
+    assert!(projection.blend_binding(&b).is_none());
+    let out = zipzi_project::encode_document_cmo3(
+        s.snapshot().document(),
+        s.snapshot().resources(),
+        &zipzi_project::Cmo3Options {
+            loss_policy: zipzi_project::LossPolicy::Allow,
+            ..Default::default()
+        },
+    )
+    .unwrap();
     assert!(out.report.diagnostics.iter().any(|d| d.object_id == b));
     apply(
         &mut s,
@@ -68,18 +74,26 @@ fn pending_blend_constraint_entries_pair_weights_by_id_and_export_explicitly() {
             ],
         }),
     );
-    let a = s.binding_field_address(&id(1713)).unwrap();
-    let p = s
-        .plan_binding_field_patch(
-            &a,
-            BindingFieldPatch::ConstraintSample {
-                value: 0.4,
-                weight: 0.3,
-            },
-        )
-        .unwrap();
-    s.execute_binding_plan(&p).unwrap();
-    let c = s.document().get_blend_constraint(&c).unwrap();
+    apply(
+        &mut s,
+        E::Blend(B::Constraint {
+            id: c.clone(),
+            parameter_id: PARAMETER_ID.into(),
+            samples: vec![
+                ConstraintSample {
+                    id: id(1713),
+                    value: 0.4,
+                    weight: 0.3,
+                },
+                ConstraintSample {
+                    id: id(1714),
+                    value: 1.,
+                    weight: 0.9,
+                },
+            ],
+        }),
+    );
+    let c = s.snapshot().document().blend_constraint(&c).unwrap();
     assert_eq!(c.samples[0].id, id(1713));
     assert_eq!(c.keys, vec![0.4, 1.]);
     assert_eq!(c.weights, vec![0.3, 0.9]);
@@ -90,26 +104,35 @@ fn pending_blend_constraint_entries_pair_weights_by_id_and_export_explicitly() {
 fn shared_rebase_constraints_locks_limits_and_missing_base_reject_without_history() {
     let mut s = shared();
     let table = id(1701);
-    let t = s.document().get_blend_key_table(&table).unwrap().clone();
+    let t = s
+        .snapshot()
+        .document()
+        .blend_key_table(&table)
+        .unwrap()
+        .clone();
     let before = s.version();
     let h = s.history_state();
     assert_eq!(
-        s.plan_binding_authoring(E::Blend(B::Table {
-            id: table.clone(),
-            operation: BO::Delete {
-                sample_id: t.base_sample_id.clone(),
-                replacement_base: None
-            }
-        }))
+        crate::support::binding(
+            &s,
+            E::Blend(B::Table {
+                id: table.clone(),
+                operation: BO::Delete {
+                    sample_id: t.base_sample_id.clone(),
+                    replacement_base: None
+                }
+            })
+        )
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "BASE_REPLACEMENT_REQUIRED"
     );
     assert_eq!(s.version(), before);
     assert_eq!(s.history_state(), h);
-    let p = s
-        .plan_binding_authoring(E::Blend(B::Table {
+    let p = crate::support::binding(
+        &s,
+        E::Blend(B::Table {
             id: table.clone(),
             operation: BO::Insert {
                 sample: BindingSample {
@@ -117,14 +140,35 @@ fn shared_rebase_constraints_locks_limits_and_missing_base_reject_without_histor
                     value: 0.5,
                 },
             },
-        }))
-        .unwrap();
-    let mut limits = s.authoring_limits();
-    limits.max_conversion_bytes = p.cost().temporary_bytes - 1;
-    s.set_authoring_limits(limits).unwrap();
-    assert!(s.execute_binding_plan(&p).is_err());
+        }),
+    )
+    .unwrap();
+    let limits = zipzi_sdk::ConversionLimits {
+        max_workspace_bytes: p.0.work.workspace_bytes - 1,
+        ..Default::default()
+    };
+    assert_eq!(
+        crate::support::binding_with_control(
+            &s,
+            E::Blend(B::Table {
+                id: table.clone(),
+                operation: BO::Insert {
+                    sample: BindingSample {
+                        id: id(1720),
+                        value: 0.5
+                    }
+                }
+            }),
+            limits,
+            &Default::default()
+        )
+        .unwrap_err()
+        .code
+        .as_str(),
+        "AUTHORING_MEMORY_LIMIT"
+    );
     assert_eq!(s.version(), before);
-    s.set_authoring_limits(Default::default()).unwrap();
+    assert_eq!(s.history_state(), h);
     let c = id(1721);
     apply(
         &mut s,
@@ -138,22 +182,38 @@ fn shared_rebase_constraints_locks_limits_and_missing_base_reject_without_histor
             },
         }),
     );
-    let mut b = s.document().get_blend_binding(&id(1702)).unwrap().clone();
+    let mut b = s
+        .snapshot()
+        .document()
+        .blend_binding(&id(1702))
+        .unwrap()
+        .clone();
     b.constraint_ids.push(c);
-    s.edit("constrain", None, |e| e.replace_blend_binding(b))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_blend_binding(b))
+            .and_then(|value| {
+                let prepared = draft.prepare("constrain")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     let before = s.version();
     let h = s.history_state();
     assert_eq!(
-        s.plan_binding_authoring(E::Blend(B::Table {
-            id: table.clone(),
-            operation: BO::SetBase {
-                sample_id: t.samples[2].id.clone()
-            }
-        }))
+        crate::support::binding(
+            &s,
+            E::Blend(B::Table {
+                id: table.clone(),
+                operation: BO::SetBase {
+                    sample_id: t.samples[2].id.clone()
+                }
+            })
+        )
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "CONSTRAINED_REBASE_NOT_REPRESENTABLE"
     );
     assert_eq!(s.version(), before);
@@ -163,7 +223,12 @@ fn shared_rebase_constraints_locks_limits_and_missing_base_reject_without_histor
 #[test]
 fn noop_shared_edits_preserve_redo_and_native_invalid_ids_are_rejected() {
     let mut s = shared();
-    let t = s.document().get_blend_key_table(&id(1701)).unwrap().clone();
+    let t = s
+        .snapshot()
+        .document()
+        .blend_key_table(&id(1701))
+        .unwrap()
+        .clone();
     apply(
         &mut s,
         E::Blend(B::Table {
@@ -176,7 +241,7 @@ fn noop_shared_edits_preserve_redo_and_native_invalid_ids_are_rejected() {
             },
         }),
     );
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let receipt = apply(
         &mut s,
@@ -188,27 +253,34 @@ fn noop_shared_edits_preserve_redo_and_native_invalid_ids_are_rejected() {
             },
         }),
     );
-    assert!(!receipt.changed);
+    assert!(receipt.writes.is_empty());
     assert_eq!(s.history_state(), history);
-    let mut d = s.document().fork_candidate();
-    let mut a = d.get_asset(ASSET_ID).unwrap().clone();
-    a.content.as_mut().unwrap().source = "assets/texture.png".into();
-    assert!(d.replace_asset(a).status.is_ok());
-    let mut wire: serde_json::Value =
-        serde_json::from_str(&zipzi_project::encode_project(&d).unwrap()).unwrap();
+    let bytes = crate::support::archive::native_bytes_with_resources(
+        s.snapshot().document(),
+        s.snapshot().resources(),
+    );
+    let mut wire = crate::support::archive::project_json(&bytes);
     wire["document"]["bindings"][0]["axes"][0]["id"] = serde_json::json!("");
-    assert_eq!(
-        zipzi_project::decode_project(&wire.to_string())
-            .unwrap_err()
-            .code,
-        "INVALID_ID"
+    assert!(
+        crate::support::archive::load_native(&crate::support::archive::replace_project_json(
+            &bytes, &wire
+        ))
+        .is_err()
     );
 }
 
 #[test]
-fn owned_conversion_edits_keep_limits_and_recheck_them_at_publication() {
+fn conversion_preparation_enforces_limits_and_publishes_one_validated_change() {
     let mut s = base();
-    let axis = s.binding(BINDING_ID).unwrap().axes[0].id.clone();
+    let axis = s
+        .snapshot()
+        .document()
+        .binding(BINDING_ID)
+        .cloned()
+        .unwrap()
+        .axes[0]
+        .id
+        .clone();
     let intent = E::Grid(G::Edit {
         owner: BINDING_ID.into(),
         operation: O::InsertSample {
@@ -217,25 +289,28 @@ fn owned_conversion_edits_keep_limits_and_recheck_them_at_publication() {
             value: 0.5,
         },
     });
-    let plan = s.plan_binding_authoring(intent.clone()).unwrap();
-    let mut edit = s.begin_owned_edit("owned conversion", None).unwrap();
-    edit.binding_authoring(intent).unwrap();
+    let plan = crate::support::binding(&s, intent.clone()).unwrap();
     let before = s.version();
     let h = s.history_state();
-    let mut limits = s.authoring_limits();
-    limits.max_conversion_bytes = 1;
-    s.set_authoring_limits(limits).unwrap();
     assert_eq!(
-        edit.commit_to(&mut s).unwrap_err().code.as_ref(),
+        crate::support::binding_with_control(
+            &s,
+            intent,
+            zipzi_sdk::ConversionLimits {
+                max_workspace_bytes: 1,
+                ..Default::default()
+            },
+            &Default::default()
+        )
+        .unwrap_err()
+        .code
+        .as_str(),
         "AUTHORING_MEMORY_LIMIT"
     );
     assert_eq!(s.version(), before);
     assert_eq!(s.history_state(), h);
-    s.set_authoring_limits(Default::default()).unwrap();
-    let mut edit = s.begin_owned_edit("owned conversion", None).unwrap();
-    edit.apply_binding_plan(&plan).unwrap();
-    edit.commit_to(&mut s).unwrap();
-    let mut flags = s.document().editor_state().clone();
+    s.publish(plan.1).unwrap();
+    let mut flags = s.snapshot().document().editor_state().clone();
     flags.objects.insert(
         id(1980),
         zipzi_core::document::ObjectEditorState {
@@ -243,8 +318,16 @@ fn owned_conversion_edits_keep_limits_and_recheck_them_at_publication() {
             locked: false,
         },
     );
-    s.edit("hide child", None, |e| e.replace_editor_state(flags))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_editor_state(flags))
+            .and_then(|value| {
+                let prepared = draft.prepare("hide child")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     op(
         &mut s,
         BINDING_ID,
@@ -252,42 +335,62 @@ fn owned_conversion_edits_keep_limits_and_recheck_them_at_publication() {
             sample_id: id(1980),
         },
     );
-    assert!(!s.document().editor_state().objects.contains_key(&id(1980)));
-    s.undo().unwrap();
-    assert!(s.document().editor_state().get(&id(1980)).hidden_in_editor);
+    assert!(!s
+        .snapshot()
+        .document()
+        .editor_state()
+        .objects
+        .contains_key(&id(1980)));
+    s.undo(s.version()).unwrap();
+    assert!(
+        s.snapshot()
+            .document()
+            .editor_state()
+            .get(&id(1980))
+            .hidden_in_editor
+    );
 }
 
 #[test]
 fn shared_conversion_report_and_partial_work_cancellation_cover_all_users() {
     let mut s = shared();
-    let table = s.document().get_blend_key_table(&id(1701)).unwrap().clone();
+    let table = s
+        .snapshot()
+        .document()
+        .blend_key_table(&id(1701))
+        .unwrap()
+        .clone();
     let intent = E::Blend(B::Table {
         id: table.id.clone(),
         operation: BO::SetBase {
             sample_id: table.samples[2].id.clone(),
         },
     });
-    let plan = s.plan_binding_authoring(intent.clone()).unwrap();
-    assert!(plan.report().preserved.iter().any(|a| a.owner == id(1702)));
-    assert!(plan.report().preserved.iter().any(|a| a.owner == id(1703)));
+    let plan = crate::support::binding(&s, intent.clone()).unwrap();
+    assert!(plan.0.report.preserved.iter().any(|a| a.owner == id(1702)));
+    assert!(plan.0.report.preserved.iter().any(|a| a.owner == id(1703)));
     assert!(plan
-        .report()
+        .0
+        .report
         .remapped
         .iter()
         .any(|r| r.before.is_base && !r.after.is_base));
     let version = s.version();
     let history = s.history_state();
-    s.drain_events();
+    s.take_events();
     let control = zipzi_sdk::ConversionControl::with_progress(|n| n < 5);
     assert_eq!(
-        s.plan_binding_authoring_with_control(intent, &control)
+        crate::support::binding_with_control(&s, intent, Default::default(), &control)
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "AUTHORING_CANCELLED"
     );
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
-    assert!(s.drain_events().is_empty());
-    assert_eq!(s.document().get_blend_key_table(&table.id), Some(&table));
+    assert!(s.take_events().is_empty());
+    assert_eq!(
+        s.snapshot().document().blend_key_table(&table.id),
+        Some(&table)
+    );
 }

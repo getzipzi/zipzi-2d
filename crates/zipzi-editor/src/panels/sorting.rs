@@ -318,7 +318,9 @@ impl SortState {
                     position,
                 };
                 match doc.palette_deformation_move_support(&request) {
-                    Ok(Some(support)) => Ok(support != zipzi_sdk::ReparentSupport::NoChange),
+                    Ok(Some(support)) => {
+                        Ok(support != zipzi_core::document::ReparentSupport::NoChange)
+                    }
                     Ok(None) => doc.plan_palette_move(request).map(|plan| !plan.is_noop()),
                     Err(error) => Err(error),
                 }
@@ -987,7 +989,7 @@ impl EditorView {
             Ok(result) => {
                 self.clear_edit_error(cx);
                 self.redraw(cx);
-                if result.receipt.changed {
+                if (result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged) {
                     self.locate_palette_step(document, projection, locate, window, cx);
                 }
             }

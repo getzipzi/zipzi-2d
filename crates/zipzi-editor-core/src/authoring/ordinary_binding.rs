@@ -1,8 +1,11 @@
 //! Ordinary binding workflow. SDK plans own all grid conversion and validation.
 use super::*;
 use anyhow::{Result, ensure};
+use zipzi_contract::authoring::BindingAuthoringEdit;
+use zipzi_contract::document::BindingGridEdit;
+use zipzi_contract::document::BindingGridTarget;
+use zipzi_contract::document::GridOperation;
 use zipzi_core::BindingAxisEditing;
-use zipzi_sdk::{BindingAuthoringEdit, BindingGridEdit, BindingGridTarget, GridOperation};
 
 #[derive(Clone, Debug)]
 pub enum OrdinaryBindingAction {
@@ -56,15 +59,12 @@ impl ParameterKeyformAction {
 #[derive(Clone, Debug)]
 enum Native {
     Request {
-        snapshot: Arc<zipzi_sdk::AuthoringSnapshot>,
+        source: crate::runtime_host::HostedSource,
         edit: BindingAuthoringEdit,
-        limits: zipzi_sdk::AuthoringLimits,
+        limits: zipzi_core::state::ConversionLimits,
     },
-    Grid(zipzi_sdk::BindingEditPlan),
-    Part {
-        binding_id: String,
-        form: zipzi_core::PartKeyform,
-    },
+    Grid(crate::EditPreview<zipzi_core::state::ConversionOutcome>),
+    Part(crate::EditPreview<()>),
 }
 #[derive(Clone, Debug)]
 pub struct OrdinaryBindingPlan {
@@ -77,7 +77,7 @@ pub struct OrdinaryBindingPlan {
     pub selection: ObjectRef,
     pub deleted_binding: bool,
     pub report: Option<zipzi_sdk::ConversionReport>,
-    pub cost: zipzi_sdk::ConversionCost,
+    pub cost: zipzi_core::state::ConversionWork,
 }
 #[derive(Clone, Debug)]
 pub struct OrdinaryBindingCapture(OrdinaryBindingPlan);
@@ -89,15 +89,24 @@ impl OrdinaryBindingCapture {
         let mut plan = self.0.clone();
         plan.control = control.clone();
         if let Native::Request {
-            snapshot,
+            source,
             edit,
             limits,
         } = &plan.native
         {
-            let native =
-                snapshot.plan_binding_authoring_with_control(edit.clone(), *limits, control)?;
-            plan.cost = native.cost();
-            plan.report = Some(native.report().clone());
+            let edit = edit.clone();
+            let limits = *limits;
+            let native = crate::EditPreview::convert(
+                source,
+                "Edit binding",
+                limits,
+                control,
+                move |commands, control| {
+                    super::binding::apply_binding(commands, edit, limits, control)
+                },
+            )?;
+            plan.cost = native.outcome.work;
+            plan.report = Some(native.outcome.report.clone());
             plan.native = Native::Grid(native);
         }
         Ok(plan)
@@ -136,7 +145,7 @@ impl Document {
             .ok_or_else(|| anyhow::anyhow!("Parameter no longer exists"))?;
         ensure!(
             self.model()
-                .get_parameter(parameter_id)
+                .parameter(parameter_id)
                 .is_some_and(|parameter| parameter.kind == zipzi_core::ParameterKind::Normal),
             "Only normal parameters support ordinary keyforms"
         );
@@ -155,7 +164,7 @@ impl Document {
         ensure!(!targets.is_empty(), "Select an editable object first");
 
         let version = self.session.version();
-        let mut edit = self.session.begin_owned_edit(
+        let mut edit = self.session.begin_draft(
             match action {
                 ParameterKeyformAction::AddCurrent => "Add parameter keyform",
                 ParameterKeyformAction::DeleteCurrent => "Delete parameter keyform",
@@ -186,7 +195,7 @@ impl Document {
             let mut changed = 0usize;
             for target in &targets {
                 let existing = {
-                    let document = candidate.candidate_document();
+                    let document = candidate.read_document()?;
                     match target.kind {
                         ObjectKind::Mesh => document
                             .binding_for_mesh(&target.id)
@@ -201,7 +210,7 @@ impl Document {
                     existing
                 } else if action.adds_samples() {
                     let id = Uuid::new_v4().to_string();
-                    candidate.binding_authoring(BindingAuthoringEdit::Grid(
+                    candidate.edit_binding_grid(
                         BindingGridEdit::Create {
                             id: id.clone(),
                             target: if target.kind == ObjectKind::Mesh {
@@ -210,7 +219,9 @@ impl Document {
                                 BindingGridTarget::Scene(target.id.clone())
                             },
                         },
-                    ))?;
+                        Default::default(),
+                        &Default::default(),
+                    )?;
                     (id, Vec::new())
                 } else {
                     continue;
@@ -248,7 +259,9 @@ impl Document {
                             if axis.samples.len() == 1 {
                                 GridOperation::RemoveAxis {
                                     axis_id: axis.id.clone(),
-                                    reduction: Some(zipzi_sdk::AxisReduction::Slice(value)),
+                                    reduction: Some(
+                                        zipzi_contract::document::AxisReduction::Slice(value),
+                                    ),
                                     keep_pending: false,
                                 }
                             } else {
@@ -263,7 +276,9 @@ impl Document {
                         let reduction = value.clamp(axis.keys[0], *axis.keys.last().unwrap());
                         vec![GridOperation::RemoveAxis {
                             axis_id: axis.id.clone(),
-                            reduction: Some(zipzi_sdk::AxisReduction::Resample(reduction)),
+                            reduction: Some(zipzi_contract::document::AxisReduction::Resample(
+                                reduction,
+                            )),
                             keep_pending: false,
                         }]
                     }
@@ -273,12 +288,14 @@ impl Document {
                     ) => Vec::new(),
                 };
                 for operation in operations {
-                    candidate.binding_authoring(BindingAuthoringEdit::Grid(
+                    candidate.edit_binding_grid(
                         BindingGridEdit::Edit {
                             owner: binding_id.clone(),
                             operation,
                         },
-                    ))?;
+                        Default::default(),
+                        &Default::default(),
+                    )?;
                     changed += 1;
                 }
             }
@@ -290,7 +307,7 @@ impl Document {
         );
         let receipt = edit.commit_to(&mut self.session)?;
         self.pristine_blank = None;
-        self.consume_authoring_receipt(&receipt, true);
+        self.consume_authoring_receipt(&receipt, None);
         self.context.reconcile(&self.object_index());
         Ok(self.authoring_result(receipt))
     }
@@ -298,7 +315,7 @@ impl Document {
     fn ordinary_part_keyform(&self, binding: &ObjectRef) -> Result<zipzi_core::PartKeyform> {
         let model_read_guard_46 = self.model();
         let b = model_read_guard_46
-            .get_scene_binding(&binding.id)
+            .scene_binding(&binding.id)
             .ok_or_else(|| anyhow::anyhow!("Expected Part binding"))?;
         let zipzi_core::SceneTrack::Part { keyforms, .. } = &b.track else {
             anyhow::bail!("Expected Part binding")
@@ -320,7 +337,7 @@ impl Document {
                                 return false;
                             }
                             let model_read_guard_47 = self.model();
-                            let parameter = model_read_guard_47.get_parameter(&p.id).unwrap();
+                            let parameter = model_read_guard_47.parameter(&p.id).unwrap();
                             let value = if parameter.repeat {
                                 let range = p.maximum - p.minimum;
                                 p.minimum + (p.value - p.minimum).rem_euclid(range)
@@ -359,7 +376,7 @@ impl Document {
     pub fn ordinary_binding_creation_capability(
         &self,
         object: &ObjectRef,
-    ) -> Result<zipzi_sdk::CapabilityState> {
+    ) -> Result<zipzi_contract::authoring::CapabilityState> {
         ensure!(
             matches!(
                 object.kind,
@@ -367,12 +384,12 @@ impl Document {
             ),
             "Expected ordinary binding target"
         );
-        self.session
-            .handle(object.kind.sdk_kind().unwrap(), &object.id)?;
+        self.model()
+            .require_object(object.kind.sdk_kind().unwrap(), &object.id)?;
         if self.model().binding_for_mesh(&object.id).is_some()
             || self.model().binding_for_scene(&object.id).is_some()
         {
-            return Ok(zipzi_sdk::CapabilityState::Unavailable {
+            return Ok(zipzi_contract::authoring::CapabilityState::Unavailable {
                 code: "BINDING_CONFLICT",
             });
         }
@@ -386,6 +403,7 @@ impl Document {
     ) -> Result<OrdinaryBindingPlan> {
         use OrdinaryBindingAction as A;
         self.ensure_authoring_idle()?;
+        let captured_source = self.session.capture_authoring();
         let source = match action {
             A::Create(o) | A::Delete(o) | A::DeleteSample(o) => o,
             A::AddAxis { binding, .. } | A::PartDrawOrder { binding, .. } => binding,
@@ -394,7 +412,7 @@ impl Document {
             | A::RemoveAxis { axis, .. } => axis,
             A::MoveSample { sample, .. } => sample,
         };
-        self.session.handle(
+        self.model().require_object(
             source
                 .kind
                 .sdk_kind()
@@ -406,7 +424,7 @@ impl Document {
             ensure!(
                 matches!(
                     self.ordinary_binding_creation_capability(target)?,
-                    zipzi_sdk::CapabilityState::Available
+                    zipzi_contract::authoring::CapabilityState::Available
                 ),
                 "Binding target is unavailable"
             );
@@ -464,12 +482,19 @@ impl Document {
                     .collect();
                 form.draw_order = *value;
                 return Ok(OrdinaryBindingPlan {
-                    native: Native::Part {
-                        binding_id: binding.id.clone(),
-                        form,
-                    },
+                    native: Native::Part(crate::EditPreview::prepare(
+                        &self.session,
+                        "Edit Part keyform",
+                        Some(captured_source.version()),
+                        |commands| {
+                            commands.set_scene_keyform(
+                                &binding.id,
+                                zipzi_core::SceneKeyform::Part(form),
+                            )
+                        },
+                    )?),
                     control: Default::default(),
-                    version: self.session.version(),
+                    version: captured_source.version(),
                     preview,
                     binding: binding.clone(),
                     target,
@@ -487,7 +512,7 @@ impl Document {
                         } else {
                             let model = self.model();
                             let p = model
-                                .get_parameter(parameter)
+                                .parameter(parameter)
                                 .ok_or_else(|| anyhow::anyhow!("Parameter no longer exists"))?;
                             let mut keys = vec![p.minimum, p.default_value, p.maximum];
                             keys.sort_by(f32::total_cmp);
@@ -507,7 +532,8 @@ impl Document {
                         GridOperation::SetParameter {
                             axis_id: source.id.clone(),
                             parameter_id: parameter.clone(),
-                            reduction: reduction.map(zipzi_sdk::AxisReduction::Slice),
+                            reduction: reduction
+                                .map(zipzi_contract::document::AxisReduction::Slice),
                         }
                     }
                     A::InsertSample { value, .. } => {
@@ -546,7 +572,8 @@ impl Document {
                         selection = binding.clone();
                         GridOperation::RemoveAxis {
                             axis_id: source.id.clone(),
-                            reduction: reduction.map(zipzi_sdk::AxisReduction::Slice),
+                            reduction: reduction
+                                .map(zipzi_contract::document::AxisReduction::Slice),
                             keep_pending: false,
                         }
                     }
@@ -559,14 +586,14 @@ impl Document {
             }
         };
         Ok(OrdinaryBindingPlan {
-            version: self.session.version(),
+            version: captured_source.version(),
             report: None,
             cost: Default::default(),
             control: Default::default(),
             native: Native::Request {
-                snapshot: Arc::new(self.session.read_snapshot()),
+                source: captured_source.clone(),
                 edit: BindingAuthoringEdit::Grid(edit),
-                limits: self.session.authoring_limits(),
+                limits: zipzi_core::state::ConversionLimits::default(),
             },
             preview,
             binding,
@@ -597,21 +624,12 @@ impl Document {
         }
         let receipt = match &plan.native {
             Native::Request { .. } => anyhow::bail!("Binding plan has not been built"),
-            Native::Grid(p) => self.session.execute_binding_plan(p)?,
-            Native::Part { binding_id, form } => {
-                self.session
-                    .edit("Edit Part keyform", Some(plan.version), |e| {
-                        e.set_scene_keyform(
-                            binding_id,
-                            zipzi_core::SceneKeyform::Part(form.clone()),
-                        )
-                    })?
-                    .1
-            }
+            Native::Grid(p) => p.publish(&mut self.session)?,
+            Native::Part(candidate) => candidate.publish(&mut self.session)?,
         };
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, true);
+            self.consume_authoring_receipt(&receipt, None);
             self.context.reconcile(&self.object_index());
         }
         Ok(self.authoring_result(receipt))

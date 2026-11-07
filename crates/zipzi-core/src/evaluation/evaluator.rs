@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::types::Status;
 
 use super::selection::{BlendSelection, Selection};
@@ -56,7 +57,7 @@ pub struct EvaluationTimings {
 impl FrameEvaluator {
     pub fn evaluate(
         &mut self,
-        doc: &Document,
+        doc: &impl EvaluationModel,
         preview: &PreviewValues,
         out: &mut DrawableFrame,
     ) -> Status {
@@ -65,7 +66,7 @@ impl FrameEvaluator {
 
     pub fn evaluate_timed(
         &mut self,
-        doc: &Document,
+        doc: &impl EvaluationModel,
         preview: &PreviewValues,
         out: &mut DrawableFrame,
         timings: &mut EvaluationTimings,
@@ -76,7 +77,7 @@ impl FrameEvaluator {
 
     fn evaluate_with_hidden_geometry(
         &mut self,
-        doc: &Document,
+        doc: &impl EvaluationModel,
         preview: &PreviewValues,
         out: &mut DrawableFrame,
         include_hidden_geometry: bool,
@@ -90,7 +91,11 @@ impl FrameEvaluator {
     }
 }
 
-pub fn evaluate_frame(doc: &Document, preview: &PreviewValues, out: &mut DrawableFrame) -> Status {
+pub fn evaluate_frame(
+    doc: &impl EvaluationModel,
+    preview: &PreviewValues,
+    out: &mut DrawableFrame,
+) -> Status {
     FrameEvaluator::default().evaluate(doc, preview, out)
 }
 
@@ -99,7 +104,7 @@ pub fn evaluate_frame(doc: &Document, preview: &PreviewValues, out: &mut Drawabl
 /// drawables retain the normal evaluation result, even when Glue connects
 /// them to disabled meshes whose normal positions are placeholders.
 pub fn evaluate_frame_including_hidden(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     preview: &PreviewValues,
     out: &mut DrawableFrame,
 ) -> Status {
@@ -129,7 +134,7 @@ pub fn evaluate_frame_including_hidden(
 }
 
 fn evaluate_into(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     preview: &PreviewValues,
     workspace: &mut FrameEvaluator,
     include_hidden_geometry: bool,

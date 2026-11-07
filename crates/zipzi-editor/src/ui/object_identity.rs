@@ -16,7 +16,7 @@ pub(crate) fn render(
     let locked = doc.authoring_capabilities(object).is_ok_and(|c| {
         matches!(
             c.state(zipzi_editor_core::AuthoringAction::Patch),
-            zipzi_sdk::CapabilityState::Unavailable {
+            zipzi_contract::authoring::CapabilityState::Unavailable {
                 code: "OBJECT_LOCKED"
             }
         )

@@ -1,17 +1,17 @@
 //! Session-owned preview evaluation. Published frames are immutable snapshots.
 use std::sync::Arc;
 
-use crate::{Document, DrawableFrame, FrameEvaluator, PreviewValues, Status};
+use crate::{state::DocumentState, DrawableFrame, FrameEvaluator, PreviewValues, Status};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct FrameKey {
     generation: u64,
-    document_revision: u64,
+    inputs: crate::state::ContentId,
     preview_revision: u64,
 }
 
 /// One instance per editing session. Call `reset` when replacing a document,
-/// and `invalidate` for initialization or mutations that do not advance its revision.
+/// Evaluation inputs and preview values have independent cache keys.
 #[derive(Debug, Default)]
 pub struct PreviewState {
     values: PreviewValues,
@@ -47,9 +47,9 @@ impl PreviewState {
         self.invalidate();
     }
 
-    pub fn retain_parameters(&mut self, doc: &Document) {
+    pub fn retain_parameters(&mut self, doc: &DocumentState) {
         let before = self.values.len();
-        self.values.retain(|id, _| doc.get_parameter(id).is_some());
+        self.values.retain(|id, _| doc.parameter(id).is_some());
         if before != self.values.len() {
             self.revision += 1;
             self.invalidate();
@@ -58,7 +58,7 @@ impl PreviewState {
 
     fn evaluate(
         &mut self,
-        doc: &Document,
+        doc: &DocumentState,
         values: &PreviewValues,
     ) -> Result<Arc<DrawableFrame>, Status> {
         self.evaluations += 1;
@@ -69,10 +69,14 @@ impl PreviewState {
         Ok(Arc::new(std::mem::take(&mut self.output)))
     }
 
-    pub fn frame(&mut self, doc: &Document, generation: u64) -> Result<Arc<DrawableFrame>, Status> {
+    pub fn frame(
+        &mut self,
+        doc: &DocumentState,
+        generation: u64,
+    ) -> Result<Arc<DrawableFrame>, Status> {
         let key = FrameKey {
             generation,
-            document_revision: doc.evaluation_revision(),
+            inputs: doc.frame_input_id(),
             preview_revision: self.revision,
         };
         if let Some((cached_key, result)) = &self.cached {
@@ -95,7 +99,7 @@ impl PreviewState {
     /// Evaluate before committing. Failure preserves parameters, version and cached frame.
     pub fn replace(
         &mut self,
-        doc: &Document,
+        doc: &DocumentState,
         generation: u64,
         values: PreviewValues,
     ) -> Result<bool, Status> {
@@ -103,7 +107,7 @@ impl PreviewState {
         if !changed {
             let key = FrameKey {
                 generation,
-                document_revision: doc.evaluation_revision(),
+                inputs: doc.frame_input_id(),
                 preview_revision: self.revision,
             };
             if let Some((cached_key, Ok(_))) = &self.cached {
@@ -119,7 +123,7 @@ impl PreviewState {
         self.cached = Some((
             FrameKey {
                 generation,
-                document_revision: doc.evaluation_revision(),
+                inputs: doc.frame_input_id(),
                 preview_revision: self.revision,
             },
             Ok(frame),

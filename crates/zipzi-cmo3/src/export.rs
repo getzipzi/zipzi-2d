@@ -12,36 +12,36 @@ use crate::{
     *,
 };
 use std::collections::{BTreeSet, HashMap};
-use zipzi_core::{types::*, Document};
+use zipzi_core::{state::DocumentState, types::*};
 
 const ROOT_DEFORMER: &str = "71fae776-e218-4aee-873e-78e8ac0cb48a";
 const ROOT_PARAMETER_GROUP: &str = "e9fe6eff-953b-4ce2-be7c-4a7c3913686b";
 
-fn ordered_drawing_children(doc: &Document, part: &str, items: &[String]) -> Vec<String> {
+fn ordered_drawing_children(doc: &DocumentState, part: &str, items: &[String]) -> Vec<String> {
     let mut children: Vec<String> = doc
         .part_order()
         .iter()
-        .filter(|id| doc.get_part(id).unwrap().parent_id == part)
+        .filter(|id| doc.part(id).unwrap().parent_id == part)
         .cloned()
         .collect();
     children.extend(
         doc.mesh_order()
             .iter()
-            .filter(|id| doc.get_mesh(id).unwrap().part_id == part)
+            .filter(|id| doc.mesh(id).unwrap().part_id == part)
             .cloned(),
     );
-    fn rank(doc: &Document, id: &str, items: &[String]) -> usize {
+    fn rank(doc: &DocumentState, id: &str, items: &[String]) -> usize {
         if let Some(index) = items.iter().position(|v| v == id) {
             return index;
         }
-        if doc.get_part(id).is_some() {
+        if doc.part(id).is_some() {
             doc.part_order()
                 .iter()
-                .filter(|child| doc.get_part(child).unwrap().parent_id == id)
+                .filter(|child| doc.part(child).unwrap().parent_id == id)
                 .chain(
                     doc.mesh_order()
                         .iter()
-                        .filter(|child| doc.get_mesh(child).unwrap().part_id == id),
+                        .filter(|child| doc.mesh(child).unwrap().part_id == id),
                 )
                 .map(|child| rank(doc, child, items))
                 .min()
@@ -54,22 +54,22 @@ fn ordered_drawing_children(doc: &Document, part: &str, items: &[String]) -> Vec
     children
 }
 fn flatten_drawing_children(
-    doc: &Document,
+    doc: &DocumentState,
     part: &str,
     owners: &BTreeSet<&str>,
     items: &[String],
     out: &mut Vec<String>,
 ) {
     for id in ordered_drawing_children(doc, part, items) {
-        if doc.get_mesh(&id).is_some() || owners.contains(id.as_str()) {
+        if doc.mesh(&id).is_some() || owners.contains(id.as_str()) {
             out.push(id);
         } else {
             flatten_drawing_children(doc, &id, owners, items, out);
         }
     }
 }
-fn offscreen_owner<'a>(doc: &'a Document, id: &str) -> &'a str {
-    &doc.get_offscreen(id).unwrap().part_id
+fn offscreen_owner<'a>(doc: &'a DocumentState, id: &str) -> &'a str {
+    &doc.offscreen(id).unwrap().part_id
 }
 
 fn s(v: impl ToString) -> N {
@@ -177,7 +177,7 @@ struct TextureSet {
 }
 
 struct Exporter<'a> {
-    doc: &'a Document,
+    doc: &'a DocumentState,
     canvas: Canvas,
     graph: Graph,
     sources: HashMap<String, N>,
@@ -214,11 +214,11 @@ impl<'a> Exporter<'a> {
     fn object_guid(&self, id: &str) -> N {
         if id.is_empty() {
             guid("CPartGuid", &self.root_part)
-        } else if self.doc.get_mesh(id).is_some() {
+        } else if self.doc.mesh(id).is_some() {
             guid("CDrawableGuid", id)
-        } else if self.doc.get_transform(id).is_some() {
+        } else if self.doc.transform(id).is_some() {
             guid("CDeformerGuid", id)
-        } else if self.doc.get_glue(id).is_some() {
+        } else if self.doc.glue(id).is_some() {
             guid("CAffecterGuid", id)
         } else {
             guid("CPartGuid", id)
@@ -274,7 +274,7 @@ impl<'a> Exporter<'a> {
     fn coordinate_unit(&self, parent: &str) -> f64 {
         if self
             .doc
-            .get_transform(parent)
+            .transform(parent)
             .is_some_and(|t| t.warp().is_some())
         {
             1.
@@ -618,7 +618,7 @@ fn fit_texture(uvs: &[Vec2], positions: &[Vec2], w: u32, h: u32) -> [f64; 6] {
 }
 
 pub(crate) fn encode(
-    doc: &Document,
+    doc: &DocumentState,
     assets: &dyn AssetResolver,
     options: &Cmo3Options,
 ) -> Result<Cmo3Artifact, Cmo3Error> {
@@ -626,14 +626,17 @@ pub(crate) fn encode(
 }
 
 pub(crate) fn encode_with_animation(
-    doc: &Document,
+    doc: &DocumentState,
     assets: &dyn AssetResolver,
     options: &Cmo3Options,
     animation: bool,
 ) -> Result<Cmo3Artifact, Cmo3Error> {
     let projection =
         if options.loss_policy == LossPolicy::Allow && !doc.binding_export_omissions().is_empty() {
-            Some(doc.available_binding_export())
+            Some(
+                doc.available_binding_export()
+                    .map_err(|s| Cmo3Error::InvalidDocument(s.message))?,
+            )
         } else {
             None
         };
@@ -666,7 +669,10 @@ pub(crate) fn encode_with_animation(
     let rest_doc = if doc.blend_binding_order().is_empty() && doc.glue_order().is_empty() {
         std::borrow::Cow::Borrowed(doc)
     } else {
-        std::borrow::Cow::Owned(doc.authoring_rest_projection())
+        std::borrow::Cow::Owned(
+            doc.authoring_rest_projection()
+                .map_err(|s| Cmo3Error::InvalidDocument(s.message))?,
+        )
     };
     let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
         &rest_doc,
@@ -692,7 +698,7 @@ pub(crate) fn encode_with_animation(
         .collect();
     let mut rotation_units = HashMap::new();
     for id in doc.sorted_transforms() {
-        let transform = doc.get_transform(&id).unwrap();
+        let transform = doc.transform(&id).unwrap();
         let inherited = rotation_units
             .get(transform.parent())
             .copied()
@@ -725,7 +731,7 @@ pub(crate) fn encode_with_animation(
         }
     }
     for id in doc.transform_order() {
-        let tag = if doc.get_transform(id).unwrap().warp().is_some() {
+        let tag = if doc.transform(id).unwrap().warp().is_some() {
             "CWarpDeformerSource"
         } else {
             "CRotationDeformerSource"
@@ -737,7 +743,7 @@ pub(crate) fn encode_with_animation(
     if !doc.editor_state().is_empty()
         || !doc.hierarchy_order().is_empty()
         || doc.transform_order().iter().any(|id| {
-            let transform = doc.get_transform(id).unwrap();
+            let transform = doc.transform(id).unwrap();
             transform.warp_authoring.is_some()
                 || transform.original_shape.is_some()
                 || transform.warp().is_some_and(|w| w.bezier.is_some())

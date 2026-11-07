@@ -1,10 +1,11 @@
+use zipzi_contract::authoring::ObjectKind;
+use zipzi_core::document::{
+    SceneContentEdit as E, SceneContentTarget as T, SceneContentValue as V,
+};
 use zipzi_core::BindingAxisEditing;
 use zipzi_core::WarpBezierEvaluation;
 use zipzi_core::{document::*, *};
-use zipzi_sdk::{
-    AuthoringSession, ObjectKind, SceneContentEdit as E, SceneContentTarget as T,
-    SceneContentValue as V,
-};
+use zipzi_sdk::{AuthoringSession, ConversionControl, ConversionLimits};
 #[path = "scene_content/deformer_original.rs"]
 mod deformer_original;
 #[path = "scene_content/warp_preservation.rs"]
@@ -13,112 +14,179 @@ fn id(n: u32) -> String {
     format!("20000000-0000-4000-8000-{n:012x}")
 }
 fn session() -> AuthoringSession {
-    AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
+    AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(1),
+                (Canvas::new(100., 100., Vec2::default(), 1.)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    )
+}
+
+// Query values carry the complete formal source; Commands also checks the field value.
+type ContentQuery = (zipzi_sdk::Version, String, T, V);
+fn read_content(
+    s: &AuthoringSession,
+    owner: &str,
+    target: T,
+) -> Result<ContentQuery, zipzi_sdk::Status> {
+    let value = s
+        .snapshot()
+        .document()
+        .scene_content_value(owner, &target)?;
+    Ok((s.version(), owner.into(), target, value))
+}
+fn prepare_content(
+    s: &AuthoringSession,
+    query: &ContentQuery,
+    value: V,
+) -> Result<
+    (
+        zipzi_core::state::SceneContentOutcome,
+        zipzi_sdk::PreparedChange,
+    ),
+    zipzi_sdk::Status,
+> {
+    let mut draft = s.begin_draft();
+    let mut source = draft.source();
+    source.base = query.0;
+    let outcome = draft.batch(source, |c| {
+        c.patch_scene_content(
+            &query.1,
+            &query.2,
+            query.3.clone(),
+            value,
+            Default::default(),
+            &Default::default(),
+        )
+    })?;
+    Ok((outcome, draft.prepare("Content")?))
 }
 
 #[test]
 fn warp_content_addresses_expire_after_organization_context_roundtrip() {
     let mut s = session();
-    let create = s
-        .plan_scene_edit(SceneEdit::Create {
-            id: id(2),
-            name: "Warp".into(),
-            object: SceneCreate::Warp { bounds: None },
-            part_id: None,
-            parent_id: None,
-            before: None,
-            deformation_before: None,
-        })
-        .unwrap();
-    s.execute_scene_plan(&create).unwrap();
-    s.edit("Part", None, |e| {
-        e.create_part(Part {
-            id: id(3),
-            ..Default::default()
-        })
+    let create = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Create {
+                id: id(2),
+                name: "Warp".into(),
+                object: SceneCreate::Warp { bounds: None },
+                part_id: None,
+                parent_id: None,
+                before: None,
+                deformation_before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
     })
     .unwrap();
-    let address = s
-        .scene_content_address(
-            &id(2),
-            T::WarpPoint {
-                row: 0,
-                column: 0,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
-    let plan = s
-        .plan_organization_edit(OrganizationEdit::Move {
+    s.publish(create.1).unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_part({
+                    let mut value = Part {
+                        id: id(3),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Part")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    let address = read_content(
+        &s,
+        &id(2),
+        T::WarpPoint {
+            row: 0,
+            column: 0,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_organization(OrganizationEdit::Move {
             ids: vec![id(2)],
             destination: OrganizationCollection::PartMembers {
                 part_id: Some(id(3)),
             },
             before: None,
         })
-        .unwrap();
-    s.execute_organization_plan(&plan).unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .is_err());
-    s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .is_err());
+    })
+    .unwrap();
+    s.publish(plan.1).unwrap();
+    assert!(prepare_content(&s, &address, address.3.clone()).is_err());
+    s.undo(s.version()).unwrap();
+    assert!(prepare_content(&s, &address, address.3.clone()).is_err());
 }
 
 #[test]
 fn unchanged_synthetic_bezier_control_does_not_materialize_controller() {
     let mut s = session();
-    let create = s
-        .plan_scene_edit(SceneEdit::Create {
-            id: id(2),
-            name: "Warp".into(),
-            object: SceneCreate::Warp { bounds: None },
-            part_id: None,
-            parent_id: None,
-            before: None,
-            deformation_before: None,
-        })
-        .unwrap();
-    s.execute_scene_plan(&create).unwrap();
+    let create = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Create {
+                id: id(2),
+                name: "Warp".into(),
+                object: SceneCreate::Warp { bounds: None },
+                part_id: None,
+                parent_id: None,
+                before: None,
+                deformation_before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    s.publish(create.1).unwrap();
     mesh(&mut s, 3);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let version = s.version();
-    let address = s
-        .scene_content_address(
-            &id(2),
-            T::WarpBezierControl {
-                node: 0,
-                component: 0,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
-    let plan = s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .unwrap();
-    assert!(plan.is_noop());
-    assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
+    let address = read_content(
+        &s,
+        &id(2),
+        T::WarpBezierControl {
+            node: 0,
+            component: 0,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
+    let plan = prepare_content(&s, &address, address.3.clone()).unwrap();
+    assert!(plan.1.writes().is_empty());
+    assert!(s.publish(plan.1).unwrap().writes.is_empty());
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
     assert!(s
+        .snapshot()
         .document()
-        .get_transform(&id(2))
+        .transform(&id(2))
         .unwrap()
         .warp()
         .unwrap()
         .bezier
         .is_none());
-    let plan = s
-        .plan_scene_content_patch(&address, V::Point(Vec2::new(2., 3.)))
-        .unwrap();
-    assert!(!plan.is_noop());
-    s.execute_scene_content_plan(&plan).unwrap();
+    let plan = prepare_content(&s, &address, V::Point(Vec2::new(2., 3.))).unwrap();
+    assert!(!plan.1.writes().is_empty());
+    s.publish(plan.1).unwrap();
     assert!(s
+        .snapshot()
         .document()
-        .get_transform(&id(2))
+        .transform(&id(2))
         .unwrap()
         .warp()
         .unwrap()
@@ -131,32 +199,31 @@ fn unchanged_implicit_offscreen_mapping_preserves_redo() {
     let mut s = session();
     offscreen(&mut s, false);
     mesh(&mut s, 30);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let version = s.version();
-    let address = s
-        .scene_content_address(
-            &id(23),
-            T::OffscreenMapping {
-                slot: PartKeyformSlot::Static,
-            },
-        )
-        .unwrap();
-    let plan = s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .unwrap();
-    assert!(plan.is_noop());
-    assert!(!s.execute_scene_content_plan(&plan).unwrap().changed);
+    let address = read_content(
+        &s,
+        &id(23),
+        T::OffscreenMapping {
+            slot: PartKeyformSlot::Static,
+        },
+    )
+    .unwrap();
+    let plan = prepare_content(&s, &address, address.3.clone()).unwrap();
+    assert!(plan.1.writes().is_empty());
+    assert!(s.publish(plan.1).unwrap().writes.is_empty());
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
     assert!(s
+        .snapshot()
         .document()
-        .get_offscreen(&id(23))
+        .offscreen(&id(23))
         .unwrap()
         .part_keyform_indices
         .is_empty());
-    s.redo().unwrap();
-    assert!(s.document().get_mesh(&id(30)).is_some());
+    s.redo(s.version()).unwrap();
+    assert!(s.snapshot().document().mesh(&id(30)).is_some());
 }
 
 #[test]
@@ -167,40 +234,59 @@ fn glue_endpoint_changes_publish_pair_references_in_both_history_directions() {
     }
     glue(&mut s, 5, 2, 3, vec![pair(6, Some(1), Some(2))]);
     let expected = s
+        .snapshot()
         .document()
         .scene_field(&id(5), SceneField::GlueEndpoints)
         .unwrap();
-    let plan = s
-        .plan_scene_edit(SceneEdit::Patch {
-            id: id(5),
-            expected,
-            value: SceneFieldValue::GlueEndpoints {
-                a: id(4).into(),
-                b: id(3).into(),
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Patch {
+                id: id(5),
+                expected,
+                value: SceneFieldValue::GlueEndpoints {
+                    a: id(4).into(),
+                    b: id(3).into(),
+                },
+                clear_glue_pairs: false,
             },
-            clear_glue_pairs: false,
-        })
-        .unwrap();
-    let check = |receipt: &zipzi_sdk::EditReceipt, before: u32, after: u32| {
-        let change = receipt
-            .changes
-            .content_references
-            .iter()
-            .find(|c| c.entity.id == id(6))
-            .expect("pair target change");
-        let zipzi_sdk::SceneContentReferenceValue::Pair { mesh_a, .. } = &change.before else {
-            panic!("before pair")
-        };
-        assert_eq!(mesh_a.resolved_id(), Some(id(before).as_str()));
-        let zipzi_sdk::SceneContentReferenceValue::Pair { mesh_a, .. } = &change.after else {
-            panic!("after pair")
-        };
-        assert_eq!(mesh_a.resolved_id(), Some(id(after).as_str()));
-        assert!(receipt.changes.modified.iter().any(|e| e.id == id(6)));
-    };
-    check(&s.execute_scene_plan(&plan).unwrap(), 2, 4);
-    check(&s.undo().unwrap(), 4, 2);
-    check(&s.redo().unwrap(), 2, 4);
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    let receipt = s.publish(plan.1).unwrap();
+    assert!(receipt.writes.records().iter().any(|r| r.id == id(5)));
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .glue(&id(5))
+            .unwrap()
+            .mesh_a_id
+            .resolved_id(),
+        Some(id(4).as_str())
+    );
+    let receipt = s.undo(s.version()).unwrap();
+    assert!(receipt.writes.records().iter().any(|r| r.id == id(5)));
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .glue(&id(5))
+            .unwrap()
+            .mesh_a_id
+            .resolved_id(),
+        Some(id(2).as_str())
+    );
+    let receipt = s.redo(s.version()).unwrap();
+    assert!(receipt.writes.records().iter().any(|r| r.id == id(5)));
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .glue(&id(5))
+            .unwrap()
+            .mesh_a_id
+            .resolved_id(),
+        Some(id(4).as_str())
+    );
 }
 
 #[test]
@@ -208,71 +294,118 @@ fn shape_address_rejects_recreated_binding_with_identical_content() {
     let mut s = session();
     mesh(&mut s, 2);
     let positions = s
+        .snapshot()
         .document()
-        .get_mesh(&id(2))
+        .mesh(&id(2))
         .unwrap()
         .base_positions
         .clone();
-    s.edit("Binding", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(3),
-            ..Default::default()
-        })?;
-        e.create_binding(MeshBinding {
-            id: id(4),
-            mesh_id: id(2),
-            axes: vec![BindingAxis::new(id(3), vec![0.])],
-            keyforms: vec![MeshKeyform {
-                keys: vec![0.],
-                positions,
-                ..Default::default()
-            }],
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(3),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.create_binding(MeshBinding {
+                    id: id(4),
+                    mesh_id: id(2),
+                    axes: vec![BindingAxis::new(id(3), vec![0.])],
+                    keyforms: vec![MeshKeyform {
+                        keys: vec![0.],
+                        positions,
+                        ..Default::default()
+                    }],
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Binding")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let binding = s.document().get_binding(&id(4)).unwrap().clone();
-    let address = s
-        .scene_content_address(
-            &id(2),
-            T::VertexPosition {
-                vertex_id: 1,
-                shape: ShapeTarget::Ordinary {
-                    binding_id: id(4),
-                    samples: binding.keyforms[0].samples.clone(),
-                },
+    let binding = s.snapshot().document().binding(&id(4)).unwrap().clone();
+    let address = read_content(
+        &s,
+        &id(2),
+        T::VertexPosition {
+            vertex_id: 1,
+            shape: ShapeTarget::Ordinary {
+                binding_id: id(4),
+                samples: binding.keyforms[0].samples.clone(),
             },
-        )
-        .unwrap();
-    let handle = s.handle(ObjectKind::MeshBinding, &id(4)).unwrap();
-    s.edit("Recreate binding", None, |e| {
-        e.erase_object(&id(4))?;
-        e.create_binding(binding)
+        },
+    )
+    .unwrap();
+    let handle = {
+        let kind = ObjectKind::MeshBinding;
+        let object_id = (&id(4)).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let mut binding = binding;
+                binding.keyforms[0].positions[0].x += 1.;
+                e.replace_binding(binding)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Recreate binding")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    assert!((s.read_snapshot().source != handle.2));
+    assert!(prepare_content(&s, &address, V::Point(Vec2::new(8., 9.))).is_err());
+}
+fn run(s: &mut AuthoringSession, e: E) -> zipzi_sdk::Publication {
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene_content(e, Default::default(), &Default::default())
     })
     .unwrap();
-    assert!(s.resolve_handle(&handle).is_err());
-    assert!(s
-        .plan_scene_content_patch(&address, V::Point(Vec2::new(8., 9.)))
-        .is_err());
-}
-fn run(s: &mut AuthoringSession, e: E) -> zipzi_sdk::EditReceipt {
-    let p = s.plan_scene_content(e).unwrap();
-    s.execute_scene_content_plan(&p).unwrap()
+    s.publish(p.1).unwrap()
 }
 fn mesh(s: &mut AuthoringSession, n: u32) {
-    s.edit("Mesh", None, |e| {
-        e.create_mesh(Mesh {
-            id: id(n),
-            vertex_ids: vec![1, 2, 3],
-            base_positions: vec![Vec2::new(0., 0.), Vec2::new(10., 0.), Vec2::new(0., 10.)],
-            uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
-            triangles: vec![[1, 2, 3]],
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_mesh({
+                    let mut value = Mesh {
+                        id: id(n),
+                        vertex_ids: vec![1, 2, 3],
+                        base_positions: vec![
+                            Vec2::new(0., 0.),
+                            Vec2::new(10., 0.),
+                            Vec2::new(0., 10.),
+                        ],
+                        uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+                        triangles: vec![[1, 2, 3]],
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Mesh")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 fn lock(s: &mut AuthoringSession, id: &str) {
-    let mut state = s.document().editor_state().clone();
+    let mut state = s.snapshot().document().editor_state().clone();
     state.objects.insert(
         id.into(),
         ObjectEditorState {
@@ -280,19 +413,38 @@ fn lock(s: &mut AuthoringSession, id: &str) {
             ..Default::default()
         },
     );
-    s.edit("Lock", None, |e| e.replace_editor_state(state))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_editor_state(state))
+            .and_then(|value| {
+                let prepared = draft.prepare("Lock")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
 }
 fn glue(s: &mut AuthoringSession, n: u32, a: u32, b: u32, pairs: Vec<GlueVertexPair>) {
-    s.edit("Glue", None, |e| {
-        e.create_glue(Glue {
-            id: id(n),
-            mesh_a_id: id(a).into(),
-            mesh_b_id: id(b).into(),
-            pairs,
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_glue(
+                    e,
+                    Glue {
+                        id: id(n),
+                        mesh_a_id: id(a).into(),
+                        mesh_b_id: id(b).into(),
+                        pairs,
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Glue")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 fn pair(n: u32, a: Option<u32>, b: Option<u32>) -> GlueVertexPair {
@@ -304,53 +456,72 @@ fn pair(n: u32, a: Option<u32>, b: Option<u32>) -> GlueVertexPair {
     }
 }
 fn offscreen(s: &mut AuthoringSession, bound: bool) {
-    s.edit("Offscreen", None, |e| {
-        e.create_part(Part {
-            id: id(20),
-            ..Default::default()
-        })?;
-        if bound {
-            e.create_parameter(Parameter {
-                id: id(21),
-                minimum: 0.,
-                maximum: 1.,
-                ..Default::default()
-            })?;
-            e.create_scene_binding(SceneBinding {
-                id: id(22),
-                axes: vec![BindingAxis::new(id(21), vec![0., 1.])],
-                track: SceneTrack::Part {
-                    target_id: id(20).into(),
-                    keyforms: vec![
-                        PartKeyform {
-                            keys: vec![0.],
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_part({
+                    let mut value = Part {
+                        id: id(20),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                if bound {
+                    e.create_parameter({
+                        let mut value = Parameter {
+                            id: id(21),
+                            minimum: 0.,
+                            maximum: 1.,
                             ..Default::default()
+                        };
+                        value.runtime_id = value.id.clone();
+                        value
+                    })?;
+                    e.create_scene_binding(SceneBinding {
+                        id: id(22),
+                        axes: vec![BindingAxis::new(id(21), vec![0., 1.])],
+                        track: SceneTrack::Part {
+                            target_id: id(20).into(),
+                            keyforms: vec![
+                                PartKeyform {
+                                    keys: vec![0.],
+                                    ..Default::default()
+                                },
+                                PartKeyform {
+                                    keys: vec![1.],
+                                    ..Default::default()
+                                },
+                            ],
                         },
-                        PartKeyform {
-                            keys: vec![1.],
-                            ..Default::default()
-                        },
-                    ],
-                },
-            })?;
-        }
-        e.create_offscreen(Offscreen {
-            id: id(23),
-            part_id: id(20),
-            keyforms: vec![
-                OffscreenKeyform {
-                    opacity: 0.2,
-                    ..Default::default()
-                },
-                OffscreenKeyform {
-                    opacity: 0.8,
-                    ..Default::default()
-                },
-            ],
-            part_keyform_indices: if bound { vec![0, 1] } else { vec![] },
-            ..Default::default()
-        })
-    })
+                    })?;
+                }
+                crate::support::insert_offscreen(
+                    e,
+                    Offscreen {
+                        id: id(23),
+                        part_id: id(20),
+                        keyforms: vec![
+                            OffscreenKeyform {
+                                opacity: 0.2,
+                                ..Default::default()
+                            },
+                            OffscreenKeyform {
+                                opacity: 0.8,
+                                ..Default::default()
+                            },
+                        ],
+                        part_keyform_indices: if bound { vec![0, 1] } else { vec![] },
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Offscreen")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 
@@ -361,27 +532,52 @@ fn warp_point_edits_preserve_controller_and_later_bezier_delta_keeps_the_residua
         .flat_map(|y| (0..=2).map(move |x| Vec2::new(x as f32 / 2., y as f32 / 2.)))
         .collect();
     let controller = WarpBezier::from_lattice(2, 2, false, &points);
-    s.edit("Warp", None, |edit| {
-        edit.create_transform(Transform {
-            id: id(2),
-            data: TransformData::Warp(WarpTransform {
-                rows: 2,
-                columns: 2,
-                quad: false,
-                points: points.clone(),
-                bezier: Some(controller.clone()),
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                crate::support::insert_transform(
+                    edit,
+                    Transform {
+                        id: id(2),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 2,
+                            columns: 2,
+                            quad: false,
+                            points: points.clone(),
+                            bezier: Some(controller.clone()),
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Warp")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let mut detail = points.clone();
     detail[4].y += 0.25;
-    s.edit("Lattice detail", None, |edit| {
-        edit.update_warp_points(&id(2), detail.clone())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                update_points(edit, &id(2), detail.clone())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Lattice detail")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let warp = s.document().get_transform(&id(2)).unwrap().warp().unwrap();
+    let warp = s
+        .snapshot()
+        .document()
+        .transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap();
     assert_eq!(warp.bezier.as_ref(), Some(&controller));
     assert_eq!(warp.points, detail);
     let mut changed = controller.clone();
@@ -396,18 +592,20 @@ fn warp_point_edits_preserve_controller_and_later_bezier_delta_keeps_the_residua
         },
     );
     assert_eq!(
-        s.document()
-            .get_transform(&id(2))
+        s.snapshot()
+            .document()
+            .transform(&id(2))
             .unwrap()
             .warp()
             .unwrap()
             .points,
         expected
     );
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_eq!(
-        s.document()
-            .get_transform(&id(2))
+        s.snapshot()
+            .document()
+            .transform(&id(2))
             .unwrap()
             .warp()
             .unwrap()
@@ -415,8 +613,9 @@ fn warp_point_edits_preserve_controller_and_later_bezier_delta_keeps_the_residua
         detail
     );
     assert_eq!(
-        s.document()
-            .get_transform(&id(2))
+        s.snapshot()
+            .document()
+            .transform(&id(2))
             .unwrap()
             .warp()
             .unwrap()
@@ -424,10 +623,11 @@ fn warp_point_edits_preserve_controller_and_later_bezier_delta_keeps_the_residua
             .as_ref(),
         Some(&controller)
     );
-    s.redo().unwrap();
+    s.redo(s.version()).unwrap();
     assert_eq!(
-        s.document()
-            .get_transform(&id(2))
+        s.snapshot()
+            .document()
+            .transform(&id(2))
             .unwrap()
             .warp()
             .unwrap()
@@ -444,49 +644,69 @@ fn warp_authoring_density_refits_all_stored_controllers_and_roundtrips_without_c
         .flat_map(|y| (0..=4).map(move |x| Vec2::new(x as f32, y as f32)))
         .collect::<Vec<_>>();
     let controller = WarpBezier::from_lattice(4, 4, false, &points);
-    s.edit("Warp and shapes", None, |edit| {
-        edit.create_transform(Transform {
-            id: id(2),
-            data: TransformData::Warp(WarpTransform {
-                rows: 4,
-                columns: 4,
-                quad: false,
-                points: points.clone(),
-                bezier: Some(controller.clone()),
-            }),
-            ..Default::default()
-        })?;
-        edit.create_parameter(Parameter {
-            id: id(3),
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.,
-            ..Default::default()
-        })?;
-        edit.create_scene_binding(SceneBinding {
-            id: id(4),
-            axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
-            track: SceneTrack::Warp {
-                target_id: id(2).into(),
-                keyforms: vec![
-                    WarpKeyform {
-                        keys: vec![0.],
-                        positions: points.clone(),
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                crate::support::insert_transform(
+                    edit,
+                    Transform {
+                        id: id(2),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 4,
+                            columns: 4,
+                            quad: false,
+                            points: points.clone(),
+                            bezier: Some(controller.clone()),
+                        }),
                         ..Default::default()
                     },
-                    WarpKeyform {
-                        keys: vec![1.],
-                        positions: points.clone(),
-                        bezier: Some(controller.clone()),
+                )?;
+                edit.create_parameter({
+                    let mut value = Parameter {
+                        id: id(3),
+                        minimum: 0.,
+                        maximum: 1.,
+                        default_value: 0.,
                         ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                edit.create_scene_binding(SceneBinding {
+                    id: id(4),
+                    axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
+                    track: SceneTrack::Warp {
+                        target_id: id(2).into(),
+                        keyforms: vec![
+                            WarpKeyform {
+                                keys: vec![0.],
+                                positions: points.clone(),
+                                ..Default::default()
+                            },
+                            WarpKeyform {
+                                keys: vec![1.],
+                                positions: points.clone(),
+                                bezier: Some(controller.clone()),
+                                ..Default::default()
+                            },
+                        ],
                     },
-                ],
-            },
-        })
-    })
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Warp and shapes")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let original = s.transform(&id(2)).unwrap();
-    let binding = s.scene_binding(&id(4)).unwrap();
+    let original = s.snapshot().document().transform(&id(2)).cloned().unwrap();
+    let binding = s
+        .snapshot()
+        .document()
+        .scene_binding(&id(4))
+        .cloned()
+        .unwrap();
     let settings = WarpAuthoringSettings {
         auto_reform: true,
         edit_mode: WarpBezierEditMode::SmoothLocal,
@@ -502,14 +722,19 @@ fn warp_authoring_density_refits_all_stored_controllers_and_roundtrips_without_c
             settings: settings.clone(),
         },
     );
-    let changed = s.transform(&id(2)).unwrap();
+    let changed = s.snapshot().document().transform(&id(2)).cloned().unwrap();
     assert_eq!(changed.warp().unwrap().points, points);
     assert_eq!(changed.warp_authoring.as_ref(), Some(&settings));
     assert_eq!(
         changed.warp().unwrap().bezier.as_ref().unwrap().nodes.len(),
         12
     );
-    let changed_binding = s.scene_binding(&id(4)).unwrap();
+    let changed_binding = s
+        .snapshot()
+        .document()
+        .scene_binding(&id(4))
+        .cloned()
+        .unwrap();
     let SceneTrack::Warp { keyforms, .. } = &changed_binding.track else {
         unreachable!()
     };
@@ -519,50 +744,93 @@ fn warp_authoring_density_refits_all_stored_controllers_and_roundtrips_without_c
         assert_eq!(form.positions, points);
     }
     let version = s.version();
-    assert!(
-        !s.execute_scene_content_plan(
-            &s.plan_scene_content(E::WarpAuthoring {
-                transform_id: id(2),
-                settings: settings.clone()
-            })
+    assert!(s
+        .publish(
+            crate::support::prepared(&s, |candidate_commands| candidate_commands
+                .edit_scene_content(
+                    E::WarpAuthoring {
+                        transform_id: id(2),
+                        settings: settings.clone()
+                    },
+                    Default::default(),
+                    &Default::default()
+                ))
             .unwrap()
+            .1
         )
         .unwrap()
-        .changed
-    );
+        .writes
+        .is_empty());
     assert_eq!(s.version(), version);
-    s.undo().unwrap();
-    assert_eq!(s.transform(&id(2)), Some(original));
-    assert_eq!(s.scene_binding(&id(4)), Some(binding));
-    s.redo().unwrap();
-    assert_eq!(s.transform(&id(2)), Some(changed.clone()));
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().transform(&id(2)).cloned(),
+        Some(original)
+    );
+    assert_eq!(
+        s.snapshot().document().scene_binding(&id(4)).cloned(),
+        Some(binding)
+    );
+    s.redo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().transform(&id(2)).cloned(),
+        Some(changed.clone())
+    );
     let directory =
         std::env::temp_dir().join(format!("zipzi-warp-authoring-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&directory).unwrap();
-    let saved = s
-        .save_project(&directory.join("warp-authoring"), None)
-        .unwrap();
-    let mut reopened = session();
-    reopened.open_project(&saved.path, None).unwrap();
-    assert_eq!(reopened.transform(&id(2)), Some(changed));
-    assert_eq!(reopened.scene_binding(&id(4)), Some(changed_binding));
-    let copy = reopened
-        .plan_scene_edit(SceneEdit::Duplicate {
-            ids: vec![id(2)],
-            scope: SceneCopyScope::Selected,
-            destination: None,
-            before: None,
-        })
-        .unwrap();
-    let copied = copy.copied_ids()[&id(2)].clone();
-    reopened.execute_scene_plan(&copy).unwrap();
+    let mut reopened = AuthoringSession::new(crate::support::roundtrip(s.snapshot()));
     assert_eq!(
-        reopened.transform(&copied).unwrap().warp_authoring.as_ref(),
+        reopened.snapshot().document().transform(&id(2)).cloned(),
+        Some(changed)
+    );
+    assert_eq!(
+        reopened
+            .snapshot()
+            .document()
+            .scene_binding(&id(4))
+            .cloned(),
+        Some(changed_binding)
+    );
+    let copy = crate::support::prepared(&reopened, |c| {
+        c.edit_scene(
+            SceneEdit::Duplicate {
+                ids: vec![id(2)],
+                scope: SceneCopyScope::Selected,
+                destination: None,
+                before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    let copied = copy.0.copied_ids[&id(2)].clone();
+    reopened.publish(copy.1).unwrap();
+    assert_eq!(
+        reopened
+            .snapshot()
+            .document()
+            .transform(&copied)
+            .cloned()
+            .unwrap()
+            .warp_authoring
+            .as_ref(),
         Some(&settings)
     );
-    let before = reopened.transform(&id(2)).unwrap();
-    let old_binding = reopened.scene_binding(&id(4)).unwrap();
-    let mut locks = reopened.document().editor_state().clone();
+    let before = reopened
+        .snapshot()
+        .document()
+        .transform(&id(2))
+        .cloned()
+        .unwrap();
+    let old_binding = reopened
+        .snapshot()
+        .document()
+        .scene_binding(&id(4))
+        .cloned()
+        .unwrap();
+    let mut locks = reopened.snapshot().document().editor_state().clone();
     locks.objects.insert(
         id(4),
         ObjectEditorState {
@@ -570,49 +838,79 @@ fn warp_authoring_density_refits_all_stored_controllers_and_roundtrips_without_c
             ..Default::default()
         },
     );
-    reopened
-        .edit("Lock controller owner", None, |edit| {
-            edit.replace_editor_state(locks)
-        })
-        .unwrap();
+    {
+        let mut draft = reopened.begin_draft();
+        draft
+            .batch(draft.source(), |edit| edit.replace_editor_state(locks))
+            .and_then(|value| {
+                let prepared = draft.prepare("Lock controller owner")?;
+                reopened.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     let version = reopened.version();
-    assert!(reopened
-        .plan_scene_content(E::WarpAuthoring {
-            transform_id: id(2),
-            settings: WarpAuthoringSettings {
-                bezier_grid: Some(WarpBezierGrid {
-                    rows: 2,
-                    columns: 2
-                }),
-                ..settings.clone()
-            }
-        })
-        .is_err());
-    assert!(reopened
-        .plan_scene_content(E::WarpAuthoring {
-            transform_id: id(2),
-            settings: WarpAuthoringSettings {
-                bezier_grid: Some(WarpBezierGrid {
-                    rows: 0,
-                    columns: 2
-                }),
-                ..settings.clone()
-            }
-        })
-        .is_err());
-    assert_eq!(reopened.transform(&id(2)), Some(before));
-    assert_eq!(reopened.scene_binding(&id(4)), Some(old_binding));
-    assert_eq!(reopened.version(), version);
-    assert!(reopened
-        .plan_scene_content(E::WarpShape {
-            transform_id: id(2),
-            target: ShapeTarget::Blend {
-                binding_id: id(4),
-                sample_id: id(5)
+    assert!(
+        crate::support::prepared(&reopened, |c| c.edit_scene_content(
+            E::WarpAuthoring {
+                transform_id: id(2),
+                settings: WarpAuthoringSettings {
+                    bezier_grid: Some(WarpBezierGrid {
+                        rows: 2,
+                        columns: 2
+                    }),
+                    ..settings.clone()
+                }
             },
-            action: WarpShapeAction::Reform
-        })
-        .is_err());
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err()
+    );
+    assert!(
+        crate::support::prepared(&reopened, |c| c.edit_scene_content(
+            E::WarpAuthoring {
+                transform_id: id(2),
+                settings: WarpAuthoringSettings {
+                    bezier_grid: Some(WarpBezierGrid {
+                        rows: 0,
+                        columns: 2
+                    }),
+                    ..settings.clone()
+                }
+            },
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err()
+    );
+    assert_eq!(
+        reopened.snapshot().document().transform(&id(2)).cloned(),
+        Some(before)
+    );
+    assert_eq!(
+        reopened
+            .snapshot()
+            .document()
+            .scene_binding(&id(4))
+            .cloned(),
+        Some(old_binding)
+    );
+    assert_eq!(reopened.version(), version);
+    assert!(
+        crate::support::prepared(&reopened, |c| c.edit_scene_content(
+            E::WarpShape {
+                transform_id: id(2),
+                target: ShapeTarget::Blend {
+                    binding_id: id(4),
+                    sample_id: id(5)
+                },
+                action: WarpShapeAction::Reform
+            },
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err()
+    );
     std::fs::remove_dir_all(directory).unwrap();
 }
 
@@ -623,25 +921,44 @@ fn warp_reset_reform_and_auto_reform_have_distinct_geometry_effects() {
         .flat_map(|y| (0..=4).map(move |x| Vec2::new(x as f32, y as f32)))
         .collect::<Vec<_>>();
     let controller = WarpBezier::from_lattice(4, 4, false, &points);
-    s.edit("Warp", None, |edit| {
-        edit.create_transform(Transform {
-            id: id(2),
-            data: TransformData::Warp(WarpTransform {
-                rows: 4,
-                columns: 4,
-                quad: false,
-                points: points.clone(),
-                bezier: Some(controller),
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                crate::support::insert_transform(
+                    edit,
+                    Transform {
+                        id: id(2),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 4,
+                            columns: 4,
+                            quad: false,
+                            points: points.clone(),
+                            bezier: Some(controller),
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Warp")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let mut detail = points;
     detail[12].y += 0.5;
-    s.edit("Detail", None, |edit| {
-        edit.update_warp_points(&id(2), detail.clone())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |edit| {
+                update_points(edit, &id(2), detail.clone())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Detail")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     run(
         &mut s,
@@ -651,28 +968,26 @@ fn warp_reset_reform_and_auto_reform_have_distinct_geometry_effects() {
             action: WarpShapeAction::ResetController,
         },
     );
-    let reset = s.transform(&id(2)).unwrap();
+    let reset = s.snapshot().document().transform(&id(2)).cloned().unwrap();
     assert_eq!(reset.warp().unwrap().points, detail);
     let before = reset.warp().unwrap().bezier.as_ref().unwrap();
-    let address = s
-        .scene_content_address(
-            &id(2),
-            T::WarpBezierControl {
-                node: 0,
-                component: 2,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
+    let address = read_content(
+        &s,
+        &id(2),
+        T::WarpBezierControl {
+            node: 0,
+            component: 2,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
     let point = Vec2::new(
         before.nodes[0].handles[1].x,
         before.nodes[0].handles[1].y + 0.3,
     );
-    let plan = s
-        .plan_scene_content_patch(&address, V::Point(point))
-        .unwrap();
-    s.execute_scene_content_plan(&plan).unwrap();
-    let edited = s.transform(&id(2)).unwrap();
+    let plan = prepare_content(&s, &address, V::Point(point)).unwrap();
+    s.publish(plan.1).unwrap();
+    let edited = s.snapshot().document().transform(&id(2)).cloned().unwrap();
     let next = edited.warp().unwrap().bezier.as_ref().unwrap();
     assert_eq!(
         edited.warp().unwrap().points,
@@ -687,11 +1002,21 @@ fn warp_reset_reform_and_auto_reform_have_distinct_geometry_effects() {
         },
     );
     assert_eq!(
-        s.transform(&id(2)).unwrap().warp().unwrap().points,
+        s.snapshot()
+            .document()
+            .transform(&id(2))
+            .cloned()
+            .unwrap()
+            .warp()
+            .unwrap()
+            .points,
         next.lattice(4, 4)
     );
-    s.undo().unwrap();
-    assert_eq!(s.transform(&id(2)), Some(edited.clone()));
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().transform(&id(2)).cloned(),
+        Some(edited.clone())
+    );
     run(
         &mut s,
         E::WarpAuthoring {
@@ -703,35 +1028,45 @@ fn warp_reset_reform_and_auto_reform_have_distinct_geometry_effects() {
         },
     );
     assert_eq!(
-        s.transform(&id(2)).unwrap().warp().unwrap().points,
+        s.snapshot()
+            .document()
+            .transform(&id(2))
+            .cloned()
+            .unwrap()
+            .warp()
+            .unwrap()
+            .points,
         edited.warp().unwrap().points
     );
-    let address = s
-        .scene_content_address(
-            &id(2),
-            T::WarpBezierControl {
-                node: 0,
-                component: 2,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
+    let address = read_content(
+        &s,
+        &id(2),
+        T::WarpBezierControl {
+            node: 0,
+            component: 2,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
     let version = s.version();
-    let unchanged = s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .unwrap();
-    assert!(unchanged.is_noop());
-    assert!(!s.execute_scene_content_plan(&unchanged).unwrap().changed);
+    let unchanged = prepare_content(&s, &address, address.3.clone()).unwrap();
+    assert!(unchanged.1.writes().is_empty());
+    assert!(s.publish(unchanged.1).unwrap().writes.is_empty());
     assert_eq!(s.version(), version);
     assert_eq!(
-        s.transform(&id(2)).unwrap().warp().unwrap().points,
+        s.snapshot()
+            .document()
+            .transform(&id(2))
+            .cloned()
+            .unwrap()
+            .warp()
+            .unwrap()
+            .points,
         edited.warp().unwrap().points
     );
-    let plan = s
-        .plan_scene_content_patch(&address, V::Point(Vec2::new(point.x, point.y + 0.2)))
-        .unwrap();
-    s.execute_scene_content_plan(&plan).unwrap();
-    let automatic = s.transform(&id(2)).unwrap();
+    let plan = prepare_content(&s, &address, V::Point(Vec2::new(point.x, point.y + 0.2))).unwrap();
+    s.publish(plan.1).unwrap();
+    let automatic = s.snapshot().document().transform(&id(2)).cloned().unwrap();
     let warp = automatic.warp().unwrap();
     assert_eq!(warp.points, warp.bezier.as_ref().unwrap().lattice(4, 4));
     assert_eq!((warp.rows, warp.columns), (4, 4));
@@ -747,35 +1082,52 @@ fn unchanged_warp_points_preserve_bezier_controller_and_redo() {
         Vec2::new(1., 1.),
     ];
     let controller = WarpBezier::from_lattice(1, 1, false, &points);
-    s.edit("Warp", None, |e| {
-        e.create_transform(Transform {
-            id: id(2),
-            data: TransformData::Warp(WarpTransform {
-                rows: 1,
-                columns: 1,
-                quad: false,
-                points: points.clone(),
-                bezier: Some(controller.clone()),
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: id(2),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 1,
+                            columns: 1,
+                            quad: false,
+                            points: points.clone(),
+                            bezier: Some(controller.clone()),
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Warp")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     mesh(&mut s, 3);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let version = s.version();
-    let (_, receipt) = s
-        .edit("Unchanged points", None, |e| {
-            e.update_warp_points(&id(2), points)
-        })
-        .unwrap();
-    assert!(!receipt.changed);
+    let (_, receipt) = {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| update_points(e, &id(2), points))
+            .and_then(|value| {
+                let prepared = draft.prepare("Unchanged points")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    assert!(receipt.writes.is_empty());
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
     assert_eq!(
-        s.document()
-            .get_transform(&id(2))
+        s.snapshot()
+            .document()
+            .transform(&id(2))
             .unwrap()
             .warp()
             .unwrap()
@@ -788,31 +1140,51 @@ fn unchanged_warp_points_preserve_bezier_controller_and_redo() {
 fn mesh_topology_seeds_every_shape_and_keeps_vertex_identity() {
     let mut s = session();
     mesh(&mut s, 2);
-    s.edit("Binding", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(3),
-            ..Default::default()
-        })?;
-        e.create_binding(MeshBinding {
-            id: id(4),
-            mesh_id: id(2),
-            axes: vec![BindingAxis::new(id(3), vec![-1., 1.])],
-            keyforms: vec![
-                MeshKeyform {
-                    keys: vec![-1.],
-                    positions: vec![Vec2::new(0., 2.), Vec2::new(20., 2.), Vec2::new(0., 20.)],
-                    ..Default::default()
-                },
-                MeshKeyform {
-                    keys: vec![1.],
-                    positions: vec![Vec2::new(4., 2.), Vec2::new(24., 2.), Vec2::new(4., 20.)],
-                    ..Default::default()
-                },
-            ],
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(3),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.create_binding(MeshBinding {
+                    id: id(4),
+                    mesh_id: id(2),
+                    axes: vec![BindingAxis::new(id(3), vec![-1., 1.])],
+                    keyforms: vec![
+                        MeshKeyform {
+                            keys: vec![-1.],
+                            positions: vec![
+                                Vec2::new(0., 2.),
+                                Vec2::new(20., 2.),
+                                Vec2::new(0., 20.),
+                            ],
+                            ..Default::default()
+                        },
+                        MeshKeyform {
+                            keys: vec![1.],
+                            positions: vec![
+                                Vec2::new(4., 2.),
+                                Vec2::new(24., 2.),
+                                Vec2::new(4., 20.),
+                            ],
+                            ..Default::default()
+                        },
+                    ],
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Binding")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let old = s.document().get_binding(&id(4)).unwrap().clone();
+    let old = s.snapshot().document().binding(&id(4)).unwrap().clone();
     run(
         &mut s,
         E::InsertMeshVertices {
@@ -838,18 +1210,21 @@ fn mesh_topology_seeds_every_shape_and_keeps_vertex_identity() {
         },
     );
     assert_eq!(
-        s.document().get_mesh(&id(2)).unwrap().vertex_ids,
+        s.snapshot().document().mesh(&id(2)).unwrap().vertex_ids,
         [1, 2, 40, 3]
     );
     assert_eq!(
-        s.document().get_mesh(&id(2)).unwrap().base_positions[2],
+        s.snapshot().document().mesh(&id(2)).unwrap().base_positions[2],
         Vec2::new(5., 0.)
     );
     assert_eq!(
-        s.document().get_binding(&id(4)).unwrap().keyforms[0].positions[2],
+        s.snapshot().document().binding(&id(4)).unwrap().keyforms[0].positions[2],
         Vec2::new(10., 2.)
     );
-    assert_eq!(s.document().get_binding(&id(4)).unwrap().axes, old.axes);
+    assert_eq!(
+        s.snapshot().document().binding(&id(4)).unwrap().axes,
+        old.axes
+    );
     run(
         &mut s,
         E::ReorderMeshVertices {
@@ -858,16 +1233,16 @@ fn mesh_topology_seeds_every_shape_and_keeps_vertex_identity() {
         },
     );
     assert_eq!(
-        s.document().get_mesh(&id(2)).unwrap().triangles,
+        s.snapshot().document().mesh(&id(2)).unwrap().triangles,
         [[1, 2, 3]]
     );
     assert_eq!(
-        s.document().get_binding(&id(4)).unwrap().keyforms[1].positions[0],
+        s.snapshot().document().binding(&id(4)).unwrap().keyforms[1].positions[0],
         Vec2::new(14., 2.)
     );
-    s.undo().unwrap();
-    s.undo().unwrap();
-    assert_eq!(s.document().get_binding(&id(4)), Some(&old));
+    s.undo(s.version()).unwrap();
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().binding(&id(4)), Some(&old));
 }
 #[test]
 fn vertex_deletion_requires_policy_and_cleans_dependent_pairs() {
@@ -875,35 +1250,65 @@ fn vertex_deletion_requires_policy_and_cleans_dependent_pairs() {
     mesh(&mut s, 2);
     mesh(&mut s, 3);
     glue(&mut s, 4, 2, 3, vec![pair(5, Some(1), Some(2))]);
-    let old = s.handle(ObjectKind::GlueVertexPair, &id(5)).unwrap();
+    let old = {
+        let kind = ObjectKind::GlueVertexPair;
+        let object_id = (&id(5)).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
     let version = s.version();
     assert_eq!(
-        s.plan_scene_content(E::DeleteMeshVertices {
-            mesh_id: id(2),
-            vertices: vec![1],
-            policy: VertexDeletePolicy::RejectReferences
-        })
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::DeleteMeshVertices {
+                    mesh_id: id(2),
+                    vertices: vec![1],
+                    policy: VertexDeletePolicy::RejectReferences
+                },
+                Default::default(),
+                &Default::default()
+            ))
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "VERTEX_REFERENCED"
     );
     assert_eq!(s.version(), version);
-    let p = s
-        .plan_scene_content(E::DeleteMeshVertices {
-            mesh_id: id(2),
-            vertices: vec![1],
-            policy: VertexDeletePolicy::RemoveDependentContent,
-        })
-        .unwrap();
-    assert_eq!(p.report().removed_pair_ids, [id(5)]);
-    assert_eq!(p.report().removed_triangle_slots, [0]);
-    s.execute_scene_content_plan(&p).unwrap();
-    assert!(s.document().get_glue(&id(4)).unwrap().pairs.is_empty());
-    assert!(s.document().get_mesh(&id(2)).unwrap().triangles.is_empty());
-    s.undo().unwrap();
-    assert!(s.resolve_handle(&old).is_err());
-    assert!(s.document().get_glue_pair(&id(5)).is_some());
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene_content(
+            E::DeleteMeshVertices {
+                mesh_id: id(2),
+                vertices: vec![1],
+                policy: VertexDeletePolicy::RemoveDependentContent,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    assert_eq!(p.0.report.removed_pair_ids, [id(5)]);
+    assert_eq!(p.0.report.removed_triangle_slots, [0]);
+    s.publish(p.1).unwrap();
+    assert!(s
+        .snapshot()
+        .document()
+        .glue(&id(4))
+        .unwrap()
+        .pairs
+        .is_empty());
+    assert!(s
+        .snapshot()
+        .document()
+        .mesh(&id(2))
+        .unwrap()
+        .triangles
+        .is_empty());
+    s.undo(s.version()).unwrap();
+    assert!((s.read_snapshot().source != old.2));
+    assert!(s.snapshot().document().glue_pair(&id(5)).is_some());
 }
 #[test]
 fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
@@ -917,22 +1322,39 @@ fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
         3,
         vec![pair(5, None, None), pair(6, Some(1), Some(1))],
     );
-    let h = s.handle(ObjectKind::GlueVertexPair, &id(5)).unwrap();
-    assert_eq!(s.scene_projection().pair_slots[&id(6)].source_slot, 1);
-    assert!(!s.scene_projection().pair_slots.contains_key(&id(5)));
+    let h = {
+        let kind = ObjectKind::GlueVertexPair;
+        let object_id = (&id(5)).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
+    assert_eq!(
+        s.snapshot().document().scene_projection().pair_slots[&id(6)].source_slot,
+        1
+    );
+    assert!(!s
+        .snapshot()
+        .document()
+        .scene_projection()
+        .pair_slots
+        .contains_key(&id(5)));
     assert!(s
+        .snapshot()
+        .document()
         .scene_projection()
         .disabled
         .iter()
         .any(|d| d.id == id(5) && d.usage == SceneUse::GluePair));
     assert!(s
+        .snapshot()
         .document()
         .scene_export_omissions()
         .iter()
         .any(|d| d.id == id(5)));
-    let address = s
-        .scene_content_address(&id(4), T::GluePair { pair_id: id(5) })
-        .unwrap();
+    let address = read_content(&s, &id(4), T::GluePair { pair_id: id(5) }).unwrap();
     run(
         &mut s,
         E::MoveGluePairs {
@@ -941,24 +1363,24 @@ fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
             before: None,
         },
     );
-    s.resolve_handle(&h).unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, V::GluePair(pair(5, Some(2), Some(2))))
-        .is_err());
-    let a = s
-        .scene_content_address(&id(4), T::GluePair { pair_id: id(5) })
-        .unwrap();
-    let p = s
-        .plan_scene_content_patch(&a, V::GluePair(pair(5, Some(2), Some(2))))
-        .unwrap();
-    s.execute_scene_content_plan(&p).unwrap();
-    assert!(!s.scene_projection().disabled.iter().any(|d| d.id == id(5)));
-    assert!(s.evaluate(&Default::default()).is_ok());
-    let encoded = zipzi_project::encode_project(s.document()).unwrap();
-    let restored = zipzi_project::decode_project(&encoded).unwrap();
+    s.snapshot().document().require_object(h.0, &h.1).unwrap();
+    assert!(prepare_content(&s, &address, V::GluePair(pair(5, Some(2), Some(2)))).is_err());
+    let a = read_content(&s, &id(4), T::GluePair { pair_id: id(5) }).unwrap();
+    let p = prepare_content(&s, &a, V::GluePair(pair(5, Some(2), Some(2)))).unwrap();
+    s.publish(p.1).unwrap();
+    assert!(!s
+        .snapshot()
+        .document()
+        .scene_projection()
+        .disabled
+        .iter()
+        .any(|d| d.id == id(5)));
+    assert!(crate::support::frame(s.snapshot(), &Default::default()).is_ok());
+    let restored = crate::support::roundtrip(s.snapshot());
+    let restored = restored.document();
     assert_eq!(
-        restored.get_glue_pair(&id(5)),
-        s.document().get_glue_pair(&id(5))
+        restored.glue_pair(&id(5)),
+        s.snapshot().document().glue_pair(&id(5))
     );
     run(
         &mut s,
@@ -968,8 +1390,8 @@ fn pair_pending_configuration_and_reordering_keep_ids_and_runtime_slots() {
             before: None,
         },
     );
-    assert_eq!(s.glue_pairs(&id(4)).unwrap().len(), 3);
-    assert!(s.document().validate_structure().is_empty());
+    assert_eq!(s.snapshot().document().glue(&id(4)).unwrap().pairs.len(), 3);
+    assert!(s.snapshot().document().builder().freeze().is_ok());
 }
 #[test]
 fn pair_transfer_keeps_handle_but_expires_owner_address() {
@@ -978,10 +1400,16 @@ fn pair_transfer_keeps_handle_but_expires_owner_address() {
     mesh(&mut s, 3);
     glue(&mut s, 4, 2, 3, vec![pair(5, Some(1), Some(2))]);
     glue(&mut s, 6, 3, 2, vec![]);
-    let h = s.handle(ObjectKind::GlueVertexPair, &id(5)).unwrap();
-    let a = s
-        .scene_content_address(&id(4), T::GluePair { pair_id: id(5) })
-        .unwrap();
+    let h = {
+        let kind = ObjectKind::GlueVertexPair;
+        let object_id = (&id(5)).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
+    let a = read_content(&s, &id(4), T::GluePair { pair_id: id(5) }).unwrap();
     run(
         &mut s,
         E::TransferGluePairs {
@@ -991,31 +1419,26 @@ fn pair_transfer_keeps_handle_but_expires_owner_address() {
             before: None,
         },
     );
-    s.resolve_handle(&h).unwrap();
-    assert_eq!(s.document().glue_pair_owner(&id(5)), Some(id(6).as_str()));
-    s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, a.expected().clone())
-        .is_err());
+    s.snapshot().document().require_object(h.0, &h.1).unwrap();
+    assert_eq!(
+        s.snapshot().document().glue_pair_owner(&id(5)),
+        Some(id(6).as_str())
+    );
+    s.undo(s.version()).unwrap();
+    assert!(prepare_content(&s, &a, a.3.clone()).is_err());
 }
 #[test]
 fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
     let mut s = session();
     mesh(&mut s, 2);
-    let a = s
-        .scene_content_address(&id(2), T::VertexUv { vertex_id: 2 })
-        .unwrap();
-    let p = s
-        .plan_scene_content_patch(&a, V::Point(Vec2::new(0.6, 0.3)))
-        .unwrap();
-    s.execute_scene_content_plan(&p).unwrap();
+    let a = read_content(&s, &id(2), T::VertexUv { vertex_id: 2 }).unwrap();
+    let p = prepare_content(&s, &a, V::Point(Vec2::new(0.6, 0.3))).unwrap();
+    s.publish(p.1).unwrap();
     assert_eq!(
-        s.document().get_mesh(&id(2)).unwrap().uvs[1],
+        s.snapshot().document().mesh(&id(2)).unwrap().uvs[1],
         Vec2::new(0.6, 0.3)
     );
-    let a = s
-        .scene_content_address(&id(2), T::Triangle { slot: 0 })
-        .unwrap();
+    let a = read_content(&s, &id(2), T::Triangle { slot: 0 }).unwrap();
     run(
         &mut s,
         E::DeleteTriangles {
@@ -1023,38 +1446,49 @@ fn uv_and_triangle_addresses_expire_after_topology_and_undo() {
             slots: vec![0],
         },
     );
-    s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, V::Triangle([1, 3, 2]))
-        .is_err());
-    assert!(s
-        .plan_scene_content(E::ReplaceTriangles {
-            mesh_id: id(2),
-            triangles: vec![[1, 2, 99]]
-        })
-        .is_err());
-    let a = s
-        .scene_content_address(
-            &id(2),
-            T::VertexPosition {
-                vertex_id: 1,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
-    s.edit("Label", None, |e| e.rename_mesh(&id(2), "Face"))
-        .unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, V::Point(Vec2::new(2., 3.)))
-        .is_ok());
+    s.undo(s.version()).unwrap();
+    assert!(prepare_content(&s, &a, V::Triangle([1, 3, 2])).is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::ReplaceTriangles {
+                    mesh_id: id(2),
+                    triangles: vec![[1, 2, 99]]
+                },
+                Default::default(),
+                &Default::default()
+            ))
+        .is_err()
+    );
+    let a = read_content(
+        &s,
+        &id(2),
+        T::VertexPosition {
+            vertex_id: 1,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.rename(zipzi_sdk::NameTarget::Mesh(&id(2)), ("Face").into())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Label")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    let current = read_content(&s, &a.1, a.2.clone()).unwrap();
+    assert!(prepare_content(&s, &current, V::Point(Vec2::new(2., 3.))).is_ok());
 }
 #[test]
 fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
     let mut s = session();
     offscreen(&mut s, true);
-    let a = s
-        .scene_content_address(&id(23), T::OffscreenKeyform { slot: 0 })
-        .unwrap();
+    let a = read_content(&s, &id(23), T::OffscreenKeyform { slot: 0 }).unwrap();
     run(
         &mut s,
         E::ReorderOffscreenKeyforms {
@@ -1063,15 +1497,14 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_offscreen(&id(23))
+        s.snapshot()
+            .document()
+            .offscreen(&id(23))
             .unwrap()
             .part_keyform_indices,
         [1, 0]
     );
-    assert!(s
-        .plan_scene_content_patch(&a, a.expected().clone())
-        .is_err());
+    assert!(prepare_content(&s, &a, a.3.clone()).is_err());
     run(
         &mut s,
         E::InsertOffscreenKeyform {
@@ -1084,19 +1517,26 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_offscreen(&id(23))
+        s.snapshot()
+            .document()
+            .offscreen(&id(23))
             .unwrap()
             .part_keyform_indices,
         [2, 1]
     );
-    assert!(s
-        .plan_scene_content(E::DeleteOffscreenKeyforms {
-            offscreen_id: id(23),
-            slots: vec![2],
-            policy: OffscreenDeletePolicy::RejectReferences
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::DeleteOffscreenKeyforms {
+                    offscreen_id: id(23),
+                    slots: vec![2],
+                    policy: OffscreenDeletePolicy::RejectReferences
+                },
+                Default::default(),
+                &Default::default()
+            ))
+        .is_err()
+    );
     run(
         &mut s,
         E::DeleteOffscreenKeyforms {
@@ -1108,13 +1548,19 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_offscreen(&id(23))
+        s.snapshot()
+            .document()
+            .offscreen(&id(23))
             .unwrap()
             .part_keyform_indices,
         [0, 1]
     );
-    let SceneTrack::Part { keyforms, .. } = &s.document().get_scene_binding(&id(22)).unwrap().track
+    let SceneTrack::Part { keyforms, .. } = &s
+        .snapshot()
+        .document()
+        .scene_binding(&id(22))
+        .unwrap()
+        .track
     else {
         unreachable!()
     };
@@ -1130,13 +1576,14 @@ fn offscreen_reorders_insertions_and_deletion_remap_part_sampling() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_offscreen(&id(23))
+        s.snapshot()
+            .document()
+            .offscreen(&id(23))
             .unwrap()
             .part_keyform_indices,
         [0, -7]
     );
-    assert!(s.evaluate(&Default::default()).is_ok());
+    assert!(crate::support::frame(s.snapshot(), &Default::default()).is_ok());
 }
 #[test]
 fn static_offscreen_implicit_zero_is_preserved_by_structural_edits() {
@@ -1154,8 +1601,9 @@ fn static_offscreen_implicit_zero_is_preserved_by_structural_edits() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_offscreen(&id(23))
+        s.snapshot()
+            .document()
+            .offscreen(&id(23))
             .unwrap()
             .part_keyform_indices,
         [1]
@@ -1169,8 +1617,9 @@ fn static_offscreen_implicit_zero_is_preserved_by_structural_edits() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_offscreen(&id(23))
+        s.snapshot()
+            .document()
+            .offscreen(&id(23))
             .unwrap()
             .part_keyform_indices,
         [-1]
@@ -1179,99 +1628,115 @@ fn static_offscreen_implicit_zero_is_preserved_by_structural_edits() {
 #[test]
 fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
     let mut s = session();
-    s.edit("Warp", None, |e| {
-        e.create_transform(Transform {
-            rotation_scale_unit: None,
-            warp_authoring: None,
-            original_shape: None,
-            id: id(2),
-            runtime_id: "Warp".into(),
-            name: "Warp".into(),
-            part_id: None,
-            parent_id: None,
-            appearance: Default::default(),
-            enabled: true,
-            data: TransformData::Warp(WarpTransform {
-                bezier: None,
-                rows: 1,
-                columns: 1,
-                quad: false,
-                points: vec![
-                    Vec2::new(0., 0.),
-                    Vec2::new(10., 0.),
-                    Vec2::new(0., 10.),
-                    Vec2::new(10., 10.),
-                ],
-            }),
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        rotation_scale_unit: None,
+                        warp_authoring: None,
+                        original_shape: None,
+                        id: id(2),
+                        runtime_id: "Warp".into(),
+                        name: "Warp".into(),
+                        part_id: None,
+                        parent_id: None,
+                        appearance: Default::default(),
+                        enabled: true,
+                        data: TransformData::Warp(WarpTransform {
+                            bezier: None,
+                            rows: 1,
+                            columns: 1,
+                            quad: false,
+                            points: vec![
+                                Vec2::new(0., 0.),
+                                Vec2::new(10., 0.),
+                                Vec2::new(0., 10.),
+                                Vec2::new(10., 10.),
+                            ],
+                        }),
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Warp")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let a = s
-        .scene_content_address(
-            &id(2),
-            T::WarpBezierControl {
-                node: 0,
-                component: 2,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
-    let p = s
-        .plan_scene_content_patch(&a, V::Point(Vec2::new(6., 2.)))
-        .unwrap();
-    s.execute_scene_content_plan(&p).unwrap();
+    let a = read_content(
+        &s,
+        &id(2),
+        T::WarpBezierControl {
+            node: 0,
+            component: 2,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
+    let p = prepare_content(&s, &a, V::Point(Vec2::new(6., 2.))).unwrap();
+    s.publish(p.1).unwrap();
     assert!(s
+        .snapshot()
         .document()
-        .get_transform(&id(2))
+        .transform(&id(2))
         .unwrap()
         .warp()
         .unwrap()
         .bezier
         .is_some());
-    let a = s
-        .scene_content_address(
-            &id(2),
-            T::WarpPoint {
-                row: 1,
-                column: 1,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
+    let a = read_content(
+        &s,
+        &id(2),
+        T::WarpPoint {
+            row: 1,
+            column: 1,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
     let controller = s
+        .snapshot()
         .document()
-        .get_transform(&id(2))
+        .transform(&id(2))
         .unwrap()
         .warp()
         .unwrap()
         .bezier
         .clone();
-    let point_plan = s
-        .plan_scene_content_patch(&a, V::Point(Vec2::new(12., 12.)))
-        .unwrap();
-    s.execute_scene_content_plan(&point_plan).unwrap();
+    let point_plan = prepare_content(&s, &a, V::Point(Vec2::new(12., 12.))).unwrap();
+    s.publish(point_plan.1).unwrap();
     assert_eq!(
-        s.document()
-            .get_transform(&id(2))
+        s.snapshot()
+            .document()
+            .transform(&id(2))
             .unwrap()
             .warp()
             .unwrap()
             .bezier,
         controller
     );
-    let p = s
-        .plan_scene_content(E::ResizeWarp {
-            transform_id: id(2),
-            rows: 3,
-            columns: 2,
-            quad: true,
-        })
-        .unwrap();
-    assert_eq!(p.report().resampled_shapes, 1);
-    s.execute_scene_content_plan(&p).unwrap();
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene_content(
+            E::ResizeWarp {
+                transform_id: id(2),
+                rows: 3,
+                columns: 2,
+                quad: true,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    assert_eq!(p.0.report.resampled_shapes, 1);
+    s.publish(p.1).unwrap();
     assert_eq!(
-        s.document()
-            .get_transform(&id(2))
+        s.snapshot()
+            .document()
+            .transform(&id(2))
             .unwrap()
             .warp()
             .unwrap()
@@ -1279,168 +1744,246 @@ fn warp_control_resize_updates_grid_shapes_and_expires_old_controls() {
             .len(),
         12
     );
-    s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&a, a.expected().clone())
-        .is_err());
+    s.undo(s.version()).unwrap();
+    assert!(prepare_content(&s, &a, a.3.clone()).is_err());
 }
 #[test]
 fn content_failures_locks_noops_budget_and_cancellation_are_atomic() {
     let mut s = session();
     mesh(&mut s, 2);
     let v = s.version();
-    let p = s
-        .plan_scene_content(E::ReorderMeshVertices {
-            mesh_id: id(2),
-            order: vec![1, 2, 3],
-        })
-        .unwrap();
-    assert!(p.is_noop());
-    assert!(!s.execute_scene_content_plan(&p).unwrap().changed);
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene_content(
+            E::ReorderMeshVertices {
+                mesh_id: id(2),
+                order: vec![1, 2, 3],
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    assert!(p.1.writes().is_empty());
+    assert!(s.publish(p.1).unwrap().writes.is_empty());
     assert_eq!(s.version(), v);
     let control = ConversionControl::default();
     control.cancel();
     assert_eq!(
-        s.plan_scene_content_with_control(
+        crate::support::prepared(&s, |c| c.edit_scene_content(
             E::DeleteTriangles {
                 mesh_id: id(2),
                 slots: vec![0]
             },
+            Default::default(),
             &control
-        )
+        ))
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "AUTHORING_CANCELLED"
     );
-    let p = s
-        .plan_scene_content(E::DeleteTriangles {
-            mesh_id: id(2),
-            slots: vec![0],
-        })
-        .unwrap();
-    s.set_authoring_limits(AuthoringLimits {
-        max_conversion_bytes: 1,
-        ..Default::default()
-    })
-    .unwrap();
-    assert!(s.execute_scene_content_plan(&p).is_err());
+    assert_eq!(
+        crate::support::prepared(&s, |c| c.edit_scene_content(
+            E::DeleteTriangles {
+                mesh_id: id(2),
+                slots: vec![0]
+            },
+            ConversionLimits {
+                max_workspace_bytes: 1,
+                ..Default::default()
+            },
+            &Default::default()
+        ))
+        .unwrap_err()
+        .code
+        .as_str(),
+        "AUTHORING_MEMORY_LIMIT"
+    );
     assert_eq!(s.version(), v);
-    s.set_authoring_limits(Default::default()).unwrap();
     lock(&mut s, &id(2));
-    assert!(s
-        .plan_scene_content(E::DeleteTriangles {
-            mesh_id: id(2),
-            slots: vec![0]
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::DeleteTriangles {
+                    mesh_id: id(2),
+                    slots: vec![0]
+                },
+                Default::default(),
+                &Default::default()
+            ))
+        .is_err()
+    );
 }
 
 #[test]
 fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() {
     let mut s = session();
     mesh(&mut s, 2);
-    let p = s
-        .plan_scene_edit(SceneEdit::Create {
-            id: id(9),
-            name: "Warp".into(),
-            object: SceneCreate::Warp {
-                bounds: Some([0., 0., 10., 10.]),
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Create {
+                id: id(9),
+                name: "Warp".into(),
+                object: SceneCreate::Warp {
+                    bounds: Some([0., 0., 10., 10.]),
+                },
+                part_id: None,
+                parent_id: None,
+                before: None,
+                deformation_before: None,
             },
-            part_id: None,
-            parent_id: None,
-            before: None,
-            deformation_before: None,
-        })
-        .unwrap();
-    s.execute_scene_plan(&p).unwrap();
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    s.publish(p.1).unwrap();
     let points = s
+        .snapshot()
         .document()
-        .get_transform(&id(9))
+        .transform(&id(9))
         .unwrap()
         .warp()
         .unwrap()
         .points
         .clone();
-    s.edit("Shapes", None, |e| {
-        e.create_parameter(Parameter {
-            id: id(3),
-            ..Default::default()
-        })?;
-        e.create_scene_binding(SceneBinding {
-            id: id(4),
-            axes: vec![BindingAxis::new(id(3), vec![-1., 1.])],
-            track: SceneTrack::Warp {
-                target_id: id(9).into(),
-                keyforms: vec![
-                    WarpKeyform {
-                        keys: vec![-1.],
-                        positions: points.clone(),
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(3),
                         ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.create_scene_binding(SceneBinding {
+                    id: id(4),
+                    axes: vec![BindingAxis::new(id(3), vec![-1., 1.])],
+                    track: SceneTrack::Warp {
+                        target_id: id(9).into(),
+                        keyforms: vec![
+                            WarpKeyform {
+                                keys: vec![-1.],
+                                positions: points.clone(),
+                                ..Default::default()
+                            },
+                            WarpKeyform {
+                                keys: vec![1.],
+                                positions: points
+                                    .iter()
+                                    .map(|p| Vec2::new(p.x + 4., p.y + 3.))
+                                    .collect(),
+                                ..Default::default()
+                            },
+                        ],
                     },
-                    WarpKeyform {
-                        keys: vec![1.],
-                        positions: points
-                            .iter()
-                            .map(|p| Vec2::new(p.x + 4., p.y + 3.))
-                            .collect(),
+                })?;
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: id(5),
+                        kind: ParameterKind::BlendShape,
+                        minimum: 0.,
+                        maximum: 1.,
                         ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateTable {
+                        table: BlendShapeKeyTable {
+                            id: id(6),
+                            parameter_id: id(5),
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                            keys: vec![0., 1.],
+                            base_key_idx: 0,
+                        },
                     },
-                ],
-            },
-        })?;
-        e.create_parameter(Parameter {
-            id: id(5),
-            kind: ParameterKind::BlendShape,
-            minimum: 0.,
-            maximum: 1.,
-            ..Default::default()
-        })?;
-        e.create_blend_key_table(BlendShapeKeyTable {
-            id: id(6),
-            parameter_id: id(5),
-            samples: vec![],
-            base_sample_id: String::new(),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(7),
-            target_id: id(2),
-            target_kind: BlendShapeTargetKind::Mesh,
-            key_table_id: id(6),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Mesh(vec![
-                DeltaMeshKeyform {
-                    positions: vec![Vec2::default(); 3],
-                    ..Default::default()
-                },
-                DeltaMeshKeyform {
-                    positions: vec![Vec2::new(2., 3.), Vec2::new(6., 7.), Vec2::new(10., 11.)],
-                    ..Default::default()
-                },
-            ]),
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(8),
-            target_id: id(9),
-            target_kind: BlendShapeTargetKind::Warp,
-            key_table_id: id(6),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Warp(vec![
-                DeltaWarpKeyform {
-                    points: vec![Vec2::default(); points.len()],
-                    ..Default::default()
-                },
-                DeltaWarpKeyform {
-                    points: vec![Vec2::new(2., 3.); points.len()],
-                    ..Default::default()
-                },
-            ]),
-        })
-    })
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                {
+                    let binding = BlendShapeBinding {
+                        id: id(7),
+                        target_id: id(2),
+                        target_kind: BlendShapeTargetKind::Mesh,
+                        key_table_id: id(6),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Mesh(vec![
+                            DeltaMeshKeyform {
+                                positions: vec![Vec2::default(); 3],
+                                ..Default::default()
+                            },
+                            DeltaMeshKeyform {
+                                positions: vec![
+                                    Vec2::new(2., 3.),
+                                    Vec2::new(6., 7.),
+                                    Vec2::new(10., 11.),
+                                ],
+                                ..Default::default()
+                            },
+                        ]),
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }?;
+                {
+                    let binding = BlendShapeBinding {
+                        id: id(8),
+                        target_id: id(9),
+                        target_kind: BlendShapeTargetKind::Warp,
+                        key_table_id: id(6),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Warp(vec![
+                            DeltaWarpKeyform {
+                                points: vec![Vec2::default(); points.len()],
+                                ..Default::default()
+                            },
+                            DeltaWarpKeyform {
+                                points: vec![Vec2::new(2., 3.); points.len()],
+                                ..Default::default()
+                            },
+                        ]),
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Shapes")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let table = s.document().get_blend_key_table(&id(6)).unwrap().clone();
+    let table = s
+        .snapshot()
+        .document()
+        .blend_key_table(&id(6))
+        .unwrap()
+        .clone();
     run(
         &mut s,
         E::InsertMeshVertices {
@@ -1465,27 +2008,30 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
             before: None,
         },
     );
-    let DeltaKeyforms::Mesh(forms) = &s.document().get_blend_binding(&id(7)).unwrap().keyforms
+    let DeltaKeyforms::Mesh(forms) = &s
+        .snapshot()
+        .document()
+        .blend_binding(&id(7))
+        .unwrap()
+        .keyforms
     else {
         unreachable!()
     };
     assert_eq!(forms[1].positions[3], Vec2::new(4., 5.));
-    let address = s
-        .scene_content_address(
-            &id(2),
-            T::VertexPosition {
-                vertex_id: 4,
-                shape: ShapeTarget::Blend {
-                    binding_id: id(7),
-                    sample_id: table.samples[1].id.clone(),
-                },
+    let address = read_content(
+        &s,
+        &id(2),
+        T::VertexPosition {
+            vertex_id: 4,
+            shape: ShapeTarget::Blend {
+                binding_id: id(7),
+                sample_id: table.samples[1].id.clone(),
             },
-        )
-        .unwrap();
-    let p = s
-        .plan_scene_content_patch(&address, V::Point(Vec2::new(8., 9.)))
-        .unwrap();
-    s.execute_scene_content_plan(&p).unwrap();
+        },
+    )
+    .unwrap();
+    let p = prepare_content(&s, &address, V::Point(Vec2::new(8., 9.))).unwrap();
+    s.publish(p.1).unwrap();
     run(
         &mut s,
         E::ResizeWarp {
@@ -1495,14 +2041,20 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
             quad: false,
         },
     );
-    let SceneTrack::Warp { keyforms, .. } = &s.document().get_scene_binding(&id(4)).unwrap().track
+    let SceneTrack::Warp { keyforms, .. } =
+        &s.snapshot().document().scene_binding(&id(4)).unwrap().track
     else {
         unreachable!()
     };
     assert_eq!(keyforms[1].positions.len(), 12);
     assert_eq!(keyforms[1].positions[11], Vec2::new(14., 13.));
     let samples = keyforms[1].samples.clone();
-    let DeltaKeyforms::Warp(forms) = &s.document().get_blend_binding(&id(8)).unwrap().keyforms
+    let DeltaKeyforms::Warp(forms) = &s
+        .snapshot()
+        .document()
+        .blend_binding(&id(8))
+        .unwrap()
+        .keyforms
     else {
         unreachable!()
     };
@@ -1511,7 +2063,10 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
         .points
         .iter()
         .all(|p| (p.x - 2.).abs() < 1e-5 && (p.y - 3.).abs() < 1e-5));
-    assert_eq!(s.document().get_blend_key_table(&id(6)), Some(&table));
+    assert_eq!(
+        s.snapshot().document().blend_key_table(&id(6)),
+        Some(&table)
+    );
     run(
         &mut s,
         E::WarpPoints {
@@ -1528,7 +2083,7 @@ fn ordinary_and_blend_shapes_follow_topology_without_recreating_shared_tables() 
             clear_bezier: false,
         },
     );
-    assert!(s.document().validate_structure().is_empty());
+    assert!(s.snapshot().document().builder().freeze().is_ok());
 }
 #[test]
 fn content_reference_receipts_invert_and_locked_pair_flags_are_not_dropped() {
@@ -1543,73 +2098,105 @@ fn content_reference_receipts_invert_and_locked_pair_flags_are_not_dropped() {
             pair: pair(5, Some(2), Some(3)),
         },
     );
-    assert_eq!(r.changes.content_references.len(), 1);
-    let edge = r.changes.content_references[0].clone();
-    let undo = s.undo().unwrap();
-    assert_eq!(undo.changes.content_references[0].before, edge.after);
-    assert_eq!(undo.changes.content_references[0].after, edge.before);
+    assert!(r.writes.records().iter().any(|r| r.id == id(4)));
+    assert_eq!(
+        s.snapshot().document().glue(&id(4)).unwrap().pairs[0].vertex_a,
+        Some(2)
+    );
+    let undo = s.undo(s.version()).unwrap();
+    assert!(undo.writes.records().iter().any(|r| r.id == id(4)));
+    assert_eq!(
+        s.snapshot().document().glue(&id(4)).unwrap().pairs[0].vertex_a,
+        Some(1)
+    );
     lock(&mut s, &id(5));
     let v = s.version();
-    assert!(s
-        .plan_scene_content(E::DeleteMeshVertices {
-            mesh_id: id(2),
-            vertices: vec![1],
-            policy: VertexDeletePolicy::RemoveDependentContent
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::DeleteMeshVertices {
+                    mesh_id: id(2),
+                    vertices: vec![1],
+                    policy: VertexDeletePolicy::RemoveDependentContent
+                },
+                Default::default(),
+                &Default::default()
+            ))
+        .is_err()
+    );
     assert_eq!(s.version(), v);
-    let mut g = s.document().get_glue(&id(4)).unwrap().clone();
+    let mut g = s.snapshot().document().glue(&id(4)).unwrap().clone();
     g.pairs.clear();
     assert_eq!(
-        s.edit("Clear locked", None, |e| e.replace_glue(g))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_glue(g))
+                .and_then(|value| {
+                    let prepared = draft.prepare("Clear locked")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap_err()
+        .code
+        .as_str(),
         "OBJECT_LOCKED"
     );
-    assert!(s
-        .plan_scene_content(E::InsertGluePair {
-            glue_id: id(4),
-            pair: pair(2, None, None),
-            before: None
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands
+            .edit_scene_content(
+                E::InsertGluePair {
+                    glue_id: id(4),
+                    pair: pair(2, None, None),
+                    before: None
+                },
+                Default::default(),
+                &Default::default()
+            ))
+        .is_err()
+    );
 }
 #[test]
 fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice() {
     let mut s = session();
-    let p = s
-        .plan_scene_edit(SceneEdit::Create {
-            id: id(2),
-            name: "Warp".into(),
-            object: SceneCreate::Warp {
-                bounds: Some([0., 0., 10., 10.]),
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            SceneEdit::Create {
+                id: id(2),
+                name: "Warp".into(),
+                object: SceneCreate::Warp {
+                    bounds: Some([0., 0., 10., 10.]),
+                },
+                part_id: None,
+                parent_id: None,
+                before: None,
+                deformation_before: None,
             },
-            part_id: None,
-            parent_id: None,
-            before: None,
-            deformation_before: None,
-        })
-        .unwrap();
-    s.execute_scene_plan(&p).unwrap();
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    s.publish(p.1).unwrap();
     let old = s
+        .snapshot()
         .document()
-        .get_transform(&id(2))
+        .transform(&id(2))
         .unwrap()
         .warp()
         .unwrap()
         .points
         .clone();
-    let address = s
-        .scene_content_address(
-            &id(2),
-            T::WarpBezierControl {
-                node: 0,
-                component: 2,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
+    let address = read_content(
+        &s,
+        &id(2),
+        T::WarpBezierControl {
+            node: 0,
+            component: 2,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
     let grid: Vec<_> = (0..=4)
         .flat_map(|y| (0..=4).map(move |x| Vec2::new(x as f32 * 2.5, y as f32 * 2.5)))
         .collect();
@@ -1632,22 +2219,56 @@ fn bezier_controller_topology_can_change_without_resetting_the_runtime_lattice()
             controller: Some(controller),
         },
     );
-    let w = s.document().get_transform(&id(2)).unwrap().warp().unwrap();
+    let w = s
+        .snapshot()
+        .document()
+        .transform(&id(2))
+        .unwrap()
+        .warp()
+        .unwrap();
     assert_eq!(w.bezier.as_ref().unwrap().rows, 2);
     assert_eq!(w.points, old);
-    let value = s
-        .scene_content_address(
-            &id(2),
-            T::WarpBezierControl {
-                node: 4,
-                component: 2,
-                shape: ShapeTarget::Base,
-            },
-        )
-        .unwrap();
-    assert!(matches!(value.expected(), V::Point(_)));
-    s.undo().unwrap();
-    assert!(s
-        .plan_scene_content_patch(&address, address.expected().clone())
-        .is_err());
+    let value = read_content(
+        &s,
+        &id(2),
+        T::WarpBezierControl {
+            node: 4,
+            component: 2,
+            shape: ShapeTarget::Base,
+        },
+    )
+    .unwrap();
+    assert!(matches!(&value.3, V::Point(_)));
+    s.undo(s.version()).unwrap();
+    assert!(prepare_content(&s, &address, address.3.clone()).is_err());
+}
+
+fn update_points(
+    c: &mut zipzi_sdk::Commands<'_>,
+    id: &str,
+    points: Vec<Vec2>,
+) -> Result<(), zipzi_sdk::Status> {
+    let state = c.read_document()?;
+    let warp = state.transform(id).unwrap().warp().unwrap();
+    let columns = warp.columns as usize + 1;
+    let updates = points
+        .into_iter()
+        .enumerate()
+        .map(|(i, position)| WarpPointPatch {
+            row: (i / columns) as u32,
+            column: (i % columns) as u32,
+            point: position,
+        })
+        .collect();
+    c.edit_scene_content(
+        E::WarpPoints {
+            transform_id: id.into(),
+            target: ShapeTarget::Base,
+            updates,
+            clear_bezier: false,
+        },
+        Default::default(),
+        &Default::default(),
+    )?;
+    Ok(())
 }

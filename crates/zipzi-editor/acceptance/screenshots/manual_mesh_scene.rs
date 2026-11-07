@@ -106,12 +106,13 @@ fn check(h: &Harness, vertices: usize, history: (usize, usize)) {
 
 fn meshes(document: &zipzi_editor_core::Document) -> Vec<zipzi_core::Mesh> {
     let host = document.runtime_host();
-    let runtime = host.read();
-    let model = runtime.document(document.runtime_session_id()).unwrap();
+    let snapshot =
+        crate::test_fixture::published_snapshot(&host, document.runtime_session_id()).unwrap();
+    let model = snapshot.document();
     model
         .mesh_order()
         .iter()
-        .map(|id| model.get_mesh(id).unwrap().clone())
+        .map(|id| model.mesh(id).unwrap().clone())
         .collect()
 }
 
@@ -276,12 +277,13 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
     h.view.read_with(&h.cx, |v, _| {
         let d = v.editor.document().unwrap();
         let host = d.runtime_host();
-        let rt = host.read();
-        let model = rt.document(d.runtime_session_id()).unwrap();
+        let snapshot =
+            crate::test_fixture::published_snapshot(&host, d.runtime_session_id()).unwrap();
+        let model = snapshot.document();
         assert_eq!(d.history_lengths(), (1, 0));
         assert_eq!(
             model
-                .get_mesh("a8210000-0000-4000-8000-000000000002")
+                .mesh("a8210000-0000-4000-8000-000000000002")
                 .unwrap()
                 .vertex_ids
                 .len(),
@@ -289,7 +291,7 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         );
         assert_eq!(
             model
-                .get_glue("a8210000-0000-4000-8000-000000000020")
+                .glue("a8210000-0000-4000-8000-000000000020")
                 .unwrap()
                 .pairs[0]
                 .vertex_b,

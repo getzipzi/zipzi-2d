@@ -2,20 +2,19 @@
 use std::{hint::black_box, sync::Arc, time::Instant};
 use zipzi_core::{
     document::{MotionKey, MotionSegment},
-    Canvas, Document, Vec2,
+    state::DocumentState,
+    Canvas, Vec2,
 };
 
 fn main() {
     const TRACKS: usize = 64;
     const KEYS: usize = 2048;
     const ITERATIONS: usize = 100;
-    let mut document = Document::new();
-    assert!(document
-        .initialize(
-            "00000000-0000-4000-8000-000000000001",
-            Canvas::new(100.0, 100.0, Vec2::default(), 10.0)
-        )
-        .is_ok());
+    let document = DocumentState::new(
+        "00000000-0000-4000-8000-000000000001",
+        Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into(),
+    )
+    .unwrap();
     let id = "00000000-0000-4000-8000-000000000002";
     let imported = zipzi_project::import_motion3(
         &document,
@@ -24,8 +23,8 @@ fn main() {
         include_str!("../../../fixtures/animation_cpu/loop.motion3.json"),
     )
     .unwrap();
-    document = imported.candidate;
-    let mut clip = document.get_motion(id).unwrap().clone();
+    let document = imported.candidate;
+    let mut clip = document.motion(id).unwrap().clone();
     let template = clip.tracks[0].clone();
     clip.duration = KEYS as f32;
     clip.tracks = (0..TRACKS)
@@ -50,15 +49,17 @@ fn main() {
             track
         })
         .collect();
-    assert!(document.replace_motion(clip).status.is_ok());
+    let mut builder = document.builder();
+    builder.replace_motion(clip).unwrap();
+    let document = builder.freeze().unwrap().state;
     let start = Instant::now();
     for _ in 0..ITERATIONS {
-        black_box(document.checkpoint());
+        black_box(document.clone());
     }
     let shared = start.elapsed();
     let start = Instant::now();
     for _ in 0..ITERATIONS {
-        let mut clip = document.get_motion(id).unwrap().clone();
+        let mut clip = document.motion(id).unwrap().clone();
         for track in &mut clip.tracks {
             track.segments = Arc::new(track.segments.as_ref().clone());
         }
@@ -67,7 +68,7 @@ fn main() {
     let deep = start.elapsed();
     let start = Instant::now();
     for _ in 0..ITERATIONS {
-        let mut clip = document.get_motion(id).unwrap().clone();
+        let mut clip = document.motion(id).unwrap().clone();
         let key_id = clip.tracks[0].segments[0].end().id.clone();
         Arc::make_mut(&mut clip.tracks[0].segments)[0] = MotionSegment::Linear {
             end: MotionKey {
@@ -83,7 +84,7 @@ fn main() {
         "{}",
         serde_json::json!({
             "tracks": TRACKS, "segments_per_track": KEYS, "iterations": ITERATIONS,
-            "checkpoint_ms": shared.as_secs_f64() * 1000.0,
+            "snapshot_clone_ms": shared.as_secs_f64() * 1000.0,
             "simulated_deep_clip_clone_ms": deep.as_secs_f64() * 1000.0,
             "single_track_copy_on_write_ms": edit.as_secs_f64() * 1000.0
         })

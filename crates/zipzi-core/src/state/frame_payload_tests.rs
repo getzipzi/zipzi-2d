@@ -1,0 +1,360 @@
+use super::*;
+use crate::evaluation::{DrawableFrame, FrameEvaluator, PreviewValues};
+
+fn id(n: u32) -> String {
+    format!("00000000-0000-4000-8000-{n:012x}")
+}
+
+// Both deformers affect the mesh, so stale prepared parent/selection data changes
+// observable geometry. Bound and unbound variants exercise both base and keyforms.
+fn fixture(bound: bool) -> DocumentState {
+    let points = vec![
+        Vec2::new(0., 0.),
+        Vec2::new(10., 0.),
+        Vec2::new(0., 10.),
+        Vec2::new(10., 10.),
+    ];
+    let mut input = OwnedDocument {
+        id: id(1),
+        assets: vec![AssetRecord {
+            id: id(2),
+            name: "image".into(),
+            content: AssetContent::Image {
+                resource: ResourceKey::new(),
+                width: 1,
+                height: 1,
+            },
+        }],
+        parameters: vec![Parameter {
+            id: id(3),
+            runtime_id: "parameter".into(),
+            minimum: 0.,
+            maximum: 1.,
+            default_value: 0.,
+            ..Default::default()
+        }],
+        transforms: vec![
+            Transform {
+                id: id(4),
+                runtime_id: "rotation".into(),
+                ..Default::default()
+            },
+            Transform {
+                id: id(5),
+                runtime_id: "warp".into(),
+                parent_id: Some(id(4).into()),
+                data: crate::TransformData::Warp(crate::WarpTransform {
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    points: points.clone(),
+                    bezier: None,
+                }),
+                ..Default::default()
+            },
+        ],
+        meshes: vec![Mesh {
+            id: id(6),
+            runtime_id: "mesh".into(),
+            texture_asset_id: id(2).into(),
+            deformer_id: id(5),
+            vertex_ids: vec![0, 1, 2],
+            base_positions: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+            uvs: vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)],
+            triangles: vec![[0, 1, 2]],
+            ..Default::default()
+        }],
+        physics: Some(Arc::new(PhysicsAsset::empty(id(10)))),
+        ..Default::default()
+    };
+    if bound {
+        input.bindings.push(MeshBinding {
+            id: id(7),
+            mesh_id: id(6),
+            axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
+            keyforms: [0., 1.]
+                .map(|key| MeshKeyform {
+                    keys: vec![key],
+                    positions: input.meshes[0].base_positions.clone(),
+                    ..Default::default()
+                })
+                .into(),
+        });
+        input.scene_bindings = vec![
+            SceneBinding {
+                id: id(8),
+                axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
+                track: SceneTrack::Rotation {
+                    target_id: id(4).into(),
+                    keyforms: [0., 1.]
+                        .map(|key| RotationKeyform {
+                            keys: vec![key],
+                            rotation: crate::RotationPose {
+                                angle: key * 20.,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        })
+                        .into(),
+                },
+            },
+            SceneBinding {
+                id: id(9),
+                axes: vec![BindingAxis::new(id(3), vec![0., 1.])],
+                track: SceneTrack::Warp {
+                    target_id: id(5).into(),
+                    keyforms: [0., 1.]
+                        .map(|key| WarpKeyform {
+                            keys: vec![key],
+                            positions: points.clone(),
+                            ..Default::default()
+                        })
+                        .into(),
+                },
+            },
+        ];
+    }
+    DocumentState::from_owned(input).unwrap()
+}
+
+/// Independent oracle: deliberately bypass payload admission and validation reuse.
+fn freeze_full(mut builder: DocumentBuilder) -> Result<DocumentState, Status> {
+    builder.normalize_touched()?;
+    builder.content.validate(&builder.base.content)?;
+    builder.finish_scene_initializations()?;
+    builder.content.validate(&builder.base.content)?;
+    builder.validation = CandidateValidation::ValidatedWithNewLayout;
+    Ok(builder.freeze()?.state)
+}
+
+fn frame(evaluator: &mut FrameEvaluator, state: &DocumentState, value: f32) -> DrawableFrame {
+    let values: PreviewValues = [(id(3), value)].into();
+    let mut frame = DrawableFrame::default();
+    let status = evaluator.evaluate(state, &values, &mut frame);
+    assert!(status.is_ok(), "{status:?}");
+    frame
+}
+
+fn compare_edit(
+    bound: bool,
+    edit: fn(&mut DocumentBuilder) -> Result<(), Status>,
+    shared: bool,
+    error: Option<&str>,
+) {
+    for warm in [false, true] {
+        let base = fixture(bound);
+        let mut evaluator = FrameEvaluator::default();
+        if warm {
+            frame(&mut evaluator, &base, 0.5);
+            base.ordered_parameter_ids();
+            base.binding_for_mesh(&id(6));
+            base.binding_for_scene(&id(5));
+        }
+        let mut builder = base.builder();
+        edit(&mut builder).unwrap();
+        if shared {
+            match builder.validate_frame_payload() {
+                Ok(eligible) => assert!(eligible, "fixture missed the fast path"),
+                Err(status) => assert_eq!(Some(status.code.as_str()), error),
+            }
+        }
+        let full = freeze_full(builder.clone());
+        let fast = builder.freeze().map(|frozen| frozen.state);
+        if let Some(code) = error {
+            assert_eq!(fast.unwrap_err().code, code);
+            assert_eq!(full.unwrap_err().code, code);
+            continue;
+        }
+        let (fast, full) = (fast.unwrap(), full.unwrap());
+        assert_eq!(Arc::ptr_eq(&base.read_cache, &fast.read_cache), shared);
+        assert_eq!(
+            base.evaluation_layout_id() == fast.evaluation_layout_id(),
+            shared
+        );
+        assert!(!Arc::ptr_eq(&base.read_cache, &full.read_cache));
+        assert_eq!(fast.mesh_order(), full.mesh_order());
+        assert_eq!(fast.transform_order(), full.transform_order());
+        for id in fast.mesh_order() {
+            assert_eq!(fast.mesh(id), full.mesh(id));
+        }
+        for id in fast.transform_order() {
+            assert_eq!(fast.transform(id), full.transform(id));
+        }
+        for id in fast.binding_order() {
+            assert_eq!(fast.binding(id), full.binding(id));
+        }
+        for id in fast.scene_binding_order() {
+            assert_eq!(fast.scene_binding(id), full.scene_binding(id));
+        }
+        assert_eq!(fast.physics(), full.physics());
+        assert_eq!(fast.editor_state(), full.editor_state());
+        // Reuse one evaluator through edit / undo / redo, including interpolated
+        // parameters. The oracle reconstructs caches for the original snapshot.
+        let mut cold_base = base.clone();
+        cold_base.read_cache = Arc::default();
+        for (actual, expected) in [(&fast, &full), (&base, &cold_base), (&fast, &full)] {
+            for value in [0., 0.35, 1.] {
+                assert_eq!(
+                    frame(&mut evaluator, actual, value),
+                    frame(&mut FrameEvaluator::default(), expected, value),
+                    "warm={warm}, value={value}"
+                );
+            }
+        }
+        // Ensure these are observable edits, not vacuous comparisons of empty frames.
+        assert_ne!(
+            frame(&mut evaluator, &base, 1.),
+            frame(&mut evaluator, &fast, 1.)
+        );
+    }
+}
+
+#[test]
+fn base_pose_and_appearance_match_full_validation_with_cold_and_warm_caches() {
+    for edit in [
+        (|b: &mut DocumentBuilder| {
+            let mut t = b.transform(&id(4)).unwrap().clone();
+            t.rotation_mut().unwrap().pose.angle = 35.;
+            t.appearance.opacity = 0.6;
+            b.replace_transform(t)
+        }) as fn(&mut DocumentBuilder) -> Result<(), Status>,
+        |b| {
+            let mut t = b.transform(&id(5)).unwrap().clone();
+            t.warp_mut().unwrap().points[0].x += 2.;
+            b.replace_transform(t)
+        },
+        |b| {
+            let mut m = b.mesh(&id(6)).unwrap().clone();
+            m.base_positions[0].x += 0.2;
+            m.appearance.opacity = 0.4;
+            b.replace_mesh(m)
+        },
+    ] {
+        compare_edit(false, edit, true, None);
+    }
+}
+
+#[test]
+fn mesh_and_scene_keyforms_match_full_validation_through_snapshot_restoration() {
+    for edit in [
+        (|b: &mut DocumentBuilder| {
+            let mut binding = b.binding(&id(7)).unwrap().clone();
+            binding.keyforms[1].positions[0].x += 0.2;
+            binding.keyforms[1].appearance.opacity = 0.4;
+            b.replace_binding(binding)
+        }) as fn(&mut DocumentBuilder) -> Result<(), Status>,
+        |b| {
+            let mut binding = b.scene_binding(&id(8)).unwrap().clone();
+            let SceneTrack::Rotation { keyforms, .. } = &mut binding.track else {
+                unreachable!()
+            };
+            keyforms[1].rotation.angle += 15.;
+            keyforms[1].appearance.opacity = 0.6;
+            b.replace_scene_binding(binding)
+        },
+        |b| {
+            let mut binding = b.scene_binding(&id(9)).unwrap().clone();
+            let SceneTrack::Warp { keyforms, .. } = &mut binding.track else {
+                unreachable!()
+            };
+            keyforms[1].positions[0].x += 2.;
+            b.replace_scene_binding(binding)
+        },
+    ] {
+        compare_edit(true, edit, true, None);
+    }
+}
+
+#[test]
+fn structural_edits_rebuild_prepared_inputs() {
+    compare_edit(
+        false,
+        |b| {
+            let mut t = b.transform(&id(5)).unwrap().clone();
+            t.parent_id = None;
+            b.replace_transform(t)?;
+            let mut m = b.mesh(&id(6)).unwrap().clone();
+            m.uvs[0].x = 0.25;
+            b.replace_mesh(m)
+        },
+        false,
+        None,
+    );
+    compare_edit(
+        true,
+        |b| {
+            let mut binding = b.binding(&id(7)).unwrap().clone();
+            binding.keyforms[1].draw_order = Some(200.);
+            b.replace_binding(binding)
+        },
+        false,
+        None,
+    );
+}
+
+#[test]
+fn invalid_payloads_fail_both_validation_paths() {
+    compare_edit(
+        false,
+        |b| {
+            let mut t = b.transform(&id(4)).unwrap().clone();
+            t.rotation_mut().unwrap().pose.angle = f32::NAN;
+            b.replace_transform(t)
+        },
+        true,
+        Some("INVALID_ROTATION"),
+    );
+    compare_edit(
+        true,
+        |b| {
+            let mut binding = b.scene_binding(&id(9)).unwrap().clone();
+            let SceneTrack::Warp { keyforms, .. } = &mut binding.track else {
+                unreachable!()
+            };
+            keyforms[1].positions.pop();
+            b.replace_scene_binding(binding)
+        },
+        true,
+        Some("INVALID_LENGTH"),
+    );
+}
+
+#[test]
+fn validation_proofs_survive_only_validated_physics_patches() {
+    for structural in [false, true] {
+        let base = fixture(false);
+        let mut b = base.builder();
+        if structural {
+            let mut mesh = b.mesh(&id(6)).unwrap().clone();
+            mesh.name = "renamed".into();
+            b.replace_mesh(mesh).unwrap();
+        }
+        b.validate_candidate().unwrap();
+        let proof = b.validation;
+        assert_eq!(
+            proof,
+            if structural {
+                CandidateValidation::ValidatedWithNewLayout
+            } else {
+                CandidateValidation::ValidatedWithSharedLayout
+            }
+        );
+        let mut patch = PhysicsPatch {
+            asset_id: id(10),
+            asset_changes: vec![PhysicsAssetProperty::Fps(Some(60.))],
+            rig: None,
+        };
+        b.patch_physics(&patch).unwrap();
+        assert_eq!(b.validation, proof);
+        let full = freeze_full(b.clone()).unwrap();
+        let fast = b.clone().freeze().unwrap().state;
+        assert_eq!(fast.physics(), full.physics());
+        assert_eq!(Arc::ptr_eq(&base.read_cache, &fast.read_cache), !structural);
+
+        patch.asset_changes = vec![PhysicsAssetProperty::Fps(Some(f32::NAN))];
+        assert!(b.patch_physics(&patch).is_err());
+        assert_eq!(b.validation, CandidateValidation::NeedsValidation);
+        assert!(b.validate_candidate().is_err());
+        assert!(b.freeze().is_err());
+    }
+}

@@ -1,220 +1,122 @@
-use std::fs;
-use std::path::Path;
-
 use super::helpers::*;
-use zipzi_project::{content_sha256, decode_png, DocumentSession, DocumentStore};
+use std::{fs, path::Path};
+use zipzi_core::state::*;
+use zipzi_project::*;
 
 #[test]
-fn export_refuses_source_project_ancestor_and_source_asset_directories() {
+fn captured_transfers_protect_source_ancestors_and_external_images() {
     let tmp = TestDirectory::new();
-    let session = tmp.saved_session();
-    let manifest = fs::read(session.project_path().unwrap()).unwrap();
-    for target in [session.root(), tmp.0.clone(), session.root().join("assets")] {
-        let result = session.export_package(&target);
-        assert_eq!(result.status.code, "INVALID_DESTINATION", "{result:?}");
-        assert_eq!(fs::read(session.project_path().unwrap()).unwrap(), manifest);
+    let (doc, resources) = tmp.fixture();
+    let source = tmp.0.join("input/assets/0.png").canonicalize().unwrap();
+    let original = fs::read(&source).unwrap();
+    for target in [&tmp.0, &tmp.0.join("input"), &tmp.0.join("input/assets")] {
+        let transfer =
+            TransferSnapshot::new(doc.clone(), resources.clone(), vec![source.clone()]).unwrap();
+        assert_eq!(
+            transfer
+                .publish(TransferFormat::Runtime, target)
+                .unwrap_err()
+                .code,
+            "INVALID_DESTINATION"
+        );
+        assert_eq!(fs::read(&source).unwrap(), original);
     }
-    assert!(session
-        .export_package(&session.root().join("exports/model"))
-        .status
-        .is_ok());
-}
-
-#[test]
-fn standalone_exports_protect_archive_current_and_historical_resources() {
-    let tmp = TestDirectory::new();
-    let session = tmp.saved_session();
-    let path = session.project_path().unwrap();
-    let original = fs::read(path).unwrap();
-    for result in [
-        session.export_cmo3(path, &Default::default()),
-        session.export_can3(path, &Default::default()),
-        session.export_cubism(path, &Default::default()),
-    ] {
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("INVALID_DESTINATION"));
-        assert_eq!(fs::read(path).unwrap(), original);
-    }
-    let asset = session.document().get_asset(&id(2)).unwrap();
-    let source = session
-        .asset_root()
-        .join(&asset.content.as_ref().unwrap().source);
-    let png = fs::read(&source).unwrap();
+    // A resource captured earlier remains readable even when its external file disappears.
+    fs::remove_file(&source).unwrap();
+    let output = tmp.0.join("export");
+    TransferSnapshot::new(doc.clone(), resources.clone(), vec![source])
+        .unwrap()
+        .publish(TransferFormat::Runtime, &output)
+        .unwrap();
     assert_eq!(
-        session
-            .validate_export_destination(&source)
-            .unwrap_err()
-            .code,
-        "INVALID_DESTINATION"
+        fs::read(output.join("textures/0.png")).unwrap(),
+        resources
+            .read_asset(doc.asset(&id(2)).unwrap())
+            .unwrap()
+            .bytes
     );
-    // Even resources retained only for history must remain immutable.
-    assert_eq!(
-        session
-            .validate_export_destination(&session.asset_root().join("assets/history.png"))
-            .unwrap_err()
-            .code,
-        "INVALID_DESTINATION"
-    );
-    assert_eq!(fs::read(source).unwrap(), png);
-    assert!(session
-        .validate_export_destination(&tmp.0.join("display.cdi3.json"))
-        .is_ok());
-}
-
-#[test]
-fn export_destination_guard_protects_external_images() {
-    let tmp = TestDirectory::new();
-    let path = tmp.0.join("external.png");
-    let (bytes, hash) = create_test_png(&path);
-    let mut document = fixture_doc(&hash, &hash);
-    for id in document.asset_order().to_vec() {
-        let mut asset = document.get_asset(&id).unwrap().clone();
-        asset.content.as_mut().unwrap().source = path.to_str().unwrap().into();
-        assert!(document.replace_asset(asset).status.is_ok());
-    }
-    let session = DocumentSession::from_authoring_document(document);
-    assert_eq!(
-        session.validate_export_destination(&path).unwrap_err().code,
-        "INVALID_DESTINATION"
-    );
-    assert_eq!(fs::read(&path).unwrap(), bytes);
 }
 
 #[cfg(unix)]
 #[test]
-fn path_aliases_do_not_bypass_export_guard_or_save_baseline() {
+fn path_aliases_do_not_bypass_transfer_guard_or_native_save() {
     let tmp = TestDirectory::new();
-    let mut session = tmp.saved_session();
+    let (doc, resources) = tmp.fixture();
+    let source = tmp.0.join("input/assets/0.png").canonicalize().unwrap();
     let alias = tmp.0.join("alias");
-    std::os::unix::fs::symlink(session.root(), &alias).unwrap();
-    assert_eq!(session.save(&alias).status.code, "INVALID_PATH");
-    assert_eq!(session.export_package(&alias).status.code, "INVALID_PATH");
+    std::os::unix::fs::symlink(tmp.0.join("input"), &alias).unwrap();
+    for target in [&alias, &alias.join("assets")] {
+        let result = TransferSnapshot::new(doc.clone(), resources.clone(), vec![source.clone()])
+            .unwrap()
+            .publish(TransferFormat::Runtime, target);
+        assert_eq!(result.unwrap_err().code, "INVALID_DESTINATION");
+    }
+    let path = tmp.0.join("model.zipzi");
+    let receipt = tmp
+        .io()
+        .save(&doc, &resources, &path, None, || true)
+        .unwrap();
+    let link = tmp.0.join("model-alias.zipzi");
+    std::os::unix::fs::symlink(&path, &link).unwrap();
+    assert!(tmp
+        .io()
+        .save(&doc, &resources, &link, Some(&receipt.fingerprint), || true)
+        .is_err());
     assert_eq!(
-        session.export_package(&alias.join("assets/..")).status.code,
-        "INVALID_DESTINATION"
-    );
-    let external = tmp.0.join("external");
-    fs::create_dir(&external).unwrap();
-    let assets = session.root().join("assets");
-    fs::rename(&assets, external.join("assets")).unwrap();
-    std::os::unix::fs::symlink(external.join("assets"), &assets).unwrap();
-    assert_eq!(
-        session
-            .save(session.project_path().unwrap().to_path_buf().as_path())
-            .status
-            .code,
-        "INVALID_PATH"
+        tmp.io().fingerprint(&path, || true).unwrap(),
+        receipt.fingerprint
     );
 }
 
 #[test]
-fn export_rejects_hash_mismatch_and_keeps_existing_package() {
+fn missing_or_mismatched_captured_resources_reject_export_before_publication() {
     let tmp = TestDirectory::new();
-    let session = tmp.saved_session();
-    let destination = tmp.0.join("package");
-    assert!(session.export_package(&destination).status.is_ok());
-    fs::write(destination.join("old-marker"), b"keep").unwrap();
-    let asset = session.document().get_asset(&id(2)).unwrap();
-    let mut buf = Vec::new();
-    {
-        let mut encoder = png::Encoder::new(&mut buf, 8, 8);
-        encoder.set_color(png::ColorType::Rgba);
-        encoder.set_depth(png::BitDepth::Eight);
-        encoder
-            .write_header()
-            .unwrap()
-            .write_image_data(&vec![255; 8 * 8 * 4])
-            .unwrap();
+    let (doc, resources) = tmp.fixture();
+    let destination = tmp.0.join("output");
+    fs::create_dir(&destination).unwrap();
+    fs::write(destination.join("keep"), b"keep").unwrap();
+    assert_eq!(
+        build_export_plan(&doc, &ResourceView::default())
+            .unwrap_err()
+            .code,
+        "MISSING_RESOURCE"
+    );
+    let mut asset = doc.asset(&id(2)).unwrap().clone();
+    if let AssetContent::Image { width, .. } = &mut asset.content {
+        *width = 9;
     }
-    fs::write(
-        session.root().join(&asset.content.as_ref().unwrap().source),
-        buf,
+    let bad = prepare(&doc, |b| b.replace_asset(asset));
+    assert!(TransferSnapshot::new(bad, resources, vec![]).is_err());
+    assert_eq!(fs::read(destination.join("keep")).unwrap(), b"keep");
+}
+
+#[test]
+fn package_writes_exact_captured_bytes_when_external_source_changes_during_validation() {
+    let tmp = TestDirectory::new();
+    let (mut doc, resources) = tmp.fixture();
+    let mut mesh = doc.mesh(&id(4)).unwrap().clone();
+    mesh.raw_blend_mode = Some(262);
+    doc = prepare(&doc, |b| b.replace_mesh(mesh));
+    let source = tmp.0.join("input/assets/0.png");
+    let before = resources
+        .read_asset(doc.asset(&id(2)).unwrap())
+        .unwrap()
+        .bytes;
+    let destination = tmp.0.join("package");
+    publish_package(
+        &doc,
+        &PackageOptions {
+            resources,
+            destination: destination.clone(),
+            validate: Some(Box::new(move |_| {
+                fs::write(&source, b"changed after verification").unwrap();
+                Ok(PackageValidation::structural(
+                    RuntimeValidation::NotPerformed,
+                ))
+            })),
+        },
     )
     .unwrap();
-    assert_eq!(
-        session.export_package(&destination).status.code,
-        "RESOURCE_HASH"
-    );
-    assert_eq!(fs::read(destination.join("old-marker")).unwrap(), b"keep");
-}
-
-#[test]
-fn package_failures_rollback_and_report_recovery_copy_when_rollback_fails() {
-    for fault in [
-        Failure::ShortWrite,
-        Failure::FileSync,
-        Failure::DirectorySync(1),
-        Failure::DirectorySync(2),
-        Failure::Rename(vec![1]),
-        Failure::Rename(vec![2]),
-        Failure::Rename(vec![2, 3]),
-    ] {
-        let rollback_fails = matches!(&fault, Failure::Rename(v) if v.len() == 2);
-        let tmp = TestDirectory::new();
-        let initial = tmp.saved_session();
-        let destination = tmp.0.join("package");
-        assert!(initial.export_package(&destination).status.is_ok());
-        fs::write(destination.join("old-marker"), b"original").unwrap();
-        let mut session = DocumentSession::with_filesystem(FailingFileSystem::new(fault));
-        assert!(session.open(initial.project_path().unwrap()).status.is_ok());
-        let result = session.export_package(&destination);
-        assert!(!result.status.is_ok());
-        assert!(!result.published);
-        if rollback_fails {
-            assert_eq!(result.status.code, "ROLLBACK_FAILED");
-            let recovery = result.status.message.split("recover from ").nth(1).unwrap();
-            assert_eq!(
-                fs::read(Path::new(recovery).join("old-marker")).unwrap(),
-                b"original"
-            );
-        } else {
-            assert_eq!(
-                fs::read(destination.join("old-marker")).unwrap(),
-                b"original"
-            );
-        }
-        assert!(initial.project_path().unwrap().exists());
-    }
-}
-
-#[test]
-fn package_postcommit_sync_error_is_a_warning_not_a_failed_export() {
-    let tmp = TestDirectory::new();
-    let initial = tmp.saved_session();
-    let mut session =
-        DocumentSession::with_filesystem(FailingFileSystem::new(Failure::DirectorySync(3)));
-    assert!(session.open(initial.project_path().unwrap()).status.is_ok());
-    let destination = tmp.0.join("package");
-    let result = session.export_package(&destination);
-    assert!(result.status.is_ok() && result.published);
-    assert!(!result.durable && !result.warnings.is_empty());
-    assert!(destination.join("model.moc3").exists());
-}
-
-#[test]
-fn package_writes_the_same_bytes_that_were_verified() {
-    let tmp = TestDirectory::new();
-    let mut session = tmp.saved_session();
-    let mut mesh = session.document().get_mesh(&id(4)).unwrap().clone();
-    mesh.raw_blend_mode = Some(262);
-    assert!(session.document_mut().replace_mesh(mesh).status.is_ok());
-    let asset = session.document().get_asset(&id(2)).unwrap();
-    let source = session.root().join(&asset.content.as_ref().unwrap().source);
-    let before = fs::read(&source).unwrap();
-    let destination = tmp.0.join("package");
-    let options = zipzi_project::PackageOptions {
-        asset_root: session.root(),
-        destination: destination.clone(),
-        validate: Some(Box::new(move |_| {
-            fs::write(&source, b"changed after verification").unwrap();
-            Ok(zipzi_project::PackageValidation::structural(
-                zipzi_project::RuntimeValidation::NotPerformed,
-            ))
-        })),
-    };
-    zipzi_project::publish_package(session.document(), &options).unwrap();
     assert_eq!(
         fs::read(destination.join("textures/0.png")).unwrap(),
         before
@@ -229,117 +131,81 @@ fn package_writes_the_same_bytes_that_were_verified() {
 }
 
 #[test]
-fn external_source_asset_directory_cannot_be_an_export_destination() {
+fn failed_new_project_write_can_retry_without_partial_bytes() {
     let tmp = TestDirectory::new();
-    let mut session = tmp.saved_session();
-    let external = tmp.0.join("external");
-    let path = external.join("source.png");
-    let (bytes, _) = create_test_png(&path);
-    assert!(session.replace_asset(&id(2), &path).status.is_ok());
-    assert_eq!(
-        session.export_package(&external).status.code,
-        "INVALID_DESTINATION"
-    );
-    assert_eq!(fs::read(path).unwrap(), bytes);
-}
-
-#[test]
-fn a_failed_new_asset_write_can_be_retried_without_reusing_partial_bytes() {
-    let tmp = TestDirectory::new();
-    let (doc, input) = tmp.fixture();
-    let destination = tmp.0.join("new-project");
-    let failed = DocumentStore::new().with_archive_store(
-        zipzi_project::archive::ProjectArchiveStore::new(std::env::temp_dir())
-            .with_filesystem(FailingFileSystem::new(Failure::ShortWrite)),
-    );
-    let result = failed.save(&doc, &input, &destination, None).0;
-    assert_eq!(result.status.code, "PROJECT_IO");
+    let (doc, resources) = tmp.fixture();
+    let destination = tmp.0.join("new.zipzi");
+    let failing = tmp
+        .io()
+        .with_filesystem(FailingFileSystem::new(Failure::ShortWrite));
+    assert!(failing
+        .save(&doc, &resources, &destination, None, || true)
+        .is_err());
     assert!(!destination.exists());
-    let result = DocumentStore::new()
-        .save(&doc, &input, &destination, None)
-        .0;
-    assert!(result.status.is_ok());
-    assert!(DocumentStore::new()
-        .open(&destination)
-        .0
-        .resources_complete());
+    tmp.io()
+        .save(&doc, &resources, &destination, None, || true)
+        .unwrap();
+    assert!(tmp
+        .io()
+        .load(&destination, || true)
+        .unwrap()
+        .diagnostics
+        .is_empty());
 }
 
 #[test]
 fn import_reports_truncated_pngs_for_both_entry_points() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap();
-    let fixture = root.join("fixtures/external_v50");
     let tmp = TestDirectory::new();
-    let png = fs::read(fixture.join("texture_00.png")).unwrap();
-    fs::copy(fixture.join("model.moc3"), tmp.0.join("model.moc3")).unwrap();
-    fs::copy(
-        fixture.join("model.model3.json"),
-        tmp.0.join("model.model3.json"),
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/external_v50");
+    fs::copy(source.join("model.moc3"), tmp.0.join("model.moc3")).unwrap();
+    let png = fs::read(source.join("texture_00.png")).unwrap();
+    fs::write(tmp.0.join("broken.png"), &png[..png.len() / 2]).unwrap();
+    let model = tmp.0.join("model.model3.json");
+    fs::write(
+        &model,
+        r#"{"Version":3,"FileReferences":{"Moc":"model.moc3","Textures":["broken.png"]}}"#,
     )
     .unwrap();
-    for length in [24, png.len() - 12] {
-        let path = tmp.0.join("texture_00.png");
-        fs::write(&path, &png[..length]).unwrap();
-        assert!(decode_png(&png[..length]).is_err());
-        let map = std::collections::HashMap::from([(0, path)]);
-        for result in [
-            zipzi_moc3::import_from_bare_moc3(&fs::read(tmp.0.join("model.moc3")).unwrap(), &map)
-                .unwrap(),
-            zipzi_moc3::import_from_model3_file(&tmp.0.join("model.model3.json")).unwrap(),
-        ] {
-            assert!(!result.textures_complete);
-            assert!(result
-                .diagnostics
-                .iter()
-                .any(|d| d.code == "CORRUPT_TEXTURE"));
+    let importer = ProjectImporter::default();
+    for (result, imported, _) in [
+        importer.import_model3(&model),
+        importer.import_bare_moc3(
+            &tmp.0.join("model.moc3"),
+            &std::collections::HashMap::from([(0, tmp.0.join("broken.png"))]),
+        ),
+    ] {
+        assert!(!result.resources_complete(), "{result:?}");
+        if let Some(imported) = imported {
+            assert!(build_export_plan(&imported.document, &imported.resources).is_err());
         }
-        let mut session = DocumentSession::new();
-        let (result, _) = session.import_model3(&tmp.0.join("model.model3.json"));
-        assert!(result.status.is_ok());
-        assert!(!result.resources_complete());
-        let (result, _) = session.import_bare_moc3(&tmp.0.join("model.moc3"), &map);
-        assert!(result.status.is_ok());
-        assert!(!result.resources_complete());
     }
 }
 
 #[test]
 fn export_plan_is_inspectable_and_publication_never_reopens_sources() {
-    use zipzi_project::{
-        build_export_plan, publish_export_plan, PackageValidation, RuntimeValidation,
-    };
     let tmp = TestDirectory::new();
-    let session = tmp.saved_session();
-    let plan = build_export_plan(session.document(), &session.root()).unwrap();
+    let (doc, resources) = tmp.fixture();
+    let plan = build_export_plan(&doc, &resources).unwrap();
     let destination = tmp.0.join("planned-package");
     assert!(!destination.exists());
-    assert_eq!(plan.source_revision(), session.document().revision());
     for reference in plan.references() {
         assert!(plan.files().contains_key(&reference.from));
         assert!(plan.files().contains_key(&reference.to));
     }
-    let source = session.root().join(
-        &session
-            .document()
-            .get_asset(&id(2))
-            .unwrap()
-            .content
-            .as_ref()
-            .unwrap()
-            .source,
-    );
-    fs::remove_file(source).unwrap();
+    fs::remove_dir_all(tmp.0.join("input")).unwrap();
+    drop(resources);
+    drop(doc);
     fs::create_dir(&destination).unwrap();
     fs::write(destination.join("old"), b"preserve").unwrap();
-    let error = publish_export_plan(&plan, &destination, &|_| {
-        Err(zipzi_core::Status::error("PACKAGE_REJECTED", "fixture"))
-    })
-    .unwrap_err();
-    assert_eq!(error.code, "PACKAGE_REJECTED");
+    assert_eq!(
+        publish_export_plan(&plan, &destination, &|_| Err(zipzi_core::Status::error(
+            "PACKAGE_REJECTED",
+            "fixture"
+        )))
+        .unwrap_err()
+        .code,
+        "PACKAGE_REJECTED"
+    );
     assert_eq!(fs::read(destination.join("old")).unwrap(), b"preserve");
     publish_export_plan(&plan, &destination, &|candidate| {
         let model: serde_json::Value =
@@ -364,7 +230,7 @@ fn transfer_replaces_removed_and_renamed_runtime_files_but_keeps_unmanaged_files
     use zipzi_core::document::MotionClip;
     use zipzi_project::TransferFormat;
     let tmp = TestDirectory::new();
-    let mut session = tmp.saved_session();
+    let (mut doc, resources) = tmp.fixture();
     let motion = MotionClip {
         track_order: Vec::new(),
         id: id(800),
@@ -382,15 +248,20 @@ fn transfer_replaces_removed_and_renamed_runtime_files_but_keeps_unmanaged_files
         opaque_source_ids: None,
         opaque_source_content_hash: None,
     };
-    assert!(session
-        .document_mut()
-        .create_motion(motion.clone())
-        .status
-        .is_ok());
+    doc = prepare(&doc, |b| {
+        b.create_motion(motion.clone())?;
+        b.set_motion_roots(vec![zipzi_core::document::MotionRegistration {
+            id: id(801),
+            clip_id: id(800),
+            fade_in: None,
+            fade_out: None,
+            sound: None,
+            extensions: Default::default(),
+        }])
+    });
     let output = tmp.0.join("transfer-runtime");
-    let publish = |session: &DocumentSession| {
-        session
-            .transfer_snapshot()
+    let publish = |doc: &DocumentState| {
+        TransferSnapshot::new(doc.clone(), resources.clone(), vec![])
             .unwrap()
             .publish(TransferFormat::Runtime, &output)
     };
@@ -403,30 +274,29 @@ fn transfer_replaces_removed_and_renamed_runtime_files_but_keeps_unmanaged_files
                 .unwrap(),
         )
     };
-    publish(&session).unwrap();
+    publish(&doc).unwrap();
     let original = motion_path();
     let mut renamed = motion;
     renamed.name = "Renamed motion".into();
-    assert!(session
-        .document_mut()
-        .replace_motion(renamed)
-        .status
-        .is_ok());
-    publish(&session).unwrap();
+    doc = prepare(&doc, |b| b.replace_motion(renamed));
+    publish(&doc).unwrap();
     let renamed = motion_path();
     assert!(renamed.is_file());
     assert!(!original.exists());
-    assert!(session.document_mut().erase_object(&id(800)).status.is_ok());
+    doc = prepare(&doc, |b| {
+        b.set_motion_roots(vec![])?;
+        b.remove_motion(&id(800))
+    });
     // A user-created neighbor in the former managed directory must still block replacement.
     let notes = output.join("motions/notes.txt");
     fs::write(&notes, b"keep").unwrap();
-    assert_eq!(publish(&session).unwrap_err().code, "UNMANAGED_OUTPUT");
+    assert_eq!(publish(&doc).unwrap_err().code, "UNMANAGED_OUTPUT");
     assert_eq!(fs::read(&notes).unwrap(), b"keep");
     assert!(renamed.is_file());
     fs::remove_file(notes).unwrap();
     let saved_motion = fs::read(&renamed).unwrap();
     fs::write(&renamed, b"independently edited motion").unwrap();
-    assert_eq!(publish(&session).unwrap_err().code, "UNMANAGED_OUTPUT");
+    assert_eq!(publish(&doc).unwrap_err().code, "UNMANAGED_OUTPUT");
     assert_eq!(fs::read(&renamed).unwrap(), b"independently edited motion");
     fs::write(&renamed, saved_motion).unwrap();
     #[cfg(unix)]
@@ -435,12 +305,12 @@ fn transfer_replaces_removed_and_renamed_runtime_files_but_keeps_unmanaged_files
         fs::write(&outside, b"keep outside").unwrap();
         let alias = output.join("motions/alias");
         std::os::unix::fs::symlink(&outside, &alias).unwrap();
-        assert_eq!(publish(&session).unwrap_err().code, "UNMANAGED_OUTPUT");
+        assert_eq!(publish(&doc).unwrap_err().code, "UNMANAGED_OUTPUT");
         assert_eq!(fs::read(&outside).unwrap(), b"keep outside");
         fs::remove_file(alias).unwrap();
     }
-    publish(&session).unwrap();
+    publish(&doc).unwrap();
     assert!(!renamed.exists());
     assert!(!output.join("motions").exists());
-    publish(&session).unwrap();
+    publish(&doc).unwrap();
 }

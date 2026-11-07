@@ -73,12 +73,12 @@ fn recent_files_record_clear_and_missing_handling(cx: &mut TestAppContext) {
 fn recent_files_open_and_save_keep_one_project_archive(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let project = harness._config_dir.path().join("recent.zipzi");
-    let mut session = zipzi_sdk::AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
     )
     .unwrap();
-    session.save_project(&project, None).unwrap();
+    crate::test_fixture::save_fixture(&mut session, &project).unwrap();
     let project = std::fs::canonicalize(project).unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {

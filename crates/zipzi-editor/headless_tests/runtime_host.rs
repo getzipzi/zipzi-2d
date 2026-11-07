@@ -3,6 +3,24 @@ use super::{Harness, setup};
 use crate::host::DesktopHost;
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 
+fn request_save(
+    host: &DesktopHost,
+    client: zipzi_runtime::ClientId,
+    session: zipzi_sdk::SessionKey,
+    path: &std::path::Path,
+) -> zipzi_runtime::JobId {
+    let io = zipzi_project::ProjectIo::new(
+        path.parent().unwrap().join("project-cache"),
+        Default::default(),
+    );
+    let mut runtime = host.runtime.write();
+    runtime.attach(client, session).unwrap();
+    let version = runtime.session_read(client, session).unwrap().version();
+    runtime
+        .request_save_as(client, version, &io, path, None, Default::default())
+        .unwrap()
+}
+
 fn external_feedback_hosted(cx: &mut TestAppContext) -> (Harness, DesktopHost) {
     let (h, host) = hosted(cx);
     h.view.update(cx, |view, cx| {
@@ -49,24 +67,15 @@ fn external_status_connections_and_disconnects_stay_quiet(cx: &mut TestAppContex
 
 fn external_status_rename(
     host: &DesktopHost,
-    session: zipzi_runtime::SessionId,
+    session: zipzi_sdk::SessionKey,
     client: zipzi_runtime::ClientId,
     mesh: &str,
     name: &str,
 ) {
-    let edit = host
-        .runtime
-        .write()
-        .begin_edit(client, session, "Rename", None)
-        .unwrap();
-    host.runtime
-        .write()
-        .apply_edit(client, edit, |e| e.rename_mesh(mesh, name))
-        .unwrap();
-    let job = host.runtime.write().request_commit(client, edit).unwrap();
-    let work = host.runtime.write().take_work(job).unwrap();
-    assert!(host.runtime.write().complete(work.run()));
-    host.runtime.write().release_job(client, job).unwrap();
+    crate::test_fixture::publish_host(&host.runtime, client, session, "Rename", |edit| {
+        edit.rename(zipzi_sdk::NameTarget::Mesh(mesh), (name).into())
+    })
+    .unwrap();
 }
 
 #[gpui_kit::test]
@@ -90,16 +99,17 @@ fn external_status_only_reports_changed_foreign_publications_as_ordinary_feedbac
         "Human edit",
     );
     external_status_rename(&host, session, client, &mesh, "Human edit");
-    let edit = host
-        .runtime
-        .write()
-        .begin_edit(client, session, "Cancelled", None)
-        .unwrap();
-    host.runtime
-        .write()
-        .apply_edit(client, edit, |e| e.rename_mesh(&mesh, "Discard me"))
-        .unwrap();
-    host.runtime.write().release_edit(client, edit).unwrap();
+    {
+        let mut runtime = host.runtime.write();
+        let version = runtime.session_read(client, session).unwrap().version();
+        let draft = runtime.begin_draft(client, version).unwrap();
+        let (draft, ()) = runtime
+            .batch(client, draft, |edit| {
+                edit.rename(zipzi_sdk::NameTarget::Mesh(&mesh), "Discard me".into())
+            })
+            .unwrap();
+        runtime.cancel_draft(client, draft.draft).unwrap();
+    }
     cx.run_until_parked();
     assert_eq!(external_feedback(&h, cx), Some(("Ready".into(), false)));
     external_status_rename(&host, session, client, &mesh, "Script edit");
@@ -217,13 +227,9 @@ fn external_status_identifies_background_projects_at_the_time_of_publication(
         )
     });
     let project_path = h._config_dir.path().join("Background-rig");
-    let job = host
-        .runtime
-        .write()
-        .request_save(client, session, &project_path)
-        .unwrap();
+    let job = request_save(&host, client, session, &project_path);
     let work = host.runtime.write().take_work(job).unwrap();
-    assert!(host.runtime.write().complete(work.run()));
+    host.runtime.write().complete(work.run()).unwrap();
     host.runtime.write().release_job(client, job).unwrap();
     let current = h.view.update(cx, |view, cx| {
         let id = view.editor.new_document().unwrap();
@@ -329,18 +335,14 @@ fn parts_header_renders_external_save_without_workspace_sync(cx: &mut TestAppCon
     let agent = host.runtime.write().register_client().unwrap();
     let target = harness._config_dir.path().join("header-external-save");
     cx.update_window(harness.window, |_, window, cx| {
-        let job = host
-            .runtime
-            .write()
-            .request_save(agent, session, &target)
-            .unwrap();
+        let job = request_save(&host, agent, session, &target);
         // The retained header can render independently of EditorView::render.
         // Do not let its root sync_runtime or the notification task run first.
         assert!(harness.view.read(cx).editor.document().is_some());
         panel.update(cx, |panel, cx| drop(panel.render_header(window, cx)));
         assert!(harness.view.read(cx).editor.document().is_some());
         let work = host.runtime.write().take_work(job).unwrap();
-        assert!(host.runtime.write().complete(work.run()));
+        host.runtime.write().complete(work.run()).unwrap();
         host.runtime.write().release_job(agent, job).unwrap();
         panel.update(cx, |panel, cx| drop(panel.render_header(window, cx)));
         harness.view.update(cx, |_, cx| cx.notify());
@@ -370,11 +372,7 @@ fn rendering_external_busy_job_before_notification_freezes_and_restores_the_view
                 .position(|spec| spec.id == CommandId::CreateParameter)
                 .unwrap();
             assert!(view.editor.command_state(command).enabled);
-            let job = host
-                .runtime
-                .write()
-                .request_save(agent, session, &target)
-                .unwrap();
+            let job = request_save(&host, agent, session, &target);
             cx.notify();
             (job, menu_index)
         });
@@ -390,7 +388,7 @@ fn rendering_external_busy_job_before_notification_freezes_and_restores_the_view
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         });
         let work = host.runtime.write().take_work(job).unwrap();
-        host.runtime.write().complete(work.run());
+        host.runtime.write().complete(work.run()).unwrap();
         host.runtime.write().release_job(agent, job).unwrap();
         // Ready also has to be visible without waiting for that task.
         harness.view.update(cx, |_, cx| cx.notify());
@@ -418,7 +416,13 @@ fn last_idle_window_enters_quit_instead_of_parking_sessions(cx: &mut TestAppCont
         assert_eq!(view.editor.document_count(), 0);
         assert!(!view.modal);
     });
-    assert!(host.runtime.read().list_sessions().is_empty());
+    assert!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[gpui_kit::test]
@@ -450,7 +454,13 @@ fn closing_dirty_last_window_supports_cancel_and_discard(cx: &mut TestAppContext
             assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         });
     }
-    assert!(host.runtime.read().list_sessions().is_empty());
+    assert!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[gpui_kit::test]
@@ -469,7 +479,14 @@ fn closing_last_window_saves_before_quitting(cx: &mut TestAppContext) {
     cx.simulate_prompt_answer("Save");
     cx.run_until_parked();
     assert!(cx.did_prompt_for_new_path());
-    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        1
+    );
     let target = harness._config_dir.path().join("saved-on-close.zipzi");
     cx.simulate_new_path_selection(|_| Some(target.clone()));
     cx.run_until_parked();
@@ -480,7 +497,13 @@ fn closing_last_window_saves_before_quitting(cx: &mut TestAppContext) {
         assert!(!view.modal);
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     });
-    assert!(host.runtime.read().list_sessions().is_empty());
+    assert!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[gpui_kit::test]
@@ -504,7 +527,14 @@ fn close_project_saves_before_releasing_its_session(cx: &mut TestAppContext) {
     cx.simulate_prompt_answer("Save");
     cx.run_until_parked();
     assert!(cx.did_prompt_for_new_path());
-    assert_eq!(host.runtime.read().list_sessions().len(), 2);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        2
+    );
     let target = harness._config_dir.path().join("closed-project.zipzi");
     cx.simulate_new_path_selection(|_| Some(target.clone()));
     cx.run_until_parked();
@@ -516,7 +546,14 @@ fn close_project_saves_before_releasing_its_session(cx: &mut TestAppContext) {
         assert!(!view.editor.exiting());
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     });
-    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        1
+    );
     assert_eq!(cx.update(|cx| cx.windows().len()), 1);
 }
 
@@ -553,7 +590,14 @@ fn close_project_cancelled_picker_or_failed_save_preserves_document(cx: &mut Tes
             assert!(!view.modal);
             assert_eq!(view.edit_error.is_some(), fail);
         });
-        assert_eq!(host.runtime.read().list_sessions().len(), 2);
+        assert_eq!(
+            host.runtime
+                .read()
+                .session_catalog(host.runtime.client_id())
+                .unwrap()
+                .len(),
+            2
+        );
     }
 }
 
@@ -609,7 +653,14 @@ fn connected_sdk_keeps_host_and_unsaved_content_alive_without_attaching_a_sessio
         assert!(!view.modal);
         assert!(view.editor.document().unwrap().modified());
     });
-    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 #[gpui_kit::test]
@@ -619,7 +670,7 @@ fn disconnected_sdk_does_not_delay_close_for_reconnect_grace(cx: &mut TestAppCon
         view.editor.document().unwrap().runtime_session_id()
     });
     let (peer, connection) = connect_peer(&host);
-    host.runtime.write().attach_session(peer, session).unwrap();
+    host.runtime.write().attach(peer, session).unwrap();
     host.protocol
         .borrow_mut()
         .disconnect(peer, connection, std::time::Instant::now());
@@ -634,7 +685,13 @@ fn disconnected_sdk_does_not_delay_close_for_reconnect_grace(cx: &mut TestAppCon
         assert_eq!(view.editor.document_count(), 0);
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
     });
-    assert!(host.runtime.read().list_sessions().is_empty());
+    assert!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[gpui_kit::test]
@@ -650,7 +707,14 @@ fn explicit_no_window_host_stays_resident_after_its_window_is_closed(cx: &mut Te
     harness
         .view
         .read_with(cx, |view, _| assert!(!view.editor.exiting()));
-    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 #[gpui_kit::test]
@@ -667,7 +731,14 @@ fn non_last_window_closes_without_starting_quit(cx: &mut TestAppContext) {
     harness
         .view
         .read_with(cx, |view, _| assert!(!view.editor.exiting()));
-    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 #[gpui_kit::test]
@@ -685,11 +756,7 @@ fn foreign_background_job_keeps_host_alive_without_sdk_connection(cx: &mut TestA
         )
         .unwrap();
     let target = harness._config_dir.path().join("background.zipzi");
-    let job = host
-        .runtime
-        .write()
-        .request_save(client, session, &target)
-        .unwrap();
+    let job = request_save(&host, client, session, &target);
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             assert_eq!(view.editor.pending_io_count(), 0);
@@ -702,7 +769,7 @@ fn foreign_background_job_keeps_host_alive_without_sdk_connection(cx: &mut TestA
         .view
         .read_with(cx, |view, _| assert!(!view.editor.exiting()));
     let work = host.runtime.write().take_work(job).unwrap();
-    host.runtime.write().complete(work.run());
+    host.runtime.write().complete(work.run()).unwrap();
     assert!(target.is_file());
 }
 
@@ -750,7 +817,14 @@ fn closing_last_window_also_prompts_for_a_detached_dirty_tab(cx: &mut TestAppCon
         assert!(!view.editor.exiting());
         assert!(view.editor.document().unwrap().modified());
     });
-    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 fn save_and_close(cx: &mut TestAppContext, fail: bool, reopen_before_completion: bool) {
@@ -764,31 +838,17 @@ fn save_and_close(cx: &mut TestAppContext, fail: bool, reopen_before_completion:
     let mesh = harness.view.read_with(cx, |view, _| {
         view.editor.document().unwrap().layers()[0].id.clone()
     });
-    let edit = host
-        .runtime
-        .write()
-        .begin_edit(host.runtime.client_id(), session, "R2 unsaved edit", None)
-        .unwrap();
-    host.runtime
-        .write()
-        .apply_edit(host.runtime.client_id(), edit, |edit| {
-            edit.rename_mesh(&mesh, "R2 changed mesh")
-        })
-        .unwrap();
-    host.runtime
-        .write()
-        .commit_edit(host.runtime.client_id(), edit)
-        .unwrap();
+    let client = host.runtime.client_id();
+    external_status_rename(&host, session, client, &mesh, "R2 changed mesh");
     harness.view.update(cx, |view, _| {
         view.editor.sync_runtime().unwrap();
     });
-    let version = host.runtime.read().session(session).unwrap().version();
-    let history = host
-        .runtime
-        .read()
-        .session(session)
-        .unwrap()
-        .history_lengths();
+    let (version, history) = {
+        let runtime = host.runtime.read();
+        let session = runtime.session_read(client, session).unwrap();
+        let history = session.history_state();
+        (session.version(), (history.undo_steps, history.redo_steps))
+    };
     let old_path = harness.view.read_with(cx, |view, _| {
         view.editor
             .document()
@@ -822,9 +882,10 @@ fn save_and_close(cx: &mut TestAppContext, fail: bool, reopen_before_completion:
         None
     };
     cx.run_until_parked();
-    let info = host.runtime.read().session_info(session).unwrap();
-    assert_eq!(info.state, zipzi_editor_core::RuntimeSessionState::Ready);
-    assert_eq!(info.version.session_id, version.session_id);
+    let catalog = host.runtime.read().session_catalog(client).unwrap();
+    let info = catalog.iter().find(|info| info.session == session).unwrap();
+    assert!(!info.saving);
+    assert_eq!(info.version, version);
     assert_eq!(host.outcomes().len(), 1);
     assert_eq!(host.outcomes()[0].result.as_ref().unwrap().is_err(), fail);
     let (window, view) = reopened.unwrap_or_else(|| {
@@ -909,7 +970,7 @@ fn quit_reports_an_attached_peer_without_reentering_the_close_loop(cx: &mut Test
         view.editor.document().unwrap().runtime_session_id()
     });
     let peer = host.runtime.write().register_client().unwrap();
-    host.runtime.write().attach_session(peer, session).unwrap();
+    host.runtime.write().attach(peer, session).unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.close(window, cx);
@@ -920,7 +981,12 @@ fn quit_reports_an_attached_peer_without_reentering_the_close_loop(cx: &mut Test
         });
     })
     .unwrap();
-    assert!(host.runtime.read().session(session).is_ok());
+    assert!(
+        host.runtime
+            .read()
+            .session_read(host.runtime.client_id(), session)
+            .is_ok()
+    );
 }
 
 use zipzi_editor_core::{ObjectKind, ObjectRef};
@@ -950,23 +1016,11 @@ fn r2_reopen_catches_up_external_edits(cx: &mut TestAppContext) {
     drop(view);
     cx.run_until_parked();
     assert!(cx.update(|cx| cx.windows().is_empty()));
-    let edit = host
-        .runtime
-        .write()
-        .begin_edit(client, session, "while hidden", None)
-        .unwrap();
-    host.runtime
-        .write()
-        .apply_edit(client, edit, |e| {
-            e.rename_mesh(&mesh, "UPDATED WHILE HIDDEN")
-        })
-        .unwrap();
-    host.runtime.write().commit_edit(client, edit).unwrap();
+    external_status_rename(&host, session, client, &mesh, "UPDATED WHILE HIDDEN");
     assert_eq!(
-        host.runtime
-            .read()
-            .session(session)
+        crate::test_fixture::published_snapshot(&host.runtime, session)
             .unwrap()
+            .document()
             .mesh(&mesh)
             .unwrap()
             .name,

@@ -31,8 +31,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--install-only", action="store_true", help="Print the isolated interpreter for Editor acceptance")
     parser.add_argument("--editor-host", type=Path, help="Also run real desktop cold-start acceptance")
-    parser.add_argument("tests", nargs="*", help="Optional InstalledConnection test names")
+    parser.add_argument("tests", nargs="*", help="Optional v4 unittest names (ConnectedLifecycle or Recovery)")
     args = parser.parse_args()
+    if args.editor_host and not args.editor_host.is_absolute():
+        parser.error('--editor-host must be absolute')
     output = ROOT / "target/python/connected"
     output.mkdir(parents=True, exist_ok=True)
     with exclusive_run(output / "runner.lock"):
@@ -40,23 +42,28 @@ def main() -> None:
         if args.install_only:
             print(python)
             return
-        subprocess.run([str(python), '-I', str(PACKAGE / 'tests/installed_contract.py'),
-            '--output', str(output / 'installed-contract.md')], cwd=tempfile.gettempdir(), check=True)
         build = subprocess.run(["cargo", "build", "--locked", "-p", "zipzi-runtime", "--features", "gpu-observation,test-support",
             "--example", "local_host_fixture", '--message-format=json-render-diagnostics'], cwd=ROOT, check=True, stdout=subprocess.PIPE, text=True, encoding='utf-8')
         host = publish_executable(output, executable(build.stdout, 'local_host_fixture', 'example'))
-        environment = dict(os.environ, ZIPZI_PYTHON_HOST=str(host), ZIPZI_PYTHON2_HOST=str(host))
-        for name in ("PYTHONPATH", "PYTHONHOME", "ZIPZI_DEV_SESSION_DIR"):
+        environment = dict(os.environ, ZIPZI_KERNEL_HOST=str(host))
+        for name in ('PYTHONPATH', 'PYTHONHOME', 'ZIPZI_DEV_SESSION_DIR', 'ZIPZI_KERNEL_EDITOR_HOST',
+                     'ZIPZI_KERNEL_SOURCE_CLIENT', 'ZIPZI_KERNEL_NATIVE'):
             environment.pop(name, None)
-        subprocess.run([str(python), "-I", str(PACKAGE / "tests/test_connection.py"), "-v", *args.tests],
-            cwd=tempfile.gettempdir(), env=environment, check=True)
+        command = [str(python), '-I', str(PACKAGE / 'tests/test_kernel.py'), '-v']
+        subprocess.run([*command, *(args.tests or ['Values', 'ConnectedLifecycle', 'Recovery'])],
+                       cwd=tempfile.gettempdir(), env=environment, check=True)
+        if not args.tests:
+            subprocess.run([str(python), '-I', str(PACKAGE / 'tests/test_connection.py'), '-v'],
+                           cwd=tempfile.gettempdir(), env=environment, check=True)
+            if os.name == 'nt':
+                subprocess.run([str(python), '-I', str(PACKAGE / 'tests/test_windows_transport.py'), '-v'],
+                               cwd=tempfile.gettempdir(), env=environment, check=True)
         if args.editor_host:
-            if not args.editor_host.is_absolute():
-                parser.error("--editor-host must be absolute")
-            environment["ZIPZI_PYTHON_EDITOR"] = str(args.editor_host)
-            environment["ZIPZI_PYTHON2_EDITOR"] = str(args.editor_host)
-            subprocess.run([str(python), "-I", str(PACKAGE / "tests/test_editor_connection.py"), "-v"],
-                cwd=tempfile.gettempdir(), env=environment, check=True)
+            environment['ZIPZI_KERNEL_EDITOR_HOST'] = str(args.editor_host)
+            subprocess.run([*command, 'ConnectedLifecycle'],
+                           cwd=tempfile.gettempdir(), env=environment, check=True)
+            subprocess.run([str(python), '-I', str(PACKAGE / 'tests/editor_mesh_generation.py'), '-v'],
+                           cwd=tempfile.gettempdir(), env=environment, check=True)
 
 
 if __name__ == "__main__":

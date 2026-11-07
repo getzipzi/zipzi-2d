@@ -1,44 +1,29 @@
+mod support;
+
 use std::collections::HashMap;
+use support::{image, prepare};
+use zipzi_core::state::{DocumentState, RecordDomain};
 use zipzi_core::{PartKeyform, SceneTrack};
 
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
 use zipzi_core::types::{
     BindingAxis, BlendShapeBinding, BlendShapeKeyTable, BlendShapeTargetKind, Canvas,
-    DeltaKeyforms, DeltaOffscreenKeyform, ImageAsset, Mesh, Offscreen, OffscreenKeyform, Parameter,
+    DeltaKeyforms, DeltaOffscreenKeyform, Mesh, Offscreen, OffscreenKeyform, Parameter,
     ParameterKind, Part, SceneBinding, Vec2,
 };
-use zipzi_core::Document;
 
 fn id(n: i32) -> String {
     format!("{n:08x}-1111-4111-8111-111111111111")
 }
 
-fn create_base_doc() -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas {
-                width: 640.0,
-                height: 480.0,
-                origin: Vec2::new(320.0, 240.0),
-                pixels_per_unit: 100.0,
-                flag: 1,
-            }
-        )
-        .is_ok());
-
-    let _ = doc.add_asset(ImageAsset {
-        unresolved_source: None,
-        id: id(2),
-        name: "Tex".to_string(),
-        content: Some(zipzi_core::ImageContent {
-            source: "tex.png".to_string(),
-            width: 64,
-            height: 64,
-            sha256: "0".repeat(64),
-        }),
-    });
+fn create_base_doc() -> DocumentState {
+    let base = DocumentState::new(
+        id(1),
+        Canvas::with_flag(640., 480., Vec2::new(320., 240.), 100., 1).into(),
+    )
+    .unwrap();
+    let mut builder = base.builder();
+    builder.create_asset(image(id(2), "Tex", 64, 64)).unwrap();
 
     let part = Part {
         id: id(3),
@@ -48,7 +33,7 @@ fn create_base_doc() -> Document {
         enabled: true,
         draw_order: 0.0,
     };
-    assert!(doc.create_part(part).status.is_ok());
+    builder.create_part(part).unwrap();
 
     let mesh = Mesh {
         id: id(4),
@@ -70,16 +55,17 @@ fn create_base_doc() -> Document {
         triangles: vec![[1, 2, 3]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(mesh).status.is_ok());
+    builder.create_mesh(mesh).unwrap();
 
-    doc
+    builder.freeze().unwrap().state
 }
 
 #[test]
 fn hidden_offscreen_preserves_composition_and_restores_appearance() {
-    let mut doc = create_base_doc();
+    let doc = create_base_doc();
     let mut offscreen = Offscreen {
         id: id(10),
+        runtime_id: "Offscreen".into(),
         part_id: id(3),
         keyforms: vec![OffscreenKeyform {
             opacity: 0.6,
@@ -88,21 +74,27 @@ fn hidden_offscreen_preserves_composition_and_restores_appearance() {
         }],
         ..Default::default()
     };
-    assert!(doc.create_offscreen(offscreen.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_offscreen(offscreen.clone()))
+        .unwrap()
+        .state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
     let plan = frame.render_plan.clone();
     assert!(frame.offscreens[0].enabled);
     assert_eq!(frame.offscreens[0].opacity, 0.6);
     offscreen.enabled = false;
-    assert!(doc.replace_offscreen(offscreen.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_offscreen(offscreen.clone()))
+        .unwrap()
+        .state;
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
     assert!(!frame.offscreens[0].enabled);
     assert_eq!(frame.offscreens[0].opacity, 0.);
     assert_eq!(frame.render_plan, plan);
-    assert!(doc.get_part(&id(3)).unwrap().enabled);
+    assert!(doc.part(&id(3)).unwrap().enabled);
     offscreen.enabled = true;
-    assert!(doc.replace_offscreen(offscreen).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_offscreen(offscreen))
+        .unwrap()
+        .state;
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
     assert!(frame.offscreens[0].enabled);
     assert_eq!(frame.offscreens[0].opacity, 0.6);
@@ -110,7 +102,7 @@ fn hidden_offscreen_preserves_composition_and_restores_appearance() {
 
 #[test]
 fn test_offscreen_crud_and_validation() {
-    let mut doc = create_base_doc();
+    let doc = create_base_doc();
 
     let os = Offscreen {
         enabled: true,
@@ -128,11 +120,9 @@ fn test_offscreen_crud_and_validation() {
             screen: Some([0.1, 0.1, 0.1]),
         }],
     };
-    let res = doc.create_offscreen(os.clone());
-    assert!(res.status.is_ok());
-    assert_eq!(doc.offscreen_count(), 1);
+    let doc = prepare(&doc, |b| b.create_offscreen(os)).unwrap().state;
     assert_eq!(doc.offscreen_order(), &[id(10)]);
-    assert!(doc.get_offscreen(&id(10)).is_some());
+    assert!(doc.offscreen(&id(10)).is_some());
     assert!(doc.offscreen_for_part(&id(3)).is_some());
 
     // Duplicate owner part rejection
@@ -143,9 +133,12 @@ fn test_offscreen_crud_and_validation() {
         part_id: id(3), // same part
         ..Default::default()
     };
-    let res_dup = doc.create_offscreen(os_dup_owner);
-    assert!(!res_dup.status.is_ok());
-    assert_eq!(res_dup.status.code, "DUPLICATE_OWNER");
+    assert_eq!(
+        prepare(&doc, |b| b.create_offscreen(os_dup_owner))
+            .unwrap_err()
+            .code,
+        "DUPLICATE_OWNER"
+    );
 
     // Missing mask mesh rejection
     let os_bad_mask = Offscreen {
@@ -156,29 +149,22 @@ fn test_offscreen_crud_and_validation() {
         masks: vec![id(999)],
         ..Default::default()
     };
-    let res_mask = doc.create_offscreen(os_bad_mask);
-    assert!(!res_mask.status.is_ok());
+    assert!(prepare(&doc, |b| b.create_offscreen(os_bad_mask)).is_err());
 
-    // Deleting owner Part is guarded
-    let res_del_part = doc.erase_object(&id(3));
-    assert!(!res_del_part.status.is_ok());
-    assert_eq!(res_del_part.status.code, "OBJECT_REFERENCED");
-
-    // Deleting mask Mesh is guarded
-    let res_del_mesh = doc.erase_object(&id(4));
-    assert!(!res_del_mesh.status.is_ok());
-    assert_eq!(res_del_mesh.status.code, "OBJECT_REFERENCED");
-
-    // Erasing Offscreen succeeds and frees references
-    let res_del_os = doc.erase_object(&id(10));
-    assert!(res_del_os.status.is_ok());
-    assert_eq!(doc.offscreen_count(), 0);
-    assert!(doc.get_offscreen(&id(10)).is_none());
+    // Removing either referenced record leaves an invalid candidate.
+    assert!(prepare(&doc, |b| b.remove_part(&id(3))).is_err());
+    assert!(prepare(&doc, |b| b.remove_mesh(&id(4))).is_err());
+    let removed = prepare(&doc, |b| b.remove_offscreen(&id(10)))
+        .unwrap()
+        .state;
+    assert!(removed.offscreen_order().is_empty());
+    assert!(removed.offscreen_for_part(&id(3)).is_none());
+    assert!(doc.offscreen(&id(10)).is_some());
 }
 
 #[test]
 fn test_offscreen_evaluation_and_blendshapes() {
-    let mut doc = create_base_doc();
+    let mut builder = create_base_doc().builder();
 
     let param_fade = Parameter {
         id: id(20),
@@ -191,7 +177,7 @@ fn test_offscreen_evaluation_and_blendshapes() {
         kind: ParameterKind::Normal,
         repeat: false,
     };
-    assert!(doc.create_parameter(param_fade).status.is_ok());
+    builder.create_parameter(param_fade).unwrap();
 
     let param_bs = Parameter {
         id: id(21),
@@ -204,7 +190,7 @@ fn test_offscreen_evaluation_and_blendshapes() {
         kind: ParameterKind::BlendShape,
         repeat: false,
     };
-    assert!(doc.create_parameter(param_bs).status.is_ok());
+    builder.create_parameter(param_bs).unwrap();
 
     // SceneBinding for Part id(3) with 2 keyforms driven by ParamFade
     let sb = SceneBinding {
@@ -231,7 +217,7 @@ fn test_offscreen_evaluation_and_blendshapes() {
             ],
         },
     };
-    assert!(doc.create_scene_binding(sb).status.is_ok());
+    builder.create_scene_binding(sb).unwrap();
 
     // Offscreen with 2 keyforms mapped via part_keyform_indices: [0, 1]
     let os = Offscreen {
@@ -257,7 +243,7 @@ fn test_offscreen_evaluation_and_blendshapes() {
             },
         ],
     };
-    assert!(doc.create_offscreen(os).status.is_ok());
+    builder.create_offscreen(os).unwrap();
 
     // BlendShapeBinding on Offscreen id(40) adding +0.4 opacity
     let bkt = BlendShapeKeyTable {
@@ -268,7 +254,7 @@ fn test_offscreen_evaluation_and_blendshapes() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     let bb = BlendShapeBinding {
         id: id(51),
@@ -289,8 +275,9 @@ fn test_offscreen_evaluation_and_blendshapes() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(bb).status.is_ok());
+    builder.create_blend_binding(bb).unwrap();
 
+    let doc = builder.freeze().unwrap().state;
     let mut preview = HashMap::new();
     let mut frame = DrawableFrame::default();
 
@@ -326,9 +313,9 @@ fn test_offscreen_evaluation_and_blendshapes() {
     assert!((os_f.opacity - 1.0).abs() < 1e-5);
 
     // 6. Disable Part => opacity becomes 0.0, enabled becomes false
-    let mut p = doc.get_part(&id(3)).unwrap().clone();
+    let mut p = doc.part(&id(3)).unwrap().clone();
     p.enabled = false;
-    assert!(doc.replace_part(p).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_part(p)).unwrap().state;
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
     let os_f = &frame.offscreens[0];
     assert_eq!(os_f.opacity, 0.0);
@@ -339,7 +326,7 @@ fn test_offscreen_evaluation_and_blendshapes() {
 fn test_offscreen_render_orders_and_hierarchical_render_plan() {
     use zipzi_core::evaluation::RenderCommand;
 
-    let mut doc = create_base_doc();
+    let mut builder = create_base_doc().builder();
     // doc has PartRoot(id(3)), MeshA(id(4))
 
     // Part 10 (Child of PartRoot), has Offscreen 100, Mesh 101
@@ -351,7 +338,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         enabled: true,
         draw_order: 1.0,
     };
-    assert!(doc.create_part(p10).status.is_ok());
+    builder.create_part(p10).unwrap();
 
     let m101 = Mesh {
         id: id(101),
@@ -369,7 +356,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         triangles: vec![[1, 2, 3]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(m101).status.is_ok());
+    builder.create_mesh(m101).unwrap();
 
     let os100 = Offscreen {
         id: id(100),
@@ -380,7 +367,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         flags: 0,
         ..Default::default()
     };
-    assert!(doc.create_offscreen(os100).status.is_ok());
+    builder.create_offscreen(os100).unwrap();
 
     // Part 20 (Child of Part 10 - nested!), has Offscreen 200, Mesh 201
     let p20 = Part {
@@ -391,7 +378,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         enabled: true,
         draw_order: 2.0,
     };
-    assert!(doc.create_part(p20).status.is_ok());
+    builder.create_part(p20).unwrap();
 
     let m201 = Mesh {
         id: id(201),
@@ -409,7 +396,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         triangles: vec![[1, 2, 3]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(m201).status.is_ok());
+    builder.create_mesh(m201).unwrap();
 
     let os200 = Offscreen {
         id: id(200),
@@ -420,7 +407,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         flags: 0,
         ..Default::default()
     };
-    assert!(doc.create_offscreen(os200).status.is_ok());
+    builder.create_offscreen(os200).unwrap();
 
     // Part 30 (Sibling of Part 10, child of PartRoot), has Offscreen 300, Mesh 301
     let p30 = Part {
@@ -431,7 +418,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         enabled: true,
         draw_order: 3.0,
     };
-    assert!(doc.create_part(p30).status.is_ok());
+    builder.create_part(p30).unwrap();
 
     let m301 = Mesh {
         id: id(301),
@@ -449,7 +436,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         triangles: vec![[1, 2, 3]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(m301).status.is_ok());
+    builder.create_mesh(m301).unwrap();
 
     let os300 = Offscreen {
         id: id(300),
@@ -460,8 +447,9 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
         flags: 0,
         ..Default::default()
     };
-    assert!(doc.create_offscreen(os300).status.is_ok());
+    builder.create_offscreen(os300).unwrap();
 
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
 
@@ -514,7 +502,7 @@ fn test_offscreen_render_orders_and_hierarchical_render_plan() {
 
 #[test]
 fn offscreen_indices_are_checked_without_a_part_binding() {
-    let mut doc = create_base_doc();
+    let doc = create_base_doc();
     let os = Offscreen {
         id: id(10),
         runtime_id: "Offscreen".into(),
@@ -526,12 +514,15 @@ fn offscreen_indices_are_checked_without_a_part_binding() {
         }],
         ..Default::default()
     };
-    assert_eq!(doc.create_offscreen(os).status.code, "INDEX_OUT_OF_BOUNDS");
+    assert_eq!(
+        prepare(&doc, |b| b.create_offscreen(os)).unwrap_err().code,
+        "INDEX_OUT_OF_BOUNDS"
+    );
 }
 
 #[test]
 fn static_offscreen_honors_explicit_mapping_and_sentinel() {
-    let mut doc = create_base_doc();
+    let doc = create_base_doc();
     let mut os = Offscreen {
         id: id(10),
         runtime_id: "Offscreen".into(),
@@ -549,27 +540,28 @@ fn static_offscreen_honors_explicit_mapping_and_sentinel() {
         ],
         ..Default::default()
     };
-    assert!(doc.create_offscreen(os.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_offscreen(os.clone()))
+        .unwrap()
+        .state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
     assert_eq!(frame.offscreens[0].opacity, 0.7);
     os.part_keyform_indices = vec![-1];
-    assert!(doc.replace_offscreen(os).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_offscreen(os)).unwrap().state;
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
     assert_eq!(frame.offscreens[0].opacity, 1.0);
 }
 
 #[test]
 fn part_binding_edits_preserve_offscreen_mapping_invariants() {
-    let mut doc = create_base_doc();
-    assert!(doc
+    let mut builder = create_base_doc().builder();
+    builder
         .create_parameter(Parameter {
             id: id(20),
             runtime_id: "Param".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     let binding = SceneBinding {
         id: id(30),
         axes: vec![BindingAxis {
@@ -592,9 +584,8 @@ fn part_binding_edits_preserve_offscreen_mapping_invariants() {
             ],
         },
     };
-    assert!(doc.create_scene_binding(binding.clone()).status.is_ok());
-    let binding = doc.get_scene_binding(&id(30)).unwrap().clone();
-    assert!(doc
+    builder.create_scene_binding(binding.clone()).unwrap();
+    builder
         .create_offscreen(Offscreen {
             id: id(10),
             runtime_id: "Offscreen".into(),
@@ -606,30 +597,33 @@ fn part_binding_edits_preserve_offscreen_mapping_invariants() {
             }],
             ..Default::default()
         })
-        .status
-        .is_ok());
-    let revision = doc.revision();
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
+    let binding = doc.scene_binding(&id(30)).unwrap().clone();
     let mut shorter = binding.clone();
     shorter.axes[0].keys.pop();
     shorter.axes[0].samples.pop();
     shorter.track.part_keyforms_mut().unwrap().pop();
-    assert!(!doc.replace_scene_binding(shorter).status.is_ok());
-    assert_eq!(doc.revision(), revision);
-    assert_eq!(doc.get_scene_binding(&id(30)), Some(&binding));
-    assert!(!doc.erase_object(&id(30)).status.is_ok());
+    assert_eq!(
+        prepare(&doc, |b| b.replace_scene_binding(shorter))
+            .unwrap_err()
+            .code,
+        "INVALID_LENGTH"
+    );
+    assert_eq!(doc.scene_binding(&id(30)), Some(&binding));
+    assert!(prepare(&doc, |b| b.remove_scene_binding(&id(30))).is_err());
 }
 
 #[test]
 fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
-    let mut doc = create_base_doc();
-    assert!(doc
+    let mut builder = create_base_doc().builder();
+    builder
         .create_parameter(Parameter {
             id: id(20),
             runtime_id: "Param".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     let mut binding = SceneBinding {
         id: id(30),
         axes: vec![BindingAxis {
@@ -652,8 +646,7 @@ fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
             ],
         },
     };
-    assert!(doc.create_scene_binding(binding.clone()).status.is_ok());
-    binding = doc.get_scene_binding(&id(30)).unwrap().clone();
+    builder.create_scene_binding(binding.clone()).unwrap();
     let mut os = Offscreen {
         id: id(10),
         runtime_id: "OS".into(),
@@ -671,8 +664,10 @@ fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
         ],
         ..Default::default()
     };
-    assert!(doc.create_offscreen(os.clone()).status.is_ok());
-    let before = doc.clone();
+    builder.create_offscreen(os.clone()).unwrap();
+    let doc = builder.freeze().unwrap().state;
+    let before = doc;
+    binding = before.scene_binding(&id(30)).unwrap().clone();
     binding.axes[0].keys.insert(1, 0.0);
     let sample_id = uuid::Uuid::new_v4().to_string();
     binding.axes[0].samples.insert(
@@ -690,11 +685,12 @@ fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
             ..Default::default()
         },
     );
-    assert!(!doc
-        .replace_part_binding_with_offscreen(binding.clone(), os.clone())
-        .status
-        .is_ok());
-    assert_eq!(doc.revision(), before.revision());
+    assert_eq!(
+        prepare(&before, |b| b.replace_scene_binding(binding.clone()))
+            .unwrap_err()
+            .code,
+        "INVALID_LENGTH"
+    );
     os.keyforms.push(OffscreenKeyform {
         opacity: 0.6,
         ..Default::default()
@@ -702,27 +698,41 @@ fn joint_part_offscreen_edit_is_atomic_and_snapshot_safe() {
     os.part_keyform_indices = vec![0, 2, 1];
     let mut invalid = os.clone();
     invalid.keyforms[2].opacity = f32::NAN;
-    assert!(!doc
-        .replace_part_binding_with_offscreen(binding.clone(), invalid)
-        .status
-        .is_ok());
     assert_eq!(
-        doc.get_scene_binding(&id(30)),
-        before.get_scene_binding(&id(30))
+        prepare(&before, |b| {
+            b.replace_scene_binding(binding.clone())?;
+            b.replace_offscreen(invalid)
+        })
+        .unwrap_err()
+        .code,
+        "INVALID_OPACITY"
     );
-    assert_eq!(doc.revision(), before.revision());
-    assert!(doc
-        .replace_part_binding_with_offscreen(binding.clone(), os.clone())
-        .status
-        .is_ok());
-    assert_eq!(doc.revision(), before.revision() + 1);
-    let after = doc.clone();
+    assert_eq!(before.scene_binding(&id(30)).unwrap().track.len(), 2);
+    assert_eq!(
+        before.offscreen(&id(10)).unwrap().part_keyform_indices,
+        [0, 1]
+    );
+
+    let prepared = prepare(&before, |b| {
+        b.replace_scene_binding(binding.clone())?;
+        b.replace_offscreen(os.clone())
+    })
+    .unwrap();
+    assert_eq!(
+        prepared
+            .writes
+            .records()
+            .iter()
+            .map(|write| write.domain)
+            .collect::<Vec<_>>(),
+        [RecordDomain::SceneBinding, RecordDomain::Offscreen]
+    );
+    let after = prepared.state;
     let mut frame = DrawableFrame::default();
-    assert!(evaluate_frame(&doc, &HashMap::from([(id(20), 0.0)]), &mut frame).is_ok());
+    assert!(evaluate_frame(&after, &HashMap::from([(id(20), 0.0)]), &mut frame).is_ok());
     assert_eq!(frame.offscreens[0].opacity, 0.6);
-    doc.restore_from(&before);
-    assert_eq!(doc.get_offscreen(&id(10)), before.get_offscreen(&id(10)));
-    doc.restore_from(&after);
-    assert_eq!(doc.get_scene_binding(&id(30)), Some(&binding));
-    assert_eq!(doc.get_offscreen(&id(10)), Some(&os));
+    assert!(evaluate_frame(&before, &HashMap::from([(id(20), 0.0)]), &mut frame).is_ok());
+    assert_eq!(frame.offscreens[0].opacity, 0.5);
+    assert_eq!(after.scene_binding(&id(30)), Some(&binding));
+    assert_eq!(after.offscreen(&id(10)), Some(&os));
 }

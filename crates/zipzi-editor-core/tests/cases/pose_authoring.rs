@@ -146,7 +146,7 @@ fn pose_structure_updates_do_not_activate_motion_or_expression() -> anyhow::Resu
         },
     )?;
     assert!(
-        d.plan_pose_field_patch(&address, address.expected().clone())
+        d.plan_pose_field_patch(&address, address.value.clone())
             .is_err()
     );
     let mut editor = super::support::editor_from_document(d);

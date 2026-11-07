@@ -6,10 +6,10 @@ impl super::ObjectIndex {
     /// These mesh fields cannot change identities, relation edges or draw groups.
     pub(crate) fn refresh_mesh_presentation(
         &mut self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &super::ObjectRef,
     ) -> bool {
-        let Some(mesh) = model.get_mesh(&object.id) else {
+        let Some(mesh) = model.mesh(&object.id) else {
             return false;
         };
         let Some(&slot) = self.structure.slots.get(object) else {
@@ -39,35 +39,6 @@ impl super::ObjectIndex {
         true
     }
 
-    pub(crate) fn refresh_physics_properties(
-        &mut self,
-        model: &zipzi_core::Document,
-        owners: &[String],
-    ) -> bool {
-        let Some(asset) = model.physics() else {
-            return false;
-        };
-        let root = super::ObjectRef::new(ObjectKind::Physics, &asset.id);
-        let Some(&slot) = self.structure.slots.get(&root) else {
-            return false;
-        };
-        let payload = json!({"meta":asset.data.meta,"extensions":asset.data.extensions});
-        let fps_changed =
-            self.objects[slot].properties["meta"].get("Fps") != payload["meta"].get("Fps");
-        if self.objects[slot].properties != payload {
-            self.objects[slot].properties = payload;
-        }
-        if fps_changed {
-            self.refresh_physics_fps(asset);
-        }
-        owners.iter().all(|id| {
-            self.refresh_physics_preview(
-                model,
-                &super::ObjectRef::new(ObjectKind::PhysicsGroup, id),
-            )
-        })
-    }
-
     // FPS belongs to the asset even though each group exposes it in Properties.
     // Asset-only receipts have no modified group, so synchronize it independently.
     fn refresh_physics_fps(&mut self, asset: &zipzi_core::document::PhysicsAsset) {
@@ -91,7 +62,7 @@ impl super::ObjectIndex {
 
     fn refresh_physics_preview(
         &mut self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &super::ObjectRef,
     ) -> bool {
         let Some(asset) = model.physics() else {
@@ -227,7 +198,7 @@ impl super::ObjectIndex {
     /// payloads without rebuilding bindings or influence paths.
     pub(crate) fn refresh_property_preview(
         &mut self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &super::ObjectRef,
         keyform_order_changed: bool,
     ) -> bool {

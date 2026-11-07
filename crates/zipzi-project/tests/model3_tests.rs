@@ -1,6 +1,6 @@
 use serde_json::Value;
 use zipzi_core::document::AllocateModelMetadata;
-use zipzi_project::DocumentSession;
+use zipzi_project::{ProjectImporter, ProjectIo, TransferFormat, TransferSnapshot};
 
 #[test]
 fn null_optional_file_references_import_as_absent() {
@@ -37,8 +37,9 @@ fn null_optional_file_references_import_as_absent() {
     let path = temporary.join("model.model3.json");
     std::fs::write(&path, serde_json::to_vec(&model3).unwrap()).unwrap();
 
-    let mut session = DocumentSession::new();
-    let (result, report) = session.import_model3(&path);
+    let importer = ProjectImporter::default();
+    let (result, imported, report) = importer.import_model3(&path);
+    assert!(imported.is_some());
     assert!(result.status.is_ok(), "{result:?}");
     assert!(result.diagnostics.is_empty(), "{result:?}");
     assert!(result.warnings.is_empty(), "{result:?}");
@@ -82,15 +83,16 @@ fn identical_expression_registrations_import_once() {
     let path = temporary.join("model.model3.json");
     std::fs::write(&path, serde_json::to_vec(&model3).unwrap()).unwrap();
 
-    let mut session = DocumentSession::new();
-    let (result, _) = session.import_model3(&path);
+    let importer = ProjectImporter::default();
+    let (result, imported, _) = importer.import_model3(&path);
     assert!(result.status.is_ok(), "{result:?}");
-    assert_eq!(session.document().expression_order().len(), 1);
+    assert_eq!(imported.unwrap().document.expression_order().len(), 1);
 
     model3["FileReferences"]["Expressions"][1]["File"] = "other.exp3.json".into();
     std::fs::write(&path, serde_json::to_vec(&model3).unwrap()).unwrap();
-    let (result, _) = session.import_model3(&path);
+    let (result, imported, _) = importer.import_model3(&path);
     assert_eq!(result.status.code, "DUPLICATE_EXPRESSION_NAME");
+    assert!(imported.is_none());
     std::fs::remove_dir_all(temporary).unwrap();
 }
 
@@ -131,41 +133,45 @@ fn model3_groups_layout_and_hit_areas_survive_project_and_package() {
         serde_json::to_vec_pretty(&model3).unwrap(),
     )
     .unwrap();
-    let mut session = DocumentSession::new();
-    let (result, _) = session.import_model3(&temporary.join("model.model3.json"));
+    let importer = ProjectImporter::default();
+    let (result, imported, _) = importer.import_model3(&temporary.join("model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
+    let imported = imported.unwrap();
     assert!(
-        session.document().missing_attachments().is_empty(),
+        imported.document.missing_attachments().is_empty(),
         "{:?}",
-        session.document().missing_attachments()
+        imported.document.missing_attachments()
     );
-    let mesh_runtime = session
-        .document()
-        .get_mesh(&session.document().mesh_order()[0])
+    let mesh_runtime = imported
+        .document
+        .mesh(&imported.document.mesh_order()[0])
         .unwrap()
         .runtime_id
         .clone();
-    let mut settings = session.document().model3_settings().clone();
+    let mut settings = imported.document.model3_settings().clone();
     settings.hit_areas = Some(vec![zipzi_core::document::ModelHitArea {
         id: zipzi_core::document::ModelHitArea::allocate().id,
         name: "".into(),
         mesh: zipzi_core::document::ModelTargetRef::Resolved {
-            object_id: session.document().mesh_order()[0].clone(),
+            object_id: imported.document.mesh_order()[0].clone(),
         },
         extensions: Default::default(),
     }]);
-    assert!(session
-        .document_mut()
-        .set_model3_settings(settings)
-        .status
-        .is_ok());
-    let project = temporary.join("project");
-    assert!(session.save(&project).status.is_ok());
-    let mut reopened = DocumentSession::new();
-    assert!(reopened.open(&project).status.is_ok());
+    let mut builder = imported.document.builder();
+    builder.set_model3_settings(settings).unwrap();
+    let edited = builder.freeze().unwrap().state;
+    let io = ProjectIo::new(temporary.join("cache"), importer.resources.clone());
+    let project = temporary.join("project.zipzi");
+    assert!(
+        io.save(&edited, &imported.resources, &project, None, || true)
+            .unwrap()
+            .published
+    );
+    let reopened = io.load(&project, || true).unwrap();
     let package = temporary.join("package");
-    let result = reopened.export_package(&package);
-    assert!(result.status.is_ok(), "{result:?}");
+    let transfer =
+        TransferSnapshot::new(reopened.document, reopened.resources, vec![project]).unwrap();
+    transfer.publish(TransferFormat::Runtime, &package).unwrap();
     let output: Value =
         serde_json::from_slice(&std::fs::read(package.join("model.model3.json")).unwrap()).unwrap();
     assert_eq!(output["Groups"], model3["Groups"]);
@@ -181,8 +187,8 @@ fn model3_groups_layout_and_hit_areas_survive_project_and_package() {
         serde_json::to_vec(&invalid).unwrap(),
     )
     .unwrap();
-    let mut rejected = DocumentSession::new();
-    let (result, _) = rejected.import_model3(&package.join("model.model3.json"));
+    let (result, imported, _) = importer.import_model3(&package.join("model.model3.json"));
+    assert!(imported.is_none());
     assert_eq!(result.status.code, "INVALID_ATTACHMENT_PATH");
     std::fs::remove_dir_all(temporary).unwrap();
 }
@@ -228,17 +234,29 @@ fn sound_and_userdata_are_managed_after_source_is_removed() {
         serde_json::to_vec_pretty(&model3).unwrap(),
     )
     .unwrap();
-    let mut session = DocumentSession::new();
-    let (result, _) = session.import_model3(&temporary.join("model.model3.json"));
+    let importer = ProjectImporter::default();
+    let (result, imported, _) = importer.import_model3(&temporary.join("model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
+    let imported = imported.unwrap();
     assert!(
-        session.document().missing_attachments().is_empty(),
+        imported.document.missing_attachments().is_empty(),
         "{:?}",
-        session.document().missing_attachments()
+        imported.document.missing_attachments()
     );
-    assert_eq!(session.document().package_attachments().len(), 2);
-    let project = temporary.join("project");
-    assert!(session.save(&project).status.is_ok());
+    assert_eq!(imported.document.package_attachments().len(), 2);
+    let io = ProjectIo::new(temporary.join("cache"), importer.resources.clone());
+    let project = temporary.join("project.zipzi");
+    assert!(
+        io.save(
+            &imported.document,
+            &imported.resources,
+            &project,
+            None,
+            || true
+        )
+        .unwrap()
+        .published
+    );
     for path in [
         "model.moc3",
         "texture_00.png",
@@ -248,11 +266,11 @@ fn sound_and_userdata_are_managed_after_source_is_removed() {
     ] {
         std::fs::remove_file(temporary.join(path)).unwrap();
     }
-    let mut reopened = DocumentSession::new();
-    assert!(reopened.open(&project).status.is_ok());
+    let reopened = io.load(&project, || true).unwrap();
     let package = temporary.join("package");
-    let result = reopened.export_package(&package);
-    assert!(result.status.is_ok(), "{result:?}");
+    let transfer =
+        TransferSnapshot::new(reopened.document, reopened.resources, vec![project]).unwrap();
+    transfer.publish(TransferFormat::Runtime, &package).unwrap();
     assert_eq!(
         std::fs::read(package.join("motions/audio/a.wav")).unwrap(),
         sound
@@ -261,9 +279,8 @@ fn sound_and_userdata_are_managed_after_source_is_removed() {
         std::fs::read(package.join("data.userdata3.json")).unwrap(),
         user_data
     );
-    let mut imported = DocumentSession::new();
-    let (result, _) = imported.import_model3(&package.join("model.model3.json"));
+    let (result, imported, _) = importer.import_model3(&package.join("model.model3.json"));
     assert!(result.status.is_ok(), "{result:?}");
-    assert!(imported.document().missing_attachments().is_empty());
+    assert!(imported.unwrap().document.missing_attachments().is_empty());
     std::fs::remove_dir_all(temporary).unwrap();
 }

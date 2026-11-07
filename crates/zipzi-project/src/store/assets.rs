@@ -1,5 +1,5 @@
 //! Disk resource validation and lazily encoded in-memory draft textures.
-use super::{DocumentStore, ResourceDiagnostic};
+
 use crate::filesystem as io;
 use crate::resources::{content_sha256, decode_png, AssetData, TextureData};
 use std::{
@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
-use zipzi_core::{Document, ImageAsset, Status};
+use zipzi_core::{ImageAsset, Status};
 
 mod texture;
 pub use texture::{read_project_texture_bounded, VerifiedTexture};
@@ -111,157 +111,11 @@ impl MemoryAsset {
         *cache = Some(result.clone());
         Ok(result)
     }
-
-    pub(super) fn validate_metadata(&self, asset: &ImageAsset) -> Result<(), Status> {
-        asset.image_content()?;
-        if self.texture.width != asset.content.as_ref().unwrap().width
-            || self.texture.height != asset.content.as_ref().unwrap().height
-        {
-            return Err(Status::error(
-                "RESOURCE_DIMENSIONS",
-                format!("{}: PNG dimensions differ from metadata", asset.id),
-            ));
-        }
-        if !asset.content.as_ref().unwrap().sha256.is_empty()
-            && self.encoded_png()?.sha256 != asset.content.as_ref().unwrap().sha256
-        {
-            return Err(Status::error(
-                "RESOURCE_HASH",
-                format!("{}: PNG differs from saved SHA-256", asset.id),
-            ));
-        }
-        Ok(())
-    }
 }
 
 pub(super) struct VerifiedAsset {
     pub(super) bytes: Arc<[u8]>,
     pub(super) sha256: String,
-}
-
-impl DocumentStore {
-    pub(super) fn clear_memory_assets(&self) {
-        self.memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .clear();
-    }
-
-    pub(super) fn has_memory_asset(&self, asset: &ImageAsset) -> bool {
-        self.memory_asset(asset).is_some()
-    }
-
-    pub(super) fn memory_asset(&self, asset: &ImageAsset) -> Option<Arc<MemoryAsset>> {
-        self.memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .get(&asset.content.as_ref()?.source)
-            .cloned()
-    }
-
-    /// Immutable draft pixels are encoded and hashed once. Disk bytes are read
-    /// and hashed on every call, so external edits are detected.
-    pub(super) fn read_verified_asset(
-        &self,
-        root: &Path,
-        asset: &ImageAsset,
-    ) -> Result<VerifiedAsset, Status> {
-        if let Some(memory) = self.memory_asset(asset) {
-            memory.validate_metadata(asset)?;
-            let png = memory.encoded_png()?;
-            return Ok(VerifiedAsset {
-                bytes: png.bytes.clone(),
-                sha256: png.sha256.clone(),
-            });
-        }
-        let source_path = asset_path(root, asset)?;
-        let bytes = fs::read(&source_path)
-            .map_err(|e| Status::error("PROJECT_IO", format!("{}: {}", asset.id, e)))?;
-        let sha256 = content_sha256(&bytes);
-        let cached_dimensions = self
-            .verified_pngs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .get(&sha256)
-            .copied();
-        let (width, height) = match cached_dimensions {
-            Some(dimensions) => dimensions,
-            None => {
-                let image = zipzi_core::image::decode_png(&bytes).map_err(|mut status| {
-                    status.message = format!("{}: {}", asset.id, status.message);
-                    status
-                })?;
-                let dimensions = (image.width, image.height);
-                self.verified_pngs
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner())
-                    .insert(sha256.clone(), dimensions);
-                dimensions
-            }
-        };
-        if width != asset.content.as_ref().unwrap().width
-            || height != asset.content.as_ref().unwrap().height
-        {
-            return Err(Status::error(
-                "RESOURCE_DIMENSIONS",
-                format!("{}: PNG dimensions differ from metadata", asset.id),
-            ));
-        }
-        if !asset.content.as_ref().unwrap().sha256.is_empty()
-            && sha256 != asset.content.as_ref().unwrap().sha256
-        {
-            return Err(Status::error(
-                "RESOURCE_HASH",
-                format!("{}: PNG differs from saved SHA-256", asset.id),
-            ));
-        }
-        Ok(VerifiedAsset {
-            bytes: bytes.into(),
-            sha256,
-        })
-    }
-
-    pub(super) fn remember_imported_assets(&self, document: &Document) {
-        let mut verified = self
-            .verified_pngs
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        for id in document.asset_order() {
-            let asset = document.get_asset(id).unwrap();
-            if asset.content.is_none() {
-                continue;
-            }
-            // MOC3 import assigns a hash only after successfully decoding the PNG.
-            if !asset.content.as_ref().unwrap().sha256.is_empty() {
-                verified.insert(
-                    asset.content.as_ref().unwrap().sha256.clone(),
-                    (
-                        asset.content.as_ref().unwrap().width,
-                        asset.content.as_ref().unwrap().height,
-                    ),
-                );
-            }
-        }
-    }
-
-    pub fn diagnose(&self, document: &Document, root: &Path) -> Vec<ResourceDiagnostic> {
-        let mut result = Vec::new();
-        for id in document.asset_order() {
-            let asset = document.get_asset(id).unwrap();
-            let validation = match self.memory_asset(asset) {
-                Some(memory) => memory.validate_metadata(asset),
-                None => self.read_verified_asset(root, asset).map(|_| ()),
-            };
-            if let Err(s) = validation {
-                result.push(ResourceDiagnostic {
-                    asset_id: id.clone(),
-                    code: s.code,
-                    message: s.message,
-                });
-            }
-        }
-        result
-    }
 }
 
 pub(crate) fn asset_path(root: &Path, asset: &ImageAsset) -> Result<PathBuf, Status> {
@@ -301,6 +155,11 @@ impl std::fmt::Debug for PreparedImageContent {
     }
 }
 impl PreparedImageContent {
+    pub(crate) fn encoded_png(&self) -> Result<(Arc<[u8]>, String), Status> {
+        self.validate_metadata()?;
+        let png = self.memory.encoded_png()?;
+        Ok((png.bytes.clone(), png.sha256.clone()))
+    }
     pub fn texture(&self) -> TextureData {
         self.memory.texture.clone()
     }
@@ -428,26 +287,42 @@ pub fn prepare_png_content(
     let rgba: Arc<[u8]> = data.rgba.into();
     pixels.commit(&rgba, crate::ImageBufferKind::Rgba)?;
     let sha256 = content_sha256(&bytes);
-    Ok(PreparedImageContent {
-        content: zipzi_core::ImageContent {
-            source: format!("assets/.memory-loaded/{sha256}.png"),
-            width,
-            height,
-            sha256: sha256.clone(),
-        },
-        memory: Arc::new(MemoryAsset {
-            texture: TextureData {
-                rgba,
+    Ok(PreparedImageContent::from_decoded_png(
+        bytes, sha256, width, height, rgba, budget,
+    ))
+}
+
+impl PreparedImageContent {
+    /// Assemble the owned result of PNG validation and budget admission.
+    pub(crate) fn from_decoded_png(
+        bytes: Arc<[u8]>,
+        sha256: String,
+        width: u32,
+        height: u32,
+        rgba: Arc<[u8]>,
+        budget: &crate::ImageMemoryBudget,
+    ) -> Self {
+        Self {
+            content: zipzi_core::ImageContent {
+                source: format!("assets/.memory-loaded/{sha256}.png"),
                 width,
                 height,
-                cache_key: format!("png:{sha256}"),
+                sha256: sha256.clone(),
             },
-            png: Mutex::new(Some(Arc::new(VerifiedAsset { bytes, sha256 }))),
-            budget: budget.clone(),
-        }),
-    })
+            memory: Arc::new(MemoryAsset {
+                texture: TextureData {
+                    rgba,
+                    width,
+                    height,
+                    cache_key: format!("png:{sha256}"),
+                },
+                png: Mutex::new(Some(Arc::new(VerifiedAsset { bytes, sha256 }))),
+                budget: budget.clone(),
+            }),
+        }
+    }
 }
-fn rgba_size(width: u32, height: u32) -> Result<usize, Status> {
+pub(crate) fn rgba_size(width: u32, height: u32) -> Result<usize, Status> {
     let size = (width as usize)
         .checked_mul(height as usize)
         .and_then(|n| n.checked_mul(4));
@@ -520,32 +395,6 @@ impl PreparedImageContent {
         })
     }
 }
-impl super::DocumentSession {
-    /// Called only after a successful SDK publication. Registration clones an Arc.
-    pub fn retain_prepared_image(&self, image: &PreparedImageContent) {
-        self.store
-            .memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .entry(image.content.source.clone())
-            .or_insert_with(|| image.memory.clone());
-    }
-    pub(crate) fn retain_image_sources(&self, sources: &std::collections::HashSet<String>) {
-        self.store
-            .memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .retain(|source, _| sources.contains(source));
-    }
-
-    pub fn memory_image(&self, asset: &ImageAsset) -> Option<PreparedImageContent> {
-        Some(PreparedImageContent {
-            memory: self.store.memory_asset(asset)?,
-            content: asset.content.clone()?,
-        })
-    }
-}
-
 struct BoundedPng {
     bytes: Vec<u8>,
     limit: usize,
@@ -570,109 +419,6 @@ impl std::io::Write for BoundedPng {
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
-    }
-}
-
-/// Shared lookup for owned SDK candidates. Pins keep resources readable after
-/// collection, while this lookup alone does not keep an unused payload alive.
-#[derive(Clone)]
-pub struct ImageResourceStore {
-    images: Arc<Mutex<std::collections::HashMap<String, Arc<MemoryAsset>>>>,
-    budget: crate::ImageMemoryBudget,
-}
-impl ImageResourceStore {
-    pub fn with_budget(&self, budget: crate::ImageMemoryBudget) -> Self {
-        Self {
-            images: self.images.clone(),
-            budget,
-        }
-    }
-    pub fn budget(&self) -> &crate::ImageMemoryBudget {
-        &self.budget
-    }
-    pub fn memory_image(&self, asset: &ImageAsset) -> Option<PreparedImageContent> {
-        Some(PreparedImageContent {
-            memory: self
-                .images
-                .lock()
-                .unwrap_or_else(|p| p.into_inner())
-                .get(&asset.content.as_ref()?.source)?
-                .clone(),
-            content: asset.content.clone()?,
-        })
-    }
-}
-impl super::DocumentSession {
-    pub fn image_resource_store(&self) -> ImageResourceStore {
-        ImageResourceStore {
-            images: self.store.memory_assets.clone(),
-            budget: self.store.image_budget.clone(),
-        }
-    }
-    pub fn image_memory_budget(&self) -> &crate::ImageMemoryBudget {
-        &self.store.image_budget
-    }
-    pub fn set_image_memory_budget(
-        &mut self,
-        budget: crate::ImageMemoryBudget,
-    ) -> Result<(), Status> {
-        let mut images = self
-            .store
-            .memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner());
-        let captured: Vec<_> = images
-            .iter()
-            .map(|(source, memory)| {
-                (
-                    source.clone(),
-                    memory.texture.clone(),
-                    memory.png.lock().unwrap_or_else(|p| p.into_inner()).clone(),
-                )
-            })
-            .collect();
-        let mut buffers = Vec::new();
-        for (_, texture, png) in &captured {
-            buffers.push((&texture.rgba, crate::ImageBufferKind::Rgba));
-            if let Some(png) = png {
-                buffers.push((&png.bytes, crate::ImageBufferKind::Png));
-            }
-        }
-        budget.track_buffers(&buffers)?;
-        *images = captured
-            .into_iter()
-            .map(|(source, texture, png)| {
-                (
-                    source,
-                    Arc::new(MemoryAsset {
-                        texture,
-                        png: Mutex::new(png),
-                        budget: budget.clone(),
-                    }),
-                )
-            })
-            .collect();
-        self.store.image_budget = budget;
-        Ok(())
-    }
-    /// Keep formal/history descriptors and independently pinned images. No byte
-    /// payload is copied; textures are separately tracked until their last Arc dies.
-    pub fn collect_image_resources(&self, sources: &std::collections::HashSet<String>) -> usize {
-        let mut images = self
-            .store
-            .memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner());
-        let before = images.len();
-        images.retain(|source, image| sources.contains(source) || Arc::strong_count(image) > 1);
-        before - images.len()
-    }
-    pub fn memory_image_entries(&self) -> usize {
-        self.store
-            .memory_assets
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .len()
     }
 }
 

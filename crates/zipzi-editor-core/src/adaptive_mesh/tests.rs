@@ -512,9 +512,8 @@ fn coarse_poisson_spacing_uses_occupied_samples_instead_of_empty_buckets() {
 
 #[test]
 fn generated_band_edges_are_free_until_the_user_constrains_them() {
-    use zipzi_sdk::{
-        ManualMeshOperation, ManualVertexIdAllocator, add_manual_interior_sites, edit_manual_mesh,
-    };
+    use zipzi_contract::authoring::ManualMeshOperation;
+    use zipzi_sdk::{ManualVertexIdAllocator, add_manual_interior_sites, edit_manual_mesh};
     let alpha = mask(192, 160, |x, y| {
         (x - 96.).powi(2) / 78_f64.powi(2) + (y - 80.).powi(2) / 62_f64.powi(2) < 1.
     });
@@ -531,7 +530,7 @@ fn generated_band_edges_are_free_until_the_user_constrains_them() {
     .unwrap()
     .geometry;
     assert!(generated.meshing.as_ref().unwrap().constraints.is_empty());
-    let edges_of = |g: &zipzi_sdk::MeshGeometry| -> BTreeSet<[usize; 2]> {
+    let edges_of = |g: &zipzi_contract::authoring::MeshGeometry| -> BTreeSet<[usize; 2]> {
         g.triangles
             .iter()
             .flat_map(|t| edges(t.map(|i| i as usize)))
@@ -586,7 +585,8 @@ fn generated_band_edges_are_free_until_the_user_constrains_them() {
 
 #[test]
 fn interior_generation_uses_authored_contours_and_keeps_vertex_identities() {
-    use zipzi_sdk::{ManualMeshOperation, edit_manual_mesh};
+    use zipzi_contract::authoring::ManualMeshOperation;
+    use zipzi_sdk::edit_manual_mesh;
     let alpha = mask(192, 160, |x, y| {
         (x - 96.).powi(2) / 78_f64.powi(2) + (y - 80.).powi(2) / 62_f64.powi(2) < 1.
     });

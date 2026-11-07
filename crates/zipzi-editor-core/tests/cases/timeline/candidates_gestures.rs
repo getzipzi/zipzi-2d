@@ -137,7 +137,7 @@ fn result_fade_masks_zero_time_candidate_but_editing_samples_it_directly() -> an
         editor.update_timeline_edit(document, token, command.clone())?;
         let candidate = evaluate(&mut editor, &mut evaluator)?;
         assert_eq!(
-            editor.timeline_edit().unwrap().candidate.clip().tracks[0]
+            editor.timeline_edit().unwrap().candidate.tracks[0]
                 .initial
                 .value,
             0.8

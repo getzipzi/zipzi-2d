@@ -1,9 +1,11 @@
 use super::*;
+use zipzi_core::document::DeletionRequest;
 use zipzi_core::{
     BindingAxisEditing, SceneBinding, SceneTrack, WarpBezier, WarpBezierEvaluation, WarpKeyform,
     WarpTransform,
 };
-use zipzi_sdk::{DeletionOptions, DeletionRequest, DeletionTarget};
+
+use zipzi_core::document::DeletionTarget;
 
 const BLEND_PARAMETER: &str = "00000000-0000-4000-8000-000000000430";
 fn add_blend(s: &mut AuthoringSession, target: &str, warp: bool) {
@@ -12,68 +14,109 @@ fn add_blend(s: &mut AuthoringSession, target: &str, warp: bool) {
         DeltaMeshKeyform, DeltaWarpKeyform, ParameterKind,
     };
     let count = if warp {
-        s.document()
-            .get_transform(target)
+        s.snapshot()
+            .document()
+            .transform(target)
             .unwrap()
             .warp()
             .unwrap()
             .points
             .len()
     } else {
-        s.document().get_mesh(target).unwrap().base_positions.len()
+        s.snapshot()
+            .document()
+            .mesh(target)
+            .unwrap()
+            .base_positions
+            .len()
     };
-    s.edit("BlendShape", None, |e| {
-        e.create_parameter(Parameter {
-            id: BLEND_PARAMETER.into(),
-            kind: ParameterKind::BlendShape,
-            minimum: 0.,
-            maximum: 1.,
-            ..Default::default()
-        })?;
-        e.create_blend_key_table(BlendShapeKeyTable {
-            id: "00000000-0000-4000-8000-000000000431".into(),
-            parameter_id: BLEND_PARAMETER.into(),
-            keys: vec![0., 1.],
-            base_key_idx: 0,
-            samples: vec![],
-            base_sample_id: String::new(),
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: "00000000-0000-4000-8000-000000000432".into(),
-            target_id: target.into(),
-            target_kind: if warp {
-                BlendShapeTargetKind::Warp
-            } else {
-                BlendShapeTargetKind::Mesh
-            },
-            key_table_id: "00000000-0000-4000-8000-000000000431".into(),
-            constraint_ids: vec![],
-            keyforms: if warp {
-                DeltaKeyforms::Warp(
-                    [0., 1.]
-                        .map(|v| DeltaWarpKeyform {
-                            points: vec![Vec2::new(0.01 * v, -0.02 * v); count],
-                            ..Default::default()
-                        })
-                        .into(),
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: BLEND_PARAMETER.into(),
+                        kind: ParameterKind::BlendShape,
+                        minimum: 0.,
+                        maximum: 1.,
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.edit_blend_shape(
+                    zipzi_sdk::BlendAuthoringEdit::CreateTable {
+                        table: BlendShapeKeyTable {
+                            id: "00000000-0000-4000-8000-000000000431".into(),
+                            parameter_id: BLEND_PARAMETER.into(),
+                            keys: vec![0., 1.],
+                            base_key_idx: 0,
+                            samples: vec![],
+                            base_sample_id: String::new(),
+                        },
+                    },
+                    Default::default(),
+                    &Default::default(),
                 )
-            } else {
-                DeltaKeyforms::Mesh(
-                    [0., 1.]
-                        .map(|v| DeltaMeshKeyform {
-                            positions: vec![Vec2::new(0.01 * v, 0.02 * v); count],
-                            ..Default::default()
-                        })
-                        .into(),
-                )
-            },
-        })
-    })
+                .map(|_| ())?;
+                {
+                    let binding = BlendShapeBinding {
+                        id: "00000000-0000-4000-8000-000000000432".into(),
+                        target_id: target.into(),
+                        target_kind: if warp {
+                            BlendShapeTargetKind::Warp
+                        } else {
+                            BlendShapeTargetKind::Mesh
+                        },
+                        key_table_id: "00000000-0000-4000-8000-000000000431".into(),
+                        constraint_ids: vec![],
+                        keyforms: if warp {
+                            DeltaKeyforms::Warp(
+                                [0., 1.]
+                                    .map(|v| DeltaWarpKeyform {
+                                        points: vec![Vec2::new(0.01 * v, -0.02 * v); count],
+                                        ..Default::default()
+                                    })
+                                    .into(),
+                            )
+                        } else {
+                            DeltaKeyforms::Mesh(
+                                [0., 1.]
+                                    .map(|v| DeltaMeshKeyform {
+                                        positions: vec![Vec2::new(0.01 * v, 0.02 * v); count],
+                                        ..Default::default()
+                                    })
+                                    .into(),
+                            )
+                        },
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("BlendShape")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 fn blended_frame(s: &AuthoringSession, p: f32, blend: f32) -> zipzi_core::DrawableFrame {
-    s.evaluate(&[(PARAMETER_ID.into(), p), (BLEND_PARAMETER.into(), blend)].into())
-        .unwrap()
+    crate::support::frame(
+        s.snapshot(),
+        &[(PARAMETER_ID.into(), p), (BLEND_PARAMETER.into(), blend)].into(),
+    )
+    .unwrap()
 }
 
 fn assert_geometry(a: &zipzi_core::DrawableFrame, b: &zipzi_core::DrawableFrame) {
@@ -105,8 +148,13 @@ fn regular_warp() -> WarpTransform {
 }
 
 fn normalize_warp_child(s: &mut AuthoringSession) {
-    let mut mesh = s.document().get_mesh(MESH_ID).unwrap().clone();
-    let mut binding = s.document().binding_for_mesh(MESH_ID).unwrap().clone();
+    let mut mesh = s.snapshot().document().mesh(MESH_ID).unwrap().clone();
+    let mut binding = s
+        .snapshot()
+        .document()
+        .binding_for_mesh(MESH_ID)
+        .unwrap()
+        .clone();
     for p in mesh
         .base_positions
         .iter_mut()
@@ -114,10 +162,18 @@ fn normalize_warp_child(s: &mut AuthoringSession) {
     {
         *p = Vec2::new(0.5 + p.x * 0.002, 0.5 + p.y * 0.002);
     }
-    s.edit("normalized Warp coordinates", None, |e| {
-        e.replace_mesh(mesh)?;
-        e.replace_binding(binding)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.replace_mesh(mesh)?;
+                e.replace_binding(binding)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("normalized Warp coordinates")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
 }
 
@@ -133,8 +189,13 @@ fn rounded_warp_fixture(into_warp: bool, end: f32, quad: bool) -> AuthoringSessi
             })
         })
         .collect();
-    let mut mesh = s.document().get_mesh(MESH_ID).unwrap().clone();
-    let mut binding = s.document().binding_for_mesh(MESH_ID).unwrap().clone();
+    let mut mesh = s.snapshot().document().mesh(MESH_ID).unwrap().clone();
+    let mut binding = s
+        .snapshot()
+        .document()
+        .binding_for_mesh(MESH_ID)
+        .unwrap()
+        .clone();
     let positions = |x| {
         (0..mesh.base_positions.len())
             .map(|i| {
@@ -149,23 +210,34 @@ fn rounded_warp_fixture(into_warp: bool, end: f32, quad: bool) -> AuthoringSessi
     binding.keyforms[1].positions = positions(end);
     mesh.base_positions = binding.keyforms[0].positions.clone();
     mesh.deformer_id = if into_warp { "" } else { R }.into();
-    s.edit("rounded affine lattice", None, |e| {
-        e.create_transform(Transform {
-            id: R.into(),
-            data: TransformData::Warp(WarpTransform {
-                rows: 1,
-                columns: 2,
-                quad,
-                points,
-                bezier: None,
-            }),
-            ..Default::default()
-        })?;
-        e.replace_mesh(mesh)?;
-        e.replace_binding(binding)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: R.into(),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 1,
+                            columns: 2,
+                            quad,
+                            points,
+                            bezier: None,
+                        }),
+                        ..Default::default()
+                    },
+                )?;
+                e.replace_mesh(mesh)?;
+                e.replace_binding(binding)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("rounded affine lattice")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    s.drain_events();
+    s.take_events();
     s
 }
 
@@ -212,22 +284,20 @@ fn rounded_warp_residual_covers_unseen_keyforms_and_interior_poses_in_both_direc
                 }
                 let version = s.version();
                 assert_eq!(
-                    s.plan_binding_authoring(E::Reparent(edit.clone()))
+                    crate::support::binding(&s, E::Reparent(edit.clone()))
                         .unwrap_err()
                         .code
-                        .as_ref(),
+                        .as_str(),
                     "REPARENT_TOLERANCE_EXCEEDED"
                 );
                 assert_eq!(s.version(), version);
-                assert!(s.drain_events().is_empty());
+                assert!(s.take_events().is_empty());
                 assert_eq!(geometry_error(&before[0], &frame(&s, 0., 0.)), 0.);
                 edit.tolerance = 0.01;
-                let plan = s.plan_binding_authoring(E::Reparent(edit)).unwrap();
-                let BindingConversion::Reparent(p) = plan.conversion() else {
-                    unreachable!()
-                };
-                let bound = p.guarantee().error_bound;
-                s.execute_binding_plan(&plan).unwrap();
+                let plan = crate::support::binding(&s, E::Reparent(edit)).unwrap();
+                let p = plan.0.report.reparent_guarantee.as_ref().unwrap();
+                let bound = p.error_bound;
+                s.publish(plan.1).unwrap();
                 let maximum = before
                     .iter()
                     .enumerate()
@@ -238,9 +308,9 @@ fn rounded_warp_residual_covers_unseen_keyforms_and_interior_poses_in_both_direc
                     "fixture must expose the discarded residual: {maximum}"
                 );
                 assert!(maximum <= bound, "{maximum} > {bound}");
-                s.undo().unwrap();
+                s.undo(s.version()).unwrap();
                 assert_eq!(geometry_error(&before[8], &frame(&s, 0.5, 0.)), 0.);
-                s.redo().unwrap();
+                s.redo(s.version()).unwrap();
                 assert!(geometry_error(&before[8], &frame(&s, 0.5, 0.)) <= bound);
             }
         }
@@ -252,16 +322,23 @@ fn rounded_warp_residual_includes_active_blendshape_coordinate_envelopes() {
     let mut s = rounded_warp_fixture(false, 0.1, true);
     add_blend(&mut s, MESH_ID, false);
     let mut blend = s
+        .snapshot()
         .document()
-        .get_blend_binding("00000000-0000-4000-8000-000000000432")
+        .blend_binding("00000000-0000-4000-8000-000000000432")
         .unwrap()
         .clone();
     if let zipzi_core::DeltaKeyforms::Mesh(forms) = &mut blend.keyforms {
         forms[1].positions.fill(Vec2::new(0.4, 0.));
     }
-    s.edit("large blend delta", None, |e| {
-        e.replace_blend_binding(blend)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_blend_binding(blend))
+            .and_then(|value| {
+                let prepared = draft.prepare("large blend delta")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let before: Vec<_> = (0..=8)
         .map(|i| blended_frame(&s, 0., i as f32 / 8.))
@@ -278,20 +355,18 @@ fn rounded_warp_residual_includes_active_blendshape_coordinate_envelopes() {
         });
     let version = s.version();
     assert_eq!(
-        s.plan_binding_authoring(E::Reparent(edit.clone()))
+        crate::support::binding(&s, E::Reparent(edit.clone()))
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "REPARENT_TOLERANCE_EXCEEDED"
     );
     assert_eq!(s.version(), version);
     edit.tolerance = 0.01;
-    let plan = s.plan_binding_authoring(E::Reparent(edit)).unwrap();
-    let BindingConversion::Reparent(p) = plan.conversion() else {
-        unreachable!()
-    };
-    let bound = p.guarantee().error_bound;
-    s.execute_binding_plan(&plan).unwrap();
+    let plan = crate::support::binding(&s, E::Reparent(edit)).unwrap();
+    let p = plan.0.report.reparent_guarantee.as_ref().unwrap();
+    let bound = p.error_bound;
+    s.publish(plan.1).unwrap();
     for (i, a) in before.iter().enumerate() {
         assert!(geometry_error(a, &blended_frame(&s, 0., i as f32 / 8.)) <= bound);
     }
@@ -301,31 +376,57 @@ fn rounded_warp_residual_includes_active_blendshape_coordinate_envelopes() {
 #[test]
 fn rounded_warp_subtree_residual_accounts_for_descendant_extrapolation() {
     let mut s = rounded_warp_fixture(false, 0.1, true);
-    let mut binding = s.document().binding_for_mesh(MESH_ID).unwrap().clone();
+    let mut binding = s
+        .snapshot()
+        .document()
+        .binding_for_mesh(MESH_ID)
+        .unwrap()
+        .clone();
     for p in &mut binding.keyforms[1].positions {
         p.x += 8.;
     }
-    s.edit("extrapolating subtree", None, |e| {
-        e.create_transform(Transform {
-            id: T.into(),
-            parent_id: Some(R.into()),
-            data: TransformData::Warp(WarpTransform {
-                rows: 1,
-                columns: 1,
-                quad: true,
-                points: vec![
-                    Vec2::new(0.1, 0.),
-                    Vec2::new(0.5, 0.),
-                    Vec2::new(0.1, 1.),
-                    Vec2::new(0.5, 1.),
-                ],
-                bezier: None,
-            }),
-            ..Default::default()
-        })?;
-        e.set_deform_parent(MESH_ID, T)?;
-        e.replace_binding(binding)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: T.into(),
+                        parent_id: Some(R.into()),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 1,
+                            columns: 1,
+                            quad: true,
+                            points: vec![
+                                Vec2::new(0.1, 0.),
+                                Vec2::new(0.5, 0.),
+                                Vec2::new(0.1, 1.),
+                                Vec2::new(0.5, 1.),
+                            ],
+                            bezier: None,
+                        }),
+                        ..Default::default()
+                    },
+                )?;
+                e.edit_scene(
+                    zipzi_core::document::SceneEdit::Reparent {
+                        edit: ReparentEdit::keep_local(
+                            vec![(MESH_ID).to_string()],
+                            (T).to_string(),
+                        ),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?;
+                e.replace_binding(binding)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("extrapolating subtree")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let before: Vec<_> = (0..=16).map(|i| frame(&s, i as f32 / 16., 0.)).collect();
     let mut edit = rounded_warp_edit(false);
@@ -336,20 +437,18 @@ fn rounded_warp_subtree_residual_accounts_for_descendant_extrapolation() {
     edit.relative_tolerance = 0.;
     let version = s.version();
     assert_eq!(
-        s.plan_binding_authoring(E::Reparent(edit.clone()))
+        crate::support::binding(&s, E::Reparent(edit.clone()))
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "REPARENT_TOLERANCE_EXCEEDED"
     );
     assert_eq!(s.version(), version);
     edit.tolerance = 0.1;
-    let plan = s.plan_binding_authoring(E::Reparent(edit)).unwrap();
-    let BindingConversion::Reparent(p) = plan.conversion() else {
-        unreachable!()
-    };
-    let bound = p.guarantee().error_bound;
-    s.execute_binding_plan(&plan).unwrap();
+    let plan = crate::support::binding(&s, E::Reparent(edit)).unwrap();
+    let p = plan.0.report.reparent_guarantee.as_ref().unwrap();
+    let bound = p.error_bound;
+    s.publish(plan.1).unwrap();
     let maximum = before
         .iter()
         .enumerate()
@@ -357,82 +456,126 @@ fn rounded_warp_subtree_residual_accounts_for_descendant_extrapolation() {
         .fold(0., f64::max);
     assert!(maximum > 0.005, "{maximum}");
     assert!(maximum <= bound, "{maximum} > {bound}");
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_eq!(geometry_error(&before[16], &frame(&s, 1., 0.)), 0.);
 }
 
 #[test]
 fn rounded_warp_rotation_direction_requires_a_proof_for_domain_preservation() {
     let mut s = rounded_warp_fixture(false, 0.5, true);
-    let mut parent = s.document().get_transform(R).unwrap().clone();
+    let mut parent = s.snapshot().document().transform(R).unwrap().clone();
     // Different residuals on the two rows change the local probe direction.
     parent.warp_mut().unwrap().points[4].x -= 0.0036;
-    s.edit("rotation child", None, |e| {
-        e.replace_transform(parent)?;
-        e.create_transform(Transform {
-            id: T.into(),
-            parent_id: Some(R.into()),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 0.,
-                pose: RotationPose {
-                    origin: zipzi_core::PreciseVec2::new(0.1, 0.2),
-                    ..Default::default()
-                },
-            }),
-            ..Default::default()
-        })?;
-        e.set_deform_parent(MESH_ID, T)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.replace_transform(parent)?;
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: T.into(),
+                        parent_id: Some(R.into()),
+                        data: TransformData::Rotation(RotationTransform {
+                            base_angle: 0.,
+                            pose: RotationPose {
+                                origin: zipzi_core::PreciseVec2::new(0.1, 0.2),
+                                ..Default::default()
+                            },
+                        }),
+                        ..Default::default()
+                    },
+                )?;
+                e.edit_scene(
+                    zipzi_core::document::SceneEdit::Reparent {
+                        edit: ReparentEdit::keep_local(
+                            vec![(MESH_ID).to_string()],
+                            (T).to_string(),
+                        ),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("rotation child")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let mut edit = rounded_warp_edit(false);
     edit.sources = vec![T.into()];
     let version = s.version();
     assert_eq!(
-        s.plan_binding_authoring(E::Reparent(edit.clone()))
+        crate::support::binding(&s, E::Reparent(edit.clone()))
             .unwrap_err()
             .code
-            .as_ref(),
+            .as_str(),
         "PARAMETER_DOMAIN_UNPROVEN"
     );
     assert_eq!(s.version(), version);
     let before = frame(&s, 0., 0.);
     edit.strategy = ReparentStrategy::PreserveEditState;
     edit.context.as_mut().unwrap().parameter_domain.clear();
-    let plan = s.plan_binding_authoring(E::Reparent(edit)).unwrap();
-    s.execute_binding_plan(&plan).unwrap();
+    let plan = crate::support::binding(&s, E::Reparent(edit)).unwrap();
+    s.publish(plan.1).unwrap();
     assert_geometry(&before, &frame(&s, 0., 0.));
 }
 
 #[test]
 fn created_rectangular_warp_deletion_preserves_world_geometry_with_default_tolerance() {
     let mut s = bound();
-    s.edit("parent", None, |e| {
-        e.create_transform(Transform {
-            id: R.into(),
-            data: TransformData::Warp(regular_warp()),
-            ..Default::default()
-        })?;
-        e.set_deform_parent(MESH_ID, R)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: R.into(),
+                        data: TransformData::Warp(regular_warp()),
+                        ..Default::default()
+                    },
+                )?;
+                e.edit_scene(
+                    zipzi_core::document::SceneEdit::Reparent {
+                        edit: ReparentEdit::keep_local(
+                            vec![(MESH_ID).to_string()],
+                            (R).to_string(),
+                        ),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("parent")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     normalize_warp_child(&mut s);
     let before: Vec<_> = (0..=8).map(|i| frame(&s, i as f32 / 8., 0.)).collect();
-    let plan = s
-        .plan_deletion(
+    let plan = crate::support::prepared(&s, |c| {
+        c.edit_deletion(
             &DeletionRequest {
                 roots: vec![DeletionTarget::RemoveDeformer(R.into())],
                 ..Default::default()
             },
-            &DeletionOptions::default(),
+            Default::default(),
+            &Default::default(),
         )
-        .unwrap();
-    s.execute_deletion_plan(&plan).unwrap();
+    })
+    .unwrap();
+    s.publish(plan.1).unwrap();
     for (i, a) in before.iter().enumerate() {
         assert_geometry(a, &frame(&s, i as f32 / 8., 0.));
     }
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_geometry(&before[4], &frame(&s, 0.5, 0.));
-    s.redo().unwrap();
+    s.redo(s.version()).unwrap();
     assert_geometry(&before[4], &frame(&s, 0.5, 0.));
 }
 
@@ -440,28 +583,48 @@ fn created_rectangular_warp_deletion_preserves_world_geometry_with_default_toler
 fn translated_rotation_deletion_preserves_geometry_with_default_tolerance() {
     let mut s = bound();
     rotation(&mut s, 1.);
-    let mut rotation = s.document().get_transform(R).unwrap().clone();
+    let mut rotation = s.snapshot().document().transform(R).unwrap().clone();
     rotation.rotation_mut().unwrap().base_angle = 0.;
     rotation.rotation_mut().unwrap().pose = RotationPose {
         origin: zipzi_core::PreciseVec2::new(81.04255676269531, -333.5),
         ..Default::default()
     };
-    s.edit("large offset", None, |e| {
-        e.replace_transform(rotation)?;
-        e.set_deform_parent(MESH_ID, R)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.replace_transform(rotation)?;
+                e.edit_scene(
+                    zipzi_core::document::SceneEdit::Reparent {
+                        edit: ReparentEdit::keep_local(
+                            vec![(MESH_ID).to_string()],
+                            (R).to_string(),
+                        ),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("large offset")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let before = frame(&s, 0.5, 0.);
-    let plan = s
-        .plan_deletion(
+    let plan = crate::support::prepared(&s, |c| {
+        c.edit_deletion(
             &DeletionRequest {
                 roots: vec![DeletionTarget::RemoveDeformer(R.into())],
                 ..Default::default()
             },
-            &DeletionOptions::default(),
+            Default::default(),
+            &Default::default(),
         )
-        .unwrap();
-    s.execute_deletion_plan(&plan).unwrap();
+    })
+    .unwrap();
+    s.publish(plan.1).unwrap();
     assert_geometry(&before, &frame(&s, 0.5, 0.));
 }
 
@@ -478,68 +641,94 @@ fn warp_subtree_reparent_and_parent_deletion_preserve_driven_children_and_rotati
             &warp.points,
         ));
         let peer = "00000000-0000-4000-8000-000000000420";
-        let mut mesh = s.document().get_mesh(MESH_ID).unwrap().clone();
+        let mut mesh = s.snapshot().document().mesh(MESH_ID).unwrap().clone();
         mesh.id = peer.into();
         mesh.runtime_id = "rotation-child-mesh".into();
         mesh.deformer_id = Q.into();
         let controller = warp.bezier.clone();
-        s.edit("subtree", None, |e| {
-            e.create_transform(Transform {
-                id: T.into(),
-                parent_id: Some(R.into()),
-                data: TransformData::Warp(warp.clone()),
-                ..Default::default()
-            })?;
-            e.create_scene_binding(SceneBinding {
-                id: "00000000-0000-4000-8000-000000000421".into(),
-                axes: vec![BindingAxis::new(PARAMETER_ID, vec![0., 1.])],
-                track: SceneTrack::Warp {
-                    target_id: T.into(),
-                    keyforms: [0., 1.]
-                        .map(|key| WarpKeyform {
-                            keys: vec![key],
-                            positions: warp
-                                .points
-                                .iter()
-                                .map(|p| Vec2::new(p.x + key * 10., p.y - key * 4.))
-                                .collect(),
-                            bezier: controller.clone(),
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| {
+                    crate::support::insert_transform(
+                        e,
+                        Transform {
+                            id: T.into(),
+                            parent_id: Some(R.into()),
+                            data: TransformData::Warp(warp.clone()),
                             ..Default::default()
-                        })
-                        .into(),
-                },
-            })?;
-            e.create_transform(Transform {
-                id: Q.into(),
-                parent_id: Some(T.into()),
-                data: TransformData::Rotation(RotationTransform {
-                    base_angle: 0.,
-                    pose: RotationPose {
-                        origin: zipzi_core::PreciseVec2::new(0.4, 0.6),
-                        scale: 0.7,
-                        angle: 20.,
-                        ..Default::default()
-                    },
-                }),
-                ..Default::default()
-            })?;
-            e.create_mesh(mesh)?;
-            e.set_deform_parent(MESH_ID, T)
-        })
+                        },
+                    )?;
+                    e.create_scene_binding(SceneBinding {
+                        id: "00000000-0000-4000-8000-000000000421".into(),
+                        axes: vec![BindingAxis::new(PARAMETER_ID, vec![0., 1.])],
+                        track: SceneTrack::Warp {
+                            target_id: T.into(),
+                            keyforms: [0., 1.]
+                                .map(|key| WarpKeyform {
+                                    keys: vec![key],
+                                    positions: warp
+                                        .points
+                                        .iter()
+                                        .map(|p| Vec2::new(p.x + key * 10., p.y - key * 4.))
+                                        .collect(),
+                                    bezier: controller.clone(),
+                                    ..Default::default()
+                                })
+                                .into(),
+                        },
+                    })?;
+                    crate::support::insert_transform(
+                        e,
+                        Transform {
+                            id: Q.into(),
+                            parent_id: Some(T.into()),
+                            data: TransformData::Rotation(RotationTransform {
+                                base_angle: 0.,
+                                pose: RotationPose {
+                                    origin: zipzi_core::PreciseVec2::new(0.4, 0.6),
+                                    scale: 0.7,
+                                    angle: 20.,
+                                    ..Default::default()
+                                },
+                            }),
+                            ..Default::default()
+                        },
+                    )?;
+                    e.create_mesh(mesh)?;
+                    e.edit_scene(
+                        zipzi_core::document::SceneEdit::Reparent {
+                            edit: ReparentEdit::keep_local(
+                                vec![(MESH_ID).to_string()],
+                                (T).to_string(),
+                            ),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )
+                    .map(|_| ())
+                })
+                .and_then(|value| {
+                    let prepared = draft.prepare("subtree")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
         .unwrap();
         normalize_warp_child(&mut s);
         let before: Vec<_> = (0..=8).map(|i| frame(&s, i as f32 / 8., 0.)).collect();
         if delete {
-            let plan = s
-                .plan_deletion(
+            let plan = crate::support::prepared(&s, |c| {
+                c.edit_deletion(
                     &DeletionRequest {
                         roots: vec![DeletionTarget::RemoveDeformer(R.into())],
                         ..Default::default()
                     },
-                    &DeletionOptions::default(),
+                    Default::default(),
+                    &Default::default(),
                 )
-                .unwrap();
-            s.execute_deletion_plan(&plan).unwrap();
+            })
+            .unwrap();
+            s.publish(plan.1).unwrap();
         } else {
             let E::Reparent(mut edit) = parent_edit(ReparentStrategy::PreserveParameterDomain, "")
             else {
@@ -552,8 +741,9 @@ fn warp_subtree_reparent_and_parent_deletion_preserve_driven_children_and_rotati
             assert_geometry(a, &frame(&s, i as f32 / 8., 0.));
         }
         assert_eq!(
-            s.document()
-                .get_transform(Q)
+            s.snapshot()
+                .document()
+                .transform(Q)
                 .unwrap()
                 .rotation()
                 .unwrap()
@@ -562,16 +752,17 @@ fn warp_subtree_reparent_and_parent_deletion_preserve_driven_children_and_rotati
             1.4
         );
         assert!(s
+            .snapshot()
             .document()
-            .get_transform(T)
+            .transform(T)
             .unwrap()
             .warp()
             .unwrap()
             .bezier
             .is_some());
-        s.undo().unwrap();
+        s.undo(s.version()).unwrap();
         assert_geometry(&before[4], &frame(&s, 0.5, 0.));
-        s.redo().unwrap();
+        s.redo(s.version()).unwrap();
         assert_geometry(&before[4], &frame(&s, 0.5, 0.));
         grid_roundtrip(&s);
     }
@@ -582,40 +773,60 @@ fn nonlinear_mesh_baking_requires_explicit_edit_state_and_retains_binding_identi
     let mut s = bound();
     let mut warp = regular_warp();
     warp.points[14].x += 120.;
-    s.edit("nonlinear parent", None, |e| {
-        e.create_transform(Transform {
-            id: R.into(),
-            data: TransformData::Warp(warp),
-            ..Default::default()
-        })?;
-        e.set_deform_parent(MESH_ID, R)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: R.into(),
+                        data: TransformData::Warp(warp),
+                        ..Default::default()
+                    },
+                )?;
+                e.edit_scene(
+                    zipzi_core::document::SceneEdit::Reparent {
+                        edit: ReparentEdit::keep_local(
+                            vec![(MESH_ID).to_string()],
+                            (R).to_string(),
+                        ),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("nonlinear parent")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     normalize_warp_child(&mut s);
     let before = frame(&s, 0.5, 0.);
-    assert!(s
-        .plan_binding_authoring(parent_edit(ReparentStrategy::PreserveParameterDomain, ""))
-        .is_err());
-    let plan = s
-        .plan_binding_authoring(parent_edit(ReparentStrategy::PreserveEditState, ""))
-        .unwrap();
-    let BindingConversion::Reparent(p) = plan.conversion() else {
-        unreachable!()
-    };
-    assert!(p
-        .guarantee()
-        .effects
-        .iter()
-        .any(|e| e.contains("Baked nonlinear")));
-    s.execute_binding_plan(&plan).unwrap();
+    assert!(crate::support::binding(
+        &s,
+        parent_edit(ReparentStrategy::PreserveParameterDomain, "")
+    )
+    .is_err());
+    let plan =
+        crate::support::binding(&s, parent_edit(ReparentStrategy::PreserveEditState, "")).unwrap();
+    let p = plan.0.report.reparent_guarantee.as_ref().unwrap();
+    assert!(p.effects.iter().any(|e| e.contains("Baked nonlinear")));
+    s.publish(plan.1).unwrap();
     assert_geometry(&before, &frame(&s, 0.5, 0.));
     assert_eq!(
-        s.document().binding_for_mesh(MESH_ID).unwrap().id,
+        s.snapshot()
+            .document()
+            .binding_for_mesh(MESH_ID)
+            .unwrap()
+            .id,
         BINDING_ID
     );
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_geometry(&before, &frame(&s, 0.5, 0.));
-    s.redo().unwrap();
+    s.redo(s.version()).unwrap();
     assert_geometry(&before, &frame(&s, 0.5, 0.));
 }
 
@@ -651,71 +862,98 @@ fn nonlinear_subtrees_bake_current_pose_without_flattening_on_delete_and_reparen
                 })
             };
             let binding_id = "00000000-0000-4000-8000-000000000422";
-            s.edit("nonlinear subtree", None, |e| {
-                e.create_transform(Transform {
-                    id: Q.into(),
-                    data: TransformData::Rotation(RotationTransform {
-                        base_angle: 0.,
-                        pose: RotationPose {
-                            scale: 2.,
-                            ..Default::default()
-                        },
-                    }),
-                    ..Default::default()
-                })?;
-                e.create_transform(Transform {
-                    id: R.into(),
-                    parent_id: Some(Q.into()),
-                    data: TransformData::Warp(outer),
-                    ..Default::default()
-                })?;
-                e.create_transform(Transform {
-                    id: T.into(),
-                    parent_id: Some(R.into()),
-                    data: data.clone(),
-                    ..Default::default()
-                })?;
-                let track = if warp_child {
-                    SceneTrack::Warp {
-                        target_id: T.into(),
-                        keyforms: [0., 1.]
-                            .map(|key| WarpKeyform {
-                                keys: vec![key],
-                                positions: points
-                                    .iter()
-                                    .map(|p| Vec2::new(p.x + key * 0.04, p.y))
-                                    .collect(),
+            {
+                let mut draft = s.begin_draft();
+                draft
+                    .batch(draft.source(), |e| {
+                        crate::support::insert_transform(
+                            e,
+                            Transform {
+                                id: Q.into(),
+                                data: TransformData::Rotation(RotationTransform {
+                                    base_angle: 0.,
+                                    pose: RotationPose {
+                                        scale: 2.,
+                                        ..Default::default()
+                                    },
+                                }),
                                 ..Default::default()
-                            })
-                            .into(),
-                    }
-                } else {
-                    SceneTrack::Rotation {
-                        target_id: T.into(),
-                        keyforms: [0., 1.]
-                            .map(|key| zipzi_core::RotationKeyform {
-                                keys: vec![key],
-                                rotation: RotationPose {
-                                    origin: zipzi_core::PreciseVec2::new(
-                                        0.4 + f64::from(key) * 0.1,
-                                        0.6,
-                                    ),
-                                    angle: 20. + key * 5.,
-                                    scale: 0.7 + key * 0.1,
-                                    ..Default::default()
-                                },
+                            },
+                        )?;
+                        crate::support::insert_transform(
+                            e,
+                            Transform {
+                                id: R.into(),
+                                parent_id: Some(Q.into()),
+                                data: TransformData::Warp(outer),
                                 ..Default::default()
-                            })
-                            .into(),
-                    }
-                };
-                e.create_scene_binding(SceneBinding {
-                    id: binding_id.into(),
-                    axes: vec![BindingAxis::new(PARAMETER_ID, vec![0., 1.])],
-                    track,
-                })?;
-                e.set_deform_parent(MESH_ID, T)
-            })
+                            },
+                        )?;
+                        crate::support::insert_transform(
+                            e,
+                            Transform {
+                                id: T.into(),
+                                parent_id: Some(R.into()),
+                                data: data.clone(),
+                                ..Default::default()
+                            },
+                        )?;
+                        let track = if warp_child {
+                            SceneTrack::Warp {
+                                target_id: T.into(),
+                                keyforms: [0., 1.]
+                                    .map(|key| WarpKeyform {
+                                        keys: vec![key],
+                                        positions: points
+                                            .iter()
+                                            .map(|p| Vec2::new(p.x + key * 0.04, p.y))
+                                            .collect(),
+                                        ..Default::default()
+                                    })
+                                    .into(),
+                            }
+                        } else {
+                            SceneTrack::Rotation {
+                                target_id: T.into(),
+                                keyforms: [0., 1.]
+                                    .map(|key| zipzi_core::RotationKeyform {
+                                        keys: vec![key],
+                                        rotation: RotationPose {
+                                            origin: zipzi_core::PreciseVec2::new(
+                                                0.4 + f64::from(key) * 0.1,
+                                                0.6,
+                                            ),
+                                            angle: 20. + key * 5.,
+                                            scale: 0.7 + key * 0.1,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    })
+                                    .into(),
+                            }
+                        };
+                        e.create_scene_binding(SceneBinding {
+                            id: binding_id.into(),
+                            axes: vec![BindingAxis::new(PARAMETER_ID, vec![0., 1.])],
+                            track,
+                        })?;
+                        e.edit_scene(
+                            zipzi_core::document::SceneEdit::Reparent {
+                                edit: ReparentEdit::keep_local(
+                                    vec![(MESH_ID).to_string()],
+                                    (T).to_string(),
+                                ),
+                            },
+                            Default::default(),
+                            &Default::default(),
+                        )
+                        .map(|_| ())
+                    })
+                    .and_then(|value| {
+                        let prepared = draft.prepare("nonlinear subtree")?;
+                        s.publish(prepared).map(|receipt| (value, receipt))
+                    })
+            }
             .unwrap();
             if warp_child {
                 normalize_warp_child(&mut s);
@@ -731,27 +969,41 @@ fn nonlinear_subtrees_bake_current_pose_without_flattening_on_delete_and_reparen
                     conversion_context: edit.context.clone(),
                     ..Default::default()
                 };
-                let report = s.analyze_deletion(&request).unwrap();
-                assert!(report.native.decisions.iter().any(|d| {
+                let report = {
+                    let mut d = s.begin_draft();
+                    d.batch(d.source(), |c| {
+                        c.review_deletion(&request, Default::default(), &Default::default())
+                    })
+                    .map(|o| o.report)
+                }
+                .unwrap();
+                assert!(report.decisions.iter().any(|d| {
                     d.choices
-                        .contains(&zipzi_sdk::DeletionChoice::PreserveEditState)
+                        .contains(&zipzi_core::document::DeletionChoice::PreserveEditState)
                 }));
                 request
                     .reparent
                     .insert(T.into(), ReparentStrategy::PreserveEditState);
-                let plan = s
-                    .plan_deletion(&request, &DeletionOptions::default())
-                    .unwrap();
-                s.execute_deletion_plan(&plan).unwrap();
+                let plan = crate::support::prepared(&s, |c| {
+                    c.edit_deletion(&request, Default::default(), &Default::default())
+                })
+                .unwrap();
+                s.publish(plan.1).unwrap();
             } else {
                 apply(&mut s, E::Reparent(edit));
             }
             assert_geometry(&before, &frame(&s, 0.5, 0.));
-            assert_eq!(s.document().binding_for_scene(T).unwrap().id, binding_id);
-            assert_eq!(s.document().get_mesh(MESH_ID).unwrap().deformer_id, T);
-            s.undo().unwrap();
+            assert_eq!(
+                s.snapshot().document().binding_for_scene(T).unwrap().id,
+                binding_id
+            );
+            assert_eq!(
+                s.snapshot().document().mesh(MESH_ID).unwrap().deformer_id,
+                T
+            );
+            s.undo(s.version()).unwrap();
             assert_geometry(&before, &frame(&s, 0.5, 0.));
-            s.redo().unwrap();
+            s.redo(s.version()).unwrap();
             assert_geometry(&before, &frame(&s, 0.5, 0.));
         }
     }
@@ -765,33 +1017,57 @@ fn ordinary_interpolation_and_active_blendshapes_survive_affine_conversion_and_c
         if nonlinear {
             outer.points[14].x += 120.;
         }
-        s.edit("parent and child", None, |e| {
-            e.create_transform(Transform {
-                id: R.into(),
-                data: TransformData::Warp(outer),
-                ..Default::default()
-            })?;
-            if warp_child {
-                e.create_transform(Transform {
-                    id: T.into(),
-                    parent_id: Some(R.into()),
-                    data: TransformData::Warp(WarpTransform {
-                        rows: 1,
-                        columns: 1,
-                        quad: true,
-                        points: vec![
-                            Vec2::new(0.2, 0.2),
-                            Vec2::new(0.8, 0.2),
-                            Vec2::new(0.2, 0.8),
-                            Vec2::new(0.8, 0.8),
-                        ],
-                        bezier: None,
-                    }),
-                    ..Default::default()
-                })?;
-            }
-            e.set_deform_parent(MESH_ID, if warp_child { T } else { R })
-        })
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| {
+                    crate::support::insert_transform(
+                        e,
+                        Transform {
+                            id: R.into(),
+                            data: TransformData::Warp(outer),
+                            ..Default::default()
+                        },
+                    )?;
+                    if warp_child {
+                        crate::support::insert_transform(
+                            e,
+                            Transform {
+                                id: T.into(),
+                                parent_id: Some(R.into()),
+                                data: TransformData::Warp(WarpTransform {
+                                    rows: 1,
+                                    columns: 1,
+                                    quad: true,
+                                    points: vec![
+                                        Vec2::new(0.2, 0.2),
+                                        Vec2::new(0.8, 0.2),
+                                        Vec2::new(0.2, 0.8),
+                                        Vec2::new(0.8, 0.8),
+                                    ],
+                                    bezier: None,
+                                }),
+                                ..Default::default()
+                            },
+                        )?;
+                    }
+                    e.edit_scene(
+                        zipzi_core::document::SceneEdit::Reparent {
+                            edit: ReparentEdit::keep_local(
+                                vec![(MESH_ID).to_string()],
+                                (if warp_child { T } else { R }).to_string(),
+                            ),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )
+                    .map(|_| ())
+                })
+                .and_then(|value| {
+                    let prepared = draft.prepare("parent and child")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
         .unwrap();
         normalize_warp_child(&mut s);
         let source = if warp_child { T } else { MESH_ID };
@@ -833,15 +1109,16 @@ fn ordinary_interpolation_and_active_blendshapes_survive_affine_conversion_and_c
             }
         }
         assert_eq!(
-            s.document()
-                .get_blend_binding("00000000-0000-4000-8000-000000000432")
+            s.snapshot()
+                .document()
+                .blend_binding("00000000-0000-4000-8000-000000000432")
                 .unwrap()
                 .target_id,
             source
         );
-        s.undo().unwrap();
+        s.undo(s.version()).unwrap();
         assert_geometry(&before, &blended_frame(&s, 0.5, 0.35));
-        s.redo().unwrap();
+        s.redo(s.version()).unwrap();
         assert_geometry(&before, &blended_frame(&s, 0.5, 0.35));
     }
 }

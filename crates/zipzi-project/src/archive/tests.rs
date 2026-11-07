@@ -4,8 +4,8 @@ use std::io::Cursor;
 #[test]
 fn native_preview_is_optional_not_authoring_and_not_reused_after_save() {
     let source = tempfile::tempdir().unwrap();
-    let mut store = ProjectArchiveStore::new(source.path());
-    let resources = store.new_resources().unwrap();
+    let mut store = io(source.path());
+    let resources = crate::ResourceView::default();
     let mut png = Vec::new();
     {
         let mut e = png::Encoder::new(&mut png, 2, 2);
@@ -17,13 +17,11 @@ fn native_preview_is_optional_not_authoring_and_not_reused_after_save() {
     }
     let preview = ProjectPreview::from_png(png).unwrap();
     // Direct archive test with no resource-bearing document.
-    let mut document = Document::new();
-    assert!(document
-        .initialize(
-            uuid::Uuid::new_v4().to_string(),
-            zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(50., 50.), 10.)
-        )
-        .is_ok());
+    let document = zipzi_core::state::DocumentState::new(
+        uuid::Uuid::new_v4().to_string(),
+        zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(50., 50.), 10.).into(),
+    )
+    .unwrap();
     store.set_save_preview(Some(preview.clone()));
     let path = source.path().join("preview.zipzi");
     let saved = store
@@ -52,18 +50,14 @@ fn native_preview_is_optional_not_authoring_and_not_reused_after_save() {
         });
         let damaged_path = source.path().join(format!("damaged-{variant}.zipzi"));
         fs::write(&damaged_path, damaged).unwrap();
-        assert!(store.open(&damaged_path, || true).is_ok());
+        assert!(store.load(&damaged_path, || true).is_ok());
         assert!(zipzi_project_preview::read_preview(File::open(damaged_path).unwrap()).is_err());
     }
-    assert!(store
-        .open(&path, || true)
-        .unwrap()
-        .document
-        .same_content(&saved.document));
+    assert!(store.load(&path, || true).unwrap().document.id() == document.id());
     store.set_save_preview(None);
     store
         .save(
-            &saved.document,
+            &document,
             &resources,
             &path,
             Some(&saved.fingerprint),
@@ -80,15 +74,13 @@ fn native_preview_is_optional_not_authoring_and_not_reused_after_save() {
 #[test]
 fn optional_preview_is_omitted_when_entry_size_or_disk_admission_is_full() {
     let root = tempfile::tempdir().unwrap();
-    let mut store = ProjectArchiveStore::new(root.path());
-    let resources = store.new_resources().unwrap();
-    let mut document = Document::new();
-    assert!(document
-        .initialize(
-            uuid::Uuid::new_v4().to_string(),
-            zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(50., 50.), 10.)
-        )
-        .is_ok());
+    let mut store = io(root.path());
+    let resources = crate::ResourceView::default();
+    let document = zipzi_core::state::DocumentState::new(
+        uuid::Uuid::new_v4().to_string(),
+        zipzi_core::Canvas::new(100., 100., zipzi_core::Vec2::new(50., 50.), 10.).into(),
+    )
+    .unwrap();
     let mut png = Vec::new();
     {
         let mut e = png::Encoder::new(&mut png, 2, 2);
@@ -99,23 +91,17 @@ fn optional_preview_is_omitted_when_entry_size_or_disk_admission_is_full() {
             .unwrap();
     }
     store.set_save_preview(Some(ProjectPreview::from_png(png).unwrap()));
-    let prepared = writer::prepare(
-        &document,
-        resources.path(),
-        store.limits,
-        || true,
-        ArchiveDocumentFormat::NativeV22,
-    )
-    .unwrap();
+    let prepared =
+        writer::prepare_state(&document, &resources, store.archive.limits, || true).unwrap();
     let base = prepared.extent;
     for variant in 0..4 {
-        store.limits = ArchiveIoLimits::default();
-        store.disk_budget = ProjectDiskBudget::default();
+        store.archive.limits = ArchiveIoLimits::default();
+        store.archive.disk_budget = ProjectDiskBudget::default();
         match variant {
-            0 => store.limits.entries = 2,
-            1 => store.limits.format_bytes = prepared.preview_format().len() as u64,
-            2 => store.limits.archive_bytes = base,
-            _ => store.disk_budget = ProjectDiskBudget::new(base),
+            0 => store.archive.limits.entries = 2,
+            1 => store.archive.limits.format_bytes = prepared.preview_format().len() as u64,
+            2 => store.archive.limits.archive_bytes = base,
+            _ => store.archive.disk_budget = ProjectDiskBudget::new(base),
         }
         let path = root.path().join(format!("limited-{variant}.zipzi"));
         store
@@ -129,79 +115,107 @@ fn optional_preview_is_omitted_when_entry_size_or_disk_admission_is_full() {
     }
 }
 
-pub(super) fn fixture(root: &Path) -> Document {
-    let mut document = Document::new();
-    assert!(document
-        .initialize(
-            uuid::Uuid::from_u128(1).to_string(),
-            zipzi_core::Canvas::new(640., 480., zipzi_core::Vec2::new(320., 240.), 100.)
-        )
-        .is_ok());
+pub(super) fn fixture(root: &Path) -> crate::ImportedProject {
+    let mut b = zipzi_core::state::DocumentState::new(
+        uuid::Uuid::from_u128(1).to_string(),
+        zipzi_core::Canvas::new(640., 480., zipzi_core::Vec2::new(320., 240.), 100.).into(),
+    )
+    .unwrap()
+    .builder();
+    let store = crate::ResourceStore::default();
+    let image = store.prepare_rgba(8, 8, vec![123; 256].into()).unwrap();
     fs::create_dir_all(root.join("assets")).unwrap();
-    let mut png = Vec::new();
-    {
-        let mut encoder = png::Encoder::new(&mut png, 8, 8);
-        encoder.set_color(png::ColorType::Rgba);
-        encoder
-            .write_header()
-            .unwrap()
-            .write_image_data(&[123; 256])
-            .unwrap();
-    }
-    fs::write(root.join("assets/old.png"), &png).unwrap();
-    for index in 2..5 {
-        assert!(document
-            .add_asset(zipzi_core::ImageAsset {
-                id: uuid::Uuid::from_u128(index).to_string(),
-                name: format!("image {index}"),
-                content: (index != 4).then(|| zipzi_core::ImageContent {
-                    source: "assets/old.png".into(),
-                    width: 8,
-                    height: 8,
-                    sha256: content_sha256(&png),
-                }),
-                unresolved_source: None,
-            })
-            .status
-            .is_ok());
-    }
-    assert!(document
-        .set_package_attachments(vec![zipzi_contract::document::PackageAttachment {
-            id: uuid::Uuid::from_u128(10).to_string(),
-            path: "userdata/example.bin".into(),
-            bytes: Some(Arc::new(vec![0, 255, 7])),
-        }])
-        .status
-        .is_ok());
-    document
-}
-
-fn write(document: &Document, root: &Path) -> (Vec<u8>, WrittenArchive) {
-    let mut output = Cursor::new(Vec::new());
-    let result = write_archive(
-        document,
-        root,
-        &mut output,
-        PrototypeLimits::default(),
-        || true,
+    fs::write(
+        root.join("assets/old.png"),
+        image.read_asset().unwrap().bytes,
     )
     .unwrap();
+    for index in 2..5 {
+        b.create_asset(zipzi_core::state::AssetRecord {
+            id: uuid::Uuid::from_u128(index).to_string(),
+            name: format!("image {index}"),
+            content: if index == 4 {
+                zipzi_core::state::AssetContent::Empty
+            } else {
+                zipzi_core::state::AssetContent::Image {
+                    resource: image.key(),
+                    width: 8,
+                    height: 8,
+                }
+            },
+        })
+        .unwrap();
+    }
+    b.set_package_attachments(vec![zipzi_contract::document::PackageAttachment {
+        id: uuid::Uuid::from_u128(10).to_string(),
+        path: "userdata/example.bin".into(),
+        bytes: Some(Arc::new(vec![0, 255, 7])),
+    }])
+    .unwrap();
+    crate::ImportedProject {
+        document: b.freeze().unwrap().state,
+        resources: crate::ResourceView::default().with_images([image]),
+        protected_paths: vec![],
+    }
+}
+pub(super) fn io(root: &Path) -> ProjectIo {
+    ProjectIo::new(root, crate::ResourceStore::default())
+}
+fn write(input: &crate::ImportedProject, _root: &Path) -> (Vec<u8>, WrittenArchive) {
+    let mut output = Cursor::new(Vec::new());
+    let result = write_state(input, &mut output, ArchiveIoLimits::default(), || true).unwrap();
     (output.into_inner(), result)
 }
-
+fn write_state(
+    input: &crate::ImportedProject,
+    output: &mut (impl Write + Seek),
+    limits: ArchiveIoLimits,
+    mut keep_going: impl FnMut() -> bool,
+) -> Result<WrittenArchive> {
+    let prepared =
+        writer::prepare_state(&input.document, &input.resources, limits, &mut keep_going)?;
+    writer::write(prepared, output, keep_going, None)
+}
+fn open_archive(
+    path: &Path,
+    root: &Path,
+    limits: ArchiveIoLimits,
+    keep_going: impl FnMut() -> bool,
+) -> Result<LoadedProject> {
+    io(root).with_limits(limits).load(path, keep_going)
+}
+pub(super) fn equivalent(
+    a: &zipzi_core::state::DocumentState,
+    ar: &crate::ResourceView,
+    b: &zipzi_core::state::DocumentState,
+    br: &crate::ResourceView,
+) -> bool {
+    fn encoded(s: &zipzi_core::state::DocumentState, r: &crate::ResourceView) -> Vec<u8> {
+        let p = writer::prepare_state(s, r, Default::default(), || true).unwrap();
+        let mut output = Cursor::new(Vec::new());
+        writer::write(p, &mut output, || true, None).unwrap();
+        output.into_inner()
+    }
+    encoded(a, ar) == encoded(b, br)
+}
 #[test]
 fn archive_roundtrip_preserves_all_assets_attachments_and_lease() {
     let source = tempfile::tempdir().unwrap();
     let document = fixture(source.path());
-    let original = encode_project(&document).unwrap();
+    let original = document.document.content_id();
     let (bytes, written) = write(&document, source.path());
     assert_eq!(written.unique_assets, 1);
-    assert_eq!(document.asset_order().len(), 3); // No Mesh uses these assets.
-    assert_eq!(encode_project(&document).unwrap(), original);
+    assert_eq!(document.document.asset_order().len(), 3);
+    assert_eq!(document.document.content_id(), original);
     let path = source.path().join("角色 with spaces.ZIPZI");
     fs::write(&path, bytes).unwrap();
-    let opened = open_archive(&path, source.path(), PrototypeLimits::default(), || true).unwrap();
-    assert!(written.document.same_content(&opened.document));
+    let opened = io(source.path()).load(&path, || true).unwrap();
+    assert!(equivalent(
+        &document.document,
+        &document.resources,
+        &opened.document,
+        &opened.resources
+    ));
     assert_eq!(
         opened.document.package_attachments()[0]
             .bytes
@@ -210,26 +224,27 @@ fn archive_roundtrip_preserves_all_assets_attachments_and_lease() {
             .as_slice(),
         &[0, 255, 7]
     );
-    assert!(opened
-        .document
-        .get_asset(&uuid::Uuid::from_u128(4).to_string())
-        .unwrap()
-        .content
-        .is_none());
-    let working = opened.asset_root().to_owned();
+    assert!(matches!(
+        opened
+            .document
+            .asset(&uuid::Uuid::from_u128(4).to_string())
+            .unwrap()
+            .content,
+        zipzi_core::state::AssetContent::Empty
+    ));
     let held = opened.clone();
     drop(opened);
     fs::remove_file(path).unwrap();
     fs::remove_dir_all(source.path().join("assets")).unwrap();
-    assert!(working.exists());
+    for (_, _, _) in held.document.image_resources() {
+        assert!(!held.resources.is_empty());
+    }
     for id in held.document.asset_order() {
-        if let Some(content) = &held.document.get_asset(id).unwrap().content {
-            let png = fs::read(working.join(&content.source)).unwrap();
-            assert_eq!(content_sha256(&png), content.sha256);
+        let a = held.document.asset(id).unwrap();
+        if matches!(a.content, zipzi_core::state::AssetContent::Image { .. }) {
+            assert_eq!(held.resources.read_asset(a).unwrap().rgba, vec![123; 256]);
         }
     }
-    drop(held);
-    assert!(!working.exists());
 }
 
 #[test]
@@ -279,7 +294,7 @@ fn fingerprints_cover_resource_bytes_and_finalized_headers() {
     let path = root.path().join("changed.zipzi");
     fs::write(&path, changed).unwrap();
     assert!(
-        !open_archive(&path, root.path(), PrototypeLimits::default(), || true)
+        !open_archive(&path, root.path(), ArchiveIoLimits::default(), || true)
             .unwrap()
             .diagnostics
             .is_empty()
@@ -335,25 +350,34 @@ fn copying_is_bounded_handles_short_io_and_checks_cancellation() {
 fn write_failure_preserves_document_and_does_not_silence_bad_resources() {
     let root = tempfile::tempdir().unwrap();
     let document = fixture(root.path());
-    let baseline = encode_project(&document).unwrap();
+    let baseline = document.document.content_id();
     fs::write(root.path().join("assets/old.png"), b"broken").unwrap();
-    assert!(write_archive(
+    assert!(write_state(
         &document,
-        root.path(),
         &mut Cursor::new(Vec::new()),
-        PrototypeLimits::default(),
+        Default::default(),
+        || true
+    )
+    .is_ok());
+    let absent = crate::ImportedProject {
+        resources: Default::default(),
+        ..document.clone()
+    };
+    assert!(write_state(
+        &absent,
+        &mut Cursor::new(Vec::new()),
+        Default::default(),
         || true
     )
     .is_err());
-    assert_eq!(encode_project(&document).unwrap(), baseline);
-    assert!(write_archive(
+    assert!(write_state(
         &document,
-        root.path(),
         &mut Cursor::new(Vec::new()),
-        PrototypeLimits::default(),
+        Default::default(),
         || false
     )
     .is_err());
+    assert_eq!(document.document.content_id(), baseline);
 }
 
 #[test]
@@ -366,19 +390,19 @@ fn archive_limits_and_failed_open_remove_private_candidates() {
     let count = || fs::read_dir(root.path()).unwrap().count();
     let before = count();
     for limits in [
-        PrototypeLimits {
+        ArchiveIoLimits {
             archive_bytes: 4,
             ..Default::default()
         },
-        PrototypeLimits {
+        ArchiveIoLimits {
             entries: 2,
             ..Default::default()
         },
-        PrototypeLimits {
+        ArchiveIoLimits {
             document_bytes: 4,
             ..Default::default()
         },
-        PrototypeLimits {
+        ArchiveIoLimits {
             expanded_bytes: 4,
             ..Default::default()
         },
@@ -387,7 +411,7 @@ fn archive_limits_and_failed_open_remove_private_candidates() {
         assert_eq!(count(), before);
     }
     fs::write(&path, &bytes[..bytes.len() - 12]).unwrap();
-    assert!(open_archive(&path, root.path(), PrototypeLimits::default(), || true).is_err());
+    assert!(open_archive(&path, root.path(), ArchiveIoLimits::default(), || true).is_err());
     assert_eq!(count(), before);
 }
 
@@ -398,21 +422,15 @@ fn native_archive_store_publishes_with_fingerprint_conflict_and_lease() {
     let source = write(&document, root.path()).0;
     let input = root.path().join("input.zipzi");
     fs::write(&input, source).unwrap();
-    let opened = open_archive(&input, root.path(), PrototypeLimits::default(), || true).unwrap();
+    let opened = open_archive(&input, root.path(), ArchiveIoLimits::default(), || true).unwrap();
     assert_eq!(
         opened.document.package_attachments()[0].path,
         "userdata/example.bin"
     );
     let target = root.path().join("角色.zipzi");
-    let store = ProjectArchiveStore::new(root.path());
+    let store = io(root.path());
     let receipt = store
-        .save(
-            &opened.document,
-            &opened.resource_lease(),
-            &target,
-            None,
-            || true,
-        )
+        .save(&opened.document, &opened.resources, &target, None, || true)
         .unwrap();
     assert!(receipt.published && receipt.durable);
     assert_eq!(
@@ -420,23 +438,22 @@ fn native_archive_store_publishes_with_fingerprint_conflict_and_lease() {
         crate::archive::read_fingerprint(&mut File::open(&target).unwrap(), 1 << 30, || true)
             .unwrap()
     );
-    let reopened = store.open(&target, || true).unwrap();
-    assert!(opened.document.same_content(&reopened.document));
+    let reopened = store.load(&target, || true).unwrap();
+    assert!(equivalent(
+        &opened.document,
+        &opened.resources,
+        &reopened.document,
+        &reopened.resources
+    ));
     let error = store
-        .save(
-            &opened.document,
-            &opened.resource_lease(),
-            &target,
-            None,
-            || true,
-        )
+        .save(&opened.document, &opened.resources, &target, None, || true)
         .unwrap_err();
     assert!(error.to_string().contains("Destination exists"));
     fs::write(&target, b"external replacement").unwrap();
     let error = store
         .save(
             &opened.document,
-            &opened.resource_lease(),
+            &opened.resources,
             &target,
             Some(&receipt.fingerprint),
             || true,
@@ -464,24 +481,15 @@ fn unknown_and_escaping_entries_are_rejected_without_extracting_them() {
         zip.finish().unwrap();
         let path = root.path().join("unknown.zipzi");
         fs::write(&path, output.into_inner()).unwrap();
-        assert!(open_archive(&path, root.path(), PrototypeLimits::default(), || true).is_err());
+        assert!(open_archive(&path, root.path(), ArchiveIoLimits::default(), || true).is_err());
     }
 }
 
-pub(super) fn native_bytes(document: &Document, root: &Path) -> Vec<u8> {
-    let mut output = Cursor::new(Vec::new());
-    write_archive_inner(
-        document,
-        root,
-        &mut output,
-        PrototypeLimits::default(),
-        || true,
-        ArchiveDocumentFormat::NativeV22,
-    )
-    .unwrap();
-    output.into_inner()
+pub(super) fn native_bytes(input: &crate::ImportedProject, root: &Path) -> Vec<u8> {
+    write(input, root).0
 }
-fn admit(bytes: &[u8], limits: PrototypeLimits) -> Result<()> {
+
+fn admit(bytes: &[u8], limits: ArchiveIoLimits) -> Result<()> {
     structure::validate(
         &mut Cursor::new(bytes),
         bytes.len() as u64,
@@ -521,14 +529,14 @@ fn preflight_rejects_local_central_mismatches_boundaries_and_metadata_bombs() {
         let mut bad = bytes.clone();
         bad[offset] = value;
         assert!(
-            admit(&bad, PrototypeLimits::default()).is_err(),
+            admit(&bad, ArchiveIoLimits::default()).is_err(),
             "accepted mutation at {offset}"
         );
     }
     assert!(matches!(
         admit(
             &bytes,
-            PrototypeLimits {
+            ArchiveIoLimits {
                 directory_bytes: 16,
                 ..Default::default()
             }
@@ -537,15 +545,15 @@ fn preflight_rejects_local_central_mismatches_boundaries_and_metadata_bombs() {
     ));
     let mut huge = bytes.clone();
     huge[e + 8..e + 12].fill(255);
-    assert!(admit(&huge, PrototypeLimits::default()).is_err()); // missing ZIP64 end
+    assert!(admit(&huge, ArchiveIoLimits::default()).is_err()); // missing ZIP64 end
     let mut prefix = vec![0];
     prefix.extend_from_slice(&bytes);
-    assert!(admit(&prefix, PrototypeLimits::default()).is_err());
+    assert!(admit(&prefix, ArchiveIoLimits::default()).is_err());
     let mut trailing = bytes.clone();
     trailing.push(0);
-    assert!(admit(&trailing, PrototypeLimits::default()).is_err());
+    assert!(admit(&trailing, ArchiveIoLimits::default()).is_err());
     for n in [0, 21, c, bytes.len() - 1] {
-        assert!(admit(&bytes[..n], PrototypeLimits::default()).is_err());
+        assert!(admit(&bytes[..n], ArchiveIoLimits::default()).is_err());
     }
 }
 
@@ -571,19 +579,17 @@ fn preflight_handles_streaming_descriptors_and_zip64_end_records() {
             std::io::copy(&mut entry, &mut writer).unwrap();
         }
         writer.finish().unwrap();
-        admit(&stream, PrototypeLimits::default()).unwrap();
+        admit(&stream, ArchiveIoLimits::default()).unwrap();
         let path = root.path().join("stream.zipzi");
         fs::write(&path, &stream).unwrap();
-        assert!(ProjectArchiveStore::new(root.path())
-            .open(&path, || true)
-            .is_ok());
+        assert!(io(root.path()).load(&path, || true).is_ok());
         let descriptor = {
             let mut zip = ZipArchive::new(Cursor::new(&stream)).unwrap();
             let entry = zip.by_index(0).unwrap();
             (entry.data_start().unwrap() + entry.compressed_size()) as usize
         };
         stream[descriptor] ^= 1;
-        assert!(admit(&stream, PrototypeLimits::default()).is_err());
+        assert!(admit(&stream, ArchiveIoLimits::default()).is_err());
     }
     // Small valid ZIP with explicit ZIP64 EOCD/locator and classic sentinels.
     let e = original.len() - 22;
@@ -606,10 +612,10 @@ fn preflight_handles_streaming_descriptors_and_zip64_end_records() {
     z.extend_from_slice(&original[e..]);
     let n = z.len();
     z[n - 14..n - 2].fill(255);
-    admit(&z, PrototypeLimits::default()).unwrap();
+    admit(&z, ArchiveIoLimits::default()).unwrap();
     let n = z.len();
     z[n - 22 - 20 + 16] = 2;
-    assert!(admit(&z, PrototypeLimits::default()).is_err());
+    assert!(admit(&z, ArchiveIoLimits::default()).is_err());
 }
 
 #[test]
@@ -635,7 +641,7 @@ fn duplicate_paths_and_case_aliases_never_reach_extraction() {
                 bytes[chunk + 10] = b'n';
             }
         }
-        assert!(admit(&bytes, PrototypeLimits::default()).is_err());
+        assert!(admit(&bytes, ArchiveIoLimits::default()).is_err());
     }
 }
 
@@ -716,10 +722,7 @@ fn native_document_admission_rejects_duplicate_members_and_incompatible_headers(
     ] {
         let path = root.path().join("bad-header.zipzi");
         fs::write(&path, replace_archive_document(&bytes, text.as_bytes())).unwrap();
-        let error = ProjectArchiveStore::new(root.path())
-            .open(&path, || true)
-            .err()
-            .unwrap();
+        let error = io(root.path()).load(&path, || true).err().unwrap();
         assert!(error.to_string().contains(message), "{error}");
         assert_eq!(Status::from(error).code, code);
     }
@@ -730,11 +733,14 @@ fn shared_png_validation_checks_each_reference_before_and_after_a_valid_one() {
     let root = tempfile::tempdir().unwrap();
     let mut document = fixture(root.path());
     let mut repeated = document
-        .get_asset(&uuid::Uuid::from_u128(2).to_string())
+        .document
+        .asset(&uuid::Uuid::from_u128(2).to_string())
         .unwrap()
         .clone();
     repeated.id = uuid::Uuid::from_u128(5).to_string();
-    assert!(document.add_asset(repeated).status.is_ok());
+    let mut b = document.document.builder();
+    b.create_asset(repeated).unwrap();
+    document.document = b.freeze().unwrap().state;
     let bytes = native_bytes(&document, root.path());
     let mut zip = ZipArchive::new(Cursor::new(&bytes)).unwrap();
     let mut json = String::new();
@@ -760,12 +766,12 @@ fn shared_png_validation_checks_each_reference_before_and_after_a_valid_one() {
             replace_archive_document(&bytes, &serde_json::to_vec(&wire).unwrap()),
         )
         .unwrap();
-        let mut store = ProjectArchiveStore::new(root.path());
+        let mut store = io(root.path());
         let budget = crate::ImageMemoryBudget::default();
         let memory = Arc::new(budget.reserve_transfer(0).unwrap());
         store.set_open_memory(Some(memory));
-        let opened = store.open(&path, || true).unwrap();
-        assert_eq!(opened.unique_assets, 1);
+        let opened = store.load(&path, || true).unwrap();
+        assert_eq!(opened.stats.unique_assets, 1);
         assert_eq!(opened.diagnostics.len(), 2); // Also the missing-content asset.
         assert!(opened
             .diagnostics
@@ -777,12 +783,10 @@ fn shared_png_validation_checks_each_reference_before_and_after_a_valid_one() {
             .any(|d| d.asset_id == uuid::Uuid::from_u128(5).to_string()));
         let good = opened
             .document
-            .get_asset(&uuid::Uuid::from_u128(5).to_string())
+            .asset(&uuid::Uuid::from_u128(5).to_string())
             .unwrap();
-        let texture =
-            read_project_texture_bounded(opened.asset_root(), good, Default::default(), || true)
-                .unwrap();
-        assert_eq!((texture.texture.width, texture.texture.height), (8, 8));
+        let texture = opened.resources.read_asset(good).unwrap();
+        assert_eq!((texture.width, texture.height), (8, 8));
     }
 }
 
@@ -798,37 +802,41 @@ fn expanded_json_is_admitted_before_decoding_and_failed_candidates_are_reclaimed
         .unwrap()
         .read_to_end(&mut padded)
         .unwrap();
-    let hash = content_sha256(&padded);
-    let bytes = repack(&original, |name, data| {
-        Some(match name {
-            "project.json" => padded.clone(),
-            "format.json" => {
-                let mut format: Format = serde_json::from_slice(&data).unwrap();
-                format.document_sha256 = hash.clone();
-                serde_json::to_vec(&format).unwrap()
-            }
-            _ => data,
-        })
-    });
+    let bytes = replace_archive_document(&original, &padded);
     assert!(bytes.len() < 10 << 10);
     let path = root.path().join("compressed.zipzi");
     fs::write(&path, &bytes).unwrap();
     let budget = crate::ImageMemoryBudget::default();
-    budget.bind_host_budget(0, 8 << 20);
+    budget.bind_host_budget(0, 3 << 20);
     let lease = Arc::new(budget.reserve_transfer(4096).unwrap());
     let cache = root.path().join("private");
-    let mut store = ProjectArchiveStore::new(&cache);
+    let mut store = io(&cache);
     store.set_open_memory(Some(lease.clone()));
-    let error = store.open(&path, || true).err().unwrap();
+    let error = store.load(&path, || true).err().unwrap();
     assert!(matches!(error, ArchiveError::Document { ref code, .. } if code == "BUDGET_EXCEEDED"));
     assert_eq!(fs::read_dir(&cache).unwrap().count(), 0);
     assert_eq!(fs::read(&path).unwrap(), bytes);
-    budget.bind_host_budget(0, 128 << 20);
-    let opened = store.open(&path, || true).unwrap();
-    let expected = decode_project(std::str::from_utf8(&padded).unwrap()).unwrap();
-    assert!(expected.same_content(&opened.document));
-    assert!(budget.usage().transfer_bytes >= padded.len() * 64);
+    budget.bind_host_budget(0, 8 << 20);
+    let opened = store.load(&path, || true).unwrap();
+    assert!(equivalent(
+        &document.document,
+        &document.resources,
+        &opened.document,
+        &opened.resources
+    ));
+    assert!(budget.usage().transfer_bytes < 3 << 20);
     drop(opened);
+
+    // A smaller but structurally dense document needs room for decoded values.
+    let mut dense = br#"{"extra":["#.to_vec();
+    dense.extend(b"0,".repeat(1 << 17));
+    dense.extend_from_slice(b"0]}");
+    let bytes = replace_archive_document(&original, &dense);
+    fs::write(&path, &bytes).unwrap();
+    let error = store.load(&path, || true).err().unwrap();
+    assert!(matches!(error, ArchiveError::Document { ref code, .. } if code == "BUDGET_EXCEEDED"));
+    assert_eq!(fs::read_dir(&cache).unwrap().count(), 0);
+
     drop(store);
     drop(lease);
     assert_eq!(budget.usage().transfer_bytes, 0);
@@ -861,10 +869,7 @@ fn versions_features_and_duplicate_json_keys_have_distinct_failures() {
             Some(serde_json::to_vec(&json).unwrap())
         });
         fs::write(&path, bad).unwrap();
-        let error = ProjectArchiveStore::new(root.path())
-            .open(&path, || true)
-            .err()
-            .unwrap();
+        let error = io(root.path()).load(&path, || true).err().unwrap();
         assert!(matches!(error, ArchiveError::Document { code: actual, .. } if actual == code));
     }
     let bad = repack(&bytes, |name, data| {
@@ -878,21 +883,28 @@ fn versions_features_and_duplicate_json_keys_have_distinct_failures() {
         )
     });
     fs::write(&path, bad).unwrap();
-    assert!(ProjectArchiveStore::new(root.path())
-        .open(&path, || true)
+    assert!(io(root.path())
+        .load(&path, || true)
         .err()
         .unwrap()
         .to_string()
         .contains("Duplicate JSON"));
     // The production reader never accepts the experimental format.
-    fs::write(&path, write(&document, root.path()).0).unwrap();
-    assert!(ProjectArchiveStore::new(root.path())
-        .open(&path, || true)
-        .is_err());
+    let experimental = repack(&bytes, |name, data| {
+        if name == "format.json" {
+            let mut f: serde_json::Value = serde_json::from_slice(&data).unwrap();
+            f["required_features"] = serde_json::json!(["prototype-directory-document-v21"]);
+            Some(serde_json::to_vec(&f).unwrap())
+        } else {
+            Some(data)
+        }
+    });
+    fs::write(&path, experimental).unwrap();
+    assert!(io(root.path()).load(&path, || true).is_err());
 }
 
 #[test]
-fn bad_or_missing_images_open_with_diagnostics_but_cannot_be_saved() {
+fn bad_or_missing_images_remain_explicitly_unresolved_when_saved() {
     let root = tempfile::tempdir().unwrap();
     let document = fixture(root.path());
     let bytes = native_bytes(&document, root.path());
@@ -908,18 +920,18 @@ fn bad_or_missing_images_open_with_diagnostics_but_cannot_be_saved() {
         });
         let path = root.path().join("bad.zipzi");
         fs::write(&path, bad).unwrap();
-        let store = ProjectArchiveStore::new(root.path());
-        let opened = store.open(&path, || true).unwrap();
-        assert_eq!(opened.unique_assets, 0);
+        let store = io(root.path());
+        let opened = store.load(&path, || true).unwrap();
+        assert_eq!(opened.stats.unique_assets, 0);
         assert_eq!(opened.diagnostics.len(), 3);
         assert!(store
             .save(
                 &opened.document,
-                &opened.resource_lease(),
-                &root.path().join("out.zipzi"),
+                &opened.resources,
+                &root.path().join(format!("out-{missing}.zipzi")),
                 None,
                 || true
             )
-            .is_err());
+            .is_ok());
     }
 }

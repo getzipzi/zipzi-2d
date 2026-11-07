@@ -15,7 +15,7 @@ impl<'a> Moc3EncoderContext<'a> {
                 ids.extend_from_slice(d.runtime_id.as_bytes());
                 ids.resize((i + 1) * 64, 0);
             }
-            let mesh = self.doc.get_mesh(&d.id).unwrap();
+            let mesh = self.doc.mesh(&d.id).unwrap();
             let binding = self.doc.binding_for_mesh(&d.id);
             let key_count = if let Some(b) = binding {
                 checked(b.keyforms.len(), &format!("{}.keyforms", b.id))?

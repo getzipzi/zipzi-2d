@@ -14,23 +14,18 @@ pub(super) fn rows(
         return vec![];
     };
     let mut rows = vec![];
-    let status = if let Some(c) = &info.asset.content {
-        format!("{} · {} × {}", t!("texture.ready"), c.width, c.height)
-    } else if let Some(source) = &info.asset.unresolved_source {
-        format!("{}: {source}", t!("texture.missing"))
-    } else {
-        t!("texture.empty").into_owned()
+    use zipzi_core::state::AssetContent;
+    let status = match &info.asset.content {
+        AssetContent::Image { width, height, .. } => {
+            format!("{} · {width} × {height}", t!("texture.ready"))
+        }
+        AssetContent::Unresolved { source } => format!("{}: {source}", t!("texture.missing")),
+        AssetContent::Empty => t!("texture.empty").into_owned(),
     };
     rows.push(Row::Detail(properties::DetailRow::Text {
         id: Some("texture-status".into()),
         value: status.into(),
     }));
-    if let Some(c) = &info.asset.content {
-        rows.push(Row::Detail(properties::DetailRow::Text {
-            id: Some("texture-source".into()),
-            value: c.source.clone().into(),
-        }));
-    }
     if target.context == EditingContext::Modeling {
         for control in [
             if loading {
@@ -41,9 +36,9 @@ pub(super) fn rows(
             Control::Delete,
         ] {
             let label = if control == Control::Load {
-                if info.asset.content.is_some() {
+                if matches!(info.asset.content, AssetContent::Image { .. }) {
                     t!("texture.replace_content").into()
-                } else if info.asset.unresolved_source.is_some() {
+                } else if matches!(info.asset.content, AssetContent::Unresolved { .. }) {
                     t!("texture.repair").into()
                 } else {
                     control.label()

@@ -110,6 +110,16 @@ class LifecycleTests(unittest.TestCase):
         self.assertIsNone(first.process())
         self.assertIsNotNone(second.process())
 
+    def test_startup_error_reports_current_launch_output(self):
+        log = self.lifecycle.directory / 'run.log'
+        log.write_text('previous launch output\n', encoding='utf-8')
+        command = [sys._base_executable, '-c',
+                   'import sys; print("PROTOCOL_MISMATCH", file=sys.stderr); sys.exit(1)']
+        with self.assertRaisesRegex(RuntimeError, 'PROTOCOL_MISMATCH') as error:
+            self.lifecycle.reload(lambda: command, cwd=self.root, env=os.environ)
+        self.assertIn(str(log), str(error.exception))
+        self.assertNotIn('previous launch output', str(error.exception))
+
     def test_resident_reuse_does_not_claim_or_stop_resident(self):
         result = self.reload(REUSE=str(os.getpid()))
         self.assertEqual(result, {'reused': os.getpid()})

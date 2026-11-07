@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::types::{BindingAxis, BlendShapeConstraint, Status, Vec2};
 
 #[derive(Debug, Clone)]
@@ -55,7 +56,7 @@ pub(super) struct GlueVertexSlots {
 
 /// Immutable evaluation inputs, owned by the document and invalidated by structural edits.
 #[derive(Debug, Clone)]
-pub(crate) struct PreparedEvaluation {
+pub struct PreparedEvaluation {
     pub(super) scene: Arc<crate::document::SceneProjection>,
     pub(super) parts: Vec<String>,
     pub(super) part_slots: HashMap<String, usize>,
@@ -77,7 +78,7 @@ pub(crate) struct PreparedEvaluation {
     pub(super) glue_vertices: Vec<Vec<Option<GlueVertexSlots>>>,
 }
 impl PreparedEvaluation {
-    pub(crate) fn new(doc: &Document) -> Result<Self, Status> {
+    pub(crate) fn new(doc: &impl EvaluationModel) -> Result<Self, Status> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = crate::benchmark::span("core.prepare_evaluation");
         let groups = crate::draw_order::resolved_groups(doc);

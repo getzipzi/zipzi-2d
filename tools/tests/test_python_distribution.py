@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 
-class Python2Distribution(unittest.TestCase):
+class SourceDistribution(unittest.TestCase):
     def backend(self):
         spec = importlib.util.spec_from_file_location('zipzi_build_backend', ROOT/'crates/zipzi-python/build_backend.py')
         module = importlib.util.module_from_spec(spec)
@@ -50,7 +50,7 @@ class Python2Distribution(unittest.TestCase):
                       'crates/zipzi-api-derive/Cargo.toml',
                       'crates/zipzi-api-derive/src/lib.rs',
                       'crates/zipzi-python/tools/generate.py',
-                      'crates/zipzi-python/tools/codegen/normalize.py',
+                      'crates/zipzi-python/tools/codegen/outputs.py',
                       'tools/workspace/dev_platform.py')
             for name in inputs:
                 path = checkout / name

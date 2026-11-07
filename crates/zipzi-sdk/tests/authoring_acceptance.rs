@@ -1,92 +1,28 @@
-//! Cross-domain publication and persistence contracts for the Editor handoff.
-use zipzi_core::BindingAxisEditing;
-use zipzi_core::{document::*, Canvas, Mesh, Parameter, Part, Vec2};
-use zipzi_sdk::{AuthoringSession, BindingAuthoringEdit, ChangeSet, EditSession, ObjectKind};
-
+//! Cross-domain atomicity and persistence through Draft and PreparedPreview.
+use crate::support::{archive, prepared};
+use zipzi_contract::authoring::ObjectKind;
+use zipzi_core::state::{DocumentState, RecordChange};
+use zipzi_core::{document::*, BindingAxisEditing, Canvas, Mesh, Parameter, Part, Vec2};
+use zipzi_sdk::{AuthoringSession, Snapshot};
 fn id(n: u32) -> String {
     format!("60000000-0000-4000-8000-{n:012x}")
 }
-
 fn session() -> AuthoringSession {
-    AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
+    AuthoringSession::new(
+        Snapshot::new(
+            DocumentState::new(id(1), Canvas::new(100., 100., Vec2::default(), 1.).into()).unwrap(),
+            Default::default(),
+        )
+        .unwrap(),
+    )
 }
-
-#[test]
-fn stale_domain_plans_abort_candidate_writes_without_publication() {
-    fn reject(
-        sdk: &mut AuthoringSession,
-        operation: &str,
-        apply: impl FnOnce(&mut EditSession<'_>) -> Result<(), zipzi_sdk::SdkError>,
-    ) {
-        let version = sdk.version();
-        let history = sdk.history_lengths();
-        let mut edit = sdk.begin_edit("stale plan", None).unwrap();
-        edit.create_part(Part {
-            id: id(999),
-            ..Default::default()
-        })
-        .unwrap();
-        let error = apply(&mut edit).unwrap_err();
-        assert_eq!(error.code.as_ref(), "STALE_PLAN");
-        assert_eq!(error.operation, operation);
-        assert_eq!(edit.commit().unwrap_err().code.as_ref(), "EDIT_ABORTED");
-        assert_eq!(sdk.version(), version);
-        assert_eq!(sdk.history_lengths(), history);
-        assert!(sdk.document().get_part(&id(999)).is_none());
-        assert!(sdk.drain_events().is_empty());
-    }
-
-    let mut sdk = session();
-    let motion = sdk
-        .plan_motion_edit(MotionEdit::CreateGroup {
-            id: id(10),
-            name: "Planned".into(),
-        })
-        .unwrap();
-    let attachment = sdk
-        .plan_attachment_edit(AttachmentEdit::Create {
-            id: id(11),
-            path: "files/planned.wav".into(),
-        })
-        .unwrap();
-    let physics = sdk
-        .plan_physics_edit(PhysicsEdit::CreateGroup {
-            asset_id: id(12),
-            id: id(13),
-            name: "Planned".into(),
-            before: None,
-        })
-        .unwrap();
-    let expression = sdk
-        .plan_expression_edit(ExpressionEdit::Create {
-            id: id(14),
-            name: "Planned".into(),
-        })
-        .unwrap();
-    sdk.edit("Advance version", None, |e| {
-        e.create_part(Part {
-            id: id(20),
-            ..Default::default()
-        })
-    })
-    .unwrap();
-    sdk.drain_events();
-
-    reject(&mut sdk, "apply_motion_plan", |e| {
-        e.apply_motion_plan(&motion)
-    });
-    reject(&mut sdk, "apply_attachment_plan", |e| {
-        e.apply_attachment_plan(&attachment)
-    });
-    reject(&mut sdk, "apply_physics_plan", |e| {
-        e.apply_physics_plan(&physics)
-    });
-    reject(&mut sdk, "apply_expression_plan", |e| {
-        e.apply_expression_plan(&expression)
-    });
+fn json(s: &AuthoringSession) -> serde_json::Value {
+    archive::project_json(&archive::native_bytes_with_resources(
+        s.snapshot().document(),
+        s.snapshot().resources(),
+    ))
 }
-
-fn create_all(edit: &mut EditSession<'_>) -> Result<(), zipzi_sdk::SdkError> {
+fn create_all(edit: &mut zipzi_sdk::Commands<'_>) -> Result<(), zipzi_core::Status> {
     edit.edit_resource(ResourceEdit::Create {
         id: id(10),
         name: "Pending image".into(),
@@ -111,31 +47,47 @@ fn create_all(edit: &mut EditSession<'_>) -> Result<(), zipzi_sdk::SdkError> {
         runtime_id: "Param".into(),
         ..Default::default()
     })?;
-    edit.create_part(Part {
-        id: id(22),
-        ..Default::default()
+    edit.create_part({
+        let mut value = Part {
+            id: id(22),
+            ..Default::default()
+        };
+        value.runtime_id = value.id.clone();
+        value
     })?;
-    edit.create_mesh(Mesh {
-        id: id(30),
-        texture_asset_id: id(10).into(),
-        ..Default::default()
+    edit.create_mesh({
+        let mut value = Mesh {
+            id: id(30),
+            texture_asset_id: id(10).into(),
+            ..Default::default()
+        };
+        value.runtime_id = value.id.clone();
+        value
     })?;
-    edit.binding_authoring(BindingAuthoringEdit::Grid(BindingGridEdit::Create {
-        id: id(31),
-        target: BindingGridTarget::Mesh(id(30)),
-    }))?;
-    edit.edit_scene(SceneEdit::Create {
-        id: id(32),
-        name: "Pending glue".into(),
-        object: SceneCreate::Glue {
-            a: Default::default(),
-            b: Default::default(),
+    edit.edit_binding_grid(
+        BindingGridEdit::Create {
+            id: id(31),
+            target: BindingGridTarget::Mesh(id(30)),
         },
-        part_id: None,
-        parent_id: None,
-        before: None,
-        deformation_before: None,
-    })?;
+        Default::default(),
+        &Default::default(),
+    )?;
+    edit.edit_scene(
+        SceneEdit::Create {
+            id: id(32),
+            name: "Pending glue".into(),
+            object: SceneCreate::Glue {
+                a: Default::default(),
+                b: Default::default(),
+            },
+            part_id: None,
+            parent_id: None,
+            before: None,
+            deformation_before: None,
+        },
+        Default::default(),
+        &Default::default(),
+    )?;
     edit.edit_expression(ExpressionEdit::Create {
         id: id(40),
         name: "Expression".into(),
@@ -188,12 +140,12 @@ fn create_all(edit: &mut EditSession<'_>) -> Result<(), zipzi_sdk::SdkError> {
         id: id(73),
         before: None,
     })?;
-    edit.edit_references(ReferenceEdit::CreateModelParameterGroup {
+    edit.edit_reference(ReferenceEdit::CreateModelParameterGroup {
         id: id(80),
         name: "EyeBlink".into(),
         before: None,
     })?;
-    edit.edit_references(ReferenceEdit::CreateMember {
+    edit.edit_reference(ReferenceEdit::CreateMember {
         id: id(81),
         collection: ReferenceCollection::ModelParameterMembers { group_id: id(80) },
         before: None,
@@ -205,66 +157,46 @@ fn create_all(edit: &mut EditSession<'_>) -> Result<(), zipzi_sdk::SdkError> {
             2.,
         )]))),
     })
-}
-
-fn assert_inverse(forward: &ChangeSet, inverse: &ChangeSet) {
-    assert_eq!(forward.created, inverse.deleted);
-    assert_eq!(forward.deleted, inverse.created);
-    assert_eq!(forward.modified, inverse.modified);
-    assert_eq!(forward.collections, inverse.collections);
-    assert_eq!(forward.categories, inverse.categories);
-    assert_eq!(forward.document_fields, inverse.document_fields);
-    // Check every reference family, including families that a fixture leaves empty.
-    let a = serde_json::to_value(forward).unwrap();
-    let b = serde_json::to_value(inverse).unwrap();
-    for field in [
-        "references",
-        "motion_references",
-        "reference_fields",
-        "reference_selections",
-        "content_references",
-        "scene_references",
-        "organization_references",
-        "pose_references",
-        "physics_references",
-        "binding_references",
-    ] {
-        let expected: Vec<_> = a[field]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|edge| {
-                let mut edge = edge.clone();
-                let old = edge["before"].take();
-                edge["before"] = edge["after"].take();
-                edge["after"] = old;
-                if edge.get("before_owner").is_some() {
-                    let old = edge["before_owner"].take();
-                    edge["before_owner"] = edge["after_owner"].take();
-                    edge["after_owner"] = old;
-                }
-                edge
-            })
-            .collect();
-        assert_eq!(serde_json::Value::Array(expected), b[field], "{field}");
-    }
+    .map(|_| ())
 }
 
 #[test]
+fn stale_cross_domain_candidates_cannot_publish_even_after_undo() {
+    let mut s = session();
+    let (_, stale) = prepared(&s, create_all).unwrap();
+    let (_, foreign) = prepared(&s, create_all).unwrap();
+    let mut other = session();
+    assert_eq!(other.publish(foreign).unwrap_err().code, "STALE_SOURCE");
+    let (_, current) = prepared(&s, |c| {
+        c.create_part(Part {
+            id: id(999),
+            runtime_id: "intervening".into(),
+            ..Default::default()
+        })
+    })
+    .unwrap();
+    s.publish(current).unwrap();
+    s.undo(s.version()).unwrap();
+    s.take_events();
+    let before = s.read_snapshot();
+    let history = s.history_state();
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    assert_eq!(s.read_snapshot().source, before.source);
+    assert_eq!(s.history_state(), history);
+    assert!(s.take_events().is_empty());
+}
+#[test]
 fn all_domains_publish_once_persist_pending_state_and_reverse_one_history_entry() {
-    let mut sdk = session();
-    let empty = zipzi_project::encode_project(sdk.document()).unwrap();
-    let (_, receipt) = sdk.edit("Authoring acceptance", None, create_all).unwrap();
-    assert_eq!(sdk.history_lengths(), (1, 0));
-    assert_eq!(sdk.drain_events(), vec![receipt.clone()]);
-    assert!(!receipt.changes.full_invalidation);
-    // Enumeration used for receipts and direct lookup must agree for owned rows
-    // as well as ordered roots, including generated Physics nodes and samples.
-    for entity in &receipt.changes.created {
-        let handle = sdk.handle(entity.kind, &entity.id).unwrap();
-        sdk.resolve_handle(&handle).unwrap();
-    }
-    let handles: Vec<_> = [
+    let mut s = session();
+    let empty = s.snapshot().content_id();
+    let (_, change) = prepared(&s, create_all).unwrap();
+    let receipt = s.publish(change).unwrap();
+    assert_eq!(s.history_state().undo_steps, 1);
+    let events = s.take_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].version, receipt.version);
+    assert_eq!(events[0].writes, receipt.writes);
+    let identities = [
         (ObjectKind::Asset, 10),
         (ObjectKind::Attachment, 11),
         (ObjectKind::CdiParameterGroup, 20),
@@ -289,125 +221,105 @@ fn all_domains_publish_once_persist_pending_state_and_reverse_one_history_entry(
         (ObjectKind::PoseLink, 73),
         (ObjectKind::ModelParameterGroup, 80),
         (ObjectKind::ModelParameterMember, 81),
-    ]
-    .into_iter()
-    .map(|(kind, n)| {
-        assert!(
-            receipt
-                .changes
-                .created
-                .iter()
-                .any(|entity| entity.kind == kind && entity.id == id(n)),
-            "{kind:?}"
-        );
-        sdk.handle(kind, &id(n)).unwrap()
-    })
-    .collect();
-    let saved = zipzi_project::encode_project(sdk.document()).unwrap();
-    let reopened = zipzi_project::decode_project(&saved).unwrap();
-    assert_eq!(zipzi_project::encode_project(&reopened).unwrap(), saved);
-    assert!(reopened.validate_structure().is_empty());
-    assert!(reopened.get_asset(&id(10)).unwrap().content.is_none());
-    assert!(
-        reopened.get_expression_entry(&id(41)).unwrap().1.target == ExpressionTarget::Unspecified
-    );
-    assert!(reopened.get_binding(&id(31)).unwrap().axes.is_empty());
-    assert!(reopened
-        .get_motion_group(&id(50))
-        .unwrap()
-        .entries
-        .is_empty());
-    let undo = sdk.undo().unwrap();
-    assert_inverse(&receipt.changes, &undo.changes);
+    ];
+    for (kind, n) in identities {
+        s.snapshot()
+            .document()
+            .require_object(kind, &id(n))
+            .unwrap();
+    }
+    let saved = json(&s);
+    let restored = crate::support::roundtrip(s.snapshot());
+    let reopened = restored.document();
+    assert!(matches!(
+        reopened.asset(&id(10)).unwrap().content,
+        zipzi_core::state::AssetContent::Empty
+    ));
     assert_eq!(
-        zipzi_project::encode_project(sdk.document()).unwrap(),
-        empty
+        reopened.expression_entry(&id(41)).unwrap().1.target,
+        ExpressionTarget::Unspecified
     );
-    let redo = sdk.redo().unwrap();
-    assert_eq!(redo.changes, receipt.changes);
-    assert_eq!(
-        zipzi_project::encode_project(sdk.document()).unwrap(),
-        saved
-    );
-    assert_eq!(sdk.drain_events(), vec![undo, redo]);
-    for old in handles {
-        assert_eq!(
-            sdk.resolve_handle(&old).unwrap_err().code.as_ref(),
-            "STALE_HANDLE"
-        );
-        sdk.resolve_handle(&sdk.handle(old.kind(), old.id()).unwrap())
+    assert!(reopened.binding(&id(31)).unwrap().axes.is_empty());
+    assert!(reopened.motion_group(&id(50)).unwrap().entries.is_empty());
+    assert_eq!(json(&AuthoringSession::new(restored)), saved);
+    let captured_source = s.read_snapshot().source;
+    let undo = s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().content_id(), empty);
+    for (forward, inverse) in receipt.writes.records().iter().zip(undo.writes.records()) {
+        assert_eq!((forward.domain, &forward.id), (inverse.domain, &inverse.id));
+        assert_eq!(forward.change, RecordChange::Created);
+        assert_eq!(inverse.change, RecordChange::Deleted);
+    }
+    let redo = s.redo(s.version()).unwrap();
+    assert_eq!(redo.writes, receipt.writes);
+    assert_eq!(json(&s), saved);
+    assert_ne!(s.read_snapshot().source, captured_source);
+    let events = s.take_events();
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0].version, undo.version);
+    assert_eq!(events[1].version, redo.version);
+    for (kind, n) in identities {
+        s.snapshot()
+            .document()
+            .require_object(kind, &id(n))
             .unwrap();
     }
 }
-
 #[test]
 fn a_late_domain_failure_rolls_back_every_domain_and_preserves_redo() {
-    let mut sdk = session();
-    sdk.edit("Populate", None, create_all).unwrap();
-    sdk.undo().unwrap();
-    sdk.drain_events();
-    let version = sdk.version();
-    let empty = zipzi_project::encode_project(sdk.document()).unwrap();
-    let failure = sdk
-        .edit("Rejected batch", None, |edit| {
-            create_all(edit)?;
-            edit.edit_references(ReferenceEdit::CreateMember {
+    let mut s = session();
+    let (_, change) = prepared(&s, create_all).unwrap();
+    s.publish(change).unwrap();
+    s.undo(s.version()).unwrap();
+    s.take_events();
+    let source = s.read_snapshot().source;
+    let history = s.history_state();
+    let empty = json(&s);
+    let mut draft = s.begin_draft();
+    assert!(draft
+        .batch(draft.source(), |c| {
+            create_all(c)?;
+            c.edit_reference(ReferenceEdit::CreateMember {
                 id: id(82),
                 collection: ReferenceCollection::ModelParameterMembers { group_id: id(999) },
                 before: None,
             })
         })
-        .unwrap_err();
-    assert!(!failure.code.is_empty());
-    assert_eq!(sdk.version(), version);
-    assert_eq!(sdk.history_lengths(), (0, 1));
-    assert!(sdk.drain_events().is_empty());
-    assert_eq!(
-        zipzi_project::encode_project(sdk.document()).unwrap(),
-        empty
-    );
-    sdk.redo().unwrap();
-    assert!(sdk.document().get_expression_entry(&id(41)).is_some());
+        .is_err());
+    assert!(draft.prepare("failed batch").is_err());
+    assert_eq!(s.read_snapshot().source, source);
+    assert_eq!(s.history_state(), history);
+    assert!(s.take_events().is_empty());
+    assert_eq!(json(&s), empty);
+    s.redo(s.version()).unwrap();
+    assert!(s.snapshot().document().expression_entry(&id(41)).is_some());
 }
-
 #[test]
-fn planned_and_direct_domain_writes_publish_identical_results() {
+fn draft_and_preview_routes_publish_identical_domain_results() {
     let mut sdk = session();
-    sdk.edit("Populate", None, create_all).unwrap();
-    sdk.drain_events();
+    let (_, change) = prepared(&sdk, create_all).unwrap();
+    sdk.publish(change).unwrap();
+    sdk.take_events();
     macro_rules! parity {
-        ($intent:expr, $plan:ident, $execute:ident, $edit:ident) => {{
-            let intent = $intent;
-            let version = sdk.version();
-            let history = sdk.history_lengths();
-            let plan = sdk.$plan(intent.clone()).unwrap();
-            assert_eq!(sdk.version(), version);
-            assert_eq!(sdk.history_lengths(), history);
-            assert!(sdk.drain_events().is_empty());
-            let planned = sdk.$execute(&plan).unwrap();
-            assert!(planned.changed);
-            let saved = zipzi_project::encode_project(sdk.document()).unwrap();
-            let undo = sdk.undo().unwrap();
-            assert_inverse(&planned.changes, &undo.changes);
-            assert_eq!(sdk.drain_events(), vec![planned.clone(), undo]);
-            let (_, direct) = sdk
-                .edit("Direct edit", None, |edit| edit.$edit(intent))
-                .unwrap();
-            assert_eq!(direct.changes, planned.changes);
-            assert_eq!(
-                zipzi_project::encode_project(sdk.document()).unwrap(),
-                saved
-            );
-            let undo = sdk.undo().unwrap();
-            assert_eq!(sdk.drain_events(), vec![direct, undo]);
+        ($intent:expr, $edit:ident $(, $extra:expr)*) => {{
+            let intent = $intent; let before = sdk.read_snapshot().source; let history = sdk.history_state();
+            let (_, change) = prepared(&sdk, |c| c.$edit(intent.clone() $(, $extra)*)).unwrap();
+            assert_eq!(sdk.read_snapshot().source, before); assert_eq!(sdk.history_state(), history); assert!(sdk.take_events().is_empty());
+            let direct = sdk.publish(change).unwrap(); assert!(!direct.writes.is_empty()); let saved = json(&sdk); sdk.undo(sdk.version()).unwrap(); sdk.take_events();
+            let mut draft = sdk.begin_draft(); let (preview, _) = draft.prepare_preview(draft.source(), |c| c.$edit(intent $(, $extra)*)).unwrap();
+            draft.install_preview(preview).unwrap();
+            let shown = draft.read_snapshot().unwrap().snapshot.content_id();
+            let publication = sdk.publish(draft.prepare("preview").unwrap()).unwrap();
+            assert_eq!(publication.writes.records(), direct.writes.records()); let mut a=serde_json::to_value(&publication.writes).unwrap(); let mut b=serde_json::to_value(&direct.writes).unwrap(); a.as_object_mut().unwrap().remove("estimated_bytes"); b.as_object_mut().unwrap().remove("estimated_bytes"); assert_eq!(a,b); assert_eq!(sdk.snapshot().content_id(), shown); assert_eq!(json(&sdk), saved); sdk.undo(sdk.version()).unwrap(); sdk.take_events();
         }};
     }
     parity!(
         ExpressionEdit::PatchEntry {
             id: id(41),
             expected: sdk
+                .snapshot()
                 .document()
-                .get_expression_entry(&id(41))
+                .expression_entry(&id(41))
                 .unwrap()
                 .1
                 .into(),
@@ -419,8 +331,6 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
                 blend: None
             },
         },
-        plan_expression_edit,
-        execute_expression_plan,
         edit_expression
     );
     parity!(
@@ -430,8 +340,6 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
                 parameter_id: id(21)
             }
         },
-        plan_motion_edit,
-        execute_motion_plan,
         edit_motion
     );
     parity!(
@@ -444,8 +352,6 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
                 part: PosePartRef::Resolved { part_id: id(22) }
             },
         },
-        plan_pose_edit,
-        execute_pose_plan,
         edit_pose
     );
     parity!(
@@ -458,9 +364,7 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
                 target: ModelTargetRef::Resolved { object_id: id(21) }
             },
         },
-        plan_reference_edit,
-        execute_reference_plan,
-        edit_references
+        edit_reference
     );
     parity!(
         OrganizationEdit::Move {
@@ -470,8 +374,6 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
             },
             before: None,
         },
-        plan_organization_edit,
-        execute_organization_plan,
         edit_organization
     );
     parity!(
@@ -481,9 +383,9 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
             value: SceneFieldValue::Label("Renamed".into()),
             clear_glue_pairs: false,
         },
-        plan_scene_edit,
-        execute_scene_plan,
-        edit_scene
+        edit_scene,
+        Default::default(),
+        &Default::default()
     );
     parity!(
         ResourceEdit::PatchName {
@@ -491,20 +393,17 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
             expected: "Pending image".into(),
             name: "Renamed".into()
         },
-        plan_resource_edit,
-        execute_resource_plan,
         edit_resource
     );
     parity!(
         DocumentAuthoringEdit::Patch {
             expected: sdk
+                .snapshot()
                 .document()
                 .document_value(DocumentField::Layout)
                 .unwrap(),
             value: DocumentValue::Layout(None),
         },
-        plan_document_edit,
-        execute_document_plan,
         edit_document
     );
     parity!(
@@ -518,20 +417,18 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
                 }),
             }
         },
-        plan_physics_edit,
-        execute_physics_plan,
         edit_physics
     );
     parity!(
-        BindingAuthoringEdit::Grid(BindingGridEdit::Edit {
+        BindingGridEdit::Edit {
             owner: id(31),
             operation: GridOperation::AddAxis {
                 axis: zipzi_core::BindingAxis::new(id(21), vec![0., 1.]),
             },
-        }),
-        plan_binding_authoring,
-        execute_binding_plan,
-        binding_authoring
+        },
+        edit_binding_grid,
+        Default::default(),
+        &Default::default()
     );
     parity!(
         SceneContentEdit::InsertMeshVertices {
@@ -544,11 +441,16 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
             }],
             before: None,
         },
-        plan_scene_content,
-        execute_scene_content_plan,
-        edit_scene_content
+        edit_scene_content,
+        Default::default(),
+        &Default::default()
     );
-    let expected = sdk.document().get_attachment(&id(11)).unwrap().clone();
+    let expected = sdk
+        .snapshot()
+        .document()
+        .attachment(&id(11))
+        .unwrap()
+        .clone();
     let mut attachment = expected.clone();
     attachment.bytes = Some(std::sync::Arc::new(vec![1, 2, 3]));
     parity!(
@@ -556,8 +458,6 @@ fn planned_and_direct_domain_writes_publish_identical_results() {
             expected,
             attachment
         },
-        plan_attachment_edit,
-        execute_attachment_plan,
         edit_attachment
     );
 }

@@ -225,20 +225,29 @@ fn all_management_commands_reject_stale_document() -> anyhow::Result<()> {
 fn imported_unresolved_members_and_extensions_survive_group_dissolution_and_export_preflight()
 -> anyhow::Result<()> {
     use zipzi_core::{Canvas, Parameter, Vec2, document::CdiParameterEntry};
-    use zipzi_sdk::AuthoringSession;
     let assets = tempfile::tempdir()?;
     let p = id(800);
     let mut session =
-        AuthoringSession::new(&id(801), Canvas::new(256., 256., Vec2::default(), 1.))?;
-    session.edit("Fixture", None, |edit| {
-        edit.create_parameter(Parameter { id: p.clone(), runtime_id: "ParamX".into(), ..Default::default() })?;
-        edit.import_cdi3(r#"{"Version":3,"Custom":{"keep":true},"ParameterGroups":[{"Id":"Face","GroupId":"","Name":"Face"},{"Id":"Eyes","GroupId":"Face","Name":"Eyes"}],"Parameters":[{"Id":"ParamX","GroupId":"Eyes","Name":"X","CustomEntry":7},{"Id":"Missing","GroupId":"Eyes","Name":"?","UnresolvedNote":"keep"}]}"#)?;
+        crate::support::fixture_session(&id(801), Canvas::new(256., 256., Vec2::default(), 1.))?;
+    crate::support::publish_fixture(&mut session, "Fixture", |edit| {
+        crate::support::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: p.clone(),
+                runtime_id: "ParamX".into(),
+                ..Default::default()
+            },
+        )?;
+        {
+            let imported = zipzi_project::import_cdi3(&edit.read_document()?, r#"{"Version":3,"Custom":{"keep":true},"ParameterGroups":[{"Id":"Face","GroupId":"","Name":"Face"},{"Id":"Eyes","GroupId":"Face","Name":"Eyes"}],"Parameters":[{"Id":"ParamX","GroupId":"Eyes","Name":"X","CustomEntry":7},{"Id":"Missing","GroupId":"Eyes","Name":"?","UnresolvedNote":"keep"}]}"#).map_err(|error| zipzi_sdk::Status::error(error.code.clone(), error.to_string()))?;
+            edit.replace_display_info(imported.candidate.display_info().clone())
+        }?;
         Ok(())
     })?;
-    let info = session.document().display_info().clone();
+    let info = session.snapshot().document().display_info().clone();
     let face = info.parameter_groups.as_ref().unwrap()[0].id.clone();
     let eyes = info.parameter_groups.as_ref().unwrap()[1].id.clone();
-    let saved = session.save_project(&assets.path().join("imported.zipzi"), None)?;
+    let saved = crate::support::save_fixture(&mut session, &assets.path().join("imported.zipzi"))?;
     let mut doc = Document::open(&saved.path)?;
     let mut draft = doc.parameter_draft(&p)?;
     draft.runtime_id = "Changed".into();
@@ -258,8 +267,8 @@ fn imported_unresolved_members_and_extensions_survive_group_dissolution_and_expo
     assert_eq!(doc.parameter_group_delete_counts(&eyes)?, (1, 1, 0));
     doc.delete_parameter_group(&eyes, doc.parameter_model_revision())?;
     let saved = doc.save(&saved.path)?;
-    session.open_project(&saved.path, None)?;
-    let after = session.document().display_info();
+    session = crate::support::open_fixture(&saved.path)?;
+    let after = session.snapshot().document().display_info();
     assert_eq!(after.extensions, info.extensions);
     assert_eq!(after.opaque_source_ids, info.opaque_source_ids);
     for (before, after) in info

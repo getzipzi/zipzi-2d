@@ -26,6 +26,9 @@ pub enum Shape {
     U64,
     Usize,
     Bytes,
+    Tuple {
+        items: Vec<Shape>,
+    },
     StringMap {
         value: Box<Shape>,
     },
@@ -520,6 +523,14 @@ mod documentation_tests {
             };
             assert_eq!(doc, expected_type);
             assert_eq!(variants[0].doc, expected_variant);
+        }
+    }
+}
+
+impl<A: ApiShape, B: ApiShape> ApiShape for (A, B) {
+    fn api_shape() -> Shape {
+        Shape::Tuple {
+            items: vec![A::api_shape(), B::api_shape()],
         }
     }
 }

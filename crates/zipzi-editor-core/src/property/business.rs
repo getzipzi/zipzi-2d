@@ -46,10 +46,14 @@ fn reference(value: &str) -> PosePartRef {
         }
     }
 }
-pub(crate) fn payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
+pub(crate) fn payload(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<Value> {
     if object.kind == ObjectKind::Physics {
         let asset = model
             .physics()
+            .as_deref()
             .filter(|a| a.id == object.id)
             .ok_or_else(|| anyhow::anyhow!("Missing physics"))?;
         return Ok(serde_json::json!({"fps":asset.data.meta.fps}));
@@ -65,7 +69,7 @@ pub(crate) fn payload(model: &zipzi_core::Document, object: &ObjectRef) -> Resul
     })
 }
 pub(crate) fn pose_patch(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
     payload: Value,
 ) -> Result<PoseEdit> {

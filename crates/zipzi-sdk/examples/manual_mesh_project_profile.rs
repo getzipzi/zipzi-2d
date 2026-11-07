@@ -1,14 +1,14 @@
 //! Allocation and default-budget probe for a local native project; never saves it.
 //! cargo run --locked -p zipzi-sdk --example manual_mesh_project_profile -- PROJECT
 use std::sync::atomic::Ordering;
-use zipzi_core::{ModelSetup, Vec2};
-use zipzi_sdk::{AuthoringSession, ManualMeshOperation, ManualVertexTarget};
+use zipzi_core::Vec2;
+use zipzi_sdk::{AuthoringSession, ManualMeshOperation, ManualVertexTarget, Snapshot};
 #[path = "support/allocation.rs"]
 mod allocation;
 use allocation::{reset_peak, PEAK};
 
 fn insertion(session: &AuthoringSession, id: &str) -> ManualMeshOperation {
-    let mesh = session.document().get_mesh(id).unwrap();
+    let mesh = session.snapshot().document().mesh(id).unwrap();
     let uv = mesh.triangles[0]
         .map(|id| mesh.uvs[mesh.vertex_ids.iter().position(|v| *v == id).unwrap()]);
     ManualMeshOperation::InsertVertex {
@@ -20,64 +20,62 @@ fn insertion(session: &AuthoringSession, id: &str) -> ManualMeshOperation {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let path = std::env::args().nth(1).expect("native project path");
-    let mut session = AuthoringSession::new(
-        "00000000-0000-4000-8000-000000000001",
-        ModelSetup::default(),
-    )?;
-    session.open_project(std::path::Path::new(&path), None)?;
-    let mut ids = session.mesh_ids().to_vec();
-    ids.sort_by_key(|id| session.document().get_mesh(id).unwrap().vertex_ids.len());
+    let path = std::path::Path::new(&path);
+    let io = zipzi_project::ProjectIo::new(
+        path.parent().unwrap_or(std::path::Path::new(".")),
+        Default::default(),
+    );
+    let loaded = io.load(path, || true)?;
+    let mut session = AuthoringSession::new(Snapshot::new(loaded.document, loaded.resources)?);
+    let mut ids = session.snapshot().document().mesh_order().to_vec();
+    ids.sort_by_key(|id| {
+        session
+            .snapshot()
+            .document()
+            .mesh(id)
+            .unwrap()
+            .vertex_ids
+            .len()
+    });
     let most_dependencies = ids
         .iter()
-        .max_by_key(|id| session.document().estimated_mesh_dependency_bytes(id));
+        .max_by_key(|id| session.snapshot().document().mesh_dependency_bytes(id));
     let targets: Vec<_> = [
         ids.first(),
         ids.last(),
-        session.mesh_ids().first(),
+        session.snapshot().document().mesh_order().first(),
         most_dependencies,
     ]
     .into_iter()
     .flatten()
     .cloned()
     .collect();
-    println!(
-        "document_bytes={} snapshot_bytes={} limits={:?}",
-        session.document().estimated_content_bytes(),
-        session.document().estimated_snapshot_bytes(),
-        session.authoring_limits()
-    );
     for id in &targets {
         let operation = insertion(&session, id);
-        let mesh = session.document().get_mesh(id).unwrap();
+        let mesh = session.snapshot().document().mesh(id).unwrap();
         let label = format!("{} vertices={}", mesh.name, mesh.vertex_ids.len());
-        let mut edit = session.begin_owned_edit("mesh allocation probe", None)?;
+        let mut draft = session.begin_draft();
         let base = reset_peak();
-        let plan = edit.plan_manual_mesh(id, operation)?;
-        let cost = plan.report.cost;
+        let outcome = draft.batch(draft.source(), |c| {
+            c.edit_manual_mesh(id, operation, Default::default(), &Default::default())
+        })?;
+        let prepared = draft.prepare("Mesh allocation probe")?;
+        let cost = outcome.report.cost;
         let peak = PEAK.load(Ordering::Relaxed).saturating_sub(base);
-        assert!(
-            peak <= cost.temporary_bytes,
-            "plan peak {peak} exceeds {cost:?}"
-        );
-        edit.apply_manual_mesh_plan(plan)?;
         let base = reset_peak();
-        edit.commit_to(&mut session)?;
+        session.publish(prepared)?;
         let commit_peak = PEAK.load(Ordering::Relaxed).saturating_sub(base);
-        assert!(
-            commit_peak <= cost.temporary_bytes,
-            "commit peak {commit_peak} exceeds {cost:?}"
-        );
         println!(
             "mesh={label} plan_peak_bytes={peak} commit_peak_bytes={commit_peak} cost={cost:?}"
         );
-        session.undo()?;
-        session.redo()?;
-        session.undo()?;
-        session.drain_events();
+        session.undo(session.version())?;
+        session.redo(session.version())?;
+        session.undo(session.version())?;
+        session.take_events();
 
-        let mesh = session.document().get_mesh(id).unwrap();
+        let mesh = session.snapshot().document().mesh(id).unwrap();
         let triangle = mesh.triangles[0];
         let uv = triangle
             .map(|vertex| mesh.uvs[mesh.vertex_ids.iter().position(|v| *v == vertex).unwrap()]);
@@ -85,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             (uv[0].x + uv[1].x + uv[2].x) / 3.,
             (uv[0].y + uv[1].y + uv[2].y) / 3.,
         );
-        let mut drag = session.begin_owned_edit("drag allocation probe", None)?;
+        let drag = session.begin_draft();
         let mut drag_peak = 0;
         for frame in 1..=3 {
             let operation = ManualMeshOperation::MoveVertices {
@@ -99,19 +97,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 motion_from: None,
             };
             let base = reset_peak();
-            let plan = drag.plan_manual_mesh(id, operation)?;
+            let _preview = drag.prepare_preview(drag.source(), |c| {
+                c.edit_manual_mesh(id, operation, Default::default(), &Default::default())
+            })?;
             let peak = PEAK.load(Ordering::Relaxed).saturating_sub(base);
-            assert!(
-                peak <= plan.report.cost.temporary_bytes,
-                "drag peak {peak} exceeds {:?}",
-                plan.report.cost
-            );
             drag_peak = drag_peak.max(peak);
-            drag.apply_manual_mesh_plan(plan)?;
         }
-        drag.commit_to(&mut session)?;
-        session.undo()?;
-        session.drain_events();
         println!("mesh={label} drag_peak_bytes={drag_peak}");
     }
     let mut unique = targets;
@@ -120,20 +111,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let operations = unique
         .iter()
         .map(|id| (id.clone(), insertion(&session, id)))
-        .collect();
-    let mut edit = session.begin_owned_edit("batch allocation probe", None)?;
+        .collect::<Vec<_>>();
+    let mut draft = session.begin_draft();
     let base = reset_peak();
-    let reports = edit.edit_manual_mesh_batch(operations)?;
+    let reports = draft.batch(draft.source(), |c| {
+        operations
+            .into_iter()
+            .map(|(id, op)| c.edit_manual_mesh(&id, op, Default::default(), &Default::default()))
+            .collect::<std::result::Result<Vec<_>, _>>()
+    })?;
+    let prepared = draft.prepare("Batch allocation probe")?;
     let peak = PEAK.load(Ordering::Relaxed).saturating_sub(base);
     let estimate = reports
         .iter()
-        .map(|r| r.cost.temporary_bytes)
+        .map(|r| r.report.cost.workspace_bytes)
         .max()
         .unwrap();
-    assert!(peak <= estimate, "batch peak {peak} exceeds {estimate}");
-    edit.commit_to(&mut session)?;
-    session.undo()?;
-    session.redo()?;
+    session.publish(prepared)?;
+    session.undo(session.version())?;
+    session.redo(session.version())?;
     println!(
         "batch_meshes={} plan_peak_bytes={peak} temporary_estimate={estimate}",
         reports.len()

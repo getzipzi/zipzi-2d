@@ -62,25 +62,36 @@ pub(super) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
         );
         Ok::<_, anyhow::Error>(())
     })??;
-    let job = host.runtime.write().request_save(
+    let io =
+        zipzi_project::ProjectIo::new(endpoint.path().join("project-cache"), Default::default());
+    {
+        let mut runtime = host.runtime.write();
+        runtime.attach(client, session)?;
+        let version = runtime.session_read(client, session)?.version();
+        let job = runtime.request_save_as(
+            client,
+            version,
+            &io,
+            &endpoint.path().join("Background-rig"),
+            None,
+            Default::default(),
+        )?;
+        let work = runtime.take_work(job)?;
+        runtime.complete(work.run()).unwrap();
+        runtime.release_job(client, job)?;
+    }
+    crate::test_fixture::publish_host(
+        &host.runtime,
         client,
         session,
-        &endpoint.path().join("Background-rig"),
+        "Native external update",
+        |edit| {
+            edit.rename(
+                zipzi_sdk::NameTarget::Mesh(&mesh),
+                ("External update").into(),
+            )
+        },
     )?;
-    let work = host.runtime.write().take_work(job)?;
-    anyhow::ensure!(
-        host.runtime.write().complete(work.run()),
-        "save completion rejected"
-    );
-    host.runtime.write().release_job(client, job)?;
-    let edit = host
-        .runtime
-        .write()
-        .begin_edit(client, session, "Native external update", None)?;
-    host.runtime
-        .write()
-        .apply_edit(client, edit, |e| e.rename_mesh(&mesh, "External update"))?;
-    host.runtime.write().commit_edit(client, edit)?;
     let frame = h.capture()?;
     save(&frame, directory, "external-other-project-applied.png")?;
     anyhow::ensure!(

@@ -1,45 +1,32 @@
-use zipzi_core::binary_wire::{encode, WireWrite};
-use zipzi_runtime::{
-    authoring::{EditOperation, WriteResult},
-    *,
-};
-use zipzi_sdk::{MeshCreateSpec, MeshGeometry, MeshOperation};
-fn fixture(limits: RuntimeLimits) -> (Runtime, ClientId, SessionId, EditId) {
+use zipzi_contract::kernel_commands::Command;
+use zipzi_core::Vec2;
+use zipzi_runtime::*;
+use zipzi_sdk::{ManualMeshOperation, MeshCreateSpec, MeshGeometry};
+
+fn fixture(limits: RuntimeLimits) -> (Runtime, ClientId, Version, DraftSource) {
     let mut rt = Runtime::new(limits);
     let client = rt.register_client().unwrap();
     let session = rt
         .create_session(
             client,
             &uuid::Uuid::new_v4().to_string(),
-            zipzi_core::Canvas::default(),
+            Default::default(),
         )
         .unwrap();
-    let edit = rt.begin_edit(client, session, "binary", None).unwrap();
-    (rt, client, session, edit)
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
+    (rt, client, version, draft)
 }
-fn payload(operations: &Vec<EditOperation>) -> Vec<u8> {
-    let mut value = AUTHORING_MAGIC.to_vec();
-    Vec::<EditOperation>::SIGNATURE.encode(&mut value).unwrap();
-    value.extend(encode(operations).unwrap());
-    value
-}
-fn upload(rt: &mut Runtime, c: ClientId, e: EditId, bytes: &[u8]) -> BlobId {
-    let blob = rt.start_authoring_upload(c, e, bytes.len()).unwrap();
-    for (index, chunk) in bytes.chunks(1 << 20).enumerate() {
-        rt.append_blob(c, blob, index * (1 << 20), chunk).unwrap();
-    }
-    rt.seal_blob(c, blob).unwrap();
-    blob
-}
+
 #[test]
-fn sdk_limit_grid_uses_typed_binary_and_pending_upload_blocks_other_writes() {
-    let (mut rt, c, s, e) = fixture(Default::default());
+fn largest_grid_roundtrips_as_a_typed_command_and_publishes_once() {
+    let (mut rt, client, version, draft) = fixture(Default::default());
     let id = uuid::Uuid::new_v4().to_string();
     let points = vec![
-        zipzi_core::Vec2::new(0., 0.),
-        zipzi_core::Vec2::new(1., 0.),
-        zipzi_core::Vec2::new(1., 1.),
-        zipzi_core::Vec2::new(0., 1.),
+        Vec2::new(0., 0.),
+        Vec2::new(1., 0.),
+        Vec2::new(1., 1.),
+        Vec2::new(0., 1.),
     ];
     let base = MeshGeometry {
         vertex_ids: vec![0, 1, 2, 3],
@@ -51,145 +38,182 @@ fn sdk_limit_grid_uses_typed_binary_and_pending_upload_blocks_other_writes() {
     let geometry = zipzi_sdk::rectangle_grid_geometry(&base, 255, 255).unwrap();
     assert_eq!(geometry.vertex_ids.len(), 65536);
     assert!(zipzi_sdk::rectangle_grid_geometry(&base, 256, 255).is_err());
-    let operations = vec![EditOperation::Mesh {
-        operation: MeshOperation::Create {
-            spec: MeshCreateSpec {
-                texture_asset_id: String::new(),
-                id: Some(id.clone()),
-                name: "large".into(),
-                geometry,
-            },
+    let commands = vec![Command::CreateMesh {
+        spec: MeshCreateSpec {
+            id: Some(id.clone()),
+            name: "Large grid".into(),
+            texture_asset_id: String::new(),
+            geometry,
         },
     }];
-    let bytes = payload(&operations);
-    assert!(bytes.len() > 1 << 20);
-    let blob = rt.start_authoring_upload(c, e, bytes.len()).unwrap();
-    assert!(matches!(
-        rt.apply_authoring(c, e, vec![]),
-        Err(RuntimeError::Busy)
-    ));
-    assert!(matches!(rt.request_commit(c, e), Err(RuntimeError::Busy)));
-    assert_eq!(rt.edit_sequence(c, e).unwrap(), 0);
-    for (index, chunk) in bytes.chunks(1 << 20).enumerate() {
-        rt.append_blob(c, blob, index * (1 << 20), chunk).unwrap();
-    }
-    rt.seal_blob(c, blob).unwrap();
-    let WriteResult { source, .. } = rt.apply_authoring_blob(c, e, blob).unwrap();
-    assert!(matches!(source, SourceRef::Edit { sequence: 1, .. }));
+    let bytes = serde_json::to_vec(&commands).unwrap();
+    assert!(bytes.len() < zipzi_runtime::protocol::MAX_FRAME);
+    let (draft, _) = rt
+        .commands(client, draft, serde_json::from_slice(&bytes).unwrap())
+        .unwrap();
+    assert_eq!(draft.sequence, 1);
+    let candidate = rt.read_draft(client, draft).unwrap();
     assert_eq!(
-        rt.edit_document(c, e)
-            .unwrap()
-            .get_mesh(&id)
+        candidate
+            .snapshot
+            .document()
+            .mesh(&id)
             .unwrap()
             .vertex_ids
             .len(),
         65536
     );
-    rt.release_blob(c, blob).unwrap();
-    assert_eq!(rt.image_memory_usage().blob_bytes, 0);
-    rt.commit_edit(c, e).unwrap();
+    assert!(rt
+        .read_snapshot(client, version.session)
+        .unwrap()
+        .snapshot
+        .document()
+        .mesh(&id)
+        .is_none());
     assert_eq!(
-        rt.document(s)
+        rt.publish(client, draft, "Large grid")
             .unwrap()
-            .get_mesh(&id)
-            .unwrap()
-            .triangles
-            .len(),
+            .history
+            .undo_steps,
+        1
+    );
+    let after = rt.read_snapshot(client, version.session).unwrap();
+    assert_eq!(
+        after.snapshot.document().mesh(&id).unwrap().triangles.len(),
         2 * 255 * 255
     );
-    assert_eq!(rt.session_info(s).unwrap().history_lengths, (1, 0));
 }
+
 #[test]
-fn malformed_or_abandoned_attached_work_fails_on_the_host_without_client_abort() {
-    for failure in [
-        "append", "seal", "contract", "trailing", "variant", "release",
-    ] {
-        let (mut rt, c, s, e) = fixture(Default::default());
-        let before = rt.session_info(s).unwrap();
-        let mut bytes = payload(&vec![]);
-        if failure == "contract" {
-            bytes[4] ^= 1;
-        }
-        if failure == "trailing" {
-            bytes.push(9);
-        }
-        if failure == "variant" {
-            bytes[20..24].copy_from_slice(&1u32.to_le_bytes());
-            bytes.extend_from_slice(&999u32.to_le_bytes());
-        }
-        let blob = if matches!(failure, "append" | "seal" | "release") {
-            rt.start_authoring_upload(c, e, bytes.len()).unwrap()
-        } else {
-            upload(&mut rt, c, e, &bytes)
-        };
-        match failure {
-            "append" => assert!(rt.append_blob(c, blob, 1, b"x").is_err()),
-            "seal" => assert!(rt.seal_blob(c, blob).is_err()),
-            "release" => rt.release_blob(c, blob).unwrap(),
-            _ => assert!(rt.apply_authoring_blob(c, e, blob).is_err()),
-        }
-        assert_eq!(
-            rt.edit_state(c, e).unwrap(),
-            EditState::Aborted,
-            "{failure}"
-        );
-        assert_eq!(rt.blob_count(), 0, "{failure}");
-        assert_eq!(rt.image_memory_usage().total_bytes(), 0, "{failure}");
-        assert_eq!(rt.session_info(s).unwrap().version, before.version);
-        assert_eq!(rt.session_info(s).unwrap().history_lengths, (0, 0));
-        assert!(matches!(
-            rt.request_commit(c, e),
-            Err(RuntimeError::Aborted)
-        ));
-    }
+fn unsealed_or_released_blob_preserves_draft_but_bad_image_aborts_accepted_batch() {
+    let (mut rt, client, version, draft) = fixture(Default::default());
+    let id = uuid::Uuid::new_v4().to_string();
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![Command::CreateAsset {
+                id: id.clone(),
+                name: "Image".into(),
+            }],
+        )
+        .unwrap();
+    let blob = rt.create_blob(client, 4).unwrap();
+    assert_eq!(
+        rt.replace_image_blob(client, draft, id.clone(), blob, 1, 1)
+            .unwrap_err()
+            .code,
+        "INCOMPLETE_BLOB"
+    );
+    assert_eq!(
+        rt.read_draft(client, draft).unwrap().source,
+        QuerySource::Draft(draft)
+    );
+    rt.release_blob(client, blob).unwrap();
+    assert_eq!(
+        rt.replace_image_blob(client, draft, id.clone(), blob, 1, 1)
+            .unwrap_err()
+            .code,
+        "BLOB_NOT_FOUND"
+    );
+    assert_eq!(
+        rt.read_draft(client, draft).unwrap().source,
+        QuerySource::Draft(draft)
+    );
+    let blob = rt.create_blob(client, 4).unwrap();
+    rt.append_blob(client, blob, 0, &[255, 0, 0, 255]).unwrap();
+    rt.seal_blob(client, blob).unwrap();
+    assert_eq!(
+        rt.replace_image_blob(client, draft, id.clone(), blob, 2, 1)
+            .unwrap_err()
+            .code,
+        "INVALID_IMAGE"
+    );
+    assert_eq!(
+        rt.read_draft(client, draft).unwrap_err().code,
+        "DRAFT_ENDED"
+    );
+    rt.release_blob(client, blob).unwrap();
+    assert_eq!(rt.task_bytes(), 0);
+    let formal = rt.subscribe(client, version.session).unwrap();
+    assert_eq!(formal.cursor, version);
+    assert_eq!(formal.history.undo_steps, 0);
+    assert!(formal.snapshot.snapshot.document().asset(&id).is_none());
 }
+
 #[test]
 fn upload_admission_refusal_preserves_the_candidate_and_sequence() {
-    let (mut rt, c, s, e) = fixture(RuntimeLimits {
-        blob_bytes: 8,
+    let (mut rt, client, version, draft) = fixture(RuntimeLimits {
+        task_bytes: 8,
         ..Default::default()
     });
-    assert!(rt.start_authoring_upload(c, e, 9).is_err());
-    assert_eq!(rt.edit_state(c, e).unwrap(), EditState::Editing);
-    assert_eq!(rt.edit_sequence(c, e).unwrap(), 0);
-    assert_eq!(rt.blob_count(), 0);
-    assert_eq!(rt.session_info(s).unwrap().history_lengths, (0, 0));
+    assert_eq!(
+        rt.create_blob(client, 9).unwrap_err().code,
+        "BUDGET_EXCEEDED"
+    );
+    assert_eq!(
+        rt.read_draft(client, draft).unwrap().source,
+        QuerySource::Draft(draft)
+    );
+    assert_eq!(draft.sequence, 0);
+    assert_eq!(rt.task_bytes(), 0);
+    assert_eq!(
+        rt.subscribe(client, version.session)
+            .unwrap()
+            .history
+            .undo_steps,
+        0
+    );
 }
 
 #[path = "../../../fixtures/mesh-edit-dependencies.rs"]
 mod manual_dependencies;
+
 #[test]
-fn manual_mesh_binary_geometric_rejection_keeps_candidate_and_sequence() {
-    use zipzi_sdk::ManualMeshOperation;
-    let (mut rt, c, s, e) = fixture(Default::default());
-    rt.apply_edit(c, e, manual_dependencies::install).unwrap();
-    rt.commit_edit(c, e).unwrap();
-    let e = rt.begin_edit(c, s, "manual binary", None).unwrap();
-    let before = rt.edit_snapshot(c, e).unwrap().source;
-    for (uv, accepted) in [
-        (zipzi_core::Vec2::new(-0.05, 0.3), false),
-        (zipzi_core::Vec2::new(0.35, 0.25), true),
-    ] {
-        let expected = rt.edit_snapshot(c, e).unwrap().source;
-        let operations = vec![EditOperation::Modeling {
-            operation: Box::new(modeling::ModelingCommand::ManualMesh {
-                mesh_id: manual_dependencies::id(2),
-                expected,
-                operation: ManualMeshOperation::InsertVertex { id: 200, uv },
-            }),
-        }];
-        let bytes = payload(&operations);
-        let blob = upload(&mut rt, c, e, &bytes);
-        let result = rt.apply_authoring_blob(c, e, blob);
-        assert_eq!(result.is_ok(), accepted);
-        if !accepted {
-            assert_eq!(rt.edit_snapshot(c, e).unwrap().source, before);
-            assert_eq!(rt.edit_state(c, e).unwrap(), EditState::Editing);
-        } else {
-            assert_eq!(result.unwrap().mesh_transfer.unwrap().shape_count, 7);
-            rt.release_blob(c, blob).unwrap();
-        }
-    }
-    rt.commit_edit(c, e).unwrap();
-    assert_eq!(rt.session(s).unwrap().history_lengths(), (2, 0));
+fn manual_mesh_command_preview_rejection_preserves_candidate_and_sequence() {
+    let (mut rt, client, _, draft) = fixture(Default::default());
+    let (draft, _) = rt
+        .batch(client, draft, manual_dependencies::install)
+        .unwrap();
+    let version = rt.publish(client, draft, "Fixture").unwrap().version;
+    let draft = rt.begin_draft(client, version).unwrap();
+    let commands = |uv| {
+        vec![Command::ManualMesh {
+            mesh: manual_dependencies::id(2),
+            operation: ManualMeshOperation::InsertVertex { id: 200, uv },
+        }]
+    };
+    assert!(rt
+        .preview_commands(client, draft, commands(Vec2::new(-0.05, 0.3)))
+        .is_err());
+    assert_eq!(
+        rt.read_draft(client, draft).unwrap().source,
+        QuerySource::Draft(draft)
+    );
+    let (updated, _) = rt
+        .preview_commands(client, draft, commands(Vec2::new(0.35, 0.25)))
+        .unwrap();
+    assert_eq!(updated.sequence, draft.sequence + 1);
+    let candidate = rt.read_draft(client, updated).unwrap();
+    let document = candidate.snapshot.document();
+    assert_eq!(
+        document
+            .mesh(&manual_dependencies::id(2))
+            .unwrap()
+            .vertex_ids
+            .len(),
+        6
+    );
+    let binding = document.binding(&manual_dependencies::id(6)).unwrap();
+    assert!(binding
+        .keyforms
+        .iter()
+        .all(|shape| shape.positions.len() == 6));
+    assert_eq!(
+        rt.publish(client, updated, "Insert vertex")
+            .unwrap()
+            .history
+            .undo_steps,
+        2
+    );
 }

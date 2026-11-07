@@ -632,28 +632,25 @@ fn switching_documents_cancels_pending_mesh_thumbnails(cx: &mut TestAppContext) 
 #[gpui_kit::test]
 fn mesh_thumbnails_only_generate_for_virtualized_rows(cx: &mut TestAppContext) {
     let (document, assets) = super::document_fixture::sample_document().unwrap();
-    let mut session =
-        zipzi_sdk::AuthoringSession::new(&uuid::Uuid::new_v4().to_string(), document.model_setup())
-            .unwrap();
-    session
-        .open_project(document.path().unwrap(), None)
-        .unwrap();
-    let template = session.mesh(document.selected_id().unwrap()).unwrap();
-    session
-        .edit("Many meshes", None, |edit| {
-            for i in 0..200 {
-                let mut mesh = template.clone();
-                mesh.id = uuid::Uuid::new_v4().to_string();
-                mesh.runtime_id = mesh.id.clone();
-                mesh.name = format!("Mesh {i}");
-                edit.create_mesh(mesh)?;
-            }
-            Ok(())
-        })
-        .unwrap();
-    let saved = session
-        .save_project(document.path().unwrap(), None)
-        .unwrap();
+    let mut session = crate::test_fixture::open_fixture(document.path().unwrap()).unwrap();
+    let template = session
+        .snapshot()
+        .document()
+        .mesh(document.selected_id().unwrap())
+        .unwrap()
+        .clone();
+    crate::test_fixture::publish_fixture(&mut session, "Many meshes", |edit| {
+        for i in 0..200 {
+            let mut mesh = template.clone();
+            mesh.id = uuid::Uuid::new_v4().to_string();
+            mesh.runtime_id = mesh.id.clone();
+            mesh.name = format!("Mesh {i}");
+            crate::test_fixture::insert_fixture_mesh(edit, mesh)?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    let saved = crate::test_fixture::save_fixture(&mut session, document.path().unwrap()).unwrap();
     let harness = super::setup_with_document(
         cx,
         zipzi_editor_core::Document::open(&saved.path).unwrap(),

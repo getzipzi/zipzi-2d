@@ -505,30 +505,32 @@ fn parameter_slider_remains_editable_after_scrolling_cached_rows(cx: &mut TestAp
     use zipzi_sdk::AuthoringSession;
 
     let assets = tempfile::tempdir().unwrap();
-    let mut session = AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )
     .unwrap();
     let ids: Vec<_> = (0..128).map(|_| Uuid::new_v4().to_string()).collect();
-    session
-        .edit("Parameters", None, |edit| {
-            for (index, id) in ids.iter().enumerate() {
-                edit.create_parameter(Parameter {
+    crate::test_fixture::publish_fixture(&mut session, "Parameters", |edit| {
+        for (index, id) in ids.iter().enumerate() {
+            crate::test_fixture::insert_fixture_parameter(
+                edit,
+                Parameter {
                     id: id.clone(),
                     name: format!("Pose {index}"),
                     minimum: 0.,
                     maximum: 1.,
                     default_value: 0.,
                     ..Default::default()
-                })?;
-            }
-            Ok(())
-        })
-        .unwrap();
-    let receipt = session
-        .save_project(&assets.path().join("parameters.zipzi"), None)
-        .unwrap();
+                },
+            )?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    let receipt =
+        crate::test_fixture::save_fixture(&mut session, &assets.path().join("parameters.zipzi"))
+            .unwrap();
     let harness = setup_with_document(cx, Document::open(&receipt.path).unwrap(), assets);
     let last = ids.last().unwrap();
     cx.update_window(harness.window, |_, window, cx| {

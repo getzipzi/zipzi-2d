@@ -27,8 +27,8 @@ impl Document {
         use zipzi_core::WarpBezierEvaluation;
         let before = self.session.document();
         let after = self.model();
-        let a = before.get_transform(&object.id).unwrap();
-        let b = after.get_transform(&object.id).unwrap();
+        let a = before.transform(&object.id).unwrap();
+        let b = after.transform(&object.id).unwrap();
         let wa = a.warp().unwrap();
         let wb = b.warp().unwrap();
         let controller = |t: &zipzi_core::Transform,
@@ -77,7 +77,7 @@ impl Document {
         };
         measure(&wa.points, &wa.bezier, &wb.points, &wb.bezier)?;
         if let Some(binding) = before.binding_for_scene(&object.id) {
-            let next = after.get_scene_binding(&binding.id).unwrap();
+            let next = after.scene_binding(&binding.id).unwrap();
             if let (SceneTrack::Warp { keyforms: a, .. }, SceneTrack::Warp { keyforms: b, .. }) =
                 (&binding.track, &next.track)
             {
@@ -111,11 +111,15 @@ impl Document {
         self.begin_control_edit(&[prepared])?;
         let result = (|| {
             self.pending.as_mut().unwrap().edit.apply(|edit| {
-                edit.edit_scene_content(zipzi_sdk::SceneContentEdit::WarpShape {
-                    transform_id: object.id.clone(),
-                    target,
-                    action,
-                })?;
+                edit.edit_scene_content(
+                    zipzi_contract::document::SceneContentEdit::WarpShape {
+                        transform_id: object.id.clone(),
+                        target,
+                        action,
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )?;
                 Ok(())
             })?;
             self.pending.as_mut().unwrap().topology_changed = true;
@@ -135,11 +139,11 @@ impl Document {
         let before = self.session.document();
         let after = self.model();
         let old = before
-            .get_transform(&object.id)
+            .transform(&object.id)
             .and_then(|t| t.warp())
             .ok_or_else(|| anyhow!("Warp no longer exists"))?;
         let new = after
-            .get_transform(&object.id)
+            .transform(&object.id)
             .and_then(|t| t.warp())
             .ok_or_else(|| anyhow!("Warp no longer exists"))?;
         // Off-node cell centers plus corners; fixed work regardless of the
@@ -186,7 +190,7 @@ impl Document {
         measure(&old.points, &new.points)?;
         if let Some(binding) = before.binding_for_scene(&object.id) {
             let next = after
-                .get_scene_binding(&binding.id)
+                .scene_binding(&binding.id)
                 .ok_or_else(|| anyhow!("Binding changed"))?;
             let (SceneTrack::Warp { keyforms: a, .. }, SceneTrack::Warp { keyforms: b, .. }) =
                 (&binding.track, &next.track)
@@ -198,9 +202,9 @@ impl Document {
                 measure(&a.positions, &b.positions)?;
             }
         }
-        for binding in before.iter_blend_bindings_for_target(&object.id) {
+        for binding in before.blend_bindings_for_target(&object.id) {
             let next = after
-                .get_blend_binding(&binding.id)
+                .blend_binding(&binding.id)
                 .ok_or_else(|| anyhow!("BlendShape changed"))?;
             let (DeltaKeyforms::Warp(a), DeltaKeyforms::Warp(b)) =
                 (&binding.keyforms, &next.keyforms)

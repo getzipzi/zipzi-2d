@@ -258,7 +258,6 @@ impl PropertiesPanel {
         let Some(document) = owner.read(cx).editor.document() else {
             return body.child(t!("editor.welcome")).into_any_element();
         };
-        let parameters = document.parameters();
         let Some(asset) = document.physics_definition() else {
             return compact::scroll_frame(body, &self.physics.scroll).into_any_element();
         };
@@ -290,6 +289,16 @@ impl PropertiesPanel {
         let bypass = animation.physics_preview.bypass;
         let editing = animation.preview_mode == AnimationPreviewMode::Editing && !manual;
         let settings = animation.physics_preview.clone();
+        // Parameter ranges and defaults are only used by manual input controls.
+        let parameters = if manual {
+            owner
+                .read(cx)
+                .editor
+                .document()
+                .map_or_else(Vec::new, |document| document.parameters())
+        } else {
+            Vec::new()
+        };
         let snapshot = owner.read(cx).displayed_animation();
         // Retained canvas images can predate a candidate; never label their traces
         // as current-configuration observations while a replacement is pending.

@@ -1,27 +1,24 @@
 #![cfg(not(feature = "gpu-observation"))]
 
-use zipzi_runtime::{observation::ObservationView, *};
+use zipzi_contract::{
+    kernel_tasks::{SampleInput, SampleRequest},
+    observation::ObservationView,
+};
+use zipzi_runtime::{JobValue, Runtime};
 
 #[test]
-fn cpu_host_rejects_images_before_admission_and_keeps_preview_usable() {
-    let mut rt = Runtime::default();
-    let c = rt.register_client().unwrap();
-    let s = rt
+fn cpu_host_rejects_images_before_admission_and_keeps_sampling_usable() {
+    let mut runtime = Runtime::default();
+    let client = runtime.register_client().unwrap();
+    let session = runtime
         .create_session(
-            c,
+            client,
             "79660000-0000-4000-8000-000000000001",
-            zipzi_core::ModelSetup::default(),
+            Default::default(),
         )
         .unwrap();
-    let capabilities = rt.runtime_capabilities();
-    assert_eq!(capabilities.gpu, Some(false));
-    assert_eq!(capabilities.gpu_backend, "None");
-    assert_eq!(capabilities.gpu_error.as_deref(), Some("GPU_UNAVAILABLE"));
-    assert!(!capabilities.domains.iter().any(|d| d == "observation"));
-    let (p, _) = rt.create_preview(c, s, None, None).unwrap();
-    let before = rt.session_info(s).unwrap();
-    let preview = rt.preview_state(c, p).unwrap();
-    let bytes = rt.accounted_bytes();
+    let before = runtime.read_snapshot(client, session).unwrap();
+    let bytes = runtime.task_bytes();
     let view = ObservationView {
         texture_policy: Default::default(),
         width: 16,
@@ -31,34 +28,47 @@ fn cpu_host_rejects_images_before_admission_and_keeps_preview_usable() {
         topology: None,
         quality: false,
     };
-    for result in [
-        rt.request_observation(c, s, None, vec![Default::default()], view.clone(), None),
-        rt.request_preview_frames(c, p, vec![0., 0.25], false, false, vec![], Some(view)),
-    ] {
-        assert!(
-            matches!(result, Err(RuntimeError::Sdk(e)) if e.code.as_ref() == "GPU_UNAVAILABLE")
-        );
-    }
-    assert_eq!(rt.accounted_bytes(), bytes);
-    assert_eq!(rt.session_info(s).unwrap(), before);
-    assert_eq!(
-        rt.preview_state(c, p).unwrap().1.sequence,
-        preview.1.sequence
-    );
-    let job = rt
-        .request_preview_samples(c, p, vec![0., 0.25], true, false)
-        .unwrap();
-    let work = rt.take_work(job).unwrap();
-    assert!(rt.complete(work.run()));
-    let result = rt.job_info(c, job).unwrap().result.unwrap().unwrap();
-    let JobValue::Previewed(result) = result else {
-        panic!("preview result")
+    let input = SampleInput::Animation {
+        times: vec![0., 0.25],
+        motions: vec![],
+        expressions: vec![],
+        inputs: vec![],
+        physics: false,
+        stabilized_start: false,
     };
-    assert_eq!(result.samples.frames.len(), 2);
-    assert!(result
-        .samples
-        .frames
-        .iter()
-        .all(|f| f.observation.is_none()));
-    rt.release_job(c, job).unwrap();
+    let failure = runtime
+        .request_observation(client, before.source, input.clone(), view)
+        .unwrap_err();
+    assert_eq!(failure.code, "UNSUPPORTED_OPERATION");
+    assert_eq!(runtime.task_bytes(), bytes);
+    assert!(runtime.next_work().is_none());
+    let after = runtime.read_snapshot(client, session).unwrap();
+    assert_eq!(after.source, before.source);
+    assert_eq!(after.snapshot.content_id(), before.snapshot.content_id());
+
+    let job = runtime
+        .request_samples(
+            client,
+            before.source,
+            SampleRequest {
+                input,
+                queries: vec![],
+                quality: false,
+            },
+        )
+        .unwrap();
+    while let Some(work) = runtime.next_work() {
+        runtime.complete(work.run()).unwrap();
+    }
+    let result = runtime.job(client, job).unwrap().result.as_ref().unwrap();
+    let JobValue::Read(result) = result.as_ref().unwrap() else {
+        panic!("expected a read result");
+    };
+    assert_eq!(result.source, before.source);
+    let value: serde_json::Value = serde_json::from_slice(result.bytes()).unwrap();
+    let frames = value["frames"].as_array().unwrap();
+    assert_eq!(frames.len(), 2);
+    assert!(frames.iter().all(|frame| frame["animation"].is_object()));
+    runtime.release_job(client, job).unwrap();
+    assert_eq!(runtime.task_bytes(), bytes);
 }

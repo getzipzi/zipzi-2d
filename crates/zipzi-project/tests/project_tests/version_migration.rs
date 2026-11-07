@@ -9,7 +9,6 @@ use zipzi_core::types::{
     DeltaGlueKeyform, DeltaKeyforms, Glue, GlueVertexPair, Mesh, Offscreen, OffscreenKeyform,
     Parameter, ParameterKind, Vec2,
 };
-use zipzi_project::{decode_project, encode_project, DocumentSession};
 
 #[test]
 fn test_v42_project_lifecycle_detachment_and_export() {
@@ -37,42 +36,35 @@ fn test_v42_project_lifecycle_detachment_and_export() {
     )
     .unwrap();
 
-    // Import into session
-    let mut session = DocumentSession::new();
-    let (imp_res, report) = session.import_model3(&src_model3);
-    assert!(imp_res.status.is_ok(), "{:?}", imp_res);
-    let rep = report.expect("Report should exist");
-    assert_eq!(rep.moc_version, 4);
-
-    // Verify V42 properties
-    assert_eq!(session.document().blend_binding_order().len(), 2);
-    assert_eq!(session.document().blend_constraint_order().len(), 1);
-
-    // Save as project.zipzi
-    let project_path = tmp.0.join("v42_detached_project");
-    let save_res = session.save(&project_path);
-    assert!(save_res.status.is_ok(), "{:?}", save_res);
-
-    // Detach: remove original files
+    let (result, imported, report) =
+        zipzi_project::ProjectImporter::default().import_model3(&src_model3);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert_eq!(report.unwrap().moc_version, 4);
+    let imported = imported.unwrap();
+    assert_eq!(imported.document.blend_binding_order().len(), 2);
+    assert_eq!(imported.document.blend_constraint_order().len(), 1);
+    let project_path = tmp.0.join("v42.zipzi");
+    tmp.io()
+        .save(
+            &imported.document,
+            &imported.resources,
+            &project_path,
+            None,
+            || true,
+        )
+        .unwrap();
     fs::remove_dir_all(&source_dir).unwrap();
-    assert!(!source_dir.exists());
-
-    // Reopen without original files
-    let mut reopened_session = DocumentSession::new();
-    let open_res = reopened_session.open(&project_path);
-    assert!(open_res.status.is_ok(), "{:?}", open_res);
-    assert!(open_res.resources_complete());
-
-    // Verify document contents preserved
-    let doc = reopened_session.document();
+    let reopened = tmp.io().load(&project_path, || true).unwrap();
+    assert!(reopened.diagnostics.is_empty());
+    let doc = &reopened.document;
     assert_eq!(doc.blend_binding_order().len(), 2);
     assert_eq!(doc.blend_constraint_order().len(), 1);
     assert_eq!(doc.mesh_order().len(), 1);
-
-    // Export upgraded 5.0 package
     let export_dir = tmp.0.join("v42_exported_package");
-    let exp_res = reopened_session.export_package(&export_dir);
-    assert!(exp_res.status.is_ok(), "{:?}", exp_res);
+    zipzi_project::TransferSnapshot::new(reopened.document, reopened.resources, vec![])
+        .unwrap()
+        .publish(zipzi_project::TransferFormat::Runtime, &export_dir)
+        .unwrap();
 
     let exported_moc3 = export_dir.join("model.moc3");
     assert!(exported_moc3.exists());
@@ -90,13 +82,11 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
         DeltaKeyforms, DeltaMeshKeyform, Glue, GlueVertexPair, ParameterKind,
     };
 
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let mut doc = fixture_doc(sha1, sha2);
+    let mut doc = fixture_doc();
 
     let bs_param_id = id(100);
-    assert!(doc
-        .create_parameter(zipzi_core::types::Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(zipzi_core::types::Parameter {
             id: bs_param_id.clone(),
             runtime_id: "ParamMouthOpenBS".to_string(),
             name: "Mouth Open BS".to_string(),
@@ -107,12 +97,11 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
             kind: ParameterKind::BlendShape,
             repeat: false,
         })
-        .status
-        .is_ok());
+    });
 
     let kt_id = id(101);
-    assert!(doc
-        .create_blend_key_table(BlendShapeKeyTable {
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
             id: kt_id.clone(),
@@ -120,34 +109,32 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
             keys: vec![0.0, 1.0],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
+    });
 
     let c_id = id(102);
-    assert!(doc
-        .create_blend_constraint(BlendShapeConstraint {
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_constraint(BlendShapeConstraint {
             samples: Default::default(),
             id: c_id.clone(),
             parameter_id: bs_param_id.clone(),
             keys: vec![0.0, 1.0],
             weights: vec![0.0, 1.0],
         })
-        .status
-        .is_ok());
+    });
 
     let mesh_id = id(4); // from fixture_doc
-    let mesh = doc.get_mesh(&mesh_id).unwrap().clone();
+    let mesh = doc.mesh(&mesh_id).unwrap().clone();
     let v_count = mesh.vertex_ids.len();
 
     let mesh2_id = id(5);
     let mut m2 = mesh.clone();
     m2.id = mesh2_id.clone();
     m2.runtime_id = "ArtMeshB".to_string();
-    assert!(doc.create_mesh(m2).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(m2));
 
     let bb_id = id(103);
-    assert!(doc
-        .create_blend_binding(BlendShapeBinding {
+    doc = prepare(&doc, |builder| {
+        builder.create_blend_binding(BlendShapeBinding {
             id: bb_id.clone(),
             target_id: mesh_id.clone(),
             target_kind: BlendShapeTargetKind::Mesh,
@@ -164,12 +151,11 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
                 },
             ]),
         })
-        .status
-        .is_ok());
+    });
 
     let glue_parameter = id(105);
-    assert!(doc
-        .create_parameter(Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: glue_parameter.clone(),
             runtime_id: "GlueStrength".into(),
             minimum: 0.0,
@@ -177,11 +163,10 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
             default_value: 0.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let glue_id = id(104);
-    assert!(doc
-        .create_glue(Glue {
+    doc = prepare(&doc, |builder| {
+        builder.create_glue(Glue {
             id: glue_id.clone(),
             runtime_id: "Glue0".to_string(),
             name: "Glue 0".to_string(),
@@ -189,7 +174,7 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
             mesh_b_id: (mesh2_id.clone()).into(),
             pairs: vec![GlueVertexPair {
                 vertex_a: Some(mesh.vertex_ids[0]),
-                vertex_b: Some(doc.get_mesh(&mesh2_id).unwrap().vertex_ids[0]),
+                vertex_b: Some(doc.mesh(&mesh2_id).unwrap().vertex_ids[0]),
                 weight_a: 0.5,
                 weight_b: 0.5,
                 ..Default::default()
@@ -200,26 +185,25 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
                     id: Default::default(),
                     samples: Default::default(),
                     parameter_id: glue_parameter,
-                    keys: vec![0.0, 1.0]
+                    keys: vec![0.0, 1.0],
                 }],
                 keyforms: vec![
                     zipzi_core::types::GlueKeyform {
                         samples: Default::default(),
-                        intensity: 0.0
+                        intensity: 0.0,
                     },
                     zipzi_core::types::GlueKeyform {
                         samples: Default::default(),
-                        intensity: 1.0
-                    }
+                        intensity: 1.0,
+                    },
                 ],
             }),
         })
-        .status
-        .is_ok());
+    });
 
-    let encoded = encode_project(&doc).expect("encode_project failed");
-    let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 21);
+    let encoded = fixture_bytes(&doc);
+    let wire: serde_json::Value = project_json(&encoded);
+    assert_eq!(wire["format_version"], 22);
     for field in [
         "blend_key_tables",
         "blend_constraints",
@@ -229,8 +213,11 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
         assert!(wire["document"].get(field).is_some(), "missing {field}");
     }
 
-    let decoded = decode_project(&encoded).expect("decode_project failed");
-    assert!(doc.same_content(&decoded));
+    let decoded = load_native(&encoded).expect("decode_project failed");
+    assert_eq!(
+        project_json(&fixture_bytes(&doc)),
+        project_json(&resaved_native(&encoded))
+    );
     assert_eq!(decoded.blend_key_table_order(), &[kt_id]);
     assert_eq!(decoded.blend_constraint_order(), &[c_id]);
     assert_eq!(decoded.blend_binding_order(), &[bb_id]);
@@ -239,12 +226,14 @@ fn test_project_v2_blendshape_and_glue_roundtrip() {
 
 #[test]
 fn test_project_v1_v2_v3_v4_migration_to_current_format() {
-    let doc = fixture_doc(&"0".repeat(64), &"1".repeat(64));
-    let mut wire: serde_json::Value = serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
+    let doc = fixture_doc();
+    let mut wire: serde_json::Value = project_json(&fixture_bytes(&doc));
     for old in 1..14 {
         wire["format_version"] = old.into();
         assert_eq!(
-            decode_project(&wire.to_string()).unwrap_err().code,
+            load_native(&replace_project_json(&fixture_bytes(&doc), &wire))
+                .unwrap_err()
+                .code,
             "UNSUPPORTED_VERSION"
         );
     }
@@ -252,13 +241,11 @@ fn test_project_v1_v2_v3_v4_migration_to_current_format() {
 
 #[test]
 fn test_v6_reader_rejects_current_format() {
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let doc = fixture_doc(sha1, sha2);
-    let encoded_current = encode_project(&doc).unwrap();
+    let doc = fixture_doc();
+    let encoded_current = fixture_bytes(&doc);
 
     // Simulate an older reader that only accepts 1..=6.
-    let v: serde_json::Value = serde_json::from_str(&encoded_current).unwrap();
+    let v: serde_json::Value = project_json(&encoded_current);
     let ver = v["format_version"].as_u64().unwrap() as u32;
     let accepted_by_legacy = (1..=6).contains(&ver);
     assert!(
@@ -269,28 +256,24 @@ fn test_v6_reader_rejects_current_format() {
 
 #[test]
 fn test_project_v4_rejects_unimplemented_collections() {
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let doc = fixture_doc(sha1, sha2);
+    let doc = fixture_doc();
     // Inject non-empty deformers collection (unsupported prototype relationships)
-    let mut wire: serde_json::Value = serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
+    let mut wire: serde_json::Value = project_json(&fixture_bytes(&doc));
     wire["document"]["deformers"] = serde_json::json!([{ "id": "def1" }]);
-    let bad_project = serde_json::to_string(&wire).unwrap();
-    let err = decode_project(&bad_project).expect_err("Non-empty deformers must be rejected");
+    let bad_project = replace_project_json(&fixture_bytes(&doc), &wire);
+    let err = load_native(&bad_project).expect_err("Non-empty deformers must be rejected");
     assert_eq!(err.code, "LEGACY_PROJECT");
     assert!(err.message.contains("Prototype relationships"));
 }
 
 #[test]
 fn test_project_v4_preserves_offscreen() {
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let mut doc = fixture_doc(sha1, sha2);
+    let mut doc = fixture_doc();
 
     let mesh_id = doc.mesh_order()[0].clone();
-    let mut mesh = doc.get_mesh(&mesh_id).unwrap().clone();
+    let mut mesh = doc.mesh(&mesh_id).unwrap().clone();
     mesh.raw_blend_mode = Some(262);
-    assert!(doc.replace_mesh(mesh).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(mesh));
 
     let os = Offscreen {
         enabled: true,
@@ -308,10 +291,10 @@ fn test_project_v4_preserves_offscreen() {
             screen: Some([0.1, 0.1, 0.1]),
         }],
     };
-    assert!(doc.create_offscreen(os.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_offscreen(os.clone()));
 
-    let encoded = encode_project(&doc).expect("encode_project failed");
-    let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+    let encoded = fixture_bytes(&doc);
+    let wire: serde_json::Value = project_json(&encoded);
     assert_eq!(
         wire["document"]["offscreens"][0]["runtime_id"],
         "Offscreen0"
@@ -321,11 +304,9 @@ fn test_project_v4_preserves_offscreen() {
         262
     );
 
-    let decoded = decode_project(&encoded).expect("decode_project failed");
-    assert_eq!(decoded.offscreen_count(), 1);
-    let decoded_os = decoded
-        .get_offscreen(&id(10))
-        .expect("offscreen must exist");
+    let decoded = load_native(&encoded).expect("decode_project failed");
+    assert_eq!(decoded.offscreen_order().len(), 1);
+    let decoded_os = decoded.offscreen(&id(10)).expect("offscreen must exist");
     assert_eq!(decoded_os.runtime_id, "Offscreen0");
     assert_eq!(decoded_os.name, "Offscreen 0");
     assert_eq!(decoded_os.part_id, sid(1));
@@ -338,66 +319,67 @@ fn test_project_v4_preserves_offscreen() {
     assert_eq!(decoded_os.keyforms[0].multiply, Some([1.0, 0.5, 0.5]));
     assert_eq!(decoded_os.keyforms[0].screen, Some([0.1, 0.1, 0.1]));
 
-    let decoded_mesh = decoded.get_mesh(&mesh_id).expect("mesh must exist");
+    let decoded_mesh = decoded.mesh(&mesh_id).expect("mesh must exist");
     assert_eq!(decoded_mesh.raw_blend_mode, Some(262));
 }
 
 #[test]
 fn disabled_offscreen_roundtrips_and_legacy_defaults_to_enabled() {
-    let mut doc = fixture_doc(&"0".repeat(64), &"1".repeat(64));
+    let mut doc = fixture_doc();
     let mut offscreen = Offscreen {
         id: id(10),
+        runtime_id: "Offscreen".into(),
         part_id: sid(1),
         ..Default::default()
     };
-    assert!(doc.create_offscreen(offscreen.clone()).status.is_ok());
-    let encoded = encode_project(&doc).unwrap();
-    let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 21);
+    doc = prepare(&doc, |builder| builder.create_offscreen(offscreen.clone()));
+    let encoded = fixture_bytes(&doc);
+    let wire: serde_json::Value = project_json(&encoded);
+    assert_eq!(wire["format_version"], 22);
     assert!(wire["document"]["offscreens"][0].get("enabled").is_none());
     assert!(
-        decode_project(&encoded)
+        load_native(&encoded)
             .unwrap()
-            .get_offscreen(&id(10))
+            .offscreen(&id(10))
             .unwrap()
             .enabled
     );
 
     offscreen.enabled = false;
-    assert!(doc.replace_offscreen(offscreen.clone()).status.is_ok());
-    let encoded = encode_project(&doc).unwrap();
-    let mut wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 21);
+    doc = prepare(&doc, |builder| builder.replace_offscreen(offscreen.clone()));
+    let encoded = fixture_bytes(&doc);
+    let mut wire: serde_json::Value = project_json(&encoded);
+    assert_eq!(wire["format_version"], 22);
     assert_eq!(wire["document"]["offscreens"][0]["enabled"], false);
     assert_eq!(
-        decode_project(&encoded).unwrap().get_offscreen(&id(10)),
+        load_native(&encoded).unwrap().offscreen(&id(10)),
         Some(&offscreen)
     );
     wire["format_version"] = serde_json::json!(7);
     assert_eq!(
-        decode_project(&wire.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&fixture_bytes(&doc), &wire))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
 }
 
 #[test]
 fn test_project_v4_preserves_repeat_parameter() {
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let mut doc = fixture_doc(sha1, sha2);
+    let mut doc = fixture_doc();
 
     let param_id = doc.parameter_order()[0].clone();
-    let mut p = doc.get_parameter(&param_id).unwrap().clone();
+    let mut p = doc.parameter(&param_id).unwrap().clone();
     p.repeat = true;
-    assert!(doc.replace_parameter(p).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_parameter(p));
 
-    let encoded = encode_project(&doc).expect("encode_project failed");
-    let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(wire["format_version"], 21);
+    let encoded = fixture_bytes(&doc);
+    let wire: serde_json::Value = project_json(&encoded);
+    assert_eq!(wire["format_version"], 22);
     assert_eq!(wire["document"]["parameters"][0]["repeat"], true);
 
-    let decoded = decode_project(&encoded).expect("decode_project failed");
-    let decoded_param = decoded.get_parameter(&param_id).unwrap();
+    let decoded = load_native(&encoded).expect("decode_project failed");
+    let decoded_param = decoded.parameter(&param_id).unwrap();
     assert!(
         decoded_param.repeat,
         "repeat: true must be preserved after project decode"
@@ -406,9 +388,7 @@ fn test_project_v4_preserves_repeat_parameter() {
 
 #[test]
 fn test_project_v4_blendshape_glue_roundtrip() {
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let mut doc = fixture_doc(sha1, sha2);
+    let mut doc = fixture_doc();
 
     // Create a second mesh
     let mesh2 = Mesh {
@@ -430,7 +410,7 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         triangles: vec![[10, 20, 30]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(mesh2).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(mesh2));
 
     let glue = Glue {
         id: id(21),
@@ -448,7 +428,7 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         intensity: 0.3,
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_glue(glue));
 
     let param_bs = Parameter {
         id: id(22),
@@ -461,7 +441,7 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         kind: ParameterKind::BlendShape,
         repeat: false,
     };
-    assert!(doc.create_parameter(param_bs).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_parameter(param_bs));
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -471,7 +451,7 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_blend_key_table(bkt));
 
     let constraint = BlendShapeConstraint {
         samples: Default::default(),
@@ -480,7 +460,7 @@ fn test_project_v4_blendshape_glue_roundtrip() {
         keys: vec![0.0, 1.0],
         weights: vec![1.0, 0.5],
     };
-    assert!(doc.create_blend_constraint(constraint).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_blend_constraint(constraint));
 
     let binding = BlendShapeBinding {
         id: id(25),
@@ -499,28 +479,23 @@ fn test_project_v4_blendshape_glue_roundtrip() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_blend_binding(binding));
 
     // Encode to project JSON
-    let encoded = encode_project(&doc).expect("encode_project failed");
-    let wire: serde_json::Value = serde_json::from_str(&encoded).unwrap();
+    let encoded = fixture_bytes(&doc);
+    let wire: serde_json::Value = project_json(&encoded);
     assert_eq!(
         wire["document"]["blend_bindings"][0]["keyforms"]["items"][1]["intensity"],
         0.5
     );
 
     // Decode and verify
-    let decoded = decode_project(&encoded).expect("decode_project failed");
-    #[cfg(feature = "binary-prototype")]
-    {
-        let binary = zipzi_project::encode_project_cbor(&doc).unwrap();
-        let binary_decoded = zipzi_project::decode_project_cbor(&binary).unwrap();
-        assert!(doc.same_content(&binary_decoded));
-    }
-    let re_glue = decoded.get_glue(&id(21)).unwrap();
+    let decoded = load_native(&encoded).expect("decode_project failed");
+
+    let re_glue = decoded.glue(&id(21)).unwrap();
     assert_eq!(re_glue.intensity, 0.3);
 
-    let re_binding = decoded.get_blend_binding(&id(25)).unwrap();
+    let re_binding = decoded.blend_binding(&id(25)).unwrap();
     assert_eq!(re_binding.target_kind, BlendShapeTargetKind::Glue);
     assert_eq!(re_binding.target_id, id(21));
     match &re_binding.keyforms {
@@ -550,11 +525,13 @@ fn test_project_v4_blendshape_glue_roundtrip() {
 
 #[test]
 fn v5_model3_migrates_to_uuid_references_and_survives_runtime_renames() {
-    let doc = fixture_doc(&"0".repeat(64), &"1".repeat(64));
-    let mut wire: serde_json::Value = serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
+    let doc = fixture_doc();
+    let mut wire: serde_json::Value = project_json(&fixture_bytes(&doc));
     wire["format_version"] = 5.into();
     assert_eq!(
-        decode_project(&wire.to_string()).unwrap_err().code,
+        load_native(&replace_project_json(&fixture_bytes(&doc), &wire))
+            .unwrap_err()
+            .code,
         "UNSUPPORTED_VERSION"
     );
 }

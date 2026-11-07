@@ -14,12 +14,12 @@ impl ObjectIndex {
     pub(crate) fn refresh_organization_properties(
         &mut self,
         m: &Model,
-        kind: zipzi_sdk::ObjectKind,
+        kind: zipzi_contract::authoring::ObjectKind,
         id: &str,
     ) -> bool {
         let (object, name, properties, enabled) = match kind {
-            zipzi_sdk::ObjectKind::Parameter => {
-                let Some(p) = m.get_parameter(id) else {
+            zipzi_contract::authoring::ObjectKind::Parameter => {
+                let Some(p) = m.parameter(id) else {
                     return false;
                 };
                 (
@@ -29,8 +29,8 @@ impl ObjectIndex {
                     None,
                 )
             }
-            zipzi_sdk::ObjectKind::CdiParameterGroup => {
-                let Some(g) = m.get_parameter_group(id) else {
+            zipzi_contract::authoring::ObjectKind::CdiParameterGroup => {
+                let Some(g) = m.parameter_group(id) else {
                     return false;
                 };
                 (
@@ -40,8 +40,8 @@ impl ObjectIndex {
                     None,
                 )
             }
-            zipzi_sdk::ObjectKind::Part => {
-                let Some(p) = m.get_part(id) else {
+            zipzi_contract::authoring::ObjectKind::Part => {
+                let Some(p) = m.part(id) else {
                     return false;
                 };
                 (

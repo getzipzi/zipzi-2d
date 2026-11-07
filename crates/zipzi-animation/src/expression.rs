@@ -3,7 +3,7 @@ use crate::AnimationError;
 use std::collections::BTreeMap;
 use zipzi_core::{
     document::{ExpressionBlend, ExpressionTarget},
-    Document,
+    state::DocumentState,
 };
 /// How an expression enters the runtime queue. Immediate cuts are useful for
 /// paused inspection; subsequent faded activations still use authored fades.
@@ -45,7 +45,8 @@ pub(crate) struct ExpressionRuntime {
     activations: Vec<Activation>,
     next_activation: usize,
     playing: Vec<PlayingExpression>,
-    projections: BTreeMap<String, std::sync::Arc<zipzi_core::document::ExpressionProjection>>,
+    projection_source: Option<zipzi_core::state::ContentId>,
+    projections: BTreeMap<String, std::sync::Arc<zipzi_core::state::ExpressionProjection>>,
 }
 impl ExpressionRuntime {
     pub(crate) fn first_schedule_difference(&self, other: &Self) -> Option<f32> {
@@ -87,7 +88,7 @@ impl ExpressionRuntime {
     /// Schedule a start at a nonnegative preview time. Ties retain call order.
     pub(crate) fn schedule(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         now: f32,
         id: &str,
         time: f32,
@@ -97,7 +98,7 @@ impl ExpressionRuntime {
 
     pub(crate) fn schedule_with_transition(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         now: f32,
         id: &str,
         time: f32,
@@ -110,7 +111,7 @@ impl ExpressionRuntime {
             return Err(AnimationError::PastActivation);
         }
         let _expression = document
-            .get_expression(id)
+            .expression(id)
             .ok_or_else(|| AnimationError::MissingExpression(id.into()))?;
         let insertion = self.activations.partition_point(|item| item.time <= time);
         self.activations.insert(
@@ -133,7 +134,7 @@ impl ExpressionRuntime {
     }
     pub(crate) fn evaluate(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         time: f32,
         values: &mut BTreeMap<String, f32>,
     ) {
@@ -161,15 +162,16 @@ impl ExpressionRuntime {
     }
     fn update_expressions(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         time: f32,
         values: &mut BTreeMap<String, f32>,
     ) {
+        if self.projection_source != Some(document.content_id()) {
+            self.projections.clear();
+            self.projection_source = Some(document.content_id());
+        }
         for playing in &self.playing {
-            let stale = self
-                .projections
-                .get(&playing.id)
-                .is_none_or(|p| p.revision != document.revision());
+            let stale = !self.projections.contains_key(&playing.id);
             if stale {
                 self.projections.insert(
                     playing.id.clone(),
@@ -186,7 +188,7 @@ impl ExpressionRuntime {
         let mut latest_fade = 0.0_f32;
         for (index, playing) in self.playing.iter_mut().enumerate() {
             let expression = document
-                .get_expression(&playing.id)
+                .expression(&playing.id)
                 .expect("scheduled expression exists");
             let start = *playing.fade_in_start.get_or_insert(time);
             let fade_in = expression.fade_in.unwrap_or(1.0);
@@ -272,9 +274,7 @@ impl ExpressionRuntime {
         for (id, slot) in components {
             let base = *values.get(&id).expect("resolved parameter exists");
             let desired = (slot.overwrite + slot.additive) * slot.multiply;
-            let parameter = document
-                .get_parameter(&id)
-                .expect("resolved parameter exists");
+            let parameter = document.parameter(&id).expect("resolved parameter exists");
             values.insert(
                 id,
                 // CubismModel::SetParameterValue clamps the target before

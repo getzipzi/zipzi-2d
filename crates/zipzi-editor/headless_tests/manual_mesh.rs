@@ -397,11 +397,11 @@ fn manual_mesh_primary_connect_keeps_gesture_after_modifier_release(cx: &mut Tes
     h.view.read_with(cx, |view, _| {
         let doc = view.editor.document().unwrap();
         let host = doc.runtime_host();
-        let runtime = host.read();
-        let mesh = runtime
-            .document(doc.runtime_session_id())
-            .unwrap()
-            .get_mesh(&view.editor.manual_target().unwrap().object.id)
+        let snapshot =
+            crate::test_fixture::published_snapshot(&host, doc.runtime_session_id()).unwrap();
+        let mesh = snapshot
+            .document()
+            .mesh(&view.editor.manual_target().unwrap().object.id)
             .unwrap();
         assert_eq!(mesh.vertex_ids.len(), 5);
         assert_eq!(mesh.meshing.as_ref().unwrap().constraints.len(), 1);
@@ -830,11 +830,11 @@ fn manual_mesh_context_menu_sets_and_releases_constraints_with_undo(cx: &mut Tes
         h.view.read_with(cx, |view, _| {
             let doc = view.editor.document().unwrap();
             let host = doc.runtime_host();
-            let runtime = host.read();
-            runtime
-                .document(doc.runtime_session_id())
-                .unwrap()
-                .get_mesh(&view.editor.manual_target().unwrap().object.id)
+            let snapshot =
+                crate::test_fixture::published_snapshot(&host, doc.runtime_session_id()).unwrap();
+            snapshot
+                .document()
+                .mesh(&view.editor.manual_target().unwrap().object.id)
                 .unwrap()
                 .clone()
         })
@@ -981,10 +981,11 @@ fn manual_mesh_mixed_dependencies_enter_edit_and_generate_interior(cx: &mut Test
         let doc = v.editor.document().unwrap();
         assert_eq!(doc.history_lengths(), (1, 0));
         let host = doc.runtime_host();
-        let rt = host.read();
-        let model = rt.document(doc.runtime_session_id()).unwrap();
+        let snapshot =
+            crate::test_fixture::published_snapshot(&host, doc.runtime_session_id()).unwrap();
+        let model = snapshot.document();
         let id = "a8210000-0000-4000-8000-000000000002";
-        assert_eq!(model.get_mesh(id).unwrap().vertex_ids.len(), 6);
+        assert_eq!(model.mesh(id).unwrap().vertex_ids.len(), 6);
         assert_eq!(
             model.binding_for_mesh(id).unwrap().keyforms[0]
                 .positions

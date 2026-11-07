@@ -1,4 +1,4 @@
-use super::tests::{fixture, native_bytes};
+use super::tests::{fixture, io, native_bytes};
 use super::*;
 use std::{
     io::{self, SeekFrom},
@@ -135,7 +135,7 @@ fn abandoned_archive_child() {
 fn normal_open_and_save_reclaim_crashed_owner_but_preserve_live_and_foreign_files() {
     let root = tempfile::tempdir().unwrap();
     let cache = root.path().join("private");
-    let store = ProjectArchiveStore::new(&cache);
+    let store = io(&cache);
     let live = ProjectResourceLease::create(&cache, ProjectDiskBudget::default()).unwrap();
     let live_stage = NativeArchiveFileSystem.create_staging(root.path()).unwrap();
     let foreign = cache.join("zipzi-working-foreign");
@@ -169,7 +169,7 @@ fn normal_open_and_save_reclaim_crashed_owner_but_preserve_live_and_foreign_file
     fs::write(&input, native_bytes(&doc, root.path())).unwrap();
     let original = fs::read(&input).unwrap();
     // No explicit maintenance call: the same production path serves Editor and SDK.
-    let opened = store.clone().open(&input, || true).unwrap();
+    let opened = store.clone().load(&input, || true).unwrap();
     assert!(!old_resources.exists());
     assert!(live.path().exists() && foreign.exists());
     assert!(
@@ -179,7 +179,7 @@ fn normal_open_and_save_reclaim_crashed_owner_but_preserve_live_and_foreign_file
     let receipt = store
         .save(
             &opened.document,
-            &opened.resource_lease(),
+            &opened.resources,
             &root.path().join("saved.zipzi"),
             None,
             || true,
@@ -189,7 +189,7 @@ fn normal_open_and_save_reclaim_crashed_owner_but_preserve_live_and_foreign_file
     assert_eq!(receipt.durable, cfg!(unix));
     assert!(!old_stage.exists() && !old_owner.exists());
     assert!(live_stage.path.exists() && foreign_stage.exists());
-    assert!(live.path().exists() && foreign.exists() && opened.asset_root().exists());
+    assert!(live.path().exists() && foreign.exists() && !opened.resources.is_empty());
     assert_eq!(fs::read(&lock).unwrap(), b"persistent lock");
     assert_eq!(fs::read(&input).unwrap(), original);
 }
@@ -213,11 +213,18 @@ fn first_draft_save_reclaims_working_sets_before_creating_resources() {
     let path = Path::new(abandoned["working_set"].as_str().unwrap());
     assert!(path.exists());
     let doc = fixture(root.path());
-    let store = crate::DocumentStore::new().with_archive_store(ProjectArchiveStore::new(&cache));
-    let (result, snapshot) = store.save(&doc, root.path(), &root.path().join("draft.zipzi"), None);
-    assert!(result.status.is_ok(), "{result:?}");
+    let store = io(&cache);
+    let result = store
+        .save(
+            &doc.document,
+            &doc.resources,
+            &root.path().join("draft.zipzi"),
+            None,
+            || true,
+        )
+        .unwrap();
+    assert!(result.published);
     assert!(!path.exists());
-    assert!(snapshot.unwrap().asset_root().exists());
 }
 
 #[test]
@@ -226,9 +233,7 @@ fn failures_before_publication_preserve_old_target_and_remove_staging() {
     let doc = fixture(root.path());
     let input = root.path().join("input.zipzi");
     fs::write(&input, native_bytes(&doc, root.path())).unwrap();
-    let opened = ProjectArchiveStore::new(root.path())
-        .open(&input, || true)
-        .unwrap();
+    let opened = io(root.path()).load(&input, || true).unwrap();
     let target = root.path().join("目标 with spaces.zipzi");
     for existing in [false, true] {
         for fault in [
@@ -240,11 +245,7 @@ fn failures_before_publication_preserve_old_target_and_remove_staging() {
         ] {
             let baseline = if existing {
                 fs::write(&target, b"old complete archive").unwrap();
-                Some(
-                    ProjectArchiveStore::new(root.path())
-                        .fingerprint(&target, || true)
-                        .unwrap(),
-                )
+                Some(io(root.path()).fingerprint(&target, || true).unwrap())
             } else {
                 let _ = fs::remove_file(&target);
                 None
@@ -254,11 +255,11 @@ fn failures_before_publication_preserve_old_target_and_remove_staging() {
                 target: target.clone(),
                 cancelled: Arc::new(AtomicBool::new(false)),
             };
-            let store = ProjectArchiveStore::new(root.path()).with_filesystem(Arc::new(injected));
+            let store = io(root.path()).with_filesystem(Arc::new(injected));
             assert!(store
                 .save(
                     &opened.document,
-                    &opened.resource_lease(),
+                    &opened.resources,
                     &target,
                     baseline.as_ref(),
                     || true
@@ -280,9 +281,7 @@ fn cancellation_directory_failure_and_no_replace_race_obey_commit_boundary() {
     let doc = fixture(root.path());
     let input = root.path().join("input.zipzi");
     fs::write(&input, native_bytes(&doc, root.path())).unwrap();
-    let opened = ProjectArchiveStore::new(root.path())
-        .open(&input, || true)
-        .unwrap();
+    let opened = io(root.path()).load(&input, || true).unwrap();
     for fault in [
         Fault::None,
         Fault::Directory,
@@ -292,18 +291,14 @@ fn cancellation_directory_failure_and_no_replace_race_obey_commit_boundary() {
         let target = root.path().join("save.zipzi");
         let _ = fs::remove_file(&target);
         let cancelled = Arc::new(AtomicBool::new(false));
-        let store = ProjectArchiveStore::new(root.path()).with_filesystem(Arc::new(Injected {
+        let store = io(root.path()).with_filesystem(Arc::new(Injected {
             fault,
             target: target.clone(),
             cancelled: cancelled.clone(),
         }));
-        let result = store.save(
-            &opened.document,
-            &opened.resource_lease(),
-            &target,
-            None,
-            || !cancelled.load(Ordering::SeqCst),
-        );
+        let result = store.save(&opened.document, &opened.resources, &target, None, || {
+            !cancelled.load(Ordering::SeqCst)
+        });
         if fault == Fault::Race {
             assert!(result.is_err());
             assert_eq!(fs::read(&target).unwrap(), b"racing creator");
@@ -320,17 +315,11 @@ fn cancellation_directory_failure_and_no_replace_race_obey_commit_boundary() {
     }
     let target = root.path().join("cancelled.zipzi");
     let mut count = 0;
-    assert!(ProjectArchiveStore::new(root.path())
-        .save(
-            &opened.document,
-            &opened.resource_lease(),
-            &target,
-            None,
-            || {
-                count += 1;
-                count < 8
-            }
-        )
+    assert!(io(root.path())
+        .save(&opened.document, &opened.resources, &target, None, || {
+            count += 1;
+            count < 8
+        })
         .is_err());
     assert!(!target.exists());
     assert_eq!(stage_count(root.path()), 0);
@@ -342,20 +331,20 @@ fn full_fingerprint_is_rechecked_after_sync_and_deleted_baselines_conflict() {
     let doc = fixture(root.path());
     let target = root.path().join("input.zipzi");
     fs::write(&target, native_bytes(&doc, root.path())).unwrap();
-    let store = ProjectArchiveStore::new(root.path());
-    let opened = store.open(&target, || true).unwrap();
+    let store = io(root.path());
+    let opened = store.load(&target, || true).unwrap();
     let store = store.with_filesystem(Arc::new(Injected {
         fault: Fault::ExternalChange,
         target: target.clone(),
         cancelled: Arc::new(AtomicBool::new(false)),
     }));
     assert!(
-        matches!(store.save(&opened.document, &opened.resource_lease(), &target, Some(&opened.fingerprint), || true), Err(ArchiveError::Document {code, ..}) if code == "PROJECT_CONFLICT")
+        matches!(store.save(&opened.document, &opened.resources, &target, Some(&opened.metadata.fingerprint), || true), Err(ArchiveError::Document {code, ..}) if code == "PROJECT_CONFLICT")
     );
     assert_eq!(fs::read(&target).unwrap(), b"changed by another writer");
     fs::remove_file(&target).unwrap();
     assert!(
-        matches!(store.save(&opened.document, &opened.resource_lease(), &target, Some(&opened.fingerprint), || true), Err(ArchiveError::Document {code, ..}) if code == "PROJECT_CONFLICT")
+        matches!(store.save(&opened.document, &opened.resources, &target, Some(&opened.metadata.fingerprint), || true), Err(ArchiveError::Document {code, ..}) if code == "PROJECT_CONFLICT")
     );
     assert!(!target.exists());
 }
@@ -363,14 +352,12 @@ fn full_fingerprint_is_rechecked_after_sync_and_deleted_baselines_conflict() {
 #[test]
 fn directory_symlink_and_hardlink_targets_are_never_replaced() {
     let root = tempfile::tempdir().unwrap();
-    let resources =
-        ProjectResourceLease::create(root.path(), ProjectDiskBudget::default()).unwrap();
     let doc = fixture(root.path());
     let target = root.path().join("directory.zipzi");
     fs::create_dir(&target).unwrap();
-    let store = ProjectArchiveStore::new(root.path());
+    let store = io(root.path());
     assert!(store
-        .save(&doc, &resources, &target, None, || true)
+        .save(&doc.document, &doc.resources, &target, None, || true)
         .is_err());
     assert!(target.is_dir());
     #[cfg(unix)]
@@ -382,7 +369,9 @@ fn directory_symlink_and_hardlink_targets_are_never_replaced() {
         let hardlink = root.path().join("hardlink");
         fs::hard_link(&file, &hardlink).unwrap();
         for path in [&symlink, &hardlink] {
-            assert!(store.save(&doc, &resources, path, None, || true).is_err());
+            assert!(store
+                .save(&doc.document, &doc.resources, path, None, || true)
+                .is_err());
         }
         assert_eq!(fs::read(file).unwrap(), b"original");
     }
@@ -436,9 +425,7 @@ fn save_progress_counts_payload_and_only_reports_published_after_commit() {
     let doc = fixture(root.path());
     let input = root.path().join("input.zipzi");
     fs::write(&input, native_bytes(&doc, root.path())).unwrap();
-    let opened = ProjectArchiveStore::new(root.path())
-        .open(&input, || true)
-        .unwrap();
+    let opened = io(root.path()).load(&input, || true).unwrap();
     for fault in [
         Fault::None,
         Fault::Finalize,
@@ -446,7 +433,7 @@ fn save_progress_counts_payload_and_only_reports_published_after_commit() {
         Fault::Directory,
     ] {
         let progress = ProjectSaveProgress::default();
-        let mut store = ProjectArchiveStore::new(root.path()).with_filesystem(Arc::new(Injected {
+        let mut store = io(root.path()).with_filesystem(Arc::new(Injected {
             fault,
             target: root.path().join("unused"),
             cancelled: Arc::new(AtomicBool::new(false)),
@@ -456,20 +443,14 @@ fn save_progress_counts_payload_and_only_reports_published_after_commit() {
             .path()
             .join(format!("progress-{}.zipzi", uuid::Uuid::new_v4()));
         let mut saw_writing = false;
-        let result = store.save(
-            &opened.document,
-            &opened.resource_lease(),
-            &target,
-            None,
-            || {
-                let state = progress.state();
-                assert!(state.completed_bytes <= state.total_bytes);
-                if state.stage == ProjectSaveStage::Writing {
-                    saw_writing = true;
-                }
-                true
-            },
-        );
+        let result = store.save(&opened.document, &opened.resources, &target, None, || {
+            let state = progress.state();
+            assert!(state.completed_bytes <= state.total_bytes);
+            if state.stage == ProjectSaveStage::Writing {
+                saw_writing = true;
+            }
+            true
+        });
         assert!(saw_writing);
         let state = progress.state();
         assert_eq!(state.completed_bytes, state.total_bytes);

@@ -5,16 +5,17 @@ pub mod animation;
 pub mod api_shape;
 pub mod authoring;
 pub mod binary_wire;
-pub mod changes;
 pub mod document;
 pub mod evaluation;
+pub mod kernel;
+pub mod kernel_commands;
+pub mod kernel_wire;
 pub mod model;
-pub mod operations;
+pub mod observation;
 pub mod physics;
 pub mod physics_document;
 pub mod project;
 pub mod protocol;
-pub mod runtime;
 pub mod scene_reference;
 pub mod serde_maps;
 mod shared_vec;
@@ -22,3 +23,5 @@ pub mod spatial;
 pub use shared_vec::SharedVec;
 
 pub mod warp_bezier;
+
+pub mod kernel_tasks;

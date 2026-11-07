@@ -1,6 +1,6 @@
-//! Small process boundary for migration acceptance, deliberately independent of Godot.
-use std::path::Path;
-use zipzi_project::DocumentSession;
+//! Save and reopen a native project through the value-only I/O boundary.
+use std::{fs, path::Path};
+use zipzi_project::{ProjectIo, ResourceStore};
 
 fn main() {
     let args: Vec<_> = std::env::args_os().collect();
@@ -8,28 +8,29 @@ fn main() {
         eprintln!("Usage: project_roundtrip INPUT_PROJECT OUTPUT_PROJECT");
         std::process::exit(2);
     }
-    let mut session = DocumentSession::new();
-    let opened = session.open(Path::new(&args[1]));
-    if !opened.status.is_ok() || !opened.resources_complete() {
-        eprintln!("Open failed: {opened:?}");
-        std::process::exit(1);
-    }
-    let artifact = zipzi_moc3::encode_moc3(session.document()).expect("encode input");
-    let saved = session.save(Path::new(&args[2]));
-    if !saved.status.is_ok() {
-        eprintln!("Save failed: {saved:?}");
-        std::process::exit(1);
-    }
-    let mut reopened = DocumentSession::new();
-    let result = reopened.open(Path::new(&args[2]));
-    assert!(
-        result.status.is_ok() && result.resources_complete(),
-        "{result:?}"
-    );
-    assert!(session.document().same_content(reopened.document()));
+    let io = ProjectIo::new(std::env::temp_dir(), ResourceStore::default());
+    let loaded = io.load(Path::new(&args[1]), || true).expect("open input");
+    assert!(loaded.diagnostics.is_empty(), "{:?}", loaded.diagnostics);
+    let artifact = zipzi_moc3::encode_moc3(&loaded.document).expect("encode input");
+    let output = Path::new(&args[2]);
+    let receipt = io
+        .save(&loaded.document, &loaded.resources, output, None, || true)
+        .expect("save output");
+    let reopened = io.load(output, || true).expect("reopen output");
+    assert!(reopened.diagnostics.is_empty());
     assert_eq!(
         artifact.bytes,
-        zipzi_moc3::encode_moc3(reopened.document()).unwrap().bytes
+        zipzi_moc3::encode_moc3(&reopened.document).unwrap().bytes
     );
-    println!("Project reopened with identical source data and MOC3 bytes");
+    let saved_bytes = fs::read(output).unwrap();
+    io.save(
+        &reopened.document,
+        &reopened.resources,
+        output,
+        Some(&receipt.fingerprint),
+        || true,
+    )
+    .unwrap();
+    assert_eq!(saved_bytes, fs::read(output).unwrap());
+    println!("Project reopened with identical native archive and MOC3 bytes");
 }

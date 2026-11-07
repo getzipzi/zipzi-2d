@@ -291,7 +291,7 @@ impl FormDialogView for MoveDestinationPicker {
                     let result = state
                         .editor
                         .execute_animation_library(self.document, &plan)?;
-                    if result.receipt.changed {
+                    if (result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged) {
                         state.defer_authoring_location(
                             self.document,
                             self.sources[0].clone(),

@@ -1,3 +1,5 @@
+mod support;
+
 #[path = "blendshape_glue_tests/atomic_validation.rs"]
 mod atomic_validation;
 #[path = "blendshape_glue_tests/common.rs"]

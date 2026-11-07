@@ -84,7 +84,7 @@ pub fn write_moc3_psd(
     Ok(report)
 }
 
-fn convert(imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
+fn convert(mut imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
     if !imported.textures_complete {
         return Err(Error::InvalidInput(format!(
             "all referenced texture PNGs are required: {}",
@@ -98,7 +98,8 @@ fn convert(imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
     }
     let canvas = imported
         .document
-        .source_canvas()
+        .setup()
+        .source_canvas
         .expect("MOC3 import retains its canvas");
     if !canvas.width.is_finite() || !canvas.height.is_finite() {
         return Err(Error::InvalidInput("invalid canvas size".into()));
@@ -116,19 +117,13 @@ fn convert(imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
         ));
     }
 
-    let mut frame = DrawableFrame::default();
-    let status =
-        evaluate_frame_including_hidden(&imported.document, &PreviewValues::new(), &mut frame);
-    if !status.is_ok() {
-        return Err(Error::Model(status.message));
-    }
     let mut textures = HashMap::<String, DecodedImage>::new();
     let mut warnings = Vec::new();
     for reference in imported
         .document
         .mesh_order()
         .iter()
-        .filter_map(|id| imported.document.get_mesh(id))
+        .filter_map(|id| imported.document.mesh(id))
         .map(|mesh| &mesh.texture_asset_id)
     {
         let asset_id = reference
@@ -139,17 +134,37 @@ fn convert(imported: ImportResult) -> Result<(Vec<u8>, ExportReport), Error> {
         }
         let asset = imported
             .document
-            .get_asset(asset_id)
+            .asset(asset_id)
             .ok_or_else(|| Error::Model(format!("missing texture asset {asset_id}")))?;
-        let content = asset
-            .image_content()
-            .map_err(|e| Error::InvalidInput(e.message))?;
-        let data = fs::read(&content.source)?;
+        let zipzi_core::state::AssetContent::Unresolved { source } = &asset.content else {
+            return Err(Error::InvalidInput(
+                "expected imported texture source".into(),
+            ));
+        };
+        let data = fs::read(source)?;
         let image = decode_png(&data)
-            .map_err(|e| Error::InvalidInput(format!("{}: {}", content.source, e.message)))?;
+            .map_err(|e| Error::InvalidInput(format!("{source}: {}", e.message)))?;
         textures.insert(asset_id.to_owned(), image);
     }
 
+    let mut b = imported.document.builder();
+    for (id, image) in &textures {
+        let mut asset = b.asset(id).unwrap().clone();
+        asset.content = zipzi_core::state::AssetContent::Image {
+            resource: zipzi_core::state::ResourceKey::new(),
+            width: image.width,
+            height: image.height,
+        };
+        b.replace_asset(asset)
+            .map_err(|e| Error::Model(e.message))?;
+    }
+    imported.document = b.freeze().map_err(|e| Error::Model(e.message))?.state;
+    let mut frame = DrawableFrame::default();
+    let status =
+        evaluate_frame_including_hidden(&imported.document, &PreviewValues::new(), &mut frame);
+    if !status.is_ok() {
+        return Err(Error::Model(status.message));
+    }
     let mut drawables: Vec<_> = frame.drawables.iter().collect();
     drawables.sort_by_key(|d| d.render_order);
     if drawables.len() > i16::MAX as usize {

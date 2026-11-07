@@ -333,7 +333,7 @@ impl PropertiesPanel {
                         state.editor.document().is_some_and(|doc| {
                             doc.authoring_capabilities(&target.object).is_ok_and(|c| {
                                 c.state(zipzi_editor_core::AuthoringAction::Patch)
-                                    == zipzi_sdk::CapabilityState::Available
+                                    == zipzi_contract::authoring::CapabilityState::Available
                             })
                         })
                     })
@@ -591,7 +591,11 @@ impl PropertiesPanel {
                     && state.editor.editing_context()
                         == Some(zipzi_editor_core::EditingContext::Modeling)
                 {
-                    state.complete_preview_edit(Ok(()), cx);
+                    if id.is_mesh_appearance() {
+                        state.refresh_modeling_preview(Ok(()), cx);
+                    } else {
+                        state.complete_preview_edit(Ok(()), cx);
+                    }
                 } else {
                     state.redraw(cx);
                 }

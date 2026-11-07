@@ -36,7 +36,8 @@ fn id(n: u32) -> String {
     format!("b8210000-0000-4000-8000-{n:012x}")
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut s = AuthoringSession::new(&id(1), ModelSetup::default())?;
+    let mut builder =
+        zipzi_core::state::DocumentState::new(&id(1), ModelSetup::default())?.builder();
     let grid = 32usize;
     let count = (grid + 1) * (grid + 1);
     let uvs: Vec<_> = (0..count)
@@ -60,9 +61,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             triangles.extend([[a, b, c + 1], [a, c + 1, c]]);
         }
     }
-    s.edit("benchmark fixture", None, |e| {
+    {
+        let e = &mut builder;
         e.create_mesh(Mesh {
             id: id(2),
+            runtime_id: id(2),
             vertex_ids: (0..count as u32).collect(),
             uvs: uvs.clone(),
             base_positions: positions.clone(),
@@ -71,6 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })?;
         e.create_parameter(Parameter {
             id: id(3),
+            runtime_id: id(3),
             minimum: 0.,
             maximum: 1.,
             ..Default::default()
@@ -97,6 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for n in [10, 20, 30, 40] {
             e.create_parameter(Parameter {
                 id: id(n),
+                runtime_id: id(n),
                 kind: ParameterKind::BlendShape,
                 minimum: 0.,
                 maximum: 1.,
@@ -128,9 +133,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ]),
             })?;
         }
-        Ok(())
-    })?;
-    let mut e = s.begin_owned_edit("drag benchmark", None)?;
+    }
+    let s = AuthoringSession::new(Snapshot::new(
+        builder.freeze()?.state,
+        ResourceView::default(),
+    )?);
+    let e = s.begin_draft();
     let mut times = vec![];
     let mut costs = None;
     for frame in 0..101 {
@@ -143,9 +151,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         ACTIVE.store(frame > 0, Ordering::Relaxed);
         let started = Instant::now();
-        let p = e.plan_manual_mesh(&id(2), operation)?;
-        costs = Some(p.report.cost);
-        e.apply_manual_mesh_plan(p)?;
+        let (_, outcome) = e.prepare_preview(e.source(), |c| {
+            c.edit_manual_mesh(&id(2), operation, Default::default(), &Default::default())
+        })?;
+        costs = Some(outcome.report.cost);
         let us = started.elapsed().as_micros();
         ACTIVE.store(false, Ordering::Relaxed);
         if frame > 0 {
@@ -158,6 +167,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::json!({"vertices":count,"triangles":grid*grid*2,"stored_shapes":58,"plans":times.len(),"median_us":times[times.len()/2],"p95_us":times[times.len()*95/100],"allocated_bytes_per_plan":BYTES.load(Ordering::Relaxed)/times.len()as u64,"allocations_per_plan":ALLOCS.load(Ordering::Relaxed)/times.len()as u64,"cost":costs})
     );
     drop(e);
-    assert_eq!(s.history_lengths(), (1, 0));
+    assert_eq!(s.history_state().undo_steps, 0);
     Ok(())
 }

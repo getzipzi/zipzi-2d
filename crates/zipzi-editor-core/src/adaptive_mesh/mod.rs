@@ -12,8 +12,9 @@ mod triangulate;
 pub use existing::fill_existing_geometry;
 use geometry::*;
 use std::collections::{BTreeMap, BTreeSet};
+use zipzi_contract::authoring::MeshGeometry;
 use zipzi_core::Vec2;
-use zipzi_sdk::{MeshGeometry, extract_manual_meshing};
+use zipzi_sdk::extract_manual_meshing;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]

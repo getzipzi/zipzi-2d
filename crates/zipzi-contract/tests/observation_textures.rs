@@ -1,7 +1,7 @@
 use zipzi_contract::{
     api_shape::ApiShape,
     binary_wire::{Reader, WireRead, WireWrite},
-    runtime::{ObservationContentIdentity, ObservationTexturePolicy},
+    observation::{ObservationContentIdentity, ObservationTexturePolicy},
 };
 
 #[test]
@@ -70,7 +70,7 @@ fn binary_policies_and_typed_content_identity_remain_distinct() {
 
 #[test]
 fn plans_and_budget_diagnostics_roundtrip_through_json_and_binary() {
-    use zipzi_contract::runtime::{
+    use zipzi_contract::observation::{
         ObservationTexturePlan, ObservationTexturePlanning, ObservationTextureSize,
         ObservationTextureSource, ObservationTextureTarget,
     };

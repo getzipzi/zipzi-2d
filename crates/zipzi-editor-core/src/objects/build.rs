@@ -4,11 +4,11 @@ use super::properties::deformer_properties;
 use super::{BindingInfo, ObjectIndex, ObjectInfo, ObjectKind, ObjectRef, Relation, RelationKind};
 use serde_json::{Value, json};
 use zipzi_core::SceneTrackEvaluation;
-use zipzi_core::document::PhysicsTargetProjection;
 use zipzi_core::document::{
     CdiParameterEntry, ExpressionTarget, ModelTargetRef, MotionTrackTarget, PosePartRef,
 };
-use zipzi_core::{BindingAxis, BlendShapeTargetKind, Document as Model, SceneTrack};
+use zipzi_core::state::PhysicsTargetProjection;
+use zipzi_core::{BindingAxis, BlendShapeTargetKind, SceneTrack, state::DocumentState as Model};
 
 impl ObjectIndex {
     pub fn add(
@@ -125,7 +125,7 @@ impl ObjectIndex {
             ..Default::default()
         };
         let doc = ObjectRef::new(K::Document, m.id());
-        s.add(doc.clone(), "Document", json!({"export_settings":m.export_settings(),"source_canvas":m.source_canvas(),"model_settings":m.model3_settings(),"display_info":m.display_info(),"missing_attachments":m.missing_attachments(),"draw_groups":m.draw_order_groups()}), None);
+        s.add(doc.clone(), "Document", json!({"export_settings":m.setup().export,"source_canvas":m.setup().source_canvas,"model_settings":m.model3_settings(),"display_info":m.display_info(),"missing_attachments":m.missing_attachments(),"draw_groups":m.draw_order_groups()}), None);
         for group in s.draw_groups.clone().iter() {
             let role = ObjectRef::new(
                 K::DrawOrderGroup,
@@ -138,7 +138,7 @@ impl ObjectIndex {
             let name = if group.owner.is_empty() {
                 "Drawing"
             } else {
-                m.get_part(&group.owner)
+                m.part(&group.owner)
                     .map_or(group.owner.as_str(), |p| p.name.as_str())
             };
             s.add(role.clone(), name, json!(group), None);
@@ -146,7 +146,7 @@ impl ObjectIndex {
                 s.ref_edge(
                     &role,
                     R::DrawMember,
-                    if m.get_mesh(item).is_some() {
+                    if m.mesh(item).is_some() {
                         K::Mesh
                     } else {
                         K::Part
@@ -156,14 +156,14 @@ impl ObjectIndex {
             }
         }
         for id in m.part_order() {
-            if let Some(x) = m.get_part(id) {
+            if let Some(x) = m.part(id) {
                 let r = ObjectRef::new(K::Part, id);
                 s.add(r.clone(), &x.name, json!(x), Some(x.enabled));
                 s.ref_edge(&r, R::PartOwner, K::Part, &x.parent_id);
             }
         }
         for id in m.transform_order() {
-            if let Some(x) = m.get_transform(id) {
+            if let Some(x) = m.transform(id) {
                 let r = ObjectRef::new(K::Deformer, id);
                 s.add(r.clone(), &x.name, deformer_properties(x), Some(x.enabled));
                 s.ref_edge(&r, R::PartOwner, K::Part, x.part());
@@ -171,7 +171,7 @@ impl ObjectIndex {
             }
         }
         for id in m.mesh_order() {
-            if let Some(x) = m.get_mesh(id) {
+            if let Some(x) = m.mesh(id) {
                 let r = ObjectRef::new(K::Mesh, id);
                 s.add(r.clone(),&x.name,json!({"id":x.id,"name":x.name,"runtime_id":x.runtime_id,"part_id":x.part_id,"deformer_id":x.deformer_id,"texture_asset_id":x.texture_asset_id.as_str(),"texture_reference":x.texture_asset_id,"appearance":x.appearance,"draw_order":x.draw_order,"blend_mode":x.blend_mode,"enabled":x.enabled,"double_sided":x.double_sided,"inverted_mask":x.inverted_mask,"masks":x.masks,"vertices":x.vertex_ids.len(),"triangles":x.triangles.len()}),Some(x.enabled));
                 let slot = *s.structure.slots.get(&r).unwrap();
@@ -185,7 +185,7 @@ impl ObjectIndex {
             }
         }
         for id in m.offscreen_order() {
-            if let Some(x) = m.get_offscreen(id) {
+            if let Some(x) = m.offscreen(id) {
                 let r = ObjectRef::new(K::Offscreen, id);
                 s.add(r.clone(), &x.name, json!(x), Some(x.enabled));
                 s.ref_edge(&r, R::PartOwner, K::Part, &x.part_id);
@@ -195,7 +195,7 @@ impl ObjectIndex {
             }
         }
         for id in m.parameter_order() {
-            if let Some(x) = m.get_parameter(id) {
+            if let Some(x) = m.parameter(id) {
                 s.add(ObjectRef::new(K::Parameter, id), &x.name, json!(x), None);
             }
         }
@@ -219,17 +219,17 @@ impl ObjectIndex {
                 s.ref_edge(&r, R::ParameterGroup, K::ParameterGroup, group);
             }
         }
-        for child in m.binding_identities_iter() {
+        for child in m.binding_identities() {
             let kind = match child.kind {
                 zipzi_core::document::BindingIdentityKind::Axis => K::BindingAxis,
                 zipzi_core::document::BindingIdentityKind::Sample => K::BindingSample,
             };
             let value = if let Some(axis) = m
-                .get_binding(&child.owner)
+                .binding(&child.owner)
                 .map(|b| b.axes.as_slice())
-                .or_else(|| m.get_scene_binding(&child.owner).map(|b| b.axes.as_slice()))
+                .or_else(|| m.scene_binding(&child.owner).map(|b| b.axes.as_slice()))
                 .or_else(|| {
-                    m.get_glue(&child.owner)
+                    m.glue(&child.owner)
                         .and_then(|g| g.binding.as_ref())
                         .map(|b| b.axes.as_slice())
                 }) {
@@ -242,12 +242,12 @@ impl ObjectIndex {
                     },
                     |a| json!({"parameter_id":a.parameter_id,"samples":a.samples}),
                 )
-            } else if let Some(t) = m.get_blend_key_table(&child.owner) {
+            } else if let Some(t) = m.blend_key_table(&child.owner) {
                 t.samples.iter().find(|s| s.id == child.id).map_or(
                     json!({}),
                     |s| json!({"value":s.value,"base":t.base_sample_id==s.id}),
                 )
-            } else if let Some(c) = m.get_blend_constraint(&child.owner) {
+            } else if let Some(c) = m.blend_constraint(&child.owner) {
                 c.samples
                     .iter()
                     .find(|s| s.id == child.id)
@@ -275,13 +275,13 @@ impl ObjectIndex {
                 json!({"owner":child.owner,"axis":child.axis,"fields":value}),
                 None,
             );
-            let owner_kind = if m.get_binding(&child.owner).is_some() {
+            let owner_kind = if m.binding(&child.owner).is_some() {
                 K::MeshBinding
-            } else if m.get_scene_binding(&child.owner).is_some() {
+            } else if m.scene_binding(&child.owner).is_some() {
                 K::SceneBinding
-            } else if m.get_glue(&child.owner).is_some() {
+            } else if m.glue(&child.owner).is_some() {
                 K::Glue
-            } else if m.get_blend_key_table(&child.owner).is_some() {
+            } else if m.blend_key_table(&child.owner).is_some() {
                 K::BlendKeyTable
             } else {
                 K::BlendConstraint
@@ -294,7 +294,7 @@ impl ObjectIndex {
             );
         }
         for id in m.binding_order() {
-            if let Some(x) = m.get_binding(id) {
+            if let Some(x) = m.binding(id) {
                 s.add_binding(BindingInfo {
                     reference: ObjectRef::new(K::MeshBinding, id),
                     target: ObjectRef::new(K::Mesh, &x.mesh_id),
@@ -305,7 +305,7 @@ impl ObjectIndex {
             }
         }
         for id in m.scene_binding_order() {
-            if let Some(x) = m.get_scene_binding(id) {
+            if let Some(x) = m.scene_binding(id) {
                 let kind = match &x.track {
                     SceneTrack::Part { .. } => K::Part,
                     _ => K::Deformer,
@@ -320,7 +320,7 @@ impl ObjectIndex {
             }
         }
         for id in m.glue_order() {
-            if let Some(x) = m.get_glue(id) {
+            if let Some(x) = m.glue(id) {
                 let r = ObjectRef::new(K::Glue, id);
                 s.add(
                     r.clone(),
@@ -356,7 +356,7 @@ impl ObjectIndex {
             }
         }
         for id in m.blend_key_table_order() {
-            if let Some(x) = m.get_blend_key_table(id) {
+            if let Some(x) = m.blend_key_table(id) {
                 let r = ObjectRef::new(K::BlendKeyTable, id);
                 s.add(r.clone(), id, json!(x), None);
                 if !x.parameter_id.is_empty() {
@@ -370,7 +370,7 @@ impl ObjectIndex {
             }
         }
         for id in m.blend_constraint_order() {
-            if let Some(x) = m.get_blend_constraint(id) {
+            if let Some(x) = m.blend_constraint(id) {
                 let r = ObjectRef::new(K::BlendConstraint, id);
                 s.add(r.clone(), id, json!(x), None);
                 if !x.parameter_id.is_empty() {
@@ -384,7 +384,7 @@ impl ObjectIndex {
             }
         }
         for id in m.blend_binding_order() {
-            if let Some(x) = m.get_blend_binding(id) {
+            if let Some(x) = m.blend_binding(id) {
                 let kind = match x.target_kind {
                     BlendShapeTargetKind::Mesh => K::Mesh,
                     BlendShapeTargetKind::Warp | BlendShapeTargetKind::Rotation => K::Deformer,
@@ -394,7 +394,7 @@ impl ObjectIndex {
                 };
                 let r = ObjectRef::new(K::BlendBinding, id);
                 let axes = m
-                    .get_blend_key_table(&x.key_table_id)
+                    .blend_key_table(&x.key_table_id)
                     .map(|t| {
                         vec![BindingAxis {
                             id: Default::default(),
@@ -434,7 +434,7 @@ impl ObjectIndex {
             let r = ObjectRef::new(K::MotionRegistration, &e.id);
             s.add(
                 r.clone(),
-                m.get_motion(&e.clip_id)
+                m.motion(&e.clip_id)
                     .map_or("Missing motion", |c| c.name.as_str()),
                 json!(e),
                 None,
@@ -453,7 +453,7 @@ impl ObjectIndex {
             }
         }
         for id in m.motion_order() {
-            if let Some(x) = m.get_motion(id) {
+            if let Some(x) = m.motion(id) {
                 let r = ObjectRef::new(K::Motion, id);
                 s.add(
                     r.clone(),
@@ -495,14 +495,14 @@ impl ObjectIndex {
             }
         }
         for id in m.motion_order() {
-            for e in &m.get_motion(id).unwrap().events {
+            for e in &m.motion(id).unwrap().events {
                 let r = ObjectRef::new(K::MotionEvent, &e.id);
                 s.add(r.clone(), &e.value, json!(e), None);
                 s.edge(&ObjectRef::new(K::Motion, id), R::Contains, r, "");
             }
         }
         for id in m.expression_order() {
-            if let Some(x) = m.get_expression(id) {
+            if let Some(x) = m.expression(id) {
                 let r = ObjectRef::new(K::Expression, id);
                 s.add(r.clone(), &x.name, json!(x), None);
                 for e in &x.entries {
@@ -669,14 +669,17 @@ impl ObjectIndex {
             }
         }
         for id in m.asset_order() {
-            if let Some(x) = m.get_asset(id) {
+            if let Some(x) = m.asset(id) {
                 s.add(ObjectRef::new(K::Texture, id), &x.name, json!(x), None);
-                if x.content.is_none() {
-                    s.objects.last_mut().unwrap().diagnostic = Some(match &x.unresolved_source {
-                        Some(source) => format!("BrokenReference: image source {source}"),
-                        None => "NeedsConfiguration: image content".into(),
-                    });
-                }
+                s.objects.last_mut().unwrap().diagnostic = match &x.content {
+                    zipzi_core::state::AssetContent::Image { .. } => None,
+                    zipzi_core::state::AssetContent::Unresolved { source } => {
+                        Some(format!("BrokenReference: image source {source}"))
+                    }
+                    zipzi_core::state::AssetContent::Empty => {
+                        Some("NeedsConfiguration: image content".into())
+                    }
+                };
             }
         }
         for x in m.package_attachments() {

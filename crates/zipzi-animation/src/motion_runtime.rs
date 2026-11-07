@@ -8,7 +8,7 @@ use crate::{
 use std::collections::BTreeMap;
 use zipzi_core::{
     document::{MotionClip, MotionSegment, MotionTrack, MotionTrackTarget},
-    Document,
+    state::DocumentState,
 };
 #[derive(Clone)]
 struct Activation {
@@ -45,7 +45,7 @@ pub(crate) struct MotionRuntime {
     playing: Vec<Playing>,
 }
 impl MotionRuntime {
-    pub(crate) fn canonical_motion_output_bytes(&self, document: &Document) -> usize {
+    pub(crate) fn canonical_motion_output_bytes(&self, document: &DocumentState) -> usize {
         use zipzi_core::binary_wire::WireWrite;
         // Count duplicate activations first: admission must not scan every key
         // or event once per activation on the Runtime owner thread.
@@ -56,7 +56,7 @@ impl MotionRuntime {
                 .or_insert(0usize) += 1;
         }
         counts.into_iter().fold(0usize, |total, (id, count)| {
-            let clip = document.get_motion(id).expect("scheduled motion");
+            let clip = document.motion(id).expect("scheduled motion");
             // Canonical replay uses 60 Hz steps. Twice that interval also covers
             // f32 grid rounding at the one-million-step seek limit and a loop seam.
             let crossings = if clip.looping {
@@ -129,7 +129,7 @@ impl MotionRuntime {
     }
     pub(crate) fn schedule_motion(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         now: f32,
         id: &str,
         time: f32,
@@ -142,7 +142,7 @@ impl MotionRuntime {
             return Err(AnimationError::PastActivation);
         }
         let clip = document
-            .get_motion(id)
+            .motion(id)
             .ok_or_else(|| AnimationError::MissingMotion(id.into()))?;
         let index = self.activations.partition_point(|item| item.time <= time);
         self.activations.insert(
@@ -163,7 +163,7 @@ impl MotionRuntime {
     /// and replayed by seek, including the Physics input cache history.
     pub(crate) fn schedule_parameter_input(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         now: f32,
         id: &str,
         time: f32,
@@ -176,7 +176,7 @@ impl MotionRuntime {
             return Err(AnimationError::PastActivation);
         }
         let parameter = document
-            .get_parameter(id)
+            .parameter(id)
             .ok_or_else(|| AnimationError::Evaluation(format!("missing parameter {id}")))?;
         let index = self
             .parameter_inputs
@@ -194,7 +194,7 @@ impl MotionRuntime {
 
     pub(crate) fn evaluate(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         curves: &BTreeMap<String, CompiledCurve>,
         time: f32,
         snapshot: &mut MotionSnapshot,
@@ -203,7 +203,7 @@ impl MotionRuntime {
         // still sample arbitrarily large deltas in constant time.
         let mut event_bound = 0.0f64;
         for playing in &self.playing {
-            let clip = document.get_motion(&playing.id).expect("scheduled motion");
+            let clip = document.motion(&playing.id).expect("scheduled motion");
             if clip.looping && !clip.events.is_empty() {
                 let cycle = f64::from(clip.duration + 1.0 / clip.fps);
                 event_bound += ((f64::from(time - playing.start_time) / cycle).ceil() + 1.0)
@@ -239,7 +239,7 @@ impl MotionRuntime {
                 );
             }
             let clip = document
-                .get_motion(&self.activations[self.next_activation].motion_id)
+                .motion(&self.activations[self.next_activation].motion_id)
                 .expect("scheduled motion");
             self.playing.push(Playing {
                 id: self.activations[self.next_activation].motion_id.clone(),
@@ -253,7 +253,7 @@ impl MotionRuntime {
             self.next_activation += 1;
         }
         for playing in &mut self.playing {
-            let clip = document.get_motion(&playing.id).expect("scheduled motion");
+            let clip = document.motion(&playing.id).expect("scheduled motion");
             let (fade_in, fade_out) = playing.fades;
             let elapsed = (time - playing.start_time).max(0.0);
             let cycle = clip.duration + 1.0 / clip.fps;
@@ -310,7 +310,7 @@ impl MotionRuntime {
                             (None, _) => out_weight,
                         };
                         let parameter = document
-                            .get_parameter(parameter_id)
+                            .parameter(parameter_id)
                             .expect("resolved parameter");
                         set_value(
                             &mut snapshot.parameters,
@@ -330,7 +330,7 @@ impl MotionRuntime {
                     MotionTrackTarget::PartOpacity { part_id } => {
                         if let Some(parameter_id) = real_parameter_for_part(document, part_id) {
                             let parameter = document
-                                .get_parameter(&parameter_id)
+                                .parameter(&parameter_id)
                                 .expect("resolved parameter");
                             snapshot.parameters.insert(
                                 parameter_id,
@@ -341,7 +341,7 @@ impl MotionRuntime {
                                 .part_opacity_channels
                                 .insert(part_id.clone(), value);
                         }
-                        if document.pose().is_none() {
+                        if document.pose().as_deref().is_none() {
                             snapshot.coverage.push(format!(
                                 "{}: PartOpacity {part_id} has no Pose asset",
                                 clip.id
@@ -394,7 +394,7 @@ impl MotionRuntime {
         self.playing.retain(|item| {
             item.end_time.is_none_or(|end| end >= time)
                 && document
-                    .get_motion(&item.id)
+                    .motion(&item.id)
                     .is_some_and(|clip| clip.looping || time - item.start_time < clip.duration)
         });
         copy_values(&mut self.motion_parameters, &snapshot.parameters);

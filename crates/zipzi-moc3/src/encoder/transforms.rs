@@ -10,7 +10,7 @@ use super::helpers::{index_of, write_colors, write_id, write_positions};
 impl<'a> Moc3EncoderContext<'a> {
     pub(super) fn encode_transforms(&mut self) -> Result<(), Status> {
         for id in &self.transforms {
-            let t = self.doc.get_transform(id).unwrap();
+            let t = self.doc.transform(id).unwrap();
             let b = self.doc.binding_for_scene(id);
             let warp = t.kind() == TransformKind::Warp;
             let prefix = if warp { "warp" } else { "rotation" };

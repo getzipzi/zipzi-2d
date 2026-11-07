@@ -1,7 +1,7 @@
 use crate::{Document, ObjectKind, ObjectRef, ParameterManagementError as E};
 use anyhow::{Result, ensure};
+use zipzi_contract::document::OrganizationEdit as Edit;
 use zipzi_core::document::CdiParameterGroup;
-use zipzi_sdk::OrganizationEdit as Edit;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParameterGroupDraft {
     pub name: String,
@@ -12,7 +12,7 @@ impl Document {
     pub fn parameter_group_draft(&self, id: &str) -> Result<ParameterGroupDraft> {
         let model_read_guard_41 = self.model();
         let g = model_read_guard_41
-            .get_parameter_group(id)
+            .parameter_group(id)
             .ok_or(E::MissingGroup)?;
         Ok(ParameterGroupDraft {
             name: g.name.clone(),
@@ -50,7 +50,7 @@ impl Document {
         let old = id
             .map(|id| {
                 self.model()
-                    .get_parameter_group(id)
+                    .parameter_group(id)
                     .cloned()
                     .ok_or(E::MissingGroup)
             })
@@ -82,14 +82,18 @@ impl Document {
         draft: &ParameterGroupDraft,
     ) -> Result<()> {
         let intent = self.group_intent(id, draft)?;
-        self.session
-            .plan_organization_edit(intent)
-            .map_err(|error| match error.code.as_ref() {
+        self.plan_organization_authoring(intent).map_err(|error| {
+            match error
+                .downcast_ref::<zipzi_core::Status>()
+                .map(|status| status.code.as_str())
+                .unwrap_or("")
+            {
                 "DUPLICATE_CDI_RUNTIME_ID" => anyhow::Error::from(E::DuplicateGroupId),
                 "CDI_GROUP_CYCLE" => anyhow::Error::from(E::GroupCycle),
                 "MISSING_CDI_GROUP" => anyhow::Error::from(E::MissingParent),
                 _ => anyhow::Error::from(error),
-            })?;
+            }
+        })?;
         Ok(())
     }
     pub fn create_parameter_group(
@@ -104,7 +108,7 @@ impl Document {
             unreachable!()
         };
         let id = group.id.clone();
-        let plan = self.session.plan_organization_edit(intent)?;
+        let plan = self.plan_organization_authoring(intent)?;
         self.execute_organization_authoring(&plan)?;
         self.navigate(ObjectRef::new(ObjectKind::ParameterGroup, &id))?;
         Ok(id)
@@ -117,9 +121,7 @@ impl Document {
     ) -> Result<()> {
         self.check_parameter_version(expected)?;
         self.validate_parameter_group(Some(id), &draft)?;
-        let plan = self
-            .session
-            .plan_organization_edit(self.group_intent(Some(id), &draft)?)?;
+        let plan = self.plan_organization_authoring(self.group_intent(Some(id), &draft)?)?;
         self.execute_organization_authoring(&plan)?;
         Ok(())
     }

@@ -2,8 +2,8 @@ use super::super::harness::{Harness, command, update};
 use super::common::{clip, drain, edit, select};
 use anyhow::{Context as _, ensure};
 use serde_json::{Value, json};
+use zipzi_animation::{CompiledCurve, sample_motion_curve};
 use zipzi_editor_core::{CommandId, TimelineChannelId, TimelineCommand};
-use zipzi_sdk::{CompiledCurve, sample_motion_curve};
 
 pub(crate) fn edges(h: &mut Harness) -> anyhow::Result<Value> {
     select(h, "TimelineOpaque")?;
@@ -58,10 +58,7 @@ pub(crate) fn edges(h: &mut Harness) -> anyhow::Result<Value> {
                 )
                 .is_err()
         );
-        assert_eq!(
-            view.editor.timeline_edit().unwrap().candidate.clip(),
-            &original
-        );
+        assert_eq!(&view.editor.timeline_edit().unwrap().candidate, &original);
         view.editor.cancel_timeline_edit();
         Ok(())
     })?;

@@ -1,3 +1,4 @@
+use common::prepare;
 use zipzi_core::{PartKeyform, RotationKeyform, SceneTrack, WarpKeyform};
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 mod common;
@@ -7,11 +8,11 @@ use std::collections::HashMap;
 use std::os::raw::c_void;
 
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
+use zipzi_core::state::*;
 use zipzi_core::types::{
-    Appearance, BindingAxis, BlendMode, Canvas, ImageAsset, Mesh, MeshBinding, MeshKeyform,
-    Parameter, Part, RotationPose, SceneBinding, Transform, TransformKind, Vec2,
+    Appearance, BindingAxis, BlendMode, Canvas, Mesh, MeshBinding, MeshKeyform, Parameter, Part,
+    RotationPose, SceneBinding, Transform, TransformKind, Vec2,
 };
-use zipzi_core::Document;
 use zipzi_moc3::{encode_moc3, Moc3Artifact};
 
 fn near(actual: f32, expected: f32, ppu: f32) {
@@ -37,50 +38,43 @@ fn sid(n: i32) -> String {
     format!("{n:08x}-2222-4222-8222-222222222222")
 }
 
-fn fixture() -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas {
-                width: 640.0,
-                height: 480.0,
-                origin: Vec2::new(271.0, 193.0),
-                pixels_per_unit: 100.0,
-                flag: 1,
-            }
-        )
-        .is_ok());
+fn fixture() -> DocumentState {
+    let mut doc = DocumentState::new(
+        id(1),
+        Canvas {
+            width: 640.0,
+            height: 480.0,
+            origin: Vec2::new(271.0, 193.0),
+            pixels_per_unit: 100.0,
+            flag: 1,
+        }
+        .into(),
+    )
+    .unwrap();
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+    doc = prepare(&doc, |builder| {
+        builder.create_asset(zipzi_core::state::AssetRecord {
             id: id(2),
             name: "A".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/0.png".to_string(),
+            content: zipzi_core::state::AssetContent::Image {
+                resource: Default::default(),
                 width: 8,
                 height: 8,
-                ..Default::default()
-            }),
+            },
         })
-        .status
-        .is_ok());
+    });
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+    doc = prepare(&doc, |builder| {
+        builder.create_asset(zipzi_core::state::AssetRecord {
             id: id(3),
             name: "B".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/1.png".to_string(),
+            content: zipzi_core::state::AssetContent::Image {
+                resource: Default::default(),
                 width: 8,
                 height: 8,
-                ..Default::default()
-            }),
+            },
         })
-        .status
-        .is_ok());
+    });
 
     let m1 = Mesh {
         id: id(4),
@@ -103,7 +97,7 @@ fn fixture() -> Document {
         triangles: vec![[91, 8, 77], [91, 77, 12]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(m1).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(m1));
 
     let m2 = Mesh {
         id: id(5),
@@ -124,11 +118,11 @@ fn fixture() -> Document {
         triangles: vec![[70, 13, 99]],
         ..Default::default()
     };
-    assert!(doc.create_mesh(m2).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(m2));
     doc
 }
 
-fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &PreviewValues) {
+fn verify_with_purism(doc: &DocumentState, artifact: &Moc3Artifact, preview: &PreviewValues) {
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(doc, preview, &mut frame).is_ok());
     let expected = &frame.drawables;
@@ -172,7 +166,7 @@ fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &Preview
         let param_vals = csmGetParameterValues(model);
 
         for (i, pid) in doc.parameter_order().iter().enumerate() {
-            let p = doc.get_parameter(pid).unwrap();
+            let p = doc.parameter(pid).unwrap();
             let actual_id = c_str_to_str(*param_ids.add(i));
             assert_eq!(actual_id, p.runtime_id);
             near(*param_mins.add(i), p.minimum, 1.0);
@@ -190,7 +184,7 @@ fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &Preview
         let part_parents = csmGetPartParentPartIndices(model);
 
         for (i, pid) in parts.iter().enumerate() {
-            let p = doc.get_part(pid).unwrap();
+            let p = doc.part(pid).unwrap();
             let actual_id = c_str_to_str(*part_ids.add(i));
             assert_eq!(actual_id, p.runtime_id);
             let expected_parent = if p.parent_id.is_empty() {
@@ -216,7 +210,7 @@ fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &Preview
         )
         .is_ok());
         let canvas = zipzi_core::geometry::finite_export_canvas(
-            doc.export_settings(),
+            doc.setup().export,
             default_frame
                 .drawables
                 .iter()
@@ -267,7 +261,7 @@ fn verify_with_purism(doc: &Document, artifact: &Moc3Artifact, preview: &Preview
                 assert_eq!(*mask_slice.add(k), expected_mask_idx);
             }
 
-            let mesh_part = &doc.get_mesh(&d.id).unwrap().part_id;
+            let mesh_part = &doc.mesh(&d.id).unwrap().part_id;
             let expected_part_idx = if mesh_part.is_empty() {
                 -1
             } else {
@@ -334,16 +328,22 @@ fn test_fixture_export_and_purism_verification() {
     verify_with_purism(&doc, &initial, &HashMap::new());
 
     // Rename mesh: display name change should NOT alter binary MOC3 bytes
-    assert!(doc
-        .rename_mesh(&id(4), "renamed".to_string())
-        .status
-        .is_ok());
+    doc = prepare(&doc, |builder| {
+        let mut mesh = builder.mesh(&id(4)).unwrap().clone();
+        mesh.name = "renamed".into();
+        builder.replace_mesh(mesh)
+    });
     let same = encode_moc3(&doc).unwrap();
     assert_eq!(same.bytes, initial.bytes);
 
     // Edit vertex positions: should alter bytes and still verify with PurismCore
     let p = Vec2::new(338.0, 69.0);
-    assert!(doc.set_vertex_positions(&id(4), &[8], &[p]).status.is_ok());
+    doc = prepare(&doc, |builder| {
+        let mut mesh = builder.mesh(&id(4)).unwrap().clone();
+        let index = mesh.vertex_ids.iter().position(|v| *v == 8).unwrap();
+        mesh.base_positions[index] = p;
+        builder.replace_mesh(mesh)
+    });
     let edited = encode_moc3(&doc).unwrap();
     assert_ne!(edited.bytes, initial.bytes);
     verify_with_purism(&doc, &edited, &HashMap::new());
@@ -393,8 +393,8 @@ fn test_animated_keyforms_1d_2d_3d() {
 
         for a in 0..dimensions {
             let pid = id(6 + a);
-            assert!(doc
-                .create_parameter(Parameter {
+            doc = prepare(&doc, |builder| {
+                builder.create_parameter(Parameter {
                     id: pid.clone(),
                     runtime_id: format!("Param{a}"),
                     name: "param".to_string(),
@@ -404,8 +404,7 @@ fn test_animated_keyforms_1d_2d_3d() {
                     decimal_places: 6,
                     ..Default::default()
                 })
-                .status
-                .is_ok());
+            });
         }
 
         let keys: Vec<f32> = if dimensions == 3 {
@@ -428,7 +427,7 @@ fn test_animated_keyforms_1d_2d_3d() {
             let mut f = MeshKeyform {
                 samples: Default::default(),
                 keys: Vec::new(),
-                positions: doc.get_mesh(&id(4)).unwrap().base_positions.clone(),
+                positions: doc.mesh(&id(4)).unwrap().base_positions.clone(),
                 appearance: Appearance::default(),
                 draw_order: None,
             };
@@ -447,7 +446,7 @@ fn test_animated_keyforms_1d_2d_3d() {
             b.keyforms.push(f);
         }
         b.keyforms.reverse();
-        assert!(doc.create_binding(b).status.is_ok());
+        doc = prepare(&doc, |builder| builder.create_binding(b));
 
         let artifact = encode_moc3(&doc).unwrap();
         let values: Vec<f32> = if dimensions == 3 {
@@ -469,10 +468,10 @@ fn test_animated_keyforms_1d_2d_3d() {
     }
 }
 
-fn scene_fixture(warp_root: bool, quad: bool) -> Document {
+fn scene_fixture(warp_root: bool, quad: bool) -> DocumentState {
     let mut doc = fixture();
-    assert!(doc
-        .create_parameter(Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
             id: id(6),
             runtime_id: "ParamScene".to_string(),
             name: "scene".to_string(),
@@ -482,11 +481,10 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
             decimal_places: 2,
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
 
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: sid(1),
             runtime_id: "PartRoot".to_string(),
             name: "root".to_string(),
@@ -494,11 +492,10 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
             enabled: true,
             draw_order: 12.0,
         })
-        .status
-        .is_ok());
+    });
 
-    assert!(doc
-        .create_part(Part {
+    doc = prepare(&doc, |builder| {
+        builder.create_part(Part {
             id: sid(2),
             runtime_id: "PartChild".to_string(),
             name: "child".to_string(),
@@ -506,8 +503,7 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
             enabled: true,
             draw_order: -3.0,
         })
-        .status
-        .is_ok());
+    });
 
     let root = Transform {
         id: sid(3),
@@ -554,7 +550,7 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
         },
         ..Default::default()
     };
-    assert!(doc.create_transform(root.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_transform(root.clone()));
 
     let child = Transform {
         id: sid(4),
@@ -602,7 +598,7 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
         },
         ..Default::default()
     };
-    assert!(doc.create_transform(child.clone()).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_transform(child.clone()));
 
     for t in [&root, &child] {
         let track = match &t.data {
@@ -654,22 +650,21 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
                     .collect(),
             },
         };
-        assert!(doc
-            .create_scene_binding(SceneBinding {
+        doc = prepare(&doc, |builder| {
+            builder.create_scene_binding(SceneBinding {
                 id: sid(if t.id == root.id { 5 } else { 6 }),
                 axes: vec![BindingAxis {
                     id: Default::default(),
                     samples: Default::default(),
                     parameter_id: id(6),
-                    keys: vec![-1.0, 0.0, 1.0]
+                    keys: vec![-1.0, 0.0, 1.0],
                 }],
                 track,
             })
-            .status
-            .is_ok());
+        });
     }
 
-    let mut mesh = doc.get_mesh(&id(4)).unwrap().clone();
+    let mut mesh = doc.mesh(&id(4)).unwrap().clone();
     mesh.part_id = sid(2);
     mesh.deformer_id = child.id.clone();
     mesh.base_positions = vec![
@@ -691,11 +686,11 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
     } else {
         BlendMode::Additive
     };
-    assert!(doc.replace_mesh(mesh).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(mesh));
 
-    let mut other = doc.get_mesh(&id(5)).unwrap().clone();
+    let mut other = doc.mesh(&id(5)).unwrap().clone();
     other.draw_order = Some(25.0);
-    assert!(doc.replace_mesh(other).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(other));
 
     let mut part_binding = SceneBinding {
         id: sid(7),
@@ -721,7 +716,7 @@ fn scene_fixture(warp_root: bool, quad: bool) -> Document {
                 draw_order: key * 20.0 + 20.0,
             });
     }
-    assert!(doc.create_scene_binding(part_binding).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_scene_binding(part_binding));
 
     doc
 }
@@ -745,15 +740,19 @@ fn test_nested_scene_hierarchy() {
 #[test]
 fn test_error_handling_and_validations() {
     let mut doc = fixture();
-    assert!(doc.begin_transaction().is_ok());
-    let err = encode_moc3(&doc).unwrap_err();
-    assert_eq!(err.code, "TRANSACTION_ACTIVE");
-    assert!(doc.cancel_transaction().is_ok());
+    // An isolated candidate cannot prevent export of its frozen source.
+    let mut candidate = doc.builder();
+    let mut mesh = candidate.mesh(&id(4)).unwrap().clone();
+    mesh.runtime_id = "candidate".into();
+    candidate.replace_mesh(mesh).unwrap();
+    let bytes = encode_moc3(&doc).unwrap().bytes;
+    drop(candidate);
+    assert_eq!(encode_moc3(&doc).unwrap().bytes, bytes);
 
     // Unrepresentable ID (> 63 characters)
-    let mut bad_mesh = doc.get_mesh(&id(4)).unwrap().clone();
+    let mut bad_mesh = doc.mesh(&id(4)).unwrap().clone();
     bad_mesh.runtime_id = "a".repeat(64);
-    assert!(doc.replace_mesh(bad_mesh).status.is_ok());
+    doc = prepare(&doc, |builder| builder.replace_mesh(bad_mesh));
     let err = encode_moc3(&doc).unwrap_err();
     assert_eq!(err.code, "UNREPRESENTABLE_ID");
 }
@@ -768,13 +767,13 @@ fn boundless_canvas_preserves_runtime_geometry_and_includes_hidden_bounds() {
         ] {
             let mut doc = fixture();
             let canvas = Canvas::with_flag(100., 100., origin, 100., flag);
-            assert!(doc.replace_model_setup(canvas).status.is_ok());
+            doc = prepare(&doc, |builder| builder.set_setup((canvas).into()));
             let before = doc.clone();
             let artifact = encode_moc3(&doc).unwrap();
             verify_with_purism(&doc, &artifact, &Default::default());
-            assert!(doc.same_content(&before));
-            assert_eq!(doc.revision(), before.revision());
-            let mut hidden = doc.get_mesh(&id(4)).unwrap().clone();
+            assert_eq!(doc.content_id(), before.content_id());
+            assert_eq!(doc.content_id(), before.content_id());
+            let mut hidden = doc.mesh(&id(4)).unwrap().clone();
             hidden.id = id(90);
             hidden.runtime_id = "Hidden".into();
             hidden.enabled = false;
@@ -783,7 +782,7 @@ fn boundless_canvas_preserves_runtime_geometry_and_includes_hidden_bounds() {
                 .iter()
                 .map(|p| Vec2::new(p.x + 4000., p.y + 2000.))
                 .collect();
-            assert!(doc.create_mesh(hidden).status.is_ok());
+            doc = prepare(&doc, |builder| builder.create_mesh(hidden));
             let artifact = encode_moc3(&doc).unwrap();
             let info = zipzi_moc3::inspect_moc3(&artifact.bytes).unwrap().canvas;
             assert!(info.width > 4800. && info.height > 2400.);
@@ -796,11 +795,16 @@ fn source_ppu_only_changes_export_units_and_rejects_export_overflow() {
     let mut doc = fixture();
     let mut before = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &Default::default(), &mut before).is_ok());
-    let evaluation_revision = doc.evaluation_revision();
-    let mut settings = doc.export_settings();
+    let content = doc.content_id();
+    let mut settings = doc.setup().export;
     settings.pixels_per_unit = f32::MIN_POSITIVE;
-    assert!(doc.replace_export_settings(settings).status.is_ok());
-    assert_eq!(doc.evaluation_revision(), evaluation_revision);
+    doc = prepare(&doc, |builder| {
+        builder.set_setup(zipzi_core::ModelSetup {
+            export: settings,
+            ..builder.setup()
+        })
+    });
+    assert_ne!(doc.content_id(), content);
     let mut after = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &Default::default(), &mut after).is_ok());
     assert_eq!(before.drawables, after.drawables);

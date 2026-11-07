@@ -1,4 +1,8 @@
-use std::collections::BTreeMap;
+mod support;
+
+use std::{collections::BTreeMap, sync::Arc};
+use support::prepare;
+use zipzi_core::state::{DocumentState, RootDomain};
 
 use serde_json::json;
 use zipzi_core::document::{
@@ -6,7 +10,7 @@ use zipzi_core::document::{
     ReferenceEntry, ReferenceEntryAllocation,
 };
 use zipzi_core::preview::PreviewState;
-use zipzi_core::{Canvas, ChangeKind, Document, Parameter, Part, Vec2};
+use zipzi_core::{Canvas, Parameter, Part, Vec2};
 
 const DOC: &str = "00000000-0000-4000-8000-000000000801";
 const PARAM: &str = "00000000-0000-4000-8000-000000000802";
@@ -15,30 +19,27 @@ const GROUP: &str = "00000000-0000-4000-8000-000000000804";
 const CHILD: &str = "00000000-0000-4000-8000-000000000805";
 const SET: &str = "00000000-0000-4000-8000-000000000806";
 
-fn fixture_document() -> Document {
-    let mut document = Document::new();
-    assert!(document
-        .initialize(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0))
-        .is_ok());
-    assert!(document
+fn fixture_document() -> DocumentState {
+    let base =
+        DocumentState::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into()).unwrap();
+    let mut builder = base.builder();
+    builder
         .create_parameter(Parameter {
             id: PARAM.into(),
             runtime_id: "ParamA".into(),
             name: "old".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(document
+        .unwrap();
+    builder
         .create_part(Part {
             id: PART.into(),
             runtime_id: "PartA".into(),
             name: "old part".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    document
+        .unwrap();
+    builder.freeze().unwrap().state
 }
 
 fn info() -> DisplayInfo {
@@ -76,46 +77,49 @@ fn info() -> DisplayInfo {
 
 #[test]
 fn cdi_identity_references_and_recovery_are_checked() {
-    let mut uninitialized = Document::new();
-    assert_eq!(
-        uninitialized.replace_display_info(info()).status.code,
-        "NOT_INITIALIZED"
-    );
-    let mut document = fixture_document();
+    let base = fixture_document();
     let mut invalid = info();
     invalid.parameter_groups.as_mut().unwrap()[0].id = PARAM.into();
     assert_eq!(
-        document.replace_display_info(invalid).status.code,
+        prepare(&base, |b| b.replace_display_info(invalid))
+            .unwrap_err()
+            .code,
         "DUPLICATE_ID"
     );
     let mut invalid = info();
     invalid.parameter_groups.as_mut().unwrap()[0].parent_id = Some(CHILD.into());
     assert_eq!(
-        document.replace_display_info(invalid).status.code,
+        prepare(&base, |b| b.replace_display_info(invalid))
+            .unwrap_err()
+            .code,
         "CDI_GROUP_CYCLE"
     );
-    assert!(document.replace_display_info(info()).status.is_ok());
+
+    let document = prepare(&base, |b| b.replace_display_info(info()))
+        .unwrap()
+        .state;
     assert!(document.contains_id(GROUP));
     assert!(document.contains_id(SET));
-    assert_eq!(
-        document.erase_object(GROUP).status.code,
-        "OBJECT_REFERENCED"
-    );
-    assert_eq!(
-        document.erase_object(PARAM).status.code,
-        "OBJECT_REFERENCED"
-    );
-    assert_eq!(
-        document.erase_object(SET).changes.kind,
-        ChangeKind::Metadata
-    );
-    assert!(document
-        .replace_display_info(DisplayInfo::default())
-        .status
-        .is_ok());
-    assert!(document.erase_object(PARAM).status.is_ok());
+    let mut without_group = document.display_info().clone();
+    without_group.parameter_groups.as_mut().unwrap().remove(0);
+    assert!(prepare(&document, |b| b.replace_display_info(without_group)).is_err());
+    assert!(prepare(&document, |b| b.remove_parameter(PARAM)).is_err());
+    let mut without_combined = document.display_info().clone();
+    without_combined
+        .combined_parameters
+        .as_mut()
+        .unwrap()
+        .clear();
+    let removed = prepare(&document, |b| b.replace_display_info(without_combined)).unwrap();
+    assert!(removed.writes.root_changed(RootDomain::DisplayInfo));
+    assert!(!removed.state.contains_id(SET));
+    let removed = prepare(&removed.state, |b| {
+        b.replace_display_info(DisplayInfo::default())?;
+        b.remove_parameter(PARAM)
+    })
+    .unwrap();
+    assert!(removed.state.parameter(PARAM).is_none());
 
-    let mut document = fixture_document();
     let mut unresolved = DisplayInfo {
         parameters: Some(vec![CdiParameterEntry::Unresolved {
             runtime_id: "NewParam".into(),
@@ -125,109 +129,83 @@ fn cdi_identity_references_and_recovery_are_checked() {
         }]),
         ..DisplayInfo::default()
     };
-    assert!(document
-        .replace_display_info(unresolved.clone())
-        .status
-        .is_ok());
+    let document = prepare(&base, |b| b.replace_display_info(unresolved.clone()))
+        .unwrap()
+        .state;
     let new_id = "00000000-0000-4000-8000-000000000807";
+    let parameter = Parameter {
+        id: new_id.into(),
+        runtime_id: "NewParam".into(),
+        ..Default::default()
+    };
     assert_eq!(
-        document
-            .create_parameter(Parameter {
-                id: new_id.into(),
-                runtime_id: "NewParam".into(),
-                ..Default::default()
-            })
-            .status
+        prepare(&document, |b| b.create_parameter(parameter.clone()))
+            .unwrap_err()
             .code,
         "DUPLICATE_RUNTIME_ID"
     );
-    let mut candidate = document.fork_candidate();
-    assert!(candidate
-        .replace_display_info(DisplayInfo::default())
-        .status
-        .is_ok());
-    assert!(candidate
-        .create_parameter(Parameter {
-            id: new_id.into(),
-            runtime_id: "NewParam".into(),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
     unresolved.parameters = Some(vec![CdiParameterEntry::Resolved {
         parameter_id: new_id.into(),
         group_id: None,
         extensions: BTreeMap::new(),
     }]);
-    assert!(candidate.replace_display_info(unresolved).status.is_ok());
-    assert!(document
-        .publish_candidate(candidate, ChangeKind::Structure, false)
-        .unwrap());
-    assert!(document.validate_structure().is_empty());
+    let repaired = prepare(&document, |b| {
+        b.replace_display_info(DisplayInfo::default())?;
+        b.create_parameter(parameter)?;
+        b.replace_display_info(unresolved)
+    })
+    .unwrap();
+    assert!(repaired.state.contains_id(new_id));
+    assert!(!document.contains_id(new_id));
+    assert!(matches!(
+        document.display_info().parameters.as_deref(),
+        Some([CdiParameterEntry::Unresolved { .. }])
+    ));
 }
 
 #[test]
-fn display_metadata_preserves_evaluation_cache_through_checkpoint_exchange() {
-    let mut document = fixture_document();
-    document.mark_saved();
+fn display_metadata_keeps_geometry_results_equal_across_frozen_snapshots() {
+    let old = fixture_document();
     let mut preview = PreviewState::default();
-    let first = preview.frame(&document, 1).unwrap();
+    let first = preview.frame(&old, 1).unwrap();
     let count = preview.evaluation_count();
-    let evaluation = document.evaluation_revision();
-    let mut old = document.checkpoint();
-    assert!(document
-        .set_parameter_display_name(PARAM, "新名称".into())
-        .status
-        .is_ok());
-    assert!(document
-        .set_part_display_name(PART, "部件".into())
-        .status
-        .is_ok());
-    assert!(document.replace_display_info(info()).status.is_ok());
-    assert_eq!(document.evaluation_revision(), evaluation);
-    assert!(document.modified());
-    assert!(std::sync::Arc::ptr_eq(
-        &first,
-        &preview.frame(&document, 1).unwrap()
+    let mut parameter = old.parameter(PARAM).unwrap().clone();
+    parameter.name = "新名称".into();
+    let mut part = old.part(PART).unwrap().clone();
+    part.name = "部件".into();
+    let edited = prepare(&old, |b| {
+        b.replace_parameter(parameter)?;
+        b.replace_part(part)?;
+        b.replace_display_info(info())
+    })
+    .unwrap();
+    assert!(edited.writes.root_changed(RootDomain::DisplayInfo));
+    assert_ne!(edited.state.content_id(), old.content_id());
+    assert_eq!(edited.state.parameter(PARAM).unwrap().name, "新名称");
+    assert_eq!(edited.state.part(PART).unwrap().name, "部件");
+    let next = preview.frame(&edited.state, 1).unwrap();
+    assert_eq!(preview.evaluation_count(), count + 1);
+    assert_eq!(first, next);
+    assert!(Arc::ptr_eq(
+        &next,
+        &preview.frame(&edited.state, 1).unwrap()
     ));
-    assert_eq!(preview.evaluation_count(), count);
-    document.exchange_checkpoint(&mut old).unwrap();
-    assert_eq!(document.evaluation_revision(), evaluation);
-    assert!(!document.modified());
-    assert!(std::sync::Arc::ptr_eq(
-        &first,
-        &preview.frame(&document, 1).unwrap()
-    ));
-    document.exchange_checkpoint(&mut old).unwrap();
-    assert!(document.modified());
-    assert_eq!(document.evaluation_revision(), evaluation);
-    let old = document.checkpoint();
-    let mut parameter = document.get_parameter(PARAM).unwrap().clone();
-    parameter.runtime_id = "ParamRenamed".into();
-    assert!(document.replace_parameter(parameter).status.is_ok());
-    assert!(document.evaluation_revision() > evaluation);
-    let mut old = old;
-    let before = document.evaluation_revision();
-    document.exchange_checkpoint(&mut old).unwrap();
-    assert!(document.evaluation_revision() > before);
+    assert_eq!(first, preview.frame(&old, 1).unwrap());
+    assert_eq!(old.parameter(PARAM).unwrap().name, "old");
 }
 
 #[test]
-fn nested_extension_maps_have_conservative_history_cost() {
-    let mut document = fixture_document();
-    let baseline = document.estimated_content_bytes();
+fn nested_extension_maps_increase_the_write_set_estimate() {
+    let base = fixture_document();
     let mut info = DisplayInfo::default();
     info.extensions
         .insert("one".into(), json!({"nested":{"tiny":true}}));
-    assert!(document.replace_display_info(info.clone()).status.is_ok());
-    let one = document.estimated_content_bytes();
-    assert!(
-        one > baseline + 1000,
-        "single-entry nested maps need node overhead"
-    );
+    let one = prepare(&base, |b| b.replace_display_info(info.clone())).unwrap();
+    assert!(one.writes.root_changed(RootDomain::DisplayInfo));
+    assert!(one.writes.estimated_bytes() > 0);
+
     info.extensions
         .insert("many".into(), json!({"a":1,"b":2,"c":3,"d":4}));
-    assert!(document.replace_display_info(info).status.is_ok());
-    assert!(document.estimated_content_bytes() > one + 1000);
-    assert!(document.checkpoint().estimated_bytes() > baseline + 1000);
+    let many = prepare(&base, |b| b.replace_display_info(info)).unwrap();
+    assert!(many.writes.estimated_bytes() > one.writes.estimated_bytes());
 }

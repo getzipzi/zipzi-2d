@@ -105,7 +105,7 @@ impl Document {
             .parameter_order()
             .iter()
             .filter(|id| Some(id.as_str()) != except)
-            .filter_map(|id| model.get_parameter(id).map(|p| p.runtime_id.clone()))
+            .filter_map(|id| model.parameter(id).map(|p| p.runtime_id.clone()))
             .collect();
         if let Some(entries) = &model.display_info().parameters {
             ids.extend(entries.iter().filter_map(|entry| match entry {
@@ -221,13 +221,13 @@ impl Document {
         self.validate_new_parameter(&draft)?;
         self.finish_edit()?;
         let id = uuid::Uuid::new_v4().to_string();
-        let plan =
-            self.session
-                .plan_organization_edit(zipzi_sdk::OrganizationEdit::CreateParameter {
-                    parameter: draft.parameter(&id),
-                    group_id: draft.group_id.clone(),
-                    before: None,
-                })?;
+        let plan = self.plan_organization_authoring(
+            zipzi_contract::document::OrganizationEdit::CreateParameter {
+                parameter: draft.parameter(&id),
+                group_id: draft.group_id.clone(),
+                before: None,
+            },
+        )?;
         self.execute_organization_authoring(&plan)?;
         self.focus_parameter(&id)?;
         Ok(id)
@@ -258,7 +258,7 @@ impl Document {
     pub fn parameter_draft(&self, id: &str) -> Result<ParameterDraft> {
         let model_read_guard_40 = self.model();
         let p = model_read_guard_40
-            .get_parameter(id)
+            .parameter(id)
             .ok_or_else(|| anyhow::Error::from(ParameterManagementError::MissingParameter))?;
         let group_id = self
             .model()
@@ -306,16 +306,13 @@ impl Document {
         &self,
         id: &str,
         draft: &ParameterDraft,
-    ) -> Result<crate::runtime_host::HostedEdit> {
+    ) -> Result<crate::runtime_host::HostedDraft> {
         let old = self.parameter_draft(id)?;
         self.ensure_editable(&[ObjectRef::new(ObjectKind::Parameter, id)])?;
         self.validate_parameter_fields(draft, Some(id))?;
         let parameter = draft.parameter(id);
-        let mut edit = self.session.begin_owned_edit("Edit parameter", None)?;
+        let mut edit = self.session.begin_draft("Edit parameter", None)?;
         if let Err(error) = edit.replace_parameter(parameter.clone()) {
-            let zipzi_runtime::RuntimeError::Sdk(error) = error else {
-                return Err(error.into());
-            };
             return Err(ParameterManagementError::Dependency {
                 code: error.code.into(),
                 message: error.message.into(),
@@ -324,9 +321,9 @@ impl Document {
             .into());
         }
         if old.group_id != draft.group_id {
-            edit.edit_organization(zipzi_sdk::OrganizationEdit::Move {
+            edit.edit_organization(zipzi_contract::document::OrganizationEdit::Move {
                 ids: vec![id.into()],
-                destination: zipzi_sdk::OrganizationCollection::Parameters {
+                destination: zipzi_contract::document::OrganizationCollection::Parameters {
                     group_id: draft.group_id.clone(),
                 },
                 before: None,
@@ -355,9 +352,9 @@ impl Document {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.update_parameter");
         self.check_parameter_version(expected)?;
-        let edit = self.prepare_parameter_update(id, &draft)?;
+        let mut edit = self.prepare_parameter_update(id, &draft)?;
         let old = self.parameter_draft(id)?;
-        if self.model().get_parameter(id) == Some(&draft.parameter(id))
+        if self.model().parameter(id) == Some(&draft.parameter(id))
             && old.group_id == draft.group_id
         {
             return Ok(());
@@ -369,10 +366,18 @@ impl Document {
     /// Display membership is owned by the parameter. All other references block deletion.
     pub fn parameter_delete_references(&self, id: &str) -> Result<Vec<String>> {
         self.parameter_draft(id)?;
-        Ok(self
-            .model()
-            .organization_delete_users(&[id.into()], zipzi_sdk::OrganizationDeletePolicy::Contents)
-            .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))?)
+        let model = self.model();
+        let mut references = model.references_to(id);
+        // The parameter owns its resolved display entry. Deleting the parameter
+        // removes that entry in the same organization operation.
+        for (index, entry) in model.display_info().parameters.iter().flatten().enumerate() {
+            if matches!(entry, zipzi_core::document::CdiParameterEntry::Resolved { parameter_id, .. } if parameter_id == id)
+            {
+                let owned = format!("display_info.Parameters[{index}]");
+                references.retain(|reference| reference != &owned);
+            }
+        }
+        Ok(references)
     }
 
     pub fn delete_parameter(&mut self, id: &str, expected: u64) -> Result<()> {
@@ -394,7 +399,7 @@ impl Document {
     pub(super) fn reconcile_parameter_preview(&mut self) -> Result<()> {
         let mut values = self.session.preview_values().clone();
         values.retain(|id, value| {
-            if let Some(p) = self.session.document().get_parameter(id) {
+            if let Some(p) = self.session.document().parameter(id) {
                 *value = value.clamp(p.minimum, p.maximum);
                 true
             } else {

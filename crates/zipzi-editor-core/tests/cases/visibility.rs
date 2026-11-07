@@ -176,21 +176,25 @@ fn all_scene_objects_support_visibility_under_locks_with_history_and_persistence
 fn hiding_a_part_does_not_follow_deformation_links_into_another_part() -> anyhow::Result<()> {
     let (mut doc, dir) = support::sample_document_with_scene_objects()?;
     let saved = doc.save(&dir.path().join("cross-part.zipzi"))?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let mesh = ObjectRef::new(ObjectKind::Mesh, sdk.mesh_ids()[1].clone());
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    let mesh = ObjectRef::new(
+        ObjectKind::Mesh,
+        sdk.snapshot().document().mesh_order()[1].clone(),
+    );
     let parent = object(ObjectKind::Part, 101);
     let child = object(ObjectKind::Deformer, 502);
-    let mut transform = sdk.document().get_transform(&child.id).unwrap().clone();
+    let mut transform = sdk
+        .snapshot()
+        .document()
+        .transform(&child.id)
+        .unwrap()
+        .clone();
     transform.part_id = Some(object(ObjectKind::Part, 102).id.clone().into());
-    sdk.edit("Cross-part fixture", None, |e| {
-        e.set_mesh_part(&mesh.id, &object(ObjectKind::Part, 102).id)?;
+    crate::support::publish_fixture(&mut sdk, "Cross-part fixture", |e| {
+        crate::support::organize_mesh(e, &mesh.id, &object(ObjectKind::Part, 102).id)?;
         e.replace_transform(transform)
     })?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     let mut doc = Document::open(&saved.path)?;
     let before = doc.snapshot()?;
     doc.set_object_visible(&parent, false)?;
@@ -218,16 +222,12 @@ fn hiding_a_part_does_not_follow_deformation_links_into_another_part() -> anyhow
 fn hidden_mesh_remains_a_mask_source_for_picking_and_output() -> anyhow::Result<()> {
     let (mut doc, dir) = support::sample_document_with_two_layers()?;
     let saved = doc.save(&dir.path().join("masked.zipzi"))?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let ids = sdk.mesh_ids().to_vec();
-    let mut masked = sdk.mesh(&ids[1]).unwrap();
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    let ids = sdk.snapshot().document().mesh_order().to_vec();
+    let mut masked = sdk.snapshot().document().mesh(&ids[1]).unwrap().clone();
     masked.masks = vec![ids[0].clone()];
-    sdk.edit("Mask fixture", None, |e| e.replace_mesh(masked))?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::publish_fixture(&mut sdk, "Mask fixture", |e| e.replace_mesh(masked))?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     let mut doc = Document::open(&saved.path)?;
     let before = doc.snapshot()?;
     doc.set_object_visible(

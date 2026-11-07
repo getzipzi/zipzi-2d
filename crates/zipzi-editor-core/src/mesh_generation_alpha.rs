@@ -1,8 +1,8 @@
 //! Map source-image pixels to authored coordinates without using a previous mesh
 //! as an alpha mask. Only a consistent affine UV mapping can be reconstructed.
 use anyhow::{Result, ensure};
+use zipzi_contract::authoring::MeshGeometry;
 use zipzi_core::Vec2;
-use zipzi_sdk::MeshGeometry;
 
 /// Add only the transparent pixels needed by the generated UV range. The extra
 /// guard texel prevents clamp-to-edge sampling from extending edge colors.

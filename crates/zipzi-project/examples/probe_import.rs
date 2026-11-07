@@ -1,10 +1,10 @@
 use std::path::Path;
-use zipzi_project::DocumentSession;
+use zipzi_project::ProjectImporter;
 
 fn main() {
+    let importer = ProjectImporter::default();
     for path in std::env::args().skip(1) {
-        let mut session = DocumentSession::new();
-        let (result, report) = session.import_model3(Path::new(&path));
+        let (result, _, report) = importer.import_model3(Path::new(&path));
         if result.status.is_ok() {
             println!(
                 "OK\t{}\t{:?}\t{:?}\t{:?}",

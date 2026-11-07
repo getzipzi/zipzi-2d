@@ -12,12 +12,15 @@ use gpui_kit::component::{
     menu::{PopupMenu, PopupMenuItem},
     select::{SearchableVec, Select, SelectState},
 };
+use zipzi_contract::authoring::DeletionIntent;
+use zipzi_contract::authoring::DeletionReviewState as State;
+use zipzi_contract::authoring::DeletionRow as R;
+use zipzi_contract::authoring::DeletionSection as S;
+use zipzi_contract::document::DeletionChoice as C;
+use zipzi_contract::document::DeletionKind as K;
+use zipzi_contract::document::DeletionObject;
 use zipzi_editor_core::{
     Command, CommandTarget, EditingContext, TreeDeletionCancellation, TreeDeletionPlan,
-};
-use zipzi_sdk::{
-    DeletionChoice as C, DeletionIntent, DeletionKind as K, DeletionObject,
-    DeletionReviewState as State, DeletionRow as R, DeletionSection as S,
 };
 
 #[path = "object_deletion/labels.rs"]
@@ -149,7 +152,7 @@ struct DeletionDialog {
     section: S,
     scope_offset: usize,
     offset: usize,
-    page: Option<zipzi_sdk::DeletionPage>,
+    page: Option<zipzi_contract::authoring::DeletionPage>,
     destination: Entity<SelectState<SearchableVec<Choice>>>,
     mapping: Entity<InputState>,
     texture: Entity<SelectState<SearchableVec<Choice>>>,
@@ -209,7 +212,7 @@ impl DeletionDialog {
                 .request
                 .reparent
                 .values()
-                .any(|s| *s == zipzi_sdk::ReparentStrategy::PreserveEditState)
+                .any(|s| *s == zipzi_contract::document::ReparentStrategy::PreserveEditState)
                 .then(|| document.preview_revision());
             document.start_tree_deletion(self.intent.clone())
         })();
@@ -377,18 +380,18 @@ impl DeletionDialog {
                     self.intent.request.reparent.insert(
                         object.id,
                         if choice == C::PreserveEditState {
-                            zipzi_sdk::ReparentStrategy::PreserveEditState
+                            zipzi_contract::document::ReparentStrategy::PreserveEditState
                         } else {
-                            zipzi_sdk::ReparentStrategy::KeepLocalData
+                            zipzi_contract::document::ReparentStrategy::KeepLocalData
                         },
                     );
                 }
                 C::DeleteSubtree => self.intent.request.roots.push(match object.kind {
-                    K::Deformer => zipzi_sdk::DeletionTarget::Deformer(object.id),
-                    K::Mesh => zipzi_sdk::DeletionTarget::Mesh(object.id),
-                    K::Part => zipzi_sdk::DeletionTarget::Part(object.id),
-                    K::Offscreen => zipzi_sdk::DeletionTarget::Offscreen(object.id),
-                    _ => zipzi_sdk::DeletionTarget::Record(object),
+                    K::Deformer => zipzi_contract::document::DeletionTarget::Deformer(object.id),
+                    K::Mesh => zipzi_contract::document::DeletionTarget::Mesh(object.id),
+                    K::Part => zipzi_contract::document::DeletionTarget::Part(object.id),
+                    K::Offscreen => zipzi_contract::document::DeletionTarget::Offscreen(object.id),
+                    _ => zipzi_contract::document::DeletionTarget::Record(object),
                 }),
                 C::ChoosePart | C::SupplyOffscreenMapping => {
                     let part_id = self
@@ -410,7 +413,7 @@ impl DeletionDialog {
                     };
                     self.intent.request.offscreen_placements.insert(
                         object.id,
-                        zipzi_sdk::DeletionOffscreenPlacement { part_id, mapping },
+                        zipzi_contract::document::DeletionOffscreenPlacement { part_id, mapping },
                     );
                 }
                 C::ClearTexture => {

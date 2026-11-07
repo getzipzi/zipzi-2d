@@ -1,12 +1,12 @@
 //! physics3 import and export with stable parameter bindings.
 use crate::export_preflight::OpaqueExportProblemCode;
 use std::collections::BTreeMap;
-use zipzi_core::document::PhysicsTargetProjection;
 use zipzi_core::document::{PhysicsAssetImport, PhysicsDefinitionWire};
+use zipzi_core::state::PhysicsTargetProjection;
 
 use thiserror::Error;
 use zipzi_core::document::PhysicsAsset;
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 use zipzi_live2d::physics3::{decode_physics3, encode_physics3};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,7 +17,7 @@ pub struct PhysicsDiagnostic {
 }
 
 pub struct PhysicsImport {
-    pub candidate: Document,
+    pub candidate: DocumentState,
     pub diagnostics: Vec<PhysicsDiagnostic>,
 }
 
@@ -41,7 +41,7 @@ fn error(
     }
 }
 
-fn namespace(document: &Document, asset: &PhysicsAsset) -> BTreeMap<String, String> {
+fn namespace(document: &DocumentState, asset: &PhysicsAsset) -> BTreeMap<String, String> {
     asset
         .data
         .settings
@@ -55,7 +55,7 @@ fn namespace(document: &Document, asset: &PhysicsAsset) -> BTreeMap<String, Stri
         .filter_map(|t| t.parameter_id())
         .filter_map(|id| {
             document
-                .get_parameter(id)
+                .parameter(id)
                 .map(|p| (id.to_owned(), p.runtime_id.clone()))
         })
         .collect()
@@ -67,17 +67,10 @@ fn content_hash(asset: &PhysicsAsset) -> String {
 }
 
 pub fn import_physics3(
-    document: &Document,
+    document: &DocumentState,
     id: &str,
     text: &str,
 ) -> Result<PhysicsImport, PhysicsProjectError> {
-    if !document.initialized() {
-        return Err(error(
-            "NOT_INITIALIZED",
-            "$",
-            "initialize the document first",
-        ));
-    }
     let data = decode_physics3(text)
         .map_err(|failure| error(failure.code, failure.path, failure.message))?;
     let mut bindings = BTreeMap::new();
@@ -110,19 +103,22 @@ pub fn import_physics3(
         asset.opaque_source_ids = Some(namespace(document, &asset));
         asset.opaque_source_content_hash = Some(content_hash(&asset));
     }
-    let mut candidate = document.fork_candidate();
-    let result = candidate.set_physics(asset);
-    if !result.status.is_ok() {
-        return Err(error(result.status.code, "$", result.status.message));
+    let mut candidate = document.builder();
+    let result = candidate.replace_physics(Some(asset));
+    if let Err(status) = result {
+        return Err(error(status.code, "$", status.message));
     }
     Ok(PhysicsImport {
-        candidate,
+        candidate: candidate
+            .freeze()
+            .map_err(|s| error(s.code, "$", s.message))?
+            .state,
         diagnostics,
     })
 }
 
 fn bind(
-    document: &Document,
+    document: &DocumentState,
     bindings: &mut BTreeMap<String, String>,
     diagnostics: &mut Vec<PhysicsDiagnostic>,
     runtime_id: &str,
@@ -133,7 +129,7 @@ fn bind(
     }
     if let Some(id) = document.parameter_order().iter().find(|id| {
         document
-            .get_parameter(id)
+            .parameter(id)
             .is_some_and(|p| p.runtime_id == runtime_id)
     }) {
         bindings.insert(runtime_id.into(), id.clone());
@@ -170,7 +166,7 @@ fn has_extensions(asset: &PhysicsAsset) -> bool {
 }
 
 pub(crate) fn opaque_export_problems(
-    document: &Document,
+    document: &DocumentState,
     asset: &PhysicsAsset,
 ) -> Vec<crate::OpaqueExportProblem> {
     use crate::OpaqueExportProblem as P;
@@ -187,7 +183,7 @@ pub(crate) fn opaque_export_problems(
     problems
 }
 
-pub fn export_physics3(document: &Document) -> Result<Option<String>, PhysicsProjectError> {
+pub fn export_physics3(document: &DocumentState) -> Result<Option<String>, PhysicsProjectError> {
     let Some(asset) = document.physics() else {
         return Ok(None);
     };
@@ -208,7 +204,7 @@ pub fn export_physics3(document: &Document) -> Result<Option<String>, PhysicsPro
             if let Some(reason) = target.disabled_reason() {
                 return Err(error(
                     match reason {
-                        zipzi_core::document::PhysicsDisabledReason::NeedsConfiguration => {
+                        zipzi_core::state::PhysicsDisabledReason::NeedsConfiguration => {
                             "NEEDS_CONFIGURATION"
                         }
                         _ => "UNRESOLVED_PARAMETER",
@@ -221,7 +217,7 @@ pub fn export_physics3(document: &Document) -> Result<Option<String>, PhysicsPro
     }
     let data = asset.data.to_wire(|t| {
         document
-            .get_parameter(t.parameter_id().expect("validated target"))
+            .parameter(t.parameter_id().expect("validated target"))
             .expect("valid parameter")
             .runtime_id
             .clone()
@@ -234,7 +230,7 @@ pub fn export_physics3(document: &Document) -> Result<Option<String>, PhysicsPro
 /// Export only the channels accepted by the same projection used for preview.
 /// Opaque payload protection is deliberately identical to strict export.
 pub fn export_available_physics3(
-    document: &Document,
+    document: &DocumentState,
 ) -> Result<Option<String>, PhysicsProjectError> {
     let Some(asset) = document.physics() else {
         return Ok(None);
@@ -262,15 +258,11 @@ pub fn export_available_physics3(
     for g in &mut projection.executable.data.settings {
         let g = std::sync::Arc::make_mut(g);
         for v in &mut g.inputs {
-            v.source.id = document
-                .get_parameter(&v.source.id)
-                .unwrap()
-                .runtime_id
-                .clone();
+            v.source.id = document.parameter(&v.source.id).unwrap().runtime_id.clone();
         }
         for v in &mut g.outputs {
             v.destination.id = document
-                .get_parameter(&v.destination.id)
+                .parameter(&v.destination.id)
                 .unwrap()
                 .runtime_id
                 .clone();

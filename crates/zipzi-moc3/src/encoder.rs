@@ -1,5 +1,5 @@
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::Status;
-use zipzi_core::Document;
 
 use crate::types::Moc3Artifact;
 
@@ -25,12 +25,12 @@ pub enum Moc3ExportVersion {
     V53,
 }
 
-pub fn encode_moc3(doc: &Document) -> Result<Moc3Artifact, Status> {
+pub fn encode_moc3(doc: &DocumentState) -> Result<Moc3Artifact, Status> {
     encode_moc3_with_version(doc, Moc3ExportVersion::Auto)
 }
 
 pub fn encode_moc3_with_version(
-    doc: &Document,
+    doc: &DocumentState,
     target_version: Moc3ExportVersion,
 ) -> Result<Moc3Artifact, Status> {
     let (export_version, frame) = validation::validate_preflight(doc, target_version)?;
@@ -51,7 +51,7 @@ pub fn encode_moc3_with_version(
     ctx.finish()
 }
 
-pub fn encode_moc3_into(doc: &Document, out: &mut Moc3Artifact) -> Status {
+pub fn encode_moc3_into(doc: &DocumentState, out: &mut Moc3Artifact) -> Status {
     match encode_moc3(doc) {
         Ok(artifact) => {
             *out = artifact;

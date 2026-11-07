@@ -235,9 +235,13 @@ pub fn group<'a>(
         .map(|rig| rig.as_ref())
         .ok_or_else(|| anyhow::anyhow!("Physics group changed"))
 }
-pub fn values(model: &zipzi_core::Document, object: &ObjectRef) -> Result<PropertyValues> {
+pub fn values(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<PropertyValues> {
     let asset = model
         .physics()
+        .as_deref()
         .ok_or_else(|| anyhow::anyhow!("Physics changed"))?;
     let rig = group(asset, object)?;
     let mut values = PropertyValues::new();
@@ -329,12 +333,13 @@ pub fn values(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Proper
     Ok(values)
 }
 pub(crate) fn patch(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
     changes: &PropertyValues,
 ) -> Result<PhysicsPatch> {
     let asset = model
         .physics()
+        .as_deref()
         .ok_or_else(|| anyhow::anyhow!("Physics changed"))?;
     let rig = group(asset, object)?;
     let mut result = PhysicsPatch {

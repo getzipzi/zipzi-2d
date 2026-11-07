@@ -19,35 +19,32 @@ class PythonContractTools(unittest.TestCase):
         first = contract.inventory()
         self.assertEqual(first, contract.inventory())
         paths = {row["path"]: row for row in first["symbols"]}
-        for path in ("zipzi.Runtime.sessions.create", "zipzi.Session.project.export",
-                     "zipzi.Edit.meshes.create", "zipzi.Edit.meshes.get",
-                     "zipzi.Session.modeling.sample_async", "zipzi.Buffer.close",
-                     "zipzi.scene.Summary.id", "zipzi.parameters.Kind.NORMAL",
-                     "zipzi.SdkFailure.code", "zipzi.OutcomeUnknown.pending",
-                     "zipzi.Busy.cleanup", "zipzi.events.SessionSubscription.initial",
-                     "zipzi.Edit.__exit__", "zipzi.modeling.commands.ModelingCommandCreateMesh"):
+        for path in ("zipzi.Runtime.sessions.create", "zipzi.Session.export",
+                     "zipzi.Draft.apply", "zipzi.Draft.preview", "zipzi.Draft.publish",
+                     "zipzi.Blob.close", "zipzi.Snapshot.source",
+                     "zipzi.ObjectKind.MESH", "zipzi.OutcomeUnknown.recover",
+                     "zipzi.Draft.__exit__", "zipzi.values.CommandCreateMesh"):
             self.assertIn(path, paths)
-        self.assertEqual(paths["zipzi.Edit.meshes.create"]["kind"], "method")
-        self.assertIn("zipzi.Path", paths)  # incidental root export outside __all__
-        self.assertFalse(paths["zipzi.Path"]["explicit_all"])
-        self.assertIn("spec", paths["zipzi.Edit.meshes.create"]["signature"])
+        self.assertNotIn("zipzi.Edit", paths)
+        self.assertEqual(paths["zipzi.Draft.apply"]["kind"], "method")
+        self.assertIn("commands", paths["zipzi.Draft.apply"]["signature"])
         self.assertEqual(len(paths), len(first["symbols"]))
         self.assertNotIn("zipzi_native._native", sys.modules)
         self.assertEqual(first["status"], "observed_not_accepted")
 
     def test_inventory_records_missing_exports_and_new_facade_methods(self):
         client = contract.load_client()
-        from zipzi import _lifecycle
+        from zipzi import _kernel
+
         def future_method(self, value: int) -> str:
             return str(value)
-        future_method.__module__ = "zipzi._lifecycle"
+
+        future_method.__module__ = "zipzi._kernel"
         with patch.object(client, "__all__", [*client.__all__, "MissingExport"]), \
-             patch.object(_lifecycle.Meshes, "future_method", future_method, create=True):
+             patch.object(_kernel.Sessions, "future_method", future_method, create=True):
             rows = {row["path"]: row for row in contract.inventory()["symbols"]}
         self.assertEqual(rows["zipzi.MissingExport"]["kind"], "missing_export")
-        for owner in ("Session", "Edit"):
-            self.assertIn(f"zipzi.{owner}.meshes.future_method", rows)
-            self.assertEqual(rows[f"zipzi.{owner}.meshes.future_method"]["target_status"], "needs_review")
+        self.assertEqual(rows["zipzi.Runtime.sessions.future_method"]["target_status"], "needs_review")
 
     def test_unresolved_hints_are_recorded_not_silently_skipped(self):
         def broken(value: "MissingContractType") -> "MissingResultType":

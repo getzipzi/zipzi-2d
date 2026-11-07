@@ -63,7 +63,7 @@ impl PropertiesPanel {
     pub(super) fn physics_chain(
         &mut self,
         rig: &PhysicsSetting,
-        trace: Option<&zipzi_sdk::PhysicsRigSnapshot>,
+        trace: Option<&zipzi_contract::animation::PhysicsRigSnapshot>,
         manual: bool,
         disabled: bool,
         cx: &mut Context<Self>,

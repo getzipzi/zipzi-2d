@@ -10,8 +10,7 @@ enum ResourceEdit {
 }
 #[derive(Clone, Debug)]
 pub struct AnimationLibraryPlan {
-    version: zipzi_sdk::Version,
-    edits: Vec<ResourceEdit>,
+    preview: EditPreview<()>,
     noop: bool,
 }
 impl AnimationLibraryPlan {
@@ -20,7 +19,7 @@ impl AnimationLibraryPlan {
     }
 }
 impl ResourceEdit {
-    fn apply(&self, edit: &mut zipzi_sdk::EditSession<'_>) -> Result<()> {
+    fn apply(&self, edit: &mut zipzi_sdk::Commands<'_>) -> Result<()> {
         match self {
             Self::Motion(intent) => edit.edit_motion(intent.clone())?,
             Self::Expression(intent) => edit.edit_expression(intent.clone())?,
@@ -59,27 +58,35 @@ fn move_before(
     Ok(())
 }
 impl Document {
-    fn plan_library_edits(&self, edits: Vec<ResourceEdit>) -> Result<AnimationLibraryPlan> {
+    fn plan_library_edits(
+        &self,
+        expected: zipzi_sdk::Version,
+        edits: Vec<ResourceEdit>,
+    ) -> Result<AnimationLibraryPlan> {
         self.ensure_authoring_idle()?;
+        let captured = self.session.sourced_snapshot();
+        ensure!(
+            captured.source == zipzi_sdk::QuerySource::Published(expected),
+            "Animation library source changed"
+        );
         let mut candidate = self
             .session
-            .begin_owned_edit("Edit animation library", None)?;
+            .begin_draft("Edit animation library", Some(expected))?;
         for intent in &edits {
             candidate.apply(|sdk| intent.apply(sdk))?;
         }
-        let noop = candidate.candidate_document().revision() == self.model().revision();
-        Ok(AnimationLibraryPlan {
-            version: self.session.version(),
-            noop,
-            edits,
-        })
+        let baseline = captured.snapshot;
+        let preview = EditPreview::from_candidate(candidate, baseline, ())?;
+        let noop = preview.is_noop();
+        Ok(AnimationLibraryPlan { preview, noop })
     }
+
     pub fn animation_resource_creation_capability(
         &self,
         kind: ObjectKind,
         selection: Option<&ObjectRef>,
-    ) -> Result<zipzi_sdk::CapabilityState> {
-        use zipzi_sdk::AuthoringCollection as C;
+    ) -> Result<zipzi_contract::authoring::CapabilityState> {
+        use zipzi_contract::kernel_wire::CollectionTarget as C;
         if let Some(object) = selection {
             ensure!(
                 self.object_index().get(object).is_some(),
@@ -102,7 +109,7 @@ impl Document {
             ObjectKind::Expression => C::Expressions,
             ObjectKind::ExpressionEntry => {
                 let Some(object) = selection else {
-                    return Ok(zipzi_sdk::CapabilityState::Unavailable {
+                    return Ok(zipzi_contract::authoring::CapabilityState::Unavailable {
                         code: "MISSING_EXPRESSION",
                     });
                 };
@@ -122,15 +129,12 @@ impl Document {
                 C::ExpressionEntries { expression_id }
             }
             _ => {
-                return Ok(zipzi_sdk::CapabilityState::Unsupported {
+                return Ok(zipzi_contract::authoring::CapabilityState::Unsupported {
                     code: "WRONG_OBJECT_KIND",
                 });
             }
         };
-        Ok(self
-            .session
-            .authoring_collection_capabilities(&collection)?
-            .create)
+        Ok(self.model().collection_capabilities(&collection)?.create)
     }
     pub fn plan_animation_resource_creation(
         &self,
@@ -138,6 +142,7 @@ impl Document {
         name: String,
         selection: Option<&ObjectRef>,
     ) -> Result<AnimationLibraryPlan> {
+        let expected = self.session.version();
         let model = self.model();
         if let Some(object) = selection {
             ensure!(
@@ -165,13 +170,11 @@ impl Document {
                     }
                     Some(o) if o.kind == ObjectKind::MotionRegistration => {
                         let (container, _) = model
-                            .get_motion_registration(&o.id)
+                            .motion_registration(&o.id)
                             .ok_or_else(|| anyhow::anyhow!("Missing registration"))?;
                         let entries = match &container {
                             MotionContainer::Root => model.motion_roots(),
-                            MotionContainer::Group(g) => {
-                                &model.get_motion_group(g).unwrap().entries
-                            }
+                            MotionContainer::Group(g) => &model.motion_group(g).unwrap().entries,
                         };
                         let before = entries
                             .iter()
@@ -188,7 +191,7 @@ impl Document {
                         model
                             .motion_order()
                             .iter()
-                            .filter_map(|id| model.get_motion(id).map(|c| c.name.as_str()))
+                            .filter_map(|id| model.motion(id).map(|c| c.name.as_str()))
                             .collect(),
                     ),
                     registration_id: registration_id.clone(),
@@ -217,7 +220,7 @@ impl Document {
                     if o.kind == ObjectKind::MotionGroup {
                         Some(o.id.clone())
                     } else if o.kind == ObjectKind::MotionRegistration {
-                        match model.get_motion_registration(&o.id)?.0 {
+                        match model.motion_registration(&o.id)?.0 {
                             MotionContainer::Group(id) => Some(id),
                             _ => None,
                         }
@@ -239,7 +242,7 @@ impl Document {
                         model
                             .expression_order()
                             .iter()
-                            .filter_map(|id| model.get_expression(id).map(|e| e.name.as_str()))
+                            .filter_map(|id| model.expression(id).map(|e| e.name.as_str()))
                             .collect(),
                     ),
                 }));
@@ -260,7 +263,7 @@ impl Document {
                     selection.ok_or_else(|| anyhow::anyhow!("Select an expression first"))?;
                 let (owner, before) = if owner.kind == ObjectKind::ExpressionEntry {
                     let (expression, _) = model
-                        .get_expression_entry(&owner.id)
+                        .expression_entry(&owner.id)
                         .ok_or_else(|| anyhow::anyhow!("Missing expression entry"))?;
                     let before = expression
                         .entries
@@ -285,7 +288,7 @@ impl Document {
             _ => anyhow::bail!("Unsupported animation resource"),
         }
         drop(model);
-        self.plan_library_edits(edits)
+        self.plan_library_edits(expected, edits)
     }
     pub fn animation_resource_destinations(
         &self,
@@ -323,6 +326,7 @@ impl Document {
         target: Option<&ObjectRef>,
         position: PalettePosition,
     ) -> Result<AnimationLibraryPlan> {
+        let expected = self.session.version();
         let model = self.model();
         let index = self.object_index();
         ensure!(
@@ -331,7 +335,7 @@ impl Document {
         );
         if target == Some(source) {
             drop(model);
-            return self.plan_library_edits(vec![]);
+            return self.plan_library_edits(expected, vec![]);
         }
         let edits = match source.kind {
             ObjectKind::MotionGroup => {
@@ -367,13 +371,11 @@ impl Document {
                             "Registrations cannot contain resources"
                         );
                         let (owner, _) = model
-                            .get_motion_registration(&o.id)
+                            .motion_registration(&o.id)
                             .ok_or_else(|| anyhow::anyhow!("Missing target registration"))?;
                         let entries = match &owner {
                             MotionContainer::Root => model.motion_roots(),
-                            MotionContainer::Group(g) => {
-                                &model.get_motion_group(g).unwrap().entries
-                            }
+                            MotionContainer::Group(g) => &model.motion_group(g).unwrap().entries,
                         };
                         let before = if position == PalettePosition::Before {
                             Some(o.id.clone())
@@ -427,7 +429,7 @@ impl Document {
                         "Invalid entry destination"
                     );
                     let (owner, _) = model
-                        .get_expression_entry(&target.id)
+                        .expression_entry(&target.id)
                         .ok_or_else(|| anyhow::anyhow!("Missing target entry"))?;
                     let before = if position == PalettePosition::Before {
                         Some(target.id.clone())
@@ -450,13 +452,14 @@ impl Document {
             _ => anyhow::bail!("Unsupported resource movement"),
         };
         drop(model);
-        self.plan_library_edits(edits)
+        self.plan_library_edits(expected, edits)
     }
     pub fn plan_animation_resource_step(
         &self,
         source: &ObjectRef,
         down: bool,
     ) -> Result<AnimationLibraryPlan> {
+        let expected = self.session.version();
         let model = self.model();
         let order: Vec<_> = match source.kind {
             ObjectKind::MotionGroup => model
@@ -466,11 +469,11 @@ impl Document {
                 .collect(),
             ObjectKind::MotionRegistration => {
                 let (owner, _) = model
-                    .get_motion_registration(&source.id)
+                    .motion_registration(&source.id)
                     .ok_or_else(|| anyhow::anyhow!("Missing registration"))?;
                 let entries = match owner {
                     MotionContainer::Root => model.motion_roots(),
-                    MotionContainer::Group(g) => &model.get_motion_group(&g).unwrap().entries,
+                    MotionContainer::Group(g) => &model.motion_group(&g).unwrap().entries,
                 };
                 entries
                     .iter()
@@ -483,7 +486,7 @@ impl Document {
                 .map(|id| ObjectRef::new(source.kind, id))
                 .collect(),
             ObjectKind::ExpressionEntry => model
-                .get_expression_entry(&source.id)
+                .expression_entry(&source.id)
                 .ok_or_else(|| anyhow::anyhow!("Missing entry"))?
                 .0
                 .entries
@@ -504,7 +507,7 @@ impl Document {
             })
             .unwrap();
         drop(model);
-        self.plan_animation_resource_move(
+        let plan = self.plan_animation_resource_move(
             source,
             Some(target),
             if down {
@@ -512,25 +515,24 @@ impl Document {
             } else {
                 PalettePosition::Before
             },
-        )
+        )?;
+        ensure!(
+            plan.preview.version() == expected,
+            "Animation library source changed"
+        );
+        Ok(plan)
     }
     pub fn execute_animation_library(
         &mut self,
         plan: &AnimationLibraryPlan,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let mut edit = self
-            .session
-            .begin_owned_edit("Edit animation library", Some(plan.version))?;
-        for intent in &plan.edits {
-            edit.apply(|sdk| intent.apply(sdk))?;
-        }
-        let receipt = edit.commit_to(&mut self.session)?;
-        if receipt.changed {
+        let receipt = plan.preview.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
-        self.consume_authoring_receipt(&receipt, false);
-        Ok(self.authoring_result(receipt))
+        self.consume_authoring_receipt(&receipt, None);
+        Ok(self.authoring_result(receipt).with_preview(&plan.preview))
     }
 }
 impl crate::Editor {
@@ -575,7 +577,7 @@ impl crate::Editor {
     pub fn execute_expression_authoring(
         &mut self,
         document: crate::DocumentId,
-        plan: &zipzi_sdk::ExpressionEditPlan,
+        plan: &crate::EditPreview<()>,
     ) -> Result<OperationResult> {
         self.ensure_animation_target(document)?;
         self.active_session_mut()

@@ -1,9 +1,13 @@
+mod support;
+
 use std::collections::HashMap;
+use support::{image, prepare};
+use zipzi_core::state::{DocumentState, RecordDomain};
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 
 use zipzi_core::{
-    evaluate_frame, evaluation::evaluate_frame_including_hidden, Appearance, Canvas, ChangeKind,
-    Document, DrawableFrame, ImageAsset, Mesh, Part, RotationPose, Transform, Vec2,
+    evaluate_frame, evaluation::evaluate_frame_including_hidden, Appearance, Canvas, DrawableFrame,
+    Mesh, Part, RotationPose, Transform, Vec2,
 };
 
 fn id(n: i32) -> String {
@@ -12,10 +16,8 @@ fn id(n: i32) -> String {
 
 #[test]
 fn invalid_rotation_scale_units_are_rejected_before_evaluation() {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(id(1), Canvas::new(640., 480., Vec2::default(), 100.))
-        .is_ok());
+    let doc =
+        DocumentState::new(id(1), Canvas::new(640., 480., Vec2::default(), 100.).into()).unwrap();
     for unit in [
         0.,
         -1.,
@@ -24,13 +26,15 @@ fn invalid_rotation_scale_units_are_rejected_before_evaluation() {
         f32::MAX,
         f32::MIN_POSITIVE * f32::EPSILON,
     ] {
-        let result = doc.create_transform(Transform {
-            id: id(2),
-            runtime_id: "Rotation".into(),
-            rotation_scale_unit: Some(unit),
-            ..Default::default()
+        let result = prepare(&doc, |builder| {
+            builder.create_transform(Transform {
+                id: id(2),
+                runtime_id: "Rotation".into(),
+                rotation_scale_unit: Some(unit),
+                ..Default::default()
+            })
         });
-        assert_eq!(result.status.code, "INVALID_ROTATION", "unit={unit}");
+        assert_eq!(result.unwrap_err().code, "INVALID_ROTATION", "unit={unit}");
         assert!(doc.transform_order().is_empty());
     }
 }
@@ -42,31 +46,19 @@ fn test_hierarchical_transforms_and_warp() {
 }
 
 fn hierarchical_transforms_and_warp(flag: u8) {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas::with_flag(640.0, 480.0, Vec2::new(320.0, 240.0), 100.0, flag)
-        )
-        .is_ok());
+    let doc = DocumentState::new(
+        id(1),
+        Canvas::with_flag(640.0, 480.0, Vec2::new(320.0, 240.0), 100.0, flag).into(),
+    )
+    .unwrap();
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: id(2),
-            name: "texture".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/0.png".to_string(),
-                width: 128,
-                height: 128,
-                ..Default::default()
-            }),
-        })
-        .status
-        .is_ok());
+    let mut builder = doc.builder();
+    builder
+        .create_asset(image(id(2), "texture", 128, 128))
+        .unwrap();
 
     // Root Part
-    assert!(doc
+    builder
         .create_part(Part {
             id: id(3),
             runtime_id: "RootPart".to_string(),
@@ -75,8 +67,7 @@ fn hierarchical_transforms_and_warp(flag: u8) {
             enabled: true,
             draw_order: 1.0,
         })
-        .status
-        .is_ok());
+        .unwrap();
 
     // Root Rotation Transform
     let mut root = Transform {
@@ -102,7 +93,7 @@ fn hierarchical_transforms_and_warp(flag: u8) {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(root.clone()).status.is_ok());
+    builder.create_transform(root.clone()).unwrap();
 
     // Child Warp Transform (2x2 grid = 9 points)
     let child = Transform {
@@ -135,7 +126,7 @@ fn hierarchical_transforms_and_warp(flag: u8) {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(child.clone()).status.is_ok());
+    builder.create_transform(child.clone()).unwrap();
 
     // Mesh under child warp
     let mesh = Mesh {
@@ -166,7 +157,9 @@ fn hierarchical_transforms_and_warp(flag: u8) {
         },
         ..Default::default()
     };
-    assert!(doc.create_mesh(mesh).status.is_ok());
+    builder.create_mesh(mesh).unwrap();
+
+    let doc = builder.freeze().unwrap().state;
 
     // Frame evaluation
     let mut frame = DrawableFrame::default();
@@ -179,10 +172,10 @@ fn hierarchical_transforms_and_warp(flag: u8) {
 
     // Rotate root transform 90 degrees
     root.rotation_mut().unwrap().pose.angle = 90.0;
-    assert_eq!(
-        doc.replace_transform(root).changes.kind,
-        ChangeKind::Positions
-    );
+    let edited = prepare(&doc, |builder| builder.replace_transform(root)).unwrap();
+    assert_eq!(edited.writes.records()[0].domain, RecordDomain::Transform);
+    assert!(!edited.writes.order_changed(RecordDomain::Transform));
+    let doc = edited.state;
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
     let d2 = &frame.drawables[0];
     assert!(d2.visible);
@@ -202,12 +195,11 @@ fn hierarchical_transforms_and_warp(flag: u8) {
     // A PSD still needs the mesh's transformed pixels when its parent is
     // disabled. The normal preview continues to leave that geometry empty.
     let visible_positions = d2.positions.clone();
-    let mut disabled_root = doc.get_transform(&id(4)).unwrap().clone();
+    let mut disabled_root = doc.transform(&id(4)).unwrap().clone();
     disabled_root.enabled = false;
-    assert_eq!(
-        doc.replace_transform(disabled_root).changes.kind,
-        ChangeKind::Structure
-    );
+    let doc = prepare(&doc, |builder| builder.replace_transform(disabled_root))
+        .unwrap()
+        .state;
     assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
     assert!(!frame.drawables[0].visible);
     assert!(frame.drawables[0]
@@ -222,17 +214,17 @@ fn hierarchical_transforms_and_warp(flag: u8) {
 #[test]
 fn rotation_display_axes_preserve_direction_for_tiny_nested_scales_and_large_origins() {
     for reflect_x in [false, true] {
-        let mut doc = Document::new();
-        assert!(doc
-            .initialize(id(80), Canvas::new(256., 256., Vec2::default(), 1.))
-            .is_ok());
+        let doc = DocumentState::new(id(80), Canvas::new(256., 256., Vec2::default(), 1.).into())
+            .unwrap();
+        let mut builder = doc.builder();
         for (number, parent, base_angle, angle, origin) in [
             (81, None, 11., 13., Vec2::new(100_000., 100_000.)),
             (82, Some(81), 7., -3.5, Vec2::new(0.25, 0.25)),
         ] {
-            assert!(doc
+            builder
                 .create_transform(Transform {
                     id: id(number),
+                    runtime_id: format!("Rotation{number}"),
                     parent_id: parent.map(|number| id(number).into()),
                     data: TransformData::Rotation(RotationTransform {
                         base_angle,
@@ -246,9 +238,9 @@ fn rotation_display_axes_preserve_direction_for_tiny_nested_scales_and_large_ori
                     }),
                     ..Default::default()
                 })
-                .status
-                .is_ok());
+                .unwrap();
         }
+        let doc = builder.freeze().unwrap().state;
         let mut frame = DrawableFrame::default();
         assert!(evaluate_frame(&doc, &HashMap::new(), &mut frame).is_ok());
         for (number, angle, sign) in [

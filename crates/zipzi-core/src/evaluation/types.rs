@@ -1,4 +1,5 @@
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::geometry::validate_positions;
 use crate::types::{Status, Vec2};
 
@@ -34,7 +35,7 @@ impl DrawableFrameBounds for DrawableFrame {
 }
 
 pub fn parent_positions<'a>(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     parent: &str,
     positions: &'a [Vec2],
 ) -> Result<&'a [Vec2], Status> {
@@ -47,7 +48,7 @@ pub fn parent_positions<'a>(
 }
 
 pub fn parent_origin(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     parent: &str,
     origin: crate::types::PreciseVec2,
 ) -> Result<Vec2, Status> {

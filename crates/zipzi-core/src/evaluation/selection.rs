@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::geometry::validate_positions;
 use crate::keyforms::find_key_segment;
 use crate::types::{
@@ -40,7 +41,7 @@ pub(super) struct Selection {
 }
 
 pub(super) fn select<'a>(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     values: &HashMap<String, f32>,
     binding: &[crate::types::BindingAxis],
     out: &'a mut Selection,
@@ -222,7 +223,7 @@ impl BlendSelection {
 }
 
 pub fn evaluate_blend_binding(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     values: &HashMap<String, f32>,
     b: &BlendShapeBinding,
 ) -> Vec<(usize, f32)> {
@@ -300,7 +301,7 @@ pub(super) fn default_selection() -> &'static Selection {
 }
 
 pub(super) fn blend_positions<'a, F>(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     parent: &str,
     s: &Selection,
     mut get: F,
@@ -352,7 +353,7 @@ mod selection_tests {
     use crate::{BindingAxis, Parameter};
 
     fn reference_blend_positions<'a, F>(
-        doc: &Document,
+        doc: &impl EvaluationModel,
         parent: &str,
         s: &Selection,
         mut get: F,
@@ -410,19 +411,18 @@ mod selection_tests {
             }
         }
         for ppu in [1.0, 100.0, f32::MIN_POSITIVE] {
-            let mut doc = Document::new();
-            assert!(doc
-                .initialize(
-                    id(1),
-                    crate::Canvas::new(640., 480., Vec2::new(320., 240.), ppu)
-                )
-                .is_ok());
+            let mut doc = crate::state::DocumentState::new(
+                id(1),
+                crate::Canvas::new(640., 480., Vec2::new(320., 240.), ppu).into(),
+            )
+            .unwrap()
+            .builder();
             assert!(doc
                 .create_transform(crate::Transform {
                     id: id(2),
+                    runtime_id: id(2),
                     ..Default::default()
                 })
-                .status
                 .is_ok());
             for parent in [String::new(), id(2)] {
                 for weights in [
@@ -450,14 +450,19 @@ mod selection_tests {
                         let mut expected = Vec::new();
                         let mut actual = Vec::new();
                         let reference = reference_blend_positions(
-                            &doc,
+                            &doc.preview().unwrap(),
                             &parent,
                             &selection,
                             |i| &data[i],
                             &mut expected,
                         );
-                        let result =
-                            blend_positions(&doc, &parent, &selection, |i| &data[i], &mut actual);
+                        let result = blend_positions(
+                            &doc.preview().unwrap(),
+                            &parent,
+                            &selection,
+                            |i| &data[i],
+                            &mut actual,
+                        );
                         assert_eq!(result, reference);
                         if result.is_ok() {
                             let bits = |positions: &[Vec2]| {
@@ -479,9 +484,15 @@ mod selection_tests {
                     let mut expected = Vec::new();
                     let mut actual = Vec::new();
                     assert_eq!(
-                        blend_positions(&doc, &parent, &selection, |i| &truncated[i], &mut actual),
+                        blend_positions(
+                            &doc.preview().unwrap(),
+                            &parent,
+                            &selection,
+                            |i| &truncated[i],
+                            &mut actual
+                        ),
                         reference_blend_positions(
-                            &doc,
+                            &doc.preview().unwrap(),
                             &parent,
                             &selection,
                             |i| &truncated[i],
@@ -497,10 +508,12 @@ mod selection_tests {
     fn compiled_blend_selection_matches_reference_at_keys_and_constraints() {
         use crate::{BlendShapeKeyTable, BlendShapeTargetKind, DeltaKeyforms, ParameterKind};
         let id = |n| format!("{n:08x}-1111-4111-8111-111111111111");
-        let mut doc = Document::new();
-        assert!(doc
-            .initialize(id(1), crate::Canvas::new(100., 100., Vec2::default(), 1.))
-            .is_ok());
+        let mut doc = crate::state::DocumentState::new(
+            id(1),
+            crate::Canvas::new(100., 100., Vec2::default(), 1.).into(),
+        )
+        .unwrap()
+        .builder();
         for (n, kind) in [(2, ParameterKind::BlendShape), (3, ParameterKind::Normal)] {
             assert!(doc
                 .create_parameter(Parameter {
@@ -510,7 +523,6 @@ mod selection_tests {
                     maximum: 10.,
                     ..Default::default()
                 })
-                .status
                 .is_ok());
         }
         let constraint = BlendShapeConstraint {
@@ -520,10 +532,7 @@ mod selection_tests {
             keys: vec![-1., 0., 1.],
             weights: vec![0., 0.75, 1.],
         };
-        assert!(doc
-            .create_blend_constraint(constraint.clone())
-            .status
-            .is_ok());
+        assert!(doc.create_blend_constraint(constraint.clone()).is_ok());
         let mut table = BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
@@ -532,7 +541,7 @@ mod selection_tests {
             keys: vec![0.],
             base_key_idx: 0,
         };
-        assert!(doc.create_blend_key_table(table.clone()).status.is_ok());
+        assert!(doc.create_blend_key_table(table.clone()).is_ok());
         let binding = BlendShapeBinding {
             id: id(6),
             target_id: id(7),
@@ -546,7 +555,7 @@ mod selection_tests {
             table.keys = (0..count).map(|i| i as f32 - 2.).collect();
             for base in 0..count {
                 table.base_key_idx = base;
-                assert!(doc.replace_blend_key_table(table.clone()).status.is_ok());
+                assert!(doc.replace_blend_key_table(table.clone()).is_ok());
                 let input = super::super::prepared::BlendSelectionInput {
                     parameter: 0,
                     keys: table.keys.clone(),
@@ -569,7 +578,7 @@ mod selection_tests {
                             ],
                         );
                         let values = [(id(2), value), (id(3), constraint_value)].into();
-                        assert_eq!(selection.as_slice(), evaluate_blend_binding(&doc, &values, &binding),
+                        assert_eq!(selection.as_slice(), evaluate_blend_binding(&doc.preview().unwrap(), &values, &binding),
                             "count={count}, base={base}, value={value}, constraint={constraint_value}");
                     }
                 }
@@ -579,18 +588,18 @@ mod selection_tests {
 
     #[test]
     fn sparse_selection_matches_cartesian_reference() {
-        let mut doc = Document::new();
-        doc.initialize(
+        let mut doc = crate::state::DocumentState::new(
             "00000000-0000-4000-8000-000000000001",
-            crate::types::Canvas::new(100., 100., Vec2::default(), 1.),
-        );
+            crate::types::Canvas::new(100., 100., Vec2::default(), 1.).into(),
+        )
+        .unwrap()
+        .builder();
         let id = "00000000-0000-4000-8000-000000000002";
         assert!(doc
             .create_parameter(Parameter {
                 id: id.into(),
                 ..Default::default()
             })
-            .status
             .is_ok());
         let binding = vec![
             BindingAxis {
@@ -604,7 +613,7 @@ mod selection_tests {
         let mut scratch = Selection::default();
         for value in [-2., -1., -0.8, -0.5, 0., 0.3, 1., 2.] {
             let values = [(id.to_owned(), value)].into();
-            let result = select(&doc, &values, &binding, &mut scratch);
+            let result = select(&doc.preview().unwrap(), &values, &binding, &mut scratch);
             let segment = find_key_segment(value, &binding[0].keys, 0.000001, 0.0000015);
             let axes = vec![
                 KeyAxis {
@@ -631,7 +640,7 @@ mod selection_tests {
                 .map(|axis| super::super::prepared::SelectionAxis {
                     parameter: 0,
                     keys: axis.keys.clone(),
-                    epsilon: 0.1f32.powi(doc.get_parameter(id).unwrap().decimal_places),
+                    epsilon: 0.1f32.powi(doc.parameter(id).unwrap().decimal_places),
                 })
                 .collect();
             let mut compiled = Selection::default();
@@ -656,7 +665,12 @@ mod selection_tests {
             };
             80
         ];
-        let result = select(&doc, &[(id.into(), 0.)].into(), &binding, &mut scratch);
+        let result = select(
+            &doc.preview().unwrap(),
+            &[(id.into(), 0.)].into(),
+            &binding,
+            &mut scratch,
+        );
         assert_eq!(result.indices, [0]);
         assert_eq!(result.weights, [1.]);
     }

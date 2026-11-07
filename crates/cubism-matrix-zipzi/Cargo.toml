@@ -7,6 +7,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+zipzi-animation.workspace = true
 zipzi-core = { version = "=0.1.0-alpha.8", path = "../zipzi-core" }
 zipzi-render = { version = "=0.1.0-alpha.8", path = "../zipzi-render" }
 zipzi-render-metal = { version = "=0.1.0-alpha.8", path = "../zipzi-render-metal" }

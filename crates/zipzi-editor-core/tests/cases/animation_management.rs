@@ -47,20 +47,33 @@ fn content_copy_regenerates_owned_identity_and_keeps_external_references() -> an
     assert_eq!(d.motion_groups()[0].entries[1].clip_id, copy.id);
     assert_eq!(d.motion_groups()[0].entries[2].id, group.entries[1].id);
     assert_eq!(d.history_lengths(), (before.0 + 1, 0));
-    let created = result.receipt.changes.created.clone();
+    let created = result
+        .receipt
+        .writes
+        .records()
+        .iter()
+        .find(|write| {
+            write.change == zipzi_core::state::RecordChange::Created
+                && write.domain == zipzi_core::state::RecordDomain::Motion
+        })
+        .unwrap();
+    assert_eq!(created.id, copy.id);
     let registration = d.motion_groups()[0].entries[1].clone();
     d.undo()?;
     assert!(d.motion_definition(&plan.selection.id).is_none());
     assert_eq!(d.motion_groups()[0], group);
     d.redo()?;
     assert_eq!(d.motion_groups()[0].entries[1], registration);
-    for object in created {
-        assert!(
-            d.object_index()
-                .get(&R::new(K::from_sdk(object.kind), object.id))
-                .is_some()
-        );
-    }
+    assert!(
+        d.object_index()
+            .get(&R::new(K::Motion, &created.id))
+            .is_some()
+    );
+    assert!(
+        d.object_index()
+            .get(&R::new(K::MotionRegistration, &registration.id))
+            .is_some()
+    );
     assert_eq!(
         index
             .objects
@@ -124,15 +137,13 @@ fn references_inherit_defaults_use_sibling_position_and_respect_locked_destinati
     assert_eq!(d.motion_groups()[0].entries[2], group.entries[1]);
     assert_eq!(d.history_lengths(), (1, 0));
     let path = d.save(&assets.path().join("locked.zipzi"))?.path;
-    let mut session = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
-    )?;
-    session.open_project(&path, None)?;
-    let mut state = session.document().editor_state().clone();
+    let mut session = crate::support::open_fixture(&path)?;
+    let mut state = session.snapshot().document().editor_state().clone();
     state.objects.entry(group.id.clone()).or_default().locked = true;
-    session.edit("Lock group", None, |edit| edit.replace_editor_state(state))?;
-    session.save_project(&path, None)?;
+    crate::support::publish_fixture(&mut session, "Lock group", |edit| {
+        edit.replace_editor_state(state)
+    })?;
+    crate::support::save_fixture(&mut session, &path)?;
     let d = Document::open(&path)?;
     assert!(
         d.plan_motion_reference(&group.entries[0].clip_id, Some(&at))
@@ -140,7 +151,7 @@ fn references_inherit_defaults_use_sibling_position_and_respect_locked_destinati
     );
     assert_eq!(
         d.motion_copy_capability(&at, Copy::Content)?,
-        zipzi_sdk::CapabilityState::Unavailable {
+        zipzi_contract::authoring::CapabilityState::Unavailable {
             code: "OBJECT_LOCKED"
         }
     );

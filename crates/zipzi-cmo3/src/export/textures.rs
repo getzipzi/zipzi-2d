@@ -45,17 +45,19 @@ impl Exporter<'_> {
         let mut atlases = Vec::new();
         let mut textures = HashMap::new();
         for id in self.doc.asset_order() {
-            let asset = self.doc.get_asset(id).unwrap();
-            let content = asset.image_content().map_err(|e| Cmo3Error::Asset {
-                asset_id: id.clone(),
-                message: e.message,
-            })?;
+            let asset = self.doc.asset(id).unwrap();
+            let zipzi_core::state::AssetContent::Image { width, height, .. } = asset.content else {
+                return Err(Cmo3Error::Asset {
+                    asset_id: id.clone(),
+                    message: "Missing image content".into(),
+                });
+            };
             let bytes = resolver.read_png(asset)?;
             let image = zipzi_core::image::decode_png(&bytes).map_err(|e| Cmo3Error::Asset {
                 asset_id: id.clone(),
                 message: e.message,
             })?;
-            if (image.width, image.height) != (content.width, content.height) {
+            if (image.width, image.height) != (width, height) {
                 return Err(Cmo3Error::Asset {
                     asset_id: id.clone(),
                     message: "PNG dimensions differ from the asset descriptor".into(),
@@ -65,8 +67,8 @@ impl Exporter<'_> {
             let path = self.embed(bytes);
             let resource = self.graph.add(
                 N::new("CImageResource")
-                    .attr("width", content.width)
-                    .attr("height", content.height)
+                    .attr("width", width)
+                    .attr("height", height)
                     .attr("type", "INT_ARGB")
                     .attr("imageFileBuf_size", size)
                     .attr("previewFileBuf_size", 0)
@@ -74,12 +76,12 @@ impl Exporter<'_> {
             );
             let atlas_guid = self.new_guid("CTextureAtlasGuid");
             let atlas_name = format!("TextureAtlas{}", atlases.len() + 1);
-            let cache = self.cache(resource.clone(), content.width, content.height);
+            let cache = self.cache(resource.clone(), width, height);
             let atlas = self.graph.add(
                 N::new("CTextureAtlas")
                     .field("name", s(&atlas_name))
-                    .field("width", i(content.width))
-                    .field("height", i(content.height))
+                    .field("width", i(width))
+                    .field("height", i(height))
                     .field("cachedAtlasImage", resource.clone())
                     .field("lockCachedAtlasImage", b(false))
                     .field("guid", atlas_guid.clone())
@@ -111,7 +113,7 @@ impl Exporter<'_> {
                     .field("srcImageResource", resource)
                     .field(
                         "transformImageResource01toLogical01",
-                        texture_transform(content.width, content.height),
+                        texture_transform(width, height),
                     )
                     .field("mipmapLevel", i(64))
                     .field("isPremultiplied", b(true)),
@@ -121,7 +123,7 @@ impl Exporter<'_> {
                 TextureBinding {
                     texture,
                     atlas_guid,
-                    uv_scale: texture_scale(content.width, content.height),
+                    uv_scale: texture_scale(width, height),
                 },
             );
         }

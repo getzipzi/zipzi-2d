@@ -1,6 +1,6 @@
 //! Bezier authoring controls are independent of the evaluated conversion lattice.
 use crate::control_edit::ControlSpace;
-use crate::{CanvasScene, Document, ModelPoint, ObjectRef};
+use crate::{CanvasScene, ModelPoint, ObjectRef};
 use std::{collections::HashMap, sync::OnceLock};
 use zipzi_core::WarpBezierEvaluation;
 use zipzi_core::{SceneTrack, Vec2, WarpBezier};
@@ -76,12 +76,11 @@ impl LazyBezierGeometry {
 }
 
 pub(crate) fn authored(
-    document: &Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
     parameters: &HashMap<&str, f32>,
 ) -> Option<LazyBezierGeometry> {
-    let model = document.model();
-    let transform = model.get_transform(&object.id)?;
+    let transform = model.transform(&object.id)?;
     let warp = transform.warp()?;
     let (stored, positions) = if let Some(b) = model
         .binding_for_scene(&object.id)
@@ -123,7 +122,7 @@ pub(crate) fn authored(
         authoring,
         parent_id: transform.parent().into(),
         parent_shape: model
-            .get_transform(transform.parent())
+            .transform(transform.parent())
             .and_then(|t| t.warp())
             .map(|w| (w.rows as usize, w.columns as usize, w.quad)),
         geometry: OnceLock::new(),
@@ -196,6 +195,7 @@ impl BezierGeometry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Document;
 
     #[test]
     fn curve_sampling_is_lazy_and_uses_an_owned_authoring_snapshot() -> anyhow::Result<()> {

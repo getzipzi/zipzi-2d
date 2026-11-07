@@ -151,8 +151,10 @@ pub(super) fn prepare(
             let host = document.runtime_host();
             let runtime = host.read();
             let source = runtime
-                .document(document.runtime_session_id())?
-                .get_mesh(&object.id)
+                .session_read(host.client_id(), document.runtime_session_id())?
+                .snapshot()
+                .document()
+                .mesh(&object.id)
                 .unwrap();
             scene
                 .mesh(&object.id)

@@ -21,13 +21,18 @@ def normalized(mode: str, report: dict) -> dict:
     if mode == 'cpu':
         for name, data in report['measurements'].items():
             add(name, data, scale=0.001)
-    elif mode in ('properties', 'color', 'deformations'):
-        cases = report['cases'] if mode in ('properties', 'color') else report['modes']
+    elif mode in ('properties', 'color', 'physics', 'deformations', 'navigation') or mode.startswith('parameter-'):
+        cases = report['cases'] if mode in ('properties', 'color', 'physics') else report['modes']
         for case, data in cases.items():
             if case in ('manual', 'idle', 'picker_idle', 'physics_idle'):
                 continue  # no measured input latency; retained in raw reports/work-count gates
             metrics = data['metrics_ms']
-            for name in ('input_handler_ms', 'native_event_handlers_per_tick_ms', 'ui_draw_ms', 'scene_ms', 'input_to_present_ms'):
+            names = ('input_handler_ms', 'native_event_handlers_per_tick_ms', 'ui_draw_ms', 'scene_ms', 'input_to_present_ms')
+            if mode == 'physics':
+                # Physics candidates may redraw only inspector controls. The
+                # outer scope includes the property effects flushed after dispatch.
+                names += ('interaction_wall_ms',)
+            for name in names:
                 if name in metrics and metrics[name].get('count', 0):
                     add(f'{case}/{name}', metrics[name], cpu=name != 'input_to_present_ms')
     elif mode == 'animation':

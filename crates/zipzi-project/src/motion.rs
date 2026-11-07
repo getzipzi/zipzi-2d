@@ -7,7 +7,7 @@ use thiserror::Error;
 use zipzi_core::document::{
     MotionClip, MotionEvent, MotionKey, MotionPoint, MotionSegment, MotionTrack, MotionTrackTarget,
 };
-use zipzi_core::Document;
+use zipzi_core::state::DocumentState;
 use zipzi_live2d::motion3::{
     decode_motion3, encode_motion3, Motion3, Motion3Curve, Motion3Event, Motion3Meta,
     MotionPoint as WirePoint, MotionSegment as WireSegment, MotionTarget,
@@ -22,7 +22,7 @@ pub struct MotionDiagnostic {
 
 #[derive(Debug)]
 pub struct MotionImport {
-    pub candidate: Document,
+    pub candidate: DocumentState,
     pub diagnostics: Vec<MotionDiagnostic>,
 }
 
@@ -127,13 +127,13 @@ fn wire_segment(segment: &MotionSegment) -> WireSegment {
     }
 }
 
-fn namespace(document: &Document, clip: Option<&MotionClip>) -> BTreeMap<String, String> {
+fn namespace(document: &DocumentState, clip: Option<&MotionClip>) -> BTreeMap<String, String> {
     let mut ids = BTreeMap::new();
     for id in document.parameter_order() {
         ids.insert(
             format!("parameter:{id}"),
             document
-                .get_parameter(id)
+                .parameter(id)
                 .expect("ordered parameter")
                 .runtime_id
                 .clone(),
@@ -142,11 +142,7 @@ fn namespace(document: &Document, clip: Option<&MotionClip>) -> BTreeMap<String,
     for id in document.part_order() {
         ids.insert(
             format!("part:{id}"),
-            document
-                .get_part(id)
-                .expect("ordered part")
-                .runtime_id
-                .clone(),
+            document.part(id).expect("ordered part").runtime_id.clone(),
         );
     }
     if let Some(clip) = clip {
@@ -202,18 +198,11 @@ fn content_hash(clip: &MotionClip) -> String {
 }
 
 pub fn import_motion3(
-    document: &Document,
+    document: &DocumentState,
     id: &str,
     name: &str,
     text: &str,
 ) -> Result<MotionImport, MotionProjectError> {
-    if !document.initialized() {
-        return Err(error(
-            "NOT_INITIALIZED",
-            "$",
-            "initialize the document first",
-        ));
-    }
     let wire = decode_motion3(text).map_err(|e| error(e.code, e.path, e.message))?;
     let mut diagnostics = Vec::new();
     if !wire.counts_match() {
@@ -230,7 +219,7 @@ pub fn import_motion3(
         .map(|id| {
             (
                 document
-                    .get_parameter(id)
+                    .parameter(id)
                     .expect("ordered parameter")
                     .runtime_id
                     .as_str(),
@@ -243,11 +232,7 @@ pub fn import_motion3(
         .iter()
         .map(|id| {
             (
-                document
-                    .get_part(id)
-                    .expect("ordered part")
-                    .runtime_id
-                    .as_str(),
+                document.part(id).expect("ordered part").runtime_id.as_str(),
                 id.as_str(),
             )
         })
@@ -340,30 +325,33 @@ pub fn import_motion3(
         clip.opaque_source_ids = Some(namespace(document, Some(&clip)));
         clip.opaque_source_content_hash = Some(content_hash(&clip));
     }
-    let mut candidate = document.fork_candidate();
-    let result = if candidate.get_motion(id).is_some() {
+    let mut candidate = document.builder();
+    let result = if candidate.motion(id).is_some() {
         candidate.replace_motion(clip)
     } else {
-        candidate.create_motion(clip)
+        candidate.create_authored_motion(clip)
     };
-    if !result.status.is_ok() {
-        return Err(error(result.status.code, "$", result.status.message));
+    if let Err(status) = result {
+        return Err(error(status.code, "$", status.message));
     }
     Ok(MotionImport {
-        candidate,
+        candidate: candidate
+            .freeze()
+            .map_err(|s| error(s.code, "$", s.message))?
+            .state,
         diagnostics,
     })
 }
 
-pub fn export_motion3(document: &Document, id: &str) -> Result<String, MotionProjectError> {
+pub fn export_motion3(document: &DocumentState, id: &str) -> Result<String, MotionProjectError> {
     let clip = document
-        .get_motion(id)
+        .motion(id)
         .ok_or_else(|| error("MISSING_MOTION", "$", id))?;
     export_clip_motion3(document, clip)
 }
 
 pub(crate) fn opaque_export_problems(
-    document: &Document,
+    document: &DocumentState,
     clip: &MotionClip,
 ) -> Vec<crate::OpaqueExportProblem> {
     use crate::OpaqueExportProblem as P;
@@ -381,7 +369,7 @@ pub(crate) fn opaque_export_problems(
 }
 
 fn export_clip_motion3(
-    document: &Document,
+    document: &DocumentState,
     clip: &MotionClip,
 ) -> Result<String, MotionProjectError> {
     if let Some(problem) = opaque_export_problems(document, clip).first() {
@@ -411,7 +399,7 @@ fn export_clip_motion3(
                 MotionTrackTarget::Parameter { parameter_id } => (
                     MotionTarget::Parameter,
                     document
-                        .get_parameter(parameter_id)
+                        .parameter(parameter_id)
                         .ok_or_else(|| error("MISSING_PARAMETER", &path, parameter_id))?
                         .runtime_id
                         .clone(),
@@ -419,7 +407,7 @@ fn export_clip_motion3(
                 MotionTrackTarget::PartOpacity { part_id } => (
                     MotionTarget::PartOpacity,
                     document
-                        .get_part(part_id)
+                        .part(part_id)
                         .ok_or_else(|| error("MISSING_PART", &path, part_id))?
                         .runtime_id
                         .clone(),
@@ -488,7 +476,7 @@ fn export_clip_motion3(
 }
 
 /// Runtime motion files contain the playback interval. Keep source-authoring
-/// pre-roll/tail keys in Document and split their curves exactly at the boundary.
+/// pre-roll/tail keys in DocumentState and split their curves exactly at the boundary.
 fn runtime_curve(
     track: &MotionTrack,
     duration: f32,
@@ -727,7 +715,7 @@ mod source_range_tests {
 /// Uses the same authored-slot projection as motion preview. Opaque source
 /// protection still applies after omission; accepting a loss never bypasses it.
 pub fn export_available_motion3(
-    document: &Document,
+    document: &DocumentState,
     id: &str,
 ) -> Result<String, MotionProjectError> {
     let projection = document
@@ -736,7 +724,7 @@ pub fn export_available_motion3(
     if projection.disabled.is_empty() {
         return export_motion3(document, id);
     }
-    let mut clip = document.get_motion(id).unwrap().clone();
+    let mut clip = document.motion(id).unwrap().clone();
     clip.tracks
         .retain(|t| !projection.disabled.iter().any(|d| d.track_id == t.id));
     clip.track_order

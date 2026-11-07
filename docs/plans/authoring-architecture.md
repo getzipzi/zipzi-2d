@@ -1,7 +1,7 @@
 # Authoring 新内核重写方案
 
-状态：设计方案，尚未实施。日期：2026-11-06。
-代码审计基线：`main@44111d1c`；实施从届时的 main 创建独立分支。
+第一至第六阶段已于 2026-11-07 完成。Editor、Observe、Runtime、Python Local/Connected 与生成契约直接使用新内核。
+代码审计基线：`main@44111d1c`；实施起点：`main@0262b010`；实施分支：`codex/authoring-kernel`。
 
 重新实现 authoring 的状态与执行内核。新内核以不可变模型、隔离 Draft、唯一发布入口、
 线性快照历史和独立资源存储为基础，直接替换旧接口和调用方。
@@ -13,6 +13,17 @@
 
 实施以正确性和结构收敛推进，不设置量化收益门槛，不建设逐分配计费证明。
 内存与性能在重写完成后集中对照；明显卡死、持续增长和行为退化仍及时作为缺陷处理。
+
+## 实施记录
+
+| 阶段 | 实施与验证记录 | 完成提交 |
+| --- | --- | --- |
+| 1 | [不可变模型与资源基础](authoring-architecture/phase-1.md) | `300e8a18` |
+| 2 | [SDK 原生工程工作流](authoring-architecture/phase-2.md) | `b6bf2ba3` |
+| 3 | [领域算法迁入](authoring-architecture/phase-3.md) | `ed8de895` |
+| 4 | [宿主与客户端切换](authoring-architecture/phase-4.md) | `3395e4a2` |
+| 5 | [旧实现清理与正确性回归](authoring-architecture/phase-5.md) | `c7ca7fe9` |
+| 6 | [工作流性能与内存对照](authoring-architecture/phase-6.md) | `64675a53` |
 
 ## 1 新内核的边界
 
@@ -264,18 +275,18 @@ Runtime 管理并发、候选/结果数量和专项资源责任，消费同一�
 
 | 编号 | 当前位置与删除对象 | 新机制 | 主要收尾阶段 |
 | --- | --- | --- | --- |
-| D1 | [Core Document](../../crates/zipzi-core/src/document.rs) 的可变总对象，以及 `transaction_active`、`staged_edits`、`batch_build_active`、`saved_content` 和 saved-match 缓存 | DocumentState / Builder / Session / SavedMarker 分别持有状态 | 三 |
-| D2 | [transactions.rs](../../crates/zipzi-core/src/document/transactions.rs) 的 `begin/stage/commit/cancel_transaction` 独立事务协议 | Draft 批量构造与唯一提交 | 三 |
-| D3 | [checkpoint.rs](../../crates/zipzi-core/src/document/checkpoint.rs) 的旧 DocumentCheckpoint、fork/publish/exchange 和恢复时重建无关索引的路径 | 直接共享 Snapshot，恢复其状态根 | 二至三 |
-| D4 | [tracking.rs](../../crates/zipzi-core/src/document/tracking.rs) 的 TrackingState、fork_tracked_candidate、逐入口覆盖 allowlist 和失去覆盖后的特殊回退 | Builder 写入口天然产生 WriteSet | 三 |
-| D5 | [publication.rs](../../crates/zipzi-core/src/document/publication.rs)、[SDK changes](../../crates/zipzi-sdk/src/changes.rs) 中为提交分类而进行的全领域前后扫描执行路径 | 受影响记录的净变化与摘要；完整比较可留作测试 oracle，不留运行时兼容回退 | 三 |
-| D6 | [Project DocumentSession](../../crates/zipzi-project/src/store/session.rs) 的 `document` 所有权、reset/publish/swap authoring 方法及依赖它的旧会话 API | Project load/save 输入输出值；正式状态由 SDK Session 直接持有 | 二至三 |
-| D7 | [SDK EditSession](../../crates/zipzi-sdk/src/edit.rs)、[AuthoringSession](../../crates/zipzi-sdk/src/session.rs) 的旧实现、`candidate: Option<Document>` 与多层 staged/commit 接线 | 新 Draft、PreparedChange 与 Session 发布协议；同名类型也必须替换内部实现 | 二至四 |
-| D8 | [SDK 历史类型](../../crates/zipzi-sdk/src/types.rs) 的完整 checkpoint 累加、begin-edit 的历史容量拒绝与转换器独立历史限额 | 线性 Snapshot 历史与 WriteSet 步骤软估计 | 二 |
-| D9 | [Runtime](../../crates/zipzi-runtime/src/runtime.rs)、[jobs.rs](../../crates/zipzi-runtime/src/jobs.rs) 中派发时 `sdk.take()`、Work/Completion 持有 Session、归还 Session 和为此保存 frozen 副本的路径 | Session 常驻；Worker 仅持有输入快照/候选与任务资源 | 四 |
-| D10 | [addressing.rs](../../crates/zipzi-runtime/src/addressing.rs)、[addresses.rs](../../crates/zipzi-runtime/src/runtime/addresses.rs) 的 CapturedAddress、FieldAddressId 注册、capture/patch 协议；SDK 跨版本 ObjectHandle/incarnation 与各领域 address/context epoch 表 | 稳定对象地址与带版本的查询/Draft 来源；保留模型引用索引和任务所有权句柄 | 四 |
-| D11 | [SDK project_io](../../crates/zipzi-sdk/src/project_io.rs) 的历史资源遍历、bind/relocate checkpoint、历史 root 路径改写和完整 saved baseline | ResourceKey + ResourceView + 保存投影 + SavedMarker | 二至四 |
-| D12 | [AuthoringLimits](../../crates/zipzi-core/src/document/binding_authoring.rs) 的通用 retained 倍率与 history 字段，以及 Runtime authoring/modeling/addresses/publication 的重复文档倍率准入 | 有规模依据的大分配保护、任务准入和独立历史策略 | 三至四 |
+| D1 | `Core Document` 的可变总对象，以及 `transaction_active`、`staged_edits`、`batch_build_active`、`saved_content` 和 saved-match 缓存 | DocumentState / Builder / Session / SavedMarker 分别持有状态 | 三 |
+| D2 | `transactions.rs` 的 `begin/stage/commit/cancel_transaction` 独立事务协议 | Draft 批量构造与唯一提交 | 三 |
+| D3 | `checkpoint.rs` 的旧 DocumentCheckpoint、fork/publish/exchange 和恢复时重建无关索引的路径 | 直接共享 Snapshot，恢复其状态根 | 二至三 |
+| D4 | `tracking.rs` 的 TrackingState、fork_tracked_candidate、逐入口覆盖 allowlist 和失去覆盖后的特殊回退 | Builder 写入口天然产生 WriteSet | 三 |
+| D5 | `publication.rs`、`SDK changes` 中为提交分类而进行的全领域前后扫描执行路径 | 受影响记录的净变化与摘要；完整比较可留作测试 oracle，不留运行时兼容回退 | 三 |
+| D6 | `Project DocumentSession` 的 `document` 所有权、reset/publish/swap authoring 方法及依赖它的旧会话 API | Project load/save 输入输出值；正式状态由 SDK Session 直接持有 | 二至三 |
+| D7 | `SDK EditSession`、`AuthoringSession` 的旧实现、`candidate: Option<Document>` 与多层 staged/commit 接线 | 新 Draft、PreparedChange 与 Session 发布协议；同名类型也必须替换内部实现 | 二至四 |
+| D8 | `SDK 历史类型` 的完整 checkpoint 累加、begin-edit 的历史容量拒绝与转换器独立历史限额 | 线性 Snapshot 历史与 WriteSet 步骤软估计 | 二 |
+| D9 | `Runtime`、`jobs.rs` 中派发时 `sdk.take()`、Work/Completion 持有 Session、归还 Session 和为此保存 frozen 副本的路径 | Session 常驻；Worker 仅持有输入快照/候选与任务资源 | 四 |
+| D10 | `addressing.rs`、`addresses.rs` 的 CapturedAddress、FieldAddressId 注册、capture/patch 协议；SDK 跨版本 ObjectHandle/incarnation 与各领域 address/context epoch 表 | 稳定对象地址与带版本的查询/Draft 来源；保留模型引用索引和任务所有权句柄 | 四 |
+| D11 | `SDK project_io` 的历史资源遍历、bind/relocate checkpoint、历史 root 路径改写和完整 saved baseline | ResourceKey + ResourceView + 保存投影 + SavedMarker | 二至四 |
+| D12 | `AuthoringLimits` 的通用 retained 倍率与 history 字段，以及 Runtime authoring/modeling/addresses/publication 的重复文档倍率准入 | 有规模依据的大分配保护、任务准入和独立历史策略 | 三至四 |
 | D13 | 旧 Rust 导出、Runtime wire/schema 操作、Python 生成与手写代理、Editor/Observe 的旧调用和迁移适配 | 新契约直接更新全部消费者；移除旧别名、转换 facade 与未使用代码 | 四至五 |
 
 删除 D9 不意味着删除保存排他状态、任务取消、外部资源租约或调用恢复。

@@ -2,12 +2,14 @@
 //! against one immutable snapshot, and publication applies exactly that plan.
 use super::*;
 use anyhow::{Result, ensure};
-use std::sync::Arc;
+
+use zipzi_contract::document::ReparentEdit;
+use zipzi_contract::document::ReparentPlacement;
+use zipzi_contract::document::ReparentStrategy;
+use zipzi_contract::document::SceneCollection;
+use zipzi_contract::document::SceneEdit;
 use zipzi_core::document::{ConversionDomain, ReparentContext};
-use zipzi_sdk::{
-    AuthoringLimits, AuthoringSnapshot, ConversionControl, ReparentEdit, ReparentPlacement,
-    ReparentStrategy, SceneCollection, SceneEdit, SceneEditPlan,
-};
+use zipzi_core::state::{ConversionControl, ConversionLimits};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PalettePreservation {
@@ -17,18 +19,18 @@ pub enum PalettePreservation {
 
 #[derive(Clone, Debug)]
 pub struct PaletteReparentCapture {
-    snapshot: Arc<AuthoringSnapshot>,
-    limits: AuthoringLimits,
+    source: crate::runtime_host::HostedSource,
+    limits: ConversionLimits,
     context: ReparentContext,
     preview_revision: u64,
 }
 #[derive(Clone, Debug)]
 pub struct PaletteReparentPlan {
-    scene: SceneEditPlan,
+    scene: crate::EditPreview<zipzi_core::state::SceneOutcome>,
     preview_revision: u64,
 }
 impl PaletteReparentPlan {
-    pub fn scene(&self) -> &SceneEditPlan {
+    pub fn scene(&self) -> &crate::EditPreview<zipzi_core::state::SceneOutcome> {
         &self.scene
     }
 }
@@ -39,7 +41,7 @@ impl PaletteReparentCapture {
         scope: PalettePreservation,
         control: &ConversionControl,
     ) -> Result<PaletteReparentPlan> {
-        let tolerance = zipzi_sdk::DeletionTolerance::default();
+        let tolerance = zipzi_contract::document::DeletionTolerance::default();
         self.plan_with_tolerance(
             request,
             scope,
@@ -57,7 +59,7 @@ impl PaletteReparentCapture {
         control: &ConversionControl,
     ) -> Result<PaletteReparentPlan> {
         let mut edit = reparent_edit(
-            self.snapshot.document(),
+            self.source.captured.snapshot.document(),
             &request,
             self.context.clone(),
             scope,
@@ -65,24 +67,31 @@ impl PaletteReparentCapture {
         edit.tolerance = tolerance;
         edit.relative_tolerance = relative_tolerance;
         Ok(PaletteReparentPlan {
-            scene: self.snapshot.plan_scene_edit_with_control(
-                SceneEdit::Reparent { edit },
-                self.limits,
-                control,
-            )?,
+            scene: {
+                let limits = self.limits;
+                crate::EditPreview::convert(
+                    &self.source,
+                    "Reparent scene",
+                    limits,
+                    control,
+                    move |commands, control| {
+                        commands.edit_scene(SceneEdit::Reparent { edit }, limits, control)
+                    },
+                )?
+            },
             preview_revision: self.preview_revision,
         })
     }
 }
 
 pub(super) fn deformation_destination(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     request: &PaletteMove,
 ) -> Result<(SceneCollection, Option<String>)> {
     let parent = match (&request.target, request.position) {
         (Some(target), PalettePosition::Inside) => {
             ensure!(
-                target.kind == ObjectKind::Deformer && model.get_transform(&target.id).is_some(),
+                target.kind == ObjectKind::Deformer && model.transform(&target.id).is_some(),
                 "Target is not a deformer"
             );
             target.id.clone()
@@ -109,7 +118,7 @@ pub(super) fn deformation_destination(
             SceneCollection::Deformation { parent_id: None }
         ) {
             members.retain(|id| {
-                model.get_transform(id).is_some() == (target.kind == ObjectKind::Deformer)
+                model.transform(id).is_some() == (target.kind == ObjectKind::Deformer)
             });
         }
         super::moving::insertion(
@@ -128,7 +137,7 @@ pub(super) fn deformation_destination(
     Ok((collection, before))
 }
 pub(super) fn reparent_edit(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     request: &PaletteMove,
     mut context: ReparentContext,
     scope: PalettePreservation,
@@ -148,8 +157,8 @@ pub(super) fn reparent_edit(
     for source in &request.sources {
         ensure!(
             match source.kind {
-                ObjectKind::Mesh => model.get_mesh(&source.id).is_some(),
-                ObjectKind::Deformer => model.get_transform(&source.id).is_some(),
+                ObjectKind::Mesh => model.mesh(&source.id).is_some(),
+                ObjectKind::Deformer => model.transform(&source.id).is_some(),
                 _ => false,
             },
             "Source identity changed"
@@ -163,7 +172,7 @@ pub(super) fn reparent_edit(
     if scope == PalettePreservation::EditState {
         context.parameter_domain.clear();
     }
-    let tolerance = zipzi_sdk::DeletionTolerance::default();
+    let tolerance = zipzi_contract::document::DeletionTolerance::default();
     Ok(ReparentEdit {
         sources: request.sources.iter().map(|s| s.id.clone()).collect(),
         parent_id: parent_id.unwrap_or_default(),
@@ -196,8 +205,8 @@ impl Document {
     pub fn capture_palette_reparent(&self) -> Result<PaletteReparentCapture> {
         self.ensure_authoring_idle()?;
         Ok(PaletteReparentCapture {
-            snapshot: Arc::new(self.session.read_snapshot()),
-            limits: self.session.authoring_limits(),
+            source: self.session.capture_authoring(),
+            limits: zipzi_core::state::ConversionLimits::default(),
             context: self.preservation_context(),
             preview_revision: self.preview_revision(),
         })

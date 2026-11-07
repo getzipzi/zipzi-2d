@@ -1,11 +1,12 @@
 # Benchmark guides
 
 Run commands from the repository root. These guides document existing harnesses
-and how to interpret their output; measured results belong in
+and how to interpret their output. Historical results are kept in
 [`docs/archive/benchmarks/`](../../docs/archive/benchmarks/).
 
 | Guide | Use it for |
 | --- | --- |
+| [Authoring workflow comparison](#authoring-workflow-comparison) | Paired SDK history, project I/O, latency and process memory |
 | [Project import and open](#project-import-and-open) | Fresh-process project I/O and Editor CPU preparation |
 | [Viewport first frame](#viewport-first-frame) | Native load-to-GPU completion and first model presentation |
 | [Manual Mesh drag](#manual-mesh-drag) | Continuous model-space topology dragging, CPU cost and native presentation |
@@ -18,6 +19,51 @@ See the [tool index](../README.md#benchmarks-and-research-tools) for Timeline,
 window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
 window or GPU latency.
+
+## Authoring workflow comparison
+
+The phase-six driver runs the same sequence against the frozen main baseline
+and the completed rewrite. It uses the default SDK history and resource limits,
+the local Mao Model3 tree, fresh Release processes and alternating AB/BA
+order. It measures SDK authoring and project I/O on macOS. The desktop view,
+GPU and IPC are outside this benchmark.
+
+Run from this checkout with the benchmark sources present. Use new output and
+worktree paths for an independent run.
+
+```sh
+probe="$PWD/tools/benchmarks/authoring-workflow"
+base_rev=0262b0108b920a2b573c7a3e6d689591566e5099
+candidate_rev=c7ca7fe9b2a05646008c21a3c923bd3a62471ee2
+base_tree="$PWD/target/workflow-baseline"
+candidate_tree="$PWD/target/workflow-candidate"
+git worktree add --detach "$base_tree" "$base_rev"
+git worktree add --detach "$candidate_tree" "$candidate_rev"
+
+for side in baseline candidate; do
+  tree="$base_tree"
+  if [ "$side" = candidate ]; then tree="$candidate_tree"; fi
+  examples="$tree/crates/zipzi-sdk/examples"
+  cp "$probe/workflow.rs" "$examples/authoring_workflow.rs"
+  cp "$probe/$side.rs" "$examples/support/authoring_workflow_adapter.rs"
+  cargo build --locked --release --manifest-path "$tree/Cargo.toml" \
+    -p zipzi-sdk --example authoring_workflow
+done
+
+uv run --locked python "$probe/compare.py" \
+  --baseline "$base_tree/target/release/examples/authoring_workflow" \
+  --candidate "$candidate_tree/target/release/examples/authoring_workflow" \
+  --baseline-commit "$base_rev" --candidate-commit "$candidate_rev" \
+  --model "$PWD/models/local/mao/runtime/mao_pro.model3.json" \
+  --output "$PWD/target/authoring-workflow-comparison"
+```
+
+The driver verifies the source tree and decoded pixels, reloads the saved copy,
+and checks an edit after reopening. It records every sample, input and binary
+fingerprint under the output directory. Stop other benchmarks and builds while
+measuring. The first run of each binary primes the filesystem cache. Allocation
+counters measure requested Rust bytes, and `/usr/bin/time -l` supplies process
+peak RSS and peak footprint. [Phase-six results](../../docs/plans/authoring-architecture/phase-6.md)
 
 ## Project import and open
 
@@ -702,8 +748,32 @@ Mesh opacity numeric drag and a separate RGB continuous color drag with 30 sampl
 and playback runs for 5 seconds. Timeline and dual viewport/background-client
 probes use 60 measured samples. It checks existing reporter completeness gates,
 records `/usr/bin/time -l`, and fingerprints executables/models for safe resume.
+For deformation fixtures that need an explicit Mesh, pass `--mesh` with the
+UUID shared by both runs. It selects the Mesh for both vertex workloads.
+Additional native modes include `navigation` (canvas pan/zoom),
+`parameter-track`, `parameter-number`, `parameter-pad` (linked two-axis pad),
+`parameter-selected` (track dragging with all visible unlocked Meshes selected),
+and `physics` (the 12-case inspector suite, with 5 warmups and 40 measured inputs).
+Parameter modes use 10 warmups and 120 measured inputs, verify changed displayed
+meshes and unchanged authored history, and retain their parameter/overlay audits.
+The probe uses the first visible parameter. Prepare the same fixture with the
+requested parameter and its group first in both runs, then pass `--parameter-id`
+to require its UUID in every audit. For the pad, put its linked partner next.
+`--physics-case` isolates one inspector case while retaining the same correctness
+and Undo checks. Report failed checks separately from valid latency samples.
+Physics comparisons retain the outer interaction wall time, including property
+effects flushed after native event dispatch. Inspector edits may produce no
+model preview, so their UI timings remain separate from correlated model
+input-to-presentation timings.
 It needs macOS, an unlocked native desktop, Metal and the local model. It does not
 relax existing timing limits or accept incomplete native traces.
+
+For a paired first-frame comparison, pass `first-frame` with the same Model3
+path or native ZIP on both sides. Each process summary includes load-to-GPU and
+load-to-presentation times, the viewport extent, and model draw calls. Compare
+the median and range across processes because each launch contributes one first
+frame. Use `editor_benchmark_report.py --modes properties deformations animation`
+for interaction comparisons based on per-process P50/P95.
 
 For R5 comparisons, `--read-batches` adds continuous CPU, independent Preview and
 GPU observation cases to `interaction`. Copy the same interaction driver and its

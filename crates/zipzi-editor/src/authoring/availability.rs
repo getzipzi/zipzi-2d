@@ -47,7 +47,7 @@ pub(crate) fn reason_message(code: &str) -> Option<String> {
 }
 pub(crate) fn error_code(error: &anyhow::Error) -> Option<&str> {
     error
-        .downcast_ref::<zipzi_sdk::SdkError>()
+        .downcast_ref::<zipzi_core::Status>()
         .map(|e| e.code.as_ref())
         .or_else(|| {
             error

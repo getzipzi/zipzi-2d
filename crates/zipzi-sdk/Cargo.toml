@@ -12,6 +12,10 @@ name = "integration"
 path = "tests/integration.rs"
 
 [[test]]
+name = "authoring"
+path = "tests/authoring.rs"
+
+[[test]]
 name = "alpha_mesh"
 path = "tests/alpha_mesh.rs"
 
@@ -31,5 +35,9 @@ spade = "2.15.1"
 rstar = "0.12.2"
 
 [dev-dependencies]
+tempfile.workspace = true
 png = { workspace = true }
 serde_json = { workspace = true }
+sha2.workspace = true
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zipzi-cmo3 = { version = "=0.1.0-alpha.8", path = "../zipzi-cmo3" }

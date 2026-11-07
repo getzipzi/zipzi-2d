@@ -3,45 +3,78 @@ use super::*;
 #[test]
 fn offscreen_blend_colors_survive_insert_and_rebase() {
     let mut s = shared();
-    s.edit("offscreen color fixture", None, |e| {
-        e.create_part(Part {
-            id: id(2100),
-            ..Default::default()
-        })?;
-        e.create_offscreen(Offscreen {
-            id: id(2101),
-            part_id: id(2100),
-            keyforms: vec![OffscreenKeyform {
-                opacity: 0.7,
-                multiply: Some([0.8; 3]),
-                screen: Some([0.1; 3]),
-            }],
-            ..Default::default()
-        })?;
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(2102),
-            target_id: id(2101),
-            target_kind: BlendShapeTargetKind::Offscreen,
-            key_table_id: id(1701),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Offscreen(
-                [-1., 0., 1.]
-                    .into_iter()
-                    .map(|v| DeltaOffscreenKeyform {
-                        opacity: v * 0.1,
-                        multiply: Some([1. + v * 0.2; 3]),
-                        screen: Some([v * 0.05; 3]),
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_part({
+                    let mut value = Part {
+                        id: id(2100),
                         ..Default::default()
-                    })
-                    .collect(),
-            ),
-        })
-    })
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                crate::support::insert_offscreen(
+                    e,
+                    Offscreen {
+                        id: id(2101),
+                        part_id: id(2100),
+                        keyforms: vec![OffscreenKeyform {
+                            opacity: 0.7,
+                            multiply: Some([0.8; 3]),
+                            screen: Some([0.1; 3]),
+                        }],
+                        ..Default::default()
+                    },
+                )?;
+                {
+                    let binding = BlendShapeBinding {
+                        id: id(2102),
+                        target_id: id(2101),
+                        target_kind: BlendShapeTargetKind::Offscreen,
+                        key_table_id: id(1701),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Offscreen(
+                            [-1., 0., 1.]
+                                .into_iter()
+                                .map(|v| DeltaOffscreenKeyform {
+                                    opacity: v * 0.1,
+                                    multiply: Some([1. + v * 0.2; 3]),
+                                    screen: Some([v * 0.05; 3]),
+                                    ..Default::default()
+                                })
+                                .collect(),
+                        ),
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("offscreen color fixture")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let expected: Vec<_> = (0..=20)
         .map(|i| frame(&s, 0.37, i as f32 / 10. - 1.).offscreens[0].clone())
         .collect();
-    let base = s.document().get_blend_key_table(&id(1701)).unwrap().samples[2]
+    let base = s
+        .snapshot()
+        .document()
+        .blend_key_table(&id(1701))
+        .unwrap()
+        .samples[2]
         .id
         .clone();
     for operation in [
@@ -85,9 +118,9 @@ fn offscreen_blend_colors_survive_insert_and_rebase() {
             }
         };
         check(&s);
-        s.undo().unwrap();
+        s.undo(s.version()).unwrap();
         check(&s);
-        s.redo().unwrap();
+        s.redo(s.version()).unwrap();
         check(&s);
     }
     roundtrip(&s);
@@ -96,30 +129,61 @@ fn offscreen_blend_colors_survive_insert_and_rebase() {
 #[test]
 fn offscreen_blend_edits_respect_owner_locks_and_retargeting() {
     let mut s = shared();
-    s.edit("offscreen targets", None, |e| {
-        for n in [2110, 2111] {
-            e.create_part(Part {
-                id: id(n),
-                ..Default::default()
-            })?;
-            e.create_offscreen(Offscreen {
-                id: id(n + 2),
-                part_id: id(n),
-                runtime_id: format!("offscreen{n}"),
-                ..Default::default()
-            })?;
-        }
-        e.create_blend_binding(BlendShapeBinding {
-            id: id(2114),
-            target_id: id(2112),
-            target_kind: BlendShapeTargetKind::Offscreen,
-            key_table_id: id(1701),
-            constraint_ids: vec![],
-            keyforms: DeltaKeyforms::Offscreen(vec![DeltaOffscreenKeyform::default(); 3]),
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                for n in [2110, 2111] {
+                    e.create_part({
+                        let mut value = Part {
+                            id: id(n),
+                            ..Default::default()
+                        };
+                        value.runtime_id = value.id.clone();
+                        value
+                    })?;
+                    crate::support::insert_offscreen(
+                        e,
+                        Offscreen {
+                            id: id(n + 2),
+                            part_id: id(n),
+                            runtime_id: format!("offscreen{n}"),
+                            ..Default::default()
+                        },
+                    )?;
+                }
+                {
+                    let binding = BlendShapeBinding {
+                        id: id(2114),
+                        target_id: id(2112),
+                        target_kind: BlendShapeTargetKind::Offscreen,
+                        key_table_id: id(1701),
+                        constraint_ids: vec![],
+                        keyforms: DeltaKeyforms::Offscreen(vec![
+                            DeltaOffscreenKeyform::default();
+                            3
+                        ]),
+                    };
+                    e.edit_blend_shape(
+                        zipzi_sdk::BlendAuthoringEdit::CreateBinding {
+                            id: binding.id.clone(),
+                            target_id: binding.target_id.clone(),
+                            target_kind: binding.target_kind,
+                            key_table_id: binding.key_table_id.clone(),
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )?;
+                    e.replace_blend_binding(binding)
+                }
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("offscreen targets")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let mut flags = s.document().editor_state().clone();
+    let mut flags = s.snapshot().document().editor_state().clone();
     flags.objects.insert(
         id(2111),
         zipzi_core::document::ObjectEditorState {
@@ -127,8 +191,16 @@ fn offscreen_blend_edits_respect_owner_locks_and_retargeting() {
             ..Default::default()
         },
     );
-    s.edit("lock owner", None, |e| e.replace_editor_state(flags))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_editor_state(flags))
+            .and_then(|value| {
+                let prepared = draft.prepare("lock owner")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     let version = s.version();
     let intent = E::Blend(B::CreateBinding {
         id: id(2115),
@@ -137,26 +209,54 @@ fn offscreen_blend_edits_respect_owner_locks_and_retargeting() {
         key_table_id: id(1701),
     });
     assert_eq!(
-        s.plan_binding_authoring(intent).unwrap_err().code.as_ref(),
+        crate::support::binding(&s, intent)
+            .unwrap_err()
+            .code
+            .as_str(),
         "OBJECT_LOCKED"
     );
-    let mut b = s.document().get_blend_binding(&id(2114)).unwrap().clone();
+    let mut b = s
+        .snapshot()
+        .document()
+        .blend_binding(&id(2114))
+        .unwrap()
+        .clone();
     b.target_id = id(2113);
     assert_eq!(
-        s.edit("retarget", None, |e| e.replace_blend_binding(b))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_blend_binding(b))
+                .and_then(|value| {
+                    let prepared = draft.prepare("retarget")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap_err()
+        .code
+        .as_str(),
         "OBJECT_LOCKED"
     );
-    let mut offscreen = s.document().get_offscreen(&id(2113)).unwrap().clone();
+    let mut offscreen = s
+        .snapshot()
+        .document()
+        .offscreen(&id(2113))
+        .unwrap()
+        .clone();
     offscreen.enabled = false;
     assert_eq!(
-        s.edit("replace locked offscreen", None, |e| e
-            .replace_offscreen(offscreen))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| e.replace_offscreen(offscreen))
+                .and_then(|value| {
+                    let prepared = draft.prepare("replace locked offscreen")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap_err()
+        .code
+        .as_str(),
         "OBJECT_LOCKED"
     );
     assert_eq!(s.version(), version);

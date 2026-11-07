@@ -17,18 +17,28 @@ impl OpenDocuments {
     fn capture(editor: &Editor) -> Self {
         let active_id = editor.active_id();
         let documents = editor.documents();
+        let mut paths: Vec<_> = documents
+            .iter()
+            .filter_map(|doc| doc.path.clone())
+            .collect();
+        let host = editor.runtime_host();
+        let mut background: Vec<_> = host
+            .read()
+            .session_catalog(host.client_id())
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|session| session.path)
+            .filter(|path| !paths.contains(path))
+            .collect();
+        background.sort();
+        background.dedup();
+        paths.extend(background);
         Self {
             active: documents
                 .iter()
                 .find(|document| Some(document.id) == active_id)
                 .and_then(|document| document.path.clone()),
-            paths: editor
-                .runtime_host()
-                .read()
-                .list_sessions()
-                .into_iter()
-                .filter_map(|session| session.path)
-                .collect(),
+            paths,
         }
     }
 

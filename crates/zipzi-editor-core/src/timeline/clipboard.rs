@@ -1,7 +1,6 @@
 use super::*;
 use anyhow::{Result, ensure};
 use zipzi_core::document::{MotionClip, MotionKey, MotionSegment, MotionTrack};
-use zipzi_sdk::MotionClipCandidate;
 
 #[derive(Debug, Clone)]
 pub struct TimelinePasteTarget {
@@ -83,7 +82,7 @@ impl TimelineClipboard {
         time: f64,
         snap: bool,
         target: Option<&TimelinePasteTarget>,
-    ) -> Result<(MotionClipCandidate, Vec<TimelineKeyRef>)> {
+    ) -> Result<(MotionClip, Vec<TimelineKeyRef>)> {
         ensure!(
             document_id == self.document && projection.clip_id == self.clip_id,
             "Cross-document and cross-clip paste are unavailable"
@@ -97,7 +96,10 @@ impl TimelineClipboard {
             .unwrap()
             .as_ref()
             .clone();
-        MotionClipCandidate::new(&document.model(), clip.clone())?;
+        ensure!(
+            !clip.has_extensions(),
+            "Reimport motion3 to edit unknown fields"
+        );
         let anchor = f64::from(timeline_time(time, projection.fps, snap)?);
         let mut selected = Vec::new();
         for copied in &self.tracks {
@@ -241,7 +243,7 @@ impl TimelineClipboard {
                 clip.tracks.push(track);
             }
         }
-        Ok((MotionClipCandidate::new(&document.model(), clip)?, selected))
+        Ok((clip, selected))
     }
 }
 
@@ -320,14 +322,17 @@ impl crate::Editor {
             target.as_ref(),
         )?;
         let gesture = self.begin_timeline_edit(document, "Paste motion keys")?;
-        self.active_session_mut()
+        let edit = self
+            .active_session_mut()
             .unwrap()
             .animation
             .timeline
             .edit
             .as_mut()
-            .unwrap()
-            .candidate = candidate;
+            .unwrap();
+        edit.draft
+            .preview(|commands| commands.replace_motion(candidate.clone()))?;
+        edit.candidate = candidate;
         self.finish_timeline_edit(document, gesture)?;
         self.reveal_timeline_keys(document, &keys)
     }

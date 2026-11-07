@@ -8,14 +8,14 @@ use std::{
 
 /// Only the metadata needed by canvas selection; inspector properties and
 /// keyform tables stay in ObjectIndex and are not rebuilt for canvas previews.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CanvasObject {
     pub reference: ObjectRef,
     pub name: String,
     pub part_id: String,
     parents: Vec<ObjectRef>,
 }
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CanvasObjectIndex {
     pub objects: Vec<CanvasObject>,
     slots: HashMap<ObjectRef, usize>,
@@ -139,13 +139,13 @@ impl MeshTopology {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ControlTopology {
     pub kind: ControlKind,
     pub edges: Arc<[(usize, usize)]>,
     pub warp_shape: Option<(u32, u32, bool)>,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct GlueTopology {
     pub object: ObjectRef,
     pub mesh_a: String,
@@ -172,13 +172,13 @@ impl CanvasTopology {
             index.objects[slot].name = if name.is_empty() { &object.id } else { name }.into();
         }
     }
-    pub fn new(model: &zipzi_core::Document) -> Self {
+    pub fn new(model: &zipzi_core::state::DocumentState) -> Self {
         Self::with_previous(model, None, None)
     }
     /// `changed` is a proven set of mesh topology writes. Other mesh Arcs can be
     /// reused without rescanning their triangles.
     pub fn with_previous(
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         previous: Option<&Self>,
         changed: Option<&HashSet<String>>,
     ) -> Self {
@@ -189,12 +189,12 @@ impl CanvasTopology {
         let mut controls = HashMap::new();
         let mut glues = Vec::new();
         for id in model.part_order() {
-            if let Some(p) = model.get_part(id) {
+            if let Some(p) = model.part(id) {
                 index.add(K::Part, id, &p.name, &p.parent_id, "");
             }
         }
         for id in model.mesh_order() {
-            let Some(m) = model.get_mesh(id) else {
+            let Some(m) = model.mesh(id) else {
                 continue;
             };
             index.add(K::Mesh, id, &m.name, &m.part_id, &m.deformer_id);
@@ -209,7 +209,7 @@ impl CanvasTopology {
             );
         }
         for id in model.transform_order() {
-            let Some(t) = model.get_transform(id) else {
+            let Some(t) = model.transform(id) else {
                 continue;
             };
             index.add(K::Deformer, id, &t.name, t.part(), t.parent());
@@ -242,12 +242,12 @@ impl CanvasTopology {
             );
         }
         for id in model.offscreen_order() {
-            if let Some(o) = model.get_offscreen(id) {
+            if let Some(o) = model.offscreen(id) {
                 index.add(K::Offscreen, id, &o.name, &o.part_id, "");
             }
         }
         for id in model.glue_order() {
-            let Some(g) = model.get_glue(id) else {
+            let Some(g) = model.glue(id) else {
                 continue;
             };
             index.add(K::Glue, id, &g.name, "", "");
@@ -270,11 +270,34 @@ impl CanvasTopology {
             });
         }
         index.build_ancestors();
+        // A source change need not change canvas structure. Preserve aggregate
+        // identities after proving equality, including labels and parentage.
+        let index = previous
+            .filter(|old| *old.index == index)
+            .map(|old| old.index.clone())
+            .unwrap_or_else(|| Arc::new(index));
+        let meshes = previous
+            .filter(|old| {
+                old.meshes.len() == meshes.len()
+                    && meshes.iter().all(|(id, mesh)| {
+                        old.meshes.get(id).is_some_and(|old| Arc::ptr_eq(old, mesh))
+                    })
+            })
+            .map(|old| old.meshes.clone())
+            .unwrap_or_else(|| Arc::new(meshes));
+        let controls = previous
+            .filter(|old| *old.controls == controls)
+            .map(|old| old.controls.clone())
+            .unwrap_or_else(|| Arc::new(controls));
+        let glues = previous
+            .filter(|old| old.glues.as_ref() == glues)
+            .map(|old| old.glues.clone())
+            .unwrap_or_else(|| glues.into());
         Self {
-            index: Arc::new(index),
-            meshes: Arc::new(meshes),
-            controls: Arc::new(controls),
-            glues: glues.into(),
+            index,
+            meshes,
+            controls,
+            glues,
         }
     }
 }
@@ -283,6 +306,89 @@ impl CanvasTopology {
 mod tests {
     use super::*;
     use zipzi_core::{Mesh, MeshConstraint, MeshConstraintKind, MeshMeshing, Vec2};
+
+    #[test]
+    fn changed_snapshot_reuses_geometry_but_refreshes_labels_and_parentage() {
+        let state = zipzi_core::state::DocumentState::new(
+            uuid::Uuid::new_v4().to_string(),
+            Default::default(),
+        )
+        .unwrap();
+        let mesh_id = uuid::Uuid::new_v4().to_string();
+        let mesh = Mesh {
+            id: mesh_id.clone(),
+            runtime_id: mesh_id,
+            name: "before".into(),
+            ..Default::default()
+        };
+        let mut builder = state.builder();
+        builder.create_mesh(mesh.clone()).unwrap();
+        let state = builder.freeze().unwrap().state;
+        let before = CanvasTopology::new(&state);
+        let mut builder = state.builder();
+        let parameter_id = uuid::Uuid::new_v4().to_string();
+        builder
+            .create_parameter(zipzi_core::Parameter {
+                id: parameter_id.clone(),
+                runtime_id: parameter_id,
+                ..Default::default()
+            })
+            .unwrap();
+        let state = builder.freeze().unwrap().state;
+        let unrelated = CanvasTopology::with_previous(&state, Some(&before), None);
+        assert!(before.same_geometry(&unrelated));
+        assert!(Arc::ptr_eq(&before.index, &unrelated.index));
+
+        let mut builder = state.builder();
+        builder
+            .replace_mesh(Mesh {
+                name: "after".into(),
+                ..mesh.clone()
+            })
+            .unwrap();
+        let state = builder.freeze().unwrap().state;
+        let renamed = CanvasTopology::with_previous(&state, Some(&unrelated), None);
+        assert!(before.same_geometry(&renamed));
+        assert!(!Arc::ptr_eq(&before.index, &renamed.index));
+        assert_eq!(
+            renamed.index.name(&ObjectRef::new(K::Mesh, &mesh.id)),
+            "after"
+        );
+
+        let part_id = uuid::Uuid::new_v4().to_string();
+        let part = zipzi_core::Part {
+            id: part_id.clone(),
+            runtime_id: part_id,
+            ..Default::default()
+        };
+        let mut builder = state.builder();
+        builder.create_part(part.clone()).unwrap();
+        builder
+            .replace_mesh(Mesh {
+                part_id: part.id.clone(),
+                ..mesh.clone()
+            })
+            .unwrap();
+        let state = builder.freeze().unwrap().state;
+        let moved = CanvasTopology::with_previous(&state, Some(&renamed), None);
+        assert!(before.same_geometry(&moved));
+        assert_eq!(
+            moved
+                .index
+                .get(&ObjectRef::new(K::Mesh, &mesh.id))
+                .unwrap()
+                .part_id,
+            part.id
+        );
+        assert!(
+            before
+                .index
+                .get(&ObjectRef::new(K::Mesh, &mesh.id))
+                .unwrap()
+                .part_id
+                .is_empty()
+        );
+    }
 
     #[test]
     fn support_edge_classification_changes_with_constraints_but_not_positions() {

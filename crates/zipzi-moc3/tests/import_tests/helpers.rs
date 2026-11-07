@@ -1,5 +1,6 @@
 pub use crate::common::import_cases;
 use crate::common::purism::*;
+pub use crate::common::{capture_images, native_roundtrip, prepare};
 use zipzi_core::{TransformData, WarpTransform};
 
 use std::collections::HashMap;
@@ -7,11 +8,10 @@ use std::os::raw::c_void;
 use std::path::PathBuf;
 
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
+use zipzi_core::state::*;
 use zipzi_core::types::{
-    Appearance, BindingAxis, Canvas, ImageAsset, Mesh, MeshBinding, MeshKeyform, Parameter,
-    Transform, Vec2,
+    Appearance, BindingAxis, Canvas, Mesh, MeshBinding, MeshKeyform, Parameter, Transform, Vec2,
 };
-use zipzi_core::Document;
 use zipzi_moc3::encode_moc3;
 
 pub(crate) fn near(actual: f32, expected: f32, ppu: f32) {
@@ -199,35 +199,31 @@ pub(crate) struct PurismDrawableData {
     pub(crate) screen_color: [f32; 4],
 }
 
-pub(crate) fn create_m1_fixture_doc() -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas {
-                width: 640.0,
-                height: 480.0,
-                origin: Vec2::new(320.0, 240.0),
-                pixels_per_unit: 100.0,
-                flag: 1,
-            }
-        )
-        .is_ok());
+pub(crate) fn create_m1_fixture_doc() -> DocumentState {
+    let mut doc = DocumentState::new(
+        id(1),
+        Canvas {
+            width: 640.0,
+            height: 480.0,
+            origin: Vec2::new(320.0, 240.0),
+            pixels_per_unit: 100.0,
+            flag: 1,
+        }
+        .into(),
+    )
+    .unwrap();
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+    doc = prepare(&doc, |builder| {
+        builder.create_asset(zipzi_core::state::AssetRecord {
             id: id(2),
             name: "Tex0".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/0.png".to_string(),
+            content: zipzi_core::state::AssetContent::Image {
+                resource: Default::default(),
                 width: 8,
                 height: 8,
-                ..Default::default()
-            }),
+            },
         })
-        .status
-        .is_ok());
+    });
 
     let p1 = Parameter {
         id: id(3),
@@ -239,7 +235,7 @@ pub(crate) fn create_m1_fixture_doc() -> Document {
         decimal_places: 4,
         ..Default::default()
     };
-    assert!(doc.create_parameter(p1).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_parameter(p1));
 
     let warp = Transform {
         id: id(4),
@@ -264,7 +260,7 @@ pub(crate) fn create_m1_fixture_doc() -> Document {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(warp).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_transform(warp));
 
     let m1 = Mesh {
         id: id(5),
@@ -294,7 +290,7 @@ pub(crate) fn create_m1_fixture_doc() -> Document {
         draw_order: Some(15.0),
         ..Default::default()
     };
-    assert!(doc.create_mesh(m1).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_mesh(m1));
 
     let binding = MeshBinding {
         id: id(6),
@@ -356,36 +352,36 @@ pub(crate) fn create_m1_fixture_doc() -> Document {
             },
         ],
     };
-    assert!(doc.create_binding(binding).status.is_ok());
+    doc = prepare(&doc, |builder| builder.create_binding(binding));
 
     doc
 }
 
-pub(crate) fn exported_drawable(doc: &Document) -> PurismDrawableData {
-    let exported = encode_moc3(doc).unwrap();
+pub(crate) fn exported_drawable(doc: &DocumentState) -> PurismDrawableData {
+    let exported = encode_moc3(&capture_images(&doc).0).unwrap();
     let mut runtime = PurismModelInstance::new(&exported.bytes);
     runtime.update();
     runtime.get_drawable("MeshQuad").unwrap()
 }
 
-pub(crate) fn assert_runtime_matches(doc: &Document, bytes: &[u8], samples: &[Vec<f32>]) {
+pub(crate) fn assert_runtime_matches(doc: &DocumentState, bytes: &[u8], samples: &[Vec<f32>]) {
     assert_runtime_matches_with_position_tolerance(doc, bytes, samples, 0.05);
 }
 
 pub(crate) fn assert_runtime_matches_with_position_tolerance(
-    doc: &Document,
+    doc: &DocumentState,
     bytes: &[u8],
     samples: &[Vec<f32>],
     pixel_tolerance: f64,
 ) -> f64 {
     let mut max_error = 0.0f64;
-    let re_export = encode_moc3(doc).unwrap();
+    let re_export = encode_moc3(&capture_images(&doc).0).unwrap();
     let mut original = PurismModelInstance::new(bytes);
     let mut exported = PurismModelInstance::new(&re_export.bytes);
     for (sample_index, sample) in samples.iter().enumerate() {
         let mut values = HashMap::new();
         for (id, value) in doc.parameter_order().iter().zip(sample) {
-            let parameter = doc.get_parameter(id).unwrap();
+            let parameter = doc.parameter(id).unwrap();
             values.insert(id.clone(), *value);
             original.set_parameter(&parameter.runtime_id, *value);
             exported.set_parameter(&parameter.runtime_id, *value);
@@ -398,11 +394,11 @@ pub(crate) fn assert_runtime_matches_with_position_tolerance(
             for (actual, ppu) in [
                 (
                     original.get_drawable(&d.runtime_id).unwrap(),
-                    doc.source_canvas().unwrap().pixels_per_unit,
+                    doc.setup().source_canvas.unwrap().pixels_per_unit,
                 ),
                 (
                     exported.get_drawable(&d.runtime_id).unwrap(),
-                    doc.export_settings().pixels_per_unit,
+                    doc.setup().export.pixels_per_unit,
                 ),
             ] {
                 assert_eq!(d.indices.as_ref(), actual.indices.as_slice());

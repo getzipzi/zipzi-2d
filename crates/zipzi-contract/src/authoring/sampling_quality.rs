@@ -88,23 +88,6 @@ pub struct MeshQuality {
     pub texture_coverage: Option<TextureCoverage>,
 }
 
-#[derive(Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-/// Ordered CPU sample frames, effective parameters and optional geometry diagnostics.
-pub struct ModelingSamples {
-    /// Exact SDK version captured for this value; not a best-effort latest-version marker.
-    pub version: Version,
-    /// Effective parameter maps in the same order as requested poses; each map is keyed by
-    /// document parameter ID.
-    pub parameters: Vec<crate::evaluation::PreviewValues>,
-    /// CPU-evaluated frames in the same order as requested parameter maps.
-    pub frames: Vec<crate::evaluation::DrawableFrame>,
-    /// Structured diagnostics from this query or operation; an empty list means none were reported.
-    pub diagnostics: Vec<GeometryDiagnostic>,
-    /// Per-pose evaluated mesh quality in frame order when Checks.quality is true; empty otherwise.
-    /// Uses default parameters of this same frozen source as the reference, without image coverage.
-    pub quality: Vec<Vec<MeshQuality>>,
-}
-
 /// Explicit diagnostic drawing options; overlays ignore masks and occlusion.
 #[derive(
     Debug,

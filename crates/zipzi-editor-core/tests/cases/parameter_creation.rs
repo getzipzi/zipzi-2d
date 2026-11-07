@@ -8,7 +8,6 @@ use zipzi_core::{
 use zipzi_editor_core::{
     Document, EditorCommand, NewParameter, ObjectKind, ObjectRef, ParameterCreateError as Error,
 };
-use zipzi_sdk::AuthoringSession;
 
 fn uuid() -> String {
     Uuid::new_v4().to_string()
@@ -51,10 +50,9 @@ fn new_parameter_is_one_history_entry_with_stable_identity_and_exact_persistence
     let saved = document.save(&destination.path().join("parameter.zipzi"))?;
     let reopened = Document::open(&saved.path)?;
     assert_eq!(reopened.parameters()[0], parameter);
-    let mut session = AuthoringSession::new(&uuid(), Canvas::new(256., 256., Vec2::default(), 1.))?;
-    session.open_project(&saved.path, None)?;
-    let model = session.document();
-    assert_eq!(model.get_parameter(&id).unwrap().runtime_id, "ParamExact");
+    let mut session = crate::support::open_fixture(&saved.path)?;
+    let model = session.snapshot().document();
+    assert_eq!(model.parameter(&id).unwrap().runtime_id, "ParamExact");
     assert!(
         matches!(&model.display_info().parameters.as_ref().unwrap()[0], CdiParameterEntry::Resolved { parameter_id, group_id: None, .. } if parameter_id == &id)
     );
@@ -204,7 +202,8 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
     let parent = uuid();
     let child = uuid();
     let existing = uuid();
-    let mut session = AuthoringSession::new(&uuid(), Canvas::new(256., 256., Vec2::default(), 1.))?;
+    let mut session =
+        crate::support::fixture_session(&uuid(), Canvas::new(256., 256., Vec2::default(), 1.))?;
     let info = DisplayInfo {
         origin: DisplayInfoOrigin::Imported,
         parameters: Some(vec![
@@ -238,15 +237,18 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
         ]),
         ..Default::default()
     };
-    session.edit("fixture", None, |edit| {
-        edit.create_parameter(Parameter {
-            id: existing.clone(),
-            runtime_id: "ParamNew".into(),
-            ..Default::default()
-        })?;
+    crate::support::publish_fixture(&mut session, "fixture", |edit| {
+        crate::support::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: existing.clone(),
+                runtime_id: "ParamNew".into(),
+                ..Default::default()
+            },
+        )?;
         edit.replace_display_info(info.clone())
     })?;
-    let receipt = session.save_project(&source.path().join("fixture.zipzi"), None)?;
+    let receipt = crate::support::save_fixture(&mut session, &source.path().join("fixture.zipzi"))?;
     let mut document = Document::open(&receipt.path)?;
     assert_eq!(document.suggested_parameter_id(), "ParamNew3");
     assert_eq!(
@@ -286,8 +288,8 @@ fn group_creation_preserves_imported_entries_and_extensions_atomically() -> anyh
     );
     document.redo()?;
     let saved = document.save(&source.path().join("created.zipzi"))?;
-    session.open_project(&saved.path, None)?;
-    let final_info = session.document().display_info();
+    session = crate::support::open_fixture(&saved.path)?;
+    let final_info = session.snapshot().document().display_info();
     assert_eq!(final_info.origin, info.origin);
     assert_eq!(final_info.parameter_groups, info.parameter_groups);
     assert_eq!(

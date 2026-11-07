@@ -55,7 +55,7 @@ fn mesh_binding_workflow_edits_stored_shape_interpolates_and_roundtrips() -> any
             shape: target.clone(),
         },
     )?;
-    let V::Point(base) = address.expected() else {
+    let V::Point(base) = address.value.1 else {
         unreachable!()
     };
     let changed = zipzi_core::Vec2::new(base.x + 20., base.y + 10.);

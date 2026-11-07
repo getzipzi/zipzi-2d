@@ -1,77 +1,112 @@
 use std::sync::Arc;
-use zipzi_core::{Canvas, PreviewValues, Vec2};
-use zipzi_sdk::AuthoringSession;
-
+use zipzi_core::{state::DocumentState, Canvas, Vec2};
+use zipzi_sdk::{AuthoringSession, QuerySource, ResourceStore, ResourceView, Snapshot};
 fn sdk() -> AuthoringSession {
     AuthoringSession::new(
-        "61000000-0000-4000-8000-000000000001",
-        Canvas::new(100., 100., Vec2::default(), 1.),
+        Snapshot::new(
+            DocumentState::new(
+                "61000000-0000-4000-8000-000000000001",
+                Canvas::new(100., 100., Vec2::default(), 1.).into(),
+            )
+            .unwrap(),
+            ResourceView::default(),
+        )
+        .unwrap(),
     )
-    .unwrap()
 }
 #[test]
-fn candidate_snapshot_keeps_new_memory_image_and_source_after_candidate_dropped() {
+fn candidate_snapshot_keeps_new_image_and_source_after_draft_and_session_drop() {
     let session = sdk();
     let asset_id = "61000000-0000-4000-8000-000000000002";
     let rgba: Arc<[u8]> = Arc::from([255, 0, 0, 255]);
-    let prepared = session.prepare_rgba_image(1, 1, rgba.clone()).unwrap();
-    let mut edit = session.begin_owned_edit("memory image", None).unwrap();
-    edit.create_prepared_image(asset_id.into(), "draft".into(), &prepared)
+    let image = ResourceStore::default()
+        .prepare_rgba(1, 1, rgba.clone())
         .unwrap();
-    drop(prepared);
-    let snapshot = session.candidate_snapshot(&edit).unwrap();
-    assert_eq!(snapshot.version(), edit.base_version());
-    assert!(session.read_snapshot().memory_image(asset_id).is_none());
-    assert!(snapshot.document().get_asset(asset_id).is_some());
-    let image = snapshot.memory_image(asset_id).unwrap();
-    assert_eq!(image.read_asset().unwrap().rgba.as_slice(), rgba.as_ref());
-    drop(edit);
+    let mut draft = session.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            c.create_empty_asset(asset_id.into(), "draft".into())?;
+            c.replace_image(asset_id, image)
+        })
+        .unwrap();
+    let snapshot = draft.read_snapshot().unwrap();
+    assert_eq!(snapshot.source, QuerySource::Draft(draft.source()));
+    assert!(session.snapshot().document().asset(asset_id).is_none());
+    let captured = snapshot
+        .snapshot
+        .resources()
+        .read_asset(snapshot.snapshot.document().asset(asset_id).unwrap())
+        .unwrap();
+    assert_eq!(captured.rgba.as_slice(), rgba.as_ref());
+    drop(draft);
     drop(session);
     assert_eq!(
         snapshot
-            .memory_image(asset_id)
+            .snapshot
+            .resources()
+            .read_asset(snapshot.snapshot.document().asset(asset_id).unwrap())
             .unwrap()
-            .read_asset()
-            .unwrap()
-            .rgba
-            .as_slice(),
-        rgba.as_ref()
+            .rgba,
+        captured.rgba
     );
-    snapshot.evaluate(&PreviewValues::default()).unwrap();
+    assert!(zipzi_core::evaluate_frame(
+        snapshot.snapshot.document(),
+        &Default::default(),
+        &mut Default::default()
+    )
+    .is_ok());
 }
 #[test]
-fn stale_revision_readable_but_cross_session_or_generation_snapshot_rejected() {
+fn stale_and_cross_session_candidates_remain_readable_but_cannot_publish() {
     let mut session = sdk();
-    let other = sdk();
-    let edit = session.begin_owned_edit("old", None).unwrap();
-    session
-        .edit("resize", None, |e| {
-            e.replace_model_setup(Canvas::new(200., 100., Vec2::default(), 1.))
+    let mut other = sdk();
+    let mut draft = session.begin_draft();
+    draft
+        .batch(draft.source(), |c| {
+            c.create_empty_asset(
+                "61000000-0000-4000-8000-000000000002".into(),
+                "draft".into(),
+            )
         })
         .unwrap();
+    let captured = draft.read_snapshot().unwrap();
+    let old = session.snapshot().clone();
+    // Replacing even with the same snapshot advances generation and invalidates old writers.
+    session.replace(session.version(), old).unwrap();
     assert_eq!(
-        session
-            .candidate_snapshot(&edit)
-            .unwrap()
+        captured
+            .snapshot
             .document()
-            .source_canvas()
+            .setup()
+            .source_canvas
             .unwrap()
             .width,
         100.
     );
     assert_eq!(
-        other.candidate_snapshot(&edit).unwrap_err().code.as_ref(),
-        "STALE_VERSION"
+        session
+            .publish(draft.prepare("stale").unwrap())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
     );
-    session
-        .new_project(
-            "61000000-0000-4000-8000-000000000003",
-            Canvas::new(100., 100., Vec2::default(), 1.),
-            None,
-        )
+    let mut foreign = session.begin_draft();
+    foreign
+        .batch(foreign.source(), |c| {
+            c.create_empty_asset(
+                "61000000-0000-4000-8000-000000000003".into(),
+                "foreign".into(),
+            )
+        })
         .unwrap();
     assert_eq!(
-        session.candidate_snapshot(&edit).unwrap_err().code.as_ref(),
-        "STALE_VERSION"
+        other
+            .publish(foreign.prepare("foreign").unwrap())
+            .unwrap_err()
+            .code,
+        "STALE_SOURCE"
     );
+    assert!(other.snapshot().document().asset_order().is_empty());
+    assert!(session.snapshot().document().asset_order().is_empty());
+    assert_eq!(captured.snapshot.document().asset_order().len(), 1);
 }

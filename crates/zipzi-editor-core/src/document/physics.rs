@@ -15,7 +15,7 @@ impl Document {
                 &current.id,
             )])?;
         }
-        let mut edit = self.session.begin_owned_edit("Validate physics", None)?;
+        let mut edit = self.session.begin_draft("Validate physics", None)?;
         edit.set_physics(asset.clone())?;
         Ok(())
     }
@@ -23,13 +23,13 @@ impl Document {
     pub(crate) fn replace_physics(&mut self, asset: PhysicsAsset, revision: u64) -> Result<()> {
         self.validate_physics_edit(&asset, revision)?;
         self.finish_edit()?;
-        let mut edit = self.session.begin_owned_edit("Edit physics", None)?;
+        let mut edit = self.session.begin_draft("Edit physics", None)?;
         edit.set_physics(asset)?;
         let receipt = edit.commit_to(&mut self.session)?;
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
         }
-        self.consume_authoring_receipt(&receipt, false);
+        self.consume_authoring_receipt(&receipt, None);
         Ok(())
     }
 }

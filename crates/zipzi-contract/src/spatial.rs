@@ -150,25 +150,3 @@ pub enum SpatialResult {
         GeometryQuery,
     ),
 }
-
-/// Effective parameters and ordered query results for one evaluated pose.
-#[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct SpatialFrame {
-    /// Effective evaluated parameter values keyed by document UUID, including defaults/clamps.
-    pub parameters: crate::evaluation::PreviewValues,
-    /// Query results in input order, including repeated queries and empty results.
-    pub results: Vec<SpatialResult>,
-}
-
-/// Ordered CPU spatial results for poses evaluated against one frozen source.
-#[derive(Clone, Debug, Serialize, zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryOutput)]
-pub struct SpatialSamples {
-    /// Exact SDK version of the immutable formal or candidate snapshot.
-    pub version: crate::authoring::Version,
-    /// Owned requested parameter maps, preserving pose order and duplicates.
-    pub requested: Vec<crate::evaluation::PreviewValues>,
-    /// Owned geometric queries shared by every returned frame.
-    pub queries: Vec<SpatialQuery>,
-    /// Effective poses and query results, aligned with requested parameter maps.
-    pub frames: Vec<SpatialFrame>,
-}

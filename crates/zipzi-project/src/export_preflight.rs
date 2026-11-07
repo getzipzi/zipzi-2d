@@ -1,7 +1,7 @@
 //! Opaque export guards shared with actual exporters. No file encoding, I/O,
 //! provenance rewriting or implicit extension removal occurs during preflight.
 use std::collections::BTreeSet;
-use zipzi_core::{document::ConversionControl, Document, Status};
+use zipzi_core::{state::ConversionControl, state::DocumentState, Status};
 
 pub use zipzi_contract::project::{OpaqueExportIssue, OpaqueExportProblem};
 
@@ -18,7 +18,7 @@ impl OpaqueExportProblemCode for OpaqueExportProblem {
     }
 }
 pub fn preflight_opaque_exports(
-    document: &Document,
+    document: &DocumentState,
     control: &ConversionControl,
 ) -> Result<BTreeSet<OpaqueExportIssue>, Status> {
     control.check()?;
@@ -39,7 +39,7 @@ pub fn preflight_opaque_exports(
     for id in document.motion_order() {
         control.check()?;
         issues.extend(
-            crate::motion::opaque_export_problems(document, document.get_motion(id).unwrap())
+            crate::motion::opaque_export_problems(document, document.motion(id).unwrap())
                 .into_iter()
                 .map(|problem| OpaqueExportIssue::Motion {
                     id: id.clone(),
@@ -50,15 +50,12 @@ pub fn preflight_opaque_exports(
     for id in document.expression_order() {
         control.check()?;
         issues.extend(
-            crate::expression::opaque_export_problems(
-                document,
-                document.get_expression(id).unwrap(),
-            )
-            .into_iter()
-            .map(|problem| OpaqueExportIssue::Expression {
-                id: id.clone(),
-                problem,
-            }),
+            crate::expression::opaque_export_problems(document, document.expression(id).unwrap())
+                .into_iter()
+                .map(|problem| OpaqueExportIssue::Expression {
+                    id: id.clone(),
+                    problem,
+                }),
         );
     }
     if let Some(pose) = document.pose() {

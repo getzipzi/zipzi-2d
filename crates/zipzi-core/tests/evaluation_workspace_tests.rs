@@ -1,6 +1,9 @@
+mod support;
+
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
-use zipzi_core::SceneTrackEvaluation;
+use support::{image, prepare};
+use zipzi_core::state::{AssetContent, DocumentState, RecordDomain};
 use zipzi_core::*;
 
 struct CountingAllocator;
@@ -33,29 +36,19 @@ fn id(n: usize) -> String {
     format!("{n:08x}-1111-4111-8111-111111111111")
 }
 
-fn document(count: usize) -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(id(1), Canvas::new(640., 480., Vec2::new(320., 240.), 100.))
-        .is_ok());
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: id(2),
-            name: String::new(),
-            content: Some(zipzi_core::ImageContent {
-                source: "tex.png".into(),
-                width: 64,
-                height: 64,
-                ..Default::default()
-            }),
-        })
-        .status
-        .is_ok());
+fn document(count: usize) -> DocumentState {
+    let base = DocumentState::new(
+        id(1),
+        Canvas::new(640., 480., Vec2::new(320., 240.), 100.).into(),
+    )
+    .unwrap();
+    let mut builder = base.builder();
+    builder.create_asset(image(id(2), "", 64, 64)).unwrap();
     for n in 0..count {
-        assert!(doc
+        builder
             .create_mesh(Mesh {
                 id: id(n + 3),
+                runtime_id: format!("Mesh{n}"),
                 texture_asset_id: (id(2)).into(),
                 vertex_ids: vec![1, 2, 3],
                 base_positions: vec![Vec2::new(0., 0.), Vec2::new(10., 0.), Vec2::new(0., 10.)],
@@ -63,32 +56,29 @@ fn document(count: usize) -> Document {
                 triangles: vec![[1, 2, 3]],
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
-    doc
+    builder.freeze().unwrap().state
 }
 
 #[test]
-fn saved_content_queries_do_not_allocate_and_still_detect_reverted_edits() {
-    let mut doc = document(100);
-    doc.mark_saved();
-    let original = doc.clone();
-    let count = allocations(|| {
-        assert!(!doc.modified());
-        assert!(doc.same_content(&original));
-    });
-    assert_eq!(count, 0);
-    assert!(doc.rename_mesh(&id(3), "changed".into()).status.is_ok());
-    assert!(doc.modified());
-    assert!(!doc.same_content(&original));
-    doc.restore_from(&original);
-    assert!(!doc.modified());
+fn snapshot_identity_checks_and_clones_do_not_allocate() {
+    let original = document(100);
+    let content = original.content_id();
+    assert_eq!(
+        allocations(|| assert_eq!(original.clone().content_id(), content)),
+        0
+    );
+    let mut mesh = original.mesh(&id(3)).unwrap().clone();
+    mesh.name = "changed".into();
+    let renamed = prepare(&original, |b| b.replace_mesh(mesh)).unwrap().state;
+    assert_ne!(renamed.content_id(), content);
+    assert_eq!(original.content_id(), content);
 }
 
 #[test]
 fn workspace_reuses_geometry_and_preserves_output_on_late_failure() {
-    let mut doc = document(100);
+    let doc = document(100);
     let preview = PreviewValues::new();
     let mut output = DrawableFrame::default();
     let mut evaluator = FrameEvaluator::default();
@@ -123,14 +113,14 @@ fn workspace_reuses_geometry_and_preserves_output_on_late_failure() {
     );
     println!("100 meshes: reused={reused}, one_shot={one_shot} allocations");
 
-    let valid = doc.clone();
-    let mut overflow = doc.get_mesh(&id(3)).unwrap().clone();
+    let mut overflow = doc.mesh(&id(3)).unwrap().clone();
     overflow.base_positions[0].x = f32::MAX;
-    assert!(doc.replace_mesh(overflow).status.is_ok());
     let rotation_id = id(9999);
-    assert!(doc
+    let mut builder = doc.builder();
+    builder
         .create_transform(Transform {
             id: rotation_id.clone(),
+            runtime_id: "OverflowRotation".into(),
             data: TransformData::Rotation(RotationTransform {
                 pose: RotationPose {
                     scale: 2.,
@@ -140,17 +130,17 @@ fn workspace_reuses_geometry_and_preserves_output_on_late_failure() {
             }),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    let mut overflow_mesh = doc.get_mesh(&id(3)).unwrap().clone();
-    overflow_mesh.deformer_id = rotation_id;
-    assert!(doc.replace_mesh(overflow_mesh).status.is_ok());
+        .unwrap();
+    overflow.deformer_id = rotation_id;
+    builder.replace_mesh(overflow).unwrap();
+    let overflow_state = builder.freeze().unwrap().state;
     assert_eq!(
-        evaluator.evaluate(&doc, &preview, &mut output).code,
+        evaluator
+            .evaluate(&overflow_state, &preview, &mut output)
+            .code,
         "NON_FINITE"
     );
     assert_eq!(output, fresh);
-    doc.restore_from(&valid);
     assert!(evaluator.evaluate(&doc, &preview, &mut output).is_ok());
     assert!(evaluate_frame(&doc, &preview, &mut fresh).is_ok());
     assert_eq!(output, fresh);
@@ -163,17 +153,18 @@ fn workspace_reuses_geometry_and_preserves_output_on_late_failure() {
 fn published_frame_ownership_preserves_snapshots_and_recycles_released_buffers() {
     use zipzi_core::preview::PreviewState;
 
-    let mut doc = document(100);
+    let doc = document(100);
     let parameter = id(200);
-    assert!(doc
-        .create_parameter(Parameter {
+    let doc = prepare(&doc, |b| {
+        b.create_parameter(Parameter {
             id: parameter.clone(),
             minimum: -1.0,
             maximum: 1.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
+    })
+    .unwrap()
+    .state;
 
     let measure = |retain: bool| {
         let mut state = PreviewState::default();
@@ -210,17 +201,18 @@ fn published_frame_ownership_preserves_snapshots_and_recycles_released_buffers()
 
 #[test]
 fn binding_index_tracks_retarget_delete_and_restore() {
-    let mut doc = document(2);
+    let doc = document(2);
     let parameter = id(10);
-    assert!(doc
-        .create_parameter(Parameter {
+    let doc = prepare(&doc, |b| {
+        b.create_parameter(Parameter {
             id: parameter.clone(),
             minimum: -1.,
             maximum: 1.,
             ..Default::default()
         })
-        .status
-        .is_ok());
+    })
+    .unwrap()
+    .state;
     assert!(doc.binding_for_mesh(&id(3)).is_none());
     let binding = MeshBinding {
         id: id(11),
@@ -233,29 +225,32 @@ fn binding_index_tracks_retarget_delete_and_restore() {
         }],
         keyforms: vec![MeshKeyform {
             keys: vec![0.],
-            positions: doc.get_mesh(&id(3)).unwrap().base_positions.clone(),
+            positions: doc.mesh(&id(3)).unwrap().base_positions.clone(),
             ..Default::default()
         }],
     };
-    assert!(doc.create_binding(binding.clone()).status.is_ok());
+    let doc = prepare(&doc, |b| b.create_binding(binding.clone()))
+        .unwrap()
+        .state;
     assert_eq!(doc.binding_for_mesh(&id(3)).unwrap().id, binding.id);
-    let saved = doc.clone();
-    let mut moved = binding.clone();
+    let saved = doc;
+    let mut moved = saved.binding(&binding.id).unwrap().clone();
     moved.mesh_id = id(4);
-    assert!(doc.replace_binding(moved).status.is_ok());
+    let doc = prepare(&saved, |b| b.replace_binding(moved)).unwrap().state;
     assert!(doc.binding_for_mesh(&id(3)).is_none());
     assert_eq!(doc.binding_for_mesh(&id(4)).unwrap().id, binding.id);
-    assert!(doc.erase_object(&binding.id).status.is_ok());
-    assert!(doc.binding_for_mesh(&id(4)).is_none());
-    doc.restore_from(&saved);
-    assert_eq!(doc.binding_for_mesh(&id(3)).unwrap().id, binding.id);
-    assert!(doc.binding_for_mesh(&id(4)).is_none());
+    let deleted = prepare(&doc, |b| b.remove_binding(&binding.id))
+        .unwrap()
+        .state;
+    assert!(deleted.binding_for_mesh(&id(4)).is_none());
+    assert_eq!(saved.binding_for_mesh(&id(3)).unwrap().id, binding.id);
+    assert!(saved.binding_for_mesh(&id(4)).is_none());
 }
 
 #[test]
-fn static_geometry_survives_positions_and_names_but_not_topology_changes() {
+fn static_geometry_tracks_snapshot_edits_and_topology_changes() {
     use std::sync::Arc;
-    let mut doc = document(1);
+    let doc = document(1);
     let mut evaluator = FrameEvaluator::default();
     let mut frame = DrawableFrame::default();
     assert!(evaluator
@@ -263,25 +258,30 @@ fn static_geometry_survives_positions_and_names_but_not_topology_changes() {
         .is_ok());
     let indices = frame.drawables[0].indices.clone();
     let uvs = frame.drawables[0].uvs.clone();
-    assert!(doc.rename_mesh(&id(3), "renamed".into()).status.is_ok());
-    assert!(doc
-        .set_vertex_positions(&id(3), &[1], &[Vec2::new(2., 3.)])
-        .status
-        .is_ok());
+    let mut mesh = doc.mesh(&id(3)).unwrap().clone();
+    mesh.name = "renamed".into();
+    mesh.base_positions[0] = Vec2::new(2., 3.);
+    let doc = prepare(&doc, |b| b.replace_mesh(mesh)).unwrap().state;
     assert!(evaluator
         .evaluate(&doc, &PreviewValues::new(), &mut frame)
         .is_ok());
-    assert!(Arc::ptr_eq(&indices, &frame.drawables[0].indices));
-    assert!(Arc::ptr_eq(&uvs, &frame.drawables[0].uvs));
-    let mut mesh = doc.get_mesh(&id(3)).unwrap().clone();
+    assert_eq!(indices, frame.drawables[0].indices);
+    assert_eq!(uvs, frame.drawables[0].uvs);
+    let warmed_uvs = frame.drawables[0].uvs.clone();
+    assert!(evaluator
+        .evaluate(&doc, &PreviewValues::new(), &mut frame)
+        .is_ok());
+    assert!(Arc::ptr_eq(&warmed_uvs, &frame.drawables[0].uvs));
+    let mut mesh = doc.mesh(&id(3)).unwrap().clone();
     mesh.uvs[0] = Vec2::new(0.5, 0.75);
-    assert!(doc.replace_mesh(mesh).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_mesh(mesh)).unwrap().state;
     assert!(evaluator
         .evaluate(&doc, &PreviewValues::new(), &mut frame)
         .is_ok());
-    assert!(!Arc::ptr_eq(&uvs, &frame.drawables[0].uvs));
-    assert_eq!(uvs[0], Vec2::new(0., 0.));
-    // Reusing an evaluator on another document with the same revision is safe.
+    assert_ne!(uvs, frame.drawables[0].uvs);
+    assert_eq!(frame.drawables[0].uvs[0], Vec2::new(0.5, 0.75));
+    assert_eq!(uvs[0], Vec2::default());
+    // Reusing an evaluator on independent frozen content is safe.
     let other = document(2);
     assert!(evaluator
         .evaluate(&other, &PreviewValues::new(), &mut frame)
@@ -290,59 +290,64 @@ fn static_geometry_survives_positions_and_names_but_not_topology_changes() {
 }
 
 #[test]
-fn metadata_reuses_preview_but_resources_and_restore_invalidate() {
+fn preview_rekeys_on_metadata_resources_and_previous_snapshots() {
     use std::sync::Arc;
     use zipzi_core::preview::PreviewState;
-    let mut doc = document(1);
-    let saved = doc.clone();
+    let saved = document(1);
     let mut preview = PreviewState::default();
-    let first = preview.frame(&doc, 1).unwrap();
-    assert!(doc.rename_mesh(&id(3), "renamed".into()).status.is_ok());
-    assert!(Arc::ptr_eq(&first, &preview.frame(&doc, 1).unwrap()));
-    assert_eq!(preview.evaluation_count(), 1);
-    let mut asset = doc.get_asset(&id(2)).unwrap().clone();
-    asset.content.as_mut().unwrap().source = "replacement.png".into();
-    assert_eq!(doc.replace_asset(asset).changes.kind, ChangeKind::Resources);
-    let second = preview.frame(&doc, 1).unwrap();
-    assert!(!Arc::ptr_eq(&first, &second));
-    assert!(Arc::ptr_eq(
-        &first.drawables[0].uvs,
-        &second.drawables[0].uvs
-    ));
-    doc.restore_from(&saved);
-    assert!(!Arc::ptr_eq(&second, &preview.frame(&doc, 1).unwrap()));
+    let first = preview.frame(&saved, 1).unwrap();
+    let mut mesh = saved.mesh(&id(3)).unwrap().clone();
+    mesh.name = "renamed".into();
+    let doc = prepare(&saved, |b| b.replace_mesh(mesh)).unwrap().state;
+    let renamed = preview.frame(&doc, 1).unwrap();
+    assert_eq!(preview.evaluation_count(), 2);
+    assert_eq!(first.drawables[0].positions, renamed.drawables[0].positions);
+    assert!(Arc::ptr_eq(&renamed, &preview.frame(&doc, 1).unwrap()));
+    let mut asset = doc.asset(&id(2)).unwrap().clone();
+    let AssetContent::Image { resource, .. } = &mut asset.content else {
+        panic!("expected image");
+    };
+    *resource = Default::default();
+    let changed = prepare(&doc, |b| b.replace_asset(asset)).unwrap();
+    assert_eq!(changed.writes.records()[0].domain, RecordDomain::Asset);
+    let replaced = preview.frame(&changed.state, 1).unwrap();
+    assert!(!Arc::ptr_eq(&renamed, &replaced));
+    assert_eq!(renamed.drawables[0].uvs, replaced.drawables[0].uvs);
+    assert_eq!(first, preview.frame(&saved, 1).unwrap());
 }
 
 #[test]
 fn keyform_order_edit_invalidates_prepared_group_bounds() {
-    let mut doc = document(2);
-    assert!(doc
-        .create_parameter(Parameter {
+    let doc = document(2);
+    let doc = prepare(&doc, |b| {
+        b.create_parameter(Parameter {
             id: id(10),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    })
+    .unwrap()
+    .state;
     let mut form = MeshKeyform {
         keys: vec![0.],
-        positions: doc.get_mesh(&id(3)).unwrap().base_positions.clone(),
+        positions: doc.mesh(&id(3)).unwrap().base_positions.clone(),
         draw_order: Some(0.),
         ..Default::default()
     };
-    assert!(doc
-        .create_binding(MeshBinding {
+    let doc = prepare(&doc, |b| {
+        b.create_binding(MeshBinding {
             id: id(11),
             mesh_id: id(3),
             axes: vec![BindingAxis {
                 id: Default::default(),
                 samples: Default::default(),
                 parameter_id: id(10),
-                keys: vec![0.]
+                keys: vec![0.],
             }],
             keyforms: vec![form.clone()],
         })
-        .status
-        .is_ok());
+    })
+    .unwrap()
+    .state;
     let mut evaluator = FrameEvaluator::default();
     let mut frame = DrawableFrame::default();
     assert!(evaluator
@@ -350,10 +355,9 @@ fn keyform_order_edit_invalidates_prepared_group_bounds() {
         .is_ok());
     assert!(frame.drawables[0].render_order < frame.drawables[1].render_order);
     form.draw_order = Some(10.);
-    assert_eq!(
-        doc.set_mesh_keyform(&id(11), form).changes.kind,
-        ChangeKind::Structure
-    );
+    let doc = prepare(&doc, |b| b.set_mesh_keyform(&id(11), form))
+        .unwrap()
+        .state;
     assert!(evaluator
         .evaluate(&doc, &PreviewValues::new(), &mut frame)
         .is_ok());
@@ -361,54 +365,67 @@ fn keyform_order_edit_invalidates_prepared_group_bounds() {
 }
 
 #[test]
-fn opacity_edits_preserve_prepared_topology_and_reject_invalid_values() {
-    let mut doc = document(2);
+fn opacity_edits_preserve_geometry_and_reject_invalid_values() {
+    use zipzi_core::state::{DocumentBuilder, PropertyPatch};
+
+    let opacity = |b: &mut DocumentBuilder, n, value| {
+        let id = id(n);
+        let mesh = b
+            .mesh(&id)
+            .ok_or_else(|| Status::error("MISSING_MESH", &id))?;
+        b.patch_property(PropertyPatch::Mesh {
+            id,
+            keyform: None,
+            appearance: Appearance {
+                opacity: value,
+                ..mesh.appearance.clone()
+            },
+            draw_order: mesh.draw_order,
+        })
+    };
+    let doc = document(2);
     let mut before = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &PreviewValues::default(), &mut before).is_ok());
-    let edit = doc.set_mesh_opacity(&id(3), 0.5);
-    assert!(edit.status.is_ok());
-    assert_eq!(edit.changes.kind, ChangeKind::Appearance);
+    let edit = prepare(&doc, |b| opacity(b, 3, 0.5)).unwrap();
+    assert_eq!(edit.writes.records()[0].domain, RecordDomain::Mesh);
+    let doc = edit.state;
     let mut after = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &PreviewValues::default(), &mut after).is_ok());
     assert_eq!(after.drawables[0].opacity, 0.5);
     assert_eq!(before.drawables[0].positions, after.drawables[0].positions);
-    assert!(std::sync::Arc::ptr_eq(
-        &before.drawables[0].indices,
-        &after.drawables[0].indices
-    ));
-    assert!(std::sync::Arc::ptr_eq(
-        &before.drawables[0].uvs,
-        &after.drawables[0].uvs
-    ));
-    let revision = doc.revision();
-    for value in [f32::NAN, f32::INFINITY, -0.1, 1.1] {
-        assert!(!doc.set_mesh_opacity(&id(3), value).status.is_ok());
-        assert_eq!(doc.revision(), revision);
+    assert_eq!(before.drawables[0].indices, after.drawables[0].indices);
+    assert_eq!(before.drawables[0].uvs, after.drawables[0].uvs);
+    for value in [f32::NAN, f32::INFINITY, -0.1] {
+        assert!(prepare(&doc, |b| opacity(b, 3, value)).is_err());
     }
-    assert!(!doc.set_mesh_opacity(&id(999), 0.5).status.is_ok());
-    assert_eq!(
-        doc.set_mesh_opacity(&id(3), 0.5).changes.kind,
-        ChangeKind::None
-    );
+    // Persistent appearance preserves finite opacity above one for format roundtrips.
+    let over = prepare(&doc, |b| opacity(b, 3, 1.1)).unwrap();
+    assert_eq!(over.state.mesh(&id(3)).unwrap().appearance.opacity, 1.1);
+    assert!(prepare(&doc, |b| opacity(b, 999, 0.5)).is_err());
+    let unchanged = prepare(&doc, |b| opacity(b, 3, 0.5)).unwrap();
+    assert!(unchanged.writes.is_empty());
+    assert_eq!(unchanged.state.content_id(), doc.content_id());
 }
 
 #[test]
 fn prepared_selection_tracks_precision_axes_and_restored_documents() {
-    let mut doc = document(2);
+    let doc = document(2);
     let parameter = id(10);
-    assert!(doc
-        .create_parameter(Parameter {
+    let doc = prepare(&doc, |b| {
+        b.create_parameter(Parameter {
             id: parameter.clone(),
             minimum: -1.,
             maximum: 1.,
             decimal_places: 6,
             ..Default::default()
         })
-        .status
-        .is_ok());
+    })
+    .unwrap()
+    .state;
+    let mut builder = doc.builder();
     for mesh in [3, 4] {
-        let base = doc.get_mesh(&id(mesh)).unwrap().base_positions.clone();
-        assert!(doc
+        let base = doc.mesh(&id(mesh)).unwrap().base_positions.clone();
+        builder
             .create_binding(MeshBinding {
                 id: id(mesh + 10),
                 mesh_id: id(mesh),
@@ -416,7 +433,7 @@ fn prepared_selection_tracks_precision_axes_and_restored_documents() {
                     id: Default::default(),
                     samples: Default::default(),
                     parameter_id: parameter.clone(),
-                    keys: vec![-1., 0., 1.]
+                    keys: vec![-1., 0., 1.],
                 }],
                 keyforms: [-1., 0., 1.]
                     .into_iter()
@@ -430,9 +447,9 @@ fn prepared_selection_tracks_precision_axes_and_restored_documents() {
                     })
                     .collect(),
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
+    let doc = builder.freeze().unwrap().state;
     let original = doc.clone();
     let values = [(parameter.clone(), 0.049)].into();
     let mut evaluator = FrameEvaluator::default();
@@ -440,9 +457,9 @@ fn prepared_selection_tracks_precision_axes_and_restored_documents() {
     assert!(evaluator.evaluate(&doc, &values, &mut frame).is_ok());
     let interpolated = frame.clone();
     assert_eq!(frame.drawables[0].positions, frame.drawables[1].positions);
-    let mut p = doc.get_parameter(&parameter).unwrap().clone();
+    let mut p = doc.parameter(&parameter).unwrap().clone();
     p.decimal_places = 1;
-    assert!(doc.replace_parameter(p).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_parameter(p)).unwrap().state;
     assert!(evaluator.evaluate(&doc, &values, &mut frame).is_ok());
     let snapped = frame.drawables[0].positions.clone();
     assert_ne!(snapped, interpolated.drawables[0].positions);
@@ -450,32 +467,34 @@ fn prepared_selection_tracks_precision_axes_and_restored_documents() {
     assert!(evaluate_frame(&doc, &[(parameter.clone(), 0.)].into(), &mut zero).is_ok());
     assert_eq!(snapped, zero.drawables[0].positions);
     // One binding diverges from the shared grid; the other must stay snapped.
-    let mut b = doc.get_binding(&id(13)).unwrap().clone();
+    let mut b = doc.binding(&id(13)).unwrap().clone();
     b.axes[0].keys.remove(1);
     b.axes[0].samples.remove(1);
     b.keyforms.remove(1);
-    assert!(doc.replace_binding(b).status.is_ok());
+    let doc = prepare(&doc, |builder| builder.replace_binding(b))
+        .unwrap()
+        .state;
     assert!(evaluator.evaluate(&doc, &values, &mut frame).is_ok());
     assert_ne!(frame.drawables[0].positions, snapped);
     assert_eq!(frame.drawables[1].positions, snapped);
-    doc.restore_from(&original);
-    assert!(evaluator.evaluate(&doc, &values, &mut frame).is_ok());
+    assert!(evaluator.evaluate(&original, &values, &mut frame).is_ok());
     assert_eq!(frame.drawables, interpolated.drawables);
 }
 
 #[test]
 fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraints() {
-    let mut doc = document(2);
-    assert!(doc
+    let mut builder = document(2).builder();
+    builder
         .create_transform(Transform {
             id: id(30),
+            runtime_id: "Rotation".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
+        .unwrap();
+    builder
         .create_transform(Transform {
             id: id(31),
+            runtime_id: "Warp".into(),
             parent_id: Some(id(30).into()),
             data: TransformData::Warp(WarpTransform {
                 rows: 1,
@@ -486,15 +505,14 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
                     Vec2::new(0., 0.),
                     Vec2::new(1., 0.),
                     Vec2::new(0., 1.),
-                    Vec2::new(1., 1.)
+                    Vec2::new(1., 1.),
                 ],
             }),
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     for (n, kind) in [(20, ParameterKind::BlendShape), (21, ParameterKind::Normal)] {
-        assert!(doc
+        builder
             .create_parameter(Parameter {
                 id: id(n),
                 kind,
@@ -502,10 +520,9 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
                 maximum: 1.,
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
-    assert!(doc
+    builder
         .create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
@@ -514,8 +531,7 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
             keys: vec![0., 1.],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
+        .unwrap();
     let mut constraint = BlendShapeConstraint {
         samples: Default::default(),
         id: id(23),
@@ -523,12 +539,9 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
         keys: vec![0., 1.],
         weights: vec![0., 1.],
     };
-    assert!(doc
-        .create_blend_constraint(constraint.clone())
-        .status
-        .is_ok());
+    builder.create_blend_constraint(constraint.clone()).unwrap();
     for n in [3, 4] {
-        assert!(doc
+        builder
             .create_blend_binding(BlendShapeBinding {
                 id: id(n + 40),
                 target_id: id(n),
@@ -546,9 +559,9 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
                     },
                 ]),
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
+    let doc = builder.freeze().unwrap().state;
     let original = doc.clone();
     let mut evaluator = FrameEvaluator::default();
     let mut frame = DrawableFrame::default();
@@ -574,15 +587,18 @@ fn animated_workspace_reuses_deformers_and_invalidates_compiled_blend_constraint
     // Same table/constraint shared by both meshes; a constraint edit must
     // invalidate compiled samples even when reusing the same evaluator.
     constraint.weights = vec![1., 1.];
-    assert!(doc.replace_blend_constraint(constraint).status.is_ok());
+    let doc = prepare(&doc, |b| b.replace_blend_constraint(constraint))
+        .unwrap()
+        .state;
     assert!(evaluator.evaluate(&doc, &samples[3], &mut frame).is_ok());
     assert!(
         (frame.drawables[0].positions[0].x - initial.drawables[0].positions[0].x - 50.).abs()
             < 1e-6
     );
     assert_eq!(frame.drawables[0].positions, frame.drawables[1].positions);
-    doc.restore_from(&original);
-    assert!(evaluator.evaluate(&doc, &samples[3], &mut frame).is_ok());
+    assert!(evaluator
+        .evaluate(&original, &samples[3], &mut frame)
+        .is_ok());
     assert_eq!(frame.drawables, initial.drawables);
     assert_eq!(frame.deformers, initial.deformers);
     // Reusing the evaluator for another document must not retain graph slots.

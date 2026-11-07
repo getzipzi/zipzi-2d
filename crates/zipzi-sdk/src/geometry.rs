@@ -1,14 +1,17 @@
 //! Deterministic authoring geometry and dependency-preserving remeshing.
-use crate::{AuthoringSession, EditReceipt, SdkError, TopologyReplacement, Version};
-use zipzi_core::{BlendShapeTargetKind, DeltaKeyforms, Vec2};
+use crate::ConversionControl;
+use crate::Status;
+use std::collections::HashSet;
+pub use zipzi_contract::spatial::ObjectTarget;
+use zipzi_core::{Mesh, Part, Vec2};
 
 pub use zipzi_contract::authoring::MeshGeometry;
 
-fn invalid(message: &str) -> SdkError {
-    SdkError::new("INVALID_RECTANGLE_GRID", message, "rectangle_grid_geometry")
+fn invalid(message: &str) -> Status {
+    Status::error("INVALID_RECTANGLE_GRID", message)
 }
 
-fn sample(values: &[Vec2], columns: usize, rows: usize) -> Result<Vec<Vec2>, SdkError> {
+fn sample(values: &[Vec2], columns: usize, rows: usize) -> Result<Vec<Vec2>, Status> {
     if values.len() != 4 || values.iter().any(|p| !p.x.is_finite() || !p.y.is_finite()) {
         return Err(invalid("rectangle values must contain four finite points"));
     }
@@ -44,7 +47,7 @@ pub fn rectangle_grid_geometry(
     source: &MeshGeometry,
     columns: usize,
     rows: usize,
-) -> Result<MeshGeometry, SdkError> {
+) -> Result<MeshGeometry, Status> {
     if source.meshing.is_some() {
         return Err(invalid(
             "rectangle grid cannot discard existing modeling topology",
@@ -153,135 +156,105 @@ pub fn rectangle_grid_geometry(
     })
 }
 
-impl AuthoringSession {
-    /// Subdivide a rectangle and migrate mesh keyforms, mesh BlendShapes and
-    /// corner glue in one undoable edit. Bound grids must be square so the
-    /// source diagonal remains an edge and piecewise-affine poses are preserved.
-    pub fn remesh_rectangle_grid(
-        &mut self,
-        mesh_id: &str,
-        columns: usize,
-        rows: usize,
-        expected: Option<Version>,
-    ) -> Result<EditReceipt, SdkError> {
-        self.begin_remesh_rectangle_grid(mesh_id, columns, rows, expected)?
-            .commit_to(self)
+pub fn rectangle_mesh(
+    id: &str,
+    name: &str,
+    asset_id: &str,
+    min: Vec2,
+    max: Vec2,
+) -> Result<Mesh, Status> {
+    if !min.x.is_finite()
+        || !min.y.is_finite()
+        || !max.x.is_finite()
+        || !max.y.is_finite()
+        || min.x >= max.x
+        || min.y >= max.y
+    {
+        return Err(Status::error(
+            "INVALID_RECTANGLE",
+            "Finite min must be below max",
+        ));
     }
-
-    /// Stage the same topology operation for a host-controlled publication.
-    pub fn begin_remesh_rectangle_grid(
-        &self,
-        mesh_id: &str,
-        columns: usize,
-        rows: usize,
-        expected: Option<Version>,
-    ) -> Result<crate::EditSession<'static>, SdkError> {
-        let mut edit = self.begin_owned_edit("remesh rectangle grid", expected)?;
-        edit.remesh_rectangle_grid(mesh_id, columns, rows)?;
-        Ok(edit)
-    }
+    Ok(Mesh {
+        id: id.into(),
+        runtime_id: id.into(),
+        name: name.into(),
+        texture_asset_id: asset_id.into(),
+        vertex_ids: vec![0, 1, 2, 3],
+        base_positions: vec![min, Vec2::new(max.x, min.y), max, Vec2::new(min.x, max.y)],
+        uvs: vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(1.0, 0.0),
+            Vec2::new(1.0, 1.0),
+            Vec2::new(0.0, 1.0),
+        ],
+        triangles: vec![[0, 1, 2], [0, 2, 3]],
+        ..Mesh::default()
+    })
 }
-impl crate::EditSession<'_> {
-    /// Generate topology and migrate ordinary/Blend keyforms in the current candidate.
-    pub fn remesh_rectangle_grid(
-        &mut self,
-        mesh_id: &str,
-        columns: usize,
-        rows: usize,
-    ) -> Result<(), SdkError> {
-        self.ensure_active("remesh_rectangle_grid")?;
-        let replacement = (|| {
-            let doc = self.candidate_document();
-            let mut mesh = doc.get_mesh(mesh_id).cloned().ok_or_else(|| {
-                SdkError::new("NOT_FOUND", "unknown mesh ID", "remesh_rectangle_grid")
-            })?;
-            let space = if mesh.deformer_id.is_empty() {
-                crate::GeometrySpace::Model
-            } else if doc
-                .get_transform(&mesh.deformer_id)
-                .is_some_and(|t| t.warp().is_some())
-            {
-                crate::GeometrySpace::WarpParameter(mesh.deformer_id.clone())
-            } else {
-                crate::GeometrySpace::RotationLocal(mesh.deformer_id.clone())
-            };
-            let source = crate::GeometrySnapshot {
-                version: self.before,
-                mesh_id: mesh_id.into(),
-                vertex_ids: mesh.vertex_ids.clone(),
-                positions: mesh.base_positions.clone(),
-                uvs: mesh.uvs.clone(),
-                triangles: mesh.triangles.clone(),
-                meshing: mesh.meshing.clone(),
-                space,
-            };
-            let geometry = rectangle_grid_geometry(
-                &MeshGeometry {
-                    vertex_ids: mesh.vertex_ids.clone(),
-                    positions: mesh.base_positions.clone(),
-                    uvs: mesh.uvs.clone(),
-                    triangles: mesh.triangles.clone(),
-                    meshing: mesh.meshing.clone(),
-                },
-                columns,
-                rows,
-            )?;
-            let mut binding = doc
-                .binding_order()
-                .iter()
-                .filter_map(|id| doc.get_binding(id))
-                .find(|b| b.mesh_id == mesh_id)
-                .cloned();
-            let mut blends: Vec<_> = doc
-                .blend_binding_order()
-                .iter()
-                .filter_map(|id| doc.get_blend_binding(id))
-                .filter(|b| b.target_id == mesh_id)
-                .cloned()
-                .collect();
-            if (binding.is_some() || !blends.is_empty()) && columns != rows {
-                return Err(invalid(
-                    "bound rectangle grids require equal columns and rows",
-                ));
-            }
-            if let Some(binding) = &mut binding {
-                for form in &mut binding.keyforms {
-                    form.positions = sample(&form.positions, columns, rows)?;
+
+/// Resolve target IDs in authoring mesh order. Missing IDs are errors; an
+/// existing Part without descendant meshes resolves to an empty vector.
+pub fn resolve_mesh_ids(
+    meshes: &[Mesh],
+    parts: &[Part],
+    targets: &[ObjectTarget],
+) -> Result<Vec<String>, Status> {
+    resolve_mesh_ids_from(
+        meshes.iter(),
+        parts.iter(),
+        targets,
+        &ConversionControl::default(),
+    )
+}
+
+fn resolve_mesh_ids_from<'a>(
+    meshes: impl Iterator<Item = &'a Mesh> + Clone,
+    parts: impl Iterator<Item = &'a Part> + Clone,
+    targets: &[ObjectTarget],
+    control: &ConversionControl,
+) -> Result<Vec<String>, Status> {
+    let mesh_by_id: HashSet<_> = meshes.clone().map(|mesh| mesh.id.as_str()).collect();
+    let part_by_id: HashSet<_> = parts.clone().map(|part| part.id.as_str()).collect();
+    let mut selected: HashSet<&str> = HashSet::new();
+    let mut descendants: HashSet<&str> = HashSet::new();
+    for target in targets {
+        control.check()?;
+        match target {
+            ObjectTarget::Mesh(id) => {
+                if !mesh_by_id.contains(id.as_str()) {
+                    return Err(Status::error("MISSING_MESH", id));
                 }
+                selected.insert(id.as_str());
             }
-            for blend in &mut blends {
-                if blend.target_kind != BlendShapeTargetKind::Mesh {
-                    return Err(invalid("unsupported BlendShape target on rectangle mesh"));
+            ObjectTarget::Part(id) => {
+                if !part_by_id.contains(id.as_str()) {
+                    return Err(Status::error("MISSING_PART", id));
                 }
-                let DeltaKeyforms::Mesh(forms) = &mut blend.keyforms else {
-                    return Err(invalid("unsupported BlendShape keyform on rectangle mesh"));
-                };
-                for form in forms {
-                    form.positions = sample(&form.positions, columns, rows)?;
-                }
+                descendants.insert(id.as_str());
             }
-            let glues = doc
-                .glue_order()
-                .iter()
-                .filter_map(|id| doc.get_glue(id))
-                .filter(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id)
-                .cloned()
-                .collect();
-            mesh.vertex_ids = geometry.vertex_ids;
-            mesh.base_positions = geometry.positions;
-            mesh.uvs = geometry.uvs;
-            mesh.triangles = geometry.triangles;
-            mesh.meshing = geometry.meshing;
-            let replacement = TopologyReplacement {
-                mesh,
-                binding,
-                blend_bindings: blends,
-                glues,
-                vertex_mapping: source.vertex_ids.iter().map(|&id| (id, Some(id))).collect(),
-            };
-            Ok((source, replacement))
-        })()
-        .map_err(|e| self.abort_with(e))?;
-        self.replace_topology(&replacement.0, replacement.1)
+        }
     }
+    loop {
+        control.check()?;
+        let before = descendants.len();
+        for part in parts.clone() {
+            if descendants.contains(part.parent_id.as_str()) {
+                descendants.insert(part.id.as_str());
+            }
+        }
+        if descendants.len() == before {
+            break;
+        }
+    }
+    for mesh in meshes.clone() {
+        if descendants.contains(mesh.part_id.as_str()) {
+            selected.insert(mesh.id.as_str());
+        }
+    }
+    Ok(meshes
+        .clone()
+        .filter(|mesh| selected.contains(mesh.id.as_str()))
+        .map(|mesh| mesh.id.clone())
+        .collect())
 }

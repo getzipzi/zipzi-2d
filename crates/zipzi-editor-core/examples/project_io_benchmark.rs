@@ -4,7 +4,7 @@ use anyhow::{Result, bail, ensure};
 use serde_json::json;
 use std::{io::Write, path::Path, time::Instant};
 use zipzi_editor_core::{Editor, LoadRequest, ViewportId, ViewportKind, ViewportMetrics};
-use zipzi_project::DocumentSession;
+use zipzi_project::{ProjectImporter, ProjectIo, ResourceStore};
 
 fn measure<T>(phase: &str, operation: impl FnOnce() -> Result<T>) -> Result<T> {
     let start = Instant::now();
@@ -16,48 +16,74 @@ fn measure<T>(phase: &str, operation: impl FnOnce() -> Result<T>) -> Result<T> {
 }
 
 fn project(mode: &str, input: &Path, output: Option<&Path>) -> Result<()> {
-    let mut session = DocumentSession::new();
-    let result = measure(mode, || {
-        Ok(if mode == "project-import" {
-            session.import_model3_authoring(input).0
+    let store = ResourceStore::default();
+    let io = ProjectIo::new(input.parent().unwrap(), store.clone());
+    let (document, resources, diagnostics) = measure(mode, || {
+        if mode == "project-import" {
+            let (result, imported, _) = (ProjectImporter { resources: store }).import_model3(input);
+            let imported = imported.ok_or(result.status)?;
+            Ok((imported.document, imported.resources, result.diagnostics))
         } else {
-            session.open_authoring(input)
-        })
+            let loaded = io.load(input, || true)?;
+            Ok((loaded.document, loaded.resources, loaded.diagnostics))
+        }
     })?;
-    ensure!(result.status.is_ok(), "{result:?}");
-    // Imports can report unresolved display-info references independently of
-    // image validity. Keep those notices and check image resources explicitly.
-    ensure!(session.diagnose().is_empty(), "Invalid image resources");
-    let document = session.document();
+    for id in document.asset_order() {
+        resources.read_texture(document.asset(id).unwrap())?;
+    }
     println!(
         "{}",
         json!({
             "meshes": document.mesh_order().len(),
             "bindings": document.binding_order().len(),
             "assets": document.asset_order().len(),
-            "diagnostics": result.diagnostics.iter().map(|d| json!({
+            "diagnostics": diagnostics.iter().map(|d| json!({
                 "asset_id": d.asset_id, "code": d.code, "message": d.message,
             })).collect::<Vec<_>>(),
         })
     );
     if let Some(output) = output {
         ensure!(!output.exists(), "Output already exists");
-        let saved = measure("project-save", || Ok(session.save(output)))?;
+        measure("project-save", || {
+            Ok(io.save(&document, &resources, output, None, || true)?)
+        })?;
+        let reopened = io.load(output, || true)?;
         ensure!(
-            saved.status.is_ok() && saved.resources_complete(),
-            "{saved:?}"
-        );
-        // Correctness checks are outside the recorded save/import phases.
-        let mut reopened = DocumentSession::new();
-        let opened = reopened.open_authoring(output);
-        ensure!(
-            opened.status.is_ok() && opened.resources_complete(),
-            "{opened:?}"
+            reopened.diagnostics.is_empty(),
+            "{:?}",
+            reopened.diagnostics
         );
         ensure!(
-            session.document().same_content(reopened.document()),
-            "Round trip differs"
+            reopened.document.mesh_order() == document.mesh_order(),
+            "Mesh order differs"
         );
+        ensure!(
+            reopened.document.binding_order() == document.binding_order(),
+            "Binding order differs"
+        );
+        ensure!(
+            reopened.document.asset_order() == document.asset_order(),
+            "Asset order differs"
+        );
+        for id in document.mesh_order() {
+            ensure!(
+                reopened.document.mesh(id) == document.mesh(id),
+                "Mesh {id} differs"
+            );
+        }
+        for id in document.binding_order() {
+            ensure!(
+                reopened.document.binding(id) == document.binding(id),
+                "Binding {id} differs"
+            );
+        }
+        for id in document.asset_order() {
+            let expected = resources.read_texture(document.asset(id).unwrap())?;
+            let actual = reopened
+                .resources
+                .read_texture(reopened.document.asset(id).unwrap())?;
+            ensure!(expected.rgba == actual.rgba, "Image {id} differs");
+        }
         println!("{}", json!({"roundtrip_equal": true}));
     }
     Ok(())

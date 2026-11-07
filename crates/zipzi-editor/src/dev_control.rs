@@ -64,14 +64,14 @@ fn prepare_exit(cx: &mut App) -> anyhow::Result<()> {
     );
     let runtime = host.runtime.read();
     anyhow::ensure!(
-        runtime.pending_jobs().is_empty(),
+        runtime.outstanding_jobs() == 0,
         "Wait for Runtime jobs before restarting Editor"
     );
     anyhow::ensure!(
         runtime
-            .list_sessions()
+            .session_catalog(host.runtime.client_id())?
             .iter()
-            .all(|s| !s.modified && s.state == zipzi_runtime::SessionState::Ready),
+            .all(|s| !s.dirty && !s.saving),
         "Save or close unsaved documents before restarting Editor"
     );
     Ok(())

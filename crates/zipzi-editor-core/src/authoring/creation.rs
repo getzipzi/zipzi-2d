@@ -1,7 +1,8 @@
 //! Editor creation defaults and stable insertion locations; domain validation
 //! remains in the organization planner.
 use super::*;
-use zipzi_sdk::{OrganizationCollection as Collection, OrganizationEdit as Edit};
+use zipzi_contract::document::OrganizationCollection as Collection;
+use zipzi_contract::document::OrganizationEdit as Edit;
 
 impl Document {
     /// Build a single creation transaction from a captured panel selection.
@@ -12,7 +13,7 @@ impl Document {
         kind: ObjectKind,
         name: String,
         selection: &[ObjectRef],
-    ) -> anyhow::Result<zipzi_sdk::OrganizationEditPlan> {
+    ) -> anyhow::Result<crate::EditPreview<zipzi_core::state::OrganizationOutcome>> {
         self.ensure_authoring_idle()?;
         anyhow::ensure!(
             matches!(kind, ObjectKind::Parameter | ObjectKind::ParameterGroup),
@@ -56,7 +57,7 @@ impl Document {
         &self,
         kind: ObjectKind,
         selection: &[ObjectRef],
-    ) -> anyhow::Result<zipzi_sdk::CapabilityState> {
+    ) -> anyhow::Result<zipzi_contract::authoring::CapabilityState> {
         anyhow::ensure!(
             matches!(kind, ObjectKind::Parameter | ObjectKind::ParameterGroup),
             "Expected a parameter or folder"
@@ -68,8 +69,8 @@ impl Document {
             Collection::ParameterGroups { parent_id: owner }
         };
         Ok(self
-            .session
-            .organization_collection_capabilities(&collection)?
+            .model()
+            .collection_capabilities(&CollectionTarget::Organization(collection))?
             .create)
     }
     fn parameter_creation_owner(&self, selection: &[ObjectRef]) -> anyhow::Result<Option<String>> {
@@ -77,17 +78,21 @@ impl Document {
         for object in selection {
             let owner = match object.kind {
                 ObjectKind::Parameter => {
-                    self.session
-                        .handle(zipzi_sdk::ObjectKind::Parameter, &object.id)?;
+                    self.model().require_object(
+                        zipzi_contract::authoring::ObjectKind::Parameter,
+                        &object.id,
+                    )?;
                     self.model()
                         .parameter_group_for(&object.id)
                         .map(str::to_owned)
                 }
                 ObjectKind::ParameterGroup => {
-                    self.session
-                        .handle(zipzi_sdk::ObjectKind::CdiParameterGroup, &object.id)?;
+                    self.model().require_object(
+                        zipzi_contract::authoring::ObjectKind::CdiParameterGroup,
+                        &object.id,
+                    )?;
                     let model = self.model();
-                    let group = model.get_parameter_group(&object.id).unwrap();
+                    let group = model.parameter_group(&object.id).unwrap();
                     if selection.len() == 1 {
                         return Ok(Some(group.id.clone()));
                     }
@@ -127,12 +132,12 @@ impl Document {
                 parent_id: owner.clone(),
             }
         };
-        let order = self.session.organization_collection(collection)?;
+        let order = self.model().organization_collection(&collection)?;
         let before = order
             .iter()
-            .rposition(|id| selection.iter().any(|object| object.id == id.id()))
+            .rposition(|id| selection.iter().any(|object| &object.id == id))
             .and_then(|at| order.get(at + 1))
-            .map(|h| h.id().to_owned());
+            .cloned();
         Ok((owner, before))
     }
 }

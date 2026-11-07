@@ -535,7 +535,6 @@ fn side_dock_keeps_graph_and_tools_accessible(cx: &mut TestAppContext) {
                 .timeline_edit()
                 .unwrap()
                 .candidate
-                .clip()
                 .tracks[0]
                 .initial
                 .value

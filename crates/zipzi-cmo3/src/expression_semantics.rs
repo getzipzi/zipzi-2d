@@ -1,7 +1,7 @@
 //! Preserve runtime expression operations alongside Animator's absolute poses.
 //! optionParam is a native string map, so these entries survive Editor saves
 //! without adding unknown XML fields or claiming native Multiply playback.
-use crate::{Cmo3Error, Document};
+use crate::{Cmo3Error, DocumentState};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use zipzi_core::document::{ExpressionBlend, ExpressionEntry, ExpressionTarget};
@@ -69,11 +69,11 @@ impl Entry {
 }
 
 /// Native runtime sidecars, for Viewer/SDK playback with arbitrary motion bases.
-pub(crate) fn files(doc: &Document) -> Result<BTreeMap<String, Vec<u8>>, Cmo3Error> {
+pub(crate) fn files(doc: &DocumentState) -> Result<BTreeMap<String, Vec<u8>>, Cmo3Error> {
     let mut files = BTreeMap::new();
     let mut manifest = Vec::new();
     for id in doc.expression_order() {
-        let asset = doc.get_expression(id).unwrap();
+        let asset = doc.expression(id).unwrap();
         let projection = doc
             .expression_projection(id)
             .map_err(|s| Cmo3Error::InvalidDocument(format!("{}: {}", s.code, s.message)))?;
@@ -83,7 +83,7 @@ pub(crate) fn files(doc: &Document) -> Result<BTreeMap<String, Vec<u8>>, Cmo3Err
             .map(|entry| {
                 let runtime_id = match &entry.target {
                     ExpressionTarget::Resolved { parameter_id } => {
-                        &doc.get_parameter(parameter_id).unwrap().runtime_id
+                        &doc.parameter(parameter_id).unwrap().runtime_id
                     }
                     ExpressionTarget::Unresolved { runtime_id } => runtime_id,
                     ExpressionTarget::Unspecified => unreachable!(

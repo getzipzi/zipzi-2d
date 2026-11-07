@@ -7,7 +7,6 @@ use zipzi_core::{
     },
 };
 use zipzi_editor_core::*;
-use zipzi_sdk::AuthoringSession;
 
 pub(super) fn id(n: u32) -> String {
     format!("00000000-0000-4000-8000-{n:012x}")
@@ -18,26 +17,33 @@ pub(super) fn fixture(
     opaque: bool,
 ) -> anyhow::Result<(Editor, tempfile::TempDir)> {
     let temp = tempfile::tempdir()?;
-    let mut s = AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;
-    s.edit("Fixture", None, |edit| {
+    let mut s =
+        crate::support::fixture_session(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;
+    crate::support::publish_fixture(&mut s, "Fixture", |edit| {
         for (n, runtime, name, default_value) in [(2, "ParamX", "X", 0.), (3, "ParamY", "Y", 0.3)] {
-            edit.create_parameter(Parameter {
-                id: id(n),
-                runtime_id: runtime.into(),
-                name: name.into(),
-                minimum: -2.,
-                maximum: 2.,
-                default_value,
-                ..Default::default()
-            })?;
+            crate::support::insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: id(n),
+                    runtime_id: runtime.into(),
+                    name: name.into(),
+                    minimum: -2.,
+                    maximum: 2.,
+                    default_value,
+                    ..Default::default()
+                },
+            )?;
         }
-        edit.create_part(Part {
-            id: id(7),
-            runtime_id: "Part0".into(),
-            name: "Part".into(),
-            ..Default::default()
-        })?;
-        let mut info = edit.candidate_document().display_info().clone();
+        crate::support::insert_fixture_part(
+            edit,
+            Part {
+                id: id(7),
+                runtime_id: "Part0".into(),
+                name: "Part".into(),
+                ..Default::default()
+            },
+        )?;
+        let mut info = edit.read_document()?.display_info().clone();
         info.parameter_groups = Some(vec![
             CdiParameterGroup {
                 id: id(5),
@@ -167,7 +173,7 @@ pub(super) fn fixture(
             opaque_source_content_hash: None,
         })
     })?;
-    let receipt = s.save_project(&temp.path().join("fixture.zipzi"), None)?;
+    let receipt = crate::support::save_fixture(&mut s, &temp.path().join("fixture.zipzi"))?;
     let mut editor = crate::support::editor_from_document(Document::open(&receipt.path)?);
     editor.set_workspace(WorkspaceKind::Animation)?;
     editor.set_canvas_metrics(ViewportMetrics {

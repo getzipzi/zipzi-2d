@@ -2,7 +2,7 @@ use super::*;
 impl ObjectIndex {
     pub(crate) fn refresh_resource_labels(&mut self, model: &Model, ids: &[String]) -> bool {
         for id in ids {
-            let Some(asset) = model.get_asset(id) else {
+            let Some(asset) = model.asset(id) else {
                 return false;
             };
             let Some(&slot) = self
@@ -30,8 +30,8 @@ impl ObjectIndex {
             return false;
         };
         let properties = &mut self.objects[slot].properties;
-        properties["export_settings"] = serde_json::json!(model.export_settings());
-        properties["source_canvas"] = serde_json::json!(model.source_canvas());
+        properties["export_settings"] = serde_json::json!(model.setup().export);
+        properties["source_canvas"] = serde_json::json!(model.setup().source_canvas);
         properties["model_settings"] = serde_json::json!(model.model3_settings());
         true
     }

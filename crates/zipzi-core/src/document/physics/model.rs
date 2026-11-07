@@ -1,10 +1,11 @@
 //! Native identities and references are deliberately separate from physics3 DTOs.
 use super::*;
 use crate::physics as wire;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 pub use zipzi_contract::physics_document::PhysicsTarget;
-pub(super) trait PhysicsTargetValidation {
+pub(crate) trait PhysicsTargetValidation {
     fn validation_key(&self) -> String;
 }
 impl PhysicsTargetValidation for PhysicsTarget {
@@ -107,7 +108,7 @@ impl PhysicsDefinitionWire for PhysicsDefinition {
     }
 }
 
-pub(super) trait PhysicsAssetIdentity {
+pub(crate) trait PhysicsAssetIdentity {
     fn identity_roles(&self) -> std::collections::HashMap<&str, u8>;
 }
 impl PhysicsAssetIdentity for PhysicsAsset {
@@ -220,91 +221,40 @@ impl PhysicsAssetImport for PhysicsAsset {
     }
 }
 
-impl Document {
-    pub fn get_physics_group(&self, id: &str) -> Option<&PhysicsSetting> {
-        self.physics()?
-            .data
-            .settings
-            .iter()
-            .find(|g| g.id == id)
-            .map(AsRef::as_ref)
-    }
-    pub fn get_physics_input(&self, id: &str) -> Option<(&PhysicsSetting, &PhysicsInput)> {
-        self.physics()?.data.settings.iter().find_map(|g| {
-            g.inputs
-                .iter()
-                .find(|v| v.id == id)
-                .map(|v| (g.as_ref(), v))
-        })
-    }
-    pub fn get_physics_output(&self, id: &str) -> Option<(&PhysicsSetting, &PhysicsOutput)> {
-        self.physics()?.data.settings.iter().find_map(|g| {
-            g.outputs
-                .iter()
-                .find(|v| v.id == id)
-                .map(|v| (g.as_ref(), v))
-        })
-    }
-    pub fn get_physics_node(&self, id: &str) -> Option<(&PhysicsSetting, &PhysicsNode)> {
-        self.physics()?.data.settings.iter().find_map(|g| {
-            g.vertices
-                .iter()
-                .find(|v| v.id == id)
-                .map(|v| (g.as_ref(), v))
-        })
-    }
-    pub fn physics_node_users(&self, id: &str) -> Vec<String> {
-        self.physics()
-            .into_iter()
-            .flat_map(|a| &a.data.settings)
-            .flat_map(|g| &g.outputs)
-            .filter(|v| v.node_id == id)
-            .map(|v| v.id.clone())
-            .collect()
-    }
-    pub fn physics_owner(&self, id: &str) -> Option<&str> {
-        let a = self.physics()?;
-        if a.id == id {
-            return None;
+pub trait PhysicsAssetEditing: Sized {
+    fn default_group(id: String, external_id: String) -> PhysicsSetting;
+}
+impl PhysicsAssetEditing for PhysicsAsset {
+    fn default_group(id: String, external_id: String) -> PhysicsSetting {
+        let node = |radius| PhysicsNode {
+            id: uuid::Uuid::new_v4().to_string(),
+            position: crate::physics::PhysicsVector { x: 0., y: radius },
+            mobility: 0.95,
+            delay: 0.8,
+            acceleration: 1.,
+            radius,
+            extensions: BTreeMap::new(),
+        };
+        PhysicsSetting {
+            id,
+            external_id,
+            inputs: vec![],
+            outputs: vec![],
+            vertices: vec![node(0.), node(10.)],
+            normalization: crate::physics::PhysicsNormalization {
+                position: crate::physics::PhysicsRange {
+                    minimum: -10.,
+                    default: 0.,
+                    maximum: 10.,
+                },
+                angle: crate::physics::PhysicsRange {
+                    minimum: -10.,
+                    default: 0.,
+                    maximum: 10.,
+                },
+                extensions: BTreeMap::new(),
+            },
+            extensions: BTreeMap::new(),
         }
-        if self.get_physics_group(id).is_some() {
-            return Some(&a.id);
-        }
-        self.get_physics_input(id)
-            .map(|(g, _)| g.id.as_str())
-            .or_else(|| self.get_physics_output(id).map(|(g, _)| g.id.as_str()))
-            .or_else(|| self.get_physics_node(id).map(|(g, _)| g.id.as_str()))
-    }
-    pub(in crate::document) fn validate_native_physics_rig(
-        &self,
-        g: &PhysicsSetting,
-    ) -> Result<(), Status> {
-        for output in &g.outputs {
-            if g.node_index(&output.node_id).is_none() {
-                return Err(Status::error("PHYSICS_NODE_UNAVAILABLE", &output.node_id));
-            }
-        }
-        for target in g
-            .inputs
-            .iter()
-            .map(|v| &v.source)
-            .chain(g.outputs.iter().map(|v| &v.destination))
-        {
-            match target {
-                PhysicsTarget::Resolved { parameter_id }
-                    if self.get_parameter(parameter_id).is_none() =>
-                {
-                    return Err(Status::error("MISSING_PARAMETER", parameter_id));
-                }
-                PhysicsTarget::Unresolved { runtime_id }
-                    if runtime_id.is_empty() || runtime_id.contains('\0') =>
-                {
-                    return Err(Status::error("INVALID_PHYSICS_TARGET", runtime_id));
-                }
-                _ => {}
-            }
-        }
-        crate::physics::validate_physics_setting(&g.to_wire(&PhysicsTarget::validation_key))
-            .map_err(|e| Status::error(e.code, format!("{}: {}", e.path, e.message)))
     }
 }

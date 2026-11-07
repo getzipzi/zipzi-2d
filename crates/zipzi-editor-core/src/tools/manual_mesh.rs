@@ -6,8 +6,11 @@ use super::{
 use crate::{Document, ManualMeshTarget, ViewportPoint, ViewportTransform};
 use anyhow::Result;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
+use zipzi_contract::authoring::ManualMeshOperation;
+use zipzi_contract::authoring::ManualVertexTarget;
+use zipzi_contract::authoring::MeshGeometry;
 use zipzi_core::{Vec2, VertexId};
-use zipzi_sdk::{ManualMeshOperation, ManualVertexIdAllocator, ManualVertexTarget, MeshGeometry};
+use zipzi_sdk::ManualVertexIdAllocator;
 mod mapping;
 mod session;
 use mapping::{PoseMapping, PositionUvMap};
@@ -173,7 +176,7 @@ impl ManualMeshMode {
         self.diagnostic = None;
         self.projected.borrow_mut().clear();
         let model = document.model();
-        if let Some(mesh) = model.get_mesh(&self.target.object.id) {
+        if let Some(mesh) = model.mesh(&self.target.object.id) {
             self.selected.retain(|id| mesh.vertex_ids.contains(id));
             self.selected_edge = self.selected_edge.filter(|edge| {
                 mesh.triangles
@@ -184,11 +187,7 @@ impl ManualMeshMode {
         Ok(())
     }
     pub fn new(target: ManualMeshTarget, document: &Document) -> Self {
-        let mesh = document
-            .model()
-            .get_mesh(&target.object.id)
-            .unwrap()
-            .clone();
+        let mesh = document.model().mesh(&target.object.id).unwrap().clone();
         let allocator = document.manual_vertex_allocator(
             &target.object.id,
             &MeshGeometry {
@@ -252,7 +251,7 @@ impl ManualMeshMode {
         if self.blocked.is_some() {
             return;
         }
-        if let Some(mesh) = document.model().get_mesh(&self.target.object.id) {
+        if let Some(mesh) = document.model().mesh(&self.target.object.id) {
             self.selected = mesh.vertex_ids.clone();
             self.selected_edge = None;
         }
@@ -341,7 +340,7 @@ impl ManualMeshMode {
 
     fn selected_starts(&self, document: &Document) -> Vec<ManualVertexTarget> {
         let model = document.model();
-        let Some(mesh) = model.get_mesh(&self.target.object.id) else {
+        let Some(mesh) = model.mesh(&self.target.object.id) else {
             return Vec::new();
         };
         mesh.vertex_ids
@@ -601,7 +600,7 @@ impl ManualMeshMode {
     ) -> Result<bool> {
         let mesh = document
             .model()
-            .get_mesh(&self.target.object.id)
+            .mesh(&self.target.object.id)
             .unwrap()
             .clone();
         let transform = frame.transform;
@@ -740,7 +739,7 @@ impl ManualMeshMode {
         };
         let current: HashMap<_, _> = {
             let model = document.model();
-            let mesh = model.get_mesh(&self.target.object.id).unwrap();
+            let mesh = model.mesh(&self.target.object.id).unwrap();
             mesh.vertex_ids
                 .iter()
                 .copied()

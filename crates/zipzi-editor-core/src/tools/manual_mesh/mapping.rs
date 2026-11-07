@@ -2,8 +2,10 @@
 use crate::{CanvasFrame, Document, ModelPoint, ModelVector, control_edit::ControlSpace};
 use anyhow::Result;
 use std::{collections::HashMap, sync::Arc};
+use zipzi_contract::authoring::ManualVertexTarget;
+use zipzi_contract::authoring::MeshGeometry;
 use zipzi_core::{Vec2, VertexId};
-use zipzi_sdk::{ManualMeshUvMap, ManualVertexTarget, MeshGeometry};
+use zipzi_sdk::ManualMeshUvMap;
 
 pub(super) struct PositionUvMap {
     mapping: ManualMeshUvMap,
@@ -23,7 +25,7 @@ impl PositionUvMap {
     ) -> Result<Self> {
         let model = document.model();
         let mesh = model
-            .get_mesh(mesh_id)
+            .mesh(mesh_id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
         let shown = frame
             .geometry
@@ -62,10 +64,10 @@ impl PoseMapping {
     pub(super) fn capture(document: &Document, frame: &CanvasFrame, mesh_id: &str) -> Result<Self> {
         let model = document.model();
         let mesh = model
-            .get_mesh(mesh_id)
+            .mesh(mesh_id)
             .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
         let local = zipzi_core::evaluation::authoring_mesh_positions(
-            &model,
+            &*model,
             mesh_id,
             frame.geometry.parameter_values(),
         )

@@ -9,12 +9,12 @@ use zipzi_editor_core::{COMMANDS, CommandId};
 #[derive(Default)]
 pub(super) struct SceneCreationMenuCache {
     document: Option<zipzi_editor_core::DocumentId>,
-    revision: u64,
+    layout: Option<zipzi_core::state::ContentId>,
     pending: bool,
     selection: Vec<zipzi_editor_core::ObjectRef>,
     states: std::collections::HashMap<
         CommandId,
-        std::sync::Arc<anyhow::Result<zipzi_sdk::CapabilityState>>,
+        std::sync::Arc<anyhow::Result<zipzi_contract::authoring::CapabilityState>>,
     >,
     #[cfg(test)]
     pub builds: usize,
@@ -24,15 +24,16 @@ impl SceneCreationMenuCache {
         let Some(document) = editor.document() else {
             return;
         };
+        let layout = document.evaluation_layout_id();
         if self.document == editor.active_id()
-            && self.revision == document.properties_revision()
+            && self.layout == Some(layout)
             && self.pending == document.has_pending_edit()
             && self.selection == document.context().selections
         {
             return;
         }
         self.document = editor.active_id();
-        self.revision = document.properties_revision();
+        self.layout = Some(layout);
         self.pending = document.has_pending_edit();
         self.selection = document.context().selections.clone();
         self.states = crate::authoring::scene_creation::all_commands()
@@ -233,10 +234,10 @@ impl EditorView {
                 .map(|id| {
                     let capability = capabilities.get(&id)?;
                     match capability.as_ref() {
-                        Ok(zipzi_sdk::CapabilityState::Available) => None,
+                        Ok(zipzi_contract::authoring::CapabilityState::Available) => None,
                         Ok(
-                            zipzi_sdk::CapabilityState::Unavailable { code }
-                            | zipzi_sdk::CapabilityState::Unsupported { code },
+                            zipzi_contract::authoring::CapabilityState::Unavailable { code }
+                            | zipzi_contract::authoring::CapabilityState::Unsupported { code },
                         ) => Some(crate::authoring::availability_reason(code)),
                         Err(error) => {
                             Some(crate::authoring::scene_creation::creation_error(&error))

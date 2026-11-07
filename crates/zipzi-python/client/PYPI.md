@@ -22,8 +22,8 @@ macOS arm64 and Windows x86-64. The desktop Editor is available from
 
 ## Read the installed documentation offline
 
-The client includes a README, workflow guide, API reference and executable
-recipes matching its installed version. Locate them without a network
+The client includes a README, workflow guide, generated API reference and
+executable recipe matching its installed version. Locate them without a network
 connection, native backend or running Editor:
 
 ```python
@@ -31,18 +31,17 @@ from importlib.resources import files
 
 package = files("zipzi")
 print(package.joinpath("README.md").read_text(encoding="utf-8"))
+print(package.joinpath("docs/getting-started.md"))
+print(package.joinpath("docs/lifecycle.md"))
 print(package.joinpath("docs/guide.md"))
+print(package.joinpath("docs/reference/index.md"))
 ```
 
-Follow the relative links in the installed README to read the local guide,
-reference and recipes. For individual API entries:
-
-```python
-import zipzi
-
-print(zipzi.describe("zipzi").format())
-print(zipzi.describe("Session.meshes.list").format())
-```
+Follow the relative links in the installed README to read the guide and recipe.
+Generated commands and query types are available in `zipzi.values`.
+Read-only result shapes are in `zipzi.results`. Use
+`print(zipzi.describe('Session.query').format())` for offline API help and
+`snapshot.records(zipzi.values.Parameter)` for typed object payloads.
 
 The Python client and native Runtime backend are MIT licensed. Editor services
 run in the GPL-3.0-only Editor. See the

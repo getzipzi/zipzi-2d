@@ -18,26 +18,28 @@ fn explicit_and_inherited_locks_survive_save_and_do_not_cross_hierarchies() -> a
     use zipzi_core::{RotationTransform, Transform, TransformData};
     let (mut doc, dir) = support::sample_document_with_parts()?;
     let saved = doc.save(&dir.path().join("hierarchy.zipzi"))?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::Canvas::new(256., 256., zipzi_core::Vec2::default(), 1.),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    let mesh = ObjectRef::new(ObjectKind::Mesh, sdk.mesh_ids()[1].clone());
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    let mesh = ObjectRef::new(
+        ObjectKind::Mesh,
+        sdk.snapshot().document().mesh_order()[1].clone(),
+    );
     let part = object(ObjectKind::Part, 101);
     let other = object(ObjectKind::Part, 102);
     let deformer = object(ObjectKind::Deformer, 501);
-    sdk.edit("Cross-part fixture", None, |e| {
-        e.create_transform(Transform {
-            id: deformer.id.clone(),
-            part_id: Some(part.id.clone().into()),
-            data: TransformData::Rotation(RotationTransform::default()),
-            ..Default::default()
-        })?;
-        e.set_mesh_part(&mesh.id, &other.id)?;
-        e.set_deform_parent(&mesh.id, &deformer.id)
+    crate::support::publish_fixture(&mut sdk, "Cross-part fixture", |e| {
+        crate::support::insert_transform(
+            e,
+            Transform {
+                id: deformer.id.clone(),
+                part_id: Some(part.id.clone().into()),
+                data: TransformData::Rotation(RotationTransform::default()),
+                ..Default::default()
+            },
+        )?;
+        crate::support::organize_mesh(e, &mesh.id, &other.id)?;
+        crate::support::reparent_local(e, &mesh.id, &deformer.id)
     })?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     let mut doc = Document::open(&saved.path)?;
     doc.set_objects_locked(&[part.clone()], true)?;
     assert!(doc.object_state_index().is_locked(&deformer));

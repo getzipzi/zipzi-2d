@@ -1,6 +1,7 @@
 //! The ordered linear operations used by Glue, for authoring inverses.
 use super::{selection, PreviewValues};
-use crate::{DeltaKeyforms, Document, Vec2};
+use crate::evaluation::EvaluationModel;
+use crate::{DeltaKeyforms, Vec2};
 
 #[derive(Clone, Debug)]
 pub struct GlueOperation {
@@ -24,7 +25,10 @@ impl GlueOperation {
 
 /// Values are the evaluated parameters of the displayed frame. Disabled scene
 /// relationships and incomplete pairs are excluded, just as in frame evaluation.
-pub fn evaluated_glue_operations(doc: &Document, values: &PreviewValues) -> Vec<GlueOperation> {
+pub fn evaluated_glue_operations(
+    doc: &impl EvaluationModel,
+    values: &PreviewValues,
+) -> Vec<GlueOperation> {
     let projection = doc.scene_projection();
     let mut result = Vec::new();
     for id in doc.glue_order() {

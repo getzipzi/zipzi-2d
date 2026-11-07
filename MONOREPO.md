@@ -1,8 +1,8 @@
 # Repository structure
 
-The root Cargo workspace owns 22 crates: 19 SDK packages and 3 Editor packages.
+The root Cargo workspace owns workspace crates in two package domains.
 `Cargo.toml` defines membership; [`tools/workspace/package-domains.json`](tools/workspace/package-domains.json)
-assigns test domains. Validate both with `python3 tools/workspace/cargo_domain.py --check`
+assigns test domains. Validate both with `uv run --locked python tools/workspace/cargo_domain.py --check`
 after adding or removing a member. All owned crates live directly under `crates/`.
 
 ## Crate responsibilities
@@ -10,7 +10,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | Crate | Responsibility |
 | --- | --- |
 | `zipzi-contract` | Shared authoring contract metadata and value types |
-| `zipzi-core` | Editable documents, deformation and evaluation |
+| `zipzi-core` | Immutable authoring state/builders, model rules, deformation and evaluation |
 | `zipzi-live2d` | Live2D motion, expression, pose and physics formats |
 | `zipzi-animation` | Animation evaluation |
 | `zipzi-project` | Project persistence, resources and package publication |
@@ -22,7 +22,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-render` | Backend-independent render planning |
 | `zipzi-render-wgpu` | WGPU rendering |
 | `zipzi-render-metal` | Native Metal rendering |
-| `zipzi-sdk` | Transactional Rust authoring API |
+| `zipzi-sdk` | Snapshot/Draft authoring, sole publication, soft history and project context |
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-observe` | Immutable inspection and GPU capture |
 | `zipzi-observe-backend` | Optional observation GPU platform dependency selection |
@@ -44,7 +44,7 @@ crates are MIT. Shared directories do not imply a shared license:
 `zipzi-python` builds a pure Python client and an optional native adapter as
 separate distributions. Both backends enter the shared Runtime. Model
 invariants and evaluation rules belong in the Rust core/format crates;
-transactions, history and authoring rules belong in `zipzi-sdk`; resource I/O
+Drafts, snapshot history and publication belong in `zipzi-sdk`; resource I/O
 and publication belong in `zipzi-project`. PyO3 converts values, errors and
 results. Python provides user-facing types, context managers, batch workflows
 and reports. New modeling rules belong in Rust even when Python is their only
@@ -56,6 +56,15 @@ exports Python projections without compiling execution packages. Core, SDK and
 Runtime consume the same types; their algorithms and resource leases stay in
 the implementation crates. The dependency/freshness checks live in
 `tools/tests/test_python_codegen.py`.
+
+Contract defines the source identities, typed commands and v4 operations. Core
+validates and freezes Builder writes. Project returns immutable model and resource
+values and publishes files. SDK owns the Snapshot, isolated Drafts, snapshot
+history and SavedMarker. Runtime keeps SDK Sessions resident and gives workers
+sourced snapshots, isolated Drafts or prepared I/O. Editor, Observe and the two
+Python backends consume these interfaces directly. The
+[authoring implementation plan](docs/plans/authoring-architecture.md) records
+remaining regression migrations and the gates actually run.
 
 `zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU
@@ -89,7 +98,7 @@ to keep platform requirements and package selection explicit. Vendor workspaces
 and the Purism submodule have their own build/test lifecycles.
 
 Root `pyproject.toml` and `uv.lock` pin development Python dependencies. Use
-`uv add --group dev <package>` and commit both files when adding one. The Python
+`uv add --group dev <package>` and commit both files when adding one. The
 Runtime-backed Python SDK has its native build configuration under
 `crates/zipzi-python` and pure client configuration under its `client/` directory.
 

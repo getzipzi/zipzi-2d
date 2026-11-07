@@ -2,24 +2,20 @@
 use super::*;
 use anyhow::{Result, ensure};
 use std::sync::Arc;
-use zipzi_runtime::{Completion, JobId, JobValue, PlanId, Work};
-use zipzi_sdk::{DeletionIntent, DeletionPage, DeletionSection, DeletionSummary};
+use zipzi_contract::authoring::DeletionIntent;
+use zipzi_contract::authoring::DeletionPage;
+use zipzi_contract::authoring::DeletionSection;
+use zipzi_contract::authoring::DeletionSummary;
+use zipzi_runtime::{Completion, JobId, Work};
+#[path = "deletion_review.rs"]
+mod review;
+use review::DeletionReview;
 
-struct PlanLease {
-    host: crate::RuntimeHost,
-    id: PlanId,
-}
-impl Drop for PlanLease {
-    fn drop(&mut self) {
-        let _ = self
-            .host
-            .write()
-            .release_modeling_plan(self.host.client_id(), self.id);
-    }
-}
 #[derive(Clone)]
 pub struct TreeDeletionPlan {
-    lease: Arc<PlanLease>,
+    candidate: crate::EditPreview<DeletionReview>,
+    host: crate::RuntimeHost,
+    _report_lease: Arc<zipzi_project::TransferReservation>,
     version: zipzi_sdk::Version,
     preview_revision: Option<u64>,
     summary: DeletionSummary,
@@ -41,20 +37,16 @@ impl TreeDeletionPlan {
         offset: usize,
         limit: usize,
     ) -> Result<DeletionPage> {
-        Ok(self.lease.host.read().deletion_report_page(
-            self.lease.host.client_id(),
-            self.lease.id,
-            section,
-            offset,
-            limit,
-        )?)
+        Ok(self.candidate.outcome.report_page(section, offset, limit)?)
     }
     pub fn removed_ids(&self) -> Vec<String> {
         let mut ids = vec![];
         let mut offset = 0;
         while let Ok(page) = self.page(DeletionSection::Removed, offset, 256) {
             ids.extend(page.rows.into_iter().filter_map(|row| match row {
-                zipzi_sdk::DeletionRow::Removal { removal } => Some(removal.object.id),
+                zipzi_contract::authoring::DeletionRow::Removal { removal } => {
+                    Some(removal.object.id)
+                }
                 _ => None,
             }));
             match page.next_offset {
@@ -66,7 +58,7 @@ impl TreeDeletionPlan {
     }
     pub fn valid_for(&self, document: &Document) -> bool {
         self.version == document.session.version()
-            && self.lease.host.same_host(&document.session.host)
+            && self.host.same_host(&document.session.host)
             && self
                 .preview_revision
                 .is_none_or(|revision| revision == document.preview_revision())
@@ -88,12 +80,20 @@ impl TreeDeletionCancellation {
 pub struct TreeDeletionTask {
     cancellation: TreeDeletionCancellation,
     work: Option<Work>,
+    candidate: Option<crate::runtime_host::HostedDraft>,
+    baseline: zipzi_sdk::Snapshot,
+    outcome: Arc<std::sync::Mutex<Option<DeletionReview>>>,
+    report_lease: Arc<zipzi_project::TransferReservation>,
     preview_revision: Option<u64>,
 }
 #[must_use = "Finish deletion planning on the owning application thread"]
 pub struct TreeDeletionCompletion {
     cancellation: TreeDeletionCancellation,
     returned: Completion,
+    candidate: crate::runtime_host::HostedDraft,
+    baseline: zipzi_sdk::Snapshot,
+    outcome: Arc<std::sync::Mutex<Option<DeletionReview>>>,
+    report_lease: Arc<zipzi_project::TransferReservation>,
     preview_revision: Option<u64>,
 }
 impl TreeDeletionTask {
@@ -104,35 +104,42 @@ impl TreeDeletionTask {
     pub fn run(mut self) -> TreeDeletionCompletion {
         TreeDeletionCompletion {
             cancellation: self.cancellation.clone(),
-            returned: self.work.take().expect("deletion task runs once").run(),
+            returned: self
+                .work
+                .take()
+                .expect("deletion task runs once")
+                .run_with_stack("deletion", 8 * 1024 * 1024),
+            candidate: self.candidate.take().expect("deletion candidate"),
+            baseline: self.baseline.clone(),
+            outcome: self.outcome.clone(),
+            report_lease: self.report_lease.clone(),
             preview_revision: self.preview_revision,
         }
     }
 }
 impl TreeDeletionCompletion {
     /// Publish on the application thread and release the Job before any weak view callback.
-    pub fn finish(self) -> Result<TreeDeletionPlan> {
+    pub fn finish(mut self) -> Result<TreeDeletionPlan> {
         let host = &self.cancellation.host;
-        host.write().complete(self.returned);
-        let result = host
-            .read()
-            .job_info(host.client_id(), self.cancellation.job)?
-            .result;
         host.write()
-            .release_job(host.client_id(), self.cancellation.job)?;
-        let JobValue::Planned(snapshot) =
-            result.ok_or_else(|| anyhow::anyhow!("Deletion job did not complete"))??
-        else {
-            anyhow::bail!("Unexpected deletion job result")
-        };
+            .complete(self.returned)
+            .map_err(|_| anyhow::anyhow!("Deletion completion belongs to another host"))?;
+        self.candidate.finish_batch(self.cancellation.job)?;
+        let outcome = self
+            .outcome
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .take()
+            .ok_or_else(|| anyhow::anyhow!("Missing deletion report"))?;
+        let summary = outcome.summary();
+        let candidate = crate::EditPreview::from_candidate(self.candidate, self.baseline, outcome)?;
         Ok(TreeDeletionPlan {
-            lease: Arc::new(PlanLease {
-                host: host.clone(),
-                id: snapshot.plan,
-            }),
-            version: snapshot.source.version(),
+            version: candidate.version(),
+            candidate,
+            host: host.clone(),
+            _report_lease: self.report_lease,
             preview_revision: self.preview_revision,
-            summary: snapshot.report.deletion.clone().expect("deletion report"),
+            summary,
         })
     }
 }
@@ -146,7 +153,9 @@ impl Drop for TreeDeletionTask {
             // A taken Work must still return its cancelled completion.
             if let Some(work) = self.work.take() {
                 let completion = work.run();
-                host.write().complete(completion);
+                host.write()
+                    .complete(completion)
+                    .expect("deletion completion belongs to its host");
             }
             let _ = host
                 .write()
@@ -156,33 +165,33 @@ impl Drop for TreeDeletionTask {
 }
 impl Document {
     pub fn deletion_intent(&self, objects: &[ObjectRef]) -> Result<DeletionIntent> {
-        let mut request = zipzi_sdk::DeletionRequest::default();
+        let mut request = zipzi_contract::document::DeletionRequest::default();
         for object in objects {
             if object.kind == crate::ObjectKind::GlueBinding {
                 ensure!(
-                    self.session
-                        .read()
-                        .document()
-                        .get_glue(&object.id)
+                    self.model()
+                        .glue(&object.id)
                         .is_some_and(|g| g.binding.is_some()),
                     "Missing Glue binding"
                 );
-                request.roots.push(zipzi_sdk::DeletionTarget::Record(
-                    zipzi_sdk::DeletionObject {
-                        kind: zipzi_sdk::DeletionKind::GlueBinding,
-                        id: object.id.clone(),
-                        owner_id: None,
-                    },
-                ));
+                request
+                    .roots
+                    .push(zipzi_contract::document::DeletionTarget::Record(
+                        zipzi_contract::document::DeletionObject {
+                            kind: zipzi_contract::document::DeletionKind::GlueBinding,
+                            id: object.id.clone(),
+                            owner_id: None,
+                        },
+                    ));
             } else {
                 let kind = object
                     .kind
                     .sdk_kind()
                     .ok_or_else(|| anyhow::anyhow!("Unsupported deletion target"))?;
-                let handle = self.session.handle(kind, &object.id)?;
+                self.model().require_object(kind, &object.id)?;
                 request
                     .roots
-                    .extend(self.session.read().deletion_request(&[handle])?.roots);
+                    .push(self.model().deletion_target(kind, &object.id)?);
             }
         }
         Ok(DeletionIntent {
@@ -197,21 +206,66 @@ impl Document {
             .request
             .reparent
             .values()
-            .any(|s| *s == zipzi_sdk::ReparentStrategy::PreserveEditState);
+            .any(|s| *s == zipzi_contract::document::ReparentStrategy::PreserveEditState);
         if current || intent.request.conversion_context.is_none() {
             intent.request.conversion_context = Some(self.preservation_context());
         }
         let host = self.runtime_host();
-        let job = host.write().request_modeling_plan(
-            host.client_id(),
-            self.runtime_session_id(),
-            None,
-            zipzi_sdk::ModelingIntent::Deletion(intent),
+        let source = self.session.capture_authoring();
+        let limits = zipzi_core::state::ConversionLimits::default();
+        let report_lease = Arc::new(host.read().reserve_transfer(limits.max_workspace_bytes)?);
+        let mut candidate = source.begin_draft("Delete objects")?;
+        let outcome = Arc::new(std::sync::Mutex::new(None));
+        let worker_outcome = outcome.clone();
+        let job = candidate.request_batch(
+            zipzi_runtime::TaskBudget {
+                workspace_bytes: limits.max_workspace_bytes,
+                result_bytes: 0,
+            },
+            move |commands, cancel| {
+                let control = cancel.conversion_control();
+                let before = commands.read_document()?;
+                let report = commands
+                    .review_deletion(&intent.request, limits, &control)?
+                    .report;
+                let existing = zipzi_project::preflight_opaque_exports(&before, &control)?;
+                let after = if report.blockers.is_empty()
+                    && report.structural_blockers.is_empty()
+                    && report.decisions.is_empty()
+                {
+                    Some(zipzi_project::preflight_opaque_exports(
+                        &commands.read_document()?,
+                        &control,
+                    )?)
+                } else {
+                    None
+                };
+                let review = DeletionReview::build(
+                    report,
+                    existing,
+                    after,
+                    intent.accepted_export_failures.into_iter().collect(),
+                    limits,
+                )?;
+                *worker_outcome.lock().unwrap_or_else(|p| p.into_inner()) = Some(review);
+                cancel.check()
+            },
         )?;
-        let work = host.dispatch_job(job)?;
+        let work = match host.dispatch_job(job) {
+            Ok(work) => work,
+            Err(error) => {
+                let _ = host.write().cancel_job(host.client_id(), job);
+                let _ = host.write().release_job(host.client_id(), job);
+                return Err(error.into());
+            }
+        };
         Ok(TreeDeletionTask {
             cancellation: TreeDeletionCancellation { host, job },
             work: Some(work),
+            candidate: Some(candidate),
+            baseline: source.captured.snapshot,
+            outcome,
+            report_lease,
             preview_revision: current.then(|| self.preview_revision()),
         })
     }
@@ -241,7 +295,7 @@ impl Document {
         let mut reported = false;
         loop {
             let page = plan.page(DeletionSection::Locks, offset, 256)?;
-            if page.rows.iter().any(|row|matches!(row,zipzi_sdk::DeletionRow::Lock {blocker} if blocker.source_id==source_id)) {reported=true;break;}
+            if page.rows.iter().any(|row|matches!(row,zipzi_contract::authoring::DeletionRow::Lock {blocker} if blocker.source_id==source_id)) {reported=true;break;}
             match page.next_offset {
                 Some(next) => offset = next,
                 None => break,
@@ -261,7 +315,7 @@ impl Document {
                     edit.replace_editor_state(state)
                 })?;
         self.session.acknowledge_receipts();
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.invalidate_projection(false);
             self.pristine_blank = None;
         }
@@ -275,12 +329,14 @@ impl Document {
         );
         let previous_index = self.object_index();
         let previous_selection = self.context.selections.clone();
-        let receipt = self
-            .session
-            .execute_modeling_plan(plan.lease.id, plan.version)?;
-        if receipt.changed {
+        ensure!(
+            plan.candidate.outcome.executable(),
+            "Resolve the deletion report before applying"
+        );
+        let receipt = plan.candidate.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, true);
+            self.consume_authoring_receipt(&receipt, None);
             let index = self.object_index();
             self.context.reconcile(&index);
             if self.context.selections.is_empty() {
@@ -320,7 +376,9 @@ impl crate::Editor {
             .active_session_mut()
             .unwrap()
             .execute_authoring(|d| d.execute_tree_deletion(plan))?;
-        if result.receipt.changed && self.active_inspection().and_then(|i| i.object()).is_none() {
+        if (result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged)
+            && self.active_inspection().and_then(|i| i.object()).is_none()
+        {
             if let Some(object) = inspected.and_then(|object| {
                 deletion_selection_fallback(
                     &previous_index,

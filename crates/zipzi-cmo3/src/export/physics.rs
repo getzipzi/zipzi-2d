@@ -3,7 +3,7 @@ use super::*;
 impl Exporter<'_> {
     pub(super) fn physics(&mut self) -> N {
         use zipzi_core::physics::PhysicsAxis;
-        let Some(asset) = self.doc.physics() else {
+        let Some(asset) = self.doc.physics().as_deref() else {
             return N::new("CPhysicsSettingsSourceSet")
                 .field("_sourceCubismPhysics", N::empty_list())
                 .field("selectedCubismPhysics", N::null())

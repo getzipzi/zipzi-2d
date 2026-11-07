@@ -1,8 +1,9 @@
 //! Release-only query/structure probe; does not save or change source assets.
 //! cargo run --release -p zipzi-sdk --example c6_authoring_benchmark -- MODEL3
 use std::{hint::black_box, sync::atomic::Ordering, time::Instant};
-use zipzi_core::{document::*, Canvas, Vec2};
-use zipzi_sdk::{AuthoringSession, ObjectKind};
+use zipzi_contract::authoring::ObjectKind;
+use zipzi_core::document::*;
+use zipzi_sdk::{AuthoringSession, Snapshot};
 #[path = "support/allocation.rs"]
 mod allocation;
 use allocation::{reset_peak, PEAK};
@@ -41,10 +42,11 @@ fn id(n: u32) -> String {
 
 fn main() -> Result<()> {
     let path = std::path::PathBuf::from(std::env::args().nth(1).expect("absolute model3 path"));
-    let mut sdk = AuthoringSession::new(&id(1), Canvas::new(100., 100., Vec2::default(), 1.))?;
-    sdk.import_model3(&path, None)?;
-    sdk.evaluate(&Default::default())?;
-    sdk.edit("Probe setup", None, |edit| {
+    let (result, imported, _) = zipzi_project::ProjectImporter::default().import_model3(&path);
+    let imported = imported.ok_or(result.status)?;
+    let mut sdk = AuthoringSession::new(Snapshot::new(imported.document, imported.resources)?);
+    let mut draft = sdk.begin_draft();
+    draft.batch(draft.source(), |edit| {
         edit.edit_motion(MotionEdit::CreateGroup {
             id: id(2),
             name: "Probe group".into(),
@@ -56,14 +58,22 @@ fn main() -> Result<()> {
             destination: MotionContainer::Root,
         })
     })?;
-    sdk.drain_events();
+    sdk.publish(draft.prepare("Probe setup")?)?;
+    sdk.take_events();
     let asset = sdk
-        .asset_ids()
+        .snapshot()
+        .document()
+        .asset_order()
         .first()
         .expect("model needs an image")
         .clone();
-    let mesh = sdk.mesh_ids().first().expect("model needs a mesh").clone();
-    let handle = sdk.handle(ObjectKind::Mesh, &mesh)?;
+    let mesh = sdk
+        .snapshot()
+        .document()
+        .mesh_order()
+        .first()
+        .expect("model needs a mesh")
+        .clone();
     let group = CdiParameterGroup {
         id: id(5),
         runtime_id: "C6Probe".into(),
@@ -73,60 +83,74 @@ fn main() -> Result<()> {
     };
     println!(
         "{}",
-        serde_json::json!({"model": path, "meshes": sdk.mesh_ids().len(),
-        "bindings": sdk.binding_ids().len(), "document_estimated_bytes": sdk.estimated_content_bytes(),
-        "authoring_limits": sdk.authoring_limits(), "warmup": 4})
+        serde_json::json!({"model": path, "meshes": sdk.snapshot().document().mesh_order().len(),
+        "bindings": sdk.snapshot().document().binding_order().len(),
+        "warmup": 4})
     );
     let version = sdk.version();
-    let history = sdk.history_lengths();
-    let evaluation = sdk.evaluation_revision();
+    let history = sdk.history_state();
+    let evaluation = sdk.snapshot().content_id();
     let mut capabilities = Samples::default();
     let mut hover = Samples::default();
     let mut blocked = Samples::default();
     for i in 0..132 {
-        capabilities.measure(i, || Ok(black_box(sdk.scene_capabilities(&handle)?)))?;
+        capabilities.measure(i, || {
+            Ok(black_box(
+                sdk.snapshot()
+                    .document()
+                    .scene_capabilities(ObjectKind::Mesh, &mesh)?,
+            ))
+        })?;
         hover.measure(i, || {
-            Ok(black_box(sdk.plan_motion_edit(
-                MotionEdit::MoveRegistrations {
+            let mut draft = sdk.begin_draft();
+            draft.batch(draft.source(), |c| {
+                c.edit_motion(MotionEdit::MoveRegistrations {
                     ids: vec![id(4)],
                     destination: MotionContainer::Group(id(2)),
                     before: None,
-                },
-            )?))
+                })
+            })?;
+            Ok(black_box(draft.prepare("Move registration")?))
         })?;
         blocked.measure(i, || {
-            let error = sdk
-                .plan_resource_edit(ResourceEdit::Delete {
-                    id: asset.clone(),
-                    replacement: None,
+            let mut draft = sdk.begin_draft();
+            let error = draft
+                .batch(draft.source(), |c| {
+                    c.edit_resource(ResourceEdit::Delete {
+                        id: asset.clone(),
+                        replacement: None,
+                    })
                 })
                 .unwrap_err();
-            assert!(!error.referrers.is_empty());
             Ok(black_box(error))
         })?;
     }
     assert_eq!(sdk.version(), version);
-    assert_eq!(sdk.history_lengths(), history);
-    assert_eq!(sdk.evaluation_revision(), evaluation);
-    assert!(sdk.drain_events().is_empty());
+    assert_eq!(sdk.history_state(), history);
+    assert_eq!(sdk.snapshot().content_id(), evaluation);
+    assert!(sdk.take_events().is_empty());
     capabilities.report("mesh_capabilities");
     hover.report("registration_hover_plan");
     blocked.report("used_texture_delete_plan");
 
     macro_rules! structure {
-        ($name:literal, $intent:expr, $plan:ident, $execute:ident) => {{
+        ($name:literal, $intent:expr, $command:ident) => {{
             let mut planning = Samples::default();
             let mut committing = Samples::default();
             let mut undoing = Samples::default();
             for i in 0..36 {
-                let history = sdk.history_lengths().0;
-                let plan = planning.measure(i, || Ok(sdk.$plan($intent)?))?;
-                let receipt = committing.measure(i, || Ok(sdk.$execute(&plan)?))?;
-                assert!(receipt.changed);
-                assert_eq!(sdk.history_lengths().0, history + 1);
-                undoing.measure(i, || Ok(sdk.undo()?))?;
-                assert_eq!(sdk.history_lengths().0, history);
-                assert_eq!(sdk.drain_events().len(), 2);
+                let history = sdk.history_state().undo_steps;
+                let plan = planning.measure(i, || {
+                    let mut draft = sdk.begin_draft();
+                    draft.batch(draft.source(), |c| c.$command($intent))?;
+                    Ok(draft.prepare($name)?)
+                })?;
+                let receipt = committing.measure(i, || Ok(sdk.publish(plan)?))?;
+                assert!(!receipt.writes.is_empty());
+                assert_eq!(sdk.history_state().undo_steps, history + 1);
+                undoing.measure(i, || Ok(sdk.undo(sdk.version())?))?;
+                assert_eq!(sdk.history_state().undo_steps, history);
+                assert_eq!(sdk.take_events().len(), 2);
             }
             planning.report(concat!($name, "_plan"));
             committing.report(concat!($name, "_commit"));
@@ -140,8 +164,7 @@ fn main() -> Result<()> {
             destination: MotionContainer::Group(id(2)),
             before: None
         },
-        plan_motion_edit,
-        execute_motion_plan
+        edit_motion
     );
     structure!(
         "empty_parameter_group",
@@ -149,8 +172,7 @@ fn main() -> Result<()> {
             group: group.clone(),
             before: None
         },
-        plan_organization_edit,
-        execute_organization_plan
+        edit_organization
     );
     structure!(
         "texture_record_copy",
@@ -160,8 +182,7 @@ fn main() -> Result<()> {
             name: "Probe copy".into(),
             before: None
         },
-        plan_resource_edit,
-        execute_resource_plan
+        edit_resource
     );
     Ok(())
 }

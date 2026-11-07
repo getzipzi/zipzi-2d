@@ -4,7 +4,7 @@ use zipzi_editor_core::AnimationFailure;
 
 pub fn failure_text(failure: &AnimationFailure) -> String {
     use AnimationFailure::*;
-    use zipzi_sdk::AnimationError as E;
+    use zipzi_animation::AnimationError as E;
     match failure {
         MotionRemoved => t!("workspace.motion_removed").into_owned(),
         ExpressionUnavailable => t!("workspace.expression_unavailable").into_owned(),

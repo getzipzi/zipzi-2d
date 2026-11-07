@@ -1,126 +1,93 @@
-use zipzi_core::{Canvas, Vec2};
-use zipzi_sdk::{prepare_png_asset, rectangle_mesh, AuthoringSession, HistoryLimits};
-
-const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000201";
-const ASSET_ID: &str = "00000000-0000-4000-8000-000000000202";
-const MESH_ID: &str = "00000000-0000-4000-8000-000000000203";
-
-fn session(limits: HistoryLimits) -> AuthoringSession {
-    AuthoringSession::with_history_limits(
-        DOCUMENT_ID,
-        Canvas::new(100.0, 100.0, Vec2::new(50.0, 50.0), 10.0),
-        limits,
-    )
-    .unwrap()
-}
-
-fn asset() -> zipzi_core::ImageAsset {
-    let path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png");
-    prepare_png_asset(ASSET_ID, "fixture", &path).unwrap()
-}
-
-#[test]
-fn oversized_commit_fails_before_publication() {
-    let baseline = session(HistoryLimits::default()).estimated_content_bytes();
-    let limits = HistoryLimits {
-        max_steps: 50,
-        max_bytes: baseline * 2 + 64,
-    };
-    let mut sdk = session(limits);
-    let before = sdk.version();
-    let asset = asset();
-    let mesh = rectangle_mesh(
-        MESH_ID,
-        "mesh",
-        ASSET_ID,
-        Vec2::new(0.0, 0.0),
-        Vec2::new(10.0, 10.0),
-    )
-    .unwrap();
-    let mut edit = sdk.begin_edit("too large", None).unwrap();
-    edit.create_asset(asset).unwrap();
-    edit.create_mesh(mesh).unwrap();
-    assert_eq!(
-        edit.commit().unwrap_err().code.as_ref(),
-        "HISTORY_LIMIT_EXCEEDED"
+use zipzi_core::{state::DocumentState, ModelSetup};
+use zipzi_sdk::{AuthoringSession, HistoryLimits, ResourceView, Snapshot};
+fn session(max_steps: usize, target_bytes: usize) -> AuthoringSession {
+    let mut s = AuthoringSession::new(
+        Snapshot::new(
+            DocumentState::new(
+                "00000000-0000-4000-8000-000000000201",
+                ModelSetup::default(),
+            )
+            .unwrap(),
+            ResourceView::default(),
+        )
+        .unwrap(),
     );
-    assert_eq!(sdk.version(), before);
-    assert!(sdk.asset_ids().is_empty());
-    assert!(sdk.mesh_ids().is_empty());
-    assert_eq!(sdk.history_lengths(), (0, 0));
-    assert!(sdk.drain_events().is_empty());
-}
-
-#[test]
-fn successful_commit_evicts_oldest_entry_only_after_publish() {
-    let limits = HistoryLimits {
-        max_steps: 2,
-        max_bytes: 256 * 1024 * 1024,
-    };
-    let mut sdk = session(limits);
-    sdk.edit("asset", None, |edit| edit.create_asset(asset()))
-        .unwrap();
-    let mesh = rectangle_mesh(
-        MESH_ID,
-        "mesh",
-        ASSET_ID,
-        Vec2::new(0.0, 0.0),
-        Vec2::new(10.0, 10.0),
-    )
-    .unwrap();
-    sdk.edit("mesh", None, |edit| edit.create_mesh(mesh))
-        .unwrap();
-    sdk.edit("rename", None, |edit| edit.rename_mesh(MESH_ID, "renamed"))
-        .unwrap();
-    let state = sdk.history_state();
-    assert_eq!((state.undo_steps, state.redo_steps), (2, 0));
-    assert!(state.estimated_bytes > 0);
-    assert!(state.estimated_bytes <= state.max_bytes);
-    sdk.undo().unwrap();
-    sdk.undo().unwrap();
-    assert!(sdk.mesh_ids().is_empty());
-    assert_eq!(sdk.asset_ids(), &[ASSET_ID]);
-    assert_eq!(sdk.undo().unwrap_err().code.as_ref(), "NOTHING_TO_UNDO");
-}
-
-#[test]
-fn budget_rejection_preserves_redo_branch() {
-    let baseline = session(HistoryLimits::default()).estimated_content_bytes();
-    let mut trial = session(HistoryLimits::default());
-    trial
-        .edit("asset", None, |edit| edit.create_asset(asset()))
-        .unwrap();
-    let asset_bytes = trial.estimated_content_bytes();
-    let limits = HistoryLimits {
-        max_steps: 50,
-        max_bytes: baseline + asset_bytes + 4096,
-    };
-    let mut sdk = session(limits);
-    sdk.edit("asset", None, |edit| edit.create_asset(asset()))
-        .unwrap();
-    sdk.undo().unwrap();
-    assert_eq!(sdk.history_lengths(), (0, 1));
-    let version = sdk.version();
-    let asset = asset();
-    let mut mesh = rectangle_mesh(
-        MESH_ID,
-        "mesh",
-        ASSET_ID,
-        Vec2::new(0.0, 0.0),
-        Vec2::new(10.0, 10.0),
-    )
-    .unwrap();
-    // Leave room for bounded change summaries, then exceed the budget through
-    // actual authored payload rather than relying on a particular event layout.
-    mesh.name = "oversized mesh".repeat(1024);
-    let result = sdk.edit("too large", None, |edit| {
-        edit.create_asset(asset)?;
-        edit.create_mesh(mesh)
+    s.set_history_limits(HistoryLimits {
+        max_steps,
+        target_bytes,
     });
-    assert_eq!(result.unwrap_err().code.as_ref(), "HISTORY_LIMIT_EXCEEDED");
-    assert_eq!(sdk.version(), version);
-    assert_eq!(sdk.history_lengths(), (0, 1));
-    sdk.redo().unwrap();
-    assert_eq!(sdk.asset_ids(), &[ASSET_ID]);
+    s
+}
+fn add(s: &mut AuthoringSession, n: u32) {
+    let mut d = s.begin_draft();
+    d.batch(d.source(), |c| {
+        c.create_empty_asset(
+            format!("00000000-0000-4000-8000-{n:012x}"),
+            format!("image-{n}"),
+        )
+    })
+    .unwrap();
+    s.publish(d.prepare("image").unwrap()).unwrap();
+}
+#[test]
+fn oversized_step_is_editable_and_keeps_one_undo_step() {
+    let mut s = session(50, 0);
+    add(&mut s, 202);
+    assert!(s.history_state().over_target);
+    assert_eq!(s.history_state().undo_steps, 1);
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().asset_order().is_empty());
+    s.redo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().asset_order().len(), 1);
+}
+#[test]
+fn successful_publish_evicts_oldest_step_and_keeps_contiguous_history() {
+    let mut s = session(2, usize::MAX);
+    add(&mut s, 202);
+    add(&mut s, 203);
+    add(&mut s, 204);
+    assert_eq!(s.history_state().undo_steps, 2);
+    s.undo(s.version()).unwrap();
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.snapshot().document().asset_order(),
+        &["00000000-0000-4000-8000-0000000000ca"]
+    );
+    assert_eq!(s.undo(s.version()).unwrap_err().code, "NO_UNDO");
+}
+#[test]
+fn failed_candidate_does_not_trim_history_or_remove_redo() {
+    let mut s = session(2, 0);
+    add(&mut s, 202);
+    s.undo(s.version()).unwrap();
+    let source = s.version();
+    let history = s.history_state();
+    s.take_events();
+    let mut d = s.begin_draft();
+    assert!(d
+        .batch(d.source(), |c| {
+            c.create_empty_asset(
+                "00000000-0000-4000-8000-000000000203".into(),
+                "candidate".into(),
+            )?;
+            c.create_empty_asset("invalid".into(), "invalid".into())
+        })
+        .is_err());
+    assert!(!d.is_active());
+    assert_eq!(s.version(), source);
+    assert_eq!(
+        (
+            s.history_state().undo_steps,
+            s.history_state().redo_steps,
+            s.history_state().estimated_bytes
+        ),
+        (
+            history.undo_steps,
+            history.redo_steps,
+            history.estimated_bytes
+        )
+    );
+    assert!(s.take_events().is_empty());
+    s.redo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().asset_order().len(), 1);
 }

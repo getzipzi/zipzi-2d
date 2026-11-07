@@ -1,34 +1,34 @@
-use zipzi_core::{document::*, Canvas, Document, Vec2};
+mod support;
+use support::*;
+use zipzi_core::state::*;
+use zipzi_core::{document::*, Canvas, Vec2};
 use zipzi_project::{
     encode_project_cubism, publish_can3, publish_cubism, Can3Options, CubismOptions,
-    DocumentSession,
 };
+use zipzi_project::{ProjectIo, ResourceStore, ResourceView, TransferSnapshot};
 
 #[test]
 fn expression_companions_keep_runtime_blends_and_publish_as_one_managed_group() {
     let temp = std::env::temp_dir().join(format!("zipzi-expressions-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir(&temp).unwrap();
     let output = temp.join("avatar");
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            &uuid::Uuid::new_v4().to_string(),
-            Canvas::new(128., 64., Vec2::default(), 32.)
-        )
-        .is_ok());
+    let mut doc = DocumentState::new(
+        &uuid::Uuid::new_v4().to_string(),
+        Canvas::new(128., 64., Vec2::default(), 32.).into(),
+    )
+    .unwrap();
     let parameter = uuid::Uuid::new_v4().to_string();
-    assert!(doc
-        .create_parameter(zipzi_core::Parameter {
+    doc = prepare(&doc, |builder| {
+        builder.create_parameter(zipzi_core::Parameter {
             id: parameter.clone(),
             runtime_id: "ParamX".into(),
             name: "X".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let expression = uuid::Uuid::new_v4().to_string();
-    assert!(doc
-        .create_expression(ExpressionAsset {
+    doc = prepare(&doc, |builder| {
+        builder.create_expression(ExpressionAsset {
             id: expression.clone(),
             name: "Smile".into(),
             file_type: Some("Live2D Expression".into()),
@@ -37,25 +37,23 @@ fn expression_companions_keep_runtime_blends_and_publish_as_one_managed_group() 
             entries: vec![ExpressionEntry {
                 id: uuid::Uuid::new_v4().to_string(),
                 target: ExpressionTarget::Resolved {
-                    parameter_id: parameter
+                    parameter_id: parameter,
                 },
                 value: 0.2,
                 blend: Some(ExpressionBlend::Multiply),
-                extensions: Default::default()
+                extensions: Default::default(),
             }],
             extensions: Default::default(),
             opaque_source_ids: None,
             opaque_source_content_hash: None,
         })
-        .status
-        .is_ok());
+    });
     let options = CubismOptions {
         base_name: "avatar".into(),
         ..Default::default()
     };
-    let encode = |doc: &Document| {
-        zipzi_cmo3::encode_cubism(doc, &|_: &zipzi_core::ImageAsset| unreachable!(), &options)
-            .unwrap()
+    let encode = |doc: &DocumentState| {
+        zipzi_cmo3::encode_cubism(doc, &|_: &AssetRecord| unreachable!(), &options).unwrap()
     };
     let artifact = encode(&doc);
     assert_eq!(artifact.can3.expression_files.len(), 2);
@@ -86,7 +84,7 @@ fn expression_companions_keep_runtime_blends_and_publish_as_one_managed_group() 
         b"keep"
     );
     std::fs::remove_file(output.join("unrelated.exp3.json")).unwrap();
-    assert!(doc.erase_object(&expression).status.is_ok());
+    doc = prepare(&doc, |builder| builder.remove_expression(&expression));
     publish_cubism(&encode(&doc), &output).unwrap();
     assert!(!output.join(&file).exists());
     assert!(!output.join("expressions.json").exists());
@@ -97,15 +95,13 @@ fn expression_companions_keep_runtime_blends_and_publish_as_one_managed_group() 
 fn saved_projects_publish_a_consistent_animation_model_pair() {
     let temp = std::env::temp_dir().join(format!("zipzi-can3-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir(&temp).unwrap();
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            "ca030000-0000-4000-8000-000000000001",
-            Canvas::new(128., 64., Vec2::new(64., 32.), 32.)
-        )
-        .is_ok());
-    assert!(doc
-        .create_motion(MotionClip {
+    let mut doc = DocumentState::new(
+        "ca030000-0000-4000-8000-000000000001",
+        Canvas::new(128., 64., Vec2::new(64., 32.), 32.).into(),
+    )
+    .unwrap();
+    doc = prepare(&doc, |builder| {
+        builder.create_motion(MotionClip {
             track_order: Vec::new(),
             id: "ca030000-0000-4000-8000-000000000002".into(),
             name: "Empty timeline".into(),
@@ -120,21 +116,21 @@ fn saved_projects_publish_a_consistent_animation_model_pair() {
             extensions: Default::default(),
             meta_extensions: Default::default(),
             opaque_source_ids: None,
-            opaque_source_content_hash: None
+            opaque_source_content_hash: None,
         })
-        .status
-        .is_ok());
-    let mut session = DocumentSession::new();
-    session.reset_authoring_document(doc);
-    let revision = session.document().revision();
+    });
+    let content = doc.content_id();
     let options = CubismOptions {
         base_name: "avatar".into(),
         ..Default::default()
     };
-    let artifact = session.encode_cubism(&options).unwrap();
+    let artifact =
+        zipzi_project::encode_document_cubism(&doc, &ResourceView::default(), &options).unwrap();
     assert!(!artifact.report.has_loss());
     let source = temp.join("source.zipzi");
-    assert!(session.save(&source).status.is_ok());
+    ProjectIo::new(&temp, ResourceStore::default())
+        .save(&doc, &ResourceView::default(), &source, None, || true)
+        .unwrap();
     let saved = encode_project_cubism(&source, &options).unwrap();
     assert_eq!(artifact.cmo3.bytes, saved.cmo3.bytes);
     assert_eq!(artifact.can3.bytes, saved.can3.bytes);
@@ -163,18 +159,20 @@ fn saved_projects_publish_a_consistent_animation_model_pair() {
     let saved_source = std::fs::read(&manifest).unwrap();
     assert!(publish_cubism(&artifact, &source).is_err());
     assert_eq!(std::fs::read(manifest).unwrap(), saved_source);
-    let animation = session
-        .encode_can3(&Can3Options {
+    let animation = zipzi_cmo3::encode_can3(
+        &doc,
+        &Can3Options {
             model_file_name: "avatar.cmo3".into(),
             animation_name: options.model.model_name.clone(),
             ..Default::default()
-        })
-        .unwrap();
+        },
+    )
+    .unwrap();
     assert_eq!(artifact.can3.bytes, animation.bytes);
     let standalone = temp.join("standalone.can3");
     publish_can3(&animation, &standalone).unwrap();
     assert_eq!(std::fs::read(standalone).unwrap(), artifact.can3.bytes);
-    assert_eq!(session.document().revision(), revision);
+    assert_eq!(doc.content_id(), content);
     std::fs::remove_dir_all(temp).unwrap();
 }
 
@@ -182,16 +180,14 @@ fn saved_projects_publish_a_consistent_animation_model_pair() {
 fn removing_last_motion_replaces_pair_with_model_only_without_deleting_unmanaged_files() {
     let temp = std::env::temp_dir().join(format!("zipzi-model-only-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir(&temp).unwrap();
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            &uuid::Uuid::new_v4().to_string(),
-            Canvas::new(100., 100., Vec2::default(), 1.)
-        )
-        .is_ok());
+    let mut doc = DocumentState::new(
+        &uuid::Uuid::new_v4().to_string(),
+        Canvas::new(100., 100., Vec2::default(), 1.).into(),
+    )
+    .unwrap();
     let motion = uuid::Uuid::new_v4().to_string();
-    assert!(doc
-        .create_motion(MotionClip {
+    doc = prepare(&doc, |builder| {
+        builder.create_motion(MotionClip {
             track_order: Vec::new(),
             id: motion.clone(),
             name: "Motion".into(),
@@ -208,27 +204,24 @@ fn removing_last_motion_replaces_pair_with_model_only_without_deleting_unmanaged
             opaque_source_ids: None,
             opaque_source_content_hash: None,
         })
-        .status
-        .is_ok());
-    let mut session = DocumentSession::from_authoring_document(doc);
+    });
     let output = temp.join("avatar");
-    let publish = |session: &DocumentSession| {
-        session
-            .transfer_snapshot()
+    let publish = |doc: &DocumentState| {
+        TransferSnapshot::new(doc.clone(), ResourceView::default(), vec![])
             .unwrap()
             .publish(zipzi_project::TransferFormat::Cubism, &output)
     };
-    publish(&session).unwrap();
+    publish(&doc).unwrap();
     assert!(output.join("avatar.can3").is_file());
-    assert!(session.document_mut().erase_object(&motion).status.is_ok());
+    doc = prepare(&doc, |builder| builder.remove_motion(&motion));
     std::fs::write(output.join("other.can3"), b"keep").unwrap();
-    assert!(publish(&session).is_err());
+    assert!(publish(&doc).is_err());
     assert_eq!(std::fs::read(output.join("other.can3")).unwrap(), b"keep");
     assert!(output.join("avatar.can3").is_file());
     std::fs::remove_file(output.join("other.can3")).unwrap();
-    publish(&session).unwrap();
+    publish(&doc).unwrap();
     assert!(output.join("avatar.cmo3").is_file());
     assert!(!output.join("avatar.can3").exists());
-    publish(&session).unwrap();
+    publish(&doc).unwrap();
     std::fs::remove_dir_all(temp).unwrap();
 }

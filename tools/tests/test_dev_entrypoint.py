@@ -33,8 +33,7 @@ class Entrypoint(unittest.TestCase):
             self.assertIn('test sdk MODE', result.stdout)
 
     def test_python_gate_paths_remain_caller_relative(self):
-        for mode, option in (('python', '--output'), ('python-connected', '--editor-host'),
-                             ('python2', '--output'), ('python2-connected', '--editor-host')):
+        for mode, option in (('python', '--output'), ('python-connected', '--editor-host')):
             with self.subTest(mode=mode), patch.object(dev.cargo_domain, 'validate'), patch.object(dev, 'run_commands', return_value=0) as run:
                 self.assertEqual(dev.main(['test', 'sdk', mode, option + '=中文 output']), 0)
                 invocation = run.call_args.args[0][0]

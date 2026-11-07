@@ -2,16 +2,16 @@ use super::*;
 impl ObjectIndex {
     pub(crate) fn refresh_scene_label(&mut self, model: &Model, object: &ObjectRef) -> bool {
         let name = match object.kind {
-            ObjectKind::Part => model.get_part(&object.id).map(|v| v.name.as_str()),
-            ObjectKind::Mesh => model.get_mesh(&object.id).map(|v| v.name.as_str()),
-            ObjectKind::Deformer => model.get_transform(&object.id).map(|v| v.name.as_str()),
-            ObjectKind::Offscreen => model.get_offscreen(&object.id).map(|v| v.name.as_str()),
-            ObjectKind::Glue => model.get_glue(&object.id).map(|v| v.name.as_str()),
+            ObjectKind::Part => model.part(&object.id).map(|v| v.name.as_str()),
+            ObjectKind::Mesh => model.mesh(&object.id).map(|v| v.name.as_str()),
+            ObjectKind::Deformer => model.transform(&object.id).map(|v| v.name.as_str()),
+            ObjectKind::Offscreen => model.offscreen(&object.id).map(|v| v.name.as_str()),
+            ObjectKind::Glue => model.glue(&object.id).map(|v| v.name.as_str()),
             ObjectKind::DrawOrderGroup => {
                 if object.id == model.id() {
                     Some("Drawing")
                 } else {
-                    model.get_part(&object.id).map(|v| v.name.as_str())
+                    model.part(&object.id).map(|v| v.name.as_str())
                 }
             }
             _ => None,

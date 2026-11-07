@@ -1,20 +1,47 @@
-use std::path::PathBuf;
-use zipzi_sdk::EditReceiptSize;
-use zipzi_sdk::{AuthoringSnapshot, EditReceipt, SaveReceipt};
+use std::sync::Arc;
+use zipzi_project::TransferReservation;
+use zipzi_sdk::{DraftSource, OpenReceipt, Publication, QuerySource, SaveReceipt, Status};
 
-pub use zipzi_contract::runtime::{
-    BlobId, ClientId, EditId, FieldAddressId, ImageId, JobId, ObjectRefId, OperationId, PlanId,
-    PreviewId, RuntimeInstanceId, SessionId, SourceRef,
-};
+pub use zipzi_contract::kernel::{BlobId, ClientId, JobId, RuntimeInstanceId};
 
-pub use zipzi_contract::runtime::{RuntimeError, SessionInfo, SessionState};
+pub type Result<T> = std::result::Result<T, Status>;
+pub(crate) fn error(code: &str, message: &str) -> Status {
+    Status::error(code, message)
+}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EditState {
-    /// Bounded preflight workspace, not eligible for formal publication.
-    Prepared,
-    Editing,
-    Aborted,
+/// Task slots and actual temporary/result storage, not document-size multipliers.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RuntimeLimits {
+    pub clients: usize,
+    pub sessions: usize,
+    pub drafts: usize,
+    pub jobs: usize,
+    pub running_jobs: usize,
+    pub events_per_session: usize,
+    pub task_bytes: usize,
+    pub result_bytes: usize,
+}
+impl Default for RuntimeLimits {
+    fn default() -> Self {
+        Self {
+            clients: 64,
+            sessions: 64,
+            drafts: 256,
+            jobs: 256,
+            running_jobs: 4,
+            events_per_session: 256,
+            task_bytes: 1024 * 1024 * 1024,
+            result_bytes: 64 * 1024 * 1024,
+        }
+    }
+}
+
+/// Reservation is acquired before entering a worker and follows its actual
+/// lifetime. Read output must fit within the requested result bound.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TaskBudget {
+    pub workspace_bytes: usize,
+    pub result_bytes: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -33,130 +60,95 @@ impl JobState {
     }
 }
 
+/// Clones share both bytes and their accounting responsibility, even after the
+/// job or Runtime is released. Published content has its own ResourceView.
+#[derive(Clone)]
+pub struct ReadResult {
+    pub source: QuerySource,
+    bytes: Arc<Vec<u8>>,
+    _lease: Arc<TransferReservation>,
+}
+impl ReadResult {
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+    pub(crate) fn new(
+        source: QuerySource,
+        bytes: Vec<u8>,
+        lease: Arc<TransferReservation>,
+    ) -> Self {
+        Self {
+            source,
+            bytes: Arc::new(bytes),
+            _lease: lease,
+        }
+    }
+}
+impl std::fmt::Debug for ReadResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReadResult")
+            .field("source", &self.source)
+            .field("bytes", &self.bytes.len())
+            .finish()
+    }
+}
 #[derive(Debug, Clone)]
 pub enum JobValue {
-    Observed(std::sync::Arc<crate::observation::ObservationSampleBatch>),
-    Spatial(std::sync::Arc<crate::spatial::SpatialSampleBatch>),
-    Previewed(std::sync::Arc<crate::preview::PreviewSampleBatch>),
-    PreparedImage(std::sync::Arc<zipzi_sdk::PreparedImageContent>),
-    ImagePrepared(crate::authoring::PreparedImageInfo),
-    Project {
-        session: SessionId,
-        report: std::sync::Arc<crate::project_io::ProjectReport>,
-    },
-    Sampled(std::sync::Arc<crate::authoring::ModelingSampleBatch>),
-    PreparedPlan(std::sync::Arc<crate::PreparedModelingPlan>),
-    Planned(std::sync::Arc<crate::authoring::PlanSnapshot>),
-    Imported {
-        session: SessionId,
-        notices: Vec<String>,
-        name: Option<String>,
-    },
-    Opened(SessionId),
+    DraftUpdated(DraftSource),
+    Published(Publication),
+    Opened(OpenReceipt),
+    Imported(ImportReceipt),
     Saved(SaveReceipt),
-    Published(std::sync::Arc<EditReceipt>),
+    Read(ReadResult),
+    Exported(ExportReceipt),
 }
-
+#[derive(Debug, Clone)]
+pub struct ImportReceipt {
+    pub publication: Publication,
+    pub warnings: Vec<String>,
+    pub diagnostics: Vec<zipzi_project::ResourceDiagnostic>,
+    pub name: Option<String>,
+}
 #[derive(Debug, Clone)]
 pub struct JobInfo {
     pub id: JobId,
     pub client: ClientId,
-    pub session: SessionId,
+    pub source: QuerySource,
     pub state: JobState,
     pub result: Option<Result<JobValue>>,
 }
 
-pub type Result<T> = std::result::Result<T, RuntimeError>;
+/// Captured on the owner thread together, with no publication between state and cursor.
+#[derive(Debug)]
+pub struct SessionSubscription {
+    pub snapshot: zipzi_sdk::SourcedSnapshot,
+    pub history: zipzi_sdk::HistoryState,
+    pub cursor: zipzi_sdk::Version,
+}
 
+/// Publication origin belongs to the host event log, not persistent content.
 #[derive(Debug, Clone)]
-pub struct SourceSnapshot {
-    pub(crate) _lease: std::sync::Arc<zipzi_project::TransferReservation>,
-    pub source: SourceRef,
-    pub snapshot: std::sync::Arc<AuthoringSnapshot>,
-    /// Busy and faulted snapshots are explicitly frozen, never current reads.
-    pub state: SessionState,
+pub struct PublicationEvent {
+    pub client: ClientId,
+    pub publication: Publication,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OpenRequest {
-    Existing(SessionId),
-    Pending(JobId),
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SessionOverview {
+    pub session: crate::SessionKey,
+    pub version: crate::Version,
+    pub document_id: String,
+    pub path: Option<std::path::PathBuf>,
+    pub dirty: bool,
+    pub saving: bool,
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "format", content = "path", rename_all = "snake_case")]
-pub enum ImportSource {
-    Model3(PathBuf),
-    Psd(PathBuf),
-    Cubism(PathBuf),
-}
-
-impl JobValue {
-    pub(crate) fn retained_bytes(&self) -> usize {
-        use zipzi_core::binary_wire::WireWrite;
-        match self {
-            Self::Project { report, .. } => report.expansion_bytes(),
-            Self::Spatial(value) => value.samples.expansion_bytes(),
-            Self::Observed(value) => value.samples.expansion_bytes(),
-            Self::Previewed(value) => value.samples.expansion_bytes(),
-            Self::Sampled(samples) => samples.samples.expansion_bytes(),
-            Self::Planned(plan) => plan.report.expansion_bytes(),
-            Self::PreparedPlan(plan) => plan.bytes,
-            Self::PreparedImage(_) | Self::ImagePrepared(_) | Self::Opened(_) => 1024,
-            Self::Published(receipt) => receipt.estimated_bytes().saturating_mul(4),
-            Self::Saved(receipt) => receipt
-                .path
-                .as_os_str()
-                .len()
-                .saturating_add(
-                    receipt
-                        .warnings
-                        .iter()
-                        .chain(&receipt.history_warnings)
-                        .map(|s| s.capacity().saturating_add(64))
-                        .sum::<usize>(),
-                )
-                .saturating_mul(4)
-                .saturating_add(1024),
-            Self::Imported { notices, name, .. } => notices
-                .iter()
-                .chain(name.iter())
-                .map(|s| s.capacity().saturating_add(64))
-                .sum::<usize>()
-                .saturating_mul(4)
-                .saturating_add(1024),
-        }
-    }
-}
-
-pub(crate) trait RuntimeErrorBytes {
-    fn retained_bytes(&self) -> usize;
-}
-impl RuntimeErrorBytes for RuntimeError {
-    fn retained_bytes(&self) -> usize {
-        use zipzi_core::binary_wire::WireWrite;
-        match self {
-            Self::Export { report, message } => report
-                .expansion_bytes()
-                .saturating_add(message.len().saturating_mul(4)),
-            Self::Sdk(e) => e
-                .code
-                .len()
-                .saturating_add(e.message.len())
-                .saturating_add(e.field_path.as_ref().map_or(0, |v| v.len()))
-                .saturating_add(
-                    e.object_ids
-                        .iter()
-                        .chain(e.referrers.iter())
-                        .map(|v| v.capacity().saturating_add(64))
-                        .sum::<usize>(),
-                )
-                .saturating_mul(4)
-                .saturating_add(4096),
-            Self::Path(message) | Self::ExecutorFailure(message) | Self::WorkerPanic(message) => {
-                message.len().saturating_mul(4).saturating_add(4096)
-            }
-            _ => 4096,
-        }
-    }
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ExportReceipt {
+    pub source: QuerySource,
+    pub path: std::path::PathBuf,
+    pub published: bool,
+    pub durable: bool,
+    pub warnings: Vec<String>,
+    pub notices: Vec<String>,
 }

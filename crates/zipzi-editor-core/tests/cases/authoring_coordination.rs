@@ -1,9 +1,11 @@
 use crate::support;
+use zipzi_contract::authoring::CapabilityState as C;
+use zipzi_contract::kernel_wire::CollectionTarget as Collection;
 use zipzi_editor_core::{
-    AuthoringAction as A, AuthoringCollection as Collection, Document, Editor, ObjectKind as K,
-    ObjectRef, PaletteProjection, SceneObjectType,
+    AuthoringAction as A, Document, Editor, ObjectKind as K, ObjectRef, PaletteProjection,
+    SceneObjectType,
 };
-use zipzi_sdk::{CapabilityState as C, ReferenceCollection as RC, ReferenceEdit as R};
+use zipzi_sdk::{ReferenceCollection as RC, ReferenceEdit as R};
 fn id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
@@ -164,29 +166,36 @@ fn inspecting_animation_children_does_not_activate_resources_or_touch_modeling_s
 fn parameter_capability_and_deletion_match_toolbar_menu_and_native_command_semantics()
 -> anyhow::Result<()> {
     let assets = tempfile::tempdir()?;
-    let mut session = zipzi_sdk::AuthoringSession::new(&id(), zipzi_core::Canvas::default())?;
+    let mut session = crate::support::fixture_session(&id(), zipzi_core::Canvas::default())?;
     let group = ObjectRef::new(K::ParameterGroup, id());
-    let plan = session.plan_organization_edit(zipzi_sdk::OrganizationEdit::CreateGroup {
-        group: zipzi_core::document::CdiParameterGroup {
-            id: group.id.clone(),
-            runtime_id: "Group".into(),
-            name: "Group".into(),
-            parent_id: None,
-            extensions: Default::default(),
-        },
-        before: None,
+    support::publish_fixture(&mut session, "Create group", |commands| {
+        commands
+            .edit_organization(zipzi_sdk::OrganizationEdit::CreateGroup {
+                group: zipzi_core::document::CdiParameterGroup {
+                    id: group.id.clone(),
+                    runtime_id: "Group".into(),
+                    name: "Group".into(),
+                    parent_id: None,
+                    extensions: Default::default(),
+                },
+                before: None,
+            })
+            .map(|_| ())
     })?;
-    session.execute_organization_plan(&plan)?;
-    assert!(session.document().get_parameter_group(&group.id).is_some());
-    session
-        .edit("Lock", None, |e| {
-            let mut state = e.candidate_document().editor_state().clone();
-            state.objects.entry(group.id.clone()).or_default().locked = true;
-            e.replace_editor_state(state)
-        })
-        .map_err(|e| anyhow::anyhow!("lock stage: {e}"))?;
-    let saved = session
-        .save_project(&assets.path().join("locked.zipzi"), None)
+    assert!(
+        session
+            .snapshot()
+            .document()
+            .parameter_group(&group.id)
+            .is_some()
+    );
+    crate::support::publish_fixture(&mut session, "Lock", |e| {
+        let mut state = e.read_document()?.editor_state().clone();
+        state.objects.entry(group.id.clone()).or_default().locked = true;
+        e.replace_editor_state(state)
+    })
+    .map_err(|e| anyhow::anyhow!("lock stage: {e}"))?;
+    let saved = crate::support::save_fixture(&mut session, &assets.path().join("locked.zipzi"))
         .map_err(|e| anyhow::anyhow!("save stage: {e}"))?;
     let mut d = Document::open(&saved.path).map_err(|e| anyhow::anyhow!("open stage: {e}"))?;
     d.navigate(group.clone())?;

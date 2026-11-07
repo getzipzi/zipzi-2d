@@ -1,6 +1,6 @@
 //! Classify the CDT dual graph, crossing only the actual outline to change sides.
 use super::error;
-use crate::SdkError;
+use crate::Status;
 use spade::{
     handles::FixedVertexHandle, ConstrainedDelaunayTriangulation, Intersection,
     LineIntersectionIterator, Point2, Triangulation,
@@ -11,7 +11,7 @@ pub(super) type Cdt = ConstrainedDelaunayTriangulation<Point2<f64>>;
 pub(super) fn faces(
     cdt: &Cdt,
     outline: &[(FixedVertexHandle, FixedVertexHandle)],
-) -> Result<Vec<bool>, SdkError> {
+) -> Result<Vec<bool>, Status> {
     let invalid = || {
         error(
             "ALPHA_MESH_GEOMETRY",

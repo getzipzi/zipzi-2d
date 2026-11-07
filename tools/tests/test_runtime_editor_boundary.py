@@ -39,7 +39,7 @@ class EditorBoundaryTests(unittest.TestCase):
         sources = dict(self.sources)
         sources['crates/zipzi-editor-core/src/runtime_host.rs'] += '''
             // AuthoringSession and drain_events() in explanatory text.
-            fn candidate(edit: &mut EditSession<'static>) {}
+            fn candidate(draft: &mut HostedDraft) {}
         '''
         self.assertEqual(violations(sources), [])
 

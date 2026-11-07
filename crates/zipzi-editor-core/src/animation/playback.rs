@@ -22,7 +22,7 @@ impl Editor {
                 .as_ref()
                 .and_then(|motion| session.document.motion_definition(&motion.clip_id))
             {
-                zipzi_sdk::canonical_motion_seek_time(
+                zipzi_animation::canonical_motion_seek_time(
                     &clip,
                     animation
                         .result_position
@@ -287,7 +287,7 @@ impl Editor {
         };
         let local = time.min(max_time);
         let time = if timeline && animation.preview_mode == AnimationPreviewMode::Result {
-            zipzi_sdk::canonical_motion_seek_time(
+            zipzi_animation::canonical_motion_seek_time(
                 &session
                     .document
                     .motion_definition(&motion.selection.clip_id)

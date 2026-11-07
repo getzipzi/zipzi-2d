@@ -1,528 +1,328 @@
-//! Ownership-carrying jobs. Executors schedule Work and deliver Completion to the
-//! application host even after the initiating view has disappeared.
-use crate::{ClientId, JobId, JobValue, Result, RuntimeError, SessionId};
-use std::path::PathBuf;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+//! Worker messages contain values and resource responsibility, never a Session.
+use crate::*;
+use std::{
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
-use zipzi_sdk::{AuthoringSession, EditSession, Version};
-mod batches;
+use zipzi_project::{ProjectIo, TransferReservation};
+use zipzi_sdk::{Commands, CompletedSave, Draft, PreparedChange, PreparedProject, PreparedSave};
 
-pub trait Executor {
-    /// Rejection returns the exact unexecuted work for a later dispatch attempt.
-    fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>>;
-}
-
-pub(crate) enum Task {
-    Read(ReadTask),
-    Project {
-        request: crate::project_io::ProjectRequest,
-        _lease: Arc<zipzi_project::TransferReservation>,
-    },
-    Open(PathBuf),
-    Import(crate::ImportSource),
-    Save {
-        path: PathBuf,
-        target_fingerprint: Option<zipzi_contract::authoring::ProjectFingerprint>,
-        progress: zipzi_project::archive::ProjectSaveProgress,
-    },
-    Commit(Box<EditSession<'static>>),
-    Undo,
-    Redo,
-}
-
-pub struct Work {
-    pub(crate) transfer: Option<Arc<zipzi_project::TransferReservation>>,
-    pub(crate) job: JobId,
-    pub(crate) client: ClientId,
-    pub(crate) session_id: SessionId,
-    pub(crate) base: Version,
-    pub(crate) session: Option<AuthoringSession>,
-    pub(crate) task: Task,
-    pub(crate) cancel: Arc<AtomicBool>,
-}
-impl Work {
-    /// Run a decoder on a host-selected stack. Thread creation failure returns
-    /// the untouched formal session; an unexpected outer panic returns Faulted.
-    pub fn run_on_thread(self, name: &str, stack_bytes: usize) -> Completion {
-        let (job, client, session_id, base) = (self.job, self.client, self.session_id, self.base);
-        let pending = Arc::new(std::sync::Mutex::new(Some(self)));
-        let owned = pending.clone();
-        match std::thread::Builder::new()
-            .name(name.into())
-            .stack_size(stack_bytes)
-            .spawn(move || owned.lock().unwrap().take().unwrap().run_quantum())
-        {
-            Ok(worker) => worker.join().unwrap_or_else(|_| Completion {
-                job,
-                client,
-                session_id,
-                base,
-                session: None,
-                transfer: None,
-                outcome: WorkOutcome::Complete(Err(RuntimeError::WorkerPanic(
-                    "worker panicked outside the SDK operation".into(),
-                ))),
-            }),
-            Err(error) => {
-                let work = pending.lock().unwrap().take().unwrap();
-                Completion {
-                    job,
-                    client,
-                    session_id,
-                    base,
-                    session: work.session,
-                    transfer: work.transfer,
-                    outcome: WorkOutcome::Complete(Err(RuntimeError::ExecutorFailure(
-                        error.to_string(),
-                    ))),
-                }
-            }
+#[derive(Clone, Default)]
+pub struct Cancellation(Arc<AtomicBool>);
+impl Cancellation {
+    pub fn conversion_control(&self) -> zipzi_sdk::ConversionControl {
+        zipzi_sdk::ConversionControl::from_cancel_flag(self.0.clone())
+    }
+    pub fn is_cancelled(&self) -> bool {
+        self.0.load(Ordering::Acquire)
+    }
+    pub fn check(&self) -> Result<()> {
+        if self.is_cancelled() {
+            Err(error("CANCELLED", "Task cancelled"))
+        } else {
+            Ok(())
         }
     }
-    pub fn save_progress(&self) -> Option<zipzi_project::archive::ProjectSaveProgress> {
-        match &self.task {
-            Task::Save { progress, .. } => Some(progress.clone()),
+    pub(crate) fn cancel(&self) {
+        self.0.store(true, Ordering::Release);
+    }
+}
+pub trait Executor {
+    /// A rejected dispatch returns the exact unentered work for retry.
+    fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>>;
+}
+pub(crate) type Batch = Box<dyn FnOnce(&mut Commands<'_>, &Cancellation) -> Result<()> + Send>;
+pub(crate) type Read = Box<dyn FnOnce(SourcedSnapshot, &Cancellation) -> Result<Vec<u8>> + Send>;
+/// Cooperative reads retain their frozen input and reservations between quanta.
+/// Each invocation must do bounded work and check cancellation within long loops.
+pub enum ReadProgress {
+    Yield,
+    Complete(Vec<u8>),
+}
+pub(crate) type ReadSteps =
+    Box<dyn FnMut(&SourcedSnapshot, &Cancellation) -> Result<ReadProgress> + Send>;
+pub(crate) enum Task {
+    Batch {
+        draft: Draft,
+        run: Batch,
+    },
+    Publish {
+        draft: Draft,
+        description: String,
+    },
+    Read {
+        snapshot: SourcedSnapshot,
+        run: Read,
+        max_bytes: usize,
+    },
+    ReadSteps {
+        snapshot: SourcedSnapshot,
+        run: ReadSteps,
+        max_bytes: usize,
+    },
+    Open {
+        io: ProjectIo,
+        path: PathBuf,
+    },
+    Import {
+        importer: zipzi_project::ProjectImporter,
+        path: PathBuf,
+        format: zipzi_contract::kernel_wire::ImportFormat,
+    },
+    Save(PreparedSave),
+    Export {
+        snapshot: zipzi_project::TransferSnapshot,
+        path: PathBuf,
+        format: zipzi_contract::kernel_tasks::ExportFormat,
+        allow_loss: bool,
+    },
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TaskKind {
+    Batch,
+    Publish,
+    Read,
+    Open,
+    Import,
+    Save,
+    Export,
+}
+impl Task {
+    pub(crate) fn kind(&self) -> TaskKind {
+        match self {
+            Self::Batch { .. } => TaskKind::Batch,
+            Self::Publish { .. } => TaskKind::Publish,
+            Self::Read { .. } | Self::ReadSteps { .. } => TaskKind::Read,
+            Self::Open { .. } => TaskKind::Open,
+            Self::Import { .. } => TaskKind::Import,
+            Self::Save(_) => TaskKind::Save,
+            Self::Export { .. } => TaskKind::Export,
+        }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Identity {
+    pub job: JobId,
+    pub client: ClientId,
+    pub source: QuerySource,
+}
+impl Identity {
+    pub fn base(self) -> Version {
+        match self.source {
+            QuerySource::Published(v) => v,
+            QuerySource::Draft(d) => d.base,
+        }
+    }
+}
+pub struct Work {
+    pub(crate) identity: Identity,
+    pub(crate) task: Task,
+    pub(crate) cancel: Cancellation,
+    pub(crate) workspace: Arc<TransferReservation>,
+    pub(crate) result_lease: Arc<TransferReservation>,
+}
+impl std::fmt::Debug for Work {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Work")
+            .field("identity", &self.identity)
+            .field("kind", &self.task.kind())
+            .finish_non_exhaustive()
+    }
+}
+#[derive(Debug)]
+pub(crate) enum Output {
+    Yield(Box<Work>),
+    Draft(Draft),
+    Publish(PreparedChange),
+    Read(ReadResult),
+    Open(PreparedProject),
+    Import(crate::runtime::imports::PreparedImport),
+    Save(CompletedSave),
+    Export(ExportReceipt),
+}
+/// Accepted work must deliver a completion even after client detachment. In
+/// particular, an externally published save always needs metadata installation.
+#[must_use = "Deliver completion to its Runtime, including cancelled/disconnected jobs"]
+#[derive(Debug)]
+pub struct Completion {
+    pub(crate) identity: Identity,
+    pub(crate) outcome: Result<Output>,
+}
+impl Completion {
+    pub fn job_id(&self) -> JobId {
+        self.identity.job
+    }
+    /// Frozen content available for worker-side view preparation. Its originating
+    /// request is still subject to owner publication checks; this is not a Session.
+    pub fn prepared_snapshot(&self) -> Option<&zipzi_sdk::Snapshot> {
+        match self.outcome.as_ref().ok()? {
+            Output::Open(prepared) => Some(prepared.snapshot()),
+            Output::Import(prepared) => Some(&prepared.snapshot),
+            Output::Publish(prepared) => Some(prepared.snapshot()),
             _ => None,
         }
     }
-    pub fn job_id(&self) -> JobId {
-        self.job
-    }
-    pub fn session_id(&self) -> SessionId {
-        self.session_id
-    }
-    /// Always emits a terminal completion for unwind panics. Process aborts
-    /// cannot be recovered. SDK errors return the same session and history.
-    pub fn run(self) -> Completion {
-        self.run_with_hook(|| {})
-    }
-    /// Execute one batch sample, texture acquisition, or GPU frame and return
-    /// ownership to Runtime. Hosts must publish every completion and dispatch
-    /// again, including completions for jobs that have not reached a terminal state.
-    pub fn run_quantum(self) -> Completion {
-        self.run_quantum_with_hook(|| {})
-    }
-    pub(crate) fn run_quantum_with_hook(self, before: impl FnOnce()) -> Completion {
-        let Self {
-            job,
-            client,
-            session_id,
-            base,
-            session,
-            transfer,
-            task,
-            cancel,
-        } = self;
-        let task = match task {
-            Task::Read(task) => match batches::ReadBatch::from_task(task) {
-                Ok(batch) => batch,
-                Err(task) => {
-                    return Self {
-                        job,
-                        client,
-                        session_id,
-                        base,
-                        session,
-                        transfer,
-                        task: Task::Read(task),
-                        cancel,
-                    }
-                    .run_with_hook(before);
-                }
-            },
-            task => {
-                return Self {
-                    job,
-                    client,
-                    session_id,
-                    base,
-                    session,
-                    transfer,
-                    task,
-                    cancel,
-                }
-                .run_with_hook(before);
-            }
-        };
-        let mut batch = task;
-        let control = zipzi_sdk::ConversionControl::from_cancel_flag(cancel.clone());
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            crate::observation::check(&cancel)?;
-            before();
-            batch.step(&cancel, &control)
-        }))
-        .unwrap_or_else(|_| Err(RuntimeError::WorkerPanic("read worker panicked".into())));
-        let outcome = match result {
-            Ok(None) => WorkOutcome::Yielded(Box::new(Self {
-                job,
-                client,
-                session_id,
-                base,
-                session: None,
-                transfer: None,
-                task: Task::Read(ReadTask::Batch(batch)),
-                cancel,
-            })),
-            result => WorkOutcome::Complete(result.map(Option::unwrap)),
-        };
-        Completion {
-            job,
-            client,
-            session_id,
-            base,
-            session: None,
-            transfer: None,
-            outcome,
-        }
-    }
-    #[cfg(feature = "test-support")]
-    pub(crate) fn executor_failure(self, message: String) -> Completion {
-        Completion {
-            job: self.job,
-            client: self.client,
-            session_id: self.session_id,
-            base: self.base,
-            session: self.session,
-            transfer: self.transfer,
-            outcome: WorkOutcome::Complete(Err(RuntimeError::ExecutorFailure(message))),
-        }
-    }
-    pub(crate) fn run_with_hook(self, before_io: impl FnOnce()) -> Completion {
-        if matches!(&self.task, Task::Read(_)) {
-            return self.run_read(before_io);
-        }
-        let Self {
-            job,
-            client,
-            session_id,
-            base,
-            session,
-            task,
-            cancel,
-            transfer,
-        } = self;
-        let mut session = session.expect("ownership job has its session");
-        let old_open_memory = session.set_project_open_memory(transfer.clone());
-        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            if cancel.load(Ordering::Acquire) {
-                return Err(RuntimeError::Cancelled);
-            }
-            before_io();
-            // Cancellation after this check is advisory. A successful SDK
-            // publication/save is reported as success, never a false rollback.
-            match task {
-                Task::Read(_) => unreachable!("read job dispatched separately"),
-                Task::Project { request, _lease } => {
-                    let _lease = _lease;
-                    return crate::project_io::execute(&mut session, request, &cancel).map(|r| {
-                        JobValue::Project {
-                            session: session_id,
-                            report: Arc::new(r),
-                        }
-                    });
-                }
-                Task::Import(source) => {
-                    let (path, result) = match source {
-                        crate::ImportSource::Model3(path) => {
-                            let entry =
-                                zipzi_project::resolve_model3_entry(&path).map_err(|s| {
-                                    RuntimeError::Sdk(zipzi_sdk::SdkError {
-                                        code: s.code.into_boxed_str(),
-                                        message: s.message.into_boxed_str(),
-                                        operation: "import_model3",
-                                        object_ids: vec![path.display().to_string()],
-                                        field_path: None,
-                                        expected_version: None,
-                                        actual_version: None,
-                                        referrers: Box::new([]),
-                                    })
-                                })?;
-                            let report = session.import_model3(&entry, Some(base));
-                            (entry, report.map(|r| r.project))
-                        }
-                        crate::ImportSource::Psd(path) => {
-                            let report = session.import_psd_in_memory(&path, Some(base));
-                            (path, report.map(|r| r.project))
-                        }
-                        crate::ImportSource::Cubism(path) => {
-                            let report = session.import_cubism(&path, Some(base));
-                            (path, report.map(|_| zipzi_sdk::ProjectResult::ok()))
-                        }
-                    };
-                    result.map(|report| {
-                        let mut notices = report.warnings;
-                        notices.extend(
-                            report
-                                .diagnostics
-                                .into_iter()
-                                .map(|d| format!("{}: {}", d.code, d.message)),
-                        );
-                        let name = path
-                            .file_stem()
-                            .map(|s| s.to_string_lossy().trim_end_matches(".model3").to_owned());
-                        JobValue::Imported {
-                            session: session_id,
-                            notices,
-                            name,
-                        }
-                    })
-                }
-                Task::Open(path) => session
-                    .open_project_controlled(&path, Some(base), &mut || {
-                        !cancel.load(Ordering::Acquire)
-                    })
-                    .map(|_| JobValue::Opened(session_id)),
-                Task::Save {
-                    path,
-                    target_fingerprint,
-                    progress,
-                } => {
-                    let preview = project_preview(&session, transfer.as_deref(), &cancel);
-                    session
-                        .save_project_with_preview(
-                            &path,
-                            Some(base),
-                            target_fingerprint.as_ref(),
-                            &progress,
-                            preview,
-                            &mut || !cancel.load(Ordering::Acquire),
-                        )
-                        .map(JobValue::Saved)
-                }
-                Task::Commit(edit) => (*edit)
-                    .commit_to(&mut session)
-                    .map(|receipt| JobValue::Published(Arc::new(receipt))),
-                Task::Undo => session
-                    .undo()
-                    .map(|receipt| JobValue::Published(Arc::new(receipt))),
-                Task::Redo => session
-                    .redo()
-                    .map(|receipt| JobValue::Published(Arc::new(receipt))),
-            }
-            .map_err(RuntimeError::from)
-        }));
-        session.set_project_open_memory(old_open_memory);
-        match outcome {
-            Ok(result) => Completion {
-                job,
-                client,
-                session_id,
-                base,
-                session: Some(session),
-                transfer,
-                outcome: WorkOutcome::Complete(result),
-            },
-            Err(panic) => {
-                let message = panic
-                    .downcast_ref::<&str>()
-                    .map(|s| (*s).to_owned())
-                    .or_else(|| panic.downcast_ref::<String>().cloned())
-                    .unwrap_or_else(|| "non-string panic".into());
-                // Consistency after a worker panic is unknown. Never return
-                // the potentially half-mutated authoring state to Ready.
-                Completion {
-                    job,
-                    client,
-                    session_id,
-                    base,
-                    session: None,
-                    transfer,
-                    outcome: WorkOutcome::Complete(Err(RuntimeError::WorkerPanic(message))),
-                }
-            }
-        }
-    }
-}
-
-/// Fields are private to prevent an executor from constructing, cloning or
-/// retargeting a completion. Runtime also validates the active job and version.
-pub struct Completion {
-    pub(crate) transfer: Option<Arc<zipzi_project::TransferReservation>>,
-    pub(crate) job: JobId,
-    pub(crate) client: ClientId,
-    pub(crate) session_id: SessionId,
-    pub(crate) base: Version,
-    pub(crate) session: Option<AuthoringSession>,
-    pub(crate) outcome: WorkOutcome,
-}
-pub(crate) enum WorkOutcome {
-    Complete(Result<JobValue>),
-    Yielded(Box<Work>),
-}
-impl Completion {
-    /// False when the Job yielded and needs another dispatch, without a public
-    /// result or event. Hosts can avoid waking views for these internal steps.
-    pub fn is_terminal(&self) -> bool {
-        matches!(self.outcome, WorkOutcome::Complete(_))
-    }
-    /// Read-only preparation while an executor still owns the returned state.
-    /// Hosts must publish this completion before attaching any resulting view.
-    pub fn returned_session(&self) -> Option<&AuthoringSession> {
-        let WorkOutcome::Complete(Ok(_)) = &self.outcome else {
-            return None;
-        };
-        self.session.as_ref()
-    }
-
-    pub fn job_id(&self) -> JobId {
-        self.job
-    }
-}
-
-pub(crate) enum ReadTask {
-    Batch(Box<batches::ReadBatch>),
-    #[cfg(feature = "gpu-observation")]
-    Observe {
-        source: crate::SourceSnapshot,
-        parameters: Vec<zipzi_core::PreviewValues>,
-        view: crate::observation::ObservationView,
-        observation: crate::observation::ObservationWork,
-    },
-    Spatial {
-        source: crate::SourceSnapshot,
-        parameters: Vec<zipzi_core::PreviewValues>,
-        queries: Vec<zipzi_sdk::SpatialQuery>,
-    },
-    Preview {
-        preview_id: u64,
-        source: crate::SourceSnapshot,
-        sequence: u64,
-        state: Arc<std::sync::Mutex<zipzi_sdk::MotionPreview>>,
-        times: Vec<f32>,
-        geometry: bool,
-        incremental: bool,
-        queries: Vec<zipzi_sdk::SpatialQuery>,
-        view: Option<crate::observation::ObservationView>,
-        observation: Option<crate::observation::ObservationWork>,
-    },
-    Image {
-        path: Option<PathBuf>,
-        bytes: Option<Arc<[u8]>>,
-        budget: zipzi_project::ImageMemoryBudget,
-    },
-    Sample {
-        source: crate::SourceSnapshot,
-        parameters: Vec<zipzi_core::PreviewValues>,
-        checks: zipzi_sdk::GeometryChecks,
-    },
-    Plan {
-        source: crate::SourceSnapshot,
-        intent: zipzi_sdk::ModelingIntent,
-        limits: zipzi_sdk::AuthoringLimits,
-        bytes: usize,
-    },
-}
-#[derive(Debug)]
-pub struct PreparedModelingPlan {
-    pub(crate) source: crate::SourceSnapshot,
-    pub(crate) plan: Arc<zipzi_sdk::ModelingPlan>,
-    pub(crate) bytes: usize,
 }
 impl Work {
-    fn run_read(self, before: impl FnOnce()) -> Completion {
-        let Self {
-            job,
-            client,
-            session_id,
-            base,
-            task,
-            cancel,
-            ..
-        } = self;
-        let Task::Read(task) = task else {
-            unreachable!()
-        };
-        let control = zipzi_sdk::ConversionControl::from_cancel_flag(cancel.clone());
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            if cancel.load(Ordering::Acquire) {
-                return Err(RuntimeError::Cancelled);
-            }
-            before();
-            let task = match batches::ReadBatch::from_task(task) {
-                Ok(mut batch) => {
-                    return loop {
-                        if let Some(value) = batch.step(&cancel, &control)? {
-                            break Ok(value);
-                        }
-                    };
-                }
-                Err(task) => task,
-            };
-            let value = match task {
-                ReadTask::Image {
-                    path,
-                    bytes,
-                    budget,
-                } => {
-                    let image = if let Some(path) = path {
-                        zipzi_project::prepare_image_content_with_budget(&path, &budget)
-                    } else {
-                        zipzi_project::prepare_png_content(
-                            bytes.ok_or(RuntimeError::InvalidReference)?,
-                            &budget,
-                        )
-                    }
-                    .map_err(crate::runtime::resources::preparation_error)?;
-                    JobValue::PreparedImage(Arc::new(image))
-                }
-                ReadTask::Plan {
-                    source,
-                    intent,
-                    limits,
-                    bytes,
-                } => {
-                    let plan = source.snapshot.plan_modeling(intent, limits, &control)?;
-                    JobValue::PreparedPlan(Arc::new(PreparedModelingPlan {
-                        source,
-                        plan: Arc::new(plan),
-                        bytes,
-                    }))
-                }
-                _ => unreachable!("batch tasks handled above"),
-            };
-            if cancel.load(Ordering::Acquire) && !matches!(value, JobValue::Previewed(_)) {
-                Err(RuntimeError::Cancelled)
-            } else {
-                Ok(value)
-            }
-        }))
-        .unwrap_or_else(|_| Err(RuntimeError::WorkerPanic("read worker panicked".into())));
-        Completion {
-            job,
-            client,
-            session_id,
-            base,
-            session: None,
-            transfer: None,
-            outcome: WorkOutcome::Complete(result),
+    /// Format decoders can request a dedicated stack without moving formal state.
+    pub fn run_with_stack(self, name: &str, bytes: usize) -> Completion {
+        let identity = self.identity;
+        match std::thread::Builder::new()
+            .name(name.into())
+            .stack_size(bytes)
+            .spawn(move || self.run())
+        {
+            Ok(worker) => worker.join().unwrap_or_else(|_| Completion {
+                identity,
+                outcome: Err(error("WORKER_PANIC", "Decoder worker panicked")),
+            }),
+            Err(error) => Completion {
+                identity,
+                outcome: Err(zipzi_sdk::Status::error("WORKER_START", error.to_string())),
+            },
         }
     }
-}
-
-// Preview failures are best effort. Cancellation is still observed by the save
-// transaction, and no old preview is copied when a new image cannot be generated.
-fn project_preview(
-    session: &AuthoringSession,
-    reservation: Option<&zipzi_project::TransferReservation>,
-    cancel: &Arc<AtomicBool>,
-) -> Option<zipzi_project::archive::ProjectPreview> {
-    #[cfg(feature = "gpu-observation")]
-    {
-        let reservation = reservation?;
-        let required = reservation
-            .reserved_bytes()
-            .checked_add(zipzi_observe::PROJECT_PREVIEW_WORKSPACE)?;
-        reservation.ensure_at_least(required).ok()?;
-        let control = zipzi_sdk::ConversionControl::from_cancel_flag(cancel.clone());
-        zipzi_observe::render_project_preview(&session.read_snapshot(), &control)
-            .ok()
-            .flatten()
+    pub fn job_id(&self) -> JobId {
+        self.identity.job
     }
-    #[cfg(not(feature = "gpu-observation"))]
-    {
-        let _ = (session, reservation, cancel);
-        None
+    pub fn source(&self) -> QuerySource {
+        self.identity.source
+    }
+    pub fn session_key(&self) -> SessionKey {
+        self.identity.base().session
+    }
+    /// Converts unwinding task failures to terminal results. Dropping a candidate
+    /// or decoder never affects the resident Session/history.
+    pub fn run(self) -> Completion {
+        let Self {
+            identity,
+            task,
+            cancel,
+            workspace,
+            result_lease,
+        } = self;
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            cancel.check()?;
+            match task {
+                Task::Batch { mut draft, run } => {
+                    let QuerySource::Draft(source) = identity.source else {
+                        unreachable!()
+                    };
+                    draft.batch(source, |commands| run(commands, &cancel))?;
+                    cancel.check()?;
+                    Ok(Output::Draft(draft))
+                }
+                Task::Publish { draft, description } => {
+                    if identity.source != QuerySource::Draft(draft.source()) {
+                        return Err(error("STALE_SOURCE", "Commit source changed"));
+                    }
+                    let prepared = draft.prepare(description)?;
+                    cancel.check()?;
+                    Ok(Output::Publish(prepared))
+                }
+                Task::Read {
+                    snapshot,
+                    run,
+                    max_bytes,
+                } => {
+                    let bytes = run(snapshot, &cancel)?;
+                    cancel.check()?;
+                    if bytes.capacity() > max_bytes {
+                        return Err(error(
+                            "RESOURCE_LIMIT",
+                            "Read result exceeds its admitted bound",
+                        ));
+                    }
+                    Ok(Output::Read(ReadResult::new(
+                        identity.source,
+                        bytes,
+                        result_lease,
+                    )))
+                }
+                Task::ReadSteps {
+                    snapshot,
+                    mut run,
+                    max_bytes,
+                } => match run(&snapshot, &cancel)? {
+                    ReadProgress::Yield => {
+                        cancel.check()?;
+                        Ok(Output::Yield(Box::new(Work {
+                            identity,
+                            task: Task::ReadSteps {
+                                snapshot,
+                                run,
+                                max_bytes,
+                            },
+                            cancel,
+                            workspace: workspace.clone(),
+                            result_lease,
+                        })))
+                    }
+                    ReadProgress::Complete(bytes) => {
+                        cancel.check()?;
+                        if bytes.capacity() > max_bytes {
+                            return Err(error(
+                                "RESOURCE_LIMIT",
+                                "Read result exceeds its admitted bound",
+                            ));
+                        }
+                        Ok(Output::Read(ReadResult::new(
+                            identity.source,
+                            bytes,
+                            result_lease,
+                        )))
+                    }
+                },
+                Task::Open { io, path } => {
+                    PreparedProject::load(identity.base(), &io, &path, || !cancel.is_cancelled())
+                        .map(Output::Open)
+                }
+                Task::Import {
+                    importer,
+                    path,
+                    format,
+                } => {
+                    let prepared = crate::runtime::imports::prepare(&importer, &path, format)?;
+                    cancel.check()?;
+                    Ok(Output::Import(prepared))
+                }
+                Task::Export {
+                    snapshot,
+                    path,
+                    format,
+                    allow_loss,
+                } => {
+                    let format = match format {
+                        zipzi_contract::kernel_tasks::ExportFormat::Runtime => {
+                            zipzi_project::TransferFormat::Runtime
+                        }
+                        zipzi_contract::kernel_tasks::ExportFormat::Cubism => {
+                            zipzi_project::TransferFormat::Cubism
+                        }
+                    };
+                    let receipt = snapshot.publish_with_options(
+                        format,
+                        &path,
+                        &zipzi_project::TransferPublishOptions { allow_loss },
+                    )?;
+                    Ok(Output::Export(ExportReceipt {
+                        source: identity.source,
+                        path,
+                        published: true,
+                        durable: receipt.durable(),
+                        warnings: receipt.warnings,
+                        notices: receipt.notices,
+                    }))
+                }
+                // No cancellation check after write: a success means externally published.
+                Task::Save(prepared) => prepared.write(|| !cancel.is_cancelled()).map(Output::Save),
+            }
+        }))
+        .unwrap_or_else(|_| Err(error("WORKER_PANIC", "Worker task panicked")));
+        drop(workspace);
+        Completion { identity, outcome }
     }
 }

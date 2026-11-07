@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use zipzi_runtime::{authoring::ModelingSampleQuery, *};
+use zipzi_runtime::*;
 
 #[derive(Default)]
 struct Manual(VecDeque<Work>);
@@ -9,7 +9,8 @@ impl Executor for Manual {
         Ok(())
     }
 }
-fn fixture(workers: usize) -> (Runtime, ClientId, SessionId) {
+
+fn fixture(workers: usize) -> (Runtime, ClientId, Version) {
     let mut rt = Runtime::new(RuntimeLimits {
         running_jobs: workers,
         ..Default::default()
@@ -19,270 +20,203 @@ fn fixture(workers: usize) -> (Runtime, ClientId, SessionId) {
         .create_session(
             client,
             &uuid::Uuid::new_v4().to_string(),
-            zipzi_core::ModelSetup::default(),
+            Default::default(),
         )
         .unwrap();
-    (rt, client, session)
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    (rt, client, version)
 }
-fn samples(rt: &mut Runtime, client: ClientId, session: SessionId, count: usize) -> JobId {
-    rt.request_modeling_samples(
+
+fn read(rt: &mut Runtime, client: ClientId, version: Version, count: u8) -> JobId {
+    let mut steps = 0;
+    rt.request_read_steps(
         client,
-        ModelingSampleQuery {
-            session,
-            edit: None,
-            parameters: vec![Default::default(); count],
-            checks: Default::default(),
-            expected: None,
+        QuerySource::Published(version),
+        TaskBudget {
+            workspace_bytes: 128,
+            result_bytes: 16,
+        },
+        move |_, cancel| {
+            cancel.check()?;
+            steps += 1;
+            Ok(if steps == count {
+                ReadProgress::Complete(vec![steps])
+            } else {
+                ReadProgress::Yield
+            })
         },
     )
     .unwrap()
 }
-fn step(rt: &mut Runtime, workers: &mut Manual) -> JobId {
-    rt.dispatch(workers);
-    assert_eq!(workers.0.len(), 1);
-    let work = workers.0.pop_front().unwrap();
+
+fn step(rt: &mut Runtime) -> JobId {
+    let work = rt.next_work().unwrap();
     let id = work.job_id();
-    assert!(rt.complete(work.run_quantum()));
+    rt.complete(work.run()).unwrap();
     id
 }
+
 #[test]
-fn clients_rotate_despite_a_flood_and_batches_yield_to_other_jobs() {
-    let (mut rt, a, s) = fixture(2);
+fn cooperative_reads_return_to_the_queue_and_yield_to_other_clients() {
+    let (mut rt, a, version) = fixture(1);
     let b = rt.register_client().unwrap();
-    let c = rt.register_client().unwrap();
-    let a1 = samples(&mut rt, a, s, 3);
-    let a2 = samples(&mut rt, a, s, 1);
-    let a3 = samples(&mut rt, a, s, 1);
-    let b1 = samples(&mut rt, b, s, 1);
-    let c1 = samples(&mut rt, c, s, 1);
-    let before = rt.session_info(s).unwrap();
-    let mut workers = Manual::default();
-    assert_eq!(step(&mut rt, &mut workers), a1);
-    assert_eq!(rt.job_info(a, a1).unwrap().state, JobState::Running);
-    assert_eq!(step(&mut rt, &mut workers), b1);
-    assert_eq!(step(&mut rt, &mut workers), c1);
-    assert_eq!(step(&mut rt, &mut workers), a2);
-    assert_eq!(step(&mut rt, &mut workers), a3);
-    assert_eq!(step(&mut rt, &mut workers), a1);
-    assert_eq!(step(&mut rt, &mut workers), a1);
-    let JobValue::Sampled(batch) = rt.job_info(a, a1).unwrap().result.unwrap().unwrap() else {
-        panic!()
+    rt.attach(b, version.session).unwrap();
+    let batch = read(&mut rt, a, version, 3);
+    let one = read(&mut rt, b, version, 1);
+    assert_eq!(step(&mut rt), batch);
+    assert_eq!(rt.job(a, batch).unwrap().state, JobState::Queued);
+    assert_eq!(step(&mut rt), one);
+    assert_eq!(rt.job(b, one).unwrap().state, JobState::Succeeded);
+    assert_eq!(step(&mut rt), batch);
+    assert_eq!(step(&mut rt), batch);
+    let Some(Ok(JobValue::Read(result))) = &rt.job(a, batch).unwrap().result else {
+        panic!("expected read result")
     };
-    assert_eq!(batch.samples.frames.len(), 3);
-    assert_eq!(batch.samples.parameters.len(), 3);
-    assert_eq!(batch.source.version(), before.version);
-    assert_eq!(rt.session_info(s).unwrap(), before);
+    assert_eq!(result.source, QuerySource::Published(version));
+    assert_eq!(result.bytes(), [3]);
+    assert_eq!(rt.subscribe(a, version.session).unwrap().cursor, version);
 }
+
 #[test]
-fn a_publication_preempts_a_continuation_even_on_a_single_worker_host() {
-    let (mut rt, c, s) = fixture(1);
-    let batch = samples(&mut rt, c, s, 64);
-    let mut workers = Manual::default();
-    assert_eq!(step(&mut rt, &mut workers), batch);
-    let edit = rt.begin_edit(c, s, "resize", None).unwrap();
-    rt.apply_edit(c, edit, |e| {
-        e.replace_model_setup(zipzi_core::Canvas::new(20., 20., Default::default(), 1.))
-    })
-    .unwrap();
-    let publish = rt.request_commit(c, edit).unwrap();
-    assert_eq!(step(&mut rt, &mut workers), publish);
-    assert_eq!(rt.job_info(c, publish).unwrap().state, JobState::Succeeded);
-    assert_eq!(rt.job_info(c, batch).unwrap().state, JobState::Running);
-    rt.cancel_job(c, batch).unwrap();
-    assert_eq!(rt.job_info(c, batch).unwrap().state, JobState::Cancelling);
-    assert_eq!(step(&mut rt, &mut workers), batch);
-    assert_eq!(rt.job_info(c, batch).unwrap().state, JobState::Cancelled);
-    rt.dispatch(&mut workers);
-    assert!(workers.0.is_empty());
-}
-#[test]
-fn cancelling_a_yielded_preview_releases_busy_and_preserves_completed_targets() {
-    let (mut rt, c, s) = fixture(2);
-    let before = rt.session_info(s).unwrap();
-    let (preview, _) = rt.create_preview(c, s, None, None).unwrap();
-    let job = rt
-        .request_preview_samples(c, preview, vec![0.25, 0.5, 1.], true, false)
+fn a_yielded_read_leaves_one_worker_available_for_publication() {
+    let (mut rt, client, version) = fixture(1);
+    let read = read(&mut rt, client, version, 64);
+    assert_eq!(step(&mut rt), read);
+    let draft = rt.begin_draft(client, version).unwrap();
+    let id = uuid::Uuid::new_v4().to_string();
+    let (draft, ()) = rt
+        .batch(client, draft, |c| {
+            c.create_part(zipzi_core::Part {
+                id: id.clone(),
+                runtime_id: id,
+                name: "Part".into(),
+                ..Default::default()
+            })
+        })
         .unwrap();
-    let mut workers = Manual::default();
-    assert_eq!(step(&mut rt, &mut workers), job);
-    assert!(matches!(
-        rt.preview_state(c, preview),
-        Err(RuntimeError::Busy)
-    ));
-    let reserved = rt.accounted_bytes();
-    rt.cancel_job(c, job).unwrap();
-    assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelling);
-    assert_eq!(rt.accounted_bytes(), reserved);
-    assert_eq!(rt.release_job(c, job), Err(RuntimeError::Busy));
-    assert_eq!(step(&mut rt, &mut workers), job);
-    assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelled);
-    assert_eq!(rt.preview_state(c, preview).unwrap().1.time, 0.25);
-    rt.release_job(c, job).unwrap();
-    rt.release_preview(c, preview).unwrap();
-    assert_eq!(rt.session_info(s).unwrap(), before);
-    assert_eq!(rt.preview_count(), 0);
+    let publish = rt
+        .request_publish(client, draft, "Create part", Default::default())
+        .unwrap();
+    let work = rt.take_work(publish).unwrap();
+    rt.complete(work.run()).unwrap();
+    assert_eq!(rt.job(client, publish).unwrap().state, JobState::Succeeded);
+    assert_eq!(rt.job(client, read).unwrap().state, JobState::Queued);
+    rt.cancel_job(client, read).unwrap();
+    assert_eq!(step(&mut rt), read);
+    assert_eq!(rt.job(client, read).unwrap().state, JobState::Cancelled);
+    assert!(rt.next_work().is_none());
 }
+
 #[test]
-fn rejected_submission_preserves_the_client_turn_and_explicit_dispatch_cannot_bypass_it() {
-    struct Reject;
+fn rejected_executor_submission_requeues_the_same_work() {
+    struct Reject(Vec<JobId>);
     impl Executor for Reject {
         fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
+            self.0.push(work.job_id());
             Err(Box::new(work))
         }
     }
-    let (mut rt, a, s) = fixture(2);
-    let b = rt.register_client().unwrap();
-    let a1 = samples(&mut rt, a, s, 2);
-    let b1 = samples(&mut rt, b, s, 1);
-    rt.dispatch(&mut Reject);
-    assert!(matches!(rt.take_work(b1), Err(RuntimeError::Busy)));
-    let mut workers = Manual::default();
-    assert_eq!(step(&mut rt, &mut workers), a1);
-    assert!(matches!(rt.take_work(a1), Err(RuntimeError::Busy)));
-    let work = rt.take_work(b1).unwrap();
-    assert!(rt.complete(work.run_quantum()));
-    assert_eq!(step(&mut rt, &mut workers), a1);
-    assert!(rt.job_info(a, a1).unwrap().state.is_terminal());
+    let (mut rt, client, version) = fixture(1);
+    let first = read(&mut rt, client, version, 2);
+    let second = read(&mut rt, client, version, 1);
+    let mut reject = Reject(Vec::new());
+    rt.dispatch(&mut reject);
+    assert_eq!(reject.0, [first]);
+    assert_eq!(rt.job(client, first).unwrap().state, JobState::Queued);
+    assert_eq!(step(&mut rt), first);
+    assert_eq!(step(&mut rt), second);
+    assert_eq!(step(&mut rt), first);
+    assert_eq!(rt.job(client, first).unwrap().state, JobState::Succeeded);
 }
 
 #[test]
-fn client_expiry_drops_a_returned_continuation_and_all_its_reservations() {
-    let (mut rt, c, s) = fixture(2);
-    let baseline = rt.accounted_bytes();
-    let (preview, _) = rt.create_preview(c, s, None, None).unwrap();
-    rt.request_preview_samples(c, preview, vec![0.1, 0.2, 0.3], true, false)
-        .unwrap();
-    let mut workers = Manual::default();
-    rt.dispatch(&mut workers);
-    let completion = workers.0.pop_front().unwrap().run_quantum();
-    assert!(!completion.is_terminal());
-    assert!(rt.accounted_bytes() > baseline);
-    rt.release_client(c);
-    assert!(rt.complete(completion));
+fn client_release_retains_yielded_work_and_leases_until_worker_cleanup() {
+    let (mut rt, client, version) = fixture(1);
+    let job = read(&mut rt, client, version, 3);
+    let completion = rt.take_work(job).unwrap().run();
+    let reserved = rt.task_bytes();
+    assert!(reserved > 0);
+    rt.release_client(client);
+    rt.complete(completion).unwrap();
+    assert_eq!(rt.outstanding_job_ids(), [job]);
+    assert_eq!(rt.task_bytes(), reserved);
+    assert_eq!(step(&mut rt), job);
+    assert!(rt.outstanding_job_ids().is_empty());
+    assert_eq!(rt.task_bytes(), 0);
+    let peer = rt.register_client().unwrap();
+    rt.attach(peer, version.session).unwrap();
+    assert_eq!(rt.subscribe(peer, version.session).unwrap().cursor, version);
+}
+
+#[test]
+fn detaching_a_client_cancels_its_read_without_closing_the_session() {
+    let (mut rt, client, version) = fixture(1);
+    let job = read(&mut rt, client, version, 2);
+    assert_eq!(step(&mut rt), job);
+    rt.detach(client, version.session).unwrap();
+    assert_eq!(rt.job(client, job).unwrap().state, JobState::Cancelling);
+    assert_eq!(rt.release_job(client, job).unwrap_err().code, "JOB_BUSY");
+    assert_eq!(step(&mut rt), job);
+    assert_eq!(rt.job(client, job).unwrap().state, JobState::Cancelled);
+    rt.release_job(client, job).unwrap();
+    assert_eq!(rt.task_bytes(), 0);
+    rt.attach(client, version.session).unwrap();
     assert_eq!(
-        rt.live_counts().3,
-        1,
-        "cleanup retains its Job until the worker returns"
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
     );
-    rt.dispatch(&mut workers);
-    assert!(rt.complete(workers.0.pop_front().unwrap().run_quantum()));
-    assert_eq!(rt.preview_count(), 0);
-    assert_eq!(rt.live_counts().3, 0);
-    assert!(rt.accounted_bytes() <= baseline);
-    rt.dispatch(&mut workers);
-    assert!(workers.0.is_empty());
-}
-
-#[test]
-fn detaching_a_view_cancels_its_yielded_preview_without_closing_the_session() {
-    let (mut rt, c, s) = fixture(2);
-    let before = rt.session_info(s).unwrap();
-    let (preview, _) = rt.create_preview(c, s, None, None).unwrap();
-    let job = rt
-        .request_preview_samples(c, preview, vec![0.1, 0.2], false, false)
-        .unwrap();
-    let mut workers = Manual::default();
-    assert_eq!(step(&mut rt, &mut workers), job);
-    assert_eq!(rt.detach_session(c, s), Err(RuntimeError::Busy));
-    rt.detach_editor_view(c, s).unwrap();
-    assert_eq!(rt.preview_count(), 0);
-    assert_eq!(step(&mut rt, &mut workers), job);
-    assert_eq!(rt.job_info(c, job).unwrap().state, JobState::Cancelled);
-    assert_eq!(rt.session_info(s).unwrap(), before);
-    rt.release_job(c, job).unwrap();
-    rt.attach_session(c, s).unwrap();
 }
 
 #[test]
 fn cancelling_entered_work_does_not_free_its_executor_slot_early() {
-    let (mut rt, c, s) = fixture(1);
-    let first = samples(&mut rt, c, s, 2);
+    let (mut rt, client, version) = fixture(1);
+    let first = read(&mut rt, client, version, 2);
     let mut workers = Manual::default();
     rt.dispatch(&mut workers);
     let entered = workers.0.pop_front().unwrap();
-    rt.cancel_job(c, first).unwrap();
-    let second = samples(&mut rt, c, s, 1);
-    assert!(matches!(rt.take_work(second), Err(RuntimeError::Busy)));
+    rt.cancel_job(client, first).unwrap();
+    let second = read(&mut rt, client, version, 1);
+    assert_eq!(rt.take_work(second).unwrap_err().code, "JOB_BUSY");
     rt.dispatch(&mut workers);
     assert!(workers.0.is_empty());
-    assert!(rt.complete(entered.run_quantum()));
-    assert_eq!(rt.job_info(c, first).unwrap().state, JobState::Cancelled);
-    assert_eq!(step(&mut rt, &mut workers), second);
-    assert_eq!(rt.job_info(c, second).unwrap().state, JobState::Succeeded);
+    rt.complete(entered.run()).unwrap();
+    assert_eq!(rt.job(client, first).unwrap().state, JobState::Cancelled);
+    assert_eq!(step(&mut rt), second);
+    assert_eq!(rt.job(client, second).unwrap().state, JobState::Succeeded);
 }
 
 #[test]
-fn queued_ownership_cancellation_restores_session_without_an_executor_slot() {
-    let (mut rt, c, s) = fixture(1);
-    let dir = tempfile::tempdir().unwrap();
-    let active = rt.request_save(c, s, &dir.path().join("active")).unwrap();
+fn cancelling_a_queued_save_releases_its_target_after_worker_completion() {
+    let (mut rt, client, version) = fixture(1);
+    let active = read(&mut rt, client, version, 1);
     let entered = rt.take_work(active).unwrap();
-    let other = rt
-        .create_session(
-            c,
-            &uuid::Uuid::new_v4().to_string(),
-            zipzi_core::ModelSetup::default(),
-        )
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("queued.zipzi");
+    let io = rt.project_io().clone();
+    let queued = rt
+        .request_save_as(client, version, &io, &path, None, Default::default())
         .unwrap();
-    let before = rt.session_info(other).unwrap();
-    let path = dir.path().join("rejected");
-    let queued = rt.request_save(c, other, &path).unwrap();
-    assert!(matches!(rt.take_work(queued), Err(RuntimeError::Busy)));
-    rt.cancel_queued_job(c, queued).unwrap();
-    assert_eq!(rt.job_info(c, queued).unwrap().state, JobState::Cancelled);
-    assert_eq!(rt.session_info(other).unwrap(), before);
+    assert_eq!(rt.take_work(queued).unwrap_err().code, "JOB_BUSY");
+    rt.cancel_job(client, queued).unwrap();
+    assert_eq!(rt.job(client, queued).unwrap().state, JobState::Cancelling);
+    assert_eq!(
+        rt.saving_job(client, version.session).unwrap(),
+        Some(queued)
+    );
     assert!(!path.exists());
-    rt.release_job(c, queued).unwrap();
-    assert!(matches!(
-        rt.cancel_queued_job(c, active),
-        Err(RuntimeError::Busy)
-    ));
-    assert_eq!(rt.job_info(c, active).unwrap().state, JobState::Running);
-    assert!(rt.complete(entered.run()));
-    // The rejected target can be reserved again immediately after capacity returns.
-    let retry = rt.request_save(c, other, &path).unwrap();
-    let work = rt.take_work(retry).unwrap();
-    assert!(rt.complete(work.run()));
-    assert_eq!(rt.job_info(c, retry).unwrap().state, JobState::Succeeded);
-}
-
-#[test]
-#[cfg(feature = "gpu-observation")]
-fn gpu_admission_survives_yields_and_cleanup_without_blocking_cpu_work() {
-    let (mut rt, a, s) = fixture(2);
-    let b = rt.register_client().unwrap();
-    let view = observation::ObservationView {
-        texture_policy: Default::default(),
-        width: 8,
-        height: 8,
-        roi: [0., 0., 1., 1.],
-        padding_model: 0.,
-        topology: None,
-        quality: false,
-    };
-    let first = rt
-        .request_observation(a, s, None, vec![Default::default(); 2], view.clone(), None)
+    rt.complete(entered.run()).unwrap();
+    assert_eq!(step(&mut rt), queued);
+    assert_eq!(rt.job(client, queued).unwrap().state, JobState::Cancelled);
+    assert!(rt.saving_job(client, version.session).unwrap().is_none());
+    assert_eq!(
+        rt.subscribe(client, version.session).unwrap().cursor,
+        version
+    );
+    assert!(!path.exists());
+    let retry = rt
+        .request_save_as(client, version, &io, &path, None, Default::default())
         .unwrap();
-    let second = rt
-        .request_observation(b, s, None, vec![Default::default(); 2], view, None)
-        .unwrap();
-    let mut workers = Manual::default();
-    // Only capture a CPU pose; this deterministic test needs no GPU device.
-    assert_eq!(step(&mut rt, &mut workers), first);
-    let cpu = samples(&mut rt, b, s, 1);
-    assert_eq!(step(&mut rt, &mut workers), cpu);
-    assert!(matches!(rt.take_work(second), Err(RuntimeError::Busy)));
-    let reserved = rt.accounted_bytes();
-    rt.cancel_job(a, first).unwrap();
-    assert_eq!(rt.accounted_bytes(), reserved);
-    assert_eq!(rt.cancel_queued_job(a, first), Err(RuntimeError::Busy));
-    assert!(matches!(rt.take_work(second), Err(RuntimeError::Busy)));
-    // Even after the cleanup worker returns, admission waits for publication.
-    let cleanup = rt.take_work(first).unwrap().run_quantum();
-    assert!(matches!(rt.take_work(second), Err(RuntimeError::Busy)));
-    assert!(rt.complete(cleanup));
-    assert_eq!(rt.job_info(a, first).unwrap().state, JobState::Cancelled);
-    assert_eq!(step(&mut rt, &mut workers), second);
-    rt.cancel_job(b, second).unwrap();
-    assert_eq!(step(&mut rt, &mut workers), second);
+    assert_eq!(step(&mut rt), retry);
+    assert_eq!(rt.job(client, retry).unwrap().state, JobState::Succeeded);
+    assert!(path.is_file());
 }

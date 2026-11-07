@@ -1,4 +1,5 @@
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::types::{Appearance, DeltaKeyforms, Status, Vec2};
 
 use super::evaluator::EvalContext;
@@ -7,7 +8,7 @@ use super::selection::{blend_appearance, blend_positions, default_selection, inh
 use super::transforms::f32_to_i32;
 
 pub(super) fn evaluate(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     prepared: &PreparedEvaluation,
     state: &mut EvalContext<'_>,
 ) -> Status {

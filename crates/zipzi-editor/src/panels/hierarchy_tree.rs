@@ -42,7 +42,7 @@ pub struct HierarchyTreePanel<const DEFORMER: bool> {
     search_placeholder: String,
     _search_subscription: Subscription,
     document_id: Option<DocumentId>,
-    revision: Option<u64>,
+    revision: Option<zipzi_core::state::ContentId>,
     last_selection: Option<zipzi_editor_core::ObjectRef>,
     locate_target: Option<zipzi_editor_core::ObjectRef>,
     selection: selection::TreeSelection,
@@ -491,7 +491,10 @@ impl<const DEFORMER: bool> Render for HierarchyTreePanel<DEFORMER> {
             let state = owner.read(cx);
             (
                 state.editor.active_id(),
-                state.editor.tree_revision(),
+                state
+                    .editor
+                    .document()
+                    .map(|document| document.evaluation_layout_id()),
                 state
                     .editor
                     .document()

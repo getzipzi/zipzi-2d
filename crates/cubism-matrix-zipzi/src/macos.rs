@@ -11,6 +11,7 @@ use zipzi_core::DrawableFrameBounds;
 use serde::Deserialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use zipzi_animation::MotionPreview;
 use zipzi_core::evaluation::RenderCommand;
 use zipzi_core::{Canvas, DrawableFrame, PreviewValues, Vec2};
 use zipzi_render::{Affine2, ViewportConfig};
@@ -18,9 +19,7 @@ use zipzi_render_metal::{
     metal, read_rgba8, MetalContext, MetalOutputMode, MetalRenderer, MetalTargetConfig,
     MetalTexture, MetalTextureCatalog,
 };
-use zipzi_sdk::{AuthoringSession, MotionPreview};
 
-const DOCUMENT_ID: &str = "00000000-0000-4000-8000-000000000001";
 const GEOMETRY_PHASES: [&str; 12] = [
     "workspace_setup",
     "preflight",
@@ -215,16 +214,16 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         use std::fmt::Write;
         write!(&mut model_hash, "{byte:02x}").unwrap();
     }
-    let mut session =
-        AuthoringSession::new(DOCUMENT_ID, Canvas::new(1.0, 1.0, Vec2::new(0.0, 0.0), 1.0))?;
-    let receipt = session.import_model3(&model_path, None)?;
-    // Mao includes references to virtual/absent parameter and Part IDs. The
-    // official runtime also accepts the package; retain this coverage signal.
-    let import_diagnostics = receipt.project.diagnostics.len();
+    let resources = zipzi_project::ResourceStore::default();
+    let importer = zipzi_project::ProjectImporter { resources };
+    let (receipt, imported, _) = importer.import_model3(&model_path);
+    let imported =
+        imported.ok_or_else(|| format!("{}: {}", receipt.status.code, receipt.status.message))?;
+    let import_diagnostics = receipt.diagnostics.len();
     if import_diagnostics != 0 {
         eprintln!("Zipzi import reported {import_diagnostics} unresolved model3 references");
     }
-    let snapshot = session.read_snapshot();
+    let snapshot = zipzi_sdk::Snapshot::new(imported.document, imported.resources)?;
     let mut frame = DrawableFrame::default();
     let status = zipzi_core::evaluation::evaluate_frame_including_hidden(
         snapshot.document(),
@@ -239,22 +238,17 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         .iter()
         .map(|drawable| drawable.texture_asset_id.as_str())
         .collect();
-    let root = snapshot
-        .project_path()
-        .and_then(Path::parent)
-        .unwrap_or(Path::new(""));
     let resolved = required
         .into_iter()
         .map(|id| {
             let asset = snapshot
                 .document()
-                .get_asset(id)
+                .asset(id)
                 .expect("evaluated texture exists");
-            let data = match snapshot.memory_image(id) {
-                Some(image) => image.read_asset(),
-                None => zipzi_project::read_project_asset(root, asset),
-            }
-            .map_err(|status| format!("{}: {}", status.code, status.message))?;
+            let data = snapshot
+                .resources()
+                .read_texture(asset)
+                .map_err(|status| format!("{}: {}", status.code, status.message))?;
             Ok::<_, String>((asset, data))
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -290,7 +284,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let mut previews: Vec<MotionPreview> = (0..workload.instances)
-        .map(|_| session.motion_preview())
+        .map(|_| MotionPreview::new(snapshot.document()))
         .collect();
     for preview in &mut previews {
         preview.schedule_motion_entry(&workload.motion.group, workload.motion.index, 0.0)?;

@@ -100,73 +100,84 @@ pub(super) fn rich_document_with_canvas(
         Mesh, Part, PreciseVec2, RotationPose, RotationTransform, Transform, TransformData,
         WarpTransform,
     };
-    use zipzi_sdk::{AuthoringSession, prepare_png_asset};
     let dir = tempfile::tempdir()?;
     let asset_path = dir.path().join("a.png");
     std::fs::write(&asset_path, include_bytes!("../../fixtures/accent.png"))?;
     let id = |n| uuid::Uuid::from_u128(n).to_string();
-    let mut s = AuthoringSession::new(&id(1), canvas)?;
-    s.edit("fixture", None, |e| {
-        e.create_asset(prepare_png_asset(&id(2), "a", &asset_path)?)?;
-        e.create_part(Part {
-            id: id(3),
-            name: "Part".into(),
-            ..Default::default()
-        })?;
-        e.create_transform(Transform {
-            id: id(4),
-            name: "Warp".into(),
-            data: TransformData::Warp(WarpTransform {
-                bezier: None,
-                rows: 1,
-                columns: 1,
-                quad: true,
-                points: vec![
-                    Vec2::new(32., 32.),
-                    Vec2::new(224., 32.),
-                    Vec2::new(32., 224.),
-                    Vec2::new(224., 224.),
+    let mut s = crate::support::fixture_session(&id(1), canvas)?;
+    crate::support::publish_fixture(&mut s, "fixture", |e| {
+        crate::support::insert_image(e, crate::support::image_fixture(&id(2), "a", &asset_path)?)?;
+        crate::support::insert_fixture_part(
+            e,
+            Part {
+                id: id(3),
+                name: "Part".into(),
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_transform(
+            e,
+            Transform {
+                id: id(4),
+                name: "Warp".into(),
+                data: TransformData::Warp(WarpTransform {
+                    bezier: None,
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    points: vec![
+                        Vec2::new(32., 32.),
+                        Vec2::new(224., 32.),
+                        Vec2::new(32., 224.),
+                        Vec2::new(224., 224.),
+                    ],
+                }),
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_transform(
+            e,
+            Transform {
+                id: id(5),
+                name: "Rotation".into(),
+                data: TransformData::Rotation(RotationTransform {
+                    base_angle: 0.,
+                    pose: RotationPose {
+                        origin: PreciseVec2::new(128., 128.),
+                        ..Default::default()
+                    },
+                }),
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_fixture_mesh(
+            e,
+            Mesh {
+                id: id(6),
+                name: "Mesh".into(),
+                texture_asset_id: (id(2)).into(),
+                part_id: id(3),
+                deformer_id: id(4),
+                vertex_ids: vec![10, 11, 12, 13],
+                base_positions: vec![
+                    Vec2::new(0.1, 0.1),
+                    Vec2::new(0.9, 0.1),
+                    Vec2::new(0.9, 0.9),
+                    Vec2::new(0.1, 0.9),
                 ],
-            }),
-            ..Default::default()
-        })?;
-        e.create_transform(Transform {
-            id: id(5),
-            name: "Rotation".into(),
-            data: TransformData::Rotation(RotationTransform {
-                base_angle: 0.,
-                pose: RotationPose {
-                    origin: PreciseVec2::new(128., 128.),
-                    ..Default::default()
-                },
-            }),
-            ..Default::default()
-        })?;
-        e.create_mesh(Mesh {
-            id: id(6),
-            name: "Mesh".into(),
-            texture_asset_id: (id(2)).into(),
-            part_id: id(3),
-            deformer_id: id(4),
-            vertex_ids: vec![10, 11, 12, 13],
-            base_positions: vec![
-                Vec2::new(0.1, 0.1),
-                Vec2::new(0.9, 0.1),
-                Vec2::new(0.9, 0.9),
-                Vec2::new(0.1, 0.9),
-            ],
-            uvs: vec![
-                Vec2::new(0., 0.),
-                Vec2::new(1., 0.),
-                Vec2::new(1., 1.),
-                Vec2::new(0., 1.),
-            ],
-            triangles: vec![[10, 11, 12], [10, 12, 13]],
-            ..Default::default()
-        })?;
+                uvs: vec![
+                    Vec2::new(0., 0.),
+                    Vec2::new(1., 0.),
+                    Vec2::new(1., 1.),
+                    Vec2::new(0., 1.),
+                ],
+                triangles: vec![[10, 11, 12], [10, 12, 13]],
+                ..Default::default()
+            },
+        )?;
         Ok(())
     })?;
-    let receipt = s.save_project(&dir.path().join("fixture"), None)?;
+    let receipt = crate::support::save_fixture(&mut s, &dir.path().join("fixture"))?;
     let mut document = Document::open(&receipt.path)?;
     document.select(&id(6))?;
     Ok((document, dir, id(4), id(5), id(3)))
@@ -256,7 +267,7 @@ pub(super) fn bound_deformer_editor(
     } else {
         canvas.flag = 1;
     }
-    let mut session = zipzi_sdk::AuthoringSession::new(&id(21), canvas)?;
+    let mut session = crate::support::fixture_session(&id(21), canvas)?;
     let positions = vec![
         Vec2::new(0.1, 0.1),
         Vec2::new(0.9, 0.1),
@@ -267,49 +278,58 @@ pub(super) fn bound_deformer_editor(
         origin: zipzi_core::PreciseVec2::new(0.5123456789, 0.4123456789),
         ..Default::default()
     };
-    session.edit("fixture", None, |edit| {
-        edit.create_transform(Transform {
-            id: id(22),
-            data: TransformData::Warp(WarpTransform {
-                bezier: None,
-                rows: 1,
-                columns: 1,
-                quad: true,
-                points: vec![
-                    Vec2::new(20., 30.),
-                    Vec2::new(220., 30.),
-                    Vec2::new(20., 230.),
-                    Vec2::new(220., 230.),
-                ],
-            }),
-            ..Default::default()
-        })?;
-        edit.create_transform(Transform {
-            id: id(23),
-            parent_id: Some(id(22).into()),
-            data: if rotation {
-                TransformData::Rotation(RotationTransform {
-                    pose,
-                    ..Default::default()
-                })
-            } else {
-                TransformData::Warp(WarpTransform {
+    crate::support::publish_fixture(&mut session, "fixture", |edit| {
+        crate::support::insert_transform(
+            edit,
+            Transform {
+                id: id(22),
+                data: TransformData::Warp(WarpTransform {
                     bezier: None,
                     rows: 1,
                     columns: 1,
                     quad: true,
-                    points: positions.clone(),
-                })
+                    points: vec![
+                        Vec2::new(20., 30.),
+                        Vec2::new(220., 30.),
+                        Vec2::new(20., 230.),
+                        Vec2::new(220., 230.),
+                    ],
+                }),
+                ..Default::default()
             },
-            ..Default::default()
-        })?;
-        edit.create_parameter(Parameter {
-            id: id(24),
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.,
-            ..Default::default()
-        })?;
+        )?;
+        crate::support::insert_transform(
+            edit,
+            Transform {
+                id: id(23),
+                parent_id: Some(id(22).into()),
+                data: if rotation {
+                    TransformData::Rotation(RotationTransform {
+                        pose,
+                        ..Default::default()
+                    })
+                } else {
+                    TransformData::Warp(WarpTransform {
+                        bezier: None,
+                        rows: 1,
+                        columns: 1,
+                        quad: true,
+                        points: positions.clone(),
+                    })
+                },
+                ..Default::default()
+            },
+        )?;
+        crate::support::insert_fixture_parameter(
+            edit,
+            Parameter {
+                id: id(24),
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.,
+                ..Default::default()
+            },
+        )?;
         edit.create_scene_binding(SceneBinding {
             id: id(25),
             axes: vec![BindingAxis {
@@ -347,7 +367,7 @@ pub(super) fn bound_deformer_editor(
         })?;
         Ok(())
     })?;
-    let saved = session.save_project(&dir.path().join("bound"), None)?;
+    let saved = crate::support::save_fixture(&mut session, &dir.path().join("bound"))?;
     let mut editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     let object = ObjectRef::new(ObjectKind::Deformer, id(23));
     editor.set_canvas_metrics(ViewportMetrics {
@@ -371,34 +391,40 @@ pub(super) fn explicit_warp_grid(
     let id = editor.active_id().unwrap();
     let task = editor.prepare_save(id, &dir.path().join("explicit-grid"), false)?;
     let saved = editor.finish_save(&mut task.run())?;
-    let mut sdk = zipzi_sdk::AuthoringSession::new(
-        &uuid::Uuid::new_v4().to_string(),
-        zipzi_core::ModelSetup::default(),
-    )?;
-    sdk.open_project(&saved.path, None)?;
-    sdk.edit("Explicit conversion density", None, |edit| {
-        edit.edit_scene_content(zipzi_sdk::SceneContentEdit::ResizeWarp {
-            transform_id: object.id.clone(),
-            rows: 4,
-            columns: 4,
-            quad: true,
-        })
-        .map(|_| ())
-    })?;
-    sdk.edit("Explicit controller density", None, |edit| {
-        edit.edit_scene_content(zipzi_sdk::SceneContentEdit::WarpAuthoring {
-            transform_id: object.id.clone(),
-            settings: zipzi_core::WarpAuthoringSettings {
-                bezier_grid: Some(zipzi_core::WarpBezierGrid {
-                    rows: 2,
-                    columns: 2,
-                }),
-                ..Default::default()
+    let mut sdk = crate::support::open_fixture(&saved.path)?;
+    crate::support::publish_fixture(&mut sdk, "Explicit conversion density", |edit| {
+        edit.edit_scene_content(
+            zipzi_sdk::SceneContentEdit::ResizeWarp {
+                transform_id: object.id.clone(),
+                rows: 4,
+                columns: 4,
+                quad: true,
             },
-        })
+            Default::default(),
+            &Default::default(),
+        )
+        .map(|_| ())
         .map(|_| ())
     })?;
-    sdk.save_project(&saved.path, None)?;
+    crate::support::publish_fixture(&mut sdk, "Explicit controller density", |edit| {
+        edit.edit_scene_content(
+            zipzi_sdk::SceneContentEdit::WarpAuthoring {
+                transform_id: object.id.clone(),
+                settings: zipzi_core::WarpAuthoringSettings {
+                    bezier_grid: Some(zipzi_core::WarpBezierGrid {
+                        rows: 2,
+                        columns: 2,
+                    }),
+                    ..Default::default()
+                },
+            },
+            Default::default(),
+            &Default::default(),
+        )
+        .map(|_| ())
+        .map(|_| ())
+    })?;
+    crate::support::save_fixture(&mut sdk, &saved.path)?;
     *editor = crate::support::editor_from_document(Document::open(&saved.path)?);
     editor.set_canvas_metrics(ViewportMetrics {
         width: 512.,

@@ -1,7 +1,7 @@
 use super::common::*;
 use zipzi_animation::MotionPreview;
 use zipzi_core::{
-    evaluate_frame, BindingAxis, DrawableFrame, ImageAsset, Mesh, MeshBinding, MeshKeyform, Vec2,
+    evaluate_frame, BindingAxis, DrawableFrame, Mesh, MeshBinding, MeshKeyform, Vec2,
 };
 
 #[test]
@@ -86,28 +86,26 @@ fn cache_eviction_cancellation_and_failed_schedule_are_atomic() {
 
 #[test]
 fn geometry_workspace_preserves_owned_frames_and_shared_reads() {
-    let mut doc = document();
+    let mut builder = document().builder();
     let asset = "00000000-0000-4000-8000-000000000e01";
     let mesh = "00000000-0000-4000-8000-000000000e02";
     let binding = "00000000-0000-4000-8000-000000000e03";
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
+    builder
+        .create_asset(zipzi_core::state::AssetRecord {
             id: asset.into(),
             name: String::new(),
-            content: Some(zipzi_core::ImageContent {
-                source: "memory://geometry".into(),
+            content: zipzi_core::state::AssetContent::Image {
+                resource: Default::default(),
                 width: 8,
                 height: 8,
-                ..Default::default()
-            }),
+            },
         })
-        .status
-        .is_ok());
+        .unwrap();
     let positions = vec![Vec2::new(0., 0.), Vec2::new(10., 0.), Vec2::new(0., 10.)];
-    assert!(doc
+    builder
         .create_mesh(Mesh {
             id: mesh.into(),
+            runtime_id: "GeometryMesh".into(),
             texture_asset_id: asset.into(),
             vertex_ids: vec![1, 2, 3],
             base_positions: positions.clone(),
@@ -115,9 +113,8 @@ fn geometry_workspace_preserves_owned_frames_and_shared_reads() {
             triangles: vec![[1, 2, 3]],
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(doc
+        .unwrap();
+    builder
         .create_binding(MeshBinding {
             id: binding.into(),
             mesh_id: mesh.into(),
@@ -125,7 +122,7 @@ fn geometry_workspace_preserves_owned_frames_and_shared_reads() {
                 id: Default::default(),
                 samples: Default::default(),
                 parameter_id: PARAM.into(),
-                keys: vec![0., 1.]
+                keys: vec![0., 1.],
             }],
             keyforms: [0., 1.]
                 .into_iter()
@@ -139,8 +136,8 @@ fn geometry_workspace_preserves_owned_frames_and_shared_reads() {
                 })
                 .collect(),
         })
-        .status
-        .is_ok());
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
     let mut preview = MotionPreview::new(&doc);
     let saved = preview.evaluate_drawables().unwrap();
     for value in [0.25, 1., 0., 0.75] {

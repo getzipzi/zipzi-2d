@@ -946,8 +946,8 @@ fn object_deletion_reviews_mask_cleanup_and_undo_restores_the_reference(cx: &mut
             document
                 .scene_field_address(&objects[1].id, F::Masks)
                 .unwrap()
-                .expected(),
-            &V::Masks(vec![])
+                .value,
+            V::Masks(vec![])
         );
         assert_eq!(document.history_lengths(), (4, 0));
         assert!(view.edit_error.is_none());
@@ -959,8 +959,8 @@ fn object_deletion_reviews_mask_cleanup_and_undo_restores_the_reference(cx: &mut
             document
                 .scene_field_address(&objects[1].id, F::Masks)
                 .unwrap()
-                .expected(),
-            &V::Masks(vec![objects[0].id.clone()])
+                .value,
+            V::Masks(vec![objects[0].id.clone()])
         );
         view.redraw(cx);
     });

@@ -17,7 +17,6 @@ import time
 import tomllib
 import zipfile
 from _support import exclusive_run, executable, executable_name, venv_python
-from codegen import schema
 
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGE = ROOT / 'crates/zipzi-python'
@@ -36,7 +35,8 @@ def extract(archive, target):
 
 
 def build_environment(cargo_target):
-    environment = {k:v for k,v in os.environ.items() if k not in {'PYTHONPATH','PYTHONHOME','ZIPZI_DEV_SESSION_DIR'} and not k.startswith('ZIPZI_TEST_')}
+    environment = {k:v for k,v in os.environ.items() if k not in {'PYTHONPATH','PYTHONHOME','ZIPZI_DEV_SESSION_DIR',
+        'ZIPZI_KERNEL_EDITOR_HOST','ZIPZI_KERNEL_SOURCE_CLIENT','ZIPZI_KERNEL_NATIVE'} and not k.startswith('ZIPZI_TEST_')}
     environment['CARGO_TARGET_DIR'] = str(cargo_target)
     # PEP 517 creates a new temporary venv for each wheel. Use the same base
     # interpreter for schema export and Maturin so PyO3's environment fingerprint
@@ -118,16 +118,17 @@ def main():
             run(mode+'-venv',['uv','venv','--python','3.14',venv])
             python=venv_python(venv)
             run(mode+'-install',['uv','pip','install','--python',python,pure,*([extension] if mode=='local' else [])])
-            if mode=='connected':
-                run('connected-offline-contract',[python,'-I',archived/'tests/installed_contract.py',
-                    '--output',output/'installed-contract.md'],cwd=output)
-            run(mode+'-recipe',[python,'-I',archived/'tests/installed_recipe.py',mode,*(['--observation'] if args.observation else [])],cwd=output,
-                env=dict(environment,ZIPZI_PYTHON_HOST=str(host),ZIPZI_PYTHON2_HOST=str(host)))
+            lifecycle = 'ConnectedLifecycle' if mode == 'connected' else 'LocalLifecycle'
+            tests = ['Values', f'{lifecycle}.test_async_mutation_save_open_and_captured_pixels']
+            if args.observation:
+                tests.append(f'{lifecycle}.test_observation_uses_explicit_view_and_bulk_png')
+            run(mode+'-recipe', [python, '-I', archived/'tests/test_kernel.py', *tests],
+                cwd=output, env=dict(environment, ZIPZI_KERNEL_HOST=str(host)))
         artifacts=[*sorted((output/'sdists').glob('*')),*sorted((output/'wheels').glob('*')),host]
         report=dict(schema=1,status='passed',base_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True, encoding='utf-8').strip(),
             dirty_files=subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True, encoding='utf-8').splitlines(),commands=commands,
             artifacts=[dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in artifacts],
-            source_contract_sha256=schema.digest(schema.read(archived/'schema/authoring.json')),
+            source_contract_sha256=hashlib.sha256((archived/'schema/authoring.json').read_bytes()).hexdigest(),
             native_source_scope='SDK dependency closure plus complete Python client, native adapter, Rust declarations, exporter and generator; pure client sdist carries the same Python sources and generated outputs')
         (output/'results.json').write_text(json.dumps(report,indent=2)+'\n')
         print(output/'results.json')

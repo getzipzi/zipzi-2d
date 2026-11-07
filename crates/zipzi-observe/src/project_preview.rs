@@ -6,7 +6,7 @@ use crate::*;
 pub const PROJECT_PREVIEW_WORKSPACE: usize = 256 << 20;
 
 pub fn render_project_preview(
-    snapshot: &AuthoringSnapshot,
+    snapshot: &SourcedSnapshot,
     control: &zipzi_sdk::ConversionControl,
 ) -> Result<Option<zipzi_project::archive::ProjectPreview>, ObservationError> {
     check_capture(control)?;
@@ -32,7 +32,7 @@ pub fn render_project_preview(
         return Ok(None);
     }
     let planning::ObservationTexturePlanning::Ready { plan } = planning::plan_textures(
-        planning::texture_sources(snapshot.document())?,
+        planning::texture_sources(snapshot.snapshot.document())?,
         planning::ObservationTexturePolicy::FitBudget {
             max_rgba_bytes: 32 << 20,
         },

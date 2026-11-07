@@ -163,7 +163,7 @@ pub(crate) fn inspector_fields(mesh: &Mesh, payload: &mut Value) {
 }
 
 pub(crate) fn keyform<'a>(
-    model: &'a zipzi_core::Document,
+    model: &'a zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Option<(&'a str, &'a zipzi_core::MeshKeyform)>> {
@@ -185,14 +185,14 @@ pub(crate) fn keyform<'a>(
 }
 
 pub(crate) fn payload(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
     #[cfg(feature = "bench-instrumentation")]
     let _benchmark_span = zipzi_core::benchmark::span("editor.mesh_full_json");
     let mesh = model
-        .get_mesh(id)
+        .mesh(id)
         .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
     let mut payload = serde_json::to_value(mesh)?;
     inspector_fields(mesh, &mut payload);
@@ -205,14 +205,14 @@ pub(crate) fn payload(
 
 /// Inspector reads do not need vertex arrays or authored source metadata.
 pub(crate) fn inspector_payload(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     id: &str,
     scope: &PropertyScope,
 ) -> Result<Value> {
     #[cfg(feature = "bench-instrumentation")]
     let _benchmark_span = zipzi_core::benchmark::span("editor.mesh_inspector_json");
     let mesh = model
-        .get_mesh(id)
+        .mesh(id)
         .ok_or_else(|| anyhow::anyhow!("Mesh no longer exists"))?;
     let mut payload = json!({
         "name": mesh.name, "runtime_id": mesh.runtime_id,

@@ -276,6 +276,15 @@ impl TransferReservation {
         self.bytes.load(Ordering::Relaxed)
     }
 
+    pub(crate) fn shrink_to(&self, bytes: usize) {
+        let mut state = self.budget.0.lock().unwrap_or_else(|p| p.into_inner());
+        let previous = self.bytes.load(Ordering::Relaxed);
+        if bytes < previous {
+            state.transfer -= previous - bytes;
+            self.bytes.store(bytes, Ordering::Relaxed);
+        }
+    }
+
     /// Grow a worker's reservation after bounded metadata admission.
     /// Shared-budget locking makes concurrent growth atomic.
     pub fn ensure_at_least(&self, bytes: usize) -> Result<(), Status> {

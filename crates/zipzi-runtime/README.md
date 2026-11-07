@@ -1,166 +1,118 @@
 # zipzi-runtime
 
-Host for `zipzi-sdk` authoring sessions, shared history and CPU/GPU jobs. Runtime
-owns clients, edits, jobs, project path reservations and event streams. It has no
-GPUI or PyO3 dependency. The default build is CPU-only; `gpu-observation` enables
-explicit GPU rendering through `zipzi-observe`.
+Single-owner host for the immutable authoring kernel. Sessions and history stay
+in Runtime; a Worker receives one Draft, a frozen sourced snapshot, prepared save
+input or value-only project load request. Work and Completion have no Session.
 
-The Editor and Python Local and Connected clients use the same Runtime. Editor
-windows attach views to resident sessions, so closing a tab can detach the view
-without discarding the document or history.
+## Authoring and dispatch
 
-## Typed access
+Register a client and create/insert a session, then `begin_draft` against its exact
+Version. Use `batch` for synchronous typed SDK commands or `request_batch` for a
+worker. Each successful batch advances DraftSource.sequence once. Drafts are
+isolated; one working Draft does not block other Drafts or published reads.
+Ownership/busy/resource admission rejection leaves the Draft intact. An accepted
+command failure (including ignored command errors or panic) ends the Draft.
 
-```rust
-use zipzi_core::{Canvas, Vec2};
-use zipzi_runtime::Runtime;
+`Protocol::execute_response` is the shared Local/Connected response boundary.
+Errors for owned Draft operations carry `draft_state` (`ready`, `working`, or
+`ended`), captured after execution on the owner thread and cached with the
+original response. Clients must not infer admission from an error code alone.
+Bounded `Query::Metadata` reads document roots without geometry or image bytes;
+all query responses preserve their exact source and content identity.
 
-# fn main() -> Result<(), Box<dyn std::error::Error>> {
-let mut runtime = Runtime::default();
-let client = runtime.register_client()?;
-let session = runtime.create_session(
-    client, "70000000-0000-4000-8000-000000000001",
-    Canvas::new(100., 100., Vec2::default(), 1.),
-)?;
-let subscription = runtime.subscribe(session)?;
-let edit = runtime.begin_edit(client, session, "Resize", Some(subscription.info.version))?;
-runtime.apply_edit(client, edit, |candidate| {
-    candidate.replace_model_setup(Canvas::new(200., 100., Vec2::default(), 1.))
-})?;
-runtime.commit_edit(client, edit)?;
-assert_eq!(runtime.session(session)?.history_lengths(), (1, 0));
-assert_eq!(runtime.events_since(subscription.cursor)?.len(), 1);
-# Ok(())
-# }
-```
+`publish` or `request_publish` consumes the candidate. Runtime checks the exact
+Session, generation, revision, Draft, sequence and job ownership before installing
+worker results through SDK publication. Undo/Redo restore existing history nodes
+on the owner thread. No-op and failed publication preserve history/redo.
 
-Formal sessions are read-only through Runtime. Edits operate on isolated
-candidates and commit through SDK history. An SDK error aborts the candidate;
-busy or admission errors leave it available. Snapshots capture a version and
-share retained image content. Capture diagnostics before consuming an edit.
+`next_work` supports a manual executor. `dispatch` supports `Executor` and the
+persistent `WorkerPool`; rejection returns unentered work for retry. Every
+accepted work item must deliver its Completion to `Runtime::complete`, including
+after cancellation or client release. Misrouted completions are returned to the
+caller so they can reach the correct Runtime. A worker panic ends its task without
+requiring a Session recovery copy.
 
-## Jobs and lifetime
+Native hosts can use `take_work(job)` for targeted dispatch and `start_save_as`
+to admit and dispatch a synchronous save in one owner call. A full worker pool
+leaves queued work intact; immediate save refusal creates no job or save permit.
+`adopt_session` installs an initially constructed native session, and
+`transfer_session_to` moves an idle, exclusively attached session between owner
+hosts without cloning history. Neither operation is a Worker completion API.
+`host_state_stamp` provides bounded session/job metadata for view notifications;
+candidate bookkeeping does not wake published projections.
 
-`LocalHost` runs a Runtime thread and worker pool for in-process clients. Desktop
-hosts dispatch `Work` to an executor and deliver each `Completion` to Runtime.
-Accepted work must return a completion even if its view has closed. Cancellation
-is advisory once work has started. Sessions return to Ready after a job; a
-worker panic faults the session and requires it to be closed and reopened.
+`request_read` freezes the requested Published or Draft source. Later edits do not
+change its input or relabel its output. This low-level host API accepts trusted
+Rust computation callbacks; domain-specific protocol handlers must choose task
+bounds before admission. Callbacks cooperate with Cancellation. Read output Vec
+capacity must fit its admitted result bound. Actual workspace reservations follow
+Work through execution; result leases follow ReadResult clones after job release.
+Cancellation alone releases neither entered task slots nor allocations. These
+bounds do not estimate document/history size or claim to measure process RSS.
 
-Open and Save As reserve normalized project paths within the Runtime. Detaching
-a client or view does not close its session. Closing checks other clients,
-active work and unsaved content. Completed job results occupy bounded slots
-until released.
+`subscribe` captures a snapshot, history state and publication cursor together.
+`publications_since` reads bounded receipts without draining other consumers.
+Evicted cursors return EVENT_GAP; resubscribe to recover. Clients and sessions,
+Drafts, job slots, concurrency, read results and publication retention are bounded.
 
-## Events and limits
+## Native project work
 
-Subscriptions capture state and a cursor together. Session and registry events
-have separate cursors; a gap or invalid cursor requires resynchronization.
-`RuntimeLimits` bounds clients, sessions, candidates, jobs, events and retained
-resources. Image, blob and document accounting is conservative and does not
-measure process RSS or GPU memory.
+`request_open` decodes into PreparedProject and replaces a resident Session only
+if the original Version still matches. The successful replacement resets history
+and advances generation. Failure or stale completion leaves current content intact.
 
-The default aggregate accounting limit is 8 GiB and the image limit is 4 GiB
-on 64-bit hosts. Cubism import can reserve up to 2 GiB for parsing, subject to
-available shared budget; limits are admission ceilings, not preallocated memory.
+`request_save` / `request_save_as` acquire an exclusive SDK save permit before
+dispatch. Published snapshots remain readable. Editing, replacement, Undo/Redo,
+other saves and closing are blocked until completion; existing Drafts are retained.
+Normalized destinations are reserved against other Session/project jobs. Save
+starts only after earlier mutation work completes; read jobs can coexist.
 
-## Local protocol
+A failed or unentered save releases its permit. Once the file is published, the
+host installs the actual ProjectContext and SavedMarker even if cancellation or
+client disconnection arrived late. This path has no subsequent model validation or
+history admission. Dropping a successful save completion is a host protocol error;
+the SDK leaves publication blocked rather than silently forgetting the saved file.
 
-The `protocol` and Unix `local` modules provide authenticated connections,
-request deduplication, recovery, reconnect grace and endpoint ownership. The
-Editor assembles the listener on its application thread. The protocol uses
-bounded JSON control frames and binary blobs. `zipzi-runtime-v3` identifies the
-wire **major**, independently of package versions, source hashes and additive API
-changes. A disconnected client can resume within its grace period; expiry
-releases its edits but retains formal sessions and entered jobs.
+Client release cancels owned outstanding work and ends its Drafts, but does not
+close resident Sessions. A later client can attach. Explicit close checks other
+attached clients, outstanding work and unsaved content.
 
-Compatibility rules for Connected clients and Editor hosts:
+## Domain and bulk tasks
 
-- Keep the wire major for new operations, optional services and compatible
-  response extensions. Advertise optional services through capabilities; missing
-  or unknown capability names do not reject the connection. Unsupported calls
-  return `UNSUPPORTED_OPERATION` while existing operations remain usable.
-- Ignore unknown handshake and request-envelope metadata. Operation arguments
-  stay strict so unsupported mutation options cannot be silently ignored. New
-  request options need host capability checks or a separate operation; older
-  callers must still work with their existing arguments and defaults.
-- Preserve existing operation semantics, required fields and binary layouts.
-  Introduce a separate operation/capability for incompatible payloads, or raise
-  the wire major if existing calls must change. Binary layout signatures remain
-  checked on the affected calls.
-- SDK build identities are diagnostic by default. An explicit Python
-  `sdk_build=...` pins that exact build. Runtime identity, resume secrets, ownership
-  and request deduplication are always enforced.
+`request_samples` runs geometry, spatial queries and detached animation schedules
+against one exact Published/Draft source, yielding between poses. Results retain
+the original source after later publication. `request_observation` prepares a
+bounded texture plan and renders explicit views; output contains length-prefixed
+JSON metadata followed by each PNG. GPU availability is a host capability.
+`request_export` captures resources and source protection, reserves the output,
+and returns actual publication/durability even after late cancellation.
 
-The contract extraction moves Rust type identities and binary layout signatures
-to `zipzi-contract`, so v1 clients and hosts require a coordinated upgrade to v3.
-The earlier feature-specific `rN` protocols also require a coordinated upgrade to
-this baseline. The in-process `zipzi-native` adapter still pairs with its Python
-package and is independent of this Connected compatibility policy.
+Animation inputs are playback schedules: each motion/expression tuple contains
+an ID and an absolute activation time, rather than a blend weight. Playback
+activates a motion on its first update at or after that time. Canonical seeks to
+at least 1/60 second replay from the first 60 Hz update, so a motion scheduled at
+zero has local time `max(0, requested_time - 1/60)` for samples within its first
+cycle. The reported `motion_positions.local_time` is the coordinate at which its authored
+curve was evaluated. A zero-time sample does not seed later positive replay.
+This differs from stateless raw-clip inspection through Rust's
+`MotionEditingPreview`, which directly samples the requested clip-local time.
 
-## Modeling and observation
+Client-owned blobs provide bounded upload/read chunks. Binary requests use the
+same authentication, request IDs, payload digests and recovery cache as control
+requests. Cached reads retain just their requested chunk and its allocation
+lease. Image replacement consumes sealed RGBA inside one ordinary Draft batch;
+source pixels remain valid after the upload is released. Job byte results are
+retrieved through `ReadJobBlob`, rather than embedded in control frames.
 
-Typed modeling, animation, resources and project operations use the same
-candidate and job boundaries. Plans, selected records, CPU samples and previews
-retain their formal or candidate source. Prepared images and image leases keep
-content alive until released. Import and replacement publish only validated
-results; project reports retain losses and publication warnings.
-
-GPU observation is optional. CPU-only hosts reject image requests with
-`GPU_UNAVAILABLE`, while CPU sampling and previews remain available. Read jobs
-cooperate with cancellation and scheduling so publication can make progress.
-
-`estimate_observation` is a synchronous metadata read available on CPU-only hosts.
-Session/Edit use their selected source; `estimate_preview_observation` uses the
-Preview's frozen source and current controls without replay, clock/sequence changes
-or GPU initialization. Busy Previews reject estimates. Results distinguish static
-feasibility, current Runtime availability and unverified source/device conditions;
-an estimate does not reserve capacity. Admission generates a trusted plan again,
-then passes it to capture. Clients cannot submit trusted dimension tables.
-
-`RuntimeLimits` exposes these observation defaults (configurable by the host):
-
-| Field | Default |
-| --- | --- |
-| `observation_texture_rgba_bytes` | 256 MiB base RGBA |
-| `observation_output_bytes` | 128 MiB aggregate RGBA + bounded PNG |
-| `observation_frames` | 64 |
-| `observation_max_dimension` | 4096 output width/height |
-| `observation_encoded_bytes` | 64 MiB per PNG |
-| `observation_workspace_bytes` | 1 GiB per-source preparation workspace |
-| `observation_metadata_bytes` | 8 MiB planning/report metadata |
-
-The workspace accounts for encoded input, bounded decoder state, RGBA conversion,
-downsampling and source-alpha sampling. Its default admits the conservative
-single-source bound at the base/encoded defaults for source axes up to 16K,
-including row and fixed decoder overhead. More extreme aspect ratios can exceed
-that workspace bound independently of their base RGBA size. Full single-image decoding is allowed; oversized decode peaks fail even
-when a requested thumbnail is small. GPU working sets, mips, output/serialization,
-frozen source and retained results also enter aggregate task admission. Byte
-counts are logical conservative estimates, not measured RSS or driver memory.
-
-Jobs retain the preparation/render peak until worker resources have been dropped.
-Completion atomically exchanges that peak for a retained-result lease; an external
-Rust result Arc keeps its charge after the Job slot is released. Cancellation
-alone never frees entered workspace. A Preview without a View performs CPU work
-and has no texture report. Inspection schema 2 stores one report per batch.
-
-CPU planning depends on `zipzi-observe` with GPU features disabled. GPU builds
-select native Metal on macOS through `zipzi-observe-backend` without WGPU;
-`wgpu-backend` explicitly opts macOS into WGPU, while other platforms use WGPU.
-
-## Tests
-
-From the repository root:
+## Focused tests
 
 ```sh
 ./tools/test-sdk.sh runtime
-cargo test --locked -p zipzi-runtime --test host
-cargo test --locked -p zipzi-runtime --test protocol
-./tools/test-sdk.sh python-connected
-# Requires a usable GPU:
-cargo test --locked -p zipzi-runtime --features gpu-observation --test observation -- --include-ignored
+cargo test --locked -p zipzi-runtime --features gpu-observation --lib
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test authoring_kernel
 ```
 
-See [test coverage](../../tools/README.md#test-coverage) for prerequisites and
-broader gates.
+The CPU gate covers resident ownership, isolated Drafts, immutable source
+identity, cancellation, binary recovery, private transport, native project work
+and CPU sampling. The GPU gate requires a usable device. Track the remaining
+integration migrations in the [authoring plan](../../docs/plans/authoring-architecture.md).

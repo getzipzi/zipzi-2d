@@ -6,7 +6,7 @@ use gpui_kit::{
 };
 use zipzi_core::{Canvas, Part, Vec2};
 use zipzi_editor_core::{Document, ModelPoint, ObjectKind, ObjectRef};
-use zipzi_sdk::{AuthoringSession, prepare_png_asset, rectangle_mesh};
+use zipzi_sdk::rectangle_mesh;
 
 fn id(n: u128) -> String {
     uuid::Uuid::from_u128(n).to_string()
@@ -21,33 +21,35 @@ fn fixture(cx: &mut TestAppContext, count: usize) -> Harness {
     )
     .unwrap();
     let mut session =
-        AuthoringSession::new(&id(1), Canvas::new(256., 256., Vec2::default(), 1.)).unwrap();
-    let asset = prepare_png_asset(&id(2), "Texture", &texture).unwrap();
-    session
-        .edit("Overlapping objects", None, |edit| {
-            edit.create_asset(asset)?;
-            edit.create_part(Part {
+        crate::test_fixture::fixture_session(&id(1), Canvas::new(256., 256., Vec2::default(), 1.))
+            .unwrap();
+    let asset = crate::test_fixture::image_fixture(&id(2), "Texture", &texture).unwrap();
+    crate::test_fixture::publish_fixture(&mut session, "Overlapping objects", |edit| {
+        crate::test_fixture::insert_image(edit, asset)?;
+        crate::test_fixture::insert_fixture_part(
+            edit,
+            Part {
                 id: id(3),
                 name: "Face · details".into(),
                 ..Default::default()
-            })?;
-            for n in 0..count {
-                let mut mesh = rectangle_mesh(
-                    &id(100 + n as u128),
-                    &format!("Mesh {n}"),
-                    &id(2),
-                    Vec2::new(24., 24.),
-                    Vec2::new(232., 232.),
-                )?;
-                mesh.part_id = id(3);
-                edit.create_mesh(mesh)?;
-            }
-            Ok(())
-        })
-        .unwrap();
-    let saved = session
-        .save_project(&assets.path().join("menu.zipzi"), None)
-        .unwrap();
+            },
+        )?;
+        for n in 0..count {
+            let mut mesh = rectangle_mesh(
+                &id(100 + n as u128),
+                &format!("Mesh {n}"),
+                &id(2),
+                Vec2::new(24., 24.),
+                Vec2::new(232., 232.),
+            )?;
+            mesh.part_id = id(3);
+            crate::test_fixture::insert_fixture_mesh(edit, mesh)?;
+        }
+        Ok(())
+    })
+    .unwrap();
+    let saved =
+        crate::test_fixture::save_fixture(&mut session, &assets.path().join("menu.zipzi")).unwrap();
     let mut document = Document::open(&saved.path).unwrap();
     document
         .select_object(ObjectRef::new(ObjectKind::Mesh, id(101)))

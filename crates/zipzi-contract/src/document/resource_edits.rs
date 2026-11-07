@@ -24,18 +24,6 @@ pub enum ResourceEdit {
         /// Human-readable display name; use the stable ID for identity because names can change.
         name: String,
     },
-    /// Replace or clear content metadata under an exact prior-value precondition.
-    SetContent {
-        /// Stable document object ID used by references; it is distinct from the exported
-        /// runtime_id.
-        id: String,
-        /// Exact current image-content metadata precondition; None requires the asset to have
-        /// no loaded content.
-        expected: Option<ImageContent>,
-        /// Image content metadata; None explicitly represents an asset with no loaded image
-        /// content.
-        content: Option<ImageContent>,
-    },
     /// Reorder selected image assets relative to an optional sibling anchor.
     Reorder {
         /// Ordered stable object IDs selected for this operation; visible names and row numbers

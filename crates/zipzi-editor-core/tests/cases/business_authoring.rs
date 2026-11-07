@@ -233,7 +233,7 @@ fn no_op_steps_preserve_redo_and_stale_business_plans_cannot_write() -> anyhow::
     assert!(d.execute_business(&plan).is_err());
     let boundary = d.plan_business(&A::Step(group, false), String::new())?;
     assert!(boundary.noop);
-    assert!(!d.execute_business(&boundary)?.receipt.changed);
+    assert!(d.execute_business(&boundary)?.receipt.kind == zipzi_sdk::PublicationKind::Unchanged);
     assert_eq!(d.history_lengths(), history);
     Ok(())
 }
@@ -262,7 +262,7 @@ fn physics_chain_topology_edits_keep_output_node_references_and_root_constraints
     let root = R::new(K::PhysicsNode, &rig.vertices[0].id);
     assert!(matches!(
         d.business_capability(&A::Step(root, false))?,
-        zipzi_sdk::CapabilityState::Unsupported { .. }
+        zipzi_contract::authoring::CapabilityState::Unsupported { .. }
     ));
     d.undo()?;
     d.undo()?;

@@ -83,12 +83,12 @@ fn welcome_open_picker_cancel_and_manual_reopen(cx: &mut TestAppContext) {
 fn welcome_external_open_dismisses_without_blocking_queue(cx: &mut TestAppContext) {
     let harness = empty_start(cx);
     let path = harness._config_dir.path().join("welcome.zipzi");
-    let mut session = zipzi_sdk::AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
     )
     .unwrap();
-    session.save_project(&path, None).unwrap();
+    crate::test_fixture::save_fixture(&mut session, &path).unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.enqueue_projects(vec![path.clone()], window, cx);
@@ -155,12 +155,12 @@ fn welcome_routes_native_new_from_panel_focus(cx: &mut TestAppContext) {
 fn welcome_recent_button_opens_project(cx: &mut TestAppContext) {
     let harness = setup(cx);
     let path = harness._config_dir.path().join("recent.zipzi");
-    let mut session = zipzi_sdk::AuthoringSession::new(
+    let mut session = crate::test_fixture::fixture_session(
         &uuid::Uuid::new_v4().to_string(),
         zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
     )
     .unwrap();
-    session.save_project(&path, None).unwrap();
+    crate::test_fixture::save_fixture(&mut session, &path).unwrap();
     cx.update_window(harness.window, |_, window, cx| {
         harness.view.update(cx, |view, cx| {
             view.record_recent_file(path.clone(), cx);

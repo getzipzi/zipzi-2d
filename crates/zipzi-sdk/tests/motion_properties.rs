@@ -1,8 +1,4 @@
-use zipzi_core::{
-    document::{MotionClip, PropertyPatch},
-    preview::PreviewState,
-    ModelSetup,
-};
+use zipzi_core::{document::MotionClip, preview::PreviewState, state::PropertyPatch, ModelSetup};
 use zipzi_sdk::AuthoringSession;
 
 fn id(n: u32) -> String {
@@ -10,7 +6,13 @@ fn id(n: u32) -> String {
 }
 
 fn fixture(source_range: bool) -> AuthoringSession {
-    let mut sdk = AuthoringSession::new(&id(1), ModelSetup::default()).unwrap();
+    let mut sdk = AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(&id(1), (ModelSetup::default()).into()).unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    );
     let mut clip: MotionClip = serde_json::from_value(serde_json::json!({
         "id": id(2), "name": "Motion", "duration": 1., "fps": 30.,
         "looping": false, "restricted_beziers": true, "fade_in": null, "fade_out": null,
@@ -29,8 +31,16 @@ fn fixture(source_range: bool) -> AuthoringSession {
         );
         clip.tracks[0].initial.time = -0.5;
     }
-    sdk.edit("fixture", None, |edit| edit.create_motion(clip))
-        .unwrap();
+    {
+        let mut draft = sdk.begin_draft();
+        draft
+            .batch(draft.source(), |edit| edit.create_motion(clip))
+            .and_then(|value| {
+                let prepared = draft.prepare("fixture")?;
+                sdk.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     sdk
 }
 
@@ -48,97 +58,118 @@ fn patch(duration: f32, fps: f32, fade_in: Option<f32>) -> PropertyPatch {
 fn scalar_validation_matches_full_motion_validation_at_time_boundaries() {
     for source_range in [false, true] {
         let sdk = fixture(source_range);
+        let state = sdk.snapshot().document();
+        let identity = state.content_id();
         for duration in [0., 0.4, 0.8, 1., 1.01, 2., f32::INFINITY] {
             for fps in [0., 1., 30., 120., f32::NAN] {
-                let mut scalar = sdk.document().fork_candidate();
-                let mut full = sdk.document().fork_candidate();
-                let mut clip = full.get_motion(&id(2)).unwrap().clone();
+                let mut scalar = state.builder();
+                let mut full = state.builder();
+                let mut clip = state.motion(&id(2)).unwrap().clone();
                 clip.duration = duration;
                 clip.fps = fps;
                 clip.fade_in = Some(0.4);
-                let expected = full.replace_motion(clip);
-                let actual = scalar.patch_property(&patch(duration, fps, Some(0.4)));
+                let expected = full.replace_motion(clip).and_then(|_| full.freeze());
+                let actual = scalar
+                    .patch_property(patch(duration, fps, Some(0.4)))
+                    .and_then(|_| scalar.freeze());
                 assert_eq!(
-                    actual.status.code, expected.status.code,
+                    actual.is_ok(),
+                    expected.is_ok(),
                     "duration={duration}, fps={fps}, source={source_range}"
                 );
-                if actual.status.is_ok() {
-                    assert!(scalar.same_content(&full));
-                } else {
-                    assert!(scalar.same_content(sdk.document()));
+                match (actual, expected) {
+                    (Ok(actual), Ok(expected)) => {
+                        assert_eq!(actual.state.motion(&id(2)), expected.state.motion(&id(2)))
+                    }
+                    (Err(actual), Err(expected)) => assert_eq!(actual.code, expected.code),
+                    _ => unreachable!(),
                 }
+                assert_eq!(state.content_id(), identity);
             }
         }
     }
 }
 
 #[test]
-fn fade_previews_share_tracks_and_events_preserve_failures_and_commit_once() {
+fn fade_previews_share_tracks_and_events_preserve_failures_and_publish_once() {
     let mut sdk = fixture(false);
     let before = sdk.read_snapshot();
-    let original = before.document().get_motion(&id(2)).unwrap();
-    let mut edit = sdk.begin_owned_edit("Fade", None).unwrap();
+    let original = before.snapshot.document().motion(&id(2)).unwrap();
+    let mut draft = sdk.begin_draft();
     let mut preview = PreviewState::default();
     for fade in [0.2, 0.4, 0.8] {
-        #[cfg(feature = "bench-instrumentation")]
-        let capture = zipzi_core::benchmark::Capture::start();
-        edit.preview_property(
-            &patch(1., 30., Some(fade)),
-            &mut preview,
-            Default::default(),
-        )
-        .unwrap();
-        #[cfg(feature = "bench-instrumentation")]
-        {
-            let stages = capture.finish();
-            assert!(!stages.contains_key("core.validate_motion"));
-            assert!(!stages.contains_key("core.validate_motion_timing"));
-        }
-        let current = edit.candidate_document().get_motion(&id(2)).unwrap();
+        let (prepared, ()) = draft
+            .prepare_preview(draft.source(), |c| {
+                c.patch_property(patch(1., 30., Some(fade)))
+            })
+            .unwrap();
+        draft.install_preview(prepared).unwrap();
+        let current = draft.document().unwrap().motion(&id(2)).unwrap();
         assert_eq!(original.tracks.as_ptr(), current.tracks.as_ptr());
         assert_eq!(original.events.as_ptr(), current.events.as_ptr());
         assert_eq!(current.fade_in, Some(fade));
         assert_eq!(original.fade_in, None);
     }
-    let frame = preview.frame(edit.candidate_document(), 0).unwrap();
-    let revision = edit.candidate_document().revision();
+    let snapshot = draft.read_snapshot().unwrap();
+    let frame = preview.frame(snapshot.snapshot.document(), 0).unwrap();
+    let source = draft.source();
     for rejected in [
         patch(0.5, 30., None),
         patch(1., 120., None),
         patch(1., 30., Some(-1.)),
     ] {
-        assert!(edit
-            .preview_property(&rejected, &mut preview, Default::default())
+        assert!(draft
+            .prepare_preview(draft.source(), |c| c.patch_property(rejected))
             .is_err());
-        assert_eq!(edit.candidate_document().revision(), revision);
+        assert_eq!(draft.source(), source);
+        let current = draft.read_snapshot().unwrap();
         assert_eq!(
-            edit.candidate_document()
-                .get_motion(&id(2))
-                .unwrap()
-                .fade_in,
+            current.snapshot.content_id(),
+            snapshot.snapshot.content_id()
+        );
+        assert_eq!(
+            current.snapshot.document().motion(&id(2)).unwrap().fade_in,
             Some(0.8)
         );
         assert!(std::sync::Arc::ptr_eq(
             &frame,
-            &preview.frame(edit.candidate_document(), 0).unwrap()
+            &preview.frame(current.snapshot.document(), 0).unwrap()
         ));
     }
-    edit.preview_property(&patch(1., 30., Some(0.6)), &mut preview, Default::default())
+    let (prepared, ()) = draft
+        .prepare_preview(draft.source(), |c| {
+            c.patch_property(patch(1., 30., Some(0.6)))
+        })
         .unwrap();
-    let receipt = edit.commit_to(&mut sdk).unwrap();
-    assert_eq!(receipt.after.revision, receipt.before.revision + 1);
+    draft.install_preview(prepared).unwrap();
+    let version = sdk.version();
+    let receipt = sdk.publish(draft.prepare("Fade").unwrap()).unwrap();
+    assert_eq!(receipt.version.revision, version.revision + 1);
     assert_eq!(
-        sdk.document().get_motion(&id(2)).unwrap().fade_in,
+        sdk.snapshot().document().motion(&id(2)).unwrap().fade_in,
         Some(0.6)
     );
-    sdk.undo().unwrap();
-    assert_eq!(sdk.document().get_motion(&id(2)).unwrap(), original);
-    sdk.redo().unwrap();
+    sdk.undo(sdk.version()).unwrap();
+    assert_eq!(sdk.snapshot().document().motion(&id(2)).unwrap(), original);
+    sdk.redo(sdk.version()).unwrap();
     assert_eq!(
-        sdk.document().get_motion(&id(2)).unwrap().fade_in,
+        sdk.snapshot().document().motion(&id(2)).unwrap().fade_in,
         Some(0.6)
     );
-    let encoded = zipzi_project::encode_project(sdk.document()).unwrap();
-    let restored = zipzi_project::decode_project(&encoded).unwrap();
-    assert!(restored.same_content(sdk.document()));
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("motion.zipzi");
+    let io = zipzi_sdk::ProjectIo::new(root.path(), zipzi_sdk::ResourceStore::default());
+    io.save(
+        sdk.snapshot().document(),
+        sdk.snapshot().resources(),
+        &path,
+        None,
+        || true,
+    )
+    .unwrap();
+    let loaded = io.load(&path, || true).unwrap();
+    assert_eq!(
+        loaded.document.motion(&id(2)),
+        sdk.snapshot().document().motion(&id(2))
+    );
 }

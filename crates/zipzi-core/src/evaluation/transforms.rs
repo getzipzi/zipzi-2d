@@ -2,7 +2,8 @@ use crate::deformers::{
     rotation_parent_angle, rotation_points, rotation_points_in_place, warp_points,
     warp_points_in_place, PsmVec2,
 };
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::geometry::validate_positions;
 use crate::types::{Appearance, DeltaKeyforms, Status, Transform, TransformKind, Vec2};
 use zipzi_core::SceneTrackEvaluation;
@@ -106,7 +107,7 @@ pub(super) fn f32_to_i32(v: f32) -> i32 {
 }
 
 pub(super) fn evaluate(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     prepared: &PreparedEvaluation,
     state: &mut EvalContext<'_>,
 ) -> crate::types::Status {

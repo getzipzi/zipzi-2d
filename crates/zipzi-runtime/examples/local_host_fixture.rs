@@ -31,11 +31,10 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         return Err("Injected startup failure".into());
     }
     let mut limits = RuntimeLimits::default();
-    limits.jobs_total = milliseconds("ZIPZI_TEST_JOB_COUNT", 32) as usize;
-    limits.session_events = milliseconds("ZIPZI_TEST_EVENT_COUNT", 512) as usize;
+    limits.jobs = milliseconds("ZIPZI_TEST_JOB_COUNT", 32) as usize;
+    limits.events_per_session = milliseconds("ZIPZI_TEST_EVENT_COUNT", 512) as usize;
     let mut runtime = Runtime::new(limits);
-    let (_server, messages) = owner.listen_with_budget(runtime.transport_budget())?;
-    let ui = runtime.register_client()?;
+    let (_server, messages) = owner.listen_with_budget(runtime.transfer_budget())?;
     let mut protocol = Protocol::new(ProtocolLimits {
         reconnect_grace: Duration::from_millis(milliseconds("ZIPZI_TEST_GRACE_MS", 30000)),
         result_ttl: Duration::from_millis(milliseconds("ZIPZI_TEST_RESULT_TTL_MS", 300000)),
@@ -45,40 +44,17 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut drop_response = std::env::var("ZIPZI_TEST_DROP_RESPONSE").unwrap_or_default();
     let mut drop_after = milliseconds("ZIPZI_TEST_DROP_RESPONSE_AFTER", 0);
     let (completed, completions) = std::sync::mpsc::channel();
-    let mut executor = Threaded {
-        completed,
-        threads: vec![],
-        #[cfg(feature = "test-support")]
-        control: runtime.test_controller(),
-    };
-    let mut busy_once = std::env::var_os("ZIPZI_TEST_BUSY_COMMIT_ONCE").is_some();
+    let mut workers =
+        WorkerPool::new(runtime.limits().running_jobs, 16 << 20, move |completion| {
+            let _ = completed.send(completion);
+        })?;
     loop {
         match messages.try_recv() {
             Ok(Inbound::Frame {
-                auth,
-                value,
-                reply,
-                _transfer,
+                auth, value, reply, ..
             }) => {
                 let op = value["operation"]["op"].as_str().unwrap_or("").to_owned();
-                let interactive = if op == "commit" && busy_once {
-                    busy_once = false;
-                    let session = runtime.list_sessions()[0].id;
-                    runtime.begin_interaction(ui, session)?;
-                    Some(session)
-                } else {
-                    None
-                };
-                if op == "request_status" {
-                    std::thread::sleep(Duration::from_millis(milliseconds(
-                        "ZIPZI_TEST_STATUS_DELAY_MS",
-                        0,
-                    )));
-                }
                 let response = protocol.receive_encoded(&mut runtime, auth, value, Instant::now());
-                if let Some(session) = interactive {
-                    runtime.end_interaction(ui, session)?;
-                }
                 if !drop_response.is_empty() && drop_response == op && drop_after == 0 {
                     drop_response.clear();
                     drop(reply);
@@ -109,7 +85,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
                     drop_response.clear();
                     drop(reply);
                 } else {
-                    if !drop_response.is_empty() && drop_response == op {
+                    if drop_response == op {
                         drop_after -= 1;
                     }
                     let _ = reply.send(response);
@@ -119,62 +95,19 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             Err(async_channel::TryRecvError::Closed) => break,
         }
         while let Ok(completion) = completions.try_recv() {
-            runtime.complete(completion);
+            runtime
+                .complete(completion)
+                .expect("completion belongs to this fixture");
         }
-        executor.reap();
-        #[cfg(feature = "test-support")]
-        let dispatch = runtime.test_controller().dispatch_enabled();
-        #[cfg(not(feature = "test-support"))]
-        let dispatch = true;
-        if dispatch {
-            runtime.dispatch(&mut executor);
-        }
+        runtime.dispatch(&mut workers);
         protocol.expire(&mut runtime, Instant::now());
-        runtime.refresh_memory_budget();
+    }
+    runtime.cancel_host_jobs();
+    while runtime.outstanding_jobs() != 0 {
+        runtime.dispatch(&mut workers);
+        runtime
+            .complete(completions.recv()?)
+            .expect("shutdown completion");
     }
     Ok(())
-}
-struct Threaded {
-    completed: std::sync::mpsc::Sender<Completion>,
-    threads: Vec<std::thread::JoinHandle<()>>,
-    #[cfg(feature = "test-support")]
-    control: std::sync::Arc<zipzi_runtime::test_support::Control>,
-}
-impl Threaded {
-    fn reap(&mut self) {
-        let mut index = 0;
-        while index < self.threads.len() {
-            if self.threads[index].is_finished() {
-                let _ = self.threads.swap_remove(index).join();
-            } else {
-                index += 1;
-            }
-        }
-    }
-}
-impl Executor for Threaded {
-    fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
-        let pending = std::sync::Arc::new(std::sync::Mutex::new(Some(work)));
-        let owned = pending.clone();
-        let completed = self.completed.clone();
-        #[cfg(feature = "test-support")]
-        let control = self.control.clone();
-        match std::thread::Builder::new()
-            .name("zipzi-fixture-io".into())
-            .stack_size(16 << 20)
-            .spawn(move || {
-                let work = owned.lock().unwrap().take().unwrap();
-                #[cfg(feature = "test-support")]
-                let result = control.run(work);
-                #[cfg(not(feature = "test-support"))]
-                let result = work.run_quantum();
-                let _ = completed.send(result);
-            }) {
-            Ok(thread) => {
-                self.threads.push(thread);
-                Ok(())
-            }
-            Err(_) => Err(Box::new(pending.lock().unwrap().take().unwrap())),
-        }
-    }
 }

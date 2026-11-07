@@ -11,13 +11,14 @@ pub mod evaluation;
 pub mod geometry;
 pub mod image;
 pub mod keyforms;
+mod model_validation;
 pub mod physics;
 pub mod preview;
 mod scene_reference;
+pub mod state;
 pub use scene_reference::SceneReference;
 pub mod types;
 
-pub use document::Document;
 pub use evaluation::{
     evaluate_frame, parent_positions, Drawable, DrawableFrame, DrawableFrameBounds,
     EvaluatedParameter, FrameEvaluator, PreviewValues,

@@ -6,8 +6,8 @@ use crate::AnimationError;
 use std::sync::Arc;
 use zipzi_core::physics::{PhysicsAxis, PhysicsInput, PhysicsOutput, PhysicsRange, PhysicsSetting};
 use zipzi_core::{
-    document::{ExecutablePhysics, PhysicsProjection},
-    Document,
+    state::DocumentState,
+    state::{ExecutablePhysics, PhysicsProjection},
 };
 
 #[derive(Clone, Copy, Default)]
@@ -77,7 +77,7 @@ pub(crate) struct PhysicsRuntime {
 
 /// Detached Physics-only state for rig editing and reference traces.
 pub struct PhysicsPreview {
-    document: Document,
+    document: DocumentState,
     state: PhysicsRuntime,
     parameters: BTreeMap<String, f32>,
     diagnostics: Vec<String>,
@@ -85,14 +85,14 @@ pub struct PhysicsPreview {
 
 impl PhysicsPreview {
     /// Capture an independent document snapshot at time zero. Later document edits are not observed.
-    pub fn new(document: &Document) -> Self {
+    pub fn new(document: &DocumentState) -> Self {
         let parameters = document
             .parameter_order()
             .iter()
             .map(|id| {
                 (
                     id.clone(),
-                    document.get_parameter(id).expect("parameter").default_value,
+                    document.parameter(id).expect("parameter").default_value,
                 )
             })
             .collect();
@@ -111,9 +111,9 @@ impl PhysicsPreview {
     pub fn diagnostics(&self) -> &[String] {
         &self.diagnostics
     }
-    /// Return the captured document revision, not the current authoring-session revision.
-    pub fn document_revision(&self) -> u64 {
-        self.document.revision()
+    /// Return the immutable content captured by this preview.
+    pub fn content_id(&self) -> zipzi_core::state::ContentId {
+        self.document.content_id()
     }
     /// Set a parameter UUID value, clamped to its range, without resetting particles.
     /// Missing UUIDs return `Evaluation`; nonfinite values return `InvalidTime`, with no
@@ -121,7 +121,7 @@ impl PhysicsPreview {
     pub fn set_parameter(&mut self, id: &str, value: f32) -> Result<(), AnimationError> {
         let parameter = self
             .document
-            .get_parameter(id)
+            .parameter(id)
             .ok_or_else(|| AnimationError::Evaluation(format!("missing parameter {id}")))?;
         if !value.is_finite() {
             return Err(AnimationError::InvalidTime);
@@ -165,7 +165,7 @@ impl PhysicsPreview {
                 (
                     id.clone(),
                     self.document
-                        .get_parameter(id)
+                        .parameter(id)
                         .expect("parameter")
                         .default_value,
                 )
@@ -194,7 +194,7 @@ impl PhysicsRuntime {
                 })
                 .sum::<usize>()
     }
-    pub(crate) fn new(document: &Document) -> Self {
+    pub(crate) fn new(document: &DocumentState) -> Self {
         let projection = document
             .physics_projection()
             .expect("validated physics topology")
@@ -205,7 +205,7 @@ impl PhysicsRuntime {
             .map(|id| {
                 (
                     id.clone(),
-                    document.get_parameter(id).expect("parameter").default_value,
+                    document.parameter(id).expect("parameter").default_value,
                 )
             })
             .collect::<BTreeMap<_, _>>();
@@ -258,11 +258,11 @@ impl PhysicsRuntime {
         }
     }
 
-    pub(crate) fn reset(&mut self, document: &Document) {
+    pub(crate) fn reset(&mut self, document: &DocumentState) {
         *self = Self::new(document);
     }
 
-    pub(crate) fn snapshot(&self, _document: &Document) -> Vec<PhysicsRigSnapshot> {
+    pub(crate) fn snapshot(&self, _document: &DocumentState) -> Vec<PhysicsRigSnapshot> {
         if !self.solved {
             return Vec::new();
         }
@@ -295,7 +295,7 @@ impl PhysicsRuntime {
 
     pub(crate) fn evaluate(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         parameters: &mut BTreeMap<String, f32>,
         dt: f32,
         diagnostics: &mut Vec<String>,
@@ -386,7 +386,7 @@ impl PhysicsRuntime {
 
     pub(crate) fn stabilize(
         &mut self,
-        document: &Document,
+        document: &DocumentState,
         parameters: &mut BTreeMap<String, f32>,
     ) {
         let Some(projection) = &self.projection else {
@@ -447,7 +447,7 @@ impl PhysicsRuntime {
 }
 
 fn read_inputs(
-    document: &Document,
+    document: &DocumentState,
     asset: &ExecutablePhysics,
     setting: &PhysicsSetting,
     values: &BTreeMap<String, f32>,
@@ -458,7 +458,7 @@ fn read_inputs(
         let Some(id) = asset.parameter_bindings.get(&input.source.id) else {
             continue;
         };
-        let Some(parameter) = document.get_parameter(id) else {
+        let Some(parameter) = document.parameter(id) else {
             continue;
         };
         let value = values.get(id).copied().unwrap_or(parameter.default_value);
@@ -581,14 +581,14 @@ fn output_value(output: &PhysicsOutput, particles: &[Particle]) -> f32 {
 }
 
 fn write_output(
-    document: &Document,
+    document: &DocumentState,
     asset: &ExecutablePhysics,
     output: &PhysicsOutput,
     raw: f32,
     values: &mut BTreeMap<String, f32>,
 ) -> Option<PhysicsOutputSnapshot> {
     let id = asset.parameter_bindings.get(&output.destination.id)?;
-    let parameter = document.get_parameter(id)?;
+    let parameter = document.parameter(id)?;
     let value = (raw * output.scale).clamp(parameter.minimum, parameter.maximum);
     let current = values.get(id).copied().unwrap_or(parameter.default_value);
     let weight = output.weight / 100.0;
@@ -620,11 +620,11 @@ mod tests {
     const Y: &str = "00000000-0000-4000-8000-000000000f03";
     const PHYSICS: &str = "00000000-0000-4000-8000-000000000f04";
 
-    fn document(source: &str) -> Document {
-        let mut doc = Document::new();
-        assert!(doc
-            .initialize(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0))
-            .is_ok());
+    fn document(source: &str) -> DocumentState {
+        let mut doc =
+            DocumentState::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into())
+                .unwrap()
+                .builder();
         for (id, runtime) in [(X, "ParamX"), (Y, "ParamY")] {
             assert!(doc
                 .create_parameter(Parameter {
@@ -636,10 +636,11 @@ mod tests {
                     default_value: 0.0,
                     ..Default::default()
                 })
-                .status
                 .is_ok());
         }
-        import_physics3(&doc, PHYSICS, source).unwrap().candidate
+        import_physics3(&doc.freeze().unwrap().state, PHYSICS, source)
+            .unwrap()
+            .candidate
     }
 
     #[test]
@@ -794,7 +795,7 @@ mod tests {
                 assert!(
                     (values[Y] - expected[index]).abs() < 0.0001,
                     "fps={:?} frame={index} actual={} expected={}",
-                    doc.physics().unwrap().data.meta.fps,
+                    doc.physics().as_deref().unwrap().data.meta.fps,
                     values[Y],
                     expected[index]
                 );

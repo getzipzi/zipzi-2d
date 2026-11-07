@@ -4,43 +4,41 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use zipzi_core::{TransformData, WarpTransform};
 
+use zipzi_core::state::*;
 use zipzi_core::types::{
-    Appearance, BindingAxis, Canvas, ImageAsset, Mesh, MeshBinding, MeshKeyform, Parameter,
-    Transform, Vec2,
+    Appearance, BindingAxis, Canvas, Mesh, MeshBinding, MeshKeyform, Parameter, Transform, Vec2,
 };
-use zipzi_core::Document;
 use zipzi_moc3::{encode_moc3, import_from_bare_moc3, import_from_model3_file};
 
 fn id(n: i32) -> String {
     format!("{n:08x}-1111-4111-8111-111111111111")
 }
 
-fn create_m1_fixture_doc() -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas {
-                width: 640.0,
-                height: 480.0,
-                origin: Vec2::new(320.0, 240.0),
-                pixels_per_unit: 100.0,
-                flag: 1,
-            }
-        )
-        .is_ok());
+fn create_m1_fixture_doc() -> DocumentState {
+    let mut doc = DocumentState::new(
+        id(1),
+        Canvas {
+            width: 640.0,
+            height: 480.0,
+            origin: Vec2::new(320.0, 240.0),
+            pixels_per_unit: 100.0,
+            flag: 1,
+        }
+        .into(),
+    )
+    .unwrap()
+    .builder();
 
-    let _ = doc.add_asset(ImageAsset {
-        unresolved_source: None,
+    doc.create_asset(AssetRecord {
         id: id(2),
         name: "Texture0".to_string(),
-        content: Some(zipzi_core::ImageContent {
-            source: "textures/0.png".to_string(),
+        content: AssetContent::Image {
+            resource: Default::default(),
             width: 64,
             height: 64,
-            sha256: "0".repeat(64),
-        }),
-    });
+        },
+    })
+    .unwrap();
 
     let param = Parameter {
         id: id(3),
@@ -52,7 +50,7 @@ fn create_m1_fixture_doc() -> Document {
         decimal_places: 1,
         ..Default::default()
     };
-    assert!(doc.create_parameter(param).status.is_ok());
+    doc.create_parameter(param).unwrap();
 
     let warp = Transform {
         id: id(4),
@@ -77,7 +75,7 @@ fn create_m1_fixture_doc() -> Document {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(warp).status.is_ok());
+    doc.create_transform(warp).unwrap();
 
     let m1 = Mesh {
         id: id(5),
@@ -107,7 +105,7 @@ fn create_m1_fixture_doc() -> Document {
         draw_order: Some(15.0),
         ..Default::default()
     };
-    assert!(doc.create_mesh(m1).status.is_ok());
+    doc.create_mesh(m1).unwrap();
 
     let binding = MeshBinding {
         id: id(6),
@@ -169,8 +167,8 @@ fn create_m1_fixture_doc() -> Document {
             },
         ],
     };
-    assert!(doc.create_binding(binding).status.is_ok());
-    doc
+    doc.create_binding(binding).unwrap();
+    doc.freeze().unwrap().state
 }
 
 #[path = "../tests/common/import_cases.rs"]
@@ -178,11 +176,11 @@ mod import_cases;
 
 // Defaults, each parameter's bounds/keys/midpoints, and full grids for
 // two/three-axis bindings. Other parameters retain their actual defaults.
-fn sample_parameters(doc: &Document) -> Vec<Vec<f32>> {
+fn sample_parameters(doc: &DocumentState) -> Vec<Vec<f32>> {
     let defaults: Vec<f32> = doc
         .parameter_order()
         .iter()
-        .map(|id| doc.get_parameter(id).unwrap().default_value)
+        .map(|id| doc.parameter(id).unwrap().default_value)
         .collect();
     let slots: HashMap<&str, usize> = doc
         .parameter_order()
@@ -193,16 +191,16 @@ fn sample_parameters(doc: &Document) -> Vec<Vec<f32>> {
     let bindings: Vec<&[BindingAxis]> = doc
         .binding_order()
         .iter()
-        .map(|id| doc.get_binding(id).unwrap().axes.as_slice())
+        .map(|id| doc.binding(id).unwrap().axes.as_slice())
         .chain(
             doc.scene_binding_order()
                 .iter()
-                .map(|id| doc.get_scene_binding(id).unwrap().axes.as_slice()),
+                .map(|id| doc.scene_binding(id).unwrap().axes.as_slice()),
         )
         .collect();
     let mut samples = vec![defaults.clone()];
     for (i, id) in doc.parameter_order().iter().enumerate() {
-        let p = doc.get_parameter(id).unwrap();
+        let p = doc.parameter(id).unwrap();
         let mut keys = vec![p.minimum, p.maximum, p.default_value];
         for axes in &bindings {
             for axis in *axes {
@@ -249,7 +247,7 @@ fn sample_parameters(doc: &Document) -> Vec<Vec<f32>> {
     samples
 }
 
-fn document_samples(doc: &Document, samples: &[Vec<f32>]) -> serde_json::Value {
+fn document_samples(doc: &DocumentState, samples: &[Vec<f32>]) -> serde_json::Value {
     use zipzi_core::{evaluate_frame, BlendMode, DrawableFrame};
     let mesh_slots: HashMap<&str, usize> = doc
         .mesh_order()
@@ -277,7 +275,27 @@ fn document_samples(doc: &Document, samples: &[Vec<f32>]) -> serde_json::Value {
     serde_json::json!({"samples": frames})
 }
 
-fn write_case(out_dir: &Path, name: &str, bytes: &[u8], doc: &Document) {
+fn write_case(out_dir: &Path, name: &str, bytes: &[u8], doc: &DocumentState) {
+    let mut builder = doc.builder();
+    let store = zipzi_project::ResourceStore::default();
+    let mut resources = Vec::new();
+    for id in doc.asset_order() {
+        let mut asset = doc.asset(id).unwrap().clone();
+        if let AssetContent::Unresolved { source } = &asset.content {
+            let image = store
+                .import_image(Path::new(source))
+                .expect("capture case texture");
+            asset.content = AssetContent::Image {
+                resource: image.key(),
+                width: image.width(),
+                height: image.height(),
+            };
+            builder.replace_asset(asset).unwrap();
+            resources.push(image);
+        }
+    }
+    let resolved = builder.freeze().unwrap().state;
+    let doc = &resolved;
     let case_dir = out_dir.join(name);
     fs::create_dir_all(&case_dir).unwrap();
     let samples = sample_parameters(doc);
@@ -299,17 +317,21 @@ fn write_case(out_dir: &Path, name: &str, bytes: &[u8], doc: &Document) {
     .unwrap();
     fs::write(
         case_dir.join("ppu.txt"),
-        doc.source_canvas().unwrap().pixels_per_unit.to_string(),
+        doc.setup()
+            .source_canvas
+            .unwrap()
+            .pixels_per_unit
+            .to_string(),
     )
     .unwrap();
     let parameters: Vec<_> = doc
         .parameter_order()
         .iter()
-        .map(|id| doc.get_parameter(id).unwrap())
+        .map(|id| doc.parameter(id).unwrap())
         .collect();
     fs::write(case_dir.join("metadata.json"), serde_json::to_vec_pretty(&serde_json::json!({
-        "canvas": doc.source_canvas().unwrap(), "parameters": parameters,
-        "textures": doc.asset_order().iter().map(|id| doc.get_asset(id).unwrap()).collect::<Vec<_>>()
+        "canvas": doc.setup().source_canvas.unwrap(), "parameters": parameters,
+        "textures": doc.asset_order().iter().map(|id| doc.asset(id).unwrap()).collect::<Vec<_>>()
     })).unwrap()).unwrap();
     println!("{name}: {} samples", samples.len());
 }

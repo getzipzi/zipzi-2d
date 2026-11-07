@@ -17,6 +17,9 @@ pub struct PropertyKey {
     entity: Option<uuid::Uuid>,
 }
 impl PropertyKey {
+    pub fn is_mesh_appearance(self) -> bool {
+        [mesh::OPACITY.key, mesh::MULTIPLY.key, mesh::SCREEN.key].contains(&self)
+    }
     pub const fn new(object: ObjectKind, name: &'static str) -> Self {
         Self {
             object,
@@ -556,7 +559,10 @@ pub struct PropertyEditToken {
     property: PropertyKey,
 }
 
-pub(crate) fn object_payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
+pub(crate) fn object_payload(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<Value> {
     #[cfg(feature = "bench-instrumentation")]
     let _benchmark_span = zipzi_core::benchmark::span("editor.object_payload");
     use ObjectKind as K;
@@ -572,13 +578,13 @@ pub(crate) fn object_payload(model: &zipzi_core::Document, object: &ObjectRef) -
     Ok(match object.kind {
         K::Document => {
             ensure!(model.id() == object.id, "Object no longer exists");
-            serde_json::json!({ "export_settings": model.export_settings() })
+            serde_json::json!({ "export_settings": model.setup().export })
         }
-        K::Part => get!(get_part),
+        K::Part => get!(part),
         K::Mesh => mesh::payload(model, &object.id, &PropertyScope::Object)?,
-        K::Deformer => get!(get_transform),
+        K::Deformer => get!(transform),
         K::Parameter => {
-            let mut payload = get!(get_parameter);
+            let mut payload = get!(parameter);
             let group = model
                 .display_info()
                 .parameters
@@ -604,11 +610,11 @@ pub(crate) fn object_payload(model: &zipzi_core::Document, object: &ObjectRef) -
                 .find(|group| group.id == object.id)
                 .ok_or_else(|| anyhow::anyhow!("Object no longer exists"))?,
         )?,
-        K::Glue => get!(get_glue),
-        K::Offscreen => get!(get_offscreen),
-        K::Texture => get!(get_asset),
-        K::Motion => get!(get_motion),
-        K::Expression => get!(get_expression),
+        K::Glue => get!(glue),
+        K::Offscreen => get!(offscreen),
+        K::Texture => get!(asset),
+        K::Motion => get!(motion),
+        K::Expression => get!(expression),
         K::Physics | K::Pose | K::PoseGroup | K::PoseEntry | K::PoseLink => {
             business::payload(model, object)?
         }
@@ -620,7 +626,10 @@ pub(crate) fn object_payload(model: &zipzi_core::Document, object: &ObjectRef) -
 }
 
 /// Inspector reads need descriptors, not geometry, motion curves or expression entries.
-pub(crate) fn inspector_payload(model: &zipzi_core::Document, object: &ObjectRef) -> Result<Value> {
+pub(crate) fn inspector_payload(
+    model: &zipzi_core::state::DocumentState,
+    object: &ObjectRef,
+) -> Result<Value> {
     Ok(match object.kind {
         ObjectKind::Mesh => mesh::inspector_payload(model, &object.id, &PropertyScope::Object)?,
         ObjectKind::Deformer => {
@@ -628,13 +637,13 @@ pub(crate) fn inspector_payload(model: &zipzi_core::Document, object: &ObjectRef
         }
         ObjectKind::Motion => {
             let c = model
-                .get_motion(&object.id)
+                .motion(&object.id)
                 .ok_or_else(|| anyhow::anyhow!("Motion no longer exists"))?;
             serde_json::json!({"name":c.name,"duration":c.duration,"fps":c.fps,"looping":c.looping,"fade_in":c.fade_in,"fade_out":c.fade_out})
         }
         ObjectKind::Expression => {
             let e = model
-                .get_expression(&object.id)
+                .expression(&object.id)
                 .ok_or_else(|| anyhow::anyhow!("Expression no longer exists"))?;
             serde_json::json!({"name":e.name,"fade_in":e.fade_in,"fade_out":e.fade_out})
         }
@@ -643,7 +652,7 @@ pub(crate) fn inspector_payload(model: &zipzi_core::Document, object: &ObjectRef
 }
 
 pub(crate) fn values_from(
-    model: &zipzi_core::Document,
+    model: &zipzi_core::state::DocumentState,
     object: &ObjectRef,
 ) -> Result<PropertyValues> {
     if object.kind == ObjectKind::PhysicsGroup {
@@ -752,7 +761,11 @@ impl crate::Editor {
         session
             .document
             .update_property_edit(&token.object, token.serial, patch)?;
-        session.invalidate_scene();
+        if token.property.is_mesh_appearance() {
+            session.invalidate_scene_appearance();
+        } else {
+            session.invalidate_scene();
+        }
         session.animation.playback.property_preview_changed();
         Ok(())
     }

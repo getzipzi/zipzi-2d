@@ -1,14 +1,13 @@
 //! Immutable, inspectable package bytes and references, prepared before publication.
 use super::{validate_package_paths, RuntimeValidation};
-use crate::filesystem as io;
-use crate::store::{asset_path, read_project_asset};
+
 use crate::{export_cdi3, export_expression3, export_motion3, export_physics3, export_pose3};
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, HashSet},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
-use zipzi_core::{types::Status, Document};
+use zipzi_core::{state::DocumentState, types::Status};
 use zipzi_moc3::encode_moc3;
 
 fn asset_filename(
@@ -162,7 +161,7 @@ pub struct ExportPlan {
     pub(super) report: Value,
     pub(super) source_paths: Vec<PathBuf>,
     references: Vec<PackageReference>,
-    revision: u64,
+    source: zipzi_core::state::ContentId,
 }
 impl ExportPlan {
     pub fn files(&self) -> &BTreeMap<String, ExportFile> {
@@ -171,28 +170,23 @@ impl ExportPlan {
     pub fn references(&self) -> &[PackageReference] {
         &self.references
     }
-    pub fn source_revision(&self) -> u64 {
-        self.revision
+    pub fn source_content(&self) -> zipzi_core::state::ContentId {
+        self.source
     }
 }
 
-pub fn build_export_plan(doc: &Document, asset_root: &Path) -> Result<ExportPlan, Status> {
-    build_export_plan_with(doc, asset_root, &|asset| {
-        read_project_asset(asset_root, asset)
-    })
+pub fn build_export_plan(
+    doc: &DocumentState,
+    resources: &crate::ResourceView,
+) -> Result<ExportPlan, Status> {
+    build_export_plan_with(doc, &[], &|asset| resources.read_asset(asset))
 }
 
 pub fn build_export_plan_with(
-    doc: &Document,
-    asset_root: &Path,
-    read: &dyn Fn(&zipzi_core::ImageAsset) -> Result<crate::AssetData, Status>,
+    doc: &DocumentState,
+    protected_paths: &[PathBuf],
+    read: &dyn Fn(&zipzi_core::state::AssetRecord) -> Result<crate::AssetData, Status>,
 ) -> Result<ExportPlan, Status> {
-    if doc.transaction_active() {
-        return Err(Status::error(
-            "TRANSACTION_ACTIVE",
-            "Commit or cancel edits first",
-        ));
-    }
     if !doc.missing_attachments().is_empty() {
         return Err(Status::error(
             "MISSING_PACKAGE_ATTACHMENT",
@@ -230,7 +224,7 @@ pub fn build_export_plan_with(
         .collect();
     let mut expressions = Vec::new();
     for id in doc.expression_order() {
-        let asset = doc.get_expression(id).expect("ordered expression exists");
+        let asset = doc.expression(id).expect("ordered expression exists");
         let content = export_expression3(doc, id).map_err(|error| {
             Status::error(error.code, format!("{}: {}", error.path, error.message))
         })?;
@@ -243,7 +237,7 @@ pub fn build_export_plan_with(
     let mut motions = Vec::new();
     let mut motion_paths = BTreeMap::new();
     for id in doc.motion_order() {
-        let clip = doc.get_motion(id).expect("ordered motion exists");
+        let clip = doc.motion(id).expect("ordered motion exists");
         let content = export_motion3(doc, id).map_err(|error| {
             Status::error(error.code, format!("{}: {}", error.path, error.message))
         })?;
@@ -403,11 +397,11 @@ pub fn build_export_plan_with(
     // Structural validity is an invariant of publication, not something a
     // caller-supplied validator may accidentally omit or mislabel.
     zipzi_moc3::inspect_moc3_safety(&artifact.bytes)?;
-    // Verify even unused project assets, as in the existing DocumentSession contract.
+    // Verify even unused project assets before encoding the captured package.
     // The bytes checked here are the exact bytes written below; never reopen after validation.
     let mut verified = std::collections::HashMap::new();
     for id in doc.asset_order() {
-        let data = read(doc.get_asset(id).unwrap())?;
+        let data = read(doc.asset(id).unwrap())?;
         verified.insert(id.as_str(), data.bytes);
     }
     let moc_version = artifact.bytes[4];
@@ -430,10 +424,10 @@ pub fn build_export_plan_with(
         "expressions": expressions.iter().map(|(path, name, _)| serde_json::json!({"path": path, "name": name})).collect::<Vec<_>>(),
         "motions": motions.iter().map(|(path, name, _)| serde_json::json!({"path": path, "name": name})).collect::<Vec<_>>(),
         "moc_version": moc_version,
-        "source_revision": doc.revision(),
+
         "package_reference_validation": "passed",
         "textures": artifact.textures.iter().map(|slot| serde_json::json!({
-            "asset_id": slot.asset_id, "source": slot.source,
+            "asset_id": slot.asset_id,
             "path": slot.package_path, "width": slot.width, "height": slot.height,
         })).collect::<Vec<_>>(),
     });
@@ -513,24 +507,13 @@ pub fn build_export_plan_with(
             return Err(Status::error("MISSING_PACKAGE_ATTACHMENT", &reference.to));
         }
     }
-    let mut source_paths = Vec::new();
-    if !asset_root.as_os_str().is_empty() {
-        source_paths.push(io::local_path(asset_root)?);
-    }
-    for id in doc.asset_order() {
-        let asset = doc.get_asset(id).expect("asset");
-        if !asset_root.as_os_str().is_empty()
-            || Path::new(&asset.content.as_ref().unwrap().source).is_absolute()
-        {
-            source_paths.push(asset_path(asset_root, asset)?);
-        }
-    }
+    let source_paths = protected_paths.to_vec();
     Ok(ExportPlan {
         files,
         report,
         source_paths,
         references,
-        revision: doc.revision(),
+        source: doc.content_id(),
     })
 }
 

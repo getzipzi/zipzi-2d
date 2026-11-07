@@ -1,20 +1,21 @@
 //! Project and session adapters for the filesystem-independent CMO3 codec.
 use crate::filesystem::{self as io, FileSystem, NativeFileSystem};
-use crate::{DocumentSession, DocumentStore, Publication};
+use crate::{ProjectIo, Publication, ResourceStore, ResourceView};
 use std::path::Path;
-use zipzi_cmo3::{encode_cmo3, Cmo3Artifact, Cmo3Error, Cmo3Options, Cmo3Report};
-use zipzi_core::{Document, ImageAsset};
+use zipzi_cmo3::{encode_cmo3, Cmo3Artifact, Cmo3Error, Cmo3Options};
+use zipzi_core::state::{AssetRecord, DocumentState};
 
 /// Encode a saved project's document, resolving and verifying PNGs under `root`.
 pub fn encode_document_cmo3(
-    document: &Document,
-    root: &Path,
+    document: &DocumentState,
+    resources: &ResourceView,
     options: &Cmo3Options,
 ) -> Result<Cmo3Artifact, Cmo3Error> {
     encode_cmo3(
         document,
-        &|asset: &ImageAsset| {
-            crate::read_project_asset(root, asset)
+        &|asset: &AssetRecord| {
+            resources
+                .read_asset(asset)
                 .map(|data| data.bytes)
                 .map_err(|status| Cmo3Error::Asset {
                     asset_id: asset.id.clone(),
@@ -31,11 +32,10 @@ pub fn encode_project_cmo3(
     source: &Path,
     options: &Cmo3Options,
 ) -> Result<Cmo3Artifact, Cmo3Error> {
-    let (result, snapshot) = DocumentStore::new().open(source);
-    let snapshot = snapshot.ok_or_else(|| {
-        Cmo3Error::InvalidDocument(format!("{}: {}", result.status.code, result.status.message))
-    })?;
-    encode_document_cmo3(&snapshot.document, snapshot.asset_root(), options)
+    let snapshot = ProjectIo::new(std::env::temp_dir(), ResourceStore::default())
+        .load(source, || true)
+        .map_err(|e| Cmo3Error::InvalidDocument(e.to_string()))?;
+    encode_document_cmo3(&snapshot.document, &snapshot.resources, options)
 }
 
 /// Publish captured CMO3 bytes by staging and atomic rename. Encoding failures
@@ -61,33 +61,4 @@ pub(crate) fn publish_bytes(
     files.write_new(&staged, bytes)?;
     files.rename(&staged, &destination)?;
     Ok(Publication::finish(files, parent))
-}
-
-impl DocumentSession {
-    /// Includes lazily encoded in-memory PSD artwork and unsaved model edits.
-    pub fn encode_cmo3(&self, options: &Cmo3Options) -> Result<Cmo3Artifact, Cmo3Error> {
-        encode_cmo3(
-            self.document(),
-            &|asset: &ImageAsset| {
-                self.read_asset(&asset.id)
-                    .map(|data| data.bytes)
-                    .map_err(|s| Cmo3Error::Asset {
-                        asset_id: asset.id.clone(),
-                        message: s.message,
-                    })
-            },
-            options,
-        )
-    }
-    pub fn export_cmo3(
-        &self,
-        destination: &Path,
-        options: &Cmo3Options,
-    ) -> Result<(Cmo3Report, Publication), Cmo3Error> {
-        self.validate_export_destination(destination)
-            .map_err(|s| Cmo3Error::InvalidDocument(format!("{}: {}", s.code, s.message)))?;
-        let artifact = self.encode_cmo3(options)?;
-        let publication = publish_cmo3(&artifact, destination)?;
-        Ok((artifact.report, publication))
-    }
 }

@@ -154,7 +154,7 @@ impl PropertyTarget {
             && editor.document().is_some_and(|doc| {
                 doc.authoring_capabilities(&self.object).is_ok_and(|c| {
                     c.state(zipzi_editor_core::AuthoringAction::Patch)
-                        == zipzi_sdk::CapabilityState::Available
+                        == zipzi_contract::authoring::CapabilityState::Available
                 })
             })
             && (self.timeline.is_none()

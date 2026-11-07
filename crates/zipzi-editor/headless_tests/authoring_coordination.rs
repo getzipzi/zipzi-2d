@@ -50,10 +50,10 @@ fn locked_folder_toolbar_command_and_row_share_domain_reason_but_inspection_stay
 ) {
     cx.update(|cx| cx.set_reduce_motion(true));
     let assets = tempfile::tempdir().unwrap();
-    let mut s = zipzi_sdk::AuthoringSession::new(&id(), zipzi_core::Canvas::default()).unwrap();
+    let mut s = crate::test_fixture::fixture_session(&id(), zipzi_core::Canvas::default()).unwrap();
     let group = ObjectRef::new(K::ParameterGroup, id());
-    let plan = s
-        .plan_organization_edit(zipzi_sdk::OrganizationEdit::CreateGroup {
+    crate::test_fixture::publish_fixture(&mut s, "Group", |edit| {
+        edit.edit_organization(zipzi_sdk::OrganizationEdit::CreateGroup {
             group: zipzi_core::document::CdiParameterGroup {
                 id: group.id.clone(),
                 runtime_id: "Group".into(),
@@ -62,18 +62,14 @@ fn locked_folder_toolbar_command_and_row_share_domain_reason_but_inspection_stay
                 extensions: Default::default(),
             },
             before: None,
-        })
-        .unwrap();
-    s.execute_organization_plan(&plan).unwrap();
-    s.edit("Lock", None, |e| {
-        let mut state = e.candidate_document().editor_state().clone();
+        })?;
+        let mut state = edit.read_document()?.editor_state().clone();
         state.objects.entry(group.id.clone()).or_default().locked = true;
-        e.replace_editor_state(state)
+        edit.replace_editor_state(state)
     })
     .unwrap();
-    let saved = s
-        .save_project(&assets.path().join("locked.zipzi"), None)
-        .unwrap();
+    let saved =
+        crate::test_fixture::save_fixture(&mut s, &assets.path().join("locked.zipzi")).unwrap();
     let mut d = Document::open(&saved.path).unwrap();
     d.navigate(group.clone()).unwrap();
     let h = setup_with_document(cx, d, assets);
@@ -264,7 +260,7 @@ fn created_resource_focuses_name_and_locates_when_shared_collection_tab_reopens(
     let mut d = Document::new_blank().unwrap();
     for n in 0..48 {
         let p = d
-            .plan_resource_authoring(zipzi_sdk::ResourceEdit::Create {
+            .plan_resource_authoring(zipzi_contract::document::ResourceEdit::Create {
                 id: id(),
                 name: format!("Texture {n}"),
                 before: None,
@@ -281,7 +277,7 @@ fn created_resource_focuses_name_and_locates_when_shared_collection_tab_reopens(
                 .editor
                 .document()
                 .unwrap()
-                .plan_resource_authoring(zipzi_sdk::ResourceEdit::Create {
+                .plan_resource_authoring(zipzi_contract::document::ResourceEdit::Create {
                     id: id(),
                     name: "New texture".into(),
                     before: None,

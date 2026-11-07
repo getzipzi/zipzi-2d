@@ -62,7 +62,7 @@ impl SceneSnapshot {
             return Ok(self.viewport_frame.clone());
         }
         let mut frame = self.viewport_frame.as_ref().clone();
-        zipzi_sdk::apply_model_opacity(&mut frame, self.model_opacity)?;
+        zipzi_animation::apply_model_opacity(&mut frame, self.model_opacity)?;
         Ok(Arc::new(frame))
     }
 }

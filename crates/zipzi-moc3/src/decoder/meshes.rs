@@ -90,17 +90,14 @@ impl<'a> Moc3DecoderContext<'a> {
                 t.asset_id.clone()
             } else {
                 let id = texture_slot_uuid(slot);
-                if self.doc.get_asset(&id).is_none() {
-                    check_status!(
-                        self.doc
-                            .add_asset(zipzi_core::types::ImageAsset {
-                                unresolved_source: Some(format!("cubism-texture-slot:{slot}")),
-                                id: id.clone(),
-                                name: format!("Texture {slot} (Unmapped)"),
-                                content: None,
-                            })
-                            .status
-                    );
+                if self.doc.asset(&id).is_none() {
+                    self.doc.create_asset(zipzi_core::state::AssetRecord {
+                        id: id.clone(),
+                        name: format!("Texture {slot}"),
+                        content: zipzi_core::state::AssetContent::Unresolved {
+                            source: format!("cubism-texture-slot:{slot}"),
+                        },
+                    })?;
                 }
                 id
             };
@@ -277,39 +274,35 @@ impl<'a> Moc3DecoderContext<'a> {
             }
 
             let base = &keyforms[0];
-            check_status!(
-                self.doc
-                    .create_mesh(Mesh {
-                        id: id.clone(),
-                        name: if runtime_id.is_empty() {
-                            format!("ArtMesh{m}")
-                        } else {
-                            runtime_id.clone()
-                        },
-                        texture_asset_id: texture_asset_id.into(),
-                        vertex_ids,
-                        base_positions: base.positions.clone(),
-                        uvs,
-                        triangles,
-                        runtime_id: if runtime_id.is_empty() {
-                            format!("ArtMesh{m}")
-                        } else {
-                            runtime_id
-                        },
-                        part_id,
-                        deformer_id,
-                        appearance: base.appearance,
-                        draw_order: base.draw_order,
-                        blend_mode,
-                        enabled,
-                        double_sided,
-                        inverted_mask,
-                        masks: Vec::new(),
-                        raw_blend_mode,
-                        meshing: None,
-                    })
-                    .status
-            );
+            check_status!(self.doc.create_mesh(Mesh {
+                id: id.clone(),
+                name: if runtime_id.is_empty() {
+                    format!("ArtMesh{m}")
+                } else {
+                    runtime_id.clone()
+                },
+                texture_asset_id: texture_asset_id.into(),
+                vertex_ids,
+                base_positions: base.positions.clone(),
+                uvs,
+                triangles,
+                runtime_id: if runtime_id.is_empty() {
+                    format!("ArtMesh{m}")
+                } else {
+                    runtime_id
+                },
+                part_id,
+                deformer_id,
+                appearance: base.appearance,
+                draw_order: base.draw_order,
+                blend_mode,
+                enabled,
+                double_sided,
+                inverted_mask,
+                masks: Vec::new(),
+                raw_blend_mode,
+                meshing: None,
+            }));
 
             if !masks.is_empty() {
                 mesh_masks.push((id.clone(), masks));
@@ -327,9 +320,9 @@ impl<'a> Moc3DecoderContext<'a> {
 
         // Set mesh masks now that all meshes exist in document
         for (m_id, masks) in mesh_masks {
-            let mut mesh = self.doc.get_mesh(&m_id).unwrap().clone();
+            let mut mesh = self.doc.mesh(&m_id).unwrap().clone();
             mesh.masks = masks;
-            check_status!(self.doc.replace_mesh(mesh).status);
+            check_status!(self.doc.replace_mesh(mesh));
         }
 
         Ok(mesh_bindings)

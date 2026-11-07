@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::time::{Duration, Instant};
 use zipzi_core::ModelSetup;
 use zipzi_runtime::{protocol::*, *};
@@ -26,7 +26,7 @@ fn request(
         connection,
         Request {
             protocol: CONTRACT.into(),
-            runtime: client.runtime_instance(),
+            runtime: rt.instance_id(),
             client,
             request_id: id,
             operation: op,
@@ -77,27 +77,35 @@ fn shutdown_releases_disconnected_clients_but_preserves_unsaved_sessions_and_liv
         .create_session(
             client,
             &uuid::Uuid::new_v4().to_string(),
-            ModelSetup::default(),
+            Default::default(),
         )
         .unwrap();
-    let edit = rt.begin_edit(client, session, "unsaved", None).unwrap();
-    rt.apply_edit(client, edit, |e| {
-        e.replace_model_setup(zipzi_core::Canvas::new(200., 100., Default::default(), 1.))
-    })
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    let version = rt.session_info(session).unwrap().version;
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![zipzi_contract::kernel_commands::Command::CreateAsset {
+                id: uuid::Uuid::new_v4().to_string(),
+                name: "Unsaved".into(),
+            }],
+        )
+        .unwrap();
+    let version = rt.publish(client, draft, "Unsaved").unwrap().version;
     let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
     let live = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
+    rt.attach(live, session).unwrap();
     p.disconnect(client, connection, now);
     p.release_disconnected_clients(&mut rt);
     assert!(p.has_connected_clients());
-    assert_eq!(rt.live_counts().0, 1);
-    assert!(rt.list_jobs(live).is_ok());
-    assert!(rt.list_jobs(client).is_err());
-    let info = rt.session_info(session).unwrap();
-    assert_eq!(info.version, version);
-    assert!(info.modified);
+    assert!(rt.list_sessions(client).is_err());
+    assert_eq!(rt.session_keys(live).unwrap(), [session]);
+    assert_eq!(rt.subscribe(live, session).unwrap().cursor, version);
+    assert_eq!(
+        rt.close_session(live, session, false).unwrap_err().code,
+        "UNSAVED_CHANGES"
+    );
     rt.close_session(live, session, true).unwrap();
 }
 
@@ -109,33 +117,30 @@ fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
             .create_session(
                 client,
                 &uuid::Uuid::new_v4().to_string(),
-                ModelSetup::default(),
+                Default::default(),
             )
             .unwrap();
-        let edit = rt.begin_edit(client, session, "bad image", None).unwrap();
-        let version = rt.session_info(session).unwrap().version;
-        let parameter = uuid::Uuid::new_v4().to_string();
-        rt.apply_modeling(
-            client,
-            edit,
-            vec![zipzi_runtime::modeling::ModelingCommand::CreateParameter {
-                parameter: zipzi_core::Parameter {
-                    id: parameter.clone(),
-                    ..Default::default()
-                },
-            }],
-        )
-        .unwrap();
-        let mut operation = json!({"op":"apply_rgba", "edit":edit, "id":uuid::Uuid::new_v4().to_string(),
-            "name":"bad", "width":1, "height":1, "rgba":[1, 2, 3], "replace":false});
-        if from_blob {
+        let version = rt.subscribe(client, session).unwrap().cursor;
+        let draft = rt.begin_draft(client, version).unwrap();
+        let id = uuid::Uuid::new_v4().to_string();
+        let (draft, _) = rt
+            .commands(
+                client,
+                draft,
+                vec![zipzi_contract::kernel_commands::Command::CreateAsset {
+                    id: id.clone(),
+                    name: "Bad image".into(),
+                }],
+            )
+            .unwrap();
+        let operation = if from_blob {
             let blob = rt.create_blob(client, 3).unwrap();
             rt.append_blob(client, blob, 0, &[1, 2, 3]).unwrap();
             rt.seal_blob(client, blob).unwrap();
-            operation["op"] = json!("apply_rgba_blob");
-            operation.as_object_mut().unwrap().remove("rgba");
-            operation["blob"] = json!(blob);
-        }
+            json!({"op":"replace_image_blob","expected":draft,"id":id,"blob":blob,"width":1,"height":1})
+        } else {
+            json!({"op":"batch","expected":draft,"commands":[{"command":"replace_image","id":id,"input":{"kind":"rgba","width":1,"height":1,"bytes":[1,2,3]}}]})
+        };
         let response = request(
             &mut rt,
             &mut p,
@@ -145,33 +150,28 @@ fn image_prepare_failure_aborts_on_host_even_if_client_never_sends_cleanup() {
             operation.clone(),
             now,
         );
-        assert_eq!(response["error"]["code"], "INVALID_IMAGE");
+        assert_eq!(response["error"]["code"], "INVALID_IMAGE", "{response}");
         assert_eq!(
             request(&mut rt, &mut p, client, connection, 1, operation, now),
             response
         );
-        assert_eq!(
-            request(
-                &mut rt,
-                &mut p,
-                client,
-                connection,
-                2,
-                json!({"op":"commit", "edit":edit}),
-                now
-            )["error"]["code"],
-            "EDIT_ABORTED"
+        let publication = request(
+            &mut rt,
+            &mut p,
+            client,
+            connection,
+            2,
+            json!({"op":"publish","expected":draft,"description":"Bad image"}),
+            now,
         );
-        assert_eq!(rt.session_info(session).unwrap().version, version);
-        assert!(
-            rt.document(session)
-                .unwrap()
-                .get_parameter(&parameter)
-                .is_none()
-        );
-        assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
+        assert_eq!(publication["error"]["code"], "DRAFT_ENDED");
+        let after = rt.subscribe(client, session).unwrap();
+        assert_eq!(after.cursor, version);
+        assert!(after.snapshot.snapshot.document().asset(&id).is_none());
+        assert_eq!(after.history.undo_steps, 0);
     }
 }
+
 #[test]
 fn handshake_extensions_do_not_block_existing_operations() {
     let mut rt = Runtime::default();
@@ -182,7 +182,7 @@ fn handshake_extensions_do_not_block_existing_operations() {
         json!({"protocol": CONTRACT, "client_version": "99.0", "extensions": ["future"]}),
         now,
     );
-    assert_eq!(hello["ok"]["protocol"], "zipzi-runtime-v3");
+    assert_eq!(hello["ok"]["protocol"], CONTRACT);
     let client: ClientId = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
     let connection = hello["ok"]["connection"].as_u64().unwrap();
     let envelope = json!({"protocol": CONTRACT, "runtime": rt.instance_id(),
@@ -207,7 +207,7 @@ fn handshake_extensions_do_not_block_existing_operations() {
         json!({"op": "future_operation"}),
         now,
     );
-    assert_eq!(unsupported["error"]["code"], "UNSUPPORTED_OPERATION");
+    assert_eq!(unsupported["error"]["code"], "INVALID_REQUEST");
     // Operation arguments remain strict: ignoring a future mutation option could
     // silently change its meaning, unlike optional envelope metadata.
     let invalid = request(
@@ -236,7 +236,10 @@ fn handshake_extensions_do_not_block_existing_operations() {
 
 #[test]
 fn incompatible_protocol_and_explicit_build_pin_never_register_clients() {
-    let mut rt = Runtime::default();
+    let mut rt = Runtime::new(RuntimeLimits {
+        clients: 1,
+        ..Default::default()
+    });
     let mut p = Protocol::default();
     let now = Instant::now();
     for protocol in [
@@ -246,7 +249,6 @@ fn incompatible_protocol_and_explicit_build_pin_never_register_clients() {
     ] {
         let response = p.hello(&mut rt, json!({"protocol": protocol}), now);
         assert_eq!(response["error"]["code"], "PROTOCOL_MISMATCH");
-        assert_eq!(rt.live_counts().0, 0);
         assert!(!p.has_connected_clients());
     }
     let response = p.hello(
@@ -255,7 +257,6 @@ fn incompatible_protocol_and_explicit_build_pin_never_register_clients() {
         now,
     );
     assert_eq!(response["error"]["code"], "BUILD_MISMATCH");
-    assert_eq!(rt.live_counts().0, 0);
     assert!(!p.has_connected_clients());
     let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
     assert_eq!(hello["ok"]["sdk_build"], SDK_BUILD);
@@ -275,19 +276,22 @@ fn incompatible_protocol_and_old_instance_never_mutate() {
         )["error"]["code"],
         "HOST_RESTARTED"
     );
-    assert_eq!(
-        request(
-            &mut fresh,
-            &mut p,
+    let response = p.handle(
+        &mut fresh,
+        client,
+        connection,
+        Request {
+            protocol: CONTRACT.into(),
+            runtime: rt.instance_id(),
             client,
-            connection,
-            1,
-            json!({"op":"list_sessions"}),
-            now
-        )["error"]["code"],
-        "HOST_RESTARTED"
+            request_id: 1,
+            operation: json!({"op":"list_sessions"}),
+        },
+        now,
     );
-    assert!(fresh.list_sessions().is_empty());
+    assert_eq!(response["error"]["code"], "HOST_RESTARTED");
+    let other = fresh.register_client().unwrap();
+    assert!(fresh.list_sessions(other).unwrap().is_empty());
 }
 #[test]
 fn a07_all_requests_deduplicate_digest_and_expired_watermark() {
@@ -296,14 +300,14 @@ fn a07_all_requests_deduplicate_digest_and_expired_watermark() {
         result_ttl: Duration::from_secs(1),
         ..Default::default()
     });
-    let op = json!({"op":"create_session", "document_id": uuid::Uuid::new_v4().to_string(), "setup": ModelSetup::default()});
+    let op = json!({"op":"create_session", "document_id": uuid::Uuid::new_v4().to_string()});
     let result = request(&mut rt, &mut p, client, connection, 1, op.clone(), now);
     assert!(result.get("ok").is_some(), "{result}");
     assert_eq!(
         request(&mut rt, &mut p, client, connection, 1, op.clone(), now),
         result
     );
-    assert_eq!(rt.list_sessions().len(), 1);
+    assert_eq!(rt.list_sessions(client).unwrap().len(), 1);
     assert_eq!(
         request(
             &mut rt,
@@ -361,45 +365,41 @@ fn a17_result_byte_budget_and_hundred_edits_remain_bounded() {
             ModelSetup::default(),
         )
         .unwrap();
-    let baseline = rt
-        .accounted_bytes()
-        .saturating_sub(p.retained_memory_bytes());
-    let mut id = 0;
-    for _ in 0..100 {
-        id += 1;
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    for index in 0..100 {
         let response = request(
             &mut rt,
             &mut p,
             client,
             connection,
-            id,
-            json!({"op":"begin_edit", "session":session,"label":"cancel","expected":null}),
+            2 * index + 1,
+            json!({"op":"begin_draft","expected":version}),
             now,
         );
-        let edit = response["ok"].clone();
-        assert!(!edit.is_null(), "{response}");
-        id += 1;
+        let draft: DraftSource =
+            serde_json::from_value(response["ok"].clone()).unwrap_or_else(|_| panic!("{response}"));
         assert_eq!(
             request(
                 &mut rt,
                 &mut p,
                 client,
                 connection,
-                id,
-                json!({"op":"release_edit", "edit":edit}),
+                2 * index + 2,
+                json!({"op":"cancel_draft","draft":draft.draft}),
                 now
             ),
             json!({"ok":null})
         );
         assert!(p.retained_results().1 <= 2048);
-        assert!(p.retained_memory_bytes() <= 2048 * 128 + 1024);
+        assert_eq!(
+            rt.read_draft(client, draft).unwrap_err().code,
+            "DRAFT_ENDED"
+        );
     }
-    assert_eq!(
-        rt.accounted_bytes()
-            .saturating_sub(p.retained_memory_bytes()),
-        baseline
-    );
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
+    assert_eq!(rt.task_bytes(), p.retained_results().1);
+    assert_eq!(rt.subscribe(client, session).unwrap().history.undo_steps, 0);
+    drop(p);
+    assert_eq!(rt.task_bytes(), 0);
 }
 #[test]
 fn a18_disconnect_resume_generation_and_expiry_reclaim_candidate_not_session() {
@@ -416,7 +416,8 @@ fn a18_disconnect_resume_generation_and_expiry_reclaim_candidate_not_session() {
             ModelSetup::default(),
         )
         .unwrap();
-    let edit = rt.begin_edit(client, session, "pending", None).unwrap();
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
     p.disconnect(client, generation, now);
     let instance = rt.instance_id();
     let resumed = p.hello(
@@ -428,46 +429,14 @@ fn a18_disconnect_resume_generation_and_expiry_reclaim_candidate_not_session() {
     assert!(resumed["connection"].as_u64().unwrap() > generation);
     p.disconnect(client, generation, now); // An old socket cannot expire a new one.
     p.expire(&mut rt, now + Duration::from_secs(31));
-    assert!(rt.edit_state(client, edit).is_ok());
+    assert!(rt.read_draft(client, draft).is_ok());
     p.disconnect(client, resumed["connection"].as_u64().unwrap(), now);
     p.expire(&mut rt, now + Duration::from_secs(31));
-    assert!(rt.edit_state(client, edit).is_err());
-    assert!(rt.session_info(session).is_ok());
+    assert!(rt.read_draft(client, draft).is_err());
+    let observer = rt.register_client().unwrap();
+    rt.attach(observer, session).unwrap();
+    assert_eq!(rt.subscribe(observer, session).unwrap().cursor, version);
 }
-#[test]
-fn a06_framing_limits_utf8_nonfinite_empty_arrays_roundtrip() {
-    use zipzi_runtime::local::*;
-    let original = json!({"array":[], "float":1.2345678901234567, "text":"你好"});
-    let mut bytes = Vec::new();
-    write_frame(&mut bytes, &original).unwrap();
-    assert_eq!(read_frame(&mut bytes.as_slice()).unwrap(), original);
-    for length in [0, (MAX_FRAME + 1) as u32, u32::MAX] {
-        assert!(read_frame(&mut length.to_be_bytes().as_slice()).is_err());
-    }
-    for body in [b"[NaN]".as_slice(), b"[1e999]", b"\xff"] {
-        let mut bytes = (body.len() as u32).to_be_bytes().to_vec();
-        bytes.extend(body);
-        assert!(read_frame(&mut bytes.as_slice()).is_err());
-    }
-}
-
-#[cfg(unix)]
-#[test]
-fn private_unix_endpoint_permissions_and_ownership() {
-    use zipzi_runtime::local::*;
-    let temp = tempfile::tempdir().unwrap();
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
-    assert!(Endpoint::new(temp.path(), "BAD").is_err());
-    let endpoint = Endpoint::new(temp.path(), "a").unwrap();
-    let owner = endpoint.claim().unwrap().unwrap();
-    assert!(endpoint.claim().unwrap().is_none());
-    drop(owner);
-    assert!(endpoint.claim().unwrap().is_some());
-    std::fs::set_permissions(temp.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
-    assert!(Endpoint::new(temp.path(), "a").is_err());
-}
-
 #[test]
 fn a07_status_of_unexecuted_id_does_not_expire_its_retry() {
     let (mut rt, mut p, client, connection, now) = setup(Default::default());
@@ -502,75 +471,66 @@ fn a04_parameter_replacement_preserves_candidate_fields_in_one_request() {
         .create_session(
             client,
             &uuid::Uuid::new_v4().to_string(),
-            ModelSetup::default(),
+            Default::default(),
         )
         .unwrap();
-    let edit = rt
-        .begin_edit(client, session, "replace in candidate", None)
-        .unwrap();
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
     let id = uuid::Uuid::new_v4().to_string();
-    rt.apply_edit(client, edit, |candidate| {
-        candidate.create_parameter(zipzi_core::Parameter {
-            id: id.clone(),
-            runtime_id: "ParamOriginal".into(),
-            name: "original".into(),
-            decimal_places: 3,
-            kind: zipzi_core::ParameterKind::BlendShape,
-            minimum: 0.0,
-            maximum: 1.0,
-            ..Default::default()
+    let (draft, _) = rt
+        .batch(client, draft, |c| {
+            c.create_parameter(zipzi_core::Parameter {
+                id: id.clone(),
+                runtime_id: "ParamOriginal".into(),
+                name: "original".into(),
+                decimal_places: 3,
+                kind: zipzi_core::ParameterKind::BlendShape,
+                minimum: 0.,
+                maximum: 1.,
+                ..Default::default()
+            })
         })
-    })
-    .unwrap();
-    let op = json!({"op":"apply", "edit":edit, "commands":[{
-        "op":"replace_parameter", "parameter":{
-            "id":id, "runtime_id":"placeholder", "name":"replacement",
-            "minimum":0.0, "maximum":1.0, "default_value":0.5,
-            "kind":"normal", "decimal_places":6, "repeat":false
-        }, "preserve_runtime_id":true, "preserve_kind":true, "preserve_decimal_places":true
-    }]});
+        .unwrap();
+    let op = json!({"op":"batch","expected":draft,"commands":[{"command":"patch_parameter","id":id,"patch":{"name":"replacement","default_value":0.5}}]});
     let result = request(&mut rt, &mut p, client, connection, 1, op.clone(), now);
-    assert!(result.get("ok").is_some(), "{result}");
-    let sequence = rt.edit_sequence(client, edit).unwrap();
     assert_eq!(
-        request(&mut rt, &mut p, client, connection, 1, op.clone(), now),
+        request(&mut rt, &mut p, client, connection, 1, op, now),
         result
     );
-    assert_eq!(rt.edit_sequence(client, edit).unwrap(), sequence);
-    let parameter = rt
-        .edit_document(client, edit)
-        .unwrap()
-        .get_parameter(&id)
-        .unwrap();
+    let draft = serde_json::from_value(result["ok"]["source"].clone())
+        .unwrap_or_else(|_| panic!("{result}"));
+    let candidate = rt.read_draft(client, draft).unwrap();
+    let parameter = candidate.snapshot.document().parameter(&id).unwrap();
     assert_eq!(parameter.name, "replacement");
+    assert_eq!(parameter.default_value, 0.5);
     assert_eq!(parameter.runtime_id, "ParamOriginal");
     assert_eq!(parameter.decimal_places, 3);
     assert_eq!(parameter.kind, zipzi_core::ParameterKind::BlendShape);
-    let mut explicit = op;
-    explicit["commands"][0]["preserve_runtime_id"] = json!(false);
-    explicit["commands"][0]["preserve_kind"] = json!(false);
-    explicit["commands"][0]["preserve_decimal_places"] = json!(false);
+    let explicit = json!({"op":"batch","expected":draft,"commands":[{"command":"patch_parameter","id":id,"patch":{"runtime_id":"ParamChanged","decimal_places":6,"kind":"normal"}}]});
     let result = request(&mut rt, &mut p, client, connection, 2, explicit, now);
-    assert!(result.get("ok").is_some(), "{result}");
-    let parameter = rt
-        .edit_document(client, edit)
-        .unwrap()
-        .get_parameter(&id)
-        .unwrap();
-    assert_eq!(parameter.runtime_id, "placeholder");
+    let draft = serde_json::from_value(result["ok"]["source"].clone())
+        .unwrap_or_else(|_| panic!("{result}"));
+    let candidate = rt.read_draft(client, draft).unwrap();
+    let parameter = candidate.snapshot.document().parameter(&id).unwrap();
+    assert_eq!(parameter.runtime_id, "ParamChanged");
     assert_eq!(parameter.decimal_places, 6);
     assert_eq!(parameter.kind, zipzi_core::ParameterKind::Normal);
-    rt.commit_edit(client, edit).unwrap();
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+    assert_eq!(
+        rt.publish(client, draft, "Parameter")
+            .unwrap()
+            .history
+            .undo_steps,
+        1
+    );
 }
 
 #[test]
 fn modeling_query_rejects_expansion_before_json_and_keeps_candidate_usable() {
     let mut rt = Runtime::new(RuntimeLimits {
-        accounted_bytes: 1 << 20,
+        result_bytes: 8192,
         ..Default::default()
     });
-    let mut p = Protocol::new(Default::default());
+    let mut p = Protocol::default();
     let now = Instant::now();
     let hello = p.hello(&mut rt, json!({"protocol": CONTRACT}), now);
     let client = serde_json::from_value(hello["ok"]["client"].clone()).unwrap();
@@ -579,184 +539,147 @@ fn modeling_query_rejects_expansion_before_json_and_keeps_candidate_usable() {
         .create_session(
             client,
             &uuid::Uuid::new_v4().to_string(),
-            ModelSetup::default(),
+            Default::default(),
         )
         .unwrap();
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
     let asset = uuid::Uuid::new_v4().to_string();
-    let edit = rt.begin_edit(client, session, "resource", None).unwrap();
-    rt.apply_edit(client, edit, |e| {
-        e.edit_resource(zipzi_sdk::ResourceEdit::Create {
-            id: asset.clone(),
-            name: "x".repeat(4096),
-            before: None,
-        })
-    })
-    .unwrap();
-    let op = json!({"op":"modeling_query", "session":session, "edit":edit,
-        "query":{"assets":vec![asset.clone(); 4300]}});
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![zipzi_contract::kernel_commands::Command::CreateAsset {
+                id: asset.clone(),
+                name: "x".repeat(4096),
+            }],
+        )
+        .unwrap();
+    let address = json!({"kind":"asset","id":asset});
+    let query = |source, count| json!({"op":"query","source":source,"input":{"query":"objects","addresses":vec![address.clone(); count]}});
+    let op = query(QuerySource::Draft(draft), 3);
     let result = request(&mut rt, &mut p, client, connection, 1, op.clone(), now);
-    assert_eq!(result["error"]["code"], "BUDGET_EXCEEDED");
-    assert_eq!(result["error"]["edit_state"], "editing");
+    assert_eq!(result["error"]["code"], "RESOURCE_LIMIT");
     assert!(serde_json::to_vec(&result).unwrap().len() < 1024);
     assert_eq!(
         request(&mut rt, &mut p, client, connection, 1, op, now),
         result
     );
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (0, 0));
-    rt.commit_edit(client, edit).unwrap();
-    let version = rt.session(session).unwrap().version();
+    assert_eq!(rt.subscribe(client, session).unwrap().history.undo_steps, 0);
+    let publication = rt.publish(client, draft, "Asset").unwrap();
+    let source = QuerySource::Published(publication.version);
     let oversized = request(
         &mut rt,
         &mut p,
         client,
         connection,
         2,
-        json!({"op":"modeling_query", "session":session, "query":{"assets":vec![asset.clone(); 4300]}}),
+        query(source, 3),
         now,
     );
-    assert_eq!(oversized["error"]["code"], "BUDGET_EXCEEDED");
+    assert_eq!(oversized["error"]["code"], "RESOURCE_LIMIT");
     let small = request(
         &mut rt,
         &mut p,
         client,
         connection,
         3,
-        json!({"op":"modeling_query", "session":session, "query":{"assets":[asset, "missing"]}}),
+        query(source, 1),
         now,
     );
     assert_eq!(
-        small["ok"]["records"]["assets"][0]["name"],
-        "x".repeat(4096),
-        "{small}"
+        small["ok"]["value"]["records"][0]["value"]["name"],
+        "x".repeat(4096)
     );
-    assert!(small["ok"]["records"]["assets"][1].is_null());
-    assert_eq!(rt.session(session).unwrap().version(), version);
-    assert_eq!(rt.session(session).unwrap().history_lengths(), (1, 0));
+    assert_eq!(
+        rt.subscribe(client, session).unwrap().cursor,
+        publication.version
+    );
 }
 
 #[test]
 fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
+    use zipzi_contract::kernel_commands::{Command, ImageInput};
     let (mut rt, mut protocol, client, connection, now) = setup(Default::default());
     let session = rt
         .create_session(
             client,
             &uuid::Uuid::new_v4().to_string(),
-            ModelSetup::default(),
+            Default::default(),
         )
         .unwrap();
+    let version = rt.subscribe(client, session).unwrap().cursor;
+    let draft = rt.begin_draft(client, version).unwrap();
     let asset = uuid::Uuid::new_v4().to_string();
-    let a = rt
-        .prepare_image(client, 1, 1, vec![12, 34, 56, 255])
-        .unwrap()
-        .image;
-    let edit = rt.begin_edit(client, session, "formal", None).unwrap();
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![authoring::EditOperation::Resource(
-            crate::authoring::ResourceOperation::CreateImage {
-                spec: zipzi_sdk::ImageCreateSpec {
-                    id: Some(asset.clone()),
+    let replace = |bytes| Command::ReplaceImage {
+        id: asset.clone(),
+        input: ImageInput::Rgba {
+            width: 1,
+            height: 1,
+            bytes,
+        },
+    };
+    let (draft, _) = rt
+        .commands(
+            client,
+            draft,
+            vec![
+                Command::CreateAsset {
+                    id: asset.clone(),
                     name: "A".into(),
                 },
-                image: a,
-            },
-        )],
-    )
-    .unwrap();
-    rt.commit_edit(client, edit).unwrap();
-    rt.release_prepared_image(client, a).unwrap();
-    let b = rt
-        .prepare_image(client, 1, 1, vec![11, 22, 33, 255])
-        .unwrap()
-        .image;
-    rt.plan_authoring(
-        client,
-        session,
-        None,
-        authoring::PlanIntent::ImageRename {
-            id: asset.clone(),
-            expected_name: Some("A".into()),
-            name: "Planned".into(),
-        },
-    )
-    .unwrap();
-    let edit = rt.begin_edit(client, session, "cancel", None).unwrap();
-    rt.apply_authoring(
-        client,
-        edit,
-        vec![authoring::EditOperation::Resource(
-            crate::authoring::ResourceOperation::CreateImage {
-                spec: zipzi_sdk::ImageCreateSpec {
-                    id: None,
-                    name: "B".into(),
-                },
-                image: b,
-            },
-        )],
-    )
-    .unwrap();
-    let job = rt.request_commit(client, edit).unwrap();
-    assert_eq!(
-        request(
-            &mut rt,
-            &mut protocol,
-            client,
-            connection,
-            1,
-            json!({"op":"job_status","job":job}),
-            now
-        )["ok"],
-        "queued"
-    );
-    assert!(
-        request(
-            &mut rt,
-            &mut protocol,
-            client,
-            connection,
-            2,
-            json!({"op":"cancel_job","job":job}),
-            now
+                replace(vec![12, 34, 56, 255]),
+            ],
         )
-        .get("ok")
-        .is_some()
+        .unwrap();
+    let publication = rt.publish(client, draft, "Formal").unwrap();
+    let draft = rt.begin_draft(client, publication.version).unwrap();
+    let (draft, _) = rt
+        .commands(client, draft, vec![replace(vec![11, 22, 33, 255])])
+        .unwrap();
+    let job = rt
+        .request_publish(client, draft, "Cancel", Default::default())
+        .unwrap();
+    let status = json!({"op":"job","job":job});
+    let queued = request(
+        &mut rt,
+        &mut protocol,
+        client,
+        connection,
+        1,
+        status.clone(),
+        now,
     );
-    struct Manual(Vec<Work>);
-    impl Executor for Manual {
-        fn submit(&mut self, work: Work) -> std::result::Result<(), Box<Work>> {
-            self.0.push(work);
-            Ok(())
-        }
-    }
-    let mut executor = Manual(vec![]);
-    rt.dispatch(&mut executor);
-    rt.complete(executor.0.pop().unwrap().run());
-    assert_eq!(
-        request(
-            &mut rt,
-            &mut protocol,
-            client,
-            connection,
-            3,
-            json!({"op":"job_status","job":job}),
-            now
-        )["ok"],
-        "cancelled"
-    );
-    assert_eq!(rt.job_info(client, job).unwrap().state, JobState::Cancelled);
-    request(
+    assert_eq!(queued["ok"]["state"], "queued");
+    assert!(request(
+        &mut rt,
+        &mut protocol,
+        client,
+        connection,
+        2,
+        json!({"op":"cancel_job","job":job}),
+        now
+    )
+    .get("ok")
+    .is_some());
+    let work = rt.take_work(job).unwrap();
+    rt.complete(work.run()).unwrap();
+    let cancelled = request(&mut rt, &mut protocol, client, connection, 3, status, now);
+    assert_eq!(cancelled["ok"]["state"], "cancelled");
+    assert!(request(
         &mut rt,
         &mut protocol,
         client,
         connection,
         4,
-        json!({"op":"job","job":job}),
-        now,
-    );
-    assert!(rt.job_info(client, job).is_err());
+        json!({"op":"release_job","job":job}),
+        now
+    )
+    .get("ok")
+    .is_some());
+    assert!(rt.job(client, job).is_err());
     let release = json!({"op":"release_client"});
-    let response = request(
+    let result = request(
         &mut rt,
         &mut protocol,
         client,
@@ -767,17 +690,21 @@ fn job_status_cancel_and_explicit_client_release_preserve_formal_resources() {
     );
     assert_eq!(
         request(&mut rt, &mut protocol, client, connection, 5, release, now),
-        response
+        result
     );
-    assert_eq!(rt.prepared_image_count(), 0);
-    assert_eq!(rt.modeling_plan_count(), 0);
-    assert_eq!(rt.image_memory_usage().rgba_bytes, 4);
-    assert_eq!(rt.session_info(session).unwrap().history_lengths, (1, 0));
     let observer = rt.register_client().unwrap();
+    rt.attach(observer, session).unwrap();
+    let after = rt.subscribe(observer, session).unwrap();
+    assert_eq!(after.cursor, publication.version);
+    assert_eq!(after.history.undo_steps, 1);
+    let asset = after.snapshot.snapshot.document().asset(&asset).unwrap();
     assert_eq!(
-        rt.image_snapshot(observer, session, None, &asset)
+        after
+            .snapshot
+            .snapshot
+            .resources()
+            .read_texture(asset)
             .unwrap()
-            .pixels
             .rgba
             .as_ref(),
         &[12, 34, 56, 255]
@@ -793,19 +720,17 @@ fn desktop_open_projects_admits_bounded_batches_and_retries_idempotently() {
         .with_project_open_support(queue.clone());
     let path = std::env::temp_dir().join("中文 project.zipzi");
     let op = json!({"op": "open_projects", "paths": [path]});
-    assert!(
-        request(
-            &mut rt,
-            &mut protocol,
-            client,
-            connection,
-            1,
-            op.clone(),
-            now
-        )
-        .get("ok")
-        .is_some()
-    );
+    assert!(request(
+        &mut rt,
+        &mut protocol,
+        client,
+        connection,
+        1,
+        op.clone(),
+        now
+    )
+    .get("ok")
+    .is_some());
     assert!(
         request(&mut rt, &mut protocol, client, connection, 1, op, now)
             .get("ok")

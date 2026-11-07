@@ -168,12 +168,14 @@ fn restart_update_refuses_a_pending_runtime_job(cx: &mut TestAppContext) {
         view.editor.document().unwrap().runtime_session_id()
     });
     let client = host.runtime.client_id();
-    let edit = host
-        .runtime
-        .write()
-        .begin_edit(client, session, "Pending edit", None)
-        .unwrap();
-    host.runtime.write().request_commit(client, edit).unwrap();
+    {
+        let mut runtime = host.runtime.write();
+        let version = runtime.session_read(client, session).unwrap().version();
+        let draft = runtime.begin_draft(client, version).unwrap();
+        runtime
+            .request_publish(client, draft, "Pending edit", Default::default())
+            .unwrap();
+    }
     let error = cx.update(updates::prepare_restart).unwrap_err();
     assert!(error.contains("Jobs are still running"), "{error}");
 }
@@ -198,9 +200,10 @@ fn restart_update_refuses_unsaved_sessions_without_a_window(cx: &mut TestAppCont
     assert!(
         host.runtime
             .read()
-            .list_sessions()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
             .iter()
-            .any(|session| session.modified)
+            .any(|session| session.dirty)
     );
     let error = cx.update(updates::prepare_restart).unwrap_err();
     assert!(error.contains("Save or close"), "{error}");
@@ -221,7 +224,14 @@ fn restart_update_restores_saved_sessions_without_a_window(cx: &mut TestAppConte
     cx.update_window(harness.window, |_, window, _| window.remove_window())
         .unwrap();
     drop(harness);
-    assert_eq!(host.runtime.read().list_sessions().len(), 1);
+    assert_eq!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .len(),
+        1
+    );
     assert_eq!(
         cx.update(updates::prepare_restart).unwrap(),
         vec![std::ffi::OsString::from("--"), expected],

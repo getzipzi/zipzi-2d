@@ -2,9 +2,7 @@ use super::*;
 use crate::{AnimationSource, DocumentId, DocumentSession, Editor, MotionSelection};
 use anyhow::{Result, ensure};
 use zipzi_core::document::{MotionEvent, MotionKey, MotionPoint, MotionTrack};
-use zipzi_sdk::{
-    MotionBezierHandle, MotionClipCandidate, MotionInterpolation, MotionKeyMove, Version,
-};
+use zipzi_sdk::{MotionBezierHandle, MotionCurveEdit, MotionInterpolation, MotionKeyMove, Version};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TimelineCandidateIdentity {
@@ -91,13 +89,13 @@ impl TimelineCommand {
 }
 
 pub struct TimelineEdit {
-    _interaction: crate::runtime_host::HostedInteraction,
+    pub(crate) draft: crate::runtime_host::HostedDraft,
     pub owner: Option<crate::TimelineBinding>,
     pub identity: TimelineCandidateIdentity,
     pub base_version: Version,
     pub local_time: f64,
-    pub candidate: MotionClipCandidate,
-    original_candidate: MotionClipCandidate,
+    pub candidate: zipzi_core::document::MotionClip,
+    original_candidate: zipzi_core::document::MotionClip,
     original_projection: Arc<TimelineProjection>,
     original_keys: HashSet<String>,
     source: Arc<AnimationSource>,
@@ -105,17 +103,15 @@ pub struct TimelineEdit {
     track_id: String,
     key_id: String,
     event_id: String,
-    label: String,
 }
 impl TimelineEdit {
-    fn apply(
+    fn prepare(
         &self,
-        document: &crate::Document,
         command: &TimelineCommand,
         snap: bool,
-    ) -> Result<MotionClipCandidate> {
-        let model = document.model();
-        let mut candidate = self.original_candidate.clone();
+    ) -> Result<(zipzi_core::document::MotionClip, Vec<MotionCurveEdit>)> {
+        let mut clip = self.original_candidate.clone();
+        let mut curves = Vec::new();
         let projection = &self.original_projection;
         let validate_key = |key: &TimelineKeyRef| -> Result<()> {
             ensure!(
@@ -131,9 +127,9 @@ impl TimelineEdit {
                 selected_key,
                 value,
             } => self.write(
-                document,
                 &projection,
-                &mut candidate,
+                &mut clip,
+                &mut curves,
                 channel,
                 track_id.as_deref(),
                 selected_key.as_ref(),
@@ -145,9 +141,9 @@ impl TimelineEdit {
                 track_id,
                 selected_key,
             } => self.write(
-                document,
                 &projection,
-                &mut candidate,
+                &mut clip,
+                &mut curves,
                 channel,
                 track_id.as_deref(),
                 selected_key.as_ref(),
@@ -172,7 +168,7 @@ impl TimelineEdit {
                     );
                 }
                 if *time_delta == 0. && *value_delta == 0. {
-                    return Ok(candidate);
+                    return Ok((clip, curves));
                 }
                 ensure!(
                     *value_delta == 0. || keys.iter().all(|key| key.track_id == anchor.track_id),
@@ -225,7 +221,7 @@ impl TimelineEdit {
                         }
                     })
                     .collect::<Vec<_>>();
-                candidate.move_keys(&model, &moves)?;
+                curves.push(MotionCurveEdit::MoveKeys(moves));
             }
             TimelineCommand::SetKey { key, time, value } => {
                 validate_key(key)?;
@@ -236,26 +232,21 @@ impl TimelineEdit {
                 } else {
                     timeline_time(*time, projection.fps, snap)?
                 };
-                candidate.move_keys(
-                    &model,
-                    &[MotionKeyMove {
-                        key: key.sdk(),
-                        point: MotionPoint {
-                            time,
-                            value: *value,
-                        },
-                    }],
-                )?;
+                curves.push(MotionCurveEdit::MoveKeys(vec![MotionKeyMove {
+                    key: key.sdk(),
+                    point: MotionPoint {
+                        time,
+                        value: *value,
+                    },
+                }]));
             }
             TimelineCommand::Delete { keys, events } => {
                 for key in keys {
                     validate_key(key)?;
                 }
-                candidate.delete_keys(
-                    &model,
-                    &keys.iter().map(TimelineKeyRef::sdk).collect::<Vec<_>>(),
-                )?;
-                let mut clip = candidate.into_clip();
+                curves.push(MotionCurveEdit::DeleteKeys(
+                    keys.iter().map(TimelineKeyRef::sdk).collect(),
+                ));
                 for id in events {
                     ensure!(
                         clip.events.iter().any(|event| &event.id == id),
@@ -263,17 +254,15 @@ impl TimelineEdit {
                     );
                 }
                 clip.events.retain(|event| !events.contains(&event.id));
-                candidate = MotionClipCandidate::new(&model, clip)?;
             }
             TimelineCommand::Interpolation { keys, kind } => {
                 for key in keys {
                     validate_key(key)?;
                 }
-                candidate.set_interpolation(
-                    &model,
-                    &keys.iter().map(TimelineKeyRef::sdk).collect::<Vec<_>>(),
-                    *kind,
-                )?;
+                curves.push(MotionCurveEdit::Interpolation {
+                    keys: keys.iter().map(TimelineKeyRef::sdk).collect(),
+                    kind: *kind,
+                });
             }
             TimelineCommand::Handle {
                 end,
@@ -289,18 +278,16 @@ impl TimelineEdit {
                     "Bezier handles are read-only for this segment"
                 );
                 ensure!(time.is_finite(), "Invalid handle time");
-                candidate.set_handle(
-                    &model,
-                    &end.sdk(),
-                    *handle,
-                    MotionPoint {
+                curves.push(MotionCurveEdit::BezierHandle {
+                    end: end.sdk(),
+                    handle: *handle,
+                    point: MotionPoint {
                         time: *time as f32,
                         value: *value,
                     },
-                )?;
+                });
             }
             TimelineCommand::Event { id, time, value } => {
-                let mut clip = candidate.into_clip();
                 if let Some(id) = id {
                     let event = clip
                         .events
@@ -319,11 +306,12 @@ impl TimelineEdit {
                         extensions: Default::default(),
                     });
                 }
-                candidate = MotionClipCandidate::new(&model, clip)?;
             }
             TimelineCommand::ScaleTime(duration) => {
                 ensure!(duration.is_finite(), "Invalid duration");
-                candidate.scale_time(&model, *duration as f32)?;
+                curves.push(MotionCurveEdit::ScaleTime {
+                    duration: *duration as f32,
+                });
             }
             TimelineCommand::Timing {
                 duration,
@@ -332,24 +320,22 @@ impl TimelineEdit {
                 fade_in,
                 fade_out,
             } => {
-                let mut clip = candidate.into_clip();
                 clip.duration = *duration;
                 clip.fps = *fps;
                 clip.looping = *looping;
                 clip.fade_in = *fade_in;
                 clip.fade_out = *fade_out;
-                candidate = MotionClipCandidate::new(&model, clip)?;
             }
         }
-        Ok(candidate)
+        Ok((clip, curves))
     }
 
     #[allow(clippy::too_many_arguments)]
     fn write(
         &self,
-        document: &crate::Document,
         projection: &TimelineProjection,
-        candidate: &mut MotionClipCandidate,
+        clip: &mut zipzi_core::document::MotionClip,
+        curves: &mut Vec<MotionCurveEdit>,
         channel_id: &TimelineChannelId,
         track_id: Option<&str>,
         selected: Option<&TimelineKeyRef>,
@@ -404,19 +390,20 @@ impl TimelineEdit {
                 selected.or_else(|| track.keys.iter().find(|key| key.time as f32 == time))
             {
                 if let Some(value) = value {
-                    candidate.move_keys(
-                        &document.model(),
-                        &[MotionKeyMove {
-                            key: key.reference.sdk(),
-                            point: MotionPoint { time, value },
-                        }],
-                    )?;
+                    curves.push(MotionCurveEdit::MoveKeys(vec![MotionKeyMove {
+                        key: key.reference.sdk(),
+                        point: MotionPoint { time, value },
+                    }]));
                 }
             } else {
-                candidate.insert_key(&document.model(), track_id, &self.key_id, time, value)?;
+                curves.push(MotionCurveEdit::InsertKey {
+                    track: track_id.into(),
+                    id: self.key_id.clone(),
+                    time,
+                    value,
+                });
             }
         } else {
-            let mut clip = candidate.clone().into_clip();
             clip.tracks.push(MotionTrack {
                 id: self.track_id.clone(),
                 target: channel_id.target(),
@@ -434,7 +421,6 @@ impl TimelineEdit {
                 time >= 0. && time <= clip.duration,
                 "New key is outside motion duration"
             );
-            *candidate = MotionClipCandidate::new(&document.model(), clip)?;
         }
         Ok(())
     }
@@ -451,12 +437,12 @@ impl DocumentSession {
         }
     }
     pub(crate) fn finish_timeline_edit(&mut self) -> Result<()> {
-        if let Some(edit) = self.animation.timeline.edit.take() {
-            let result = self.document.commit_timeline_candidate(
-                edit.candidate,
-                edit.base_version,
-                &edit.label,
-            );
+        if let Some(mut edit) = self.animation.timeline.edit.take() {
+            let result = self.document.commit_timeline_draft(&mut edit.draft);
+            if result.is_err() && edit.draft.is_active() {
+                self.animation.timeline.edit = Some(edit);
+                return result;
+            }
             self.animation.playback.set_candidate(None);
             if let Some(state) = self.animation.timeline.current_mut() {
                 state.generation = 0;
@@ -710,13 +696,17 @@ impl Editor {
             .active
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Select a motion"))?;
-        let original = session
-            .document
-            .motion_definition(clip_id)
-            .unwrap()
-            .as_ref()
+        let source = Arc::new(session.document.animation_source());
+        let original = source
+            .document()
+            .motion(clip_id)
+            .ok_or_else(|| anyhow::anyhow!("Motion no longer exists"))?
             .clone();
-        let candidate = MotionClipCandidate::new(&session.document.model(), original.clone())?;
+        ensure!(
+            !original.has_extensions(),
+            "Reimport motion3 to edit unknown fields"
+        );
+        let candidate = original.clone();
         let original_projection = session
             .animation
             .timeline
@@ -724,7 +714,6 @@ impl Editor {
             .unwrap()
             .projection
             .clone();
-        let source = Arc::new(session.document.animation_source());
         session.animation.timeline.next_edit += 1;
         let identity = TimelineCandidateIdentity {
             edit: session.animation.timeline.next_edit,
@@ -735,15 +724,19 @@ impl Editor {
             .iter()
             .flat_map(|track| track.keys().map(|key| key.id.clone()))
             .collect();
-        let interaction = session
+        let zipzi_sdk::QuerySource::Published(base_version) = source.snapshot.source else {
+            anyhow::bail!("Finish the inspector gesture first");
+        };
+        let draft = session
             .document
-            .runtime_host()
-            .interaction(session.document.runtime_session_id())?;
+            .session
+            .begin_draft(label, Some(base_version))?
+            .interactive()?;
         session.animation.timeline.edit = Some(TimelineEdit {
-            _interaction: interaction,
+            draft,
             owner: None,
             identity,
-            base_version: source.snapshot.version(),
+            base_version,
             original_candidate: candidate.clone(),
             original_projection,
             original_keys,
@@ -754,7 +747,6 @@ impl Editor {
             track_id: uuid::Uuid::new_v4().to_string(),
             key_id: uuid::Uuid::new_v4().to_string(),
             event_id: uuid::Uuid::new_v4().to_string(),
-            label: label.into(),
         });
         session.animation.playback.set_candidate(Some(identity));
         Ok(identity)
@@ -794,7 +786,7 @@ impl Editor {
             "Timeline gesture changed"
         );
         ensure!(
-            edit.base_version.revision == session.document.model_generation(),
+            edit.base_version == session.document.session.version(),
             "Timeline edit is stale"
         );
         let target = command.target();
@@ -804,24 +796,35 @@ impl Editor {
                 .is_none_or(|expected| expected == &target),
             "Gesture target changed"
         );
-        let candidate = edit.apply(&session.document, &command, snap)?;
+        let (clip, curves) = edit.prepare(&command, snap)?;
+        let clip_id = clip.id.clone();
+        edit.draft.preview(|commands| {
+            commands.replace_motion(clip)?;
+            for curve in curves {
+                commands.edit_motion_curve(&clip_id, curve)?;
+            }
+            Ok(())
+        })?;
+        let snapshot = edit.draft.read_snapshot()?;
+        let candidate = snapshot
+            .snapshot
+            .document()
+            .motion(&clip_id)
+            .expect("Timeline clip")
+            .clone();
         edit.target = Some(target);
         if candidate != edit.candidate {
             let source = Arc::new(AnimationSource {
                 snapshot: edit.source.snapshot.clone(),
-                properties: None,
                 textures: edit.source.textures.clone(),
-                candidate: Some(Arc::new(candidate.clone())),
-                materialized: Default::default(),
+                candidate: Some(Arc::new(snapshot)),
             });
             let incremental = matches!(command, TimelineCommand::WriteValue { .. })
-                .then(|| {
-                    previous_projection.with_value_changes(edit.candidate.clip(), candidate.clip())
-                })
+                .then(|| previous_projection.with_value_changes(&edit.candidate, &candidate))
                 .flatten();
             let projection = Arc::new(match incremental {
                 Some(projection) => projection,
-                None => TimelineProjection::from_clip(&session.document, candidate.clip())?,
+                None => TimelineProjection::from_clip(&session.document, &candidate)?,
             });
             let same_rows = Arc::ptr_eq(&previous_projection.rows, &projection.rows);
             let added: Vec<_> = if same_rows {

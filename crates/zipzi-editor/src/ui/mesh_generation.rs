@@ -108,7 +108,7 @@ pub(crate) struct MeshGenerationPanel {
     pub(crate) viewport: ViewportId,
     context: EditingContextToken,
     source: Arc<MeshGenerationSource>,
-    contour: Option<zipzi_sdk::MeshGeometry>,
+    contour: Option<zipzi_contract::authoring::MeshGeometry>,
     stage: Stage,
     columns: u16,
     edge: Entity<SelectState<Vec<Choice>>>,

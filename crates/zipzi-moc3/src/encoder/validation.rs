@@ -1,25 +1,16 @@
 use std::collections::HashMap;
 
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::{BlendShapeTargetKind, Status};
-use zipzi_core::Document;
 
 use super::helpers::is_representable;
 use super::Moc3ExportVersion;
 
 pub(super) fn validate_preflight(
-    doc: &Document,
+    doc: &DocumentState,
     target_version: Moc3ExportVersion,
 ) -> Result<(u8, DrawableFrame), Status> {
-    if doc.transaction_active() {
-        return Err(Status::error(
-            "TRANSACTION_ACTIVE",
-            "Commit or cancel edits before export",
-        ));
-    }
-    if let Some(issue) = doc.validate_structure().first() {
-        return Err(issue.status.clone());
-    }
     if let Some(omission) = doc.scene_export_omissions().first() {
         return Err(Status::error(
             "SCENE_NEEDS_CONFIGURATION",
@@ -39,13 +30,13 @@ pub(super) fn validate_preflight(
             format!("{}: {}", omission.object_id, omission.code),
         ));
     }
-    let has_v53_features = doc.offscreen_count() > 0
+    let has_v53_features = doc.offscreen_order().len() > 0
         || doc
             .mesh_order()
             .iter()
-            .any(|id| doc.get_mesh(id).and_then(|m| m.raw_blend_mode).is_some())
+            .any(|id| doc.mesh(id).and_then(|m| m.raw_blend_mode).is_some())
         || doc.blend_binding_order().iter().any(|id| {
-            doc.get_blend_binding(id)
+            doc.blend_binding(id)
                 .map(|b| b.target_kind == BlendShapeTargetKind::Offscreen)
                 .unwrap_or(false)
         });
@@ -100,7 +91,7 @@ pub(super) fn validate_preflight(
     }
 
     for id in doc.parameter_order() {
-        let p = doc.get_parameter(id).unwrap();
+        let p = doc.parameter(id).unwrap();
         if !is_representable(&p.runtime_id) {
             return Err(Status::error(
                 "UNREPRESENTABLE_ID",
@@ -113,7 +104,7 @@ pub(super) fn validate_preflight(
     let transforms = doc.sorted_transforms();
 
     for id in &parts {
-        let p = doc.get_part(id).unwrap();
+        let p = doc.part(id).unwrap();
         if !is_representable(&p.runtime_id) {
             return Err(Status::error(
                 "UNREPRESENTABLE_ID",
@@ -123,7 +114,7 @@ pub(super) fn validate_preflight(
     }
 
     for id in &transforms {
-        let t = doc.get_transform(id).unwrap();
+        let t = doc.transform(id).unwrap();
         if !is_representable(&t.runtime_id) {
             return Err(Status::error(
                 "UNREPRESENTABLE_ID",
@@ -133,7 +124,7 @@ pub(super) fn validate_preflight(
     }
 
     for id in doc.glue_order() {
-        let g = doc.get_glue(id).unwrap();
+        let g = doc.glue(id).unwrap();
         if !is_representable(&g.runtime_id) {
             return Err(Status::error(
                 "UNREPRESENTABLE_ID",
@@ -143,7 +134,7 @@ pub(super) fn validate_preflight(
     }
 
     for id in doc.offscreen_order() {
-        let os = doc.get_offscreen(id).unwrap();
+        let os = doc.offscreen(id).unwrap();
         if !is_representable(&os.runtime_id) {
             return Err(Status::error(
                 "UNREPRESENTABLE_ID",
@@ -160,31 +151,28 @@ mod authoring_tests {
     use super::*;
     #[test]
     fn zero_axis_binding_is_rejected_before_runtime_encoding() {
-        use zipzi_core::{Canvas, ImageAsset, Mesh, MeshBinding};
+        use zipzi_core::{Canvas, Mesh, MeshBinding};
         let id = |n: u32| format!("00000000-0000-4000-8000-{n:012x}");
-        let mut d = Document::new();
-        assert!(d.initialize(id(1), Canvas::default()).is_ok());
-        assert!(d
-            .add_asset(ImageAsset {
-                unresolved_source: None,
-                id: id(2),
-                name: String::new(),
-                content: Some(zipzi_core::ImageContent {
-                    source: "assets/texture.png".into(),
-                    width: 1,
-                    height: 1,
-                    ..Default::default()
-                }),
-            })
-            .status
-            .is_ok());
+        let mut d = DocumentState::new(id(1), Canvas::default().into())
+            .unwrap()
+            .builder();
+        d.create_asset(zipzi_core::state::AssetRecord {
+            id: id(2),
+            name: String::new(),
+            content: zipzi_core::state::AssetContent::Image {
+                resource: zipzi_core::state::ResourceKey::new(),
+                width: 1,
+                height: 1,
+            },
+        })
+        .unwrap();
         assert!(d
             .create_mesh(Mesh {
                 id: id(3),
+                runtime_id: id(3),
                 texture_asset_id: (id(2)).into(),
                 ..Default::default()
             })
-            .status
             .is_ok());
         assert!(d
             .create_binding(MeshBinding {
@@ -192,9 +180,8 @@ mod authoring_tests {
                 mesh_id: id(3),
                 ..Default::default()
             })
-            .status
             .is_ok());
-        assert!(d.validate_structure().is_empty());
+        let d = d.freeze().unwrap().state;
         let error = validate_preflight(&d, Moc3ExportVersion::Auto).unwrap_err();
         assert_eq!(error.code, "ZERO_AXIS_BINDING_NOT_REPRESENTABLE");
     }

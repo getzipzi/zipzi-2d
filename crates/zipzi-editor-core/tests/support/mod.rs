@@ -1,9 +1,12 @@
 use tempfile::TempDir;
 use uuid::Uuid;
 use zipzi_core::BindingAxisEditing;
+use zipzi_core::document::OrganizationEdit;
 use zipzi_core::{Canvas, Mesh, Vec2};
 use zipzi_editor_core::{CanvasFrame, Document, Editor, ObjectKind, ObjectRef};
-use zipzi_sdk::{AuthoringSession, prepare_png_asset};
+use zipzi_sdk::Status;
+mod sdk;
+pub use sdk::*;
 
 mod rectangle;
 #[allow(unused_imports)]
@@ -108,29 +111,28 @@ pub fn sample_document_with_parts() -> anyhow::Result<(Document, TempDir)> {
         .map(|node| node.id.clone())
         .collect();
     let saved = document.save(&assets.path().join("parts.zipzi"))?;
-    let mut session = AuthoringSession::new(
-        &Uuid::new_v4().to_string(),
-        Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&saved.path, None)?;
+    let mut session = open_fixture(&saved.path)?;
     let id = |value| Uuid::from_u128(value).to_string();
-    session.edit("Parts fixture", None, |edit| {
+    publish_fixture(&mut session, "Parts fixture", |edit| {
         for (value, name, parent) in [
             (101, "Face", None),
             (102, "Body", None),
             (103, "Eyes", Some(101)),
         ] {
-            edit.create_part(zipzi_core::Part {
-                id: id(value),
-                name: name.into(),
-                parent_id: parent.map(id).unwrap_or_default(),
-                ..Default::default()
-            })?;
+            insert_fixture_part(
+                edit,
+                zipzi_core::Part {
+                    id: id(value),
+                    name: name.into(),
+                    parent_id: parent.map(id).unwrap_or_default(),
+                    ..Default::default()
+                },
+            )?;
         }
-        edit.set_mesh_part(&meshes[0], &id(101))?;
-        edit.set_mesh_part(&meshes[1], &id(103))
+        organize_mesh(edit, &meshes[0], &id(101))?;
+        organize_mesh(edit, &meshes[1], &id(103))
     })?;
-    let saved = session.save_project(&saved.path, None)?;
+    let saved = save_fixture(&mut session, &saved.path)?;
     Ok((Document::open(&saved.path)?, assets))
 }
 
@@ -139,49 +141,54 @@ pub fn sample_document_with_scene_objects() -> anyhow::Result<(Document, TempDir
     use zipzi_core::{Offscreen, Transform, TransformData, WarpTransform};
     let (mut document, assets) = sample_document_with_parts()?;
     let saved = document.save(&assets.path().join("scene.zipzi"))?;
-    let mut session = AuthoringSession::new(
-        &Uuid::new_v4().to_string(),
-        Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&saved.path, None)?;
-    let meshes = session.mesh_ids().to_vec();
+    let mut session = open_fixture(&saved.path)?;
+    let meshes = session.snapshot().document().mesh_order().to_vec();
     let id = |n| Uuid::from_u128(n).to_string();
-    session.edit("Scene objects fixture", None, |edit| {
-        edit.create_transform(Transform {
-            id: id(501),
-            name: "Rotation".into(),
-            part_id: Some(id(101).into()),
-            ..Default::default()
-        })?;
-        edit.create_transform(Transform {
-            id: id(502),
-            name: "Warp".into(),
-            part_id: Some(id(103).into()),
-            parent_id: Some(id(501).into()),
-            data: TransformData::Warp(WarpTransform {
-                bezier: None,
-                rows: 1,
-                columns: 1,
-                quad: false,
-                points: vec![
-                    Vec2::new(0., 0.),
-                    Vec2::new(256., 0.),
-                    Vec2::new(0., 256.),
-                    Vec2::new(256., 256.),
-                ],
-            }),
-            ..Default::default()
-        })?;
-        edit.set_deform_parent(&meshes[0], &id(501))?;
-        edit.set_deform_parent(&meshes[1], &id(502))?;
-        edit.create_offscreen(Offscreen {
-            id: id(601),
-            name: "Face composite".into(),
-            part_id: id(101),
-            ..Default::default()
-        })
+    publish_fixture(&mut session, "Scene objects fixture", |edit| {
+        insert_transform(
+            edit,
+            Transform {
+                id: id(501),
+                name: "Rotation".into(),
+                part_id: Some(id(101).into()),
+                ..Default::default()
+            },
+        )?;
+        insert_transform(
+            edit,
+            Transform {
+                id: id(502),
+                name: "Warp".into(),
+                part_id: Some(id(103).into()),
+                parent_id: Some(id(501).into()),
+                data: TransformData::Warp(WarpTransform {
+                    bezier: None,
+                    rows: 1,
+                    columns: 1,
+                    quad: false,
+                    points: vec![
+                        Vec2::new(0., 0.),
+                        Vec2::new(256., 0.),
+                        Vec2::new(0., 256.),
+                        Vec2::new(256., 256.),
+                    ],
+                }),
+                ..Default::default()
+            },
+        )?;
+        reparent_local(edit, &meshes[0], &id(501))?;
+        reparent_local(edit, &meshes[1], &id(502))?;
+        insert_offscreen(
+            edit,
+            Offscreen {
+                id: id(601),
+                name: "Face composite".into(),
+                part_id: id(101),
+                ..Default::default()
+            },
+        )
     })?;
-    session.save_project(&saved.path, None)?;
+    save_fixture(&mut session, &saved.path)?;
     Ok((Document::open(&saved.path)?, assets))
 }
 
@@ -190,24 +197,27 @@ pub fn sample_document_with_parameters(count: usize) -> anyhow::Result<(Document
     use zipzi_core::Parameter;
 
     let directory = tempfile::tempdir()?;
-    let mut session = AuthoringSession::new(
+    let mut session = fixture_session(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )?;
-    session.edit("Create parameters", None, |edit| {
+    publish_fixture(&mut session, "Create parameters", |edit| {
         for index in 0..count {
-            edit.create_parameter(Parameter {
-                id: Uuid::from_u128(index as u128 + 1).to_string(),
-                name: format!("Parameter {index}"),
-                minimum: 0.,
-                maximum: 1.,
-                default_value: 0.,
-                ..Default::default()
-            })?;
+            insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: Uuid::from_u128(index as u128 + 1).to_string(),
+                    name: format!("Parameter {index}"),
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
+                },
+            )?;
         }
         Ok(())
     })?;
-    let receipt = session.save_project(&directory.path().join("fixture.zipzi"), None)?;
+    let receipt = save_fixture(&mut session, &directory.path().join("fixture.zipzi"))?;
     Ok((Document::open(&receipt.path)?, directory))
 }
 
@@ -216,23 +226,26 @@ pub fn sample_document_with_parameter_groups() -> anyhow::Result<(Document, Temp
     use zipzi_core::{Parameter, document::CdiParameterGroup};
 
     let directory = tempfile::tempdir()?;
-    let mut session = AuthoringSession::new(
+    let mut session = fixture_session(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::default(), 1.),
     )?;
-    session.edit("Grouped parameters", None, |edit| {
+    publish_fixture(&mut session, "Grouped parameters", |edit| {
         for (index, name, parent) in [
             (101, "Face", None),
             (102, "Eyes", Some(101)),
             (103, "Body", None),
             (104, "Expressions", None),
         ] {
-            edit.create_parameter_group(CdiParameterGroup {
-                id: Uuid::from_u128(index).to_string(),
-                runtime_id: name.into(),
-                name: name.into(),
-                parent_id: parent.map(|id| Uuid::from_u128(id).to_string()),
-                extensions: Default::default(),
+            edit.edit_organization(OrganizationEdit::CreateGroup {
+                before: None,
+                group: CdiParameterGroup {
+                    id: Uuid::from_u128(index).to_string(),
+                    runtime_id: name.into(),
+                    name: name.into(),
+                    parent_id: parent.map(|id| Uuid::from_u128(id).to_string()),
+                    extensions: Default::default(),
+                },
             })?;
         }
         // Deliberately interleave memberships to exercise presentation ordering.
@@ -244,21 +257,27 @@ pub fn sample_document_with_parameter_groups() -> anyhow::Result<(Document, Temp
             (5, "Breath", None),
         ] {
             let id = Uuid::from_u128(index).to_string();
-            edit.create_parameter(Parameter {
-                id: id.clone(),
-                runtime_id: format!("Param{index}"),
-                name: name.into(),
-                minimum: 0.,
-                maximum: 1.,
-                default_value: 0.,
-                ..Default::default()
-            })?;
+            insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: id.clone(),
+                    runtime_id: format!("Param{index}"),
+                    name: name.into(),
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
+                },
+            )?;
             let group = group.map(|id| Uuid::from_u128(id).to_string());
-            edit.set_parameter_group(&id, group.as_deref())?;
+            edit.edit_organization(OrganizationEdit::SetParameterGroup {
+                parameter_id: id,
+                group_id: group,
+            })?;
         }
         Ok(())
     })?;
-    let saved = session.save_project(&directory.path().join("grouped.zipzi"), None)?;
+    let saved = save_fixture(&mut session, &directory.path().join("grouped.zipzi"))?;
     Ok((Document::open(&saved.path)?, directory))
 }
 
@@ -276,7 +295,7 @@ fn sample_document_with_options(
     std::fs::write(&texture_path, include_bytes!("../fixtures/accent.png"))?;
     let asset_id = Uuid::new_v4().to_string();
     let mesh_id = Uuid::new_v4().to_string();
-    let asset = prepare_png_asset(&asset_id, "Accent", &texture_path)?;
+    let asset = image_fixture(&asset_id, "Accent", &texture_path)?;
     let mesh = Mesh {
         id: mesh_id,
         name: "Diamond".into(),
@@ -297,30 +316,33 @@ fn sample_document_with_options(
         triangles: vec![[0, 1, 2], [0, 2, 3]],
         ..Default::default()
     };
-    let mut session = AuthoringSession::new(
+    let mut session = fixture_session(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )?;
-    session.edit("Create test layer", None, |edit| {
-        edit.create_asset(asset)?;
-        edit.create_mesh(mesh.clone())?;
+    publish_fixture(&mut session, "Create test layer", |edit| {
+        insert_image(edit, asset)?;
+        insert_fixture_mesh(edit, mesh.clone())?;
         if two_layers {
             let mut second = mesh.clone();
             second.id = Uuid::new_v4().to_string();
             second.name = "Second".into();
-            edit.create_mesh(second)?;
+            insert_fixture_mesh(edit, second)?;
         }
         if bound {
             use zipzi_core::{BindingAxis, MeshBinding, MeshKeyform, Parameter};
             let parameter_id = Uuid::new_v4().to_string();
-            edit.create_parameter(Parameter {
-                id: parameter_id.clone(),
-                name: "Pose".into(),
-                minimum: 0.,
-                maximum: 1.,
-                default_value: 0.,
-                ..Default::default()
-            })?;
+            insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: parameter_id.clone(),
+                    name: "Pose".into(),
+                    minimum: 0.,
+                    maximum: 1.,
+                    default_value: 0.,
+                    ..Default::default()
+                },
+            )?;
             edit.create_binding(MeshBinding {
                 id: Uuid::new_v4().to_string(),
                 mesh_id: mesh.id.clone(),
@@ -343,7 +365,7 @@ fn sample_document_with_options(
         }
         Ok(())
     })?;
-    let receipt = session.save_project(&directory.path().join("fixture.zipzi"), None)?;
+    let receipt = save_fixture(&mut session, &directory.path().join("fixture.zipzi"))?;
     let mut document = Document::open(&receipt.path)?;
     document.select(&mesh.id)?;
     Ok((document, directory))
@@ -353,28 +375,34 @@ fn sample_document_with_options(
 pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Document, TempDir)> {
     use zipzi_core::{BindingAxis, Parameter, Part, PartKeyform, SceneBinding, SceneTrack};
     let assets = tempfile::tempdir()?;
-    let mut session = AuthoringSession::new(
+    let mut session = fixture_session(
         &Uuid::new_v4().to_string(),
         Canvas::new(256., 256., Vec2::new(0., 0.), 1.),
     )?;
     let ids = [Uuid::new_v4().to_string(), Uuid::new_v4().to_string()];
     let part = Uuid::new_v4().to_string();
     let keys = vec![0.13, 0.375, 0.91];
-    session.edit("Nonuniform parameter keys", None, |edit| {
+    publish_fixture(&mut session, "Nonuniform parameter keys", |edit| {
         for id in &ids {
-            edit.create_parameter(Parameter {
-                id: id.clone(),
-                minimum: 0.13,
-                maximum: 0.91,
-                default_value: 0.13,
-                decimal_places: 2,
-                ..Default::default()
-            })?;
+            insert_fixture_parameter(
+                edit,
+                Parameter {
+                    id: id.clone(),
+                    minimum: 0.13,
+                    maximum: 0.91,
+                    default_value: 0.13,
+                    decimal_places: 2,
+                    ..Default::default()
+                },
+            )?;
         }
-        edit.create_part(Part {
-            id: part.clone(),
-            ..Default::default()
-        })?;
+        insert_fixture_part(
+            edit,
+            Part {
+                id: part.clone(),
+                ..Default::default()
+            },
+        )?;
         edit.create_scene_binding(SceneBinding {
             id: Uuid::new_v4().to_string(),
             axes: ids
@@ -402,7 +430,7 @@ pub fn sample_document_with_nonuniform_parameter_keys() -> anyhow::Result<(Docum
         })?;
         Ok(())
     })?;
-    let receipt = session.save_project(&assets.path().join("nonuniform.zipzi"), None)?;
+    let receipt = save_fixture(&mut session, &assets.path().join("nonuniform.zipzi"))?;
     Ok((Document::open(&receipt.path)?, assets))
 }
 
@@ -417,17 +445,14 @@ pub fn animation_document_with_sound_bytes(
     sound: Option<&[u8]>,
 ) -> anyhow::Result<(Document, TempDir)> {
     use zipzi_core::document::{
-        ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget, MotionClip,
-        MotionGroup, MotionKey, MotionRegistration, MotionSegment, MotionTrack, MotionTrackTarget,
+        AttachmentEdit, ExpressionAsset, ExpressionBlend, ExpressionEntry, ExpressionTarget,
+        MotionClip, MotionContainer, MotionEdit, MotionKey, MotionRegistration, MotionSegment,
+        MotionTrack, MotionTrackTarget, PackageAttachment,
     };
     let (mut doc, assets) = rectangle_document(true)?;
     let path = doc.save(&assets.path().join("animation.zipzi"))?.path;
-    let mut session = AuthoringSession::new(
-        &Uuid::new_v4().to_string(),
-        Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&path, None)?;
-    let parameter_id = session.parameter_ids()[0].clone();
+    let mut session = open_fixture(&path)?;
+    let parameter_id = session.snapshot().document().parameter_order()[0].clone();
     let clip = Uuid::new_v4().to_string();
     let make_clip = |id: String, name: &str, looping: bool, duration: f32| MotionClip {
         track_order: vec![],
@@ -471,14 +496,26 @@ pub fn animation_document_with_sound_bytes(
         opaque_source_ids: None,
         opaque_source_content_hash: None,
     };
-    session.edit("Animation fixture", None, |edit| {
+    publish_fixture(&mut session, "Animation fixture", |edit| {
         let sound = if let Some(bytes) = sound {
             let id = Uuid::new_v4().to_string();
-            edit.set_package_attachments(vec![zipzi_core::document::PackageAttachment {
+            let path = "test.wav".to_owned();
+            edit.edit_attachment(AttachmentEdit::Create {
                 id: id.clone(),
-                path: "test.wav".into(),
-                bytes: Some(std::sync::Arc::new(bytes.to_vec())),
-            }])?;
+                path: path.clone(),
+            })?;
+            let expected = PackageAttachment {
+                id: id.clone(),
+                path,
+                bytes: None,
+            };
+            edit.edit_attachment(AttachmentEdit::Replace {
+                expected: expected.clone(),
+                attachment: PackageAttachment {
+                    bytes: Some(std::sync::Arc::new(bytes.to_vec())),
+                    ..expected
+                },
+            })?;
             zipzi_core::document::AttachmentRef::Resolved { attachment_id: id }
         } else {
             "test.wav".into()
@@ -510,26 +547,48 @@ pub fn animation_document_with_sound_bytes(
         }
         edit.create_motion(make_clip(clip.clone(), "Once", false, 2.))?;
         edit.create_motion(make_clip(Uuid::new_v4().to_string(), "Loop", true, 1.))?;
-        edit.set_motion_library(
-            vec![MotionGroup {
-                id: uuid::Uuid::new_v4().to_string(),
-                name: "Idle".into(),
-                entries: [0., 1.]
-                    .into_iter()
-                    .map(|fade| MotionRegistration {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        clip_id: clip.clone(),
-                        fade_in: Some(fade),
-                        fade_out: Some(0.),
-                        sound: Some(sound.clone()),
-                        extensions: Default::default(),
-                    })
-                    .collect(),
-            }],
-            vec![],
-        )
+        let group = Uuid::new_v4().to_string();
+        edit.edit_motion(MotionEdit::CreateGroup {
+            id: group.clone(),
+            name: "Idle".into(),
+        })?;
+        let destination = MotionContainer::Group(group);
+        let existing = edit
+            .read_document()?
+            .motion_roots()
+            .iter()
+            .find(|entry| entry.clip_id == clip)
+            .unwrap()
+            .clone();
+        edit.edit_motion(MotionEdit::PatchRegistration {
+            id: existing.id.clone(),
+            expected: existing.clone(),
+            entry: MotionRegistration {
+                fade_in: Some(0.),
+                fade_out: Some(0.),
+                sound: Some(sound.clone()),
+                ..existing.clone()
+            },
+        })?;
+        edit.edit_motion(MotionEdit::MoveRegistrations {
+            ids: vec![existing.id],
+            destination: destination.clone(),
+            before: None,
+        })?;
+        edit.edit_motion(MotionEdit::Register {
+            destination,
+            before: None,
+            entry: MotionRegistration {
+                id: Uuid::new_v4().to_string(),
+                clip_id: clip,
+                fade_in: Some(1.),
+                fade_out: Some(0.),
+                sound: Some(sound),
+                extensions: Default::default(),
+            },
+        })
     })?;
-    session.save_project(&path, None)?;
+    save_fixture(&mut session, &path)?;
     Ok((Document::open(&path)?, assets))
 }
 
@@ -538,13 +597,18 @@ pub fn animation_document_with_sound_bytes(
 pub fn combined_animation_document() -> anyhow::Result<(Document, TempDir)> {
     let (mut document, assets) = animation_document()?;
     let path = document.save(&assets.path().join("combined.zipzi"))?.path;
-    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.model_setup())?;
-    session.open_project(&path, None)?;
-    let mut input = session.parameter(&session.parameter_ids()[0]).unwrap();
+    let mut session = open_fixture(&path)?;
+    let mut input = session
+        .snapshot()
+        .document()
+        .parameter(&session.snapshot().document().parameter_order()[0])
+        .unwrap()
+        .clone();
     input.runtime_id = "ParamX".into();
     let mut part = session
+        .snapshot()
         .document()
-        .get_part(&session.document().part_order()[0])
+        .part(&session.snapshot().document().part_order()[0])
         .unwrap()
         .clone();
     part.runtime_id = "Part0".into();
@@ -561,31 +625,46 @@ pub fn combined_animation_document() -> anyhow::Result<(Document, TempDir)> {
             "Normalization":{"Position":{"Minimum":-1,"Default":0,"Maximum":1},"Angle":{"Minimum":-1,"Default":0,"Maximum":1}}
         }]
     });
-    session.edit("Combined runtime fixture", None, |edit| {
+    publish_fixture(&mut session, "Combined runtime fixture", |edit| {
         edit.replace_parameter(input)?;
-        edit.create_parameter(zipzi_core::Parameter {
-            id: Uuid::new_v4().to_string(),
-            runtime_id: "ParamY".into(),
-            name: "Physics output".into(),
-            minimum: -1.,
-            maximum: 1.,
-            ..Default::default()
-        })?;
+        insert_fixture_parameter(
+            edit,
+            zipzi_core::Parameter {
+                id: Uuid::new_v4().to_string(),
+                runtime_id: "ParamY".into(),
+                name: "Physics output".into(),
+                minimum: -1.,
+                maximum: 1.,
+                ..Default::default()
+            },
+        )?;
         edit.replace_part(part)?;
-        edit.create_part(zipzi_core::Part {
-            id: Uuid::new_v4().to_string(),
-            runtime_id: "Part1".into(),
-            name: "Pose peer".into(),
-            ..Default::default()
-        })?;
-        edit.import_physics3(&Uuid::new_v4().to_string(), &physics.to_string())?;
-        edit.import_pose3(
+        insert_fixture_part(
+            edit,
+            zipzi_core::Part {
+                id: Uuid::new_v4().to_string(),
+                runtime_id: "Part1".into(),
+                name: "Pose peer".into(),
+                ..Default::default()
+            },
+        )?;
+        let imported = zipzi_project::import_physics3(
+            &edit.read_document()?,
+            &Uuid::new_v4().to_string(),
+            &physics.to_string(),
+        )
+        .map_err(|error| Status::error(error.code.clone(), error.to_string()))?;
+        edit.replace_physics(imported.candidate.physics().as_deref().cloned())?;
+        let imported = zipzi_project::import_pose3(
+            &edit.read_document()?,
             &Uuid::new_v4().to_string(),
             r#"{"Type":"Live2D Pose","FadeInTime":0.5,"Groups":[[{"Id":"Part0"},{"Id":"Part1"}]]}"#,
-        )?;
+        )
+        .map_err(|error| Status::error(error.code.clone(), error.to_string()))?;
+        edit.replace_pose(imported.candidate.pose().as_deref().cloned())?;
         Ok(())
     })?;
-    session.save_project(&path, None)?;
+    save_fixture(&mut session, &path)?;
     Ok((Document::open(&path)?, assets))
 }
 
@@ -599,11 +678,11 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
     let path = document
         .save(&assets.path().join("diagnostics.zipzi"))?
         .path;
-    let mut session = AuthoringSession::new(&Uuid::new_v4().to_string(), document.model_setup())?;
-    session.open_project(&path, None)?;
+    let mut session = open_fixture(&path)?;
     let mut clip = session
+        .snapshot()
         .document()
-        .get_motion(&session.document().motion_order()[0])
+        .motion(&session.snapshot().document().motion_order()[0])
         .unwrap()
         .clone();
     clip.id = Uuid::new_v4().to_string();
@@ -625,7 +704,7 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
             segment.end_mut().id = Uuid::new_v4().to_string();
         }
     }
-    session.edit("Diagnostic resources", None, |edit| {
+    publish_fixture(&mut session, "Diagnostic resources", |edit| {
         edit.create_motion(clip)?;
         edit.create_expression(ExpressionAsset {
             id: Uuid::new_v4().to_string(),
@@ -647,7 +726,7 @@ pub fn diagnostic_animation_document() -> anyhow::Result<(Document, TempDir)> {
             opaque_source_content_hash: None,
         })
     })?;
-    session.save_project(&path, None)?;
+    save_fixture(&mut session, &path)?;
     Ok((Document::open(&path)?, assets))
 }
 
@@ -674,43 +753,45 @@ pub fn sample_document_for_reparent(driven: bool) -> anyhow::Result<(Document, T
     use zipzi_core::{PreciseVec2, RotationPose, RotationTransform, Transform, TransformData};
     let (mut d, assets) = sample_document_with_two_layers()?;
     let saved = d.save(&assets.path().join("reparent.zipzi"))?;
-    let mut session = AuthoringSession::new(
-        &Uuid::new_v4().to_string(),
-        Canvas::new(256., 256., Vec2::default(), 1.),
-    )?;
-    session.open_project(&saved.path, None)?;
-    let meshes = session.mesh_ids().to_vec();
+    let mut session = open_fixture(&saved.path)?;
+    let meshes = session.snapshot().document().mesh_order().to_vec();
     let id = |n| Uuid::from_u128(n).to_string();
-    session.edit("Affine parents", None, |e| {
+    publish_fixture(&mut session, "Affine parents", |e| {
         for (n, name, angle, scale) in [
             (501, "Source rotation", 25., 0.8),
             (502, "Destination rotation", -18., 1.2),
         ] {
-            e.create_transform(Transform {
-                id: id(n),
-                name: name.into(),
-                data: TransformData::Rotation(RotationTransform {
-                    base_angle: 0.,
-                    pose: RotationPose {
-                        angle,
-                        scale,
-                        origin: PreciseVec2::new(8., -3.),
-                        ..Default::default()
-                    },
-                }),
-                ..Default::default()
-            })?;
+            insert_transform(
+                e,
+                Transform {
+                    id: id(n),
+                    name: name.into(),
+                    data: TransformData::Rotation(RotationTransform {
+                        base_angle: 0.,
+                        pose: RotationPose {
+                            angle,
+                            scale,
+                            origin: PreciseVec2::new(8., -3.),
+                            ..Default::default()
+                        },
+                    }),
+                    ..Default::default()
+                },
+            )?;
         }
-        e.set_deform_parent(&meshes[0], &id(501))?;
-        e.set_deform_parent(&meshes[1], &id(502))?;
-        e.create_parameter(zipzi_core::Parameter {
-            id: id(701),
-            name: "Driver".into(),
-            minimum: 0.,
-            maximum: 1.,
-            default_value: 0.5,
-            ..Default::default()
-        })?;
+        reparent_local(e, &meshes[0], &id(501))?;
+        reparent_local(e, &meshes[1], &id(502))?;
+        insert_fixture_parameter(
+            e,
+            zipzi_core::Parameter {
+                id: id(701),
+                name: "Driver".into(),
+                minimum: 0.,
+                maximum: 1.,
+                default_value: 0.5,
+                ..Default::default()
+            },
+        )?;
         if driven {
             e.create_scene_binding(zipzi_core::SceneBinding {
                 id: id(702),
@@ -734,8 +815,65 @@ pub fn sample_document_for_reparent(driven: bool) -> anyhow::Result<(Document, T
         }
         Ok(())
     })?;
-    session.save_project(&saved.path, None)?;
+    save_fixture(&mut session, &saved.path)?;
     let mut d = Document::open(&saved.path)?;
     d.select(&meshes[0])?;
     Ok((d, assets))
+}
+
+#[allow(dead_code)]
+pub fn published_snapshot(
+    host: &zipzi_editor_core::RuntimeHost,
+    session: zipzi_sdk::SessionKey,
+) -> Result<zipzi_sdk::Snapshot, Status> {
+    Ok(host
+        .read()
+        .read_snapshot(host.client_id(), session)?
+        .snapshot)
+}
+
+#[allow(dead_code)]
+pub fn publish_host(
+    host: &zipzi_editor_core::RuntimeHost,
+    client: zipzi_runtime::ClientId,
+    session: zipzi_sdk::SessionKey,
+    description: &str,
+    write: impl FnOnce(&mut zipzi_sdk::Commands<'_>) -> Result<(), Status>,
+) -> Result<zipzi_sdk::Publication, Status> {
+    let mut runtime = host.write();
+    runtime.attach(client, session)?;
+    let expected = runtime.session_read(client, session)?.version();
+    let draft = runtime.begin_draft(client, expected)?;
+    let (draft, ()) = runtime.batch(client, draft, write)?;
+    runtime.publish(client, draft, description)
+}
+
+#[allow(dead_code)]
+pub fn import_model3_fixture(
+    path: &std::path::Path,
+) -> anyhow::Result<(
+    zipzi_project::ImportedProject,
+    Vec<zipzi_project::ResourceDiagnostic>,
+)> {
+    let importer = zipzi_project::ProjectImporter {
+        resources: Default::default(),
+    };
+    let (result, project, _) = importer.import_model3(path);
+    anyhow::ensure!(result.status.is_ok(), "{}", result.status);
+    Ok((
+        project.ok_or_else(|| anyhow::anyhow!("Model3 import returned no project"))?,
+        result.diagnostics,
+    ))
+}
+
+#[allow(dead_code)]
+pub fn transfer_fixture(
+    snapshot: &zipzi_sdk::Snapshot,
+    protected_paths: Vec<std::path::PathBuf>,
+) -> Result<zipzi_project::TransferSnapshot, Status> {
+    zipzi_project::TransferSnapshot::new(
+        snapshot.document().clone(),
+        snapshot.resources().clone(),
+        protected_paths,
+    )
 }

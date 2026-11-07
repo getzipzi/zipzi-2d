@@ -221,7 +221,7 @@ fn referenced_parameter_delete_opens_review_without_mutating_document(cx: &mut T
             view.editor
                 .authoring_command_capability(CommandId::DeleteParameter)
                 .unwrap(),
-            zipzi_sdk::CapabilityState::Available
+            zipzi_contract::authoring::CapabilityState::Available
         );
         assert!(view.edit_error.is_none());
     });

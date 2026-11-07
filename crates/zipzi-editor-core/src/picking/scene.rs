@@ -39,9 +39,9 @@ impl CanvasScene {
             let Some(&slot) = self.mesh_slots.get(&object.id) else {
                 continue;
             };
-            let mesh = doc.get_mesh(&object.id).unwrap();
+            let mesh = doc.mesh(&object.id).unwrap();
             let space = crate::control_edit::ControlSpace::new(document, self, &mesh.deformer_id)?;
-            let local = zipzi_core::evaluation::authoring_mesh_positions(&doc, &object.id, values)
+            let local = zipzi_core::evaluation::authoring_mesh_positions(&*doc, &object.id, values)
                 .map_err(|e| anyhow::anyhow!("{}", e.message))?;
             let m = Arc::make_mut(&mut meshes[slot]);
             m.vertices = mesh
@@ -81,7 +81,7 @@ impl CanvasScene {
         let mut scene = self.clone();
         let model = document.model();
         if let Some(&slot) = self.mesh_slots.get(&target.object.id) {
-            if let Some(mesh) = model.get_mesh(&target.object.id) {
+            if let Some(mesh) = model.mesh(&target.object.id) {
                 let mut meshes = self.meshes.to_vec();
                 let m = Arc::make_mut(&mut meshes[slot]);
                 m.vertices = mesh
@@ -121,6 +121,8 @@ impl CanvasScene {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.canvas_geometry_build");
         let topology = document.canvas_topology();
+        let model = document.model();
+        let object_state = document.object_state_index();
         let index = topology.index.clone();
         let previous = previous.filter(|previous| previous.topology.same_geometry(&topology));
         let visible_meshes = visible_meshes(&source.viewport_frame);
@@ -169,15 +171,16 @@ impl CanvasScene {
             let Some(t) = topology.controls.get(&evaluated.id) else {
                 continue;
             };
+            let object = ObjectRef::new(K::Deformer, &evaluated.id);
+            let visible = object_state.state(&object).visible();
             controls.push(ControlGeometry {
-                object: ObjectRef::new(K::Deformer, &evaluated.id),
+                object,
                 kind: t.kind,
                 points: evaluated.points.iter().copied().map(to_model).collect(),
                 rotation_axis: evaluated.rotation_axis.map(|axis| {
                     // Rotate the scale-independent axis before any translation.
                     // Imported Cubism handles use a vertical zero-angle reference.
-                    let angle = document
-                        .model()
+                    let angle = model
                         .editor_state()
                         .rotation_bone_angle_offsets
                         .get(&evaluated.id)
@@ -190,20 +193,18 @@ impl CanvasScene {
                         y: sin * axis.x + cos * axis.y,
                     }
                 }),
-                rotation_bone_length: document
-                    .model()
+                rotation_bone_length: model
                     .editor_state()
                     .rotation_bone_lengths
                     .get(&evaluated.id)
                     .copied()
                     .unwrap_or(crate::deformer::ROTATION_BONE_LENGTH),
-                rotation_bone_reference_scale: document
-                    .model()
+                rotation_bone_reference_scale: model
                     .rotation_bone_reference_scale(&evaluated.id)
                     .unwrap_or(1.),
                 edges: t.edges.clone(),
                 enabled: evaluated.enabled,
-                visible: document.deformer_controls_visible(&evaluated.id),
+                visible,
             });
         }
         let mesh_slots = previous
@@ -251,7 +252,7 @@ impl CanvasScene {
                 points,
                 edges: edges.into(),
                 enabled: visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b),
-                visible: document.object_state(&g.object).visible(),
+                visible: object_state.state(&g.object).visible(),
             });
         }
         let texture_slots = source
@@ -281,10 +282,7 @@ impl CanvasScene {
             });
         let parameter_values = Self::capture_parameter_values(&source, previous);
         let glue_map = Arc::new(crate::mesh_edit::GlueMap::new(
-            &zipzi_core::evaluation::evaluated_glue_operations(
-                &document.model(),
-                &parameter_values,
-            ),
+            &zipzi_core::evaluation::evaluated_glue_operations(&*model, &parameter_values),
         ));
         let mut scene = Self {
             parameter_values,
@@ -311,7 +309,7 @@ impl CanvasScene {
         for c in &scene.controls {
             if c.kind == ControlKind::Warp {
                 if let Some(authoring) =
-                    crate::warp_bezier::authored(document, &c.object, &parameters)
+                    crate::warp_bezier::authored(&model, &c.object, &parameters)
                 {
                     scene
                         .beziers
@@ -332,12 +330,13 @@ impl CanvasScene {
         }
         let visible_meshes = visible_meshes(&source.viewport_frame);
         let mut controls = self.controls.clone();
+        let object_state = document.object_state_index();
         for control in &mut controls {
             if control.object.kind == K::Deformer {
-                control.visible = document.deformer_controls_visible(&control.object.id);
+                control.visible = object_state.state(&control.object).visible();
             }
             if control.kind == ControlKind::Glue {
-                control.visible = document.object_state(&control.object).visible();
+                control.visible = object_state.state(&control.object).visible();
                 if let Some(g) = topology.glues.iter().find(|g| g.object == control.object) {
                     control.enabled =
                         visible_meshes.contains(&g.mesh_a) && visible_meshes.contains(&g.mesh_b);

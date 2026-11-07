@@ -1,21 +1,14 @@
 //! Source-bound UV sampling and complete, atomic dependency transfer.
 use crate::{manual_mesh::edit_manual_uv_candidate, *};
 use rstar::{PointDistance, RTree, RTreeObject, AABB};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
-use zipzi_core::{
-    document::{AuthoringLimits, ConversionControl, ConversionCost, DocumentSnapshotId},
-    DeltaKeyforms, Document, Mesh, Vec2, VertexId,
-};
+use std::collections::{HashMap, HashSet};
+use zipzi_core::state::DocumentState;
+use zipzi_core::{DeltaKeyforms, Mesh, Vec2, VertexId};
 
-fn error(code: &str, message: impl Into<String>, ids: Vec<String>) -> SdkError {
-    let mut e = SdkError::new(code, &message.into(), "plan_manual_mesh");
-    e.object_ids = ids;
-    e
+fn error(code: &str, message: impl Into<String>, ids: Vec<String>) -> Status {
+    Status::error(code, format!("{} [{}]", message.into(), ids.join(", ")))
 }
-fn image_domain(g: &MeshGeometry, mesh_id: &str) -> Result<(), SdkError> {
+fn image_domain(g: &MeshGeometry, mesh_id: &str) -> Result<(), Status> {
     if let Some((slot, _)) = g.uvs.iter().enumerate().find(|(_, uv)| {
         !uv.x.is_finite()
             || !uv.y.is_finite()
@@ -27,56 +20,14 @@ fn image_domain(g: &MeshGeometry, mesh_id: &str) -> Result<(), SdkError> {
             "UV lies outside the complete source image",
             vec![mesh_id.into()],
         );
-        e.field_path = Some(format!("uvs[{slot}]").into());
+        e.message.push_str(&format!("uvs[{slot}]"));
         return Err(e);
     }
     Ok(())
 }
-fn status(s: zipzi_core::Status) -> SdkError {
-    SdkError::from_status(s, "plan_manual_mesh", vec![])
+fn status(s: Status) -> Status {
+    s
 }
-
-fn transfer_cost(
-    document: &Document,
-    combinations: usize,
-    payload: usize,
-    workspace: usize,
-    dependencies: usize,
-    retained: usize,
-    limits: AuthoringLimits,
-) -> Result<ConversionCost, SdkError> {
-    let overflow = || {
-        error(
-            "AUTHORING_CAPACITY_OVERFLOW",
-            "Mesh transfer workspace",
-            vec![],
-        )
-    };
-    // Three snapshot copies (source, proposed result, Core validation) plus one
-    // metadata/index workspace for validation and commit. Record payloads and
-    // per-mesh vertex indexes share Arcs; only edited dependencies detach.
-    let temporary_bytes = document
-        .estimated_snapshot_bytes()
-        .checked_mul(4)
-        .and_then(|n| n.checked_add(document.estimated_authoring_index_bytes()))
-        .and_then(|n| n.checked_add(workspace))
-        .and_then(|n| dependencies.checked_mul(2).and_then(|d| n.checked_add(d)))
-        .and_then(|n| payload.checked_mul(3).and_then(|p| n.checked_add(p)))
-        .ok_or_else(overflow)?;
-    let history_bytes = retained
-        .checked_mul(2)
-        .and_then(|n| n.checked_add(payload))
-        .ok_or_else(overflow)?;
-    limits
-        .check_cost(ConversionCost {
-            sample_combinations: combinations,
-            payload_bytes: payload,
-            temporary_bytes,
-            history_bytes,
-        })
-        .map_err(status)
-}
-
 #[derive(Clone, Debug)]
 struct UvTriangle {
     ids: [VertexId; 3],
@@ -119,7 +70,7 @@ impl PointDistance for UvTriangle {
 
 /// Unlike interpolation, boundary extension deliberately permits negative weights.
 /// Keep that permission local to manual mesh transfer, including finite checks.
-fn extrapolate_channel(values: &[Vec2], weights: &[(usize, f64)]) -> Result<Vec2, SdkError> {
+fn extrapolate_channel(values: &[Vec2], weights: &[(usize, f64)]) -> Result<Vec2, Status> {
     let (mut x, mut y) = (0., 0.);
     for &(slot, w) in weights {
         x += f64::from(values[slot].x) * w;
@@ -246,7 +197,7 @@ impl UvSampler {
         let w = barycentric(p, triangle.uv)?;
         Some((triangle.ids, triangle.slots.into_iter().zip(w).collect()))
     }
-    pub(crate) fn sample_position(&self, g: &MeshGeometry, uv: Vec2) -> Result<Vec2, SdkError> {
+    pub(crate) fn sample_position(&self, g: &MeshGeometry, uv: Vec2) -> Result<Vec2, Status> {
         if !uv.x.is_finite() || !uv.y.is_finite() {
             return Err(error("INVALID_POSITION", "Invalid UV position", vec![]));
         }
@@ -271,18 +222,18 @@ pub struct ManualMeshUvMap {
     sampler: UvSampler,
 }
 impl ManualMeshUvMap {
-    pub fn new(geometry: MeshGeometry) -> Result<Self, SdkError> {
+    pub fn new(geometry: MeshGeometry) -> Result<Self, Status> {
         extract_manual_meshing(&geometry)?;
         Ok(Self {
             sampler: UvSampler::new(&geometry),
             geometry,
         })
     }
-    pub fn position(&self, uv: Vec2) -> Result<Vec2, SdkError> {
+    pub fn position(&self, uv: Vec2) -> Result<Vec2, Status> {
         self.sampler.sample_position(&self.geometry, uv)
     }
     /// Reject overlapping inverse branches, including extrapolated branches.
-    pub fn uv(&self, point: Vec2) -> Result<Vec2, SdkError> {
+    pub fn uv(&self, point: Vec2) -> Result<Vec2, Status> {
         if !point.x.is_finite() || !point.y.is_finite() {
             return Err(error("INVALID_POSITION", "Invalid model position", vec![]));
         }
@@ -378,33 +329,95 @@ pub enum VertexProvenance {
     },
 }
 
-pub use zipzi_contract::authoring::ManualMeshTransferReport;
+#[derive(Clone, Debug)]
+pub struct ManualMeshTransferReport {
+    pub added: usize,
+    pub moved: usize,
+    pub removed: usize,
+    pub shape_count: usize,
+    pub reconnected: bool,
+    pub glue_endpoints: bool,
+    pub non_affine_parent: bool,
+    pub affine_extension: bool,
+    pub appearance_limits: Vec<String>,
+    pub cost: ConversionWork,
+}
 
 /// Complete frozen authoring source, including inactive and incomplete dependencies.
 #[derive(Clone, Debug)]
-pub struct ManualMeshSource {
-    document: Document,
+pub struct ManualMeshInspection {
+    pub geometry: MeshGeometry,
+    pub referenced_vertices: Vec<VertexId>,
+}
+impl ManualMeshInspection {
+    pub fn capture(
+        document: &DocumentState,
+        mesh_id: &str,
+        limits: ConversionLimits,
+    ) -> Result<Self, Status> {
+        let source = ManualMeshSource::new(document, mesh_id, limits)?;
+        Ok(Self {
+            geometry: source.geometry.clone(),
+            referenced_vertices: source.referenced_vertices,
+        })
+    }
+    pub fn can_rebuild(&self) -> bool {
+        self.referenced_vertices.is_empty()
+    }
+    pub fn check_rebuild(&self) -> Result<(), Status> {
+        if self.can_rebuild() {
+            Ok(())
+        } else {
+            Err(Status::error(
+                "GLUE_VERTEX_REFERENCED",
+                "Full rebuild would remove Glue endpoints",
+            ))
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct ManualMeshSource<'a> {
+    document: &'a DocumentState,
     mesh_id: String,
     geometry: MeshGeometry,
     slots: HashMap<VertexId, usize>,
     sampler: UvSampler,
     meshing: zipzi_core::MeshMeshing,
-    estimated_bytes: usize,
     workspace_bytes: usize,
     dependency_bytes: usize,
     affine_extension: Option<AffineUvMap>,
-    pub geometry_space: GeometrySpace,
     pub referenced_vertices: Vec<VertexId>,
 }
-impl ManualMeshSource {
-    pub fn new(document: &Document, mesh_id: &str) -> Result<Self, SdkError> {
-        let mesh = document.get_mesh(mesh_id).ok_or_else(|| {
+impl<'a> ManualMeshSource<'a> {
+    pub fn new(
+        document: &'a DocumentState,
+        mesh_id: &str,
+        limits: ConversionLimits,
+    ) -> Result<Self, Status> {
+        let mesh = document.mesh(mesh_id).ok_or_else(|| {
             error(
                 "MISSING_MESH",
                 "Mesh no longer exists",
                 vec![mesh_id.into()],
             )
         })?;
+        let workspace = mesh
+            .vertex_ids
+            .len()
+            .saturating_mul(128)
+            .saturating_add(mesh.triangles.len().saturating_mul(160))
+            .saturating_add(mesh.meshing.as_ref().map_or(0, |m| {
+                m.boundary.len().saturating_mul(4).saturating_add(
+                    m.constraints
+                        .len()
+                        .saturating_mul(std::mem::size_of::<zipzi_core::MeshConstraint>()),
+                )
+            }));
+        limits.check_conversion(
+            1,
+            workspace.saturating_add(document.mesh_dependency_bytes(mesh_id)),
+        )?;
         let geometry = MeshGeometry {
             vertex_ids: mesh.vertex_ids.clone(),
             positions: mesh.base_positions.clone(),
@@ -417,7 +430,7 @@ impl ManualMeshSource {
         let mut referenced_vertices: Vec<_> = document
             .glue_order()
             .iter()
-            .filter_map(|id| document.get_glue(id))
+            .filter_map(|id| document.glue(id))
             .flat_map(|g| {
                 g.pairs.iter().flat_map(|p| {
                     [
@@ -436,23 +449,13 @@ impl ManualMeshSource {
             || document
                 .blend_binding_order()
                 .iter()
-                .filter_map(|id| document.get_blend_binding(id))
+                .filter_map(|id| document.blend_binding(id))
                 .any(|b| b.target_id == mesh_id)
             || document
                 .glue_order()
                 .iter()
-                .filter_map(|id| document.get_glue(id))
+                .filter_map(|id| document.glue(id))
                 .any(|g| g.mesh_a_id == mesh_id || g.mesh_b_id == mesh_id);
-        let geometry_space = if mesh.deformer_id.is_empty() {
-            GeometrySpace::Model
-        } else if document
-            .get_transform(&mesh.deformer_id)
-            .is_some_and(|t| matches!(t.data, zipzi_core::TransformData::Warp(_)))
-        {
-            GeometrySpace::WarpParameter(mesh.deformer_id.clone())
-        } else {
-            GeometrySpace::RotationLocal(mesh.deformer_id.clone())
-        };
         let workspace_bytes = geometry
             .vertex_ids
             .len()
@@ -463,13 +466,10 @@ impl ManualMeshSource {
                 meshing.constraints.len() * std::mem::size_of::<zipzi_core::MeshConstraint>(),
             );
         Ok(Self {
-            estimated_bytes: document
-                .estimated_content_bytes()
-                .saturating_add(workspace_bytes),
             workspace_bytes,
-            dependency_bytes: document.estimated_mesh_dependency_bytes(mesh_id),
+            dependency_bytes: document.mesh_dependency_bytes(mesh_id),
             meshing,
-            document: document.fork_candidate(),
+            document,
             mesh_id: mesh_id.into(),
             sampler: UvSampler::new(&geometry),
             slots: geometry
@@ -482,172 +482,77 @@ impl ManualMeshSource {
                 .then(|| AffineUvMap::from_geometry(&geometry).ok())
                 .flatten(),
             geometry,
-            geometry_space,
             referenced_vertices,
         })
     }
-    pub fn document(&self) -> &Document {
-        &self.document
-    }
     pub fn geometry(&self) -> &MeshGeometry {
         &self.geometry
-    }
-    pub fn estimated_bytes(&self) -> usize {
-        self.estimated_bytes
-    }
-    pub(crate) fn estimated_workspace_bytes(&self) -> usize {
-        self.document
-            .estimated_snapshot_bytes()
-            .saturating_add(self.workspace_bytes)
     }
     fn cost(
         &self,
         combinations: usize,
         payload: usize,
-        limits: AuthoringLimits,
-    ) -> Result<ConversionCost, SdkError> {
-        transfer_cost(
-            &self.document,
+        limits: ConversionLimits,
+    ) -> Result<ConversionWork, Status> {
+        limits.check_conversion(
             combinations,
-            payload,
-            self.workspace_bytes,
-            self.dependency_bytes,
-            self.estimated_bytes,
-            limits,
+            payload
+                .saturating_add(self.workspace_bytes)
+                .saturating_add(self.dependency_bytes),
         )
-    }
-    pub fn can_rebuild(&self) -> bool {
-        self.referenced_vertices.is_empty()
-    }
-    pub fn check_rebuild(&self) -> Result<(), SdkError> {
-        if self.can_rebuild() {
-            return Ok(());
-        }
-        let id = self.referenced_vertices[0];
-        let glue = self
-            .document
-            .glue_order()
-            .iter()
-            .filter_map(|g| self.document.get_glue(g))
-            .find(|g| {
-                g.pairs.iter().any(|p| {
-                    (g.mesh_a_id == self.mesh_id && p.vertex_a == Some(id))
-                        || (g.mesh_b_id == self.mesh_id && p.vertex_b == Some(id))
-                })
-            })
-            .unwrap();
-        Err(error(
-            "GLUE_VERTEX_REFERENCED",
-            format!(
-                "Vertex {id} is connected to Glue {}; use interior fill or release its pairs before rebuilding",
-                glue.id
-            ),
-            vec![self.mesh_id.clone(), glue.id.clone(), id.to_string()],
-        ))
     }
 
     /// Build one complete replacement without mutating the current candidate.
     /// A full rebuild must allocate fresh IDs before calling this method.
     pub fn plan_geometry(
         &self,
-        current: &Document,
-        version: Version,
         geometry: MeshGeometry,
-        limits: AuthoringLimits,
+        limits: ConversionLimits,
         control: &ConversionControl,
-    ) -> Result<ManualMeshPlan, SdkError> {
+    ) -> Result<MeshTransfer, Status> {
         image_domain(&geometry, &self.mesh_id)?;
-        if !current.is_same_snapshot(&self.document) {
-            return Err(error(
-                "STALE_MANUAL_MESH_PLAN",
-                "Frozen dependencies changed",
-                vec![self.mesh_id.clone()],
-            ));
-        }
-        self.build_geometry(current, version, geometry, limits, control)
+        self.build_geometry(geometry, limits, control)
     }
     /// Explicit texture-padding path: sample in the previous image coordinates,
     /// then validate the final normalized UVs before returning a complete plan.
     pub fn plan_geometry_with_texture_uvs(
         &self,
-        current: &Document,
-        version: Version,
         geometry: MeshGeometry,
         texture_uvs: Vec<Vec2>,
-        limits: AuthoringLimits,
+        limits: ConversionLimits,
         control: &ConversionControl,
-    ) -> Result<ManualMeshPlan, SdkError> {
-        if !current.is_same_snapshot(&self.document) {
-            return Err(error(
-                "STALE_MANUAL_MESH_PLAN",
-                "Frozen dependencies changed",
-                vec![self.mesh_id.clone()],
-            ));
-        }
+    ) -> Result<MeshTransfer, Status> {
         let mut final_geometry = geometry.clone();
         final_geometry.uvs = texture_uvs;
         extract_manual_meshing(&final_geometry)?;
         image_domain(&final_geometry, &self.mesh_id)?;
-        let mut plan = self.build_geometry(current, version, geometry, limits, control)?;
-        let id = &self.mesh_id;
-        let mut mesh = plan.validated.get_mesh(id).unwrap().clone();
-        mesh.uvs = final_geometry.uvs;
-        let kept: HashSet<_> = mesh.vertex_ids.iter().copied().collect();
-        let mapping = self
-            .geometry
-            .vertex_ids
-            .iter()
-            .map(|&v| (v, kept.contains(&v).then_some(v)))
-            .collect();
-        let binding = plan.validated.binding_for_mesh(id).cloned();
-        let blends = plan
-            .validated
-            .blend_bindings_for_target(id)
-            .into_iter()
-            .cloned()
-            .collect();
-        let glues = plan
-            .validated
-            .glues_for_mesh(id)
-            .into_iter()
-            .cloned()
-            .collect();
-        let mut candidate = current.fork_candidate();
-        let result = candidate.replace_mesh_topology(mesh, binding, blends, glues, mapping);
-        if !result.status.is_ok() {
-            return Err(status(result.status));
-        }
-        plan.validated = candidate;
-        plan.changes = result;
+        let mut plan = self.build_geometry(geometry, limits, control)?;
+        plan.mesh.uvs = final_geometry.uvs;
         Ok(plan)
     }
     fn build_geometry(
         &self,
-        current: &Document,
-        version: Version,
         geometry: MeshGeometry,
-        limits: AuthoringLimits,
+        limits: ConversionLimits,
         control: &ConversionControl,
-    ) -> Result<ManualMeshPlan, SdkError> {
+    ) -> Result<MeshTransfer, Status> {
         control.check().map_err(status)?;
         extract_manual_meshing(&geometry)?;
-        self.build_replacement(current, version, geometry, limits, control, false)
+        self.build_replacement(geometry, limits, control, false)
     }
     fn build_replacement(
         &self,
-        current: &Document,
-        version: Version,
         geometry: MeshGeometry,
-        limits: AuthoringLimits,
+        limits: ConversionLimits,
         control: &ConversionControl,
         extend_outline: bool,
-    ) -> Result<ManualMeshPlan, SdkError> {
+    ) -> Result<MeshTransfer, Status> {
         control.check().map_err(status)?;
         let old = &self.geometry;
         let doc = &self.document;
         let id = &self.mesh_id;
         let kept: HashSet<_> = geometry.vertex_ids.iter().copied().collect();
-        for g in doc.glue_order().iter().filter_map(|id| doc.get_glue(id)) {
+        for g in doc.glue_order().iter().filter_map(|id| doc.glue(id)) {
             for pair in &g.pairs {
                 for endpoint in [
                     (g.mesh_a_id == *id).then_some(pair.vertex_a).flatten(),
@@ -665,7 +570,7 @@ impl ManualMeshSource {
                             ),
                             vec![id.clone(), g.id.clone(), pair.id.clone()],
                         );
-                        e.field_path = Some(format!("vertex_ids[{endpoint}]").into());
+                        e.message.push_str(&format!("vertex_ids[{endpoint}]"));
                         return Err(e);
                     }
                 }
@@ -675,7 +580,7 @@ impl ManualMeshSource {
         let blends: Vec<_> = doc
             .blend_binding_order()
             .iter()
-            .filter_map(|b| doc.get_blend_binding(b))
+            .filter_map(|b| doc.blend_binding(b))
             .filter(|b| b.target_id == *id)
             .collect();
         let shape_count = 1
@@ -692,8 +597,7 @@ impl ManualMeshSource {
             .len()
             .saturating_mul(shape_count.saturating_mul(8).saturating_add(128))
             .saturating_add(geometry.triangles.len().saturating_mul(160));
-        // Include the old spatial index, candidate copy and retained history before
-        // allocating any channel arrays. Limits remain caller-reducible.
+        // Admit channel arrays and the source spatial index before allocation.
         let cost = self.cost(shape_count, payload, limits)?;
         let mut provenance = Vec::with_capacity(geometry.vertex_ids.len());
         let (mut added, mut moved, mut extension) = (0, 0, false);
@@ -730,7 +634,7 @@ impl ManualMeshSource {
                     ),
                     vec![id.clone()],
                 );
-                e.field_path = Some(format!("vertex_ids[{vertex}]").into());
+                e.message.push_str(&format!("vertex_ids[{vertex}]"));
                 return Err(e);
             }
         }
@@ -741,9 +645,9 @@ impl ManualMeshSource {
             .filter(|(_, p)| !matches!(p, VertexProvenance::Retained(_)))
             .map(|(i, _)| i)
             .collect();
-        let remap = |values: &mut Vec<Vec2>| -> Result<(), SdkError> {
+        let remap = |values: &mut Vec<Vec2>| -> Result<(), Status> {
             control.check().map_err(status)?;
-            let sample = |i: usize| -> Result<Vec2, SdkError> {
+            let sample = |i: usize| -> Result<Vec2, Status> {
                 if i % 256 == 0 {
                     control.check().map_err(status)?;
                 }
@@ -765,7 +669,7 @@ impl ManualMeshSource {
             if same_slots {
                 // The owned channel was already cloned once with its binding.
                 // Compute all samples before writing, then patch only changed slots.
-                let updates: Result<Vec<_>, _> =
+                let updates: Result<Vec<_>, Status> =
                     changed_slots.iter().map(|&i| Ok((i, sample(i)?))).collect();
                 for (i, value) in updates? {
                     values[i] = value;
@@ -776,7 +680,7 @@ impl ManualMeshSource {
             }
             Ok(())
         };
-        let mut mesh: Mesh = doc.get_mesh(id).unwrap().clone();
+        let mut mesh: Mesh = doc.mesh(id).unwrap().clone();
         remap(&mut mesh.base_positions)?;
         mesh.vertex_ids = geometry.vertex_ids.clone();
         mesh.uvs = geometry.uvs.clone();
@@ -799,7 +703,7 @@ impl ManualMeshSource {
         let glues: Vec<_> = doc
             .glue_order()
             .iter()
-            .filter_map(|g| doc.get_glue(g))
+            .filter_map(|g| doc.glue(g))
             .filter(|g| g.mesh_a_id == *id || g.mesh_b_id == *id)
             .cloned()
             .collect();
@@ -816,7 +720,7 @@ impl ManualMeshSource {
         let mut seen = HashSet::new();
         let mut non_affine_parent = false;
         while !parent.is_empty() && seen.insert(parent) {
-            let Some(t) = doc.get_transform(parent) else {
+            let Some(t) = doc.transform(parent) else {
                 break;
             };
             non_affine_parent |= matches!(t.data, zipzi_core::TransformData::Warp(_));
@@ -842,18 +746,12 @@ impl ManualMeshSource {
         if !glues.is_empty() {
             appearance_limits.push("Glue is evaluated after local shape transfer".into());
         }
-        let mesh_id = mesh.id.clone();
-        let mut candidate = current.fork_candidate();
-        let check = candidate.replace_mesh_topology(mesh, binding, blend_bindings, glues, mapping);
-        if !check.status.is_ok() {
-            return Err(status(check.status));
-        }
-        Ok(ManualMeshPlan {
-            version,
-            publication_source: current.snapshot_id(),
-            mesh_id,
-            validated: candidate,
-            changes: check,
+        Ok(MeshTransfer {
+            mesh,
+            binding,
+            blend_bindings,
+            glues,
+            vertex_mapping: mapping,
             provenance,
             report: ManualMeshTransferReport {
                 added,
@@ -867,36 +765,23 @@ impl ManualMeshSource {
                 appearance_limits,
                 cost,
             },
-            baseline: None,
             affected_edges: vec![],
-            moving_ids: vec![],
         })
     }
     pub fn plan(
         &self,
-        current: &Document,
-        version: Version,
         operation: ManualMeshOperation,
-        limits: AuthoringLimits,
+        limits: ConversionLimits,
         control: &ConversionControl,
-    ) -> Result<ManualMeshPlan, SdkError> {
-        if !current.is_same_snapshot(&self.document) {
-            return Err(error(
-                "STALE_MANUAL_MESH_PLAN",
-                "Frozen dependencies changed",
-                vec![self.mesh_id.clone()],
-            ));
-        }
-        self.plan_candidate(current, version, operation, limits, control)
+    ) -> Result<MeshTransfer, Status> {
+        self.plan_candidate(operation, limits, control)
     }
     fn plan_candidate(
         &self,
-        current: &Document,
-        version: Version,
         operation: ManualMeshOperation,
-        limits: AuthoringLimits,
+        limits: ConversionLimits,
         control: &ConversionControl,
-    ) -> Result<ManualMeshPlan, SdkError> {
+    ) -> Result<MeshTransfer, Status> {
         // Bound topology workspace before cloning or triangulating input.
         self.cost(
             1,
@@ -907,21 +792,12 @@ impl ManualMeshSource {
                 .saturating_mul(256),
             limits,
         )?;
-        let result = edit_manual_uv_candidate(&self.geometry, self.meshing.clone(), operation)
-            .map_err(|mut e| {
-                if e.object_ids.is_empty() {
-                    e.object_ids.push(self.mesh_id.clone());
-                }
-                e
-            })?;
+        let result = edit_manual_uv_candidate(&self.geometry, self.meshing.clone(), operation)?;
         let mut plan = self
-            .build_replacement(current, version, result.geometry, limits, control, true)
+            .build_replacement(result.geometry, limits, control, true)
             .map_err(|e| {
-                if e.code.as_ref() == "INVALID_MESH_MESHING" {
-                    let mut error =
-                        SdkError::new("INVALID_MANUAL_MESH", &e.message, "edit_manual_mesh");
-                    error.object_ids.push(self.mesh_id.clone());
-                    error
+                if e.code == "INVALID_MESH_MESHING" {
+                    error("INVALID_MANUAL_MESH", e.message, vec![self.mesh_id.clone()])
                 } else {
                     e
                 }
@@ -931,322 +807,20 @@ impl ManualMeshSource {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ManualMeshPlan {
-    version: Version,
-    publication_source: DocumentSnapshotId,
-    mesh_id: String,
-    validated: Document,
-    changes: zipzi_core::EditResult,
+pub(crate) struct MeshTransfer {
+    pub mesh: Mesh,
+    pub binding: Option<zipzi_core::MeshBinding>,
+    pub blend_bindings: Vec<zipzi_core::BlendShapeBinding>,
+    pub glues: Vec<zipzi_core::Glue>,
+    pub vertex_mapping: HashMap<VertexId, Option<VertexId>>,
     pub provenance: Vec<VertexProvenance>,
     pub report: ManualMeshTransferReport,
-    baseline: Option<Arc<ManualMeshSource>>,
-    affected_edges: Vec<[VertexId; 2]>,
-    moving_ids: Vec<VertexId>,
-}
-impl ManualMeshPlan {
-    pub fn geometry(&self) -> MeshGeometry {
-        let m = self.validated.get_mesh(&self.mesh_id).unwrap();
-        MeshGeometry {
-            vertex_ids: m.vertex_ids.clone(),
-            positions: m.base_positions.clone(),
-            uvs: m.uvs.clone(),
-            triangles: m.triangles.clone(),
-            meshing: m.meshing.clone(),
-        }
-    }
+    pub affected_edges: Vec<[VertexId; 2]>,
 }
 
-pub(crate) struct ManualMeshBaseline {
-    pub source: Arc<ManualMeshSource>,
-    pub publication: DocumentSnapshotId,
-    pub moving_ids: Vec<VertexId>,
-}
-impl EditSession<'_> {
-    /// Plans can fail without aborting an interactive candidate. Runtime performs
-    /// this read-only step before entering its ordinary abort-on-error write path.
-    pub fn plan_manual_mesh(
-        &self,
-        mesh_id: &str,
-        operation: ManualMeshOperation,
-    ) -> Result<ManualMeshPlan, SdkError> {
-        self.plan_manual_mesh_with_limits(mesh_id, operation, self.authoring_limits)
-    }
-    pub fn plan_manual_mesh_with_limits(
-        &self,
-        mesh_id: &str,
-        operation: ManualMeshOperation,
-        limits: AuthoringLimits,
-    ) -> Result<ManualMeshPlan, SdkError> {
-        self.plan_manual_mesh_at(
-            self.candidate_document(),
-            self.candidate_document(),
-            mesh_id,
-            operation,
-            limits,
-        )
-    }
-
-    fn plan_manual_mesh_at(
-        &self,
-        current: &Document,
-        baseline_publication: &Document,
-        mesh_id: &str,
-        operation: ManualMeshOperation,
-        limits: AuthoringLimits,
-    ) -> Result<ManualMeshPlan, SdkError> {
-        self.ensure_active("plan_manual_mesh")?;
-        transfer_cost(
-            current,
-            1,
-            0,
-            0,
-            current.estimated_mesh_dependency_bytes(mesh_id),
-            current.estimated_content_bytes(),
-            limits,
-        )?;
-        let mut operation = operation;
-        if let ManualMeshOperation::MoveVertices {
-            targets,
-            motion_from,
-        } = &mut operation
-        {
-            let mesh = current.get_mesh(mesh_id).ok_or_else(|| {
-                error(
-                    "MISSING_MESH",
-                    "Mesh no longer exists",
-                    vec![mesh_id.into()],
-                )
-            })?;
-            let slots: HashMap<_, _> = mesh
-                .vertex_ids
-                .iter()
-                .enumerate()
-                .map(|(slot, id)| (*id, slot))
-                .collect();
-            let actual: Vec<_> = targets
-                .iter()
-                .filter_map(|t| {
-                    slots.get(&t.id).map(|&slot| ManualVertexTarget {
-                        id: t.id,
-                        uv: mesh.uvs[slot],
-                    })
-                })
-                .collect();
-            if let Some(from) = motion_from {
-                if from.len() != actual.len() || from.iter().any(|t| !actual.contains(t)) {
-                    return Err(error(
-                        "STALE_MANUAL_MOTION",
-                        "Motion must start at the latest accepted candidate",
-                        vec![mesh_id.into()],
-                    ));
-                }
-            } else {
-                *motion_from = Some(actual);
-            }
-        }
-        let mut moving_ids = match &operation {
-            ManualMeshOperation::MoveVertices { targets, .. } => {
-                targets.iter().map(|v| v.id).collect::<Vec<_>>()
-            }
-            _ => vec![],
-        };
-        moving_ids.sort_unstable();
-        let is_move = matches!(operation, ManualMeshOperation::MoveVertices { .. });
-        let source = if is_move {
-            self.manual_baselines
-                .get(mesh_id)
-                .filter(|b| {
-                    b.source.mesh_id == mesh_id
-                        && b.moving_ids == moving_ids
-                        && b.publication.matches(baseline_publication)
-                })
-                .map(|b| b.source.clone())
-        } else {
-            None
-        };
-        let source = match source {
-            Some(s) => s,
-            None => Arc::new(ManualMeshSource::new(current, mesh_id)?),
-        };
-        let mut plan = source.plan_candidate(
-            current,
-            self.base_version(),
-            operation,
-            limits,
-            &ConversionControl::default(),
-        )?;
-        plan.baseline = is_move.then_some(source);
-        plan.moving_ids = moving_ids;
-        Ok(plan)
-    }
-    pub fn apply_manual_mesh_plan(
-        &mut self,
-        plan: ManualMeshPlan,
-    ) -> Result<ManualMeshTransferReport, SdkError> {
-        self.ensure_active("apply_manual_mesh_plan")?;
-        if plan.version != self.base_version()
-            || !plan.publication_source.matches(self.candidate_document())
-        {
-            return Err(error(
-                "STALE_MANUAL_MESH_PLAN",
-                "Manual mesh source changed",
-                vec![plan.mesh_id.clone()],
-            ));
-        }
-        // The private plan owns the fully validated Core result, bound to the
-        // exact publication snapshot above. Do not clone/revalidate it on apply.
-        // This transfer retains all object/sample identities; only vertex IDs
-        // and channel arrays can change, so no object-key inventory is retired.
-        self.candidate_content_bytes.take();
-        self.candidate = Some(plan.validated);
-        let cost = plan.report.cost;
-        self.binding_cost = Some(self.binding_cost.map_or(cost, |old| ConversionCost {
-            sample_combinations: old.sample_combinations.max(cost.sample_combinations),
-            payload_bytes: old.payload_bytes.max(cost.payload_bytes),
-            temporary_bytes: old.temporary_bytes.max(cost.temporary_bytes),
-            history_bytes: old.history_bytes.max(cost.history_bytes),
-        }));
-        self.record(plan.changes, "apply_manual_mesh_plan", &plan.mesh_id)?;
-        self.manual_baselines.clear();
-        if let Some(source) = plan.baseline {
-            self.manual_baselines.insert(
-                plan.mesh_id,
-                ManualMeshBaseline {
-                    source,
-                    publication: self.candidate_document().snapshot_id(),
-                    moving_ids: plan.moving_ids,
-                },
-            );
-        }
-        Ok(plan.report)
-    }
-
-    /// Validate every mesh before publishing any candidate change. Rejected
-    /// geometry retains the last accepted batch and its frozen move sources.
-    pub fn edit_manual_mesh_batch(
-        &mut self,
-        operations: Vec<(String, ManualMeshOperation)>,
-    ) -> Result<Vec<ManualMeshTransferReport>, SdkError> {
-        self.ensure_active("edit_manual_mesh_batch")?;
-        let mut ids = HashSet::new();
-        if operations.is_empty() || operations.iter().any(|(id, _)| !ids.insert(id.clone())) {
-            return Err(error(
-                "INVALID_MANUAL_MESH",
-                "Supply one operation per mesh in a nonempty batch",
-                vec![],
-            ));
-        }
-        let mut plans: Vec<ManualMeshPlan> = Vec::with_capacity(operations.len());
-        let mut bytes = 0usize;
-        for (id, operation) in operations {
-            // Earlier plans retain their map/metadata copies and edited records,
-            // while all unaffected records stay shared. Reserve that workspace
-            // before planning another mesh, without copying its entire document.
-            let mut limits = self.authoring_limits;
-            limits.max_conversion_bytes = limits
-                .max_conversion_bytes
-                .checked_sub(bytes)
-                .ok_or_else(|| {
-                    error(
-                        "AUTHORING_MEMORY_LIMIT",
-                        "Mesh batch exceeds the session budget",
-                        vec![],
-                    )
-                })?;
-            let current = plans
-                .last()
-                .map_or(self.candidate_document(), |p| &p.validated);
-            let mut plan = self.plan_manual_mesh_at(
-                current,
-                self.candidate_document(),
-                &id,
-                operation,
-                limits,
-            )?;
-            plan.report.cost.temporary_bytes =
-                plan.report.cost.temporary_bytes.saturating_add(bytes);
-            self.authoring_limits
-                .check_cost(plan.report.cost)
-                .map_err(status)?;
-            bytes = bytes
-                .saturating_add(plan.validated.estimated_snapshot_bytes())
-                .saturating_add(plan.report.cost.payload_bytes)
-                .saturating_add(plan.baseline.as_ref().map_or(0, |s| {
-                    s.estimated_workspace_bytes()
-                        .saturating_add(s.dependency_bytes)
-                }));
-            plans.push(plan);
-        }
-        let baselines: Vec<_> = plans
-            .iter()
-            .filter_map(|plan| {
-                plan.baseline.as_ref().map(|source| {
-                    (
-                        plan.mesh_id.clone(),
-                        source.clone(),
-                        plan.moving_ids.clone(),
-                    )
-                })
-            })
-            .collect();
-        let mut reports = Vec::with_capacity(plans.len());
-        for plan in plans {
-            reports.push(self.apply_manual_mesh_plan(plan)?);
-        }
-        let publication = self.candidate_document().snapshot_id();
-        self.manual_baselines = baselines
-            .into_iter()
-            .map(|(id, source, moving_ids)| {
-                (
-                    id,
-                    ManualMeshBaseline {
-                        source,
-                        moving_ids,
-                        publication: publication.clone(),
-                    },
-                )
-            })
-            .collect();
-        Ok(reports)
-    }
-    pub fn edit_manual_mesh(
-        &mut self,
-        mesh_id: &str,
-        operation: ManualMeshOperation,
-    ) -> Result<ManualMeshResult, SdkError> {
-        let plan = self.plan_manual_mesh(mesh_id, operation)?;
-        let old = self.candidate_document().get_mesh(mesh_id).unwrap();
-        let geometry = plan.geometry();
-        let kept: HashSet<_> = geometry.vertex_ids.iter().copied().collect();
-        let old_ids: HashSet<_> = old.vertex_ids.iter().copied().collect();
-        let result = ManualMeshResult {
-            added: geometry
-                .vertex_ids
-                .iter()
-                .filter(|id| !old_ids.contains(id))
-                .copied()
-                .collect(),
-            removed: old
-                .vertex_ids
-                .iter()
-                .filter(|id| !kept.contains(id))
-                .copied()
-                .collect(),
-            vertex_mapping: old
-                .vertex_ids
-                .iter()
-                .map(|&id| (id, kept.contains(&id).then_some(id)))
-                .collect(),
-            changed: geometry.vertex_ids != old.vertex_ids
-                || geometry.positions != old.base_positions
-                || geometry.uvs != old.uvs
-                || geometry.triangles != old.triangles
-                || geometry.meshing != old.meshing,
-            geometry,
-            affected_edges: plan.affected_edges.clone(),
-        };
-        self.apply_manual_mesh_plan(plan)?;
-        Ok(result)
-    }
+#[derive(Debug, Clone)]
+pub struct ManualMeshOutcome {
+    pub report: ManualMeshTransferReport,
+    pub provenance: Vec<VertexProvenance>,
+    pub affected_edges: Vec<[VertexId; 2]>,
 }

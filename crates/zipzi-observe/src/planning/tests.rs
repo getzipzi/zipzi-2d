@@ -242,27 +242,29 @@ fn id(n: u32) -> String {
 
 #[test]
 fn reference_collection_keeps_hidden_and_mask_meshes_and_ignores_unused_images() {
-    use zipzi_core::{Canvas, Document, ImageContent, Mesh, Vec2};
-    let mut document = Document::new();
-    assert!(document
-        .initialize(&id(1), Canvas::new(100., 100., Vec2::new(50., 50.), 10.))
-        .is_ok());
-    // These files deliberately do not exist: planning must never read/decode them.
+    use zipzi_core::{
+        state::{AssetContent, AssetRecord, DocumentState, ResourceKey},
+        Canvas, Mesh, Vec2,
+    };
+    let mut document = DocumentState::new(
+        id(1),
+        Canvas::new(100., 100., Vec2::new(50., 50.), 10.).into(),
+    )
+    .unwrap()
+    .builder();
+    // Metadata-only planning needs no resources and performs no pixel reads.
     for (n, width) in [(2, 3), (3, 5), (4, u32::MAX)] {
-        assert!(document
-            .add_asset(ImageAsset {
+        document
+            .create_asset(AssetRecord {
                 id: id(n),
                 name: format!("asset {n}"),
-                unresolved_source: None,
-                content: Some(ImageContent {
-                    source: format!("/missing/texture-{n}.png"),
+                content: AssetContent::Image {
+                    resource: ResourceKey::new(),
                     width,
                     height: width,
-                    sha256: String::new()
-                }),
+                },
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
     for (n, asset, enabled, masks) in [
         (5, 3, false, vec![]),
@@ -272,14 +274,15 @@ fn reference_collection_keeps_hidden_and_mask_meshes_and_ignores_unused_images()
         assert!(document
             .create_mesh(Mesh {
                 id: id(n),
+                runtime_id: id(n),
                 texture_asset_id: id(asset).into(),
                 enabled,
                 masks,
                 ..Default::default()
             })
-            .status
             .is_ok());
     }
+    let document = document.freeze().unwrap().state;
     let sources = texture_sources(&document).unwrap();
     assert_eq!(sources, [source(&id(2), 3, 3), source(&id(3), 5, 5)]);
     let plan = ready(sources, 136);

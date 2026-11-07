@@ -1,82 +1,83 @@
+use crate::support::prepared;
 use std::sync::Arc;
-use zipzi_core::ModelSetup;
-use zipzi_project::{ImageMemoryBudget, PreparedImageContent};
-use zipzi_sdk::{AuthoringSession, HistoryLimits};
+use zipzi_core::{state::DocumentState, ModelSetup};
+use zipzi_project::{ImageMemoryBudget, ImageResource, PreparedImageContent, ResourceStore};
+use zipzi_sdk::{AuthoringSession, HistoryLimits, Snapshot};
 const DOC: &str = "61000000-0000-4000-8000-000000000001";
 const IMAGE: &str = "61000000-0000-4000-8000-000000000002";
-fn session(budget: &ImageMemoryBudget) -> AuthoringSession {
-    let mut sdk = AuthoringSession::with_history_limits(
-        DOC,
-        ModelSetup::default(),
-        HistoryLimits {
-            max_steps: 2,
-            max_bytes: 1 << 20,
-        },
-    )
-    .unwrap();
-    sdk.set_image_memory_budget(budget.clone()).unwrap();
-    sdk
+fn session() -> AuthoringSession {
+    let mut s = AuthoringSession::new(
+        Snapshot::new(
+            DocumentState::new(DOC, ModelSetup::default().into()).unwrap(),
+            Default::default(),
+        )
+        .unwrap(),
+    );
+    s.set_history_limits(HistoryLimits {
+        max_steps: 2,
+        target_bytes: 1 << 20,
+    });
+    s
 }
-fn image(value: u8, budget: &ImageMemoryBudget) -> PreparedImageContent {
-    PreparedImageContent::from_rgba(1, 1, Arc::from([value, 0, 0, 255]), budget).unwrap()
+fn image(value: u8, store: &ResourceStore) -> ImageResource {
+    store
+        .prepare_rgba(1, 1, Arc::from([value, 0, 0, 255]))
+        .unwrap()
+}
+fn insert(
+    c: &mut zipzi_sdk::Commands<'_>,
+    id: &str,
+    image: ImageResource,
+) -> Result<(), zipzi_core::Status> {
+    c.create_empty_asset(id.into(), "image".into())?;
+    c.replace_image(id, image)
+}
+fn pixels(s: &Snapshot) -> zipzi_project::TextureData {
+    s.resources()
+        .read_texture(s.document().asset(IMAGE).unwrap())
+        .unwrap()
 }
 #[test]
-fn a17_hundred_distinct_cancelled_images_return_to_baseline_without_closing() {
+fn hundred_distinct_cancelled_images_return_to_baseline_without_closing() {
     let budget = ImageMemoryBudget::new(1 << 20);
-    let sdk = session(&budget);
-    let version = sdk.version();
+    let store = ResourceStore::new(budget.clone());
+    let s = session();
+    let version = s.version();
     for n in 0..100 {
-        let prepared = sdk
-            .prepare_rgba_image(1, 1, Arc::from([n, 0, 0, 255]))
+        let mut d = s.begin_draft();
+        d.batch(d.source(), |c| insert(c, IMAGE, image(n, &store)))
             .unwrap();
-        let mut edit = sdk.begin_owned_edit("draft", None).unwrap();
-        edit.create_prepared_image(IMAGE.into(), "draft".into(), &prepared)
-            .unwrap();
-        drop(prepared);
-        sdk.collect_image_resources();
-        let snapshot = sdk.candidate_snapshot(&edit).unwrap();
-        assert_eq!(
-            snapshot
-                .memory_image(IMAGE)
-                .unwrap()
-                .texture()
-                .rgba
-                .as_ref(),
-            &[n, 0, 0, 255]
-        );
+        let snapshot = d.read_snapshot().unwrap();
+        assert_eq!(pixels(&snapshot.snapshot).rgba.as_ref(), &[n, 0, 0, 255]);
         assert_eq!(budget.usage().rgba_bytes, 4);
         drop(snapshot);
-        drop(edit);
-        sdk.collect_image_resources();
-        assert_eq!(sdk.memory_image_entries(), 0);
+        drop(d);
         assert_eq!(budget.usage().total_bytes(), 0);
     }
-    assert_eq!(sdk.version(), version);
-    assert_eq!(sdk.history_lengths(), (0, 0));
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state().undo_steps, 0);
 }
 #[test]
-fn a14_candidate_prepared_image_and_snapshot_pin_before_registration() {
+fn candidate_and_snapshot_pin_resources_before_publication() {
     let budget = ImageMemoryBudget::new(1 << 20);
-    let sdk = session(&budget);
-    let image = image(17, &budget);
-    let mut edit = sdk.begin_owned_edit("prepared", None).unwrap();
-    edit.create_prepared_image(IMAGE.into(), "image".into(), &image)
+    let store = ResourceStore::new(budget.clone());
+    let s = session();
+    let mut d = s.begin_draft();
+    d.batch(d.source(), |c| insert(c, IMAGE, image(17, &store)))
         .unwrap();
-    let snapshot = sdk.candidate_snapshot(&edit).unwrap();
-    drop(image);
-    drop(edit);
-    sdk.collect_image_resources();
-    assert_eq!(sdk.memory_image_entries(), 0);
+    let snapshot = d.read_snapshot().unwrap().snapshot;
+    drop(d);
+    drop(store);
+    drop(s);
     assert_eq!(
         snapshot
-            .memory_image(IMAGE)
-            .unwrap()
-            .read_asset()
+            .resources()
+            .read_asset(snapshot.document().asset(IMAGE).unwrap())
             .unwrap()
             .rgba,
         [17, 0, 0, 255]
     );
-    let pixels = snapshot.memory_image(IMAGE).unwrap().texture().rgba;
+    let pixels = pixels(&snapshot).rgba;
     drop(snapshot);
     assert_eq!(budget.usage().png_bytes, 0);
     assert_eq!(budget.usage().rgba_bytes, 4);
@@ -84,179 +85,143 @@ fn a14_candidate_prepared_image_and_snapshot_pin_before_registration() {
     assert_eq!(budget.usage().total_bytes(), 0);
 }
 #[test]
-fn a17_history_eviction_retains_undo_candidates_and_snapshots_then_reclaims() {
+fn history_eviction_retains_undo_candidates_and_snapshots_then_reclaims() {
     let budget = ImageMemoryBudget::new(1 << 20);
-    let mut sdk = session(&budget);
-    sdk.edit("create", None, |e| {
-        e.create_prepared_image(IMAGE.into(), "image".into(), &image(0, &budget))
-    })
-    .unwrap();
-    let snapshot = sdk.read_snapshot();
-    let candidate = sdk.begin_owned_edit("old candidate", None).unwrap();
+    let store = ResourceStore::new(budget.clone());
+    let mut s = session();
+    let (_, p) = prepared(&s, |c| insert(c, IMAGE, image(0, &store))).unwrap();
+    s.publish(p).unwrap();
+    let snapshot = s.read_snapshot();
+    let candidate = s.begin_draft();
     for n in 1..=100 {
-        sdk.edit("replace", None, |e| {
-            e.replace_prepared_image(IMAGE, &image(n, &budget))
-        })
-        .unwrap();
-        sdk.collect_image_resources();
-        assert!(sdk.memory_image_entries() <= 4);
+        let (_, p) = prepared(&s, |c| c.replace_image(IMAGE, image(n, &store))).unwrap();
+        s.publish(p).unwrap();
         assert!(budget.usage().rgba_bytes <= 16);
-        assert_eq!(snapshot.memory_image(IMAGE).unwrap().texture().rgba[0], 0);
+        assert_eq!(pixels(&snapshot.snapshot).rgba[0], 0);
     }
-    assert_eq!(sdk.history_lengths(), (2, 0));
-    sdk.undo().unwrap();
-    assert_eq!(sdk.read_texture(IMAGE).unwrap().rgba[0], 99);
-    sdk.redo().unwrap();
-    assert_eq!(sdk.read_texture(IMAGE).unwrap().rgba[0], 100);
+    assert_eq!(s.history_state().undo_steps, 2);
+    s.undo(s.version()).unwrap();
+    assert_eq!(pixels(s.snapshot()).rgba[0], 99);
+    s.redo(s.version()).unwrap();
+    assert_eq!(pixels(s.snapshot()).rgba[0], 100);
     assert_eq!(
-        sdk.candidate_snapshot(&candidate)
-            .unwrap()
-            .memory_image(IMAGE)
-            .unwrap()
-            .texture()
-            .rgba[0],
+        pixels(&candidate.read_snapshot().unwrap().snapshot).rgba[0],
         0
     );
     drop(candidate);
     drop(snapshot);
-    sdk.collect_image_resources();
-    assert_eq!(sdk.memory_image_entries(), 3);
     assert_eq!(budget.usage().rgba_bytes, 12);
+    drop(s);
+    assert_eq!(budget.usage().total_bytes(), 0);
 }
 #[test]
-fn a17_budget_rejection_and_png_retry_leave_no_preparation_or_history_changes() {
+fn budget_rejection_and_png_retry_leave_no_preparation_or_history_changes() {
     let budget = ImageMemoryBudget::new(4);
-    let mut sdk = session(&budget);
-    let prepared = image(7, &budget);
-    assert_eq!(image_error(&budget), "RESOURCE_BUDGET_EXCEEDED");
+    let store = ResourceStore::new(budget.clone());
+    let mut s = session();
+    let img = image(7, &store);
     assert_eq!(
-        prepared.read_asset().unwrap_err().code,
+        store
+            .prepare_rgba(1, 1, Arc::from([99, 0, 0, 255]))
+            .unwrap_err()
+            .code,
         "RESOURCE_BUDGET_EXCEEDED"
     );
-    assert_eq!(budget.usage().preparing_bytes, 0);
-    sdk.edit("create", None, |e| {
-        e.create_prepared_image(IMAGE.into(), "image".into(), &prepared)
-    })
-    .unwrap();
-    let version = sdk.version();
+    for _ in 0..2 {
+        assert_eq!(
+            img.read_asset().unwrap_err().code,
+            "RESOURCE_BUDGET_EXCEEDED"
+        );
+        assert_eq!(budget.usage().preparing_bytes, 0);
+    }
+    let (_, p) = prepared(&s, |c| insert(c, IMAGE, img)).unwrap();
+    s.publish(p).unwrap();
+    let version = s.version();
     assert_eq!(
-        sdk.read_asset(IMAGE).unwrap_err().code.as_ref(),
+        s.snapshot()
+            .resources()
+            .read_asset(s.snapshot().document().asset(IMAGE).unwrap())
+            .unwrap_err()
+            .code,
         "RESOURCE_BUDGET_EXCEEDED"
     );
-    assert_eq!(sdk.version(), version);
-    assert_eq!(sdk.history_lengths(), (1, 0));
-    let larger = ImageMemoryBudget::new(1 << 20);
-    sdk.set_image_memory_budget(larger.clone()).unwrap();
-    assert_eq!(sdk.read_asset(IMAGE).unwrap().rgba, [7, 0, 0, 255]);
-    assert!(larger.usage().png_bytes > 0);
-    assert_eq!(larger.usage().preparing_bytes, 0);
+    assert_eq!(s.version(), version);
+    assert_eq!(s.history_state().undo_steps, 1);
+    drop(s);
+    assert_eq!(budget.usage().total_bytes(), 0);
 }
-fn image_error(budget: &ImageMemoryBudget) -> String {
-    PreparedImageContent::from_rgba(1, 1, Arc::from([99, 0, 0, 255]), budget)
-        .unwrap_err()
-        .code
-}
-
 #[test]
-fn owned_candidate_cannot_publish_images_using_its_previous_unlimited_budget() {
-    let mut sdk = AuthoringSession::new(DOC, ModelSetup::default()).unwrap();
-    let mut candidate = sdk.begin_owned_edit("before hosting", None).unwrap();
-    let prepared = image(8, &Default::default());
-    candidate
-        .create_prepared_image(IMAGE.into(), "image".into(), &prepared)
+fn store_admission_cannot_bypass_its_budget_with_unlimited_preparation() {
+    let img = PreparedImageContent::from_rgba(1, 1, Arc::from([8, 0, 0, 255]), &Default::default())
         .unwrap();
-    let limited = ImageMemoryBudget::new(3);
-    sdk.set_image_memory_budget(limited.clone()).unwrap();
+    let budget = ImageMemoryBudget::new(3);
+    let store = ResourceStore::new(budget.clone());
     assert_eq!(
-        candidate.commit_to(&mut sdk).unwrap_err().code.as_ref(),
+        store.adopt_image(img).unwrap_err().code,
         "RESOURCE_BUDGET_EXCEEDED"
     );
-    assert!(sdk.asset(IMAGE).is_none());
-    assert_eq!(sdk.history_lengths(), (0, 0));
-    assert_eq!(limited.usage().total_bytes(), 0);
-}
-
-#[test]
-fn cached_png_and_rgba_admission_is_atomic_on_budget_rejection() {
-    let prepared = image(8, &Default::default());
-    prepared.read_asset().unwrap();
-    let budget = ImageMemoryBudget::new(4);
-    assert!(prepared.with_budget(&budget).is_err());
     assert_eq!(budget.usage().total_bytes(), 0);
     assert_eq!(budget.usage().allocations, 0);
 }
-
 #[test]
-fn prepared_images_survive_other_commits_and_unused_leases_release_memory() {
+fn cached_png_and_rgba_admission_is_atomic_on_budget_rejection() {
+    let img = PreparedImageContent::from_rgba(1, 1, Arc::from([8, 0, 0, 255]), &Default::default())
+        .unwrap();
+    img.read_asset().unwrap();
+    let budget = ImageMemoryBudget::new(4);
+    assert!(ResourceStore::new(budget.clone()).adopt_image(img).is_err());
+    assert_eq!(budget.usage().total_bytes(), 0);
+    assert_eq!(budget.usage().allocations, 0);
+}
+#[test]
+fn prepared_images_survive_other_commits_and_unused_handles_release_memory() {
     let budget = ImageMemoryBudget::new(1 << 20);
-    let mut sdk = session(&budget);
+    let store = ResourceStore::new(budget.clone());
+    let mut s = session();
     let second = "61000000-0000-4000-8000-000000000003";
-    let a = sdk
-        .prepare_rgba_image(1, 1, Arc::from([1, 0, 0, 255]))
-        .unwrap();
-    let b = sdk
-        .prepare_rgba_image(1, 1, Arc::from([2, 0, 0, 255]))
-        .unwrap();
-    let unused = sdk
-        .prepare_rgba_image(1, 1, Arc::from([3, 0, 0, 255]))
-        .unwrap();
-    assert_eq!(sdk.memory_image_entries(), 0);
-    sdk.edit("A", None, |e| {
-        e.create_prepared_image(IMAGE.into(), "A".into(), &a)
-    })
-    .unwrap();
-    drop(a);
-    sdk.collect_image_resources();
+    let a = image(1, &store);
+    let b = image(2, &store);
+    let unused = image(3, &store);
+    let (_, p) = prepared(&s, |c| insert(c, IMAGE, a)).unwrap();
+    s.publish(p).unwrap();
     assert_eq!(budget.usage().rgba_bytes, 12);
     drop(unused);
     assert_eq!(budget.usage().rgba_bytes, 8);
-    sdk.edit("B", None, |e| {
-        e.create_prepared_image(second.into(), "B".into(), &b)
-    })
-    .unwrap();
-    drop(b);
-    sdk.collect_image_resources();
+    let (_, p) = prepared(&s, |c| insert(c, second, b)).unwrap();
+    s.publish(p).unwrap();
+    assert_eq!(pixels(s.snapshot()).rgba.as_ref(), &[1, 0, 0, 255]);
+    s.undo(s.version()).unwrap();
+    s.redo(s.version()).unwrap();
     assert_eq!(
-        sdk.read_texture(IMAGE).unwrap().rgba.as_ref(),
-        &[1, 0, 0, 255]
-    );
-    assert_eq!(
-        sdk.read_texture(second).unwrap().rgba.as_ref(),
-        &[2, 0, 0, 255]
-    );
-    sdk.undo().unwrap();
-    sdk.collect_image_resources();
-    sdk.redo().unwrap();
-    assert_eq!(
-        sdk.read_texture(second).unwrap().rgba.as_ref(),
+        s.snapshot()
+            .resources()
+            .read_texture(s.snapshot().document().asset(second).unwrap())
+            .unwrap()
+            .rgba
+            .as_ref(),
         &[2, 0, 0, 255]
     );
 }
-
 #[test]
 fn captured_disk_image_pins_encoded_bytes_and_pixels_after_source_is_replaced() {
-    let folder = std::env::temp_dir().join(format!("zipzi-disk-lease-{}", uuid::Uuid::new_v4()));
-    std::fs::create_dir_all(&folder).unwrap();
+    let folder = tempfile::tempdir().unwrap();
+    let path = folder.path().join("image.png");
     let budget = ImageMemoryBudget::new(1 << 20);
-    let mut sdk = session(&budget);
-    let prepared = image(17, &budget);
-    sdk.edit("image", None, |e| {
-        e.create_prepared_image(IMAGE.into(), "image".into(), &prepared)
-    })
+    let store = ResourceStore::new(budget.clone());
+    std::fs::write(
+        &path,
+        image(17, &ResourceStore::default())
+            .read_asset()
+            .unwrap()
+            .bytes,
+    )
     .unwrap();
-    drop(prepared);
-    sdk.save_project(&folder.join("project"), None).unwrap();
-    let asset = sdk.asset(IMAGE).unwrap();
-    let root = sdk.project_path().unwrap().parent().unwrap();
-    let path = root.join(&asset.content.as_ref().unwrap().source);
-    let captured = sdk.capture_image_content(&asset, &budget).unwrap();
+    let captured = store.import_image(&path).unwrap();
     let png = captured.read_asset().unwrap().bytes;
     std::fs::write(&path, b"changed after capture").unwrap();
-    assert_eq!(captured.texture().rgba.as_ref(), [17, 0, 0, 255]);
+    assert_eq!(captured.texture().rgba.as_ref(), &[17, 0, 0, 255]);
     assert_eq!(captured.read_asset().unwrap().bytes, png);
-    assert!(sdk.capture_image_content(&asset, &budget).is_err());
+    assert!(store.import_image(&path).is_err());
     drop(captured);
-    drop(sdk);
     assert_eq!(budget.usage().total_bytes(), 0);
-    std::fs::remove_dir_all(folder).unwrap();
 }

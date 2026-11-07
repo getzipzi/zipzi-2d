@@ -22,7 +22,7 @@ mod schema;
 mod xml;
 
 use serde::{Deserialize, Serialize};
-use zipzi_core::{Document, ImageAsset};
+use zipzi_core::state::{AssetRecord, DocumentState};
 
 /// How to handle document features that this exporter cannot represent.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,25 +103,25 @@ pub enum Cmo3Error {
 /// Resource boundary shared by in-memory, project and future CLI adapters.
 /// Return encoded PNG bytes; the codec verifies image dimensions before export.
 pub trait AssetResolver {
-    fn read_png(&self, asset: &ImageAsset) -> Result<Vec<u8>, Cmo3Error>;
+    fn read_png(&self, asset: &AssetRecord) -> Result<Vec<u8>, Cmo3Error>;
 }
 impl<F> AssetResolver for F
 where
-    F: Fn(&ImageAsset) -> Result<Vec<u8>, Cmo3Error>,
+    F: Fn(&AssetRecord) -> Result<Vec<u8>, Cmo3Error>,
 {
-    fn read_png(&self, asset: &ImageAsset) -> Result<Vec<u8>, Cmo3Error> {
+    fn read_png(&self, asset: &AssetRecord) -> Result<Vec<u8>, Cmo3Error> {
         self(asset)
     }
 }
 
 /// Inspect conversion losses without reading resources or writing output.
-pub fn inspect_export(document: &Document) -> Result<Cmo3Report, Cmo3Error> {
+pub fn inspect_export(document: &DocumentState) -> Result<Cmo3Report, Cmo3Error> {
     export::inspect(document)
 }
 
 /// Encode a document and its resources entirely in memory. Never mutates input.
 pub fn encode_cmo3(
-    document: &Document,
+    document: &DocumentState,
     assets: &dyn AssetResolver,
     options: &Cmo3Options,
 ) -> Result<Cmo3Artifact, Cmo3Error> {

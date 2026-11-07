@@ -10,7 +10,7 @@ impl Exporter<'_> {
             .doc
             .part_order()
             .iter()
-            .any(|id| self.doc.get_part(id).unwrap().runtime_id == root_runtime_id)
+            .any(|id| self.doc.part(id).unwrap().runtime_id == root_runtime_id)
         {
             root_runtime_id.push('_');
         }
@@ -26,7 +26,7 @@ impl Exporter<'_> {
             self.doc
                 .part_order()
                 .iter()
-                .map(|id| self.doc.get_part(id).unwrap().clone()),
+                .map(|id| self.doc.part(id).unwrap().clone()),
         );
         for p in parts {
             let owner = self.source(&p.id);
@@ -45,7 +45,7 @@ impl Exporter<'_> {
                 .doc
                 .offscreen_order()
                 .iter()
-                .map(|id| self.doc.get_offscreen(id).unwrap())
+                .map(|id| self.doc.offscreen(id).unwrap())
                 .find(|os| os.part_id == p.id);
             for (slot, (_, order)) in samples.iter().enumerate() {
                 let (base, g) = self.form_base(&owner);
@@ -87,7 +87,7 @@ impl Exporter<'_> {
             let groups = zipzi_core::draw_order::resolved_groups(self.doc);
             let mut group_owner = part;
             while !group_owner.is_empty() && !groups.iter().any(|g| g.owner == group_owner) {
-                group_owner = &self.doc.get_part(group_owner).unwrap().parent_id;
+                group_owner = &self.doc.part(group_owner).unwrap().parent_id;
             }
             let items = &groups
                 .iter()
@@ -103,7 +103,7 @@ impl Exporter<'_> {
                 self.doc
                     .transform_order()
                     .iter()
-                    .filter(|id| self.doc.get_transform(id).unwrap().part() == part)
+                    .filter(|id| self.doc.transform(id).unwrap().part() == part)
                     .cloned(),
             );
             children.extend(
@@ -112,7 +112,7 @@ impl Exporter<'_> {
                     .iter()
                     .filter(|id| {
                         self.doc
-                            .get_mesh(&self.doc.get_glue(id).unwrap().mesh_a_id)
+                            .mesh(&self.doc.glue(id).unwrap().mesh_a_id)
                             .unwrap()
                             .part_id
                             == part
@@ -188,7 +188,7 @@ impl Exporter<'_> {
     pub(super) fn transforms(&mut self) -> Vec<N> {
         let mut sources = Vec::new();
         for id in self.doc.transform_order() {
-            let t = self.doc.get_transform(id).unwrap();
+            let t = self.doc.transform(id).unwrap();
             let owner = self.source(id);
             let binding = self.doc.binding_for_scene(id);
             let samples: Vec<_> =

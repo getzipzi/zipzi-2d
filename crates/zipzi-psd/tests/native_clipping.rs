@@ -38,8 +38,20 @@ fn import(layers: Vec<Layer>) -> ImportBundle {
 }
 
 fn render(bundle: &ImportBundle) -> Vec<u8> {
+    let mut b = bundle.document.builder();
+    for asset in &bundle.assets {
+        let image = decode_png(&asset.bytes).unwrap();
+        let mut value = b.asset(&asset.id).unwrap().clone();
+        value.content = zipzi_core::state::AssetContent::Image {
+            resource: zipzi_core::state::ResourceKey::new(),
+            width: image.width,
+            height: image.height,
+        };
+        b.replace_asset(value).unwrap();
+    }
+    let document = b.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
-    assert!(zipzi_core::evaluate_frame(&bundle.document, &Default::default(), &mut frame).is_ok());
+    assert!(zipzi_core::evaluate_frame(&document, &Default::default(), &mut frame).is_ok());
     let context = MetalContext::new().unwrap();
     let data: Vec<_> = bundle
         .assets
@@ -162,12 +174,16 @@ fn editing_the_imported_base_updates_the_entire_clipping_group() {
     clipped.clipping = Some(true);
     let mut bundle = import(vec![raster("base", [255, 0, 0, 255]), clipped]);
     let id = bundle.document.mesh_order()[0].clone();
-    let mut base = bundle.document.get_mesh(&id).unwrap().clone();
+    let mut base = bundle.document.mesh(&id).unwrap().clone();
     base.appearance.opacity = 0.5;
-    assert!(bundle.document.replace_mesh(base.clone()).status.is_ok());
+    let mut b = bundle.document.builder();
+    b.replace_mesh(base.clone()).unwrap();
+    bundle.document = b.freeze().unwrap().state;
     assert_pixel(&render(&bundle), 4, [0, 128, 0, 128]);
     base.enabled = false;
-    assert!(bundle.document.replace_mesh(base).status.is_ok());
+    let mut b = bundle.document.builder();
+    b.replace_mesh(base).unwrap();
+    bundle.document = b.freeze().unwrap().state;
     assert_pixel(&render(&bundle), 4, [0; 4]);
 }
 

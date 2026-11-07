@@ -1,201 +1,285 @@
-# Zipzi Python SDK: agent workflow
+# Authoring with Python
 
-Import `zipzi` and use `zipzi.describe("zipzi")` to discover the installed API.
-Use `zipzi.describe("Session.meshes.list")` for one method at a time. The reference
-and recipes here match this installed client.
+This guide and [executable recipes](recipes.py) ship with the installed client.
+Requires CPython 3.14. Install `zipzi` for an Editor connection; install the
+matching `zipzi-native` as well for Local execution.
 
-`print(zipzi.describe("modeling.ModelingQuery").format())` prints complete help,
-including fields and child paths. Direct printing, `repr` and `summary` are bounded
-previews. Describing or formatting help sends no host requests.
+New users: start with [installation and first run](getting-started.md), then
+[ownership and lifetimes](lifecycle.md). This guide focuses on task workflows.
 
-## Choose an execution host
+## Find an API without starting a host
 
-`with zipzi.local() as runtime:` explicitly owns a process-local Runtime and needs
-the matching optional native wheel. `zipzi.connect(endpoint=...)` uses the existing
-host; `start=True` explicitly allows starting one. Installing native code never
-changes an established connection. Pure imports and `describe` require neither a
-native wheel, a host nor a GPU.
-
-Query `runtime.capabilities()` and `runtime.limits()` before selecting work. These
-describe current availability without reserving admission. Local has no Editor
-windows. `runtime.connection` caches handshake information.
-
-Connected compatibility uses the stable wire major `zipzi-runtime-v3`, separately
-from package versions and source build hashes. Compatible API additions and
-different optional capabilities do not prevent connection. Check
-`runtime.connection.capabilities` before choosing optional services; unsupported
-calls return `UNSUPPORTED_OPERATION` and leave the connection usable. Binary
-layout signatures are still checked for the affected calls. An explicit
-`zipzi.connect(sdk_build=...)` additionally pins an exact build; the default does
-not. Earlier feature-specific `rN` protocols require upgrading Python and Editor
-to this baseline together. `zipzi.local()` still needs its matching native wheel.
-
-## Select and read
-
-Use `runtime.sessions.list()` and attach an explicit `SessionId`. Create with
-`runtime.sessions.create()` when the task needs a new document; shared Rust code
-allocates its persistent UUID. A freshly initialized document is unsaved and
-modified; save it or explicitly discard it when closing. Never guess an existing object's UUID.
-
-Every collection has `list(name=None, limit=128, cursor=None)`, `get(id, expected=None)`
-and `get_many(ids, expected=None)`. A name filter is case-sensitive and exact.
-Duplicate names are legitimate: use ownership and IDs to choose the intended
-object. List returns small metadata, excluding geometry, keyforms and pixels.
-Follow `next_cursor` until None. A page may contain fewer than limit items or even
-be empty after a bounded scan; continue while a cursor exists.
-
-A cursor binds its collection, filter and exact Source. A formal change, Undo/Redo
-or candidate sequence change causes `STALE_SOURCE`: explicitly restart from the
-first page. Do not concatenate pages from different sources. A recovered lost
-reply returns the original captured page, including its original continuation.
-
-Read `snapshot.value` or `batch.items`; source is on the outer container, including
-empty results. `get_many` preserves order and duplicate IDs and fails as a whole
-for missing IDs or budget refusals. Queries do not poison an Edit. Explicit
-`expected=source` rejects a changed source atomically on the host.
-
-### Choose mesh records and follow references
-
-`meshes.get/get_many` returns identity, name and geometry. Use canonical
-`modeling.records` for texture references, Part/deformer membership, appearance,
-draw order and other authoring metadata. Requested record slots may be `None`
-when an ID is absent. This example assumes an attached `session` and a known
-`mesh_id`; it keeps subsequent image reads on the same Source:
+Browse the [generated API reference](reference/index.md) for methods and
+overloads, read-only response fields, and domain types with constructor defaults
+and enum members. The reference is included in the installed package:
 
 ```python
-from zipzi import modeling
+from importlib.resources import files
 
-snapshot = session.modeling.records(modeling.ModelingQuery(meshes=(mesh_id,)))
-mesh = snapshot.value.meshes[0]
-if mesh is not None:
-    part_id = mesh.part_id or None
-    parent_id = mesh.deformer_id or None
-    print(part_id, parent_id, mesh.appearance, mesh.draw_order)
-    texture = mesh.texture_asset_id
-    if isinstance(texture, modeling.scene.SceneReferenceResolved):
-        image = session.resources.get(texture.object_id, expected=snapshot.source)
-        print(image.value)
-    elif isinstance(texture, modeling.scene.SceneReferenceUnresolved):
-        print("Texture reference is unresolved:", texture)
-    else:
-        print("No texture reference was specified")
+print(files('zipzi').joinpath('docs/reference/index.md').read_text(encoding='utf-8'))
 ```
 
-Canonical `Mesh.part_id/deformer_id` and `Part.parent_id` use `""` for the root
-or an unassigned relationship. Scene summaries use `None`. Convert canonical
-values with `value or None` when comparing to summaries; use `value or ""` when
-constructing canonical records. Resolved references expose `.object_id`, ordinary
-objects `.id`, and typed `PartId`/`TransformId` wrappers `.value`; unresolved
-references must not be treated as existing object IDs.
+For focused interactive help:
 
-`SessionInfo.id` and `Source.session` identify a Runtime session;
-`SessionInfo.version.session_id` and `Source.version.session_id` identify the SDK
-authoring session. Do not compare their serial numbers as if they share an ID
-namespace. `SessionInfo.path` is a project path, not an Editor display title;
-there is currently no SessionInfo display-name field. A pathless session remains
-selectable by its Runtime identity. Optional `editor_context()` alone does not
-guarantee a unique active document across windows.
+```python
+import zipzi
 
-Convenience `edit.meshes.create` and `edit.parameters.create` return IDs directly.
-`edit.apply(scene.CreatePart(scene.PartSpec("Face")))` returns a `WriteResult`;
-the created Part ID is in `.ids[0]`. Organization membership and drawing groups
-are independent: `MoveToPart` does not promise to change draw-group membership.
-Inspect canonical drawing groups as well as the evaluated order when reorganizing.
-
-Convenience `bindings.Axis.keys` and `bindings.Keyform.keys` use numeric parameter
-coordinates. Canonical binding axes contain samples with stable UUIDs; canonical
-keyforms refer to those sample identities. Match numeric coordinates to the axis
-samples before constructing canonical keyforms; a numeric key is not a sample ID.
-
-### Mesh quality
-
-See the [mesh quality and inspection guide](mesh-quality.md) for sampling, overlays and coverage.
-
-## Edit and plan
-
-Use `with session.edit("meaningful history label") as edit:`. Candidate reads see
-prior successful operations. Construct operations in their domain (`meshes.Rename`,
-`parameters.Patch`, `bindings.Create`, `resources.CreateImage`, scene/modeling).
-`ops.Operation` and `ops.PlannableOperation` are type unions, not constructor namespaces.
-Ordinary convenience methods construct these same operations.
-
-Geometry triangles contain vertex IDs, not offsets into positions. Arrays follow
-the corresponding vertex-ID order; UV and model coordinates retain SDK semantics.
-Inputs are copied into immutable owned collections before execution. Canonical
-modeling records use their documented SDK fields; no Python model mirror exists.
-
-`session.plan(operation)` plans against formal content. `edit.plan(operation)`
-plans against that exact candidate/sequence. Inspect report cost and losses before
-`edit.apply(plan)`. A batch can contain one Plan, as its first item, followed by
-operations. A later write invalidates an older candidate Plan. Keep its report
-for inspection; close the Plan after use. Address plans also bind identity,
-context and field epochs, so recreating an ID cannot revive an old address.
-
-Normal Edit context exit commits and waits. The confirmed `edit.receipt` states
-whether content changed and identifies before/after versions. Explicit cancel
-leaves receipt None. Ordinary write or conversion failures make the candidate
-uncommittable even if caught: fix inputs and start a fresh Edit. Confirmed Busy
-or pre-execution budget refusals preserve the candidate; act on recovery_action.
-
-## Continue work in the Editor
-
-Attach the desktop Session. `edit.commit().wait()` updates its in-memory document
-and adds one Undo step when changed. Editor views refresh; people can refine the
-content and the next Edit reads their changes. Script exit retains committed
-resources; saving is separate. Use the installed example:
-
-```sh
-python -I -m zipzi.docs.editor_handoff list
-python -I -m zipzi.docs.editor_handoff rename \
-  --runtime RUNTIME_UUID --session SESSION_SERIAL --mesh MESH_UUID --name "Refined face"
+print(zipzi.describe().format())
+print(zipzi.describe('Session.query').format())
+print(zipzi.describe('values.Command').format())
+print(zipzi.describe('values.CommandCreateParameter').format())
+print(zipzi.describe('results.SaveReceipt').format())
 ```
 
-Use `--endpoint /absolute/path/to/profile.sock` before the subcommand for a
-specific Unix host. Windows uses a local Named Pipe name. Prefer discovery with
-`ZIPZI_RUNTIME_DIR` (an absolute directory) and `ZIPZI_RUNTIME_PROFILE` (a short
-lowercase name); `zipzi.connect(start=True, host=absolute_host_path)` uses those
-settings. The Windows Editor supports connected sessions; desktop validation
-is still in progress. Installing the pure client does not install or launch a
-host unless `start=True` is explicitly requested.
+`children` contains paths for further queries. Pass `next_offset` as `offset`
+to continue an entry's children; the default page contains 32 paths. Use
+`describe('values')` to browse all generated inputs and domain values, and
+`describe('results')` for response shapes. `help(Type)` and `inspect.signature`
+work too. No discovery call starts an Editor or imports the native adapter.
 
-## Recover and wait
+The value package is divided into domains such as `values.parameters`,
+`values.meshes`, `values.bindings`, `values.motion`, `values.physics`,
+`values.commands` and `values.operations`. Browse one with
+`describe('values.meshes')`. Existing `from zipzi import values as v` code works;
+focused imports are also available:
 
-Use `zipzi.recover_call(edit.meshes.create, spec)` when static result typing matters.
-Only registered SDK methods are accepted; it calls the method once and can recover
-the original Call once. It never retries arbitrary business code or an entire workflow.
+```python
+from zipzi.values.meshes import Mesh, MeshGeometry
+from zipzi.values.motion import MotionClip
+```
 
-On `OutcomeUnknown`, retain the original exception/owner and call `error.recover()`.
-The recovered runtime result has exactly the original public return type. Do not
-resend the write, create a new request identity or infer success from silence.
-Recovery can remain unknown; keep the new exception. Resolved old exceptions cannot
-consume newer requests. Recover commit into a Job, then wait for its Receipt.
+`v.Mesh` and `Mesh` are the same immutable type, with the same codec and defaults.
 
-`JobTimeout` means the accepted Job remains pending. It does not mean cancellation,
-failed execution or unknown write outcome. Keep the Job and wait again. `cancel()`
-is a request: entered IO may still finish and reports its real outcome. `wait()`
-caches success/failure and releases the result slot. `close()` waits, rather than
-cancels. Pending status/cancel requests must be recovered first.
+Generated constructors validate fields and own immutable nested values. Their
+`repr` is a short preview; use `.to_wire()` to inspect complete content. Field
+semantics come from the shared contract. Response mappings and tuples are also
+immutable. `results` declares their read-only keys for IDEs and type checkers.
 
-## Verify, save and release
+## Choose a host and document
 
-After commit, reread objects and verify content, Source, values, pixels or history.
-Bounded repr and `summary()` perform no RPC or array/byte expansion.
+`with zipzi.local() as runtime:` owns a native in-process host. Closing it releases
+its documents without saving. `with zipzi.connect() as runtime:` connects to a
+running Editor. `endpoint=Path(...)` selects a private endpoint explicitly;
+`start=True, host=Path(...)` permits starting an Editor executable when needed.
+The client and host must support wire major v4. Check `runtime.capabilities()`
+and `runtime.limits()` before selecting optional services.
 
-Prepare images independently with `runtime.resources.prepare_image`; preparation
-is not a document write. Accept or replace through an Edit. Prepared images,
-Buffers, Plans, references and pixel leases have explicit ownership; close them.
-Candidate/formal/history owners retain accepted image data independently.
+List documents before editing an existing one:
 
-See the [animation, spatial queries and observation guide](animation-spatial.md) for these workflows.
+```python
+with zipzi.connect() as runtime:
+    for info in runtime.sessions.list():
+        print(info['session'], info['path'], info['dirty'])
+```
 
-Save with `session.project.save(absolute_host_path).wait()` and inspect `durable`
-and the receipt version. Paths refer to the execution host, not the client machine.
+Attach an explicit ID from that output with `runtime.sessions.attach(session_id)`.
+Multiple windows, absent paths and duplicate names are possible; do not assume
+the first document is the intended one. `runtime.sessions.create()` creates a new
+unsaved document. `session.detach()` releases your attachment and retains the
+document. `session.close()` closes it and checks unsaved changes and other
+attachments. Discarding edits requires `discard_modified=True`.
 
-`session.detach()` invalidates all aliases in this client and retains the host
-session; active work refuses detach. `session.close()` actually frees the session,
-path lock and attached resources. It refuses unsaved changes or other clients.
-Save first, or use explicit `discard_modified=True` only when the task permits it.
-Attach again to create a new binding; old references stay invalid. Close Runtime
-last. Connected close releases the client while formal sessions remain resident;
-Local close releases the Runtime's sessions. Unknown pending work defaults to Busy;
-`abandon_pending=True` explicitly forfeits recovery and never authorizes replay.
+## Query typed values and follow pages
+
+The following snippets assume an attached `session` and explicitly selected IDs.
+The recipes provide complete functions and a runnable Local CLI.
+
+```python
+from zipzi import values as v
+
+page = session.query(v.QueryCollection(
+    kind=v.ObjectKind.PARAMETER, offset=0, limit=128,
+))
+for parameter in page.records(v.Parameter):
+    print(parameter.id, parameter.name, parameter.minimum, parameter.maximum)
+if page.value['next_offset'] is not None:
+    following = session.query(v.QueryCollection(
+        kind=v.ObjectKind.PARAMETER, offset=page.value['next_offset'], limit=128,
+    ), source=page.source)
+```
+
+Continue until `next_offset` is `None`. The `list_parameters` recipe implements
+the complete loop. Reuse the original source for all pages and dependent reads.
+If another client publishes, `STALE_SOURCE` means discard collected pages and
+start again; do not combine pages from different sources. Names may be duplicated:
+select by stable ID after inspecting ownership and references.
+
+`QueryObjects(addresses=(ObjectAddress(...), ...))` preserves requested order and
+duplicates. Missing IDs fail the whole query with `MISSING_OBJECT`; at most 256
+records may be requested. Collection page sizes are 1–256. Queries return full
+records, which can include geometry; request a small page for large objects.
+`QuerySummary()` returns identity and counts. `QueryCollectionCapabilities(...)`
+returns current creation/move/reorder verdicts; availability does not reserve a
+later operation.
+
+`Snapshot.source` distinguishes formal and candidate content; `content` identifies
+immutable content within the resident session/history. It is not a persistent
+file hash: reopening or importing creates a new content identity even when the
+authored values are equal. To verify a saved/reopened project, compare stable
+object IDs, fields, geometry and pixels rather than comparing `content` with an
+earlier save receipt. `snapshot.records(v.Mesh)` decodes a homogeneous selection into
+generated Mesh values. For mixed kinds, inspect each `address` and decode its
+`value` with the corresponding `Type.from_wire(...)`. Root references in some
+canonical domain records use the empty string; unresolved imported references
+are explicit variants and must not be treated as existing object IDs.
+
+Mesh creation takes `MeshCreateSpec.geometry` and a texture asset ID string.
+A queried `Mesh` exposes `vertex_ids`, `base_positions`, `uvs` and `triangles`
+directly; it has no `geometry` attribute. Its texture is a typed reference:
+
+```python
+mesh, = session.query(v.QueryObjects(addresses=(
+    v.ObjectAddress(kind=v.ObjectKind.MESH, id=mesh_id),
+))).records(v.Mesh)
+if isinstance(mesh.texture_asset_id, v.SceneReferenceResolved):
+    print(mesh.texture_asset_id.object_id)
+```
+
+Compare these fields directly. `repr` is a bounded diagnostic preview, so do not
+parse it to resolve references or compare complete geometry.
+
+## Read, edit and verify
+
+```python
+selection = v.QueryObjects(addresses=(
+    v.ObjectAddress(kind=v.ObjectKind.PARAMETER, id=parameter_id),
+))
+snapshot = session.query(selection)
+assert isinstance(snapshot.source, v.QuerySourcePublished)
+with session.draft('Rename parameter', expected=snapshot.source.value) as draft:
+    draft.apply(v.CommandRename(target=selection.addresses[0], name='Head angle'))
+    parameter, = draft.query(selection).records(v.Parameter)
+    assert parameter.name == 'Head angle'
+```
+
+This publishes once and creates one undo step. Formal Session reads keep seeing
+the resident publication while Draft queries see the candidate. Candidate
+commands advance `draft.source.sequence`. A concurrent publication makes a Draft
+stale: inspect the current document and rebuild the intended edit.
+
+`draft.apply(*commands)` submits an atomic batch; an ordinary accepted command
+failure ends the Draft. `draft.preview(*commands)` prepares a gesture proposal;
+rejection retains the last valid candidate. Normal Draft context exit publishes,
+exceptions cancel. `OutcomeUnknown` retains ownership for recovery instead.
+`draft.apply_async(...)` makes the Draft busy: wait for its Job before further
+commands or leaving the Draft context. Undo/Redo advance revision even when
+restoring earlier content; old sources do not become valid again.
+
+## Save, import and export
+
+Editing and saving are separate. An explicit path is absolute on the host:
+
+```python
+from pathlib import Path
+
+with session.save(Path('/absolute/path/model.zipzi')) as job:
+    receipt = job.wait()
+print(receipt['published'], receipt['durable'], receipt['warnings'])
+```
+
+`published` reports destination replacement. Check `durable` and `warnings`
+for storage-sync issues even after publication. `session.save()` uses the current
+project path. `fingerprint=` supplies an exact destination precondition.
+
+`save(path)` without a fingerprint creates a new destination and returns
+`PROJECT_EXISTS` if it already exists. After the first save, `session.save()`
+updates that same tracked project using its known fingerprint. To replace a
+different known destination intentionally, supply the fingerprint from its
+earlier save receipt:
+
+```python
+fingerprint = v.ProjectFingerprint.from_wire(previous_receipt['fingerprint'])
+with session.save(destination, fingerprint=fingerprint) as job:
+    receipt = job.wait()
+```
+
+An open project path is owned by its resident Session. Opening the same file in
+a second Session on that host returns `PROJECT_BUSY`. To verify a saved file,
+reopen it in its existing Session, or close that owner before opening another.
+Detaching retains the resident Session and its project ownership.
+
+`session.open(path)` replaces content from a native project. `import_project(path,
+v.ImportFormat.PSD)` imports PSD; Model3 and Cubism are also supported. Both return
+Jobs and reset history on replacement. Save or explicitly resolve unsaved work
+first. `session.export(path, v.ExportFormat.RUNTIME)` exports captured content;
+read its receipt for durability and conversion notices. Use `allow_loss=True`
+only when the intended conversion may discard unsupported data.
+
+## Own jobs and bulk bytes
+
+Use context managers for Jobs and Blobs. Each `append` or `read` transfers at most
+1 MiB. Image uploads contain RGBA bytes, exactly `width * height * 4`; seal before
+`draft.replace_image_blob`. The `create_scene` recipe demonstrates a complete
+image and mesh edit. `read_all` handles multi-chunk readback.
+
+`session.samples(v.SampleRequest(...))` returns a Job whose Blob contains UTF-8
+JSON: source, content and ordered frames. `sample_animation` accepts clip IDs,
+activation times and sample times in seconds. For activation scheduled at the origin,
+pass `motions=((clip_id, 0.0),)`; the second value is its start time, not a weight.
+Empty motions samples the rest pose. Sampling is
+read-only and does not add undo history.
+
+Animation sampling uses preview playback, with canonical 1/60-second update
+ticks. An activation starts on its first eligible update; the clip's local time
+can differ from the requested absolute time. For an activation scheduled at zero,
+positive seeks start playback at the first tick (1/60 second); a sample at time
+zero shows the initial key. Compare curve values using each frame's
+`animation['motion_positions'][i]['local_time']`, not the requested time.
+This preserves the Editor playback behavior.
+
+The `create_linear_motion` recipe shows all fields required for a real parameter
+track and clip, including fades and extension maps:
+
+```python
+from zipzi.docs.recipes import create_linear_motion, sample_animation
+
+clip_id = create_linear_motion(session, parameter_id)
+report = sample_animation(session, (0., .25, .5, .75, 1.), motions=((clip_id, 0.),))
+for frame in report['frames']:
+    animation = frame['animation']
+    print(animation['time'], animation['motion_positions'], animation['parameters'])
+```
+
+For this -20..20 linear sweep, the expected value is `-20 + 40 * local_time`.
+Keep the authored parameter default unchanged when sampling a motion.
+
+A host with `gpu_observation` supports `session.observe(input, view)`. Its Blob is
+a sequence of packets: four-byte big-endian JSON-header length, that header,
+then `png_bytes` bytes of PNG. The first header includes the shared texture report.
+The `observe` and `observation_packets` recipes decode complete packets.
+
+## Handle timeouts and lost responses
+
+A `JobTimeout` leaves work running. Catch it **inside** the Job context to wait
+again; leaving the context closes the Job and cancels unfinished work:
+
+```python
+with session.save() as job:
+    try:
+        receipt = job.wait(timeout=1)
+    except zipzi.JobTimeout:
+        receipt = job.wait()
+```
+
+`OutcomeUnknown` means the mutation may have happened. Recover the original call
+and preserve the returned result:
+
+```python
+draft = session.draft('Rename')
+try:
+    outcomes = draft.apply(command)
+except zipzi.OutcomeUnknown as error:
+    outcomes = zipzi.recover_call(error)
+# The recovered apply has updated this same Draft's source.
+draft.publish()
+```
+
+Recovery can itself lose a response: recover the new `OutcomeUnknown` before
+continuing. Keep the Runtime, Draft and Job owners alive until resolution.
+Never replay a mutation under a fresh request ID. Recovering a lost context-exit
+publication does not resume the Python `with` block; explicitly inspect the
+recovered outcome and release resources when finished.
+
+For event readers, `session.subscribe()` returns a starting cursor. Keep a cursor
+per reader; use `session.events(cursor)` and advance to the final event's version.
+`EVENT_GAP` requires a new subscription and fresh state inspection.

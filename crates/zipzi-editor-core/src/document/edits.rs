@@ -20,7 +20,7 @@ impl Document {
         self.ensure_editable(std::slice::from_ref(object))?;
         ensure!(
             self.model()
-                .get_transform(&object.id)
+                .transform(&object.id)
                 .is_some_and(|t| t.rotation().is_some()),
             "Select a Rotation"
         );
@@ -36,7 +36,7 @@ impl Document {
             original: PendingOriginal::RotationLength(object.id.clone(), original),
             edit: self
                 .session
-                .begin_owned_edit("Adjust rotation bone length", None)?
+                .begin_draft("Adjust rotation bone length", None)?
                 .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -100,7 +100,7 @@ impl Document {
         self.pending = Some(PendingEdit {
             kind,
             original: PendingOriginal::Controls(crate::control_edit::EditOriginal::Mesh(original)),
-            edit: self.session.begin_owned_edit(label, None)?.interactive()?,
+            edit: self.session.begin_draft(label, None)?.interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
             topology_changed: false,
@@ -127,7 +127,7 @@ impl Document {
             )),
             edit: self
                 .session
-                .begin_owned_edit("Edit canvas controls", None)?
+                .begin_draft("Edit canvas controls", None)?
                 .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -172,7 +172,7 @@ impl Document {
                 pending
                     .edit
                     .candidate_document()
-                    .get_transform(&target.object.id)
+                    .transform(&target.object.id)
                     .and_then(|t| t.warp())
                     .map(|w| (w.rows, w.columns))
             };
@@ -183,7 +183,7 @@ impl Document {
             let after = pending
                 .edit
                 .candidate_document()
-                .get_transform(&target.object.id)
+                .transform(&target.object.id)
                 .and_then(|t| t.warp())
                 .map(|w| (w.rows, w.columns));
             if before != after {
@@ -192,7 +192,8 @@ impl Document {
                 let old_source = self.canvas_topology_source.get_mut().unwrap().take();
                 if let Some(old) = old {
                     *self.previous_canvas_topology.get_mut().unwrap() = Some(old);
-                    *self.previous_canvas_source.get_mut().unwrap() = old_source;
+                    *self.previous_canvas_source.get_mut().unwrap() =
+                        old_source.map(|(source, _)| source);
                 }
                 *self.changed_canvas_meshes.get_mut().unwrap() = None;
             }
@@ -255,13 +256,16 @@ impl Document {
         {
             return true;
         }
-        self.pending.as_ref().is_some_and(|pending| {
-            *pending.changed.get_or_init(|| {
-                !pending
-                    .original
-                    .unchanged(&pending.edit.candidate_document())
+        self.pending
+            .as_ref()
+            .filter(|pending| pending.edit.is_active())
+            .is_some_and(|pending| {
+                *pending.changed.get_or_init(|| {
+                    !pending
+                        .original
+                        .unchanged(&pending.edit.candidate_document())
+                })
             })
-        })
     }
 
     pub fn finish_edit(&mut self) -> Result<()> {
@@ -269,27 +273,39 @@ impl Document {
         if self.manual_pending.is_some() {
             self.finish_manual_mesh_gesture()?;
         }
+        if self
+            .pending
+            .as_ref()
+            .is_some_and(|pending| !pending.edit.is_active())
+        {
+            self.cancel_edit();
+            return Err(
+                zipzi_core::Status::error("DRAFT_ENDED", "Edit candidate has ended").into(),
+            );
+        }
         if let Some(token) = self.expression_edit_token() {
             self.commit_expression_entry_edit(token)?;
             return Ok(());
         }
         let changed = self.pending_changed();
-        if let Some(pending) = self.pending.take() {
+        if let Some(mut pending) = self.pending.take() {
             let previous_revision = self.projection_revision;
             let property = pending.property_index_target();
             if changed
                 && property.as_ref().is_some_and(|p| {
                     matches!(
                         p.kind,
-                        crate::ObjectKind::PhysicsGroup
-                            | crate::ObjectKind::ExpressionEntry
-                            | crate::ObjectKind::MotionRegistration
+                        crate::ObjectKind::ExpressionEntry | crate::ObjectKind::MotionRegistration
                     )
                 })
             {
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,
                     Err(error) => {
+                        if pending.edit.is_active() {
+                            self.pending = Some(pending);
+                            return Err(error.into());
+                        }
                         if let Some(object) =
                             property.as_ref().filter(|_| !pending.topology_changed)
                         {
@@ -302,10 +318,10 @@ impl Document {
                         return Err(error.into());
                     }
                 };
-                if receipt.changed {
+                if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                     self.pristine_blank = None;
                 }
-                self.consume_authoring_receipt(&receipt, false);
+                self.consume_authoring_receipt(&receipt, None);
                 return Ok(());
             }
             self.invalidate_projection(
@@ -316,6 +332,10 @@ impl Document {
                 let receipt = match pending.edit.commit_to(&mut self.session) {
                     Ok(receipt) => receipt,
                     Err(error) => {
+                        if pending.edit.is_active() {
+                            self.pending = Some(pending);
+                            return Err(error.into());
+                        }
                         if let Some(object) =
                             property.as_ref().filter(|_| !pending.topology_changed)
                         {
@@ -328,16 +348,7 @@ impl Document {
                         return Err(error.into());
                     }
                 };
-                if property
-                    .as_ref()
-                    .is_none_or(|p| p.kind != crate::ObjectKind::Motion)
-                    || receipt
-                        .changes
-                        .categories
-                        .contains(&zipzi_sdk::ChangeCategory::EvaluationInputs)
-                {
-                    self.animation_input_revision = receipt.after.revision;
-                }
+                self.animation_input_revision = receipt.version.revision;
                 if parameter {
                     self.reconcile_parameter_preview()?;
                 }
@@ -365,18 +376,26 @@ impl Document {
             if let PendingOriginal::ExpressionEntry(address) = &pending.original {
                 let references_changed = pending
                     .edit
-                    .candidate_document()
-                    .get_expression_entry(address.entry_id())
-                    .unwrap()
-                    .1
-                    .target
-                    != address.expected().target;
+                    .read_snapshot()
+                    .ok()
+                    .and_then(|snapshot| {
+                        snapshot
+                            .snapshot
+                            .document()
+                            .expression_entry(&address.id)
+                            .map(|(_, entry)| entry.target != address.value.target)
+                    })
+                    .unwrap_or(true);
                 let previous_revision = self.projection_revision;
                 self.invalidate_expression_projection();
                 if !references_changed {
                     self.refresh_expression_index(
                         previous_revision,
-                        &[address.owner_id().to_owned()],
+                        &[address
+                            .owner
+                            .as_deref()
+                            .expect("expression owner")
+                            .to_owned()],
                     );
                 }
                 return;
@@ -411,8 +430,7 @@ impl Document {
 
     fn apply_history(&mut self, redo: bool) -> Result<()> {
         self.finish_edit()?;
-        let before = self.evaluation_revision();
-        let state = self.model().editor_state().clone();
+        let before = self.model();
         let receipt = if redo {
             self.session.redo()?
         } else {
@@ -420,13 +438,11 @@ impl Document {
         };
         self.refresh_textures()?;
         self.reconcile_parameter_preview()?;
-        self.consume_authoring_receipt(
-            &receipt,
-            before != self.evaluation_revision() || state == *self.model().editor_state(),
-        );
+        self.consume_authoring_receipt(&receipt, Some(&before));
         // Visibility affects Editor preview even though it is not a runtime
         // evaluation input. Lock-only history keeps the current playback source.
-        if !state
+        if !before
+            .editor_state()
             .hidden_objects()
             .eq(self.model().editor_state().hidden_objects())
         {
@@ -464,20 +480,23 @@ mod tests {
             let peer = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::new_v4().to_string());
             doc.session.edit("Fixture", None, |edit| {
                 for object in [&mesh, &peer] {
-                    edit.create_mesh(zipzi_core::Mesh {
-                        id: object.id.clone(),
-                        runtime_id: object.id.clone(),
-                        name: "Mesh".into(),
-                        vertex_ids: vec![0, 1, 2],
-                        base_positions: vec![
-                            Vec2::new(0., 0.),
-                            Vec2::new(1., 0.),
-                            Vec2::new(0., 1.),
-                        ],
-                        uvs: vec![Vec2::default(); 3],
-                        triangles: vec![[0, 1, 2]],
-                        ..Default::default()
-                    })?;
+                    crate::test_sdk::insert_fixture_mesh(
+                        edit,
+                        zipzi_core::Mesh {
+                            id: object.id.clone(),
+                            runtime_id: object.id.clone(),
+                            name: "Mesh".into(),
+                            vertex_ids: vec![0, 1, 2],
+                            base_positions: vec![
+                                Vec2::new(0., 0.),
+                                Vec2::new(1., 0.),
+                                Vec2::new(0., 1.),
+                            ],
+                            uvs: vec![Vec2::default(); 3],
+                            triangles: vec![[0, 1, 2]],
+                            ..Default::default()
+                        },
+                    )?;
                 }
                 Ok(())
             })?;

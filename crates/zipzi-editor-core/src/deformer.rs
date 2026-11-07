@@ -378,7 +378,7 @@ impl crate::tools::ToolController {
         object: &crate::ObjectRef,
     ) -> Option<WarpTransformTarget> {
         let model = document.model();
-        model.get_transform(&object.id)?.warp()?;
+        model.transform(&object.id)?.warp()?;
         let components = if self.warp_whole {
             vec![]
         } else {
@@ -387,7 +387,7 @@ impl crate::tools::ToolController {
                 .filter(|c| {
                     document.context().selections.contains(&c.object)
                         && model
-                            .get_transform(&c.object.id)
+                            .transform(&c.object.id)
                             .is_some_and(|t| t.warp().is_some())
                 })
                 .cloned()

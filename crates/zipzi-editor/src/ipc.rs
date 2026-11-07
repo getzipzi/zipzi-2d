@@ -61,7 +61,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
         .global::<host::DesktopHost>()
         .runtime
         .read()
-        .transport_budget();
+        .transfer_budget();
     let (server, incoming) = owner.listen_with_budget(budget)?;
     // One host-owned pool survives every batch yield. Completions return through
     // this mailbox rather than blocking GPUI executor threads on OS-thread joins.
@@ -84,11 +84,11 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
         while let Ok(completion) = completions.recv().await {
             cx.update(|cx| {
                 let host = cx.global::<host::DesktopHost>().clone();
-                let terminal = completion.is_terminal();
-                host.runtime.write().complete(completion);
-                if terminal {
-                    host.completed();
-                }
+                host.runtime
+                    .write()
+                    .complete(completion)
+                    .expect("worker completion belongs to DesktopHost");
+                host.completed();
                 dispatch(host, &returning_workers);
             });
         }
@@ -199,7 +199,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
     .detach();
     Ok(())
 }
-fn show_session(session: Option<zipzi_runtime::SessionId>, cx: &mut App) {
+fn show_session(session: Option<zipzi_runtime::SessionKey>, cx: &mut App) {
     host::open_window(cx, true);
     for window in cx.windows() {
         let _ = window.update(cx, |root, window, cx| {

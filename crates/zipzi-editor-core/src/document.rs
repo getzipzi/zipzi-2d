@@ -7,7 +7,8 @@ use std::{
 };
 use uuid::Uuid;
 use zipzi_core::{Mesh, ModelSetup, ParameterKind, preview::PreviewState};
-use zipzi_sdk::{AuthoringSession, EditReceipt, EditSession, SaveReceipt};
+use zipzi_sdk::Publication;
+use zipzi_sdk::{AuthoringSession, Commands, SaveReceipt};
 
 #[path = "object_state.rs"]
 mod object_state;
@@ -101,7 +102,7 @@ enum Gesture {
 
 enum PendingOriginal {
     RotationLength(String, Option<f32>),
-    ExpressionEntry(zipzi_sdk::ExpressionEntryAddress),
+    ExpressionEntry(crate::FieldCapture<zipzi_contract::document::ExpressionEntryFields>),
     Controls(crate::control_edit::EditOriginal),
     Properties(
         crate::ObjectRef,
@@ -113,21 +114,24 @@ impl PendingOriginal {
     fn id(&self) -> &str {
         match self {
             Self::RotationLength(id, _) => id,
-            Self::ExpressionEntry(address) => address.entry_id(),
+            Self::ExpressionEntry(address) => &address.id,
             Self::Controls(original) => original.id(),
             Self::Properties(object, _, _) => &object.id,
         }
     }
-    fn unchanged(&self, model: &zipzi_core::Document) -> bool {
+    fn unchanged(&self, model: &zipzi_core::state::DocumentState) -> bool {
         match self {
             Self::RotationLength(id, value) => {
                 model.editor_state().rotation_bone_lengths.get(id).copied() == *value
             }
-            Self::ExpressionEntry(address) => model
-                .get_expression_entry(address.entry_id())
-                .is_some_and(|(_, entry)| {
-                    zipzi_sdk::ExpressionEntryFields::from(entry) == *address.expected()
-                }),
+            Self::ExpressionEntry(address) => {
+                model
+                    .expression_entry(&address.id)
+                    .is_some_and(|(_, entry)| {
+                        zipzi_contract::document::ExpressionEntryFields::from(entry)
+                            == *&address.value
+                    })
+            }
             Self::Controls(original) => original.unchanged(model),
             Self::Properties(object, values, scope) => {
                 Document::property_values_in(model, object, scope)
@@ -140,7 +144,7 @@ impl PendingOriginal {
 struct PendingEdit {
     kind: Gesture,
     original: PendingOriginal,
-    edit: crate::runtime_host::HostedEdit,
+    edit: crate::runtime_host::HostedDraft,
     preview: PreviewState,
     changed: OnceLock<bool>,
     topology_changed: bool,
@@ -149,14 +153,19 @@ struct PendingEdit {
 }
 
 struct ManualPending {
-    edit: crate::runtime_host::HostedEdit,
+    edit: crate::runtime_host::HostedDraft,
     preview: PreviewState,
     changed: bool,
 }
 
+struct GenerationPending {
+    edit: crate::EditPreview<zipzi_sdk::ManualMeshOutcome>,
+    preview: PreviewState,
+}
+
 /// CPU presentation prepared on a load worker; contains no writable SDK state.
 pub(crate) struct PreparedDocument {
-    version: zipzi_sdk::Version,
+    content: zipzi_sdk::ContentId,
     textures: textures::DocumentTextures,
     projection: Arc<crate::ObjectIndex>,
 }
@@ -179,9 +188,10 @@ pub struct Document {
     object_index_builds: std::sync::atomic::AtomicUsize,
     pub(crate) animation_catalog: std::sync::Mutex<Option<(u64, Arc<crate::AnimationCatalog>)>>,
     canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
-    canvas_topology_source: std::sync::Mutex<Option<zipzi_runtime::SourceRef>>,
+    canvas_topology_source:
+        std::sync::Mutex<Option<(zipzi_sdk::QuerySource, zipzi_core::state::ContentId)>>,
     previous_canvas_topology: std::sync::Mutex<Option<Arc<crate::canvas_topology::CanvasTopology>>>,
-    previous_canvas_source: std::sync::Mutex<Option<zipzi_runtime::SourceRef>>,
+    previous_canvas_source: std::sync::Mutex<Option<zipzi_sdk::QuerySource>>,
     changed_canvas_meshes: std::sync::Mutex<Option<std::collections::HashSet<String>>>,
     pending: Option<PendingEdit>,
     manual_pending: Option<ManualPending>,
@@ -191,7 +201,7 @@ pub struct Document {
             std::sync::Arc<std::sync::Mutex<zipzi_sdk::ManualVertexIdAllocator>>,
         >,
     >,
-    generation_pending: Option<ManualPending>,
+    generation_pending: Option<GenerationPending>,
     generation_texture: Option<SceneTexture>,
     next_property_edit: u64,
     textures: textures::DocumentTextures,
@@ -202,17 +212,18 @@ pub struct Document {
 mod authoring;
 pub use authoring::{
     AnimationDeletionPlan, AnimationLibraryPlan, AnimationRemoval, AuthoringAction,
-    AuthoringCollection, AuthoringCollectionCapabilities, AuthoringPlanningError,
-    AuthoringSessionReason, BusinessAction, BusinessDestination, BusinessPlan,
-    ExpressionAuthoringCapabilities, ExpressionEntryEditToken, MotionCopyKind, MotionCopyPlan,
-    ObjectAuthoringCapabilities, OperationResult, OrdinaryBindingAction, OrdinaryBindingCapture,
-    OrdinaryBindingPlan, OrganizationAuthoringCapabilities, PaletteMove, PaletteMoveDestination,
-    PaletteMovePlan, PaletteMovePlanningError, PalettePosition, PalettePreservation,
-    PaletteProjection, PaletteReparentCapture, PaletteReparentPlan, ParameterKeyformAction,
-    PhysicsAuthoringCapabilities, PhysicsChannelAction, PoseAuthoringCapabilities,
-    ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities, SceneAuthoringCapabilities,
-    SceneContentAuthoringCapabilities, SceneObjectCreationPlan, SceneObjectType, TextureInfo,
-    TreeDeletionCancellation, TreeDeletionCompletion, TreeDeletionPlan, TreeDeletionTask,
+    AuthoringCollectionCapabilities, AuthoringPlanningError, AuthoringSessionReason,
+    BusinessAction, BusinessDestination, BusinessPlan, CollectionTarget, EditPreview,
+    ExpressionAuthoringCapabilities, ExpressionEntryEditToken, FieldCapture, MotionCopyKind,
+    MotionCopyPlan, ObjectAuthoringCapabilities, OperationResult, OrdinaryBindingAction,
+    OrdinaryBindingCapture, OrdinaryBindingPlan, OrganizationAuthoringCapabilities, PaletteMove,
+    PaletteMoveDestination, PaletteMovePlan, PaletteMovePlanningError, PalettePosition,
+    PalettePreservation, PaletteProjection, PaletteReparentCapture, PaletteReparentPlan,
+    ParameterKeyformAction, PhysicsAuthoringCapabilities, PhysicsChannelAction,
+    PoseAuthoringCapabilities, ReferenceAuthoringCapabilities, ResourceAuthoringCapabilities,
+    SceneAuthoringCapabilities, SceneContentAuthoringCapabilities, SceneObjectCreationPlan,
+    SceneObjectType, TextureInfo, TreeDeletionCancellation, TreeDeletionCompletion,
+    TreeDeletionPlan, TreeDeletionTask,
 };
 mod edits;
 mod physics;
@@ -222,7 +233,7 @@ mod textures;
 mod transfer;
 
 impl Document {
-    pub fn runtime_session_id(&self) -> zipzi_runtime::SessionId {
+    pub fn runtime_session_id(&self) -> zipzi_sdk::SessionKey {
         self.session.id
     }
     pub fn runtime_host(&self) -> crate::RuntimeHost {
@@ -231,7 +242,8 @@ impl Document {
     pub(crate) fn sync_runtime_events(&mut self) -> Result<bool> {
         let receipts = match self.session.receipts() {
             Ok(receipts) => receipts,
-            Err(zipzi_runtime::RuntimeError::ResyncRequired) => {
+            Err(error) if error.code == "EVENT_GAP" => {
+                self.cancel_edit();
                 self.refresh_textures()?;
                 self.reconcile_parameter_preview()?;
                 self.after_history(true);
@@ -241,13 +253,16 @@ impl Document {
             }
             Err(error) => return Err(error.into()),
         };
-        let changed = receipts.iter().any(|r| r.changed);
+        let changed = receipts
+            .iter()
+            .any(|r| r.kind != zipzi_sdk::PublicationKind::Unchanged);
         if changed {
+            self.cancel_edit();
             self.refresh_textures()?;
             self.reconcile_parameter_preview()?;
             self.pristine_blank = None;
             for receipt in receipts {
-                self.consume_authoring_receipt(&receipt, true);
+                self.consume_authoring_receipt(&receipt, None);
             }
         }
         self.session.refresh_metadata()?;
@@ -280,7 +295,7 @@ impl Document {
         let known_changes = self.changed_canvas_meshes.get_mut().unwrap();
         if let Some(old) = old {
             *previous = Some(old);
-            *self.previous_canvas_source.get_mut().unwrap() = old_source;
+            *self.previous_canvas_source.get_mut().unwrap() = old_source.map(|(source, _)| source);
             *known_changes = changed;
         } else if previous.is_some() {
             *known_changes = match (known_changes.take(), changed) {
@@ -306,16 +321,23 @@ impl Document {
     pub(crate) fn animation_source(&self) -> crate::AnimationSource {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.animation_source");
+        let snapshot = if self.has_inspector_edit() {
+            self.pending
+                .as_ref()
+                .expect("inspector gesture")
+                .edit
+                .read_snapshot()
+                .expect("active inspector Draft")
+        } else {
+            self.session.sourced_snapshot()
+        };
         crate::AnimationSource {
-            snapshot: Arc::new(self.session.read_snapshot()),
-            properties: self
-                .has_inspector_edit()
-                .then(|| Arc::new(self.model().fork_candidate())),
+            snapshot: Arc::new(snapshot),
             textures: self.textures.snapshot(),
             candidate: None,
-            materialized: Default::default(),
         }
     }
+
     pub fn new_blank() -> Result<Self> {
         let mut document = Self::from_session(Self::empty_session()?)?;
         document.pristine_blank = Some(document.session.version());
@@ -327,74 +349,111 @@ impl Document {
     }
 
     fn empty_session() -> Result<AuthoringSession> {
-        Ok(AuthoringSession::new(
-            &Uuid::new_v4().to_string(),
-            ModelSetup::default(),
-        )?)
+        Ok(AuthoringSession::new(zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                Uuid::new_v4().to_string(),
+                ModelSetup::default(),
+            )?,
+            Default::default(),
+        )?))
     }
 
-    /// Construct separately so a malformed project/resource never replaces the live document.
+    /// Decode into a separate resident host; invalid content cannot replace a live view.
     pub fn open(path: &Path) -> Result<Self> {
-        let mut session = Self::empty_session()?;
-        session.open_project(path, None)?;
-        Self::from_session(session)
+        Self::load_document(path, None).map(|(document, _)| document)
     }
 
     pub fn import_model3(path: &Path) -> Result<(Self, Vec<String>)> {
-        let mut session = Self::empty_session()?;
-        let entry = zipzi_project::resolve_model3_entry(path)
-            .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-        let path = entry.as_path();
-        let receipt = session.import_model3(path, None)?;
-        let mut notices = receipt.project.warnings;
-        notices.extend(
-            receipt
-                .project
-                .diagnostics
-                .into_iter()
-                .map(|diagnostic| format!("{}: {}", diagnostic.code, diagnostic.message)),
-        );
-        let mut document = Self::from_session(session)?;
-        document.import_name = model_name_from_path(path);
+        let entry = zipzi_project::resolve_model3_entry(path)?;
+        let (mut document, notices) = Self::load_document(
+            &entry,
+            Some(zipzi_contract::kernel_wire::ImportFormat::Model3),
+        )?;
+        document.import_name = model_name_from_path(&entry);
         Ok((document, notices))
     }
 
-    pub fn import_psd(source: &Path) -> Result<(Self, Vec<String>)> {
-        let mut session = Self::empty_session()?;
-        let receipt = session.import_psd_in_memory(source, None)?;
-        let mut notices = receipt.project.warnings;
-        notices.extend(
-            receipt
-                .project
-                .diagnostics
-                .into_iter()
-                .map(|diagnostic| format!("{}: {}", diagnostic.code, diagnostic.message)),
-        );
-        let mut document = Self::from_session(session)?;
-        document.import_name = source
+    pub fn import_psd(path: &Path) -> Result<(Self, Vec<String>)> {
+        let (mut document, notices) =
+            Self::load_document(path, Some(zipzi_contract::kernel_wire::ImportFormat::Psd))?;
+        document.import_name = path
             .file_stem()
             .map(|name| name.to_string_lossy().into_owned());
         Ok((document, notices))
     }
 
-    pub(crate) fn prepare_runtime_view(session: &AuthoringSession) -> Result<PreparedDocument> {
+    fn load_document(
+        path: &Path,
+        format: Option<zipzi_contract::kernel_wire::ImportFormat>,
+    ) -> Result<(Self, Vec<String>)> {
+        let host = crate::RuntimeHost::new();
+        let client = host.client_id();
+        let id = host.write().create_session(
+            client,
+            &Uuid::new_v4().to_string(),
+            ModelSetup::default(),
+        )?;
+        let version = host.read().session_read(client, id)?.version();
+        let job = if let Some(format) = format {
+            host.write()
+                .request_import(client, version, path, format, Default::default())?
+        } else {
+            let io = host.read().project_io().clone();
+            host.write()
+                .request_open(client, version, &io, path, Default::default())?
+        };
+        let completed = host
+            .dispatch_job(job)?
+            .run_with_stack("zipzi-document-load", 8 << 20);
+        let prepared = completed
+            .prepared_snapshot()
+            .map(Self::prepare_runtime_view);
+        host.write()
+            .complete(completed)
+            .expect("completion belongs to native load host");
+        let result = host
+            .read()
+            .job(client, job)?
+            .result
+            .clone()
+            .expect("completed load");
+        host.write().release_job(client, job)?;
+        let (mut notices, diagnostics) = match result? {
+            zipzi_runtime::JobValue::Imported(receipt) => (receipt.warnings, receipt.diagnostics),
+            zipzi_runtime::JobValue::Opened(receipt) => (vec![], receipt.diagnostics),
+            _ => unreachable!("load returned another job value"),
+        };
+        notices.extend(
+            diagnostics
+                .into_iter()
+                .map(|d| format!("{}: {}", d.code, d.message)),
+        );
+        if let Some(prepared) = prepared {
+            host.prepare_view(id, prepared);
+        }
+        Ok((Self::attach_runtime(host, id)?, notices))
+    }
+
+    pub(crate) fn prepare_runtime_view(snapshot: &zipzi_sdk::Snapshot) -> Result<PreparedDocument> {
         Ok(PreparedDocument {
-            version: session.version(),
-            textures: textures::DocumentTextures::new(session)?,
-            projection: Arc::new(crate::ObjectIndex::build(session.document())),
+            content: snapshot.content_id(),
+            textures: textures::DocumentTextures::new(snapshot)?,
+            projection: Arc::new(crate::ObjectIndex::build(snapshot.document())),
         })
     }
     fn from_session(session: AuthoringSession) -> Result<Self> {
         Self::from_hosted(crate::runtime_host::HostedSession::from_session(session)?)
     }
-    pub fn attach_runtime(host: crate::RuntimeHost, id: zipzi_runtime::SessionId) -> Result<Self> {
+    pub fn attach_runtime(host: crate::RuntimeHost, id: zipzi_sdk::SessionKey) -> Result<Self> {
         Self::from_hosted(crate::runtime_host::HostedSession::attach(host, id)?)
     }
     fn from_hosted(session: crate::runtime_host::HostedSession) -> Result<Self> {
         let prepared = session.host.take_prepared_view(session.id)?;
         let prepared = match prepared {
-            Some(prepared) if prepared.version == session.version() => prepared,
-            _ => Self::prepare_runtime_view(&session.read())?,
+            Some(prepared) if prepared.content == session.read().snapshot().content_id() => {
+                prepared
+            }
+            _ => Self::prepare_runtime_view(session.read().snapshot())?,
         };
         let PreparedDocument {
             textures,
@@ -438,7 +497,7 @@ impl Document {
     }
 
     fn refresh_textures(&mut self) -> Result<()> {
-        self.textures.refresh(&self.session.read())
+        self.textures.refresh(self.session.read().snapshot())
     }
 
     pub fn save(&mut self, path: &Path) -> Result<SaveReceipt> {
@@ -449,14 +508,14 @@ impl Document {
     }
 
     pub fn export_settings(&self) -> zipzi_core::ExportSettings {
-        self.model().export_settings()
+        self.model().setup().export
     }
     pub fn model_setup(&self) -> zipzi_core::ModelSetup {
-        self.model().model_setup()
+        self.model().setup()
     }
 
     pub fn source_canvas(&self) -> Option<zipzi_core::Canvas> {
-        self.model().source_canvas()
+        self.model().setup().source_canvas
     }
 
     pub fn path(&self) -> Option<&Path> {
@@ -483,25 +542,29 @@ impl Document {
     }
 
     fn mesh(&self, id: &str) -> Option<Mesh> {
-        if let Some(pending) = self
-            .generation_pending
-            .as_ref()
-            .or(self.manual_pending.as_ref())
-        {
-            return pending.edit.candidate_document().get_mesh(id).cloned();
+        if let Some(pending) = &self.generation_pending {
+            return pending
+                .edit
+                .snapshot()
+                .snapshot
+                .document()
+                .mesh(id)
+                .cloned();
+        }
+        if let Some(pending) = &self.manual_pending {
+            return pending.edit.candidate_document().mesh(id).cloned();
         }
         match &self.pending {
-            Some(pending) => pending.edit.candidate_document().get_mesh(id).cloned(),
+            Some(pending) => pending.edit.candidate_document().mesh(id).cloned(),
             None => self.session.mesh(id),
         }
     }
 
-    pub(crate) fn model(&self) -> crate::runtime_host::ModelRead<'_> {
-        if let Some(pending) = self
-            .generation_pending
-            .as_ref()
-            .or(self.manual_pending.as_ref())
-        {
+    pub(crate) fn model(&self) -> crate::runtime_host::ModelRead {
+        if let Some(pending) = &self.generation_pending {
+            return crate::runtime_host::ModelRead(pending.edit.snapshot().snapshot.clone());
+        }
+        if let Some(pending) = &self.manual_pending {
             return pending.edit.candidate_document();
         }
         self.pending
@@ -567,13 +630,13 @@ impl Document {
 
     /// Source-art metadata follows committed edits, never interactive pose previews.
     pub fn mesh_texture_revision(&self) -> u64 {
-        self.session.document().revision()
+        self.session.version().revision
     }
 
     /// Static source-art crop and UV footprint; never evaluates posed geometry.
     pub fn mesh_texture_region(&self, id: &str) -> Option<crate::MeshTextureRegion> {
         let model_read_guard_55 = self.session.document();
-        let mesh = model_read_guard_55.get_mesh(id)?;
+        let mesh = model_read_guard_55.mesh(id)?;
         let texture = self.textures.get(&mesh.texture_asset_id)?;
         crate::MeshTextureRegion::new(texture, mesh)
     }
@@ -588,6 +651,10 @@ impl Document {
     /// Changes when inspector-visible object data changes, including candidates.
     pub fn properties_revision(&self) -> u64 {
         self.projection_revision
+    }
+    /// Structural scene queries can share results across pose and appearance candidates.
+    pub fn evaluation_layout_id(&self) -> zipzi_core::state::ContentId {
+        self.model().evaluation_layout_id()
     }
 
     pub fn object_index(&self) -> Arc<crate::ObjectIndex> {
@@ -644,10 +711,7 @@ impl Document {
         Ok(())
     }
     pub fn focus_parameter(&mut self, id: &str) -> Result<()> {
-        ensure!(
-            self.model().get_parameter(id).is_some(),
-            "Parameter not found"
-        );
+        ensure!(self.model().parameter(id).is_some(), "Parameter not found");
         self.finish_context_edit()?;
         let r = crate::ObjectRef::new(crate::ObjectKind::Parameter, id);
         self.context.parameter_focus = Some(r.clone());
@@ -750,50 +814,34 @@ impl Document {
     }
 
     pub(crate) fn canvas_topology(&self) -> Arc<crate::canvas_topology::CanvasTopology> {
-        let source = if let Some(pending) = self
-            .generation_pending
-            .as_ref()
-            .or(self.manual_pending.as_ref())
-        {
-            pending.edit.source_ref()
+        let snapshot = if let Some(pending) = &self.generation_pending {
+            pending.edit.snapshot().clone()
+        } else if let Some(pending) = &self.manual_pending {
+            pending.edit.read_snapshot().expect("active canvas Draft")
         } else if let Some(pending) = &self.pending {
-            pending.edit.source_ref()
+            pending.edit.read_snapshot().expect("active canvas Draft")
         } else {
-            zipzi_runtime::SourceRef::Formal {
-                session: self.session.id,
-                version: self.session.version(),
-            }
+            self.session.sourced_snapshot()
         };
+        let source = snapshot.source;
+        let model = snapshot.snapshot.document();
+        let layout = model.evaluation_layout_id();
         let mut current = self.canvas_topology.lock().unwrap();
         let mut cached_source = self.canvas_topology_source.lock().unwrap();
         if let Some(value) = current.as_mut() {
-            // A second candidate may share the formal version while containing
-            // different mesh edits. Recheck its topology before sharing any Arc.
-            let different_candidate = match (*cached_source, source) {
-                (
-                    Some(zipzi_runtime::SourceRef::Edit {
-                        session: old_session,
-                        edit: old_edit,
-                        base: old_base,
-                        ..
-                    }),
-                    zipzi_runtime::SourceRef::Edit {
-                        session,
-                        edit,
-                        base,
-                        ..
-                    },
-                ) => (old_session, old_edit, old_base) != (session, edit, base),
-                _ => false,
-            };
-            if different_candidate {
-                *value = Arc::new(crate::canvas_topology::CanvasTopology::with_previous(
-                    &self.model(),
-                    Some(value),
-                    None,
-                ));
+            // A source includes the candidate sequence as well as its base.
+            // Recheck structural equality before sharing geometry from another
+            // source; a local invalidation hint alone cannot prove equivalence.
+            if !cached_source
+                .is_some_and(|(cached, cached_layout)| cached == source || cached_layout == layout)
+            {
+                let next =
+                    crate::canvas_topology::CanvasTopology::with_previous(model, Some(value), None);
+                if !next.same_geometry(value) || !Arc::ptr_eq(&next.index, &value.index) {
+                    *value = Arc::new(next);
+                }
             }
-            *cached_source = Some(source);
+            *cached_source = Some((source, layout));
             return value.clone();
         }
         let previous = self.previous_canvas_topology.lock().unwrap().take();
@@ -801,24 +849,14 @@ impl Document {
         let previous_source = self.previous_canvas_source.lock().unwrap().take();
         let different_candidate = match (previous_source, source) {
             (
-                Some(zipzi_runtime::SourceRef::Edit {
-                    session: old_session,
-                    edit: old_edit,
-                    base: old_base,
-                    ..
-                }),
-                zipzi_runtime::SourceRef::Edit {
-                    session,
-                    edit,
-                    base,
-                    ..
-                },
-            ) => (old_session, old_edit, old_base) != (session, edit, base),
-            _ => false,
+                Some(zipzi_sdk::QuerySource::Draft(previous)),
+                zipzi_sdk::QuerySource::Draft(current),
+            ) => previous.base != current.base || previous.draft != current.draft,
+            _ => previous_source != Some(source),
         };
         let built = if previous.is_some() {
             crate::canvas_topology::CanvasTopology::with_previous(
-                &self.model(),
+                model,
                 previous.as_deref(),
                 if different_candidate {
                     None
@@ -827,11 +865,11 @@ impl Document {
                 },
             )
         } else {
-            crate::canvas_topology::CanvasTopology::new(&self.model())
+            crate::canvas_topology::CanvasTopology::new(model)
         };
         let built = Arc::new(built);
         *current = Some(built.clone());
-        *cached_source = Some(source);
+        *cached_source = Some((source, layout));
         built
     }
 
@@ -841,35 +879,31 @@ impl Document {
     }
 
     pub fn snapshot(&mut self) -> Result<SceneSnapshot> {
-        let frame = if let Some(pending) = self
-            .generation_pending
-            .as_mut()
-            .or(self.manual_pending.as_mut())
-        {
+        let frame = if let Some(pending) = &mut self.generation_pending {
+            let document = pending.edit.snapshot().snapshot.document();
             pending
                 .preview
-                .replace(
-                    &pending.edit.candidate_document(),
-                    0,
-                    self.session.preview_values().clone(),
-                )
+                .replace(document, 0, self.session.preview_values().clone())?;
+            pending.preview.frame(document, 0)?
+        } else if let Some(pending) = &mut self.manual_pending {
+            let document = pending.edit.candidate_document();
+            pending
+                .preview
+                .replace(&document, 0, self.session.preview_values().clone())
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
             pending
                 .preview
-                .frame(&pending.edit.candidate_document(), 0)
+                .frame(&document, 0)
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
         } else if let Some(pending) = &mut self.pending {
+            let document = pending.edit.candidate_document();
             pending
                 .preview
-                .replace(
-                    &pending.edit.candidate_document(),
-                    0,
-                    self.session.preview_values().clone(),
-                )
+                .replace(&document, 0, self.session.preview_values().clone())
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?;
             pending
                 .preview
-                .frame(&pending.edit.candidate_document(), 0)
+                .frame(&document, 0)
                 .map_err(|status| anyhow!("{}: {}", status.code, status.message))?
         } else {
             self.session.preview_frame()?

@@ -291,7 +291,7 @@ pub(crate) fn prepare_restart(cx: &mut App) -> Result<Vec<std::ffi::OsString>, S
         if host.protocol.borrow().has_connected_clients() {
             return Err(t!("updates.blocked_clients").into_owned());
         }
-        if !host.runtime.read().pending_jobs().is_empty() {
+        if host.runtime.read().outstanding_jobs() > 0 {
             return Err(t!("updates.blocked_jobs").into_owned());
         }
     }
@@ -337,10 +337,12 @@ pub(crate) fn prepare_restart(cx: &mut App) -> Result<Vec<std::ffi::OsString>, S
     }
     if let Some(host) = cx.try_global::<host::DesktopHost>() {
         let runtime = host.runtime.read();
-        let sessions = runtime.list_sessions();
+        let sessions = runtime
+            .session_catalog(host.runtime.client_id())
+            .map_err(|error| error.to_string())?;
         if sessions
             .iter()
-            .any(|session| session.modified || session.state != zipzi_runtime::SessionState::Ready)
+            .any(|session| session.dirty || session.saving)
         {
             return Err(t!("updates.blocked_documents").into_owned());
         }

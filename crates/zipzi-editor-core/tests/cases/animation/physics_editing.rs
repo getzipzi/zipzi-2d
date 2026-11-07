@@ -463,7 +463,7 @@ fn physics_authoring_preserves_field_identity_after_reordering_and_does_not_acti
         doc.physics_authoring_capabilities(&ObjectRef::new(ObjectKind::PhysicsInput, &inserted))?;
     assert_eq!(
         capabilities.domain.patch,
-        zipzi_sdk::CapabilityState::Available
+        zipzi_contract::authoring::CapabilityState::Available
     );
     assert!(capabilities.session_reason.is_none());
     assert!(

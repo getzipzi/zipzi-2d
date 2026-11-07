@@ -5,7 +5,7 @@ use zipzi_core::{DeformerOriginalAction, DeformerOriginalShape, DeformerOriginal
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeformerOriginalTarget {
     pub object: ObjectRef,
-    session: zipzi_runtime::SessionId,
+    session: zipzi_sdk::SessionKey,
     version: zipzi_sdk::Version,
     preview_revision: u64,
     scope: PropertyScope,
@@ -33,7 +33,7 @@ impl Document {
             return None;
         }
         (object.kind == ObjectKind::Deformer).then_some(())?;
-        self.model().get_transform(&object.id)?;
+        self.model().transform(&object.id)?;
         Some(DeformerOriginalTarget {
             object: object.clone(),
             session: self.session.id,
@@ -45,7 +45,7 @@ impl Document {
     }
     pub fn deformer_original_info(&self, object: &ObjectRef) -> Option<DeformerOriginalInfo> {
         let model = self.model();
-        let t = model.get_transform(&object.id)?;
+        let t = model.transform(&object.id)?;
         let record = t.original_shape.as_ref();
         let snapshot = record.and_then(|r| r.snapshot.as_ref());
         let mut info = DeformerOriginalInfo {
@@ -92,10 +92,10 @@ impl Document {
         self.ensure_editable(std::slice::from_ref(&target.object))?;
         let shape = match (&target.scope, action) {
             (_, DeformerOriginalAction::AutoUpdate { .. }) | (PropertyScope::Object, _) => {
-                zipzi_sdk::ShapeTarget::Base
+                zipzi_contract::document::ShapeTarget::Base
             }
             (PropertyScope::DeformerKeyform { binding, samples }, _) => {
-                zipzi_sdk::ShapeTarget::Ordinary {
+                zipzi_contract::document::ShapeTarget::Ordinary {
                     binding_id: binding.clone(),
                     samples: samples.clone(),
                 }
@@ -109,12 +109,14 @@ impl Document {
             .iter()
             .map(|p| (p.id.clone(), p.value))
             .collect();
-        let plan = self.plan_scene_content(zipzi_sdk::SceneContentEdit::DeformerOriginal {
-            transform_id: target.object.id.clone(),
-            target: shape,
-            action,
-            context,
-        })?;
+        let plan = self.plan_scene_content(
+            zipzi_contract::document::SceneContentEdit::DeformerOriginal {
+                transform_id: target.object.id.clone(),
+                target: shape,
+                action,
+                context,
+            },
+        )?;
         self.execute_scene_content(&plan)?;
         Ok(())
     }

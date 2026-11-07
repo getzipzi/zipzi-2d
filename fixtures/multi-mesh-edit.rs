@@ -1,18 +1,25 @@
 //! Two dedicated images and independently identified meshes with colliding vertex IDs.
 use zipzi_core::{Canvas, Vec2};
-use zipzi_sdk::{AuthoringSession, prepare_png_asset, rectangle_mesh};
+use zipzi_sdk::{AuthoringSession, ResourceStore, Snapshot, rectangle_mesh};
 pub fn id(n: u128) -> String {
     uuid::Uuid::from_u128(9400 + n).to_string()
 }
 pub fn create(path: &std::path::Path, png: &[u8]) -> anyhow::Result<AuthoringSession> {
     let image = path.join("multi.png");
     std::fs::write(&image, png)?;
-    let mut session = AuthoringSession::new(&id(0), Canvas::new(256., 256., Vec2::default(), 1.))?;
-    session.edit("Fixture", None, |edit| {
+    let state = zipzi_core::state::DocumentState::new(
+        &id(0),
+        Canvas::new(256., 256., Vec2::default(), 1.).into(),
+    )?;
+    let pixels = ResourceStore::default().import_image(&image)?;
+    let mut session = AuthoringSession::new(Snapshot::new(state, Default::default())?);
+    let mut draft = session.begin_draft();
+    draft.batch(draft.source(), |edit| {
         for (asset, mesh, x, y, width, height) in
             [(1, 2, 20., 20., 80., 80.), (3, 4, 140., 140., 40., 80.)]
         {
-            edit.create_asset(prepare_png_asset(&id(asset), "Image", &image)?)?;
+            edit.create_empty_asset(id(asset), "Image".into())?;
+            edit.replace_image(&id(asset), pixels.clone())?;
             edit.create_mesh(rectangle_mesh(
                 &id(mesh),
                 &format!("Mesh {mesh}"),
@@ -23,5 +30,6 @@ pub fn create(path: &std::path::Path, png: &[u8]) -> anyhow::Result<AuthoringSes
         }
         Ok(())
     })?;
+    session.publish(draft.prepare("Fixture")?)?;
     Ok(session)
 }

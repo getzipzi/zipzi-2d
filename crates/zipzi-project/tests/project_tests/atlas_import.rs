@@ -1,9 +1,13 @@
-use super::helpers::{id, TestDirectory};
+use super::helpers::{id, prepare, TestDirectory};
 use std::{collections::HashMap, fs};
-use zipzi_core::{Canvas, Document, ImageAsset, ImageContent, Mesh, Vec2};
-use zipzi_project::{content_sha256, DocumentSession, ImageMemoryBudget, TextureData};
+use zipzi_core::state::*;
+use zipzi_core::{Canvas, Mesh, Vec2};
+use zipzi_project::{
+    ImageMemoryBudget, ImportedProject, ProjectImporter, ProjectIo, ResourceStore, TextureData,
+    TransferFormat, TransferSnapshot,
+};
 
-fn fixture(tmp: &TestDirectory) -> (Document, Vec<u8>, TextureData) {
+fn fixture(tmp: &TestDirectory) -> (DocumentState, Vec<u8>, TextureData) {
     let width = 24;
     let mut rgba = Vec::new();
     for y in 0..width {
@@ -24,24 +28,20 @@ fn fixture(tmp: &TestDirectory) -> (Document, Vec<u8>, TextureData) {
     }
     let path = tmp.0.join("page.png");
     fs::write(&path, &png).unwrap();
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(id(900), Canvas::new(256., 256., Vec2::default(), 1.))
-        .is_ok());
-    assert!(doc
-        .add_asset(ImageAsset {
+    let mut doc =
+        DocumentState::new(id(900), Canvas::new(256., 256., Vec2::default(), 1.).into()).unwrap();
+    let image = ResourceStore::default().import_image(&path).unwrap();
+    doc = prepare(&doc, |builder| {
+        builder.create_asset(AssetRecord {
             id: id(901),
             name: "Atlas".into(),
-            unresolved_source: None,
-            content: Some(ImageContent {
-                source: path.to_string_lossy().into_owned(),
+            content: AssetContent::Image {
+                resource: image.key(),
                 width,
                 height: width,
-                sha256: content_sha256(&png)
-            }),
+            },
         })
-        .status
-        .is_ok());
+    });
     for (i, uvs) in [
         vec![
             Vec2::new(0.5, 0.2),
@@ -59,8 +59,8 @@ fn fixture(tmp: &TestDirectory) -> (Document, Vec<u8>, TextureData) {
     .into_iter()
     .enumerate()
     {
-        assert!(doc
-            .create_mesh(Mesh {
+        doc = prepare(&doc, |builder| {
+            builder.create_mesh(Mesh {
                 id: id(910 + i as i32),
                 runtime_id: format!("Piece{i}"),
                 name: format!("Piece {i}"),
@@ -74,8 +74,7 @@ fn fixture(tmp: &TestDirectory) -> (Document, Vec<u8>, TextureData) {
                 triangles: vec![[0, 1, 2], [0, 2, 3]],
                 ..Default::default()
             })
-            .status
-            .is_ok());
+        });
     }
     let parameter = zipzi_core::Parameter {
         id: id(920),
@@ -85,10 +84,10 @@ fn fixture(tmp: &TestDirectory) -> (Document, Vec<u8>, TextureData) {
         maximum: 1.,
         ..Default::default()
     };
-    assert!(doc.create_parameter(parameter).status.is_ok());
-    let base = doc.get_mesh(&id(910)).unwrap().base_positions.clone();
-    assert!(doc
-        .create_binding(zipzi_core::MeshBinding {
+    doc = prepare(&doc, |builder| builder.create_parameter(parameter));
+    let base = doc.mesh(&id(910)).unwrap().base_positions.clone();
+    doc = prepare(&doc, |builder| {
+        builder.create_binding(zipzi_core::MeshBinding {
             id: id(921),
             mesh_id: id(910),
             axes: vec![zipzi_core::BindingAxis {
@@ -109,8 +108,7 @@ fn fixture(tmp: &TestDirectory) -> (Document, Vec<u8>, TextureData) {
                 .collect(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     (
         doc,
         png,
@@ -143,29 +141,32 @@ fn sample(image: &TextureData, uv: [f64; 2]) -> [f64; 4] {
                 * y.fract().rem_euclid(1.)
     })
 }
-fn assert_appearance(before: &Document, atlas: &TextureData, after: &DocumentSession) {
+fn assert_appearance(before: &DocumentState, atlas: &TextureData, after: &ImportedProject) {
     assert_eq!(
-        after.document().asset_order().len(),
-        after.document().mesh_order().len()
+        after.document.asset_order().len(),
+        after.document.mesh_order().len()
     );
     let mut assets = std::collections::HashSet::new();
     for mesh in before
         .mesh_order()
         .iter()
-        .map(|id| before.get_mesh(id).unwrap())
+        .map(|id| before.mesh(id).unwrap())
     {
         let actual = after
-            .document()
+            .document
             .mesh_order()
             .iter()
-            .map(|id| after.document().get_mesh(id).unwrap())
+            .map(|id| after.document.mesh(id).unwrap())
             .find(|m| m.runtime_id == mesh.runtime_id)
             .unwrap();
         assert!(assets.insert(actual.texture_asset_id.clone()));
         assert_eq!(mesh.base_positions, actual.base_positions);
         assert_eq!(mesh.vertex_ids, actual.vertex_ids);
         assert_eq!(mesh.triangles, actual.triangles);
-        let image = after.read_texture(&actual.texture_asset_id).unwrap();
+        let image = after
+            .resources
+            .read_texture(after.document.asset(&actual.texture_asset_id).unwrap())
+            .unwrap();
         assert!(image.width < atlas.width || image.height < atlas.height);
         let slots: HashMap<_, _> = mesh
             .vertex_ids
@@ -201,7 +202,7 @@ fn assert_appearance(before: &Document, atlas: &TextureData, after: &DocumentSes
         }
     }
 }
-fn runtime_package(tmp: &TestDirectory, doc: &Document) -> std::path::PathBuf {
+fn runtime_package(tmp: &TestDirectory, doc: &DocumentState) -> std::path::PathBuf {
     let moc = zipzi_moc3::encode_moc3(doc).unwrap();
     fs::write(tmp.0.join("model.moc3"), moc.bytes).unwrap();
     let path = tmp.0.join("model.model3.json");
@@ -212,20 +213,30 @@ fn runtime_package(tmp: &TestDirectory, doc: &Document) -> std::path::PathBuf {
     .unwrap();
     path
 }
-fn save_reopen(tmp: &TestDirectory, session: &mut DocumentSession) {
+fn save_reopen(tmp: &TestDirectory, session: &ImportedProject) {
     let expected: Vec<_> = session
-        .document()
+        .document
         .mesh_order()
         .iter()
-        .map(|id| session.document().get_mesh(id).unwrap().clone())
+        .map(|id| session.document.mesh(id).unwrap().clone())
         .collect();
     let pixels: Vec<_> = expected
         .iter()
-        .map(|m| session.read_texture(&m.texture_asset_id).unwrap())
+        .map(|m| {
+            session
+                .resources
+                .read_texture(session.document.asset(&m.texture_asset_id).unwrap())
+                .unwrap()
+        })
         .collect();
     // Extracted drafts must no longer depend on the original page or model files.
     fs::remove_file(tmp.0.join("page.png")).unwrap();
-    let captured = session.transfer_snapshot().unwrap();
+    let captured = TransferSnapshot::new(
+        session.document.clone(),
+        session.resources.clone(),
+        session.protected_paths.clone(),
+    )
+    .unwrap();
     let refusal = captured
         .publish(zipzi_project::TransferFormat::Runtime, &tmp.0)
         .unwrap_err();
@@ -234,23 +245,34 @@ fn save_reopen(tmp: &TestDirectory, session: &mut DocumentSession) {
         "Extracted images must not remove source overwrite protection"
     );
     let exported = tmp.0.join("runtime");
-    let result = session.export_package(&exported);
-    assert!(
-        result.status.is_ok(),
-        "Export before save must resolve extracted images: {result:?}"
+    TransferSnapshot::new(
+        session.document.clone(),
+        session.resources.clone(),
+        session.protected_paths.clone(),
+    )
+    .unwrap()
+    .publish(TransferFormat::Runtime, &exported)
+    .unwrap();
+    let (result, reimported, _) =
+        ProjectImporter::default().import_model3(&exported.join("model.model3.json"));
+    assert!(result.status.is_ok(), "{result:?}");
+    assert_eq!(
+        reimported.unwrap().document.asset_order().len(),
+        expected.len()
     );
-    let mut reimported = DocumentSession::new();
-    let (result, _) = reimported.import_model3_authoring(&exported.join("model.model3.json"));
-    assert!(result.status.is_ok(), "{result:?}");
-    assert_eq!(reimported.document().asset_order().len(), expected.len());
-    let output = tmp.0.join("saved");
-    let result = session.save(&output);
-    assert!(result.status.is_ok(), "{result:?}");
-    let mut reopened = DocumentSession::new();
-    assert!(reopened.open(&output).status.is_ok());
+    let output = tmp.0.join("saved.zipzi");
+    let io = ProjectIo::new(&tmp.0, ResourceStore::default());
+    io.save(&session.document, &session.resources, &output, None, || {
+        true
+    })
+    .unwrap();
+    let reopened = io.load(&output, || true).unwrap();
     for (mesh, image) in expected.iter().zip(pixels) {
-        assert_eq!(reopened.document().get_mesh(&mesh.id).unwrap(), mesh);
-        let actual = reopened.read_texture(&mesh.texture_asset_id).unwrap();
+        assert_eq!(reopened.document.mesh(&mesh.id).unwrap(), mesh);
+        let actual = reopened
+            .resources
+            .read_texture(reopened.document.asset(&mesh.texture_asset_id).unwrap())
+            .unwrap();
         assert_eq!(
             (actual.width, actual.height, actual.rgba),
             (image.width, image.height, image.rgba)
@@ -264,26 +286,29 @@ fn model3_import_unpacks_shared_atlas_and_survives_source_removal_and_save() {
     let (doc, png, atlas) = fixture(&tmp);
     let path = runtime_package(&tmp, &doc);
     let raw = zipzi_moc3::import_from_model3_file(&path).unwrap();
-    let mut imported = DocumentSession::new();
-    let (result, _) = imported.import_model3_authoring(&path);
+    let (result, imported, _) = ProjectImporter::default().import_model3(&path);
     assert!(result.status.is_ok(), "{result:?}");
+    let imported = imported.unwrap();
     assert_appearance(&raw.document, &atlas, &imported);
     // The page's top-left corner is inside the diamond's bounds, but belongs
     // to another mesh. It must be transparent in the diamond's independent image.
     let mesh = imported
-        .document()
+        .document
         .mesh_order()
         .iter()
-        .map(|id| imported.document().get_mesh(id).unwrap())
+        .map(|id| imported.document.mesh(id).unwrap())
         .find(|m| m.runtime_id == "Piece0")
         .unwrap();
-    let image = imported.read_texture(&mesh.texture_asset_id).unwrap();
+    let image = imported
+        .resources
+        .read_texture(imported.document.asset(&mesh.texture_asset_id).unwrap())
+        .unwrap();
     assert_eq!(
         image.rgba[((6 - 2) * image.width as usize + (6 - 2)) * 4 + 3],
         0
     );
     assert_eq!(fs::read(tmp.0.join("page.png")).unwrap(), png);
-    save_reopen(&tmp, &mut imported);
+    save_reopen(&tmp, &imported);
 }
 
 #[test]
@@ -292,34 +317,32 @@ fn bare_moc3_and_legacy_model3_imports_unpack_the_same_pages() {
     let (doc, _, atlas) = fixture(&tmp);
     let path = runtime_package(&tmp, &doc);
     let raw = zipzi_moc3::import_from_model3_file(&path).unwrap();
-    for authoring in [false, true] {
-        let mut session = DocumentSession::new();
-        let paths = HashMap::from([(0, tmp.0.join("page.png"))]);
-        let (result, _) = if authoring {
-            session.import_bare_moc3_authoring(&tmp.0.join("model.moc3"), &paths)
-        } else {
-            session.import_bare_moc3(&tmp.0.join("model.moc3"), &paths)
-        };
-        assert!(result.status.is_ok(), "{result:?}");
-        assert_appearance(&raw.document, &atlas, &session);
-    }
-    let mut session = DocumentSession::new();
-    assert!(session.import_model3(&path).0.status.is_ok());
-    assert_appearance(&raw.document, &atlas, &session);
+    let paths = HashMap::from([(0, tmp.0.join("page.png"))]);
+    let (result, session, _) =
+        ProjectImporter::default().import_bare_moc3(&tmp.0.join("model.moc3"), &paths);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert_appearance(&raw.document, &atlas, &session.unwrap());
+    let (result, session, _) = ProjectImporter::default().import_model3(&path);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert_appearance(&raw.document, &atlas, &session.unwrap());
 }
 
 #[test]
 fn cmo3_import_unpacks_atlas_and_preserves_animated_geometry() {
     let tmp = TestDirectory::new();
     let (doc, png, atlas) = fixture(&tmp);
-    let artifact =
-        zipzi_cmo3::encode_cmo3(&doc, &|_: &ImageAsset| Ok(png.clone()), &Default::default())
-            .unwrap();
+    let artifact = zipzi_cmo3::encode_cmo3(
+        &doc,
+        &|_: &AssetRecord| Ok(png.clone()),
+        &Default::default(),
+    )
+    .unwrap();
     let raw = zipzi_cmo3::import_model(&artifact.bytes).unwrap();
     let path = tmp.0.join("model.cmo3");
     fs::write(&path, artifact.bytes).unwrap();
-    let mut imported = DocumentSession::new();
-    imported.import_cubism_authoring(&path).unwrap();
+    let imported = ProjectImporter::default()
+        .import_cubism_authoring(&path)
+        .unwrap();
     assert_appearance(&raw.document, &atlas, &imported);
     for value in [-1., -0.3, 0., 0.6, 1.] {
         let mut expected = zipzi_core::DrawableFrame::default();
@@ -327,7 +350,7 @@ fn cmo3_import_unpacks_atlas_and_preserves_animated_geometry() {
         let preview = HashMap::from([(id(920), value)]);
         assert!(zipzi_core::evaluation::evaluate_frame(&doc, &preview, &mut expected).is_ok());
         assert!(
-            zipzi_core::evaluation::evaluate_frame(imported.document(), &preview, &mut actual)
+            zipzi_core::evaluation::evaluate_frame(&imported.document, &preview, &mut actual)
                 .is_ok()
         );
         for (a, b) in expected.drawables.iter().zip(&actual.drawables) {
@@ -335,20 +358,25 @@ fn cmo3_import_unpacks_atlas_and_preserves_animated_geometry() {
             assert_eq!(a.opacity, b.opacity);
         }
     }
-    save_reopen(&tmp, &mut imported);
+    save_reopen(&tmp, &imported);
 }
 
 #[test]
-fn atlas_extraction_budget_failure_does_not_replace_the_current_session() {
+fn atlas_resource_budget_failure_reports_unresolved_resources_without_changing_source() {
     let tmp = TestDirectory::new();
     let (doc, _, _) = fixture(&tmp);
     let path = runtime_package(&tmp, &doc);
-    let mut session = DocumentSession::from_authoring_document(doc.clone());
+    let original = doc.content_id();
     let budget = ImageMemoryBudget::new(128);
-    session.set_image_memory_budget(budget.clone()).unwrap();
-    let (result, _) = session.import_model3_authoring(&path);
-    assert!(!result.status.is_ok());
-    assert!(session.document().same_content(&doc));
+    let importer = ProjectImporter {
+        resources: ResourceStore::new(budget.clone()),
+    };
+    let (result, imported, _) = importer.import_model3(&path);
+    assert!(!result.resources_complete());
+    if let Some(imported) = imported {
+        assert!(zipzi_project::build_export_plan(&imported.document, &imported.resources).is_err());
+    }
+    assert_eq!(doc.content_id(), original);
     assert_eq!(budget.usage().total_bytes(), 0);
 }
 
@@ -356,15 +384,19 @@ fn atlas_extraction_budget_failure_does_not_replace_the_current_session() {
 fn single_mesh_atlas_is_unpacked_for_runtime_and_cmo3_import() {
     let tmp = TestDirectory::new();
     let (mut doc, png, atlas) = fixture(&tmp);
-    assert!(doc.erase_object(&id(911)).status.is_ok());
+    doc = prepare(&doc, |b| b.remove_mesh(&id(911)));
     let path = runtime_package(&tmp, &doc);
     let raw = zipzi_moc3::import_from_model3_file(&path).unwrap();
-    let mut session = DocumentSession::new();
-    assert!(session.import_model3_authoring(&path).0.status.is_ok());
+    let (result, session, _) = ProjectImporter::default().import_model3(&path);
+    assert!(result.status.is_ok());
+    let session = session.unwrap();
     assert_appearance(&raw.document, &atlas, &session);
-    let artifact =
-        zipzi_cmo3::encode_cmo3(&doc, &|_: &ImageAsset| Ok(png.clone()), &Default::default())
-            .unwrap();
+    let artifact = zipzi_cmo3::encode_cmo3(
+        &doc,
+        &|_: &AssetRecord| Ok(png.clone()),
+        &Default::default(),
+    )
+    .unwrap();
     let raw = zipzi_cmo3::import_model(&artifact.bytes).unwrap();
     assert_eq!(
         raw.atlas_assets.len(),
@@ -373,6 +405,8 @@ fn single_mesh_atlas_is_unpacked_for_runtime_and_cmo3_import() {
     );
     let path = tmp.0.join("single.cmo3");
     fs::write(&path, artifact.bytes).unwrap();
-    session.import_cubism_authoring(&path).unwrap();
+    let session = ProjectImporter::default()
+        .import_cubism_authoring(&path)
+        .unwrap();
     assert_appearance(&raw.document, &atlas, &session);
 }

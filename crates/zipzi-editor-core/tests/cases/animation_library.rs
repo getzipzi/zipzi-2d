@@ -117,7 +117,7 @@ fn expression_members_use_stable_identity_and_noop_preserves_redo() -> anyhow::R
     let history = d.history_lengths();
     let plan = d.plan_animation_resource_step(&y, false)?;
     let result = d.execute_animation_library(&plan)?;
-    assert!(!result.receipt.changed);
+    assert!(result.receipt.kind == zipzi_sdk::PublicationKind::Unchanged);
     assert_eq!(d.history_lengths(), history);
     assert!(
         d.plan_animation_resource_creation(K::ExpressionEntry, "".into(), None)
@@ -243,7 +243,7 @@ fn expression_library_order_preserves_playback_but_member_order_invalidates_it()
         .unwrap()
         .plan_animation_resource_step(&expression, true)?;
     let result = editor.execute_animation_library(document, &plan)?;
-    assert!(result.receipt.changed);
+    assert!(result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
     assert_ne!(
         editor.document().unwrap().expression_resources()[0].id,
         expression.id
@@ -268,7 +268,7 @@ fn expression_library_order_preserves_playback_but_member_order_invalidates_it()
         .unwrap()
         .plan_animation_resource_step(&member, false)?;
     let result = editor.execute_animation_library(document, &plan)?;
-    assert!(result.receipt.changed);
+    assert!(result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
     assert!(!editor.animation().unwrap().playing);
     assert!(editor.animation().unwrap().preview_generation > generation);
     Ok(())

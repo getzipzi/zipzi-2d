@@ -204,10 +204,11 @@ impl EditorView {
                         object.kind == ObjectKind::ExpressionEntry,
                         "Expected expression member"
                     );
-                    let plan =
-                        doc.plan_expression_authoring(zipzi_sdk::ExpressionEdit::DeleteEntries {
+                    let plan = doc.plan_expression_authoring(
+                        zipzi_contract::document::ExpressionEdit::DeleteEntries {
                             ids: vec![object.id.clone()],
-                        })?;
+                        },
+                    )?;
                     return editor.execute_expression_authoring(document, &plan);
                 }
                 let plan = match action {

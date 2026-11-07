@@ -154,6 +154,14 @@ impl DocumentSession {
         self.appearance_geometry = None;
         self.modeling.tools.reconcile(&mut self.document);
     }
+    pub(crate) fn invalidate_scene_appearance(&mut self) {
+        let reusable = self
+            .geometry
+            .clone()
+            .or_else(|| self.appearance_geometry.take());
+        self.invalidate_scene();
+        self.appearance_geometry = reusable;
+    }
     pub fn cancel_gesture(&mut self) {
         if self.modeling.tools.cancel(&mut self.document) {
             self.invalidate_scene();
@@ -369,9 +377,9 @@ impl DocumentSession {
                 self.document.apply_manual_mesh_once(
                     &target,
                     if constrained {
-                        zipzi_sdk::ManualMeshOperation::ConstrainEdge { a, b }
+                        zipzi_contract::authoring::ManualMeshOperation::ConstrainEdge { a, b }
                     } else {
-                        zipzi_sdk::ManualMeshOperation::ReleaseConstraint { a, b }
+                        zipzi_contract::authoring::ManualMeshOperation::ReleaseConstraint { a, b }
                     },
                 )?;
                 self.modeling.tools.refresh_manual_source(&self.document)

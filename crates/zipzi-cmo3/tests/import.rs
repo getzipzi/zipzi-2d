@@ -1,4 +1,5 @@
 use zipzi_core::document::AllocateModelMetadata;
+use zipzi_core::state::*;
 use zipzi_core::BindingAxisEditing;
 mod common;
 use common::*;
@@ -53,8 +54,12 @@ fn initial_scene(n: u32, frames: f32) -> MotionClip {
 fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_motions() {
     let (mut source, _) = fixture();
     // Known registrations establish motion identity even for a static pose.
-    assert!(source.create_motion(initial_scene(100, 8.)).status.is_ok());
-    assert!(source.create_motion(initial_scene(200, 8.)).status.is_ok());
+    source = prepare(&source, |builder| {
+        builder.create_motion(initial_scene(100, 8.))
+    });
+    source = prepare(&source, |builder| {
+        builder.create_motion(initial_scene(200, 8.))
+    });
     let registration = MotionRegistration {
         id: uuid::Uuid::new_v4().to_string(),
         clip_id: uuid(100),
@@ -92,10 +97,10 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
             entries: Vec::new(),
         },
     ];
-    assert!(source.set_motion_groups(groups.clone()).status.is_ok());
+    source = prepare(&source, |builder| builder.set_motion_groups(groups.clone()));
     let bytes = encode_can3(&source, &Default::default()).unwrap().bytes;
     let (mut imported, _) = fixture();
-    import_animation(&bytes, &mut imported).unwrap();
+    imported = import_animation(&bytes, &imported).unwrap();
     assert_eq!(
         external_motion_groups(imported.motion_groups()),
         external_motion_groups(&groups)
@@ -104,7 +109,7 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
     assert_eq!(imported.expression_order(), [uuid(200)]);
     let again = encode_can3(&imported, &Default::default()).unwrap().bytes;
     let (mut reopened, _) = fixture();
-    import_animation(&again, &mut reopened).unwrap();
+    reopened = import_animation(&again, &reopened).unwrap();
     assert_eq!(
         external_motion_groups(reopened.motion_groups()),
         external_motion_groups(&groups)
@@ -122,23 +127,22 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
                     .insert("custom".into(), serde_json::json!(true));
             }
         }
-        assert!(imported.set_motion_groups(groups).status.is_ok());
+        imported = prepare(&imported, |builder| builder.set_motion_groups(groups));
         assert!(encode_can3(&imported, &Default::default()).is_err());
     }
     // Even an empty registration group is metadata a standalone CMO3 cannot
     // carry. With no clips, the ordinary animation-loss guard cannot catch it.
     let (mut groups_only, png) = fixture();
-    assert!(groups_only
-        .set_motion_groups(vec![MotionGroup {
+    groups_only = prepare(&groups_only, |builder| {
+        builder.set_motion_groups(vec![MotionGroup {
             id: uuid::Uuid::new_v4().to_string(),
             name: "Empty".into(),
             entries: Vec::new(),
         }])
-        .status
-        .is_ok());
+    });
     assert!(encode_cmo3(
         &groups_only,
-        &|_: &zipzi_core::ImageAsset| Ok(png.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(png.clone()),
         &Default::default(),
     )
     .is_err());
@@ -148,18 +152,17 @@ fn model3_groups_roundtrip_as_native_playlists_without_reclassifying_registered_
 fn initial_values_classify_as_expressions_regardless_of_duration_or_name() {
     let (mut source, _) = fixture();
     for (n, frames) in [(100, 1.), (200, 8.), (300, 240.)] {
-        assert!(source
-            .create_motion(initial_scene(n, frames))
-            .status
-            .is_ok());
+        source = prepare(&source, |builder| {
+            builder.create_motion(initial_scene(n, frames))
+        });
     }
     let bytes = encode_can3(&source, &Default::default()).unwrap().bytes;
     let (mut imported, _) = fixture();
-    import_animation(&bytes, &mut imported).unwrap();
+    imported = import_animation(&bytes, &imported).unwrap();
     assert!(imported.motion_order().is_empty());
     assert_eq!(imported.expression_order().len(), 3);
     for (n, frames) in [(100, 1.), (200, 8.), (300, 240.)] {
-        let expression = imported.get_expression(&uuid(n)).unwrap();
+        let expression = imported.expression(&uuid(n)).unwrap();
         assert_eq!(expression.name, format!("Scene {n}"));
         assert_eq!(expression.entries.len(), 1);
         assert_eq!(expression.entries[0].value, 0.7);
@@ -198,11 +201,11 @@ fn later_keys_events_and_non_parameter_scenes_remain_motions() {
     let mut empty = initial_scene(400, 8.);
     empty.tracks.clear();
     for clip in [later, event, delayed, empty] {
-        assert!(source.create_motion(clip).status.is_ok());
+        source = prepare(&source, |builder| builder.create_motion(clip));
     }
     let bytes = encode_can3(&source, &Default::default()).unwrap().bytes;
     let (mut imported, _) = fixture();
-    import_animation(&bytes, &mut imported).unwrap();
+    imported = import_animation(&bytes, &imported).unwrap();
     assert_eq!(imported.motion_order().len(), 4);
     assert!(imported.expression_order().is_empty());
 }
@@ -210,19 +213,18 @@ fn later_keys_events_and_non_parameter_scenes_remain_motions() {
 #[test]
 fn expression_engineering_roundtrip_preserves_setup_and_uses_current_entries() {
     let (mut source, png) = fixture();
-    let mut parameter = source.get_parameter(PARAM).unwrap().clone();
+    let mut parameter = source.parameter(PARAM).unwrap().clone();
     parameter.default_value = 0.5;
-    assert!(source.replace_parameter(parameter).status.is_ok());
+    source = prepare(&source, |builder| builder.replace_parameter(parameter));
     let part = uuid(1);
-    assert!(source
-        .create_part(zipzi_core::Part {
+    source = prepare(&source, |builder| {
+        builder.create_part(zipzi_core::Part {
             id: part.clone(),
             runtime_id: "PartArm".into(),
             name: "Arm".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let mut scene = initial_scene(100, 8.);
     let mut setup = scene.tracks[0].clone();
     setup.id = uuid(110);
@@ -233,16 +235,16 @@ fn expression_engineering_roundtrip_preserves_setup_and_uses_current_entries() {
     let original_scene = scene.clone();
     let model = encode_cmo3(
         &source,
-        &|_: &zipzi_core::ImageAsset| Ok(png.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(png.clone()),
         &Default::default(),
     )
     .unwrap();
-    assert!(source.create_motion(scene).status.is_ok());
+    source = prepare(&source, |builder| builder.create_motion(scene));
     let bytes = encode_can3(&source, &Default::default()).unwrap().bytes;
     // Use a separately decoded model, without source animations.
-    let mut imported = import_model(&model.bytes).unwrap().document;
-    import_animation(&bytes, &mut imported).unwrap();
-    let mut expression = imported.get_expression(&uuid(100)).unwrap().clone();
+    let mut imported = resolve_images(&import_model(&model.bytes).unwrap());
+    imported = import_animation(&bytes, &imported).unwrap();
+    let mut expression = imported.expression(&uuid(100)).unwrap().clone();
     assert_eq!(expression.entries[0].value, 0.7 - 0.5);
     assert_eq!(expression.entries[0].blend, Some(ExpressionBlend::Add));
     assert_eq!(
@@ -253,17 +255,17 @@ fn expression_engineering_roundtrip_preserves_setup_and_uses_current_entries() {
     // An absent Blend also means Add, including when encoding a CAN3 scene.
     expression.entries[0].blend = None;
     expression.name = "Edited expression".into();
-    assert!(imported.replace_expression(expression).status.is_ok());
+    imported = prepare(&imported, |builder| builder.replace_expression(expression));
     let pair = encode_cubism(
         &imported,
-        &|_: &zipzi_core::ImageAsset| Ok(png.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(png.clone()),
         &Default::default(),
     )
     .unwrap();
-    let mut reopened = import_model(&pair.cmo3.bytes).unwrap().document;
-    import_animation(&pair.can3.bytes, &mut reopened).unwrap();
+    let mut reopened = resolve_images(&import_model(&pair.cmo3.bytes).unwrap());
+    reopened = import_animation(&pair.can3.bytes, &reopened).unwrap();
     assert!(reopened.motion_order().is_empty());
-    let expression = reopened.get_expression(&uuid(100)).unwrap();
+    let expression = reopened.expression(&uuid(100)).unwrap();
     assert_eq!(expression.name, "Edited expression");
     assert_eq!(expression.entries[0].value, -0.25);
     assert_eq!(expression.entries[0].blend, None);
@@ -273,7 +275,7 @@ fn expression_engineering_roundtrip_preserves_setup_and_uses_current_entries() {
     assert_eq!(scene.tracks[1].initial.value, 0.);
     let mut multiply = expression.clone();
     multiply.entries[0].blend = Some(ExpressionBlend::Multiply);
-    assert!(reopened.replace_expression(multiply).status.is_ok());
+    reopened = prepare(&reopened, |builder| builder.replace_expression(multiply));
     let report = inspect_cubism(&reopened).unwrap();
     assert!(report
         .diagnostics
@@ -282,7 +284,7 @@ fn expression_engineering_roundtrip_preserves_setup_and_uses_current_entries() {
     assert!(!report.has_loss());
     assert!(encode_cubism(
         &reopened,
-        &|_: &zipzi_core::ImageAsset| Ok(png.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(png.clone()),
         &Default::default()
     )
     .is_ok());
@@ -292,15 +294,14 @@ fn expression_engineering_roundtrip_preserves_setup_and_uses_current_entries() {
 fn exported_model_import_preserves_parameter_bound_geometry_and_texture_pixels() {
     let (mut document, png) = fixture();
     let part_id = uuid(1);
-    assert!(document
-        .create_part(zipzi_core::Part {
+    document = prepare(&document, |builder| {
+        builder.create_part(zipzi_core::Part {
             id: part_id.clone(),
             runtime_id: "PartArm".into(),
             name: "手臂 Arm".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let mut settings = document.model3_settings().clone();
     settings.groups = Some(vec![zipzi_core::document::ModelParameterGroup {
         id: zipzi_core::document::ModelParameterGroup::allocate().id,
@@ -312,13 +313,12 @@ fn exported_model_import_preserves_parameter_bound_geometry_and_texture_pixels()
         )],
         extensions: Default::default(),
     }]);
-    assert!(document
-        .set_model3_settings(settings.clone())
-        .status
-        .is_ok());
+    document = prepare(&document, |builder| {
+        builder.set_model3_settings(settings.clone())
+    });
     let artifact = encode_cmo3(
         &document,
-        &|_: &zipzi_core::ImageAsset| Ok(png.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(png.clone()),
         &Default::default(),
     )
     .unwrap();
@@ -339,11 +339,8 @@ fn exported_model_import_preserves_parameter_bound_geometry_and_texture_pixels()
         );
         assert_ne!(a.id, b.id);
     }
-    assert!(imported.document.validate_structure().is_empty());
-    assert_eq!(
-        imported.document.get_part(&part_id).unwrap().name,
-        "手臂 Arm"
-    );
+    assert!(imported.document.builder().freeze().is_ok());
+    assert_eq!(imported.document.part(&part_id).unwrap().name, "手臂 Arm");
     assert_eq!(
         imported.document.display_info().parts,
         Some(vec![CdiPartEntry::Resolved {
@@ -374,7 +371,7 @@ fn malformed_or_corrupt_archives_return_errors() {
     let (document, png) = fixture();
     let mut artifact = encode_cmo3(
         &document,
-        &|_: &zipzi_core::ImageAsset| Ok(png.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(png.clone()),
         &Default::default(),
     )
     .unwrap();
@@ -416,12 +413,12 @@ fn opacity_curve_roundtrip_preserves_initial_keys_and_bezier_controls() {
         },
     ]
     .into();
-    assert!(source.create_motion(clip.clone()).status.is_ok());
+    source = prepare(&source, |builder| builder.create_motion(clip.clone()));
     for _ in 0..2 {
         let bytes = encode_can3(&source, &Default::default()).unwrap().bytes;
         let (mut imported, _) = fixture();
-        import_animation(&bytes, &mut imported).unwrap();
-        let actual = &imported.get_motion(&clip.id).unwrap().tracks[0];
+        imported = import_animation(&bytes, &imported).unwrap();
+        let actual = &imported.motion(&clip.id).unwrap().tracks[0];
         let expected = &clip.tracks[0];
         assert_eq!(actual.initial.point(), expected.initial.point());
         for (a, b) in actual.segments.iter().zip(expected.segments.iter()) {
@@ -449,19 +446,18 @@ fn opacity_curve_roundtrip_preserves_initial_keys_and_bezier_controls() {
 fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
     use zipzi_core::types::*;
     let (mut source, png) = fixture();
-    let mut parameter = source.get_parameter(PARAM).unwrap().clone();
+    let mut parameter = source.parameter(PARAM).unwrap().clone();
     parameter.default_value = 0.5;
-    assert!(source.replace_parameter(parameter).status.is_ok());
-    assert!(source
-        .create_parameter(Parameter {
+    source = prepare(&source, |builder| builder.replace_parameter(parameter));
+    source = prepare(&source, |builder| {
+        builder.create_parameter(Parameter {
             id: uuid(9),
             runtime_id: "GridY".into(),
             name: "Grid Y".into(),
             default_value: 0.25,
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let mut binding = source.binding_for_mesh(MESH).unwrap().clone();
     binding.axes.push(BindingAxis {
         id: Default::default(),
@@ -484,9 +480,9 @@ fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
             })
         })
         .collect();
-    assert!(source.replace_binding(binding).status.is_ok());
-    assert!(source
-        .create_parameter(Parameter {
+    source = prepare(&source, |builder| builder.replace_binding(binding));
+    source = prepare(&source, |builder| {
+        builder.create_parameter(Parameter {
             id: uuid(10),
             runtime_id: "Blend".into(),
             name: "Blend".into(),
@@ -495,10 +491,9 @@ fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
             maximum: 1.,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(source
-        .create_blend_key_table(BlendShapeKeyTable {
+    });
+    source = prepare(&source, |builder| {
+        builder.create_blend_key_table(BlendShapeKeyTable {
             samples: Default::default(),
             base_sample_id: Default::default(),
             id: uuid(11),
@@ -506,10 +501,9 @@ fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
             keys: vec![0., 1.],
             base_key_idx: 0,
         })
-        .status
-        .is_ok());
-    assert!(source
-        .create_blend_binding(BlendShapeBinding {
+    });
+    source = prepare(&source, |builder| {
+        builder.create_blend_binding(BlendShapeBinding {
             id: uuid(12),
             target_id: MESH.into(),
             target_kind: BlendShapeTargetKind::Mesh,
@@ -529,18 +523,17 @@ fn morph_roundtrip_uses_interpolated_default_pose_and_appearance() {
                 },
             ]),
         })
-        .status
-        .is_ok());
+    });
     let mut current = source.clone();
     for _ in 0..2 {
         let bytes = encode_cmo3(
             &current,
-            &|_: &ImageAsset| Ok(png.clone()),
+            &|_: &AssetRecord| Ok(png.clone()),
             &Default::default(),
         )
         .unwrap()
         .bytes;
-        current = import_model(&bytes).unwrap().document;
+        current = resolve_images(&import_model(&bytes).unwrap());
         for normal in [-0.5, 0.5, 0.75] {
             for blend in [0., 0.5, 1.] {
                 let values = PreviewValues::from([(PARAM.into(), normal), (uuid(10), blend)]);
@@ -569,24 +562,22 @@ fn expression_source_scene_targets_block_deletion_until_detached() {
     let (mut source, _) = fixture();
     let parameter = uuid(1);
     let part = uuid(2);
-    assert!(source
-        .create_parameter(zipzi_core::Parameter {
+    source = prepare(&source, |builder| {
+        builder.create_parameter(zipzi_core::Parameter {
             id: parameter.clone(),
             runtime_id: "Unbound".into(),
             name: "Unbound".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
-    assert!(source
-        .create_part(zipzi_core::Part {
+    });
+    source = prepare(&source, |builder| {
+        builder.create_part(zipzi_core::Part {
             id: part.clone(),
             runtime_id: "Part".into(),
             name: "Part".into(),
             ..Default::default()
         })
-        .status
-        .is_ok());
+    });
     let mut scene = initial_scene(100, 8.);
     scene.tracks[0].target = MotionTrackTarget::Parameter {
         parameter_id: parameter.clone(),
@@ -599,34 +590,44 @@ fn expression_source_scene_targets_block_deletion_until_detached() {
     };
     scene.tracks.push(setup);
     let mut imported = source.clone();
-    assert!(source.create_motion(scene).status.is_ok());
-    import_animation(
+    source = prepare(&source, |builder| builder.create_motion(scene));
+    imported = import_animation(
         &encode_can3(&source, &Default::default()).unwrap().bytes,
-        &mut imported,
+        &imported,
     )
     .unwrap();
-    let mut expression = imported.get_expression(&uuid(100)).unwrap().clone();
+    let mut expression = imported.expression(&uuid(100)).unwrap().clone();
     // The source scene still refers to this parameter after its runtime entry is removed.
     expression.entries.clear();
-    assert!(imported
-        .replace_expression(expression.clone())
-        .status
-        .is_ok());
+    imported = prepare(&imported, |builder| {
+        builder.replace_expression(expression.clone())
+    });
     for target in [&parameter, &part] {
         assert!(!imported.references_to(target).is_empty());
-        assert_eq!(
-            imported.erase_object(target).status.code,
-            "OBJECT_REFERENCED"
-        );
-        assert!(imported.validate_structure().is_empty());
+        let identity = imported.content_id();
+        let mut candidate = imported.builder();
+        if target == &parameter {
+            candidate.remove_parameter(target).unwrap();
+        } else {
+            candidate.remove_part(target).unwrap();
+        }
+        assert!(candidate.freeze().is_err(), "referenced object was removed");
+        assert_eq!(imported.content_id(), identity);
+        assert!(imported.builder().freeze().is_ok());
     }
     expression.extensions.remove("ZipziSourceScene");
-    assert!(imported.replace_expression(expression).status.is_ok());
+    imported = prepare(&imported, |builder| builder.replace_expression(expression));
     for target in [&parameter, &part] {
         assert!(imported.references_to(target).is_empty());
-        assert!(imported.erase_object(target).status.is_ok());
+        imported = prepare(&imported, |builder| {
+            if target == &parameter {
+                builder.remove_parameter(target)
+            } else {
+                builder.remove_part(target)
+            }
+        });
     }
-    assert!(imported.validate_structure().is_empty());
+    assert!(imported.builder().freeze().is_ok());
 }
 
 fn external_motion_groups(
@@ -647,16 +648,16 @@ fn host_workspace_refuses_model_and_animation_before_expansion() {
     let (source, png) = fixture();
     let model = encode_cmo3(
         &source,
-        &|_: &zipzi_core::ImageAsset| Ok(png.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(png.clone()),
         &Default::default(),
     )
     .unwrap();
     let animation = encode_can3(&source, &Default::default()).unwrap();
     assert!(import_model_with_budget(&model.bytes, 64).is_err());
     assert!(animation_model_paths_with_budget(&animation.bytes, 64).is_err());
-    let mut target = source.clone();
-    assert!(import_animation_with_budget(&animation.bytes, &mut target, 64).is_err());
-    assert!(target.same_content(&source));
+    let target = source.clone();
+    assert!(import_animation_with_budget(&animation.bytes, &target, 64).is_err());
+    assert_eq!(target.content_id(), source.content_id());
     assert!(import_model_with_budget(&model.bytes, 512 << 20).is_ok());
     assert!(animation_model_paths_with_budget(&animation.bytes, 512 << 20).is_ok());
 }
@@ -687,25 +688,25 @@ fn imported_deformers_do_not_invent_original_shapes() {
             }),
         ),
     ] {
-        assert!(source
-            .create_transform(zipzi_core::Transform {
+        source = prepare(&source, |builder| {
+            builder.create_transform(zipzi_core::Transform {
+                runtime_id: id.clone(),
                 id,
                 parent_id: parent,
                 data,
                 ..Default::default()
             })
-            .status
-            .is_ok());
+        });
     }
     let points = source
-        .get_transform(&uuid(901))
+        .transform(&uuid(901))
         .unwrap()
         .warp()
         .unwrap()
         .points
         .clone();
-    assert!(source
-        .create_scene_binding(zipzi_core::SceneBinding {
+    source = prepare(&source, |builder| {
+        builder.create_scene_binding(zipzi_core::SceneBinding {
             id: uuid(902),
             axes: vec![zipzi_core::BindingAxis::new(PARAM, vec![-1., 1.])],
             track: zipzi_core::SceneTrack::Warp {
@@ -717,14 +718,13 @@ fn imported_deformers_do_not_invent_original_shapes() {
                         positions: points.clone(),
                         ..Default::default()
                     })
-                    .collect()
+                    .collect(),
             },
         })
-        .status
-        .is_ok());
+    });
     let artifact = encode_cmo3(
         &source,
-        &|_: &zipzi_core::ImageAsset| Ok(assets.clone()),
+        &|_: &zipzi_core::state::AssetRecord| Ok(assets.clone()),
         &Default::default(),
     )
     .unwrap();
@@ -735,7 +735,7 @@ fn imported_deformers_do_not_invent_original_shapes() {
     );
     for id in imported.transform_order() {
         assert!(
-            imported.get_transform(id).unwrap().original_shape.is_none(),
+            imported.transform(id).unwrap().original_shape.is_none(),
             "{id}"
         );
     }

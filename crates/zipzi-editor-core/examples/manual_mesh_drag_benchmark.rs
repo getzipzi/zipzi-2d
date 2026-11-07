@@ -44,8 +44,10 @@ fn main() -> Result<()> {
         let host = d.runtime_host();
         let mesh = host
             .read()
-            .document(d.runtime_session_id())?
-            .get_mesh(&layer.id)
+            .read_snapshot(host.client_id(), d.runtime_session_id())?
+            .snapshot
+            .document()
+            .mesh(&layer.id)
             .unwrap()
             .clone();
         if requested
@@ -174,8 +176,10 @@ fn main() -> Result<()> {
     let host = d.runtime_host();
     ensure!(
         host.read()
-            .document(d.runtime_session_id())?
-            .get_mesh(&mesh.id)
+            .read_snapshot(host.client_id(), d.runtime_session_id())?
+            .snapshot
+            .document()
+            .mesh(&mesh.id)
             == Some(&original),
         "cancel changed source"
     );

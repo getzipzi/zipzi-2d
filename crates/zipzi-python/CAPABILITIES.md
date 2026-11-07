@@ -1,98 +1,44 @@
 # Python SDK capabilities
 
-The `zipzi` client uses the same Rust Runtime operations for local and connected
-sessions. Use `runtime.capabilities()` and `runtime.limits()` to check what a
-host provides and the limits it enforces. See the [README](README.md) for setup
-and the [guide](client/python/zipzi/docs/guide.md),
-[API reference](client/python/zipzi/docs/reference.md) and
-[recipes](client/python/zipzi/docs/recipes.py) for usage.
+Local and Connected use the same generated v4 operations. Check host support
+with `runtime.capabilities()` and admission limits with `runtime.limits()`.
+The installed package includes the typed `zipzi.values` module, a guide and an
+executable recipes. `zipzi.describe(path)` provides paginated offline help;
+`Snapshot.records(Type)` decodes object payloads into domain values. Query and
+save response shapes are available in `zipzi.results`. [Setup and usage](README.md)
 
-## Connections and lifecycle
-
-| Capability | Public entry | Notes |
+| Capability | Public entry | Behavior |
 | --- | --- | --- |
-| Local Runtime | `zipzi.local()` | Requires the optional `zipzi-native` package. |
-| Connected Runtime | `zipzi.connect()` | Discovers a resident host; accepts an explicit endpoint or can start a specified Editor host. The pure client does not require `zipzi-native`. |
-| Sessions | `runtime.sessions.create/list/attach`, `session.info`, `session.detach/close` | Attached clients share the formal document and history. Detach retains the host session; close releases it subject to active work, other clients and unsaved changes. |
-| Editor window | `session.show_window()` | Requires a desktop host. Edits update the resident document; saving is separate. |
-| Events | `session.subscribe()`, `runtime.sessions.subscribe()`, `runtime.events_since()` | Readers have independent cursors; use `resync()` after a gap. |
-| Jobs | `state`, `cancel`, `wait`, `close` | A finite wait may raise `JobTimeout` without cancelling the accepted job. Wait for or close jobs to release resources. |
-| Recovery | `OutcomeUnknown.recover()`, `zipzi.recover_call()` | Recovers the original call and result after a lost response. An unresolved Runtime can be closed with `abandon_pending=True` to forfeit recovery. |
-| Offline documentation | `zipzi.describe()` | Describes the installed API without a host or native extension. |
+| Local and Connected hosts | `zipzi.local()`, `zipzi.connect()` | Local loads the optional native adapter. Connected attaches to a private endpoint and can start an Editor host. |
+| Session lifecycle | `runtime.sessions.create/list/attach`, `session.info/detach/close` | Attached clients share a resident document and history. Detach retains the Session. Closing checks unsaved work and active owners. |
+| Desktop services | `session.editor_context()`, `session.show_window()`, `runtime.generate_editor_mesh()` | Editor context is versioned. The bounded mesh service returns detached geometry for a subsequent Draft. |
+| Authoring | `session.draft()`, `draft.apply/apply_async/preview/publish/cancel` | Generated commands cover meshes, bindings, scene and organization, resources, references, deletion, and animation. A rejected gesture preview retains its last valid candidate. An accepted failing batch ends the Draft. |
+| Queries and history | `session.query()`, `draft.query()`, `session.undo/redo` | Object reads use stable IDs. Collection offsets belong to an exact source. Each changed publication contributes one history step. |
+| Events | `session.subscribe()`, `session.events(cursor)` | Each reader keeps its own Version cursor and resubscribes after an event gap. |
+| Images and bulk transfer | `runtime.blob()`, `draft.replace_image_blob()`, `session.image_blob()`, `job.blob()` | Explicit owned handles transfer data in bounded binary chunks. |
+| Projects | `session.open/import_project/save/export` | Jobs capture a source and report their actual outcome. Supported imports are PSD, Model3 and Cubism. Exports target runtime packages or Cubism. |
+| Sampling and spatial queries | `session.samples()`, `SampleInputParameters`, `SampleInputAnimation` | Modeling and playback recipes can request spatial queries and mesh quality on frozen sources. Results include source identity. |
+| GPU observation | `session.observe()`, `ObservationView` | A GPU-capable host returns PNG packets and a texture report. Views support texture policy, topology overlays and quality metrics. |
+| Recovery | `zipzi.recover_call(error)`, `Job.wait()` | Recover a lost response with its original request ID. A wait timeout leaves the Job owned. |
 
-## Authoring and queries
+## Manual UV mesh editing
 
-| Capability | Public entry | Notes |
-| --- | --- | --- |
-| Edits and history | `session.edit()`, `edit.apply/apply_many`, commit, undo and redo | Operations share an isolated candidate and publish through the same document history. A failed write aborts its candidate. |
-| Meshes | `session/edit.meshes`, `meshes` operations | Create and edit meshes, positions and topology; query individual meshes or batches. |
-| Parameters and bindings | `session/edit.parameters`, `session/edit.bindings`, `parameters` and `bindings` operations | Create, patch and query parameters and mesh bindings, including keyforms. Rust allocates identities and validates inputs. |
-| Scene and modeling | `session/edit.scene`, `modeling.commands.ModelingCommand*` | Parts, groups, deformers, BlendShapes, Glue, Offscreen, organization, topology and conversions use SDK modeling operations. |
-| Animation authoring | `modeling.commands.ModelingCommandMotion`, `ModelingCommandExpression`, `ModelingCommandPhysics`, `ModelingCommandPose` | Edit animation assets and query selected records, plans, addresses and capabilities. |
-| Object deletion | `modeling.commands.ModelingCommandDeletion`, `Plan.deletion_page()` | Shared cleanup for scene objects, parameters/folders, textures, attachments and typed business/child records; native dimension reduction, replacements, locks and export regressions, with source-bound paged reports. |
-| Plans and references | `session/edit.plan()`, `session.reference()`, `session.address()` | Plans retain their source and cost/loss report. References and addresses are subject to identity and field-epoch validation. |
-| Reads and collections | `get`, `get_many`, `list` | Reads return source-bound `Snapshot` or `Batch` values. Collection pages have source-bound cursors; restart pagination on `STALE_SOURCE`. |
-| Attachments | `modeling.commands.ModelingCommandAttachment` and selected records | Attachments use modeling operations and project I/O. |
-
-## Resources, projects and observation
-
-| Capability | Public entry | Notes |
-| --- | --- | --- |
-| Images and buffers | `runtime.resources.prepare_image/prepare_buffer`, `session/edit.resources` | Prepared images, buffers and image snapshots have explicit lifetimes. Large payloads use bounded binary transfer. |
-| Project I/O | `runtime.sessions.import_()`, `session.project` | Jobs cover new, open, import, save, diagnostics and export. Supported formats include PSD, Model3/MOC3, Cubism projects and runtime sidecars; format-specific loss rules apply. |
-| CPU modeling samples | `session/edit.modeling.sample()` | Evaluates explicit poses against a frozen source without changing history or Editor preview. |
-| Animation preview | `session/edit.preview()` | Independent frozen playback supports controls and sample, seek and advance jobs. It does not change the Editor's playback state. |
-| Spatial queries | `session/edit.modeling.spatial()`, Preview `queries` | Bounds and hit queries use frozen poses or animation frames. |
-| GPU observation | `modeling.observe()`, Preview `view`, `inspection.save()` | Requires a host with GPU observation and a usable device. Inspection saves PNG/JSON output locally. |
-| Texture budgets and estimates | `observation.Original`, `FitBudget`, `modeling.estimate_observation()`, `Preview.estimate_observation()` | Metadata-only estimates on CPU/GPU hosts; bounded texture preparation and one report per observation batch. [Usage and limits](client/python/zipzi/docs/animation-spatial.md#observation-texture-budgets). |
-| Mesh quality | `sampling.Checks(quality=True)`, `observation.View(quality=True)` | Per-pose model-space angle, aspect, flip, area and edge-stretch metrics. GPU observations add bounded source-alpha coverage; reports cover requested poses only. |
-| Topology inspection | `observation.Overlay`, `View.topology`, `observation.Thresholds` | Mesh/Part selection, label collision avoidance, bounded heat opacity and anomaly-only layers, including Preview. Full textured context is retained; masks and occlusion do not hide diagnostics. |
-| Editor mesh generation | `zipzi.mesh_generation.generate()` | Connected Editor hosts may offer this synchronous, bounded service. Local hosts do not provide it; generation returns geometry without modifying the document. |
-
-The packages target CPython 3.14. Native wheels are prepared for macOS arm64
-and Windows x86-64. The desktop host, GPU features and platform-specific
-installation must meet their own requirements. Limits can also require smaller
-batches or payloads.
+Submit `CommandManualMesh` on a Draft using the exact source returned by that
+Draft. Use `draft.preview()` for repeated gesture positions, followed by
+`draft.publish()`. The host retains stable vertex identities and transfers base
+positions, ordinary bindings and BlendShape deltas together. It validates Glue
+endpoints, and reports `GLUE_VERTEX_REFERENCED` when a vertex still belongs to
+a pair.
 
 ## Validation
-
-Run from the repository root:
 
 ```sh
 ./tools/test-sdk.sh python
 ./tools/test-sdk.sh python --recovery
 ./tools/test-sdk.sh python --discovery
-./tools/test-sdk.sh python-connected
-# Requires a usable GPU:
 ./tools/test-sdk.sh python --observation
+./tools/test-sdk.sh python-connected --editor-host /absolute/path/to/zipzi-editor
 ```
 
-For Editor mesh generation, run the focused test against a production host:
-
-```sh
-./tools/dev-python crates/zipzi-python/tests/editor_mesh_generation.py --host /absolute/path/to/zipzi-editor
-```
-
-## Manual UV mesh editing
-
-`ModelingCommandManualMesh` supports ordinary bindings, multiple Mesh BlendShapes,
-parent deformers and Glue together. Capture `edit.meshes.get(mesh_id).source` for
-`expected` before each operation and submit the command alone. Runtime guards the
-session, edit, base version and candidate sequence. Repeated move commands keep a
-frozen sampling baseline and check motion against the last accepted candidate.
-
-`WriteResult.mesh_transfer` contains a typed `ManualMeshTransferReport` for these
-writes, including finite costs. Base and ordinary positions and BlendShape deltas
-share the same UV sample weights; sample/table/pair identities and non-position
-channels remain intact. Local and Connected use the same implementation, including
-binary upload. `GLUE_VERTEX_REFERENCED` identifies a pair that must be released
-before deleting its endpoint. Manual moves and insertions extend beyond the old
-UV coverage using the nearest source triangle's affine extrapolation, with the
-same weights for every stored shape. UVs must stay inside the complete source
-image; expand the image to provide more editing space. Full generation still
-requires existing UV coverage or a dependency-free global affine map.
-
-A host-confirmed manual refusal with `SdkFailure.edit_state == "editing"` keeps
-the candidate available, so a pointer gesture may continue from its last valid
-preview. Other transaction failures keep their normal abort semantics. Inspect
-`edit_state`; do not infer candidate liveness from an English error message.
+The Editor host gate includes detached mesh generation and Draft publication.
+GPU observation requires a usable GPU.

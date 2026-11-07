@@ -14,19 +14,30 @@ fn warp_grid_add_insert_reduce_preserves_controllers_and_domain() {
         Vec2::new(1., 1.),
     ];
     let bezier = WarpBezier::from_lattice(1, 1, true, &points);
-    s.edit("warp", None, |e| {
-        e.create_transform(Transform {
-            id: t.clone(),
-            data: TransformData::Warp(WarpTransform {
-                rows: 1,
-                columns: 1,
-                quad: true,
-                points,
-                bezier: Some(bezier),
-            }),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_transform(
+                    e,
+                    Transform {
+                        id: t.clone(),
+                        data: TransformData::Warp(WarpTransform {
+                            rows: 1,
+                            columns: 1,
+                            quad: true,
+                            points,
+                            bezier: Some(bezier),
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("warp")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     apply(
         &mut s,
@@ -42,7 +53,7 @@ fn warp_grid_add_insert_reduce_preserves_controllers_and_domain() {
             axis: BindingAxis::new(PARAMETER_ID, vec![0., 1.]),
         },
     );
-    let binding = s.document().get_scene_binding(&b).unwrap();
+    let binding = s.snapshot().document().scene_binding(&b).unwrap();
     let axis = binding.axes[0].id.clone();
     let mut f = match &binding.track {
         SceneTrack::Warp { keyforms, .. } => keyforms[1].clone(),
@@ -57,9 +68,17 @@ fn warp_grid_add_insert_reduce_preserves_controllers_and_domain() {
             p.x += 0.4;
         }
     }
-    s.edit("warp pose", None, |e| {
-        e.set_scene_keyform(&b, SceneKeyform::Warp(f))
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.set_scene_keyform(&b, SceneKeyform::Warp(f))
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("warp pose")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let expected = frame(&s, 0.3, 0.)
         .deformers
@@ -95,8 +114,9 @@ fn warp_grid_add_insert_reduce_preserves_controllers_and_domain() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_transform(&t)
+        s.snapshot()
+            .document()
+            .transform(&t)
             .unwrap()
             .warp()
             .unwrap()
@@ -104,8 +124,9 @@ fn warp_grid_add_insert_reduce_preserves_controllers_and_domain() {
         actual
     );
     assert!(s
+        .snapshot()
         .document()
-        .get_transform(&t)
+        .transform(&t)
         .unwrap()
         .warp()
         .unwrap()
@@ -120,50 +141,65 @@ fn part_grid_remaps_offscreen_and_does_not_revive_old_static_appearance() {
     let p = id(1630);
     let b = id(1631);
     let os = id(1632);
-    s.edit("part/offscreen", None, |e| {
-        e.create_part(Part {
-            id: p.clone(),
-            ..Default::default()
-        })?;
-        e.create_scene_binding(SceneBinding {
-            id: b.clone(),
-            axes: vec![BindingAxis::new(PARAMETER_ID, vec![0., 1.])],
-            track: SceneTrack::Part {
-                target_id: p.clone().into(),
-                keyforms: vec![
-                    PartKeyform {
-                        keys: vec![0.],
-                        draw_order: 3.,
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_part({
+                    let mut value = Part {
+                        id: p.clone(),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.create_scene_binding(SceneBinding {
+                    id: b.clone(),
+                    axes: vec![BindingAxis::new(PARAMETER_ID, vec![0., 1.])],
+                    track: SceneTrack::Part {
+                        target_id: p.clone().into(),
+                        keyforms: vec![
+                            PartKeyform {
+                                keys: vec![0.],
+                                draw_order: 3.,
+                                ..Default::default()
+                            },
+                            PartKeyform {
+                                keys: vec![1.],
+                                draw_order: 17.,
+                                ..Default::default()
+                            },
+                        ],
+                    },
+                })?;
+                crate::support::insert_offscreen(
+                    e,
+                    Offscreen {
+                        id: os.clone(),
+                        runtime_id: "offscreen".into(),
+                        part_id: p.clone(),
+                        part_keyform_indices: vec![1, 0],
+                        keyforms: vec![
+                            OffscreenKeyform {
+                                opacity: 0.2,
+                                ..Default::default()
+                            },
+                            OffscreenKeyform {
+                                opacity: 0.8,
+                                ..Default::default()
+                            },
+                        ],
                         ..Default::default()
                     },
-                    PartKeyform {
-                        keys: vec![1.],
-                        draw_order: 17.,
-                        ..Default::default()
-                    },
-                ],
-            },
-        })?;
-        e.create_offscreen(Offscreen {
-            id: os.clone(),
-            runtime_id: "offscreen".into(),
-            part_id: p.clone(),
-            part_keyform_indices: vec![1, 0],
-            keyforms: vec![
-                OffscreenKeyform {
-                    opacity: 0.2,
-                    ..Default::default()
-                },
-                OffscreenKeyform {
-                    opacity: 0.8,
-                    ..Default::default()
-                },
-            ],
-            ..Default::default()
-        })
-    })
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("part/offscreen")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let primary = s.document().get_scene_binding(&b).unwrap().axes[0]
+    let primary = s.snapshot().document().scene_binding(&b).unwrap().axes[0]
         .id
         .clone();
     op(
@@ -173,12 +209,13 @@ fn part_grid_remaps_offscreen_and_does_not_revive_old_static_appearance() {
             axis: BindingAxis::new(id(1600), vec![-1., 1.]),
         },
     );
-    let secondary = s.document().get_scene_binding(&b).unwrap().axes[1]
+    let secondary = s.snapshot().document().scene_binding(&b).unwrap().axes[1]
         .id
         .clone();
     assert_eq!(
-        s.document()
-            .get_offscreen(&os)
+        s.snapshot()
+            .document()
+            .offscreen(&os)
             .unwrap()
             .part_keyform_indices,
         vec![1, 0, 1, 0]
@@ -191,8 +228,9 @@ fn part_grid_remaps_offscreen_and_does_not_revive_old_static_appearance() {
         },
     );
     assert_eq!(
-        s.document()
-            .get_offscreen(&os)
+        s.snapshot()
+            .document()
+            .offscreen(&os)
             .unwrap()
             .part_keyform_indices,
         vec![1, 1, 0, 0]
@@ -215,18 +253,26 @@ fn part_grid_remaps_offscreen_and_does_not_revive_old_static_appearance() {
             keep_pending: false,
         },
     );
-    assert_eq!(s.document().get_part(&p).unwrap().draw_order, 6.5);
+    assert_eq!(s.snapshot().document().part(&p).unwrap().draw_order, 6.5);
     let appearance = frame(&s, 0., 0.)
         .offscreens
         .into_iter()
         .find(|o| o.id == os)
         .unwrap();
     assert!((appearance.opacity - 0.65).abs() < 1e-6);
-    let mut o = s.document().get_offscreen(&os).unwrap().clone();
+    let mut o = s.snapshot().document().offscreen(&os).unwrap().clone();
     let slot = o.part_keyform_indices[0] as usize;
     o.keyforms[slot].opacity = 0.33;
-    s.edit("static appearance", None, |e| e.replace_offscreen(o))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_offscreen(o))
+            .and_then(|value| {
+                let prepared = draft.prepare("static appearance")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     op(
         &mut s,
         &b,
@@ -254,18 +300,29 @@ fn part_grid_remaps_offscreen_and_does_not_revive_old_static_appearance() {
 fn glue_zero_axis_grid_conversion_uses_stable_samples() {
     let mut s = base();
     let g = id(1640);
-    s.edit("glue", None, |e| {
-        e.create_glue(Glue {
-            id: g.clone(),
-            runtime_id: "glue".into(),
-            name: "glue".into(),
-            mesh_a_id: MESH_ID.into(),
-            mesh_b_id: MESH_ID.into(),
-            pairs: vec![],
-            intensity: 0.6,
-            binding: None,
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                crate::support::insert_glue(
+                    e,
+                    Glue {
+                        id: g.clone(),
+                        runtime_id: "glue".into(),
+                        name: "glue".into(),
+                        mesh_a_id: MESH_ID.into(),
+                        mesh_b_id: MESH_ID.into(),
+                        pairs: vec![],
+                        intensity: 0.6,
+                        binding: None,
+                    },
+                )
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("glue")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     apply(
         &mut s,
@@ -282,8 +339,9 @@ fn glue_zero_axis_grid_conversion_uses_stable_samples() {
         },
     );
     let a = s
+        .snapshot()
         .document()
-        .get_glue(&g)
+        .glue(&g)
         .unwrap()
         .binding
         .as_ref()
@@ -291,9 +349,18 @@ fn glue_zero_axis_grid_conversion_uses_stable_samples() {
         .axes[0]
         .id
         .clone();
-    let mut glue = s.document().get_glue(&g).unwrap().clone();
+    let mut glue = s.snapshot().document().glue(&g).unwrap().clone();
     glue.binding.as_mut().unwrap().keyforms[1].intensity = 0.9;
-    s.edit("glue pose", None, |e| e.replace_glue(glue)).unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_glue(glue))
+            .and_then(|value| {
+                let prepared = draft.prepare("glue pose")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
     op(
         &mut s,
         &g,
@@ -304,8 +371,9 @@ fn glue_zero_axis_grid_conversion_uses_stable_samples() {
         },
     );
     assert!(
-        (s.document()
-            .get_glue(&g)
+        (s.snapshot()
+            .document()
+            .glue(&g)
             .unwrap()
             .binding
             .as_ref()
@@ -325,12 +393,13 @@ fn glue_zero_axis_grid_conversion_uses_stable_samples() {
             keep_pending: false,
         },
     );
-    assert!((s.document().get_glue(&g).unwrap().intensity - 0.75).abs() < 1e-6);
+    assert!((s.snapshot().document().glue(&g).unwrap().intensity - 0.75).abs() < 1e-6);
     roundtrip(&s);
-    s.undo().unwrap();
+    s.undo(s.version()).unwrap();
     assert_eq!(
-        s.document()
-            .get_glue(&g)
+        s.snapshot()
+            .document()
+            .glue(&g)
             .unwrap()
             .binding
             .as_ref()

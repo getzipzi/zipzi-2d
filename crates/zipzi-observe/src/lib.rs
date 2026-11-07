@@ -4,18 +4,18 @@
 //! never borrow the live editing session.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use zipzi_animation::{MotionPreview, MotionSnapshot};
 use zipzi_core::draw_order::DrawOrderGroup;
 use zipzi_core::evaluation::evaluate_frame_including_hidden;
+use zipzi_core::state::{AssetContent, AssetRecord, ContentId};
 use zipzi_core::{
-    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, DrawableFrame, Glue, ImageAsset,
-    Mesh, MeshBinding, Offscreen, Parameter, Part, PreviewValues, SceneBinding, Transform,
+    BlendShapeBinding, BlendShapeConstraint, BlendShapeKeyTable, DrawableFrame, Glue, Mesh,
+    MeshBinding, Offscreen, Parameter, Part, PreviewValues, SceneBinding, Transform,
 };
-use zipzi_project::{read_project_texture_bounded, TextureData};
-use zipzi_sdk::{AuthoringSnapshot, Version};
+use zipzi_project::{ResourceView, TextureData};
+use zipzi_sdk::{QuerySource, SourcedSnapshot};
 
 mod alpha;
 mod digest;
@@ -35,19 +35,17 @@ mod view;
 #[cfg(feature = "gpu")]
 pub use gpu::{DrawableBounds, ObservedFrame, ObservedTexture, Observer, ObserverConfig};
 pub use view::{ModelRoi, RenderRequest, ViewMapping};
-pub use zipzi_contract::runtime::{ObservationTextureReport, ObservationTextureReportEntry};
+pub use zipzi_contract::observation::{ObservationTextureReport, ObservationTextureReportEntry};
 
 #[derive(Clone, Debug)]
 pub struct ObservationInput {
-    version: Version,
-    evaluation_revision: u64,
+    provenance: QuerySource,
+    content_id: ContentId,
     document_id: String,
     requested: PreviewValues,
     frame: DrawableFrame,
-    assets: Vec<ImageAsset>,
-    root: PathBuf,
-    _resource_lease: Option<zipzi_project::archive::ProjectResourceLease>,
-    memory_images: BTreeMap<String, zipzi_project::PreparedImageContent>,
+    assets: Vec<AssetRecord>,
+    resources: ResourceView,
     source: ObservationSource,
     authoring: CapturedAuthoring,
     #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
@@ -64,7 +62,7 @@ struct CapturedAuthoring {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     parameters: Vec<Parameter>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    assets: Vec<ImageAsset>,
+    assets: Vec<CapturedAsset>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     draw_order_groups: Vec<DrawOrderGroup>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -82,6 +80,55 @@ struct CapturedAuthoring {
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+struct CapturedAsset {
+    id: String,
+    name: String,
+    content: CapturedAssetContent,
+}
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum CapturedAssetContent {
+    Empty,
+    Unresolved { source: String },
+    Image { width: u32, height: u32 },
+}
+impl From<&AssetRecord> for CapturedAsset {
+    fn from(asset: &AssetRecord) -> Self {
+        let content = match &asset.content {
+            AssetContent::Empty => CapturedAssetContent::Empty,
+            AssetContent::Unresolved { source } => CapturedAssetContent::Unresolved {
+                source: source.clone(),
+            },
+            AssetContent::Image { width, height, .. } => CapturedAssetContent::Image {
+                width: *width,
+                height: *height,
+            },
+        };
+        Self {
+            id: asset.id.clone(),
+            name: asset.name.clone(),
+            content,
+        }
+    }
+}
+fn image_descriptor(
+    asset: &AssetRecord,
+) -> Result<(zipzi_core::state::ResourceKey, u32, u32), ObservationError> {
+    match asset.content {
+        AssetContent::Image {
+            resource,
+            width,
+            height,
+        } => Ok((resource, width, height)),
+        _ => Err(ObservationError {
+            code: "MISSING_IMAGE_CONTENT".into(),
+            message: "Observation requires captured image content".into(),
+            asset_id: Some(asset.id.clone()),
+        }),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "source_kind", rename_all = "snake_case")]
 enum ObservationSource {
     Parameters,
@@ -90,7 +137,7 @@ enum ObservationSource {
 
 #[derive(Clone, Debug)]
 struct ResolvedTexture {
-    asset: ImageAsset,
+    asset: AssetRecord,
     data: TextureData,
     source_content_identity: planning::ObservationContentIdentity,
     render_rgba_hash: String,
@@ -108,14 +155,10 @@ pub struct ObservationCaptureLimits {
 }
 impl Default for ObservationCaptureLimits {
     fn default() -> Self {
-        let limits = zipzi_contract::runtime::RuntimeLimits::default();
         Self {
-            max_frames: limits.observation_frames,
-            max_rgba_bytes: limits.observation_texture_rgba_bytes,
-            png: zipzi_core::image::PngDecodeLimits {
-                max_encoded_bytes: limits.observation_encoded_bytes,
-                max_workspace_bytes: limits.observation_workspace_bytes,
-            },
+            max_frames: 64,
+            max_rgba_bytes: zipzi_contract::observation::DEFAULT_OBSERVATION_TEXTURE_RGBA_BYTES,
+            png: Default::default(),
         }
     }
 }
@@ -144,6 +187,14 @@ fn check_capture(control: &zipzi_sdk::ConversionControl) -> Result<(), Observati
 }
 
 impl ResolvedObservation {
+    pub fn source(&self) -> QuerySource {
+        self.input.provenance
+    }
+
+    pub fn content_id(&self) -> ContentId {
+        self.input.content_id
+    }
+
     /// Resolve 1..64 inputs from one snapshot, sharing decoded texture content.
     /// Cooperatively cancel between samples, texture decodes and scene digests.
     /// An already entered image decode completes before cancellation is observed.
@@ -189,14 +240,12 @@ impl ResolvedObservation {
             });
         }
         let first = &inputs[0];
-        let mut assets = BTreeMap::<String, ImageAsset>::new();
+        let mut assets = BTreeMap::<String, AssetRecord>::new();
         for input in &inputs {
             check_capture(control)?;
-            if input.version != first.version
+            if input.provenance != first.provenance
                 || input.document_id != first.document_id
-                || input.evaluation_revision != first.evaluation_revision
-                || input.root != first.root
-                || input.authoring != first.authoring
+                || input.content_id != first.content_id
             {
                 return Err(ObservationError {
                     code: "MIXED_DOCUMENT_SNAPSHOTS".into(),
@@ -206,11 +255,7 @@ impl ResolvedObservation {
             }
             for asset in &input.assets {
                 check_capture(control)?;
-                asset.image_content().map_err(|e| ObservationError {
-                    code: e.code,
-                    message: e.message,
-                    asset_id: Some(asset.id.clone()),
-                })?;
+                image_descriptor(asset)?;
                 if let Some(existing) = assets.insert(asset.id.clone(), asset.clone()) {
                     if existing != *asset {
                         return Err(ObservationError {
@@ -251,23 +296,20 @@ impl ResolvedObservation {
             .zip(&plan.textures)
             .map(|(asset, target)| {
                 check_capture(control)?;
-                Self::check_preparation_workspace(
-                    target,
-                    limits,
-                    source_alpha,
-                    first.memory_images.contains_key(&asset.id),
-                )?;
-                let verified = match first.memory_images.get(&asset.id) {
-                    Some(image) => image.verified_texture_with_control(|| !control.is_cancelled()),
-                    None => read_project_texture_bounded(&first.root, &asset, limits.png, || {
-                        !control.is_cancelled()
-                    }),
-                }
-                .map_err(|status| ObservationError {
-                    code: status.code,
-                    message: status.message,
+                Self::check_preparation_workspace(target, limits, source_alpha, true)?;
+                let (key, _, _) = image_descriptor(&asset)?;
+                let image = first.resources.image(key).ok_or_else(|| ObservationError {
+                    code: "MISSING_RESOURCE".into(),
+                    message: "Captured resource view is incomplete".into(),
                     asset_id: Some(asset.id.clone()),
                 })?;
+                let verified = image
+                    .verified_texture_with_control(|| !control.is_cancelled())
+                    .map_err(|status| ObservationError {
+                        code: status.code,
+                        message: status.message,
+                        asset_id: Some(asset.id.clone()),
+                    })?;
                 check_capture(control)?;
                 Self::prepare_texture(asset, target, verified, source_alpha, control)
             })
@@ -324,7 +366,7 @@ impl std::error::Error for ObservationError {}
 impl ObservationInput {
     /// Evaluate a detached authoring snapshot; no live session is consulted.
     pub fn capture_from_snapshot(
-        snapshot: &AuthoringSnapshot,
+        snapshot: &SourcedSnapshot,
         requested: &PreviewValues,
     ) -> Result<Self, ObservationError> {
         Self::capture_from_snapshot_with_quality(snapshot, requested, false)
@@ -332,12 +374,13 @@ impl ObservationInput {
 
     /// Capture an optional default-pose reference from this exact immutable snapshot.
     pub fn capture_from_snapshot_with_quality(
-        snapshot: &AuthoringSnapshot,
+        snapshot: &SourcedSnapshot,
         requested: &PreviewValues,
         quality: bool,
     ) -> Result<Self, ObservationError> {
         let mut frame = DrawableFrame::default();
-        let status = evaluate_frame_including_hidden(snapshot.document(), requested, &mut frame);
+        let status =
+            evaluate_frame_including_hidden(snapshot.snapshot.document(), requested, &mut frame);
         if !status.is_ok() {
             return Err(ObservationError {
                 code: status.code,
@@ -357,7 +400,7 @@ impl ObservationInput {
     /// Capture animation against the exact document snapshot checked for identity.
     /// Apply Model opacity to drawable draws before mask / Offscreen composition.
     pub fn capture_motion_from_snapshot(
-        snapshot: &AuthoringSnapshot,
+        snapshot: &SourcedSnapshot,
         preview: &MotionPreview,
     ) -> Result<Self, ObservationError> {
         Self::capture_motion_from_snapshot_with_quality(snapshot, preview, false)
@@ -365,17 +408,16 @@ impl ObservationInput {
 
     /// Capture animation and, optionally, its authoring source's default-pose reference.
     pub fn capture_motion_from_snapshot_with_quality(
-        snapshot: &AuthoringSnapshot,
+        snapshot: &SourcedSnapshot,
         preview: &MotionPreview,
         quality: bool,
     ) -> Result<Self, ObservationError> {
-        let version = snapshot.version();
-        if preview.source_identity() != Some((version.session_id, version.generation))
-            || !preview.matches_document(snapshot.document())
+        if preview.source_identity() != Some(snapshot.source)
+            || !preview.matches_document(snapshot.snapshot.document())
         {
             return Err(ObservationError {
                 code: "STALE_ANIMATION_PREVIEW".into(),
-                message: "Animation preview was captured from another document revision".into(),
+                message: "Animation preview belongs to another query source or content node".into(),
                 asset_id: None,
             });
         }
@@ -410,25 +452,24 @@ impl ObservationInput {
     }
 
     fn capture_frame(
-        snapshot: &AuthoringSnapshot,
+        snapshot: &SourcedSnapshot,
         requested: PreviewValues,
         frame: DrawableFrame,
         source: ObservationSource,
         quality: bool,
     ) -> Result<Self, ObservationError> {
-        let version = snapshot.version();
-        let document = snapshot.document();
-        let evaluation_revision = document.evaluation_revision();
+        let provenance = snapshot.source;
+        let document = snapshot.snapshot.document();
+        let content_id = document.content_id();
         let assets = planning::referenced_assets(document)?;
         planning::validate_frame_references(&frame, &assets)?;
-        let root = snapshot.asset_root().to_path_buf();
         let authoring = CapturedAuthoring {
             meshes: document
                 .mesh_order()
                 .iter()
                 .map(|id| {
                     document
-                        .get_mesh(id)
+                        .mesh(id)
                         .cloned()
                         .expect("mesh ID exists in captured document")
                 })
@@ -438,7 +479,7 @@ impl ObservationInput {
                 .iter()
                 .map(|id| {
                     document
-                        .get_part(id)
+                        .part(id)
                         .cloned()
                         .expect("part ID exists in captured document")
                 })
@@ -448,7 +489,7 @@ impl ObservationInput {
                 .iter()
                 .map(|id| {
                     document
-                        .get_transform(id)
+                        .transform(id)
                         .cloned()
                         .expect("transform ID exists in captured document")
                 })
@@ -458,7 +499,7 @@ impl ObservationInput {
                 .iter()
                 .map(|id| {
                     document
-                        .get_binding(id)
+                        .binding(id)
                         .cloned()
                         .expect("binding ID exists in captured document")
                 })
@@ -466,25 +507,20 @@ impl ObservationInput {
             parameters: document
                 .parameter_order()
                 .iter()
-                .map(|id| {
-                    document
-                        .get_parameter(id)
-                        .cloned()
-                        .expect("parameter exists")
-                })
+                .map(|id| document.parameter(id).cloned().expect("parameter exists"))
                 .collect(),
             assets: document
                 .asset_order()
                 .iter()
-                .map(|id| document.get_asset(id).cloned().expect("asset exists"))
+                .map(|id| CapturedAsset::from(document.asset(id).expect("asset exists")))
                 .collect(),
-            draw_order_groups: document.draw_order_groups().unwrap_or_default().to_vec(),
+            draw_order_groups: document.draw_order_groups().clone().unwrap_or_default(),
             scene_bindings: document
                 .scene_binding_order()
                 .iter()
                 .map(|id| {
                     document
-                        .get_scene_binding(id)
+                        .scene_binding(id)
                         .cloned()
                         .expect("scene binding exists")
                 })
@@ -492,24 +528,19 @@ impl ObservationInput {
             offscreens: document
                 .offscreen_order()
                 .iter()
-                .map(|id| {
-                    document
-                        .get_offscreen(id)
-                        .cloned()
-                        .expect("offscreen exists")
-                })
+                .map(|id| document.offscreen(id).cloned().expect("offscreen exists"))
                 .collect(),
             glues: document
                 .glue_order()
                 .iter()
-                .map(|id| document.get_glue(id).cloned().expect("glue exists"))
+                .map(|id| document.glue(id).cloned().expect("glue exists"))
                 .collect(),
             blend_key_tables: document
                 .blend_key_table_order()
                 .iter()
                 .map(|id| {
                     document
-                        .get_blend_key_table(id)
+                        .blend_key_table(id)
                         .cloned()
                         .expect("key table exists")
                 })
@@ -519,7 +550,7 @@ impl ObservationInput {
                 .iter()
                 .map(|id| {
                     document
-                        .get_blend_constraint(id)
+                        .blend_constraint(id)
                         .cloned()
                         .expect("constraint exists")
                 })
@@ -529,41 +560,39 @@ impl ObservationInput {
                 .iter()
                 .map(|id| {
                     document
-                        .get_blend_binding(id)
+                        .blend_binding(id)
                         .cloned()
                         .expect("blend binding exists")
                 })
                 .collect(),
         };
-        let memory_images = assets
-            .iter()
-            .filter_map(|a| {
-                snapshot
-                    .memory_image(&a.id)
-                    .map(|image| (a.id.clone(), image.clone()))
-            })
-            .collect();
         Ok(Self {
             reference_frame: if quality {
-                Some(snapshot.quality_reference().map_err(|e| ObservationError {
-                    code: e.code.into(),
-                    message: e.message.into(),
-                    asset_id: None,
-                })?)
+                Some(
+                    snapshot
+                        .snapshot
+                        .quality_reference()
+                        .map_err(|e| ObservationError {
+                            code: e.code.into(),
+                            message: e.message.into(),
+                            asset_id: None,
+                        })?,
+                )
             } else {
                 None
             },
-            memory_images,
-            version,
-            evaluation_revision,
+            resources: snapshot.snapshot.resources().clone(),
+            provenance,
+            content_id,
             document_id: document.id().to_owned(),
             requested,
             frame,
             assets,
-            root,
-            _resource_lease: snapshot.resource_lease(),
             source,
             authoring,
         })
     }
 }
+
+#[cfg(test)]
+mod source_tests;

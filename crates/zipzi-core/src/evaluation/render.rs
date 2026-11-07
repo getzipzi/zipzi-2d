@@ -1,4 +1,5 @@
-use crate::document::Document;
+use crate::evaluation::EvaluationModel;
+
 use crate::types::{DeltaKeyforms, Status};
 use zipzi_core::OffscreenLookup;
 
@@ -7,7 +8,7 @@ use super::prepared::{DrawItemSource, PreparedEvaluation};
 use super::types::OffscreenFrame;
 
 pub(super) fn evaluate(
-    doc: &Document,
+    doc: &impl EvaluationModel,
     prepared: &PreparedEvaluation,
     state: &mut EvalContext<'_>,
 ) -> Status {

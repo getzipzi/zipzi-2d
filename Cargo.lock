@@ -865,33 +865,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ciborium"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42e69ffd6f0917f5c029256a24d0161db17cea3997d185db0d35926308770f0e"
-dependencies = [
- "ciborium-io",
- "ciborium-ll",
- "serde",
-]
-
-[[package]]
-name = "ciborium-io"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05afea1e0a06c9be33d539b876f1ce3692f4afea2cb41f740e7743225ed1c757"
-
-[[package]]
-name = "ciborium-ll"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57663b653d948a338bfb3eeba9bb2fd5fcfaecb9e199e87e1eda4d9e8b240fd9"
-dependencies = [
- "ciborium-io",
- "half",
-]
-
-[[package]]
 name = "cipher"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1289,6 +1262,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.0",
+ "zipzi-animation",
  "zipzi-core",
  "zipzi-project",
  "zipzi-render",
@@ -9480,10 +9454,13 @@ dependencies = [
  "velopack",
  "wgpu",
  "windows 0.62.2",
+ "zipzi-animation",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-editor-render",
  "zipzi-observe",
+ "zipzi-project",
  "zipzi-runtime",
  "zipzi-sdk",
 ]
@@ -9501,7 +9478,10 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.20",
  "uuid",
+ "zip 9.0.3",
+ "zipzi-animation",
  "zipzi-cmo3",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-project",
  "zipzi-runtime",
@@ -9520,6 +9500,8 @@ dependencies = [
  "png 0.17.16",
  "wgpu",
  "windows 0.62.2",
+ "zipzi-animation",
+ "zipzi-contract",
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-render",
@@ -9591,7 +9573,6 @@ dependencies = [
 name = "zipzi-project"
 version = "0.1.0-alpha.8"
 dependencies = [
- "ciborium",
  "png 0.17.16",
  "serde",
  "serde_json",
@@ -9692,6 +9673,7 @@ dependencies = [
  "thiserror 2.0.20",
  "uuid",
  "windows-sys 0.61.2",
+ "zipzi-animation",
  "zipzi-api-derive",
  "zipzi-contract",
  "zipzi-core",
@@ -9710,10 +9692,14 @@ dependencies = [
  "rstar",
  "serde",
  "serde_json",
+ "sha2 0.11.0",
  "spade",
+ "tempfile",
  "uuid",
+ "zip 9.0.3",
  "zipzi-animation",
  "zipzi-api-derive",
+ "zipzi-cmo3",
  "zipzi-contract",
  "zipzi-core",
  "zipzi-project",

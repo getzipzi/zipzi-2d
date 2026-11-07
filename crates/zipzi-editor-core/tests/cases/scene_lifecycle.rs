@@ -90,7 +90,7 @@ fn scene_copy_and_delete_refresh_canvas_topology_and_keep_context() -> anyhow::R
         destination: None,
         before: None,
     })?;
-    let copy = p.copied_ids()[&source].clone();
+    let copy = p.outcome.copied_ids[&source].clone();
     let r = d.execute_scene_authoring(&p)?;
     assert!(
         r.suggested_selection
@@ -296,7 +296,7 @@ fn tree_deletion_reviews_locked_descendants_and_cleans_external_references() -> 
     let blocked = d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))?;
     assert_eq!(
         blocked.summary().state,
-        zipzi_sdk::DeletionReviewState::Blocked
+        zipzi_contract::authoring::DeletionReviewState::Blocked
     );
     assert!(d.execute_tree_deletion(&blocked).is_err());
     d.set_objects_locked(std::slice::from_ref(&mesh), false)?;
@@ -311,7 +311,7 @@ fn tree_deletion_reviews_locked_descendants_and_cleans_external_references() -> 
     let plan = d.plan_tree_deletion(P::Organization, std::slice::from_ref(&part))?;
     assert_eq!(
         plan.summary().state,
-        zipzi_sdk::DeletionReviewState::NeedsConfirmation
+        zipzi_contract::authoring::DeletionReviewState::NeedsConfirmation
     );
     assert!(plan.removed_ids().contains(&glue));
     assert_eq!(d.history_lengths(), history);
@@ -364,14 +364,14 @@ fn tree_deletion_scope_is_projection_independent_and_preview_context_expires() -
     assert!(!current.valid_for(&d));
     assert!(d.execute_tree_deletion(&current).is_err());
     let host = d.runtime_host();
-    let plans = host.read().modeling_plan_count();
+    let tasks = host.read().outstanding_jobs();
     let task = d.start_tree_deletion(d.deletion_intent(std::slice::from_ref(&mesh))?)?;
     task.cancellation().cancel();
     assert!(task.run().finish().is_err());
-    assert_eq!(host.read().modeling_plan_count(), plans);
+    assert_eq!(host.read().outstanding_jobs(), tasks);
     let task = d.start_tree_deletion(d.deletion_intent(std::slice::from_ref(&mesh))?)?;
     drop(task);
-    assert_eq!(host.read().modeling_plan_count(), plans);
+    assert_eq!(host.read().outstanding_jobs(), tasks);
     assert!(d.object_index().get(&mesh).is_some());
     Ok(())
 }
@@ -393,8 +393,7 @@ fn tree_deletion_background_planning_can_overlap_runtime_reads() -> anyhow::Resu
     // Rendering keeps a read alive while the worker finishes its frozen plan.
     let runtime = host.read();
     let finished = std::thread::spawn(move || task.run()).join();
-    assert_eq!(runtime.modeling_plan_count(), 0);
-    let jobs = runtime.list_jobs(host.client_id())?;
+    let jobs = runtime.client_jobs(host.client_id())?;
     assert_eq!(jobs.len(), 1);
     assert_eq!(jobs[0].state, zipzi_runtime::JobState::Running);
     drop(runtime);
@@ -403,10 +402,9 @@ fn tree_deletion_background_planning_can_overlap_runtime_reads() -> anyhow::Resu
         .finish()?;
     assert!(plan.valid_for(&document));
     assert_eq!(plan.removed_ids(), vec![mesh.id]);
-    assert!(host.read().list_jobs(host.client_id())?.is_empty());
-    assert_eq!(host.read().modeling_plan_count(), 1);
+    assert!(host.read().client_jobs(host.client_id())?.is_empty());
     drop(plan);
-    assert_eq!(host.read().modeling_plan_count(), 0);
+    assert_eq!(host.read().outstanding_jobs(), 0);
     Ok(())
 }
 
@@ -428,9 +426,9 @@ fn tree_deletion_completion_releases_jobs_after_source_view_is_dropped() -> anyh
         }
         let plan = completion.finish();
         assert_eq!(plan.is_err(), cancel);
-        assert!(host.read().list_jobs(host.client_id())?.is_empty());
+        assert!(host.read().client_jobs(host.client_id())?.is_empty());
         drop(plan);
-        assert_eq!(host.read().modeling_plan_count(), 0);
+        assert_eq!(host.read().outstanding_jobs(), 0);
     }
     Ok(())
 }
@@ -501,15 +499,10 @@ fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() 
 {
     let assets = tempfile::tempdir()?;
     let asset = id();
-    let mut sdk = zipzi_sdk::AuthoringSession::new(&id(), zipzi_core::Canvas::default())?;
-    sdk.edit("locked resource", None, |e| {
-        e.create_asset(zipzi_core::ImageAsset {
-            id: asset.clone(),
-            name: "Locked".into(),
-            content: None,
-            unresolved_source: None,
-        })?;
-        let mut state = e.candidate_document().editor_state().clone();
+    let mut sdk = crate::support::fixture_session(&id(), zipzi_core::Canvas::default())?;
+    crate::support::publish_fixture(&mut sdk, "locked resource", |e| {
+        e.create_empty_asset(asset.clone(), "Locked".into())?;
+        let mut state = e.read_document()?.editor_state().clone();
         state.objects.insert(
             asset.clone(),
             zipzi_core::document::ObjectEditorState {
@@ -519,7 +512,7 @@ fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() 
         );
         e.replace_editor_state(state)
     })?;
-    let saved = sdk.save_project(&assets.path().join("locked.zipzi"), None)?;
+    let saved = crate::support::save_fixture(&mut sdk, &assets.path().join("locked.zipzi"))?;
     let mut d = Document::open(&saved.path)?;
     let target = ObjectRef::new(ObjectKind::Texture, &asset);
     let plan = d.plan_tree_deletion(
@@ -528,7 +521,7 @@ fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() 
     )?;
     assert_eq!(
         plan.summary().state,
-        zipzi_sdk::DeletionReviewState::Blocked
+        zipzi_contract::authoring::DeletionReviewState::Blocked
     );
     assert!(
         d.unlock_deletion_source(&plan, "unreported-source")
@@ -542,7 +535,10 @@ fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() 
         zipzi_editor_core::PaletteProjection::Organization,
         &[target.clone()],
     )?;
-    assert_eq!(fresh.summary().state, zipzi_sdk::DeletionReviewState::Ready);
+    assert_eq!(
+        fresh.summary().state,
+        zipzi_contract::authoring::DeletionReviewState::Ready
+    );
     d.execute_tree_deletion(&fresh)?;
     assert!(d.object_index().get(&target).is_none());
     d.undo()?;
@@ -554,7 +550,7 @@ fn tree_deletion_unlocks_only_a_reported_business_source_and_expires_its_plan() 
     )?;
     assert_eq!(
         restored.summary().state,
-        zipzi_sdk::DeletionReviewState::Blocked
+        zipzi_contract::authoring::DeletionReviewState::Blocked
     );
     Ok(())
 }

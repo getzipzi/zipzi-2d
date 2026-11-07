@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use zipzi_core::evaluation::Drawable;
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::Status;
-use zipzi_core::Document;
 
 use crate::layout::{checked, Layout};
 use crate::schema::section;
@@ -16,7 +16,7 @@ pub(super) struct BindingView<'a> {
 }
 
 pub(super) struct Moc3EncoderContext<'a> {
-    pub(super) doc: &'a Document,
+    pub(super) doc: &'a DocumentState,
     pub(super) export_version: u8,
     pub(super) drawables: &'a [Drawable],
     pub(super) parts: Vec<String>,
@@ -43,7 +43,7 @@ pub(super) struct Moc3EncoderContext<'a> {
 
 impl<'a> Moc3EncoderContext<'a> {
     pub(super) fn new(
-        doc: &'a Document,
+        doc: &'a DocumentState,
         export_version: u8,
         drawables: &'a [Drawable],
     ) -> Result<Self, Status> {
@@ -60,17 +60,17 @@ impl<'a> Moc3EncoderContext<'a> {
         for id in doc.binding_order() {
             all_bindings.push(BindingView {
                 id,
-                axes: &doc.get_binding(id).unwrap().axes,
+                axes: &doc.binding(id).unwrap().axes,
             });
         }
         for id in doc.scene_binding_order() {
             all_bindings.push(BindingView {
                 id,
-                axes: &doc.get_scene_binding(id).unwrap().axes,
+                axes: &doc.scene_binding(id).unwrap().axes,
             });
         }
         for id in doc.glue_order() {
-            if let Some(binding) = &doc.get_glue(id).unwrap().binding {
+            if let Some(binding) = &doc.glue(id).unwrap().binding {
                 all_bindings.push(BindingView {
                     id,
                     axes: &binding.axes,
@@ -88,7 +88,7 @@ impl<'a> Moc3EncoderContext<'a> {
         l.counts[1] = checked(transforms.len(), "deformers")? as u32;
 
         if export_version >= 6 {
-            l.counts[35] = doc.offscreen_count() as u32;
+            l.counts[35] = doc.offscreen_order().len() as u32;
         }
 
         let mut table_indices: HashMap<&'a str, Vec<i32>> = HashMap::new();
@@ -98,7 +98,7 @@ impl<'a> Moc3EncoderContext<'a> {
 
         let mut param_bkts: HashMap<&'a str, Vec<&'a str>> = HashMap::new();
         for bkt_id in doc.blend_key_table_order() {
-            let bkt = doc.get_blend_key_table(bkt_id).unwrap();
+            let bkt = doc.blend_key_table(bkt_id).unwrap();
             param_bkts
                 .entry(bkt.parameter_id.as_str())
                 .or_default()
@@ -164,7 +164,7 @@ impl<'a> Moc3EncoderContext<'a> {
         }
 
         let c = zipzi_core::geometry::finite_export_canvas(
-            self.doc.export_settings(),
+            self.doc.setup().export,
             frame
                 .drawables
                 .iter()
@@ -218,8 +218,10 @@ impl<'a> Moc3EncoderContext<'a> {
         };
 
         for id in self.doc.asset_order() {
-            let asset = self.doc.get_asset(id).unwrap();
-            let content = asset.image_content()?;
+            let asset = self.doc.asset(id).unwrap();
+            let zipzi_core::state::AssetContent::Image { width, height, .. } = asset.content else {
+                return Err(Status::error("MISSING_IMAGE_CONTENT", id));
+            };
             let path = format!("textures/{}.png", result.textures.len());
             if !result.textures.is_empty() {
                 result.model3_json.push(',');
@@ -227,10 +229,9 @@ impl<'a> Moc3EncoderContext<'a> {
             result.model3_json.push_str(&format!("\n      \"{path}\""));
             result.textures.push(TextureSlot {
                 asset_id: id.clone(),
-                source: content.source.clone(),
                 package_path: path,
-                width: content.width,
-                height: content.height,
+                width,
+                height,
             });
         }
 

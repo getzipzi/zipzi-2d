@@ -8,7 +8,7 @@ impl<'a> Moc3EncoderContext<'a> {
     pub(super) fn encode_parameters(&mut self) -> Result<(), Status> {
         let mut table_count: i32 = 0;
         for id in self.doc.parameter_order() {
-            let p = self.doc.get_parameter(id).unwrap();
+            let p = self.doc.parameter(id).unwrap();
             {
                 let ids = self.l.field("param_src.id")?;
                 let start = ids.len();
@@ -67,7 +67,7 @@ impl<'a> Moc3EncoderContext<'a> {
 
             if let Some(bkts) = bkts {
                 for &bkt_id in bkts {
-                    let bkt = self.doc.get_blend_key_table(bkt_id).unwrap();
+                    let bkt = self.doc.blend_key_table(bkt_id).unwrap();
                     union_keys.extend_from_slice(&bkt.keys);
                 }
             }
@@ -94,7 +94,7 @@ impl<'a> Moc3EncoderContext<'a> {
         }
 
         for &bkt_id in &self.ordered_bkts {
-            let bkt = self.doc.get_blend_key_table(bkt_id).unwrap();
+            let bkt = self.doc.blend_key_table(bkt_id).unwrap();
             let keys_off = checked(self.l.field("keys_src.key")?.len() / 4, "bkt_keys_off")?;
             self.l.integer("blend_key_table_src.keys_off", keys_off)?;
             self.l.integer(

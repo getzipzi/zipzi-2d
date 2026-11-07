@@ -1,85 +1,94 @@
 use serde_json::Value;
-use zipzi_core::{Canvas, Parameter, Vec2};
-use zipzi_sdk::{AuthoringSession, ObjectKind};
-
+use zipzi_core::{state::DocumentState, ModelSetup, Parameter};
+use zipzi_sdk::{AuthoringSession, ResourceStore, ResourceView, Snapshot, Status};
 const DOC: &str = "00000000-0000-4000-8000-000000000c01";
 const PARAM: &str = "00000000-0000-4000-8000-000000000c02";
 const EXP: &str = "00000000-0000-4000-8000-000000000c03";
-
 fn session() -> AuthoringSession {
-    let mut session =
-        AuthoringSession::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0)).unwrap();
-    session
-        .edit("parameter", None, |edit| {
-            edit.create_parameter(Parameter {
-                id: PARAM.into(),
-                runtime_id: "ParamX".into(),
-                name: "X".into(),
-                ..Default::default()
-            })
-        })
-        .unwrap();
-    session
+    let mut b = DocumentState::new(DOC, ModelSetup::default())
+        .unwrap()
+        .builder();
+    b.create_parameter(Parameter {
+        id: PARAM.into(),
+        runtime_id: "ParamX".into(),
+        name: "X".into(),
+        ..Default::default()
+    })
+    .unwrap();
+    AuthoringSession::new(
+        Snapshot::new(b.freeze().unwrap().state, ResourceView::default()).unwrap(),
+    )
 }
-
+fn import(
+    s: &mut AuthoringSession,
+    input: &str,
+) -> Result<Vec<zipzi_project::ExpressionDiagnostic>, Status> {
+    let mut d = s.begin_draft();
+    let diagnostics = d.batch(d.source(), |c| {
+        let imported = zipzi_project::import_expression3(&c.read_document()?, EXP, "Smile", input)
+            .map_err(|e| Status::error(e.code, format!("{}: {}", e.path, e.message)))?;
+        c.create_expression(imported.candidate.expression(EXP).unwrap().clone())?;
+        Ok(imported.diagnostics)
+    })?;
+    s.publish(d.prepare("expression import")?)?;
+    Ok(diagnostics)
+}
 #[test]
-fn expression_import_is_undoable_and_saved_with_v5_project() {
-    let mut session = session();
-    let evaluation_revision = session.evaluation_revision();
+fn expression_import_is_undoable_and_survives_native_save() {
+    let mut s = session();
+    let content = s.snapshot().content_id();
     let input =
         r#"{"Type":"Live2D Expression","Parameters":[{"Id":"ParamX","Value":0.5,"Blend":"Add"}]}"#;
-    let (diagnostics, _) = session
-        .edit("expression", None, |edit| {
-            edit.import_expression3(EXP, "Smile", input)
-        })
-        .unwrap();
-    assert!(diagnostics.is_empty());
-    assert!(session.evaluation_revision() > evaluation_revision);
-    let handle = session.handle(ObjectKind::Expression, EXP).unwrap();
-    let output: Value = serde_json::from_str(&session.export_expression3(EXP).unwrap()).unwrap();
+    assert!(import(&mut s, input).unwrap().is_empty());
+    assert_ne!(s.snapshot().content_id(), content);
+    let output: Value = serde_json::from_str(
+        &zipzi_project::export_expression3(s.snapshot().document(), EXP).unwrap(),
+    )
+    .unwrap();
     assert_eq!(output["Parameters"][0]["Id"], "ParamX");
-    session.undo().unwrap();
-    assert!(session.resolve_handle(&handle).is_err());
-    session.redo().unwrap();
-    assert!(session.resolve_handle(&handle).is_err());
-    let root = std::env::temp_dir().join(format!("zipzi-expression-sdk-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&root);
-    std::fs::create_dir_all(&root).unwrap();
-    let project = root.join("project");
-    session.save_project(&project, None).unwrap();
-    let mut reopened =
-        AuthoringSession::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0)).unwrap();
-    reopened.open_project(&project, None).unwrap();
-    assert_eq!(reopened.expression(EXP).unwrap().name, "Smile");
+    let stale = s.begin_draft().prepare("before undo").unwrap();
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().expression(EXP).is_none());
+    s.redo(s.version()).unwrap();
+    assert_eq!(s.publish(stale).unwrap_err().code, "STALE_SOURCE");
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("model.zipzi");
+    let io = zipzi_sdk::ProjectIo::new(root.path(), ResourceStore::default());
+    s.save_as(&io, &path, None, || true).unwrap();
+    let (reopened, diagnostics) = AuthoringSession::open(&io, &path, || true).unwrap();
+    assert!(diagnostics.is_empty());
     assert_eq!(
-        serde_json::from_str::<Value>(&reopened.export_expression3(EXP).unwrap()).unwrap(),
+        reopened.snapshot().document().expression(EXP).unwrap().name,
+        "Smile"
+    );
+    assert_eq!(
+        serde_json::from_str::<Value>(
+            &zipzi_project::export_expression3(reopened.snapshot().document(), EXP).unwrap()
+        )
+        .unwrap(),
         output
     );
-    std::fs::remove_dir_all(root).unwrap();
 }
-
 #[test]
-fn failed_expression_import_keeps_edit_atomic() {
-    let mut session = session();
-    let before = session.version();
+fn failed_expression_import_keeps_publication_atomic_and_unresolved_targets_explicit() {
+    let mut s = session();
+    let version = s.version();
     let invalid = r#"{"Parameters":[{"Id":"ParamX","Value":0.5,"Blend":"Unknown"}]}"#;
-    let error = session
-        .edit("bad expression", None, |edit| {
-            edit.import_expression3(EXP, "Smile", invalid)
-        })
-        .unwrap_err();
-    assert_eq!(error.field_path.as_deref(), Some("$.Parameters[0].Blend"));
-    assert_eq!(session.version(), before);
-    assert!(session.expression_ids().is_empty());
+    let diagnostic =
+        zipzi_project::import_expression3(s.snapshot().document(), EXP, "Smile", invalid)
+            .unwrap_err();
+    assert_eq!(diagnostic.path, "$.Parameters[0].Blend");
+    let error = import(&mut s, invalid).unwrap_err();
+    assert_eq!(error.code, diagnostic.code);
+    assert_eq!(s.version(), version);
+    assert!(s.snapshot().document().expression_order().is_empty());
     let unresolved = r#"{"Parameters":[{"Id":"Missing","Value":0.5}]}"#;
-    let (diagnostics, _) = session
-        .edit("repairable", None, |edit| {
-            edit.import_expression3(EXP, "Smile", unresolved)
-        })
-        .unwrap();
+    let diagnostics = import(&mut s, unresolved).unwrap();
     assert_eq!(diagnostics[0].path, "$.Parameters[0].Id");
     assert_eq!(
-        session.export_expression3(EXP).unwrap_err().code.as_ref(),
+        zipzi_project::export_expression3(s.snapshot().document(), EXP)
+            .unwrap_err()
+            .code,
         "UNRESOLVED_PARAMETER"
     );
 }

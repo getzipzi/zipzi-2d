@@ -8,19 +8,17 @@ use std::{
     path::PathBuf,
     time::Instant,
 };
-use zipzi_core::{Canvas, Vec2};
-use zipzi_sdk::AuthoringSession;
+use zipzi_animation::MotionPreview;
+use zipzi_project::ProjectImporter;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = std::env::args_os().skip(1);
     let model = PathBuf::from(args.next().ok_or("missing MODEL3")?).canonicalize()?;
     let output = PathBuf::from(args.next().ok_or("missing OUTPUT")?);
-    let mut session = AuthoringSession::new(
-        "00000000-0000-4000-8000-000000000001",
-        Canvas::new(1., 1., Vec2::default(), 1.),
-    )?;
-    session.import_model3(&model, None)?;
-    let mut preview = session.motion_preview();
+    let (report, imported, _) = ProjectImporter::default().import_model3(&model);
+    let imported =
+        imported.ok_or_else(|| format!("{}: {}", report.status.code, report.status.message))?;
+    let mut preview = MotionPreview::new(&imported.document);
     preview.schedule_motion_entry("Idle", 0, 0.)?;
     let mut writer = BufWriter::new(File::create(output)?);
     let (mut animation, mut geometry) = (0., 0.);

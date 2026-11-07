@@ -9,6 +9,19 @@ use super::*;
 use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues};
 use anyhow::bail;
 
+pub(crate) enum PreparedProperties {
+    Draft(crate::runtime_host::HostedDraft),
+    Parent(crate::PaletteMovePlan),
+}
+impl PreparedProperties {
+    fn version(&self) -> zipzi_sdk::Version {
+        match self {
+            Self::Draft(draft) => draft.base_version(),
+            Self::Parent(plan) => plan.source_version(),
+        }
+    }
+}
+
 enum PropertyPayload {
     Unchanged,
     Object(serde_json::Value),
@@ -38,7 +51,7 @@ impl PropertyPayload {
 impl Document {
     fn scene_property_scope(
         &self,
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         id: &str,
         blend_id: &str,
     ) -> PropertyScope {
@@ -47,7 +60,7 @@ impl Document {
         let values: std::collections::HashMap<_, _> = model
             .parameter_order()
             .iter()
-            .filter_map(|id| model.get_parameter(id))
+            .filter_map(|id| model.parameter(id))
             .map(|p| {
                 let requested = self
                     .session
@@ -78,7 +91,7 @@ impl Document {
             })
             .collect();
         if model
-            .iter_blend_bindings_for_target(blend_id)
+            .blend_bindings_for_target(blend_id)
             .any(|b| !zipzi_core::evaluation::evaluate_blend_binding(model, &values, b).is_empty())
         {
             return PropertyScope::DeformerBlendShape;
@@ -178,7 +191,7 @@ impl Document {
                     .zip(&form.keys)
                     .all(|(axis, key)| {
                         model
-                            .get_parameter(&axis.parameter_id)
+                            .parameter(&axis.parameter_id)
                             .is_some_and(|parameter| {
                                 let value = self
                                     .session
@@ -216,7 +229,7 @@ impl Document {
     }
 
     pub(crate) fn property_values_in(
-        model: &zipzi_core::Document,
+        model: &zipzi_core::state::DocumentState,
         object: &ObjectRef,
         scope: &PropertyScope,
     ) -> Result<PropertyValues> {
@@ -438,11 +451,11 @@ impl Document {
     }
 
     fn apply_properties(
-        &self,
-        edit: &mut EditSession<'_>,
+        edit: &mut Commands<'_>,
         object: &ObjectRef,
         patch: &PropertyPatch,
         payload: PropertyPayload,
+        organization: Option<crate::document::sorting::OrganizationMove>,
     ) -> Result<()> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.apply_properties");
@@ -452,7 +465,8 @@ impl Document {
         let payload = match payload {
             PropertyPayload::Unchanged => return Ok(()),
             PropertyPayload::DeformationParent(plan) => {
-                return plan.apply_to(edit, self.preview_revision());
+                let _ = plan;
+                anyhow::bail!("Parent changes must publish their prepared candidate");
             }
             PropertyPayload::Motion(intent) => return Ok(edit.edit_motion(intent)?),
             PropertyPayload::Pose(intent) => return Ok(edit.edit_pose(intent)?),
@@ -460,15 +474,17 @@ impl Document {
             payload => payload.json()?,
         };
         if object.kind == ObjectKind::Texture {
-            let original = edit
-                .candidate_document()
-                .get_asset(&object.id)
+            let current = edit.read_document()?;
+            let original = current
+                .asset(&object.id)
                 .ok_or_else(|| anyhow!("Texture no longer exists"))?;
-            return Ok(edit.edit_resource(zipzi_sdk::ResourceEdit::PatchName {
-                id: object.id.clone(),
-                expected: original.name.clone(),
-                name: payload["name"].as_str().unwrap().into(),
-            })?);
+            return Ok(
+                edit.edit_resource(zipzi_contract::document::ResourceEdit::PatchName {
+                    id: object.id.clone(),
+                    expected: original.name.clone(),
+                    name: payload["name"].as_str().unwrap().into(),
+                })?,
+            );
         }
         if object.kind == ObjectKind::Part
             && patch
@@ -488,20 +504,27 @@ impl Document {
                 "Texture changes must be independent"
             );
             let expected = edit
-                .candidate_document()
-                .scene_field(&object.id, zipzi_sdk::SceneField::Texture)
+                .read_document()?
+                .scene_field(&object.id, zipzi_contract::document::SceneField::Texture)
                 .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-            return Ok(edit.edit_scene(zipzi_sdk::SceneEdit::Patch {
-                id: object.id.clone(),
-                expected,
-                value: zipzi_sdk::SceneFieldValue::Texture(
-                    payload["texture_choice"].as_str().unwrap().into(),
-                ),
-                clear_glue_pairs: false,
-            })?);
+            return Ok(edit
+                .edit_scene(
+                    zipzi_contract::document::SceneEdit::Patch {
+                        id: object.id.clone(),
+                        expected,
+                        value: zipzi_contract::document::SceneFieldValue::Texture(
+                            payload["texture_choice"].as_str().unwrap().into(),
+                        ),
+                        clear_glue_pairs: false,
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?);
         }
         if patch.uses_scalar_patch(object.kind) {
-            return Ok(edit.patch_property(&self.scalar_patch(object, patch, &payload)?)?);
+            let scalar = Self::scalar_patch(&edit.read_document()?, object, patch, &payload)?;
+            return Ok(edit.patch_property(scalar)?);
         }
         if matches!(
             object.kind,
@@ -513,30 +536,28 @@ impl Document {
                 .all(|key| crate::property_spec(*key).is_some_and(|s| s.path == "name"))
         {
             let expected = edit
-                .candidate_document()
-                .scene_field(&object.id, zipzi_sdk::SceneField::Label)
+                .read_document()?
+                .scene_field(&object.id, zipzi_contract::document::SceneField::Label)
                 .map_err(|s| anyhow!("{}: {}", s.code, s.message))?;
-            return Ok(edit.edit_scene(zipzi_sdk::SceneEdit::Patch {
-                id: object.id.clone(),
-                expected,
-                value: zipzi_sdk::SceneFieldValue::Label(payload["name"].as_str().unwrap().into()),
-                clear_glue_pairs: false,
-            })?);
+            return Ok(edit
+                .edit_scene(
+                    zipzi_contract::document::SceneEdit::Patch {
+                        id: object.id.clone(),
+                        expected,
+                        value: zipzi_contract::document::SceneFieldValue::Label(
+                            payload["name"].as_str().unwrap().into(),
+                        ),
+                        clear_glue_pairs: false,
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
+                .map(|_| ())?);
+        }
+        if let Some(plan) = organization {
+            plan.apply(edit, object)?;
         }
         if object.kind == ObjectKind::Deformer {
-            if patch
-                .changes
-                .contains_key(&crate::property::deformer::PART.key)
-            {
-                ensure!(patch.changes.len() == 1, "Part changes must be independent");
-                let part = payload["part_id"].as_str().unwrap();
-                if let Some(plan) = self.prepare_organization_move(
-                    object,
-                    crate::OrganizationDestination::Part((!part.is_empty()).then(|| part.into())),
-                )? {
-                    plan.apply(edit, object)?;
-                }
-            }
             return crate::property::deformer::apply(edit, &object.id, patch, &payload);
         }
         if object.kind == ObjectKind::Part
@@ -550,9 +571,9 @@ impl Document {
             return replace(edit, object.kind, payload);
         }
         use crate::property::mesh;
-        let model_read_guard_111 = self.session.document();
-        let original = model_read_guard_111
-            .get_mesh(&object.id)
+        let current = edit.read_document()?;
+        let original = current
+            .mesh(&object.id)
             .ok_or_else(|| anyhow!("Mesh no longer exists"))?;
         let mut next: zipzi_core::Mesh = if patch.mesh_presentation_only(object.kind) {
             let mut next = original.clone();
@@ -575,9 +596,7 @@ impl Document {
                 .iter()
                 .any(|spec| spec.key == *key && spec.keyframed)
         });
-        if let Some((binding, form)) =
-            mesh::keyform(&self.session.document(), &object.id, &patch.scope)?
-        {
+        if let Some((binding, form)) = mesh::keyform(&current, &object.id, &patch.scope)? {
             if pose_changed {
                 let mut form = form.clone();
                 form.appearance = next.appearance;
@@ -587,21 +606,6 @@ impl Document {
             next.appearance = original.appearance;
             next.draw_order = original.draw_order;
         }
-        // Prepare against the same policy as tree moves, and include ordering
-        // and legacy drawing-group protection in this single history step.
-        let plan = if next.part_id != original.part_id {
-            self.prepare_organization_move(
-                object,
-                crate::OrganizationDestination::Part(
-                    (!next.part_id.is_empty()).then(|| next.part_id.clone()),
-                ),
-            )?
-        } else {
-            None
-        };
-        if let Some(plan) = plan {
-            plan.apply(edit, object)?;
-        }
         if &next != original {
             edit.replace_mesh(next)?;
         }
@@ -609,12 +613,12 @@ impl Document {
     }
 
     fn scalar_patch(
-        &self,
+        model: &zipzi_core::state::DocumentState,
         object: &ObjectRef,
         patch: &PropertyPatch,
         payload: &serde_json::Value,
-    ) -> Result<zipzi_core::document::PropertyPatch> {
-        use zipzi_core::document::PropertyPatch as P;
+    ) -> Result<zipzi_core::state::PropertyPatch> {
+        use zipzi_core::state::PropertyPatch as P;
         let id = object.id.clone();
         fn read<T: serde::de::DeserializeOwned>(p: &serde_json::Value, key: &str) -> Result<T> {
             Ok(serde_json::from_value(p[key].clone())?)
@@ -622,12 +626,8 @@ impl Document {
         Ok(match object.kind {
             ObjectKind::Mesh => P::Mesh {
                 id,
-                keyform: crate::property::mesh::keyform(
-                    &self.session.document(),
-                    &object.id,
-                    &patch.scope,
-                )?
-                .map(|(binding, form)| (binding.to_owned(), form.samples.clone())),
+                keyform: crate::property::mesh::keyform(model, &object.id, &patch.scope)?
+                    .map(|(binding, form)| (binding.to_owned(), form.samples.clone())),
                 appearance: read(payload, "appearance")?,
                 draw_order: read(payload, "draw_order")?,
             },
@@ -715,15 +715,41 @@ impl Document {
         self.prepare_object_properties(object, patch).map(|_| ())
     }
 
+    fn prepare_property_organization(
+        &self,
+        object: &ObjectRef,
+        patch: &PropertyPatch,
+    ) -> Result<Option<crate::document::sorting::OrganizationMove>> {
+        let field = match object.kind {
+            ObjectKind::Mesh => crate::property::mesh::PART.key,
+            ObjectKind::Deformer => crate::property::deformer::PART.key,
+            _ => return Ok(None),
+        };
+        let Some(value) = patch.changes.get(&field) else {
+            return Ok(None);
+        };
+        if object.kind == ObjectKind::Deformer {
+            ensure!(patch.changes.len() == 1, "Part changes must be independent");
+        }
+        let part = value.text();
+        let destination = (!part.is_empty()).then_some(part);
+        if self.model().organization_owner(&object.id) == destination.as_deref() {
+            return Ok(None);
+        }
+        self.prepare_organization_move(object, crate::OrganizationDestination::Part(destination))
+    }
+
     pub(crate) fn prepare_object_properties(
         &self,
         object: &ObjectRef,
         patch: &PropertyPatch,
-    ) -> Result<Option<crate::runtime_host::HostedEdit>> {
+    ) -> Result<Option<PreparedProperties>> {
         let payload = self.checked_payload(object, patch)?;
         if object.kind == ObjectKind::Parameter {
             let draft = self.parameter_from_payload(object, payload.json()?)?;
-            return self.prepare_parameter_update(&object.id, &draft).map(Some);
+            return self
+                .prepare_parameter_update(&object.id, &draft)
+                .map(|draft| Some(PreparedProperties::Draft(draft)));
         }
         if object.kind == ObjectKind::ParameterGroup {
             self.validate_parameter_group(
@@ -732,11 +758,13 @@ impl Document {
             )?;
             return Ok(None);
         }
-        let mut edit = self
-            .session
-            .begin_owned_edit("Edit object properties", None)?;
-        edit.apply(|sdk| self.apply_properties(sdk, object, patch, payload))?;
-        Ok(Some(edit))
+        if let PropertyPayload::DeformationParent(plan) = payload {
+            return Ok(Some(PreparedProperties::Parent(plan)));
+        }
+        let mut edit = self.session.begin_draft("Edit object properties", None)?;
+        let organization = self.prepare_property_organization(object, patch)?;
+        edit.apply(|sdk| Self::apply_properties(sdk, object, patch, payload, organization))?;
+        Ok(Some(PreparedProperties::Draft(edit)))
     }
 
     pub fn set_object_properties(
@@ -752,7 +780,7 @@ impl Document {
         &mut self,
         object: &ObjectRef,
         patch: &PropertyPatch,
-        prepared: Option<crate::runtime_host::HostedEdit>,
+        prepared: Option<PreparedProperties>,
     ) -> Result<()> {
         #[cfg(feature = "bench-instrumentation")]
         let _benchmark_span = zipzi_core::benchmark::span("editor.set_properties");
@@ -769,7 +797,7 @@ impl Document {
         self.validate_property_baseline(object, patch)?;
         let prepared = if prepared
             .as_ref()
-            .is_some_and(|edit| edit.base_version() != self.session.version())
+            .is_some_and(|edit| edit.version() != self.session.version())
         {
             self.prepare_object_properties(object, patch)?
         } else {
@@ -780,17 +808,24 @@ impl Document {
             let draft = self.parameter_group_from_payload(&object.id, payload.json_ref()?)?;
             return self.update_parameter_group(&object.id, draft, self.parameter_model_revision());
         };
+        let mut edit = match edit {
+            PreparedProperties::Parent(plan) => {
+                self.execute_palette_move(&plan)?;
+                return Ok(());
+            }
+            PreparedProperties::Draft(edit) => edit,
+        };
         let preserves_structure = patch.preserves_structure()
             && (object.kind != ObjectKind::Parameter || {
                 let old = self
                     .session
                     .document()
-                    .get_parameter(&object.id)
+                    .parameter(&object.id)
                     .unwrap()
                     .clone();
                 let next = edit
                     .candidate_document()
-                    .get_parameter(&object.id)
+                    .parameter(&object.id)
                     .unwrap()
                     .clone();
                 old.name == next.name && old.runtime_id == next.runtime_id
@@ -810,21 +845,15 @@ impl Document {
                 | ObjectKind::PoseGroup
                 | ObjectKind::PoseEntry
                 | ObjectKind::PoseLink
-        ) || (!receipt.changes.scene_fields.is_empty()
-            && receipt
-                .changes
-                .scene_fields
-                .iter()
-                .all(|f| f.field == zipzi_sdk::SceneField::Label))
-        {
-            if receipt.changed {
+        ) {
+            if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                 self.pristine_blank = None;
             }
-            self.consume_authoring_receipt(&receipt, false);
+            self.consume_authoring_receipt(&receipt, None);
             return Ok(());
         }
         self.session.acknowledge_receipts();
-        if receipt.changed {
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
             let presentation_only = patch.mesh_presentation_only(object.kind);
             use crate::property::mesh;
@@ -834,11 +863,12 @@ impl Document {
                     let name = self
                         .session
                         .document()
-                        .get_mesh(&object.id)
+                        .mesh(&object.id)
                         .unwrap()
                         .name
                         .clone();
                     Arc::make_mut(topology).rename(object, &name);
+                    self.canvas_topology_source.get_mut().unwrap().take();
                 }
             }
             if presentation_only {
@@ -961,7 +991,7 @@ impl Document {
             original: PendingOriginal::Properties(object.clone(), original, patch.scope.clone()),
             edit: self
                 .session
-                .begin_owned_edit("Edit object property", None)?
+                .begin_draft("Edit object property", None)?
                 .interactive()?,
             preview: PreviewState::default(),
             changed: OnceLock::new(),
@@ -1007,13 +1037,27 @@ impl Document {
             let owner = self
                 .session
                 .document()
-                .get_expression_entry(&id)
+                .expression_entry(&id)
                 .unwrap()
                 .0
                 .id
                 .clone();
             let pending = self.pending.as_mut().unwrap();
-            pending.edit.preview_expression_entry(&id, fields)?;
+            let expected = zipzi_contract::document::ExpressionEntryFields::from(
+                pending
+                    .edit
+                    .candidate_document()
+                    .expression_entry(&id)
+                    .unwrap()
+                    .1,
+            );
+            pending.edit.preview(|commands| {
+                commands.edit_expression(zipzi_contract::document::ExpressionEdit::PatchEntry {
+                    id,
+                    expected,
+                    fields,
+                })
+            })?;
             pending.changed.take();
             let previous = self.projection_revision;
             self.invalidate_expression_projection();
@@ -1061,7 +1105,8 @@ impl Document {
         if self.pending.as_ref().unwrap().property_write
             == Some(crate::property::PropertyWrite::ScalarPatch)
         {
-            let scalar = self.scalar_patch(object, patch, payload.json_ref()?)?;
+            let scalar =
+                Self::scalar_patch(&self.session.document(), object, patch, payload.json_ref()?)?;
             let pending = self.pending.as_mut().unwrap();
             pending.edit.preview_property(
                 &scalar,
@@ -1071,10 +1116,9 @@ impl Document {
         } else {
             // Preview capability does not require a scalar backend. Full object
             // writes retain isolated replacement and atomic preview validation.
-            let mut edit = self
-                .session
-                .begin_owned_edit("Edit object property", None)?;
-            edit.apply(|sdk| self.apply_properties(sdk, object, patch, payload))?;
+            let mut edit = self.session.begin_draft("Edit object property", None)?;
+            let organization = self.prepare_property_organization(object, patch)?;
+            edit.apply(|sdk| Self::apply_properties(sdk, object, patch, payload, organization))?;
             let mut preview = PreviewState::default();
             preview
                 .replace(
@@ -1101,7 +1145,7 @@ impl Document {
     }
 }
 
-fn replace(edit: &mut EditSession<'_>, kind: ObjectKind, payload: serde_json::Value) -> Result<()> {
+fn replace(edit: &mut Commands<'_>, kind: ObjectKind, payload: serde_json::Value) -> Result<()> {
     macro_rules! replace {
         ($method:ident) => {
             edit.$method(serde_json::from_value(payload)?)?
@@ -1109,9 +1153,15 @@ fn replace(edit: &mut EditSession<'_>, kind: ObjectKind, payload: serde_json::Va
     }
     match kind {
         ObjectKind::Document => {
-            edit.replace_export_settings(serde_json::from_value(
-                payload["export_settings"].clone(),
-            )?)?;
+            let expected = zipzi_contract::document::DocumentValue::ExportSettings(
+                edit.read_document()?.setup().export,
+            );
+            edit.edit_document(zipzi_contract::document::DocumentAuthoringEdit::Patch {
+                expected,
+                value: zipzi_contract::document::DocumentValue::ExportSettings(
+                    serde_json::from_value(payload["export_settings"].clone())?,
+                ),
+            })?;
         }
         ObjectKind::Part => replace!(replace_part),
         ObjectKind::Parameter => replace!(replace_parameter),
@@ -1160,7 +1210,7 @@ mod tests {
         asset.reconcile_counts();
         let node_id = asset.data.settings[0].vertices[1].id.clone();
         doc.session
-            .edit("Fixture", None, |edit| edit.set_physics(asset))?;
+            .edit("Fixture", None, |edit| edit.replace_physics(Some(asset)))?;
         doc.invalidate_projection(true);
         let object = ObjectRef::new(ObjectKind::PhysicsGroup, &group_id);
         let initial = doc.property_values(&object)?;
@@ -1241,27 +1291,33 @@ mod tests {
         let binding = uuid::Uuid::new_v4().to_string();
         let peer_binding = uuid::Uuid::new_v4().to_string();
         doc.session.edit("Bound Mesh fixture", None, |edit| {
-            edit.create_parameter(zipzi_core::Parameter {
-                id: parameter.clone(),
-                minimum: 0.,
-                maximum: 1.,
-                ..Default::default()
-            })?;
+            crate::test_sdk::insert_fixture_parameter(
+                edit,
+                zipzi_core::Parameter {
+                    id: parameter.clone(),
+                    minimum: 0.,
+                    maximum: 1.,
+                    ..Default::default()
+                },
+            )?;
             for (mesh, binding) in [(&object.id, &binding), (&peer, &peer_binding)] {
                 let positions = vec![
                     zipzi_core::Vec2::new(0., 0.),
                     zipzi_core::Vec2::new(1., 0.),
                     zipzi_core::Vec2::new(0., 1.),
                 ];
-                edit.create_mesh(zipzi_core::Mesh {
-                    id: mesh.clone(),
-                    name: "Bound Mesh".into(),
-                    vertex_ids: vec![0, 1, 2],
-                    base_positions: positions.clone(),
-                    uvs: vec![zipzi_core::Vec2::new(0., 0.); 3],
-                    triangles: vec![[0, 1, 2]],
-                    ..Default::default()
-                })?;
+                crate::test_sdk::insert_fixture_mesh(
+                    edit,
+                    zipzi_core::Mesh {
+                        id: mesh.clone(),
+                        name: "Bound Mesh".into(),
+                        vertex_ids: vec![0, 1, 2],
+                        base_positions: positions.clone(),
+                        uvs: vec![zipzi_core::Vec2::new(0., 0.); 3],
+                        triangles: vec![[0, 1, 2]],
+                        ..Default::default()
+                    },
+                )?;
                 edit.create_binding(zipzi_core::MeshBinding {
                     id: binding.clone(),
                     mesh_id: mesh.clone(),
@@ -1332,11 +1388,7 @@ mod tests {
             }
             assert_eq!(doc.session.history_lengths().0, history + 1);
             assert_eq!(
-                doc.session
-                    .document()
-                    .get_binding(&binding)
-                    .unwrap()
-                    .keyforms[0]
+                doc.session.document().binding(&binding).unwrap().keyforms[0]
                     .appearance
                     .opacity,
                 0.4
@@ -1344,18 +1396,18 @@ mod tests {
             assert_eq!(
                 doc.session
                     .document()
-                    .get_mesh(&object.id)
+                    .mesh(&object.id)
                     .unwrap()
                     .appearance
                     .opacity,
                 1.
             );
             assert_eq!(
-                doc.session.document().get_binding(&peer_binding),
-                retained.document().get_binding(&peer_binding)
+                doc.session.document().binding(&peer_binding),
+                retained.document().binding(&peer_binding)
             );
             assert_eq!(
-                retained.document().get_binding(&binding).unwrap().keyforms[0]
+                retained.document().binding(&binding).unwrap().keyforms[0]
                     .appearance
                     .opacity,
                 1.
@@ -1378,11 +1430,7 @@ mod tests {
             );
             doc.undo()?;
             assert_eq!(
-                doc.session
-                    .document()
-                    .get_binding(&binding)
-                    .unwrap()
-                    .keyforms[0]
+                doc.session.document().binding(&binding).unwrap().keyforms[0]
                     .appearance
                     .opacity,
                 1.
@@ -1400,21 +1448,27 @@ mod tests {
         let asset = uuid::Uuid::new_v4().to_string();
         let object = ObjectRef::new(ObjectKind::Mesh, uuid::Uuid::new_v4().to_string());
         doc.session.edit("Mesh fixture", None, |edit| {
-            edit.create_asset(zipzi_sdk::prepare_png_asset(&asset, "Texture", &path)?)?;
-            edit.create_mesh(zipzi_core::Mesh {
-                id: object.id.clone(),
-                name: "Original".into(),
-                texture_asset_id: asset.into(),
-                vertex_ids: vec![0, 1, 2],
-                base_positions: vec![
-                    zipzi_core::Vec2::new(0., 0.),
-                    zipzi_core::Vec2::new(1., 0.),
-                    zipzi_core::Vec2::new(0., 1.),
-                ],
-                uvs: vec![zipzi_core::Vec2::new(0., 0.); 3],
-                triangles: vec![[0, 1, 2]],
-                ..Default::default()
-            })
+            crate::test_sdk::insert_image(
+                edit,
+                crate::test_sdk::image_fixture(&asset, "Texture", &path)?,
+            )?;
+            crate::test_sdk::insert_fixture_mesh(
+                edit,
+                zipzi_core::Mesh {
+                    id: object.id.clone(),
+                    name: "Original".into(),
+                    texture_asset_id: asset.into(),
+                    vertex_ids: vec![0, 1, 2],
+                    base_positions: vec![
+                        zipzi_core::Vec2::new(0., 0.),
+                        zipzi_core::Vec2::new(1., 0.),
+                        zipzi_core::Vec2::new(0., 1.),
+                    ],
+                    uvs: vec![zipzi_core::Vec2::new(0., 0.); 3],
+                    triangles: vec![[0, 1, 2]],
+                    ..Default::default()
+                },
+            )
         })?;
         doc.invalidate_projection(true);
         for (field, value) in [
@@ -1541,11 +1595,14 @@ mod tests {
         );
         let part = ObjectRef::new(ObjectKind::Part, uuid::Uuid::new_v4().to_string());
         doc.session.edit("Part fixture", None, |edit| {
-            edit.create_part(zipzi_core::Part {
-                id: part.id.clone(),
-                name: "Part".into(),
-                ..Default::default()
-            })
+            crate::test_sdk::insert_fixture_part(
+                edit,
+                zipzi_core::Part {
+                    id: part.id.clone(),
+                    name: "Part".into(),
+                    ..Default::default()
+                },
+            )
         })?;
         doc.invalidate_projection(true);
         for (object, spec) in [

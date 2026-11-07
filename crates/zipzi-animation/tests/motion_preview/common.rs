@@ -1,5 +1,5 @@
 pub use zipzi_animation::MotionPreview;
-pub use zipzi_core::{Canvas, Document, Parameter, Vec2};
+pub use zipzi_core::{state::DocumentState, Canvas, Parameter, Vec2};
 pub use zipzi_project::{import_expression3, import_motion3, import_physics3, import_pose3};
 
 pub const DOC: &str = "00000000-0000-4000-8000-000000000d01";
@@ -18,12 +18,11 @@ pub const MINIMAL_MOTION3: &str =
 pub const MINIMAL_POSE3: &str =
     include_str!("../../../../fixtures/animation_cpu/minimal.pose3.json");
 
-pub fn document() -> Document {
-    let mut document = Document::new();
-    assert!(document
-        .initialize(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0))
-        .is_ok());
-    assert!(document
+pub fn document() -> DocumentState {
+    let document =
+        DocumentState::new(DOC, Canvas::new(100.0, 100.0, Vec2::default(), 10.0).into()).unwrap();
+    let mut document = document.builder();
+    document
         .create_parameter(Parameter {
             id: PARAM.into(),
             runtime_id: "ParamX".into(),
@@ -33,15 +32,14 @@ pub fn document() -> Document {
             default_value: 0.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
-    document
+        .unwrap();
+    document.freeze().unwrap().state
 }
 
 pub fn combined_cache_preview() -> MotionPreview {
     use zipzi_core::Part;
-    let mut doc = document();
-    assert!(doc
+    let mut builder = document().builder();
+    builder
         .create_parameter(Parameter {
             id: "00000000-0000-4000-8000-000000000e01".into(),
             runtime_id: "ParamY".into(),
@@ -50,21 +48,19 @@ pub fn combined_cache_preview() -> MotionPreview {
             maximum: 1.0,
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
     for (id, runtime) in [
         ("00000000-0000-4000-8000-000000000e02", "Part0"),
         ("00000000-0000-4000-8000-000000000e03", "Part1"),
     ] {
-        assert!(doc
+        builder
             .create_part(Part {
                 id: id.into(),
                 runtime_id: runtime.into(),
                 name: runtime.into(),
                 ..Default::default()
             })
-            .status
-            .is_ok());
+            .unwrap();
     }
     let source = serde_json::json!({"Version":3,"Meta":{"Duration":2,"Fps":30,"Loop":true,
         "AreBeziersRestricted":true,"CurveCount":2,"TotalSegmentCount":3,"TotalPointCount":5,
@@ -72,6 +68,7 @@ pub fn combined_cache_preview() -> MotionPreview {
         "Curves":[{"Target":"Parameter","Id":"ParamX","Segments":[0,0,0,2,1]},
         {"Target":"PartOpacity","Id":"Part1","Segments":[0,0,2,0.8,1,2,2,0]}],
         "UserData":[{"Time":59.0/60.0,"Value":"tick"}]});
+    let mut doc = builder.freeze().unwrap().state;
     doc = import_motion3(&doc, MOTION, "Cache", &source.to_string())
         .unwrap()
         .candidate;

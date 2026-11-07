@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use zipzi_core::state::DocumentState;
 use zipzi_core::types::Status;
-use zipzi_core::Document;
 
 use crate::decoder::{decode_moc3, texture_slot_uuid, DecodedMoc3, ImportReport, TextureSlotInfo};
 use crate::inspector::inspect_moc3;
@@ -25,10 +25,12 @@ pub struct ImportDiagnostic {
 
 #[derive(Debug, Clone)]
 pub struct ImportResult {
-    pub document: Document,
+    pub document: DocumentState,
     pub report: ImportReport,
     pub diagnostics: Vec<ImportDiagnostic>,
     pub textures_complete: bool,
+    /// Verified descriptors used by decoding; resource owners must capture matching bytes.
+    pub textures: Vec<TextureSlotInfo>,
 }
 
 fn compute_sha256(bytes: &[u8]) -> String {
@@ -217,13 +219,9 @@ pub fn import_from_model3_json(
 
     // Check if any meshes reference unmapped texture slots
     for id in document.mesh_order() {
-        if let Some(m) = document.get_mesh(id) {
-            if let Some(asset) = document.get_asset(&m.texture_asset_id) {
-                if asset.content.is_none()
-                    && asset
-                        .unresolved_source
-                        .as_ref()
-                        .is_some_and(|s| s.starts_with("cubism-texture-slot:"))
+        if let Some(m) = document.mesh(id) {
+            if let Some(asset) = document.asset(&m.texture_asset_id) {
+                if matches!(&asset.content,zipzi_core::state::AssetContent::Unresolved {source} if source.starts_with("cubism-texture-slot:"))
                     && !diagnostics
                         .iter()
                         .any(|d| d.code == "UNMAPPED_TEXTURE_SLOT")
@@ -247,6 +245,7 @@ pub fn import_from_model3_json(
         report,
         diagnostics,
         textures_complete,
+        textures,
     })
 }
 
@@ -344,13 +343,9 @@ pub fn import_from_bare_moc3(
 
     // Check if any meshes reference a texture slot not provided in the map
     for id in document.mesh_order() {
-        if let Some(m) = document.get_mesh(id) {
-            if let Some(asset) = document.get_asset(&m.texture_asset_id) {
-                if asset.content.is_none()
-                    && asset
-                        .unresolved_source
-                        .as_ref()
-                        .is_some_and(|s| s.starts_with("cubism-texture-slot:"))
+        if let Some(m) = document.mesh(id) {
+            if let Some(asset) = document.asset(&m.texture_asset_id) {
+                if matches!(&asset.content,zipzi_core::state::AssetContent::Unresolved {source} if source.starts_with("cubism-texture-slot:"))
                     && !diagnostics
                         .iter()
                         .any(|d| d.code == "UNMAPPED_TEXTURE_SLOT")
@@ -374,6 +369,7 @@ pub fn import_from_bare_moc3(
         report,
         diagnostics,
         textures_complete,
+        textures,
     })
 }
 

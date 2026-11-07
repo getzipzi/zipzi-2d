@@ -1,27 +1,22 @@
-use zipzi_core::{types::*, Document};
+use zipzi_core::{state::*, types::*};
 pub const DOC: &str = "00000000-0000-4000-8000-000000000001";
 pub const ASSET: &str = "00000000-0000-4000-8000-000000000002";
 pub const MESH: &str = "00000000-0000-4000-8000-000000000003";
 pub const PARAM: &str = "00000000-0000-4000-8000-000000000004";
-pub fn fixture() -> (Document, Vec<u8>) {
-    let mut d = Document::new();
-    assert!(d
-        .initialize(DOC, Canvas::new(128., 64., Vec2::new(20., 30.), 32.))
-        .is_ok());
-    assert!(d
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: ASSET.into(),
-            name: "Texture".into(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/texture.png".into(),
-                width: 2,
-                height: 2,
-                ..Default::default()
-            }),
-        })
-        .status
-        .is_ok());
+pub fn fixture() -> (DocumentState, Vec<u8>) {
+    let mut d = DocumentState::new(DOC, Canvas::new(128., 64., Vec2::new(20., 30.), 32.).into())
+        .unwrap()
+        .builder();
+    d.create_asset(AssetRecord {
+        id: ASSET.into(),
+        name: "Texture".into(),
+        content: AssetContent::Image {
+            resource: ResourceKey::new(),
+            width: 2,
+            height: 2,
+        },
+    })
+    .unwrap();
     let positions = vec![Vec2::new(8., 12.), Vec2::new(104., 12.), Vec2::new(8., 60.)];
     assert!(d
         .create_mesh(Mesh {
@@ -35,7 +30,6 @@ pub fn fixture() -> (Document, Vec<u8>) {
             triangles: vec![[100, 7, 23]],
             ..Default::default()
         })
-        .status
         .is_ok());
     assert!(d
         .create_parameter(Parameter {
@@ -45,7 +39,6 @@ pub fn fixture() -> (Document, Vec<u8>) {
             repeat: true,
             ..Default::default()
         })
-        .status
         .is_ok());
     assert!(d
         .create_binding(MeshBinding {
@@ -73,7 +66,6 @@ pub fn fixture() -> (Document, Vec<u8>) {
                 })
                 .collect()
         })
-        .status
         .is_ok());
     let mut png = Vec::new();
     {
@@ -85,12 +77,13 @@ pub fn fixture() -> (Document, Vec<u8>) {
             .write_image_data(&[255; 16])
             .unwrap();
     }
-    (d, png)
+    (d.freeze().unwrap().state, png)
 }
 
 use std::io::{Cursor, Read};
 // Independent CAFF reader in the contract test: check offsets, varints, XOR
 // widths, archive guards and the ZIP payload, rather than calling writer internals.
+#[allow(dead_code)]
 pub fn archive(bytes: &[u8]) -> Vec<(String, String, u8, Vec<u8>)> {
     assert_eq!(&bytes[..4], b"CAFF");
     assert_eq!(&bytes[bytes.len() - 2..], b"bc");
@@ -152,4 +145,40 @@ pub fn archive(bytes: &[u8]) -> Vec<(String, String, u8, Vec<u8>)> {
         entries.push((path, tag, compression, content));
     }
     entries
+}
+
+/// Construct a validated fixture candidate without mutating the source snapshot.
+#[allow(dead_code)]
+pub fn prepare(
+    state: &DocumentState,
+    write: impl FnOnce(&mut DocumentBuilder) -> Result<(), zipzi_core::Status>,
+) -> DocumentState {
+    let mut builder = state.builder();
+    write(&mut builder).unwrap();
+    builder.freeze().unwrap().state
+}
+
+/// Resolve the decoder's source descriptors against the PNGs owned by this
+/// codec fixture. Production Project import adopts these bytes into ResourceStore.
+#[allow(dead_code)]
+pub fn resolve_images(imported: &zipzi_cmo3::ImportedModel) -> DocumentState {
+    prepare(&imported.document, |builder| {
+        for id in imported.document.asset_order() {
+            let mut asset = imported.document.asset(id).unwrap().clone();
+            let AssetContent::Unresolved { source } = &asset.content else {
+                continue;
+            };
+            let decoder = png::Decoder::new(Cursor::new(&imported.images[source]));
+            let mut reader = decoder.read_info().unwrap();
+            let mut pixels = vec![0; reader.output_buffer_size()];
+            let image = reader.next_frame(&mut pixels).unwrap();
+            asset.content = AssetContent::Image {
+                resource: ResourceKey::new(),
+                width: image.width,
+                height: image.height,
+            };
+            builder.replace_asset(asset)?;
+        }
+        Ok(())
+    })
 }

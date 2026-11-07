@@ -9,11 +9,11 @@ fn test_glue_blendshape_asymmetric_weights() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
-    let mut mesh_b = doc.get_mesh(MESH_B).unwrap().clone();
+    let mut mesh_b = builder.mesh(MESH_B).unwrap().clone();
     mesh_b.base_positions[0] = Vec2::new(10.0, 20.0);
-    assert!(doc.replace_mesh(mesh_b).status.is_ok());
+    builder.replace_mesh(mesh_b).unwrap();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -31,7 +31,7 @@ fn test_glue_blendshape_asymmetric_weights() {
         intensity: 0.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    builder.create_glue(glue).unwrap();
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -41,7 +41,7 @@ fn test_glue_blendshape_asymmetric_weights() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     let binding = BlendShapeBinding {
         id: BINDING_BS.to_string(),
@@ -60,10 +60,11 @@ fn test_glue_blendshape_asymmetric_weights() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    builder.create_blend_binding(binding).unwrap();
 
     let mut preview: PreviewValues = HashMap::new();
     preview.insert(PARAM_BS.to_string(), 1.0);
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
 
@@ -81,10 +82,10 @@ fn test_glue_blendshape_ordered_multiple_glues() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
     let mesh_c_id = "44444444-4444-4444-8444-444444444445";
-    assert!(doc
+    builder
         .create_mesh(Mesh {
             id: mesh_c_id.to_string(),
             runtime_id: "MeshC".to_string(),
@@ -94,18 +95,17 @@ fn test_glue_blendshape_ordered_multiple_glues() {
             base_positions: vec![
                 Vec2::new(20.0, 0.0),
                 Vec2::new(30.0, 0.0),
-                Vec2::new(20.0, 10.0)
+                Vec2::new(20.0, 10.0),
             ],
             uvs: vec![
                 Vec2::new(0.0, 0.0),
                 Vec2::new(1.0, 0.0),
-                Vec2::new(0.0, 1.0)
+                Vec2::new(0.0, 1.0),
             ],
             triangles: vec![[100, 200, 300]],
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
 
     // Glue 1: Mesh A (1) at (0, 0) and Mesh B (10) at (10, 0)
     let glue1_id = GLUE_ID;
@@ -125,7 +125,7 @@ fn test_glue_blendshape_ordered_multiple_glues() {
         intensity: 0.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue1).status.is_ok());
+    builder.create_glue(glue1).unwrap();
 
     // Glue 2: Mesh B (10) and Mesh C (100) at (20, 0)
     let glue2_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab";
@@ -145,7 +145,7 @@ fn test_glue_blendshape_ordered_multiple_glues() {
         intensity: 0.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue2).status.is_ok());
+    builder.create_glue(glue2).unwrap();
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -155,7 +155,7 @@ fn test_glue_blendshape_ordered_multiple_glues() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     // Blend binding on Glue 1 (delta 1.0)
     let b1 = BlendShapeBinding {
@@ -175,7 +175,7 @@ fn test_glue_blendshape_ordered_multiple_glues() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(b1).status.is_ok());
+    builder.create_blend_binding(b1).unwrap();
 
     // Blend binding on Glue 2 (delta 1.0)
     let b2_id = "99999999-9999-4999-8999-999999999998";
@@ -196,10 +196,11 @@ fn test_glue_blendshape_ordered_multiple_glues() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(b2).status.is_ok());
+    builder.create_blend_binding(b2).unwrap();
 
     let mut preview: PreviewValues = HashMap::new();
     preview.insert(PARAM_BS.to_string(), 1.0);
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
 
@@ -215,11 +216,11 @@ fn test_glue_blendshape_faceless_endpoints() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
     // Create a faceless mesh (0 triangles, like Hiyori's 4 faceless meshes)
     let faceless_id = "33333333-3333-4333-8333-333333333399";
-    assert!(doc
+    builder
         .create_mesh(Mesh {
             id: faceless_id.to_string(),
             runtime_id: "FacelessMesh".to_string(),
@@ -231,12 +232,11 @@ fn test_glue_blendshape_faceless_endpoints() {
             triangles: vec![], // 0 triangles!
             ..Default::default()
         })
-        .status
-        .is_ok());
+        .unwrap();
 
-    let mut mesh_b = doc.get_mesh(MESH_B).unwrap().clone();
+    let mut mesh_b = builder.mesh(MESH_B).unwrap().clone();
     mesh_b.base_positions[0] = Vec2::new(10.0, 10.0);
-    assert!(doc.replace_mesh(mesh_b).status.is_ok());
+    builder.replace_mesh(mesh_b).unwrap();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -254,7 +254,7 @@ fn test_glue_blendshape_faceless_endpoints() {
         intensity: 0.0,
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    builder.create_glue(glue).unwrap();
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -264,7 +264,7 @@ fn test_glue_blendshape_faceless_endpoints() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     let binding = BlendShapeBinding {
         id: BINDING_BS.to_string(),
@@ -283,10 +283,11 @@ fn test_glue_blendshape_faceless_endpoints() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    builder.create_blend_binding(binding).unwrap();
 
     let mut preview: PreviewValues = HashMap::new();
     preview.insert(PARAM_BS.to_string(), 1.0);
+    let doc = builder.freeze().unwrap().state;
     let mut frame = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &preview, &mut frame).is_ok());
 
@@ -308,11 +309,11 @@ fn test_glue_blendshape_seam_a_b_a() {
     use std::collections::HashMap;
     use zipzi_core::evaluation::{evaluate_frame, DrawableFrame, PreviewValues};
 
-    let mut doc = create_base_document();
+    let mut builder = create_base_document().builder();
 
-    let mut mesh_b = doc.get_mesh(MESH_B).unwrap().clone();
+    let mut mesh_b = builder.mesh(MESH_B).unwrap().clone();
     mesh_b.base_positions[0] = Vec2::new(10.0, 20.0);
-    assert!(doc.replace_mesh(mesh_b).status.is_ok());
+    builder.replace_mesh(mesh_b).unwrap();
 
     let glue = Glue {
         id: GLUE_ID.to_string(),
@@ -330,7 +331,7 @@ fn test_glue_blendshape_seam_a_b_a() {
         intensity: 0.2,
         binding: None,
     };
-    assert!(doc.create_glue(glue).status.is_ok());
+    builder.create_glue(glue).unwrap();
 
     let bkt = BlendShapeKeyTable {
         samples: Default::default(),
@@ -340,7 +341,7 @@ fn test_glue_blendshape_seam_a_b_a() {
         keys: vec![0.0, 1.0],
         base_key_idx: 0,
     };
-    assert!(doc.create_blend_key_table(bkt).status.is_ok());
+    builder.create_blend_key_table(bkt).unwrap();
 
     let binding = BlendShapeBinding {
         id: BINDING_BS.to_string(),
@@ -359,9 +360,10 @@ fn test_glue_blendshape_seam_a_b_a() {
             },
         ]),
     };
-    assert!(doc.create_blend_binding(binding).status.is_ok());
+    builder.create_blend_binding(binding).unwrap();
 
     let mut preview: PreviewValues = HashMap::new();
+    let doc = builder.freeze().unwrap().state;
     let mut frame_initial = DrawableFrame::default();
     let mut frame_mid = DrawableFrame::default();
     let mut frame_returned = DrawableFrame::default();
@@ -406,12 +408,12 @@ fn test_glue_blendshape_seam_a_b_a() {
 #[test]
 fn hidden_geometry_capture_preserves_visible_glue_result() {
     use zipzi_core::{evaluate_frame, evaluation::evaluate_frame_including_hidden, DrawableFrame};
-    let mut doc = create_base_document();
-    let mut hidden = doc.get_mesh(MESH_A).unwrap().clone();
+    let mut builder = create_base_document().builder();
+    let mut hidden = builder.mesh(MESH_A).unwrap().clone();
     hidden.enabled = false;
     hidden.base_positions[0] = Vec2::new(80.0, 30.0);
-    assert!(doc.replace_mesh(hidden).status.is_ok());
-    assert!(doc
+    builder.replace_mesh(hidden).unwrap();
+    builder
         .create_glue(Glue {
             id: GLUE_ID.into(),
             mesh_a_id: MESH_A.into(),
@@ -428,8 +430,8 @@ fn hidden_geometry_capture_preserves_visible_glue_result() {
                 ..Default::default()
             }],
         })
-        .status
-        .is_ok());
+        .unwrap();
+    let doc = builder.freeze().unwrap().state;
     let mut normal = DrawableFrame::default();
     let mut captured = DrawableFrame::default();
     assert!(evaluate_frame(&doc, &Default::default(), &mut normal).is_ok());

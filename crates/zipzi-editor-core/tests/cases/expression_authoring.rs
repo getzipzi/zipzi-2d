@@ -1,6 +1,6 @@
 use zipzi_core::document::ExpressionTarget;
 use zipzi_editor_core::{Document, ObjectKind, ObjectRef};
-use zipzi_sdk::{ChangeCategory, ExpressionEdit as E, ExpressionEntryFields};
+use zipzi_sdk::{ExpressionEdit as E, ExpressionEntryFields};
 const A: &str = "00000000-0000-4000-8000-00000000a101";
 const B: &str = "00000000-0000-4000-8000-00000000a102";
 const X: &str = "00000000-0000-4000-8000-00000000a103";
@@ -57,11 +57,14 @@ fn editor_adapts_sdk_results_and_projects_pending_entries_without_changing_selec
             before: None,
         },
     )?;
-    assert!(
+    assert_eq!(
         r.receipt
-            .changes
-            .categories
-            .contains(&ChangeCategory::Order)
+            .writes
+            .records()
+            .iter()
+            .filter(|write| write.domain == zipzi_core::state::RecordDomain::Expression)
+            .count(),
+        2
     );
     assert!(
         d.plan_expression_entry_patch(
@@ -75,7 +78,7 @@ fn editor_adapts_sdk_results_and_projects_pending_entries_without_changing_selec
         .is_err()
     );
     let address = d.expression_entry_address(X)?;
-    assert_eq!(address.owner_id(), B);
+    assert_eq!(address.owner.as_deref().unwrap(), B);
     let candidate = d.begin_expression_entry_edit(&address)?;
     d.preview_expression_entry_edit(
         candidate,
@@ -86,7 +89,7 @@ fn editor_adapts_sdk_results_and_projects_pending_entries_without_changing_selec
         },
     )?;
     let r = d.commit_expression_entry_edit(candidate)?;
-    assert!(r.receipt.changed);
+    assert!(r.receipt.kind != zipzi_sdk::PublicationKind::Unchanged);
     d.undo()?;
     assert_eq!(d.expression_definition(B).unwrap().entries[0].value, 0.);
     d.undo()?;
@@ -219,7 +222,7 @@ fn recoverable_preview_noop_and_finish_share_the_editor_lifecycle() -> anyhow::R
     );
     document.preview_expression_entry_edit(token, entry_fields(0.0))?;
     let receipt = document.commit_expression_entry_edit(token)?;
-    assert!(!receipt.receipt.changed);
+    assert!(receipt.receipt.kind == zipzi_sdk::PublicationKind::Unchanged);
     assert_eq!(document.history_lengths(), history);
     assert!(!document.has_pending_edit());
     let token = entry_candidate(&mut document, 0.6)?;

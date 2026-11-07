@@ -11,23 +11,23 @@ impl ObjectIndex {
     pub(crate) fn refresh_motion_properties(&mut self, model: &Model, object: &ObjectRef) -> bool {
         let (name, properties) = match object.kind {
             ObjectKind::Motion => {
-                let Some(clip) = model.get_motion(&object.id) else {
+                let Some(clip) = model.motion(&object.id) else {
                     return false;
                 };
                 (clip.name.clone(), motion_properties(clip))
             }
             ObjectKind::MotionGroup => {
-                let Some(group) = model.get_motion_group(&object.id) else {
+                let Some(group) = model.motion_group(&object.id) else {
                     return false;
                 };
                 (group.name.clone(), json!(group))
             }
             ObjectKind::MotionRegistration => {
-                let Some((_, entry)) = model.get_motion_registration(&object.id) else {
+                let Some((_, entry)) = model.motion_registration(&object.id) else {
                     return false;
                 };
                 (
-                    model.get_motion(&entry.clip_id).unwrap().name.clone(),
+                    model.motion(&entry.clip_id).unwrap().name.clone(),
                     json!(entry),
                 )
             }

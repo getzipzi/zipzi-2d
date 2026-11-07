@@ -2,10 +2,13 @@
 //! ordering, subtree normalization, locks, cycles and atomic publication.
 use super::*;
 use anyhow::{Result, anyhow, ensure};
-use zipzi_sdk::{
-    OrganizationCollection as Collection, OrganizationEdit, ReparentEdit, ReparentPlacement,
-    ReparentStrategy, SceneCollection, SceneEdit,
-};
+use zipzi_contract::document::OrganizationCollection as Collection;
+use zipzi_contract::document::OrganizationEdit;
+use zipzi_contract::document::ReparentEdit;
+use zipzi_contract::document::ReparentPlacement;
+use zipzi_contract::document::ReparentStrategy;
+use zipzi_contract::document::SceneCollection;
+use zipzi_contract::document::SceneEdit;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PaletteProjection {
@@ -42,33 +45,20 @@ pub struct PaletteMove {
 pub struct PaletteMovePlan(pub(super) MovePlan);
 #[derive(Clone, Debug)]
 pub(super) enum MovePlan {
-    Organization(zipzi_sdk::OrganizationEditPlan),
-    Scene(zipzi_sdk::SceneEditPlan),
+    Organization(crate::EditPreview<zipzi_core::state::OrganizationOutcome>),
+    Scene(crate::EditPreview<zipzi_core::state::SceneOutcome>),
     Reparent {
-        plan: zipzi_sdk::SceneEditPlan,
+        plan: crate::EditPreview<zipzi_core::state::SceneOutcome>,
         preview_revision: u64,
     },
     Steps(super::stepping::PaletteStepsPlan),
 }
 impl PaletteMovePlan {
-    pub(crate) fn apply_to(
-        &self,
-        edit: &mut zipzi_sdk::EditSession<'_>,
-        revision: u64,
-    ) -> Result<()> {
+    pub(crate) fn source_version(&self) -> zipzi_sdk::Version {
         match &self.0 {
-            MovePlan::Scene(plan) => Ok(edit.apply_scene_plan(plan)?),
-            MovePlan::Reparent {
-                plan,
-                preview_revision,
-            } => {
-                ensure!(
-                    revision == *preview_revision,
-                    "Frozen parameter values changed; reselect the parent"
-                );
-                Ok(edit.apply_scene_plan(plan)?)
-            }
-            _ => anyhow::bail!("Expected a deformation parent plan"),
+            MovePlan::Scene(plan) | MovePlan::Reparent { plan, .. } => plan.version(),
+            MovePlan::Organization(plan) => plan.version(),
+            MovePlan::Steps(plan) => plan.version(),
         }
     }
     pub fn is_noop(&self) -> bool {
@@ -107,7 +97,7 @@ impl Document {
     pub fn palette_deformation_move_support(
         &self,
         request: &PaletteMove,
-    ) -> Result<Option<zipzi_sdk::ReparentSupport>> {
+    ) -> Result<Option<zipzi_core::document::ReparentSupport>> {
         let Some(edit) = self.palette_deformation_reparent(request)? else {
             return Ok(None);
         };
@@ -146,14 +136,14 @@ impl Document {
                 path: path.clone(),
             });
             let mut children = Vec::new();
-            let handles = self.session.organization_collection(collection)?;
+            let handles = self.model().organization_collection(&collection)?;
             for handle in handles {
-                if (kind == ObjectKind::Part && handle.kind() != zipzi_sdk::ObjectKind::Part)
-                    || !seen.insert(handle.id().to_owned())
+                if (kind == ObjectKind::Part && self.model().part(&handle).is_none())
+                    || !seen.insert(handle.clone())
                 {
                     continue;
                 }
-                let object = ObjectRef::new(kind, handle.id());
+                let object = ObjectRef::new(kind, &handle);
                 let name = index.name(&object);
                 let child_path = if path.is_empty() {
                     name.to_owned()
@@ -182,7 +172,7 @@ impl Document {
             .iter()
             .chain(model.transform_order())
         {
-            if let Some(transform) = model.get_transform(id).filter(|_| seen.insert(id.as_str())) {
+            if let Some(transform) = model.transform(id).filter(|_| seen.insert(id.as_str())) {
                 children.entry(transform.parent()).or_default().push(id);
             }
         }
@@ -335,14 +325,14 @@ impl Document {
                 None
             } else {
                 let mut members: Vec<_> = self
-                    .session
-                    .organization_collection(collection.clone())?
+                    .model()
+                    .organization_collection(&collection)?
                     .into_iter()
-                    .map(|handle| handle.id().to_owned())
+                    .map(|handle| handle.clone())
                     .collect();
                 if matches!(collection, Collection::PartMembers { part_id: None }) {
                     members.retain(|id| {
-                        self.model().get_part(id).is_some() == (target.kind == ObjectKind::Part)
+                        self.model().part(id).is_some() == (target.kind == ObjectKind::Part)
                     });
                 }
                 insertion(&members, &ids, target, request.position)?

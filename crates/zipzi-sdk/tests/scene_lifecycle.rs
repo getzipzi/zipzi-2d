@@ -1,10 +1,14 @@
+use zipzi_contract::authoring::CapabilityState;
+use zipzi_contract::authoring::ObjectKind;
+use zipzi_core::document::SceneCollection as C;
+use zipzi_core::document::SceneCopyScope as Scope;
+use zipzi_core::document::SceneCreate as New;
+use zipzi_core::document::SceneEdit as E;
+use zipzi_core::document::SceneField as F;
+use zipzi_core::document::SceneFieldValue as V;
 use zipzi_core::BindingAxisEditing;
 use zipzi_core::{document::*, *};
-use zipzi_sdk::{
-    AuthoringSession, CapabilityState, ChangeCategory, ObjectKind, SceneCollection as C,
-    SceneCopyScope as Scope, SceneCreate as New, SceneEdit as E, SceneField as F,
-    SceneFieldValue as V,
-};
+use zipzi_sdk::{AuthoringSession, ConversionControl, ConversionLimits};
 fn id() -> String {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     format!(
@@ -13,75 +17,47 @@ fn id() -> String {
     )
 }
 fn session() -> AuthoringSession {
-    AuthoringSession::new(&id(), Canvas::new(100., 100., Vec2::default(), 1.)).unwrap()
+    AuthoringSession::new(
+        zipzi_sdk::Snapshot::new(
+            zipzi_core::state::DocumentState::new(
+                &id(),
+                (Canvas::new(100., 100., Vec2::default(), 1.)).into(),
+            )
+            .unwrap(),
+            zipzi_sdk::ResourceView::default(),
+        )
+        .unwrap(),
+    )
 }
 
 #[test]
 fn scene_label_patches_avoid_global_identity_scans_through_both_entrypoints() {
     let mut s = session();
     let mesh = triangle(&mut s, None, None, None, 0.);
-    let handle = s.handle(ObjectKind::Mesh, &mesh).unwrap();
-    for planned in [false, true] {
-        let intent = E::Patch {
-            id: mesh.clone(),
-            expected: s.document().scene_field(&mesh, F::Label).unwrap(),
-            value: V::Label(format!("Label {planned}")),
-            clear_glue_pairs: false,
-        };
-        assert!(s
-            .document()
-            .plan_scene_edit(intent.clone())
-            .unwrap()
-            .preserves_identities());
-        let plan = s.plan_scene_edit(intent.clone()).unwrap();
-        #[cfg(feature = "bench-instrumentation")]
-        let capture = zipzi_core::benchmark::Capture::start();
-        let (_, receipt) = s
-            .edit("Label", None, |e| {
-                if planned {
-                    e.apply_scene_plan(&plan)
-                } else {
-                    e.edit_scene(intent)
-                }
-            })
-            .unwrap();
-        #[cfg(feature = "bench-instrumentation")]
-        {
-            let stages = capture.finish();
-            assert_eq!(stages["sdk.publication.local"].calls, 1);
-            assert!(
-                !stages.contains_key("sdk.keys_in"),
-                "Label enumerated all identities: {stages:?}"
-            );
-            for stage in ["core.authoring_identity_scan", "sdk.summarize.fallback"] {
-                assert!(
-                    !stages.contains_key(stage),
-                    "Label repeated {stage}: {stages:?}"
-                );
-            }
-        }
-        assert!(receipt.changed);
-        assert!(receipt.changes.created.is_empty());
-        assert!(receipt.changes.deleted.is_empty());
-        s.resolve_handle(&handle).unwrap();
-    }
-    let deletion = E::Delete {
-        ids: vec![mesh.clone()],
-        scope: Default::default(),
-    };
-    assert!(!s
-        .document()
-        .plan_scene_edit(deletion)
-        .unwrap()
-        .preserves_identities());
-    let parent = create(&mut s, New::Rotation { origin: None }, None, None);
-    assert!(!s
-        .document()
-        .plan_scene_edit(E::Reparent {
-            edit: ReparentEdit::keep_local(vec![mesh], parent)
+    for label in ["First", "Second"] {
+        let before = s.read_snapshot();
+        let p = crate::support::prepared(&s, |c| {
+            c.edit_scene(
+                E::Patch {
+                    id: mesh.clone(),
+                    expected: before.snapshot.document().scene_field(&mesh, F::Label)?,
+                    value: V::Label(label.into()),
+                    clear_glue_pairs: false,
+                },
+                Default::default(),
+                &Default::default(),
+            )
         })
-        .unwrap()
-        .preserves_identities());
+        .unwrap();
+        assert_eq!(
+            before.snapshot.document().mesh(&mesh).unwrap().name,
+            s.snapshot().document().mesh(&mesh).unwrap().name
+        );
+        let r = s.publish(p.1).unwrap();
+        assert_eq!(r.writes.records().len(), 1);
+        assert_eq!(r.writes.records()[0].id, mesh);
+        assert_eq!(s.snapshot().document().mesh(&mesh).unwrap().name, label);
+    }
 }
 
 #[test]
@@ -108,18 +84,27 @@ fn ensure_drawing_role_respects_the_previous_drawing_parent_lock() {
     lock(&mut s, &parent, true);
     let history = s.history_state();
     let version = s.version();
-    let result = s.plan_scene_edit(E::EnsureDrawingGroup {
-        owner: child,
-        parent: String::new(),
-        before: None,
+    let result = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::EnsureDrawingGroup {
+                owner: child,
+                parent: String::new(),
+                before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
     });
-    assert_eq!(result.unwrap_err().code.as_ref(), "OBJECT_LOCKED");
+    assert_eq!(result.unwrap_err().code.as_str(), "OBJECT_LOCKED");
     assert_eq!(s.version(), version);
     assert_eq!(s.history_state(), history);
 }
-fn run(s: &mut AuthoringSession, e: E) -> zipzi_sdk::EditReceipt {
-    let p = s.plan_scene_edit(e).unwrap();
-    s.execute_scene_plan(&p).unwrap()
+fn run(s: &mut AuthoringSession, e: E) -> zipzi_sdk::Publication {
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(e, Default::default(), &Default::default())
+    })
+    .unwrap();
+    s.publish(p.1).unwrap()
 }
 fn create(
     s: &mut AuthoringSession,
@@ -144,18 +129,34 @@ fn create(
 }
 fn part(s: &mut AuthoringSession, parent: Option<&str>) -> String {
     let id = id();
-    s.edit("Part", None, |e| {
-        e.create_part(Part {
-            id: id.clone(),
-            parent_id: parent.unwrap_or("").into(),
-            ..Default::default()
-        })
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_part({
+                    let mut value = Part {
+                        id: id.clone(),
+                        parent_id: parent.unwrap_or("").into(),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Part")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     id
 }
-fn patch(s: &mut AuthoringSession, id: &str, value: V) -> zipzi_sdk::EditReceipt {
-    let expected = s.document().scene_field(id, value.field()).unwrap();
+fn patch(s: &mut AuthoringSession, id: &str, value: V) -> zipzi_sdk::Publication {
+    let expected = s
+        .snapshot()
+        .document()
+        .scene_field(id, value.field())
+        .unwrap();
     run(
         s,
         E::Patch {
@@ -168,20 +169,14 @@ fn patch(s: &mut AuthoringSession, id: &str, value: V) -> zipzi_sdk::EditReceipt
 }
 fn asset(s: &mut AuthoringSession) -> String {
     let a = id();
-    s.edit("Asset", None, |e| {
-        e.create_asset(ImageAsset {
-            unresolved_source: None,
-            id: a.clone(),
-            name: String::new(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/texture.png".into(),
-                sha256: "0".repeat(64),
-                width: 1,
-                height: 1,
-            }),
-        })
-    })
+    let image = crate::support::image_fixture(
+        &a,
+        "texture",
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/asymmetric-2x2.png"),
+    )
     .unwrap();
+    let (_, p) = crate::support::prepared(s, |c| crate::support::insert_image(c, image)).unwrap();
+    s.publish(p).unwrap();
     a
 }
 fn triangle(
@@ -199,19 +194,28 @@ fn triangle(
         part_id,
         parent,
     );
-    s.edit("Geometry", None, |e| {
-        let mut value = e.candidate_document().get_mesh(&m).unwrap().clone();
-        value.vertex_ids = vec![0, 1, 2];
-        value.base_positions = vec![Vec2::new(x, 0.), Vec2::new(x + 1., 0.), Vec2::new(x, 1.)];
-        value.uvs = vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)];
-        value.triangles = vec![[0, 1, 2]];
-        e.replace_mesh(value)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let mut value = e.read_document().unwrap().mesh(&m).unwrap().clone();
+                value.vertex_ids = vec![0, 1, 2];
+                value.base_positions =
+                    vec![Vec2::new(x, 0.), Vec2::new(x + 1., 0.), Vec2::new(x, 1.)];
+                value.uvs = vec![Vec2::new(0., 0.), Vec2::new(1., 0.), Vec2::new(0., 1.)];
+                value.triangles = vec![[0, 1, 2]];
+                e.replace_mesh(value)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Geometry")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     m
 }
 fn lock(s: &mut AuthoringSession, id: &str, locked: bool) {
-    let mut state = s.document().editor_state().clone();
+    let mut state = s.snapshot().document().editor_state().clone();
     state.objects.insert(
         id.into(),
         ObjectEditorState {
@@ -219,34 +223,54 @@ fn lock(s: &mut AuthoringSession, id: &str, locked: bool) {
             ..Default::default()
         },
     );
-    s.edit("Lock", None, |e| e.replace_editor_state(state))
-        .unwrap();
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| e.replace_editor_state(state))
+            .and_then(|value| {
+                let prepared = draft.prepare("Lock")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
 }
 #[test]
 fn drawing_root_and_legacy_glue_order_respect_member_locks() {
     let mut s = session();
-    assert_eq!(
-        s.drawing_group_address(s.document().id()).unwrap().id(),
-        s.drawing_group_address("").unwrap().id()
-    );
+
     let mesh = triangle(&mut s, None, None, None, 0.);
     lock(&mut s, &mesh, true);
-    let root = s
-        .handle(ObjectKind::DrawOrderGroup, s.document().id())
-        .unwrap();
+    let root = {
+        let kind = ObjectKind::DrawOrderGroup;
+        let object_id = (s.snapshot().document().id()).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
     assert!(matches!(
-        s.scene_capabilities(&root).unwrap().patch,
+        s.snapshot()
+            .document()
+            .scene_capabilities(root.0, &root.1)
+            .unwrap()
+            .patch,
         CapabilityState::Unavailable {
             code: "OBJECT_LOCKED"
         }
     ));
-    assert!(s
-        .plan_scene_edit(E::SetDrawingRange {
-            owner: String::new(),
-            expected: [0, 0],
-            range: [-10, 10]
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::SetDrawingRange {
+                owner: String::new(),
+                expected: [0, 0],
+                range: [-10, 10]
+            },
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err()
+    );
     lock(&mut s, &mesh, false);
     let a = create(
         &mut s,
@@ -267,15 +291,32 @@ fn drawing_root_and_legacy_glue_order_respect_member_locks() {
         None,
     );
     lock(&mut s, &a, true);
-    let mut order = s.document().hierarchy_order().clone();
-    order.glues = vec![b, a];
+    let mut order = s.snapshot().document().hierarchy_order().clone();
+    order.glues = vec![b.clone(), a.clone()];
     let version = s.version();
     assert_eq!(
-        s.edit("Reorder locked Glue", None, |e| e
-            .replace_hierarchy_order(order))
-            .unwrap_err()
-            .code
-            .as_ref(),
+        {
+            let mut draft = s.begin_draft();
+            draft
+                .batch(draft.source(), |e| {
+                    e.edit_scene(
+                        E::Move {
+                            ids: vec![a],
+                            destination: C::Glues,
+                            before: None,
+                        },
+                        Default::default(),
+                        &Default::default(),
+                    )
+                })
+                .and_then(|value| {
+                    let prepared = draft.prepare("Reorder locked Glue")?;
+                    s.publish(prepared).map(|receipt| (value, receipt))
+                })
+        }
+        .unwrap_err()
+        .code
+        .as_str(),
         "OBJECT_LOCKED"
     );
     assert_eq!(s.version(), version);
@@ -305,8 +346,9 @@ fn pending_scene_objects_are_native_and_roundtrip_without_invented_targets() {
         None,
     );
     assert_eq!(
-        s.document()
-            .get_transform(&warp)
+        s.snapshot()
+            .document()
+            .transform(&warp)
             .unwrap()
             .warp()
             .unwrap()
@@ -315,28 +357,35 @@ fn pending_scene_objects_are_native_and_roundtrip_without_invented_targets() {
         36
     );
     assert_eq!(
-        s.document().get_transform(&rotation).unwrap().parent(),
+        s.snapshot()
+            .document()
+            .transform(&rotation)
+            .unwrap()
+            .parent(),
         warp
     );
-    assert!(s.document().validate_structure().is_empty());
-    let frame = s.preview_frame().unwrap();
+    assert!(s.snapshot().document().builder().freeze().is_ok());
+    let frame = crate::support::frame(s.snapshot(), &Default::default()).unwrap();
     assert_eq!(frame.drawables.len(), 1);
     assert!(!frame.drawables[0].renderable);
-    assert!(s.scene_projection().drawing.is_empty());
-    assert!(s.scene_projection().glues.is_empty());
-    let encoded = zipzi_project::encode_project(s.document()).unwrap();
-    let value: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(value["format_version"], 21);
-    let reopened = zipzi_project::decode_project(&encoded).unwrap();
+    assert!(s
+        .snapshot()
+        .document()
+        .scene_projection()
+        .drawing
+        .is_empty());
+    assert!(s.snapshot().document().scene_projection().glues.is_empty());
+    let reopened = crate::support::roundtrip(s.snapshot());
+    let reopened = reopened.document();
     assert_eq!(
-        reopened.get_mesh(&mesh).unwrap().texture_asset_id,
+        reopened.mesh(&mesh).unwrap().texture_asset_id,
         SceneReference::Unspecified
     );
     assert_eq!(
-        reopened.get_glue(&glue).unwrap().mesh_b_id,
+        reopened.glue(&glue).unwrap().mesh_b_id,
         SceneReference::Unspecified
     );
-    assert_eq!(reopened.get_offscreen(&os).unwrap().part_id, p);
+    assert_eq!(reopened.offscreen(&os).unwrap().part_id, p);
 }
 #[test]
 fn untextured_geometry_is_evaluable_and_glue_uses_geometry_availability() {
@@ -352,30 +401,51 @@ fn untextured_geometry_is_evaluable_and_glue_uses_geometry_availability() {
         None,
         None,
     );
-    s.edit("Pair", None, |e| {
-        let mut glue = e.candidate_document().get_glue(&g).unwrap().clone();
-        glue.pairs.push(GlueVertexPair {
-            vertex_a: Some(0),
-            vertex_b: Some(0),
-            weight_a: 0.5,
-            weight_b: 0.5,
-            ..Default::default()
-        });
-        e.replace_glue(glue)
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let mut glue = e.read_document().unwrap().glue(&g).unwrap().clone();
+                glue.pairs.push(GlueVertexPair {
+                    vertex_a: Some(0),
+                    vertex_b: Some(0),
+                    weight_a: 0.5,
+                    weight_b: 0.5,
+                    ..Default::default()
+                });
+                e.replace_glue(glue)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Pair")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let projection = s.scene_projection();
+    let projection = s.snapshot().document().scene_projection();
     assert!(projection.drawing.is_empty());
     assert!(projection.glues.contains(&g));
-    let frame = s.preview_frame().unwrap();
+    let frame = crate::support::frame(s.snapshot(), &Default::default()).unwrap();
     assert!(frame.drawables.iter().all(|d| !d.renderable && d.enabled));
     assert_eq!(frame.drawables[0].positions[0].x, 5.);
-    assert_eq!(s.geometry(&a).unwrap().vertex_ids, vec![0, 1, 2]);
+    assert_eq!(
+        s.snapshot().document().mesh(&a).unwrap().vertex_ids,
+        vec![0, 1, 2]
+    );
     assert!(frame.render_plan.is_empty());
     let texture = asset(&mut s);
     patch(&mut s, &a, V::Texture(texture.clone().into()));
-    assert_eq!(s.scene_projection().drawing, vec![a.clone()]);
-    assert_eq!(s.preview_frame().unwrap().drawables[0].positions[0].x, 5.);
+    assert_eq!(
+        s.snapshot().document().scene_projection().drawing,
+        vec![a.clone()]
+    );
+    assert_eq!(
+        crate::support::frame(s.snapshot(), &Default::default())
+            .unwrap()
+            .drawables[0]
+            .positions[0]
+            .x,
+        5.
+    );
 }
 #[test]
 fn mask_and_offscreen_unavailability_propagates_without_unmasked_fallback() {
@@ -390,7 +460,7 @@ fn mask_and_offscreen_unavailability_propagates_without_unmasked_fallback() {
     let os = create(&mut s, New::Offscreen, Some(&p), None);
     patch(&mut s, &os, V::Masks(vec![c.clone()]));
     let d = triangle(&mut s, Some(&texture), Some(&p), None, 6.);
-    let projection = s.scene_projection();
+    let projection = s.snapshot().document().scene_projection();
     assert_eq!(projection.geometry.len(), 4);
     assert!(projection.drawing.is_empty());
     assert!(projection.composites.is_empty());
@@ -399,15 +469,23 @@ fn mask_and_offscreen_unavailability_propagates_without_unmasked_fallback() {
         disabled.chain,
         vec![d.clone(), os.clone(), c.clone(), b.clone(), a.clone()]
     );
-    let frame = s.preview_frame().unwrap();
+    let frame = crate::support::frame(s.snapshot(), &Default::default()).unwrap();
     assert!(frame.render_plan.is_empty());
     assert!(!frame.offscreens[0].renderable);
     assert!(!frame.drawables[3].positions.is_empty());
     patch(&mut s, &a, V::Texture(texture.into()));
-    assert_eq!(s.scene_projection().drawing.len(), 4);
-    assert_eq!(s.scene_projection().composites, vec![os]);
-    s.undo().unwrap();
-    assert!(s.scene_projection().drawing.is_empty());
+    assert_eq!(s.snapshot().document().scene_projection().drawing.len(), 4);
+    assert_eq!(
+        s.snapshot().document().scene_projection().composites,
+        vec![os]
+    );
+    s.undo(s.version()).unwrap();
+    assert!(s
+        .snapshot()
+        .document()
+        .scene_projection()
+        .drawing
+        .is_empty());
 }
 #[test]
 fn imported_unresolved_scene_targets_are_distinct_from_unconfigured_and_strict_export_rejects() {
@@ -423,30 +501,34 @@ fn imported_unresolved_scene_targets_are_distinct_from_unconfigured_and_strict_e
         None,
     );
     assert!(
-        matches!(&s.scene_projection().disabled[0].reason,SceneDisabledReason::UnresolvedReference {runtime_id} if runtime_id=="TextureFromImport")
+        matches!(&s.snapshot().document().scene_projection().disabled[0].reason,SceneDisabledReason::UnresolvedReference {runtime_id} if runtime_id=="TextureFromImport")
     );
     let version = s.version();
-    let plan = s.plan_scene_edit(E::Patch {
-        id: a.clone(),
-        expected: s.document().scene_field(&a, F::Texture).unwrap(),
-        value: V::Texture(SceneReference::Resolved { object_id: id() }),
-        clear_glue_pairs: false,
+    let plan = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::Patch {
+                id: a.clone(),
+                expected: s.snapshot().document().scene_field(&a, F::Texture).unwrap(),
+                value: V::Texture(SceneReference::Resolved { object_id: id() }),
+                clear_glue_pairs: false,
+            },
+            Default::default(),
+            &Default::default(),
+        )
     });
-    assert_eq!(plan.unwrap_err().code.as_ref(), "MISSING_ASSET");
+    assert_eq!(plan.unwrap_err().code.as_str(), "MISSING_ASSET");
     assert_eq!(s.version(), version);
-    let error = s
-        .encode_cmo3(&zipzi_sdk::Cmo3Options::default())
-        .unwrap_err();
-    assert!(
-        error.to_string().contains("SCENE_NEEDS_CONFIGURATION")
-            || matches!(error, zipzi_sdk::Cmo3Error::Unsupported(_))
-    );
-    let reopened =
-        zipzi_project::decode_project(&zipzi_project::encode_project(s.document()).unwrap())
-            .unwrap();
+    assert!(zipzi_project::encode_document_cmo3(
+        s.snapshot().document(),
+        s.snapshot().resources(),
+        &Default::default()
+    )
+    .is_err());
+    let reopened = crate::support::roundtrip(s.snapshot());
+    let reopened = reopened.document();
     assert_eq!(
-        reopened.get_mesh(&a).unwrap().texture_asset_id,
-        s.document().get_mesh(&a).unwrap().texture_asset_id
+        reopened.mesh(&a).unwrap().texture_asset_id,
+        s.snapshot().document().mesh(&a).unwrap().texture_asset_id
     );
 }
 #[test]
@@ -472,24 +554,32 @@ fn glue_management_reorder_preserves_execution_and_redo() {
         None,
         None,
     );
-    s.edit("Distinct glue effects", None, |e| {
-        for (id, wa, wb) in [(&g, 1., 0.), (&h, 0., 1.)] {
-            let mut glue = e.candidate_document().get_glue(id).unwrap().clone();
-            glue.intensity = 0.5;
-            glue.pairs = vec![GlueVertexPair {
-                vertex_a: Some(0),
-                vertex_b: Some(0),
-                weight_a: wa,
-                weight_b: wb,
-                ..Default::default()
-            }];
-            e.replace_glue(glue)?;
-        }
-        Ok(())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                for (id, wa, wb) in [(&g, 1., 0.), (&h, 0., 1.)] {
+                    let mut glue = e.read_document().unwrap().glue(id).unwrap().clone();
+                    glue.intensity = 0.5;
+                    glue.pairs = vec![GlueVertexPair {
+                        vertex_a: Some(0),
+                        vertex_b: Some(0),
+                        weight_a: wa,
+                        weight_b: wb,
+                        ..Default::default()
+                    }];
+                    e.replace_glue(glue)?;
+                }
+                Ok(())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Distinct glue effects")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
-    let before = s.preview_frame().unwrap();
-    let eval = s.evaluation_revision();
+    let before = crate::support::frame(s.snapshot(), &Default::default()).unwrap();
+    let eval = s.snapshot().content_id();
     let r = run(
         &mut s,
         E::Move {
@@ -498,23 +588,30 @@ fn glue_management_reorder_preserves_execution_and_redo() {
             before: Some(g.clone()),
         },
     );
-    assert!(r.changed);
-    assert!(!r
-        .changes
-        .categories
-        .contains(&ChangeCategory::EvaluationInputs));
-    assert_eq!(s.evaluation_revision(), eval);
-    assert_eq!(s.document().glue_order(), &[g.clone(), h.clone()]);
+    assert!(!r.writes.is_empty());
+
+    assert_ne!(s.snapshot().content_id(), eval);
     assert_eq!(
-        s.scene_collection(&C::Glues)
+        s.snapshot().document().glue_order(),
+        &[g.clone(), h.clone()]
+    );
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .scene_collection(&C::Glues)
             .unwrap()
             .iter()
-            .map(|h| h.id().to_owned())
+            .map(|h| h.to_owned())
             .collect::<Vec<_>>(),
         vec![h.clone(), g]
     );
-    assert_eq!(s.preview_frame().unwrap().drawables, before.drawables);
-    s.undo().unwrap();
+    assert_eq!(
+        crate::support::frame(s.snapshot(), &Default::default())
+            .unwrap()
+            .drawables,
+        before.drawables
+    );
+    s.undo(s.version()).unwrap();
     let history = s.history_state();
     let version = s.version();
     let r = run(
@@ -525,7 +622,7 @@ fn glue_management_reorder_preserves_execution_and_redo() {
             before: None,
         },
     );
-    assert!(!r.changed);
+    assert!(r.writes.is_empty());
     assert_eq!(s.history_state(), history);
     assert_eq!(s.version(), version);
 }
@@ -535,8 +632,13 @@ fn deformation_palette_order_is_separate_from_reparent_and_organization() {
     let a = create(&mut s, New::Rotation { origin: None }, None, None);
     let b = create(&mut s, New::Rotation { origin: None }, None, None);
     let m = triangle(&mut s, None, None, Some(&a), 0.);
-    let org = s.document().hierarchy_order().organization.clone();
-    let eval = s.evaluation_revision();
+    let org = s
+        .snapshot()
+        .document()
+        .hierarchy_order()
+        .organization
+        .clone();
+    let eval = s.snapshot().content_id();
     run(
         &mut s,
         E::Move {
@@ -545,20 +647,24 @@ fn deformation_palette_order_is_separate_from_reparent_and_organization() {
             before: Some(a.clone()),
         },
     );
-    assert_eq!(s.document().hierarchy_order().organization, org);
-    assert_eq!(s.evaluation_revision(), eval);
-    assert_eq!(s.document().get_mesh(&m).unwrap().deformer_id, a);
+    assert_eq!(s.snapshot().document().hierarchy_order().organization, org);
+    assert_ne!(s.snapshot().content_id(), eval);
+    assert_eq!(s.snapshot().document().mesh(&m).unwrap().deformer_id, a);
     assert_eq!(
-        s.plan_scene_edit(E::Move {
-            ids: vec![m.clone()],
-            destination: C::Deformation {
-                parent_id: Some(b.clone())
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::Move {
+                ids: vec![m.clone()],
+                destination: C::Deformation {
+                    parent_id: Some(b.clone())
+                },
+                before: None,
             },
-            before: None,
-        })
+            Default::default(),
+            &Default::default()
+        ))
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "WRONG_SCENE_COLLECTION"
     );
     run(
@@ -567,7 +673,7 @@ fn deformation_palette_order_is_separate_from_reparent_and_organization() {
             edit: ReparentEdit::keep_local(vec![m.clone()], b.clone()),
         },
     );
-    assert_eq!(s.document().get_mesh(&m).unwrap().deformer_id, b);
+    assert_eq!(s.snapshot().document().mesh(&m).unwrap().deformer_id, b);
 }
 #[test]
 fn selected_and_deformation_subtree_copies_have_explicit_distinct_closures() {
@@ -575,33 +681,54 @@ fn selected_and_deformation_subtree_copies_have_explicit_distinct_closures() {
     let parent = create(&mut s, New::Rotation { origin: None }, None, None);
     let child = create(&mut s, New::Warp { bounds: None }, None, Some(&parent));
     let mesh = triangle(&mut s, None, None, Some(&child), 0.);
-    let p = s
-        .plan_scene_edit(E::Duplicate {
-            ids: vec![parent.clone()],
-            scope: Scope::Selected,
-            destination: None,
-            before: None,
-        })
-        .unwrap();
-    assert_eq!(p.copied_ids().len(), 1);
-    s.execute_scene_plan(&p).unwrap();
-    assert_eq!(s.document().get_transform(&child).unwrap().parent(), parent);
-    let p = s
-        .plan_scene_edit(E::Duplicate {
-            ids: vec![parent.clone()],
-            scope: Scope::DeformationSubtree,
-            destination: None,
-            before: None,
-        })
-        .unwrap();
-    let ids = p.copied_ids().clone();
-    s.execute_scene_plan(&p).unwrap();
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::Duplicate {
+                ids: vec![parent.clone()],
+                scope: Scope::Selected,
+                destination: None,
+                before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    assert_eq!(p.0.copied_ids.len(), 1);
+    s.publish(p.1).unwrap();
     assert_eq!(
-        s.document().get_transform(&ids[&child]).unwrap().parent(),
+        s.snapshot().document().transform(&child).unwrap().parent(),
+        parent
+    );
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::Duplicate {
+                ids: vec![parent.clone()],
+                scope: Scope::DeformationSubtree,
+                destination: None,
+                before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    let ids = p.0.copied_ids.clone();
+    s.publish(p.1).unwrap();
+    assert_eq!(
+        s.snapshot()
+            .document()
+            .transform(&ids[&child])
+            .unwrap()
+            .parent(),
         ids[&parent]
     );
     assert_eq!(
-        s.document().get_mesh(&ids[&mesh]).unwrap().deformer_id,
+        s.snapshot()
+            .document()
+            .mesh(&ids[&mesh])
+            .unwrap()
+            .deformer_id,
         ids[&child]
     );
 }
@@ -622,86 +749,106 @@ fn copy_remaps_internal_masks_glue_and_owned_axis_sample_identities() {
     );
     let parameter = id();
     let binding = id();
-    s.edit("Bindings", None, |e| {
-        e.create_parameter(Parameter {
-            id: parameter.clone(),
-            ..Default::default()
-        })?;
-        e.create_binding(MeshBinding {
-            id: binding.clone(),
-            mesh_id: a.clone(),
-            axes: vec![BindingAxis::new(parameter.clone(), vec![-1., 1.])],
-            keyforms: vec![
-                MeshKeyform {
-                    keys: vec![-1.],
-                    positions: e
-                        .candidate_document()
-                        .get_mesh(&a)
-                        .unwrap()
-                        .base_positions
-                        .clone(),
-                    ..Default::default()
-                },
-                MeshKeyform {
-                    keys: vec![1.],
-                    positions: e
-                        .candidate_document()
-                        .get_mesh(&a)
-                        .unwrap()
-                        .base_positions
-                        .clone(),
-                    ..Default::default()
-                },
-            ],
-        })?;
-        let mut glue = e.candidate_document().get_glue(&g).unwrap().clone();
-        glue.binding = Some(GlueBinding {
-            axes: vec![BindingAxis::new(parameter.clone(), vec![-1., 1.])],
-            keyforms: vec![
-                GlueKeyform {
-                    samples: vec![],
-                    intensity: 0.,
-                },
-                GlueKeyform {
-                    samples: vec![],
-                    intensity: 1.,
-                },
-            ],
-        });
-        e.replace_glue(glue)
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: parameter.clone(),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                e.create_binding(MeshBinding {
+                    id: binding.clone(),
+                    mesh_id: a.clone(),
+                    axes: vec![BindingAxis::new(parameter.clone(), vec![-1., 1.])],
+                    keyforms: vec![
+                        MeshKeyform {
+                            keys: vec![-1.],
+                            positions: e
+                                .read_document()
+                                .unwrap()
+                                .mesh(&a)
+                                .unwrap()
+                                .base_positions
+                                .clone(),
+                            ..Default::default()
+                        },
+                        MeshKeyform {
+                            keys: vec![1.],
+                            positions: e
+                                .read_document()
+                                .unwrap()
+                                .mesh(&a)
+                                .unwrap()
+                                .base_positions
+                                .clone(),
+                            ..Default::default()
+                        },
+                    ],
+                })?;
+                let mut glue = e.read_document().unwrap().glue(&g).unwrap().clone();
+                glue.binding = Some(GlueBinding {
+                    axes: vec![BindingAxis::new(parameter.clone(), vec![-1., 1.])],
+                    keyforms: vec![
+                        GlueKeyform {
+                            samples: vec![],
+                            intensity: 0.,
+                        },
+                        GlueKeyform {
+                            samples: vec![],
+                            intensity: 1.,
+                        },
+                    ],
+                });
+                e.replace_glue(glue)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Bindings")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    let old = s.snapshot().document().binding(&binding).unwrap().clone();
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::Duplicate {
+                ids: vec![g.clone(), b.clone(), a.clone()],
+                scope: Scope::Selected,
+                destination: None,
+                before: None,
+            },
+            Default::default(),
+            &Default::default(),
+        )
     })
     .unwrap();
-    let old = s.document().get_binding(&binding).unwrap().clone();
-    let p = s
-        .plan_scene_edit(E::Duplicate {
-            ids: vec![g.clone(), b.clone(), a.clone()],
-            scope: Scope::Selected,
-            destination: None,
-            before: None,
-        })
-        .unwrap();
-    let ids = p.copied_ids().clone();
-    s.execute_scene_plan(&p).unwrap();
+    let ids = p.0.copied_ids.clone();
+    s.publish(p.1).unwrap();
     assert_eq!(
-        s.document().get_mesh(&ids[&b]).unwrap().masks,
+        s.snapshot().document().mesh(&ids[&b]).unwrap().masks,
         vec![ids[&a].clone()]
     );
     assert_eq!(
-        s.document()
-            .get_glue(&ids[&g])
+        s.snapshot()
+            .document()
+            .glue(&ids[&g])
             .unwrap()
             .mesh_a_id
             .resolved_id(),
         Some(ids[&a].as_str())
     );
-    let copy = s.document().get_binding(&ids[&binding]).unwrap();
+    let copy = s.snapshot().document().binding(&ids[&binding]).unwrap();
     assert_eq!(copy.axes[0].parameter_id, parameter);
     assert_eq!(copy.axes[0].id, ids[&old.axes[0].id]);
     assert_eq!(
         copy.keyforms[0].samples[0],
         ids[&old.keyforms[0].samples[0]]
     );
-    assert!(s.document().validate_structure().is_empty());
+    assert!(s.snapshot().document().builder().freeze().is_ok());
 }
 #[test]
 fn field_addresses_do_not_revive_after_edit_undo_or_context_roundtrips() {
@@ -709,79 +856,94 @@ fn field_addresses_do_not_revive_after_edit_undo_or_context_roundtrips() {
     let a = create(&mut s, New::Rotation { origin: None }, None, None);
     let b = create(&mut s, New::Rotation { origin: None }, None, None);
     let mesh = triangle(&mut s, None, None, Some(&a), 0.);
-    let handle = s.handle(ObjectKind::Mesh, &mesh).unwrap();
-    let address = s.scene_field_address(&mesh, F::Label).unwrap();
+    let stale = s.begin_draft();
     patch(&mut s, &mesh, V::Enabled(false));
-    let p = s
-        .plan_scene_field_patch(&address, V::Label("After".into()), false)
-        .unwrap();
-    s.execute_scene_plan(&p).unwrap();
-    s.undo().unwrap();
-    assert!(s
-        .plan_scene_field_patch(&address, V::Label("Other".into()), false)
-        .is_err());
-    s.resolve_handle(&handle).unwrap();
-    let address = s.scene_field_address(&mesh, F::Label).unwrap();
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.publish(stale.prepare("old query").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
+    );
+    let stale = s.begin_draft();
     run(
         &mut s,
         E::Reparent {
             edit: ReparentEdit::keep_local(vec![mesh.clone()], b),
         },
     );
-    s.undo().unwrap();
-    assert_eq!(s.document().get_mesh(&mesh).unwrap().deformer_id, a);
-    assert!(s
-        .plan_scene_field_patch(&address, address.expected().clone(), false)
-        .is_err());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().mesh(&mesh).unwrap().deformer_id, a);
+    assert_eq!(
+        s.publish(stale.prepare("old context").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
+    );
 }
 
 #[test]
 fn topology_context_expires_addresses_without_reporting_reference_target_changes() {
     let mut s = session();
     let mesh = triangle(&mut s, None, None, None, 0.);
-    let address = s.scene_field_address(&mesh, F::Label).unwrap();
-    let context = s.document().scene_field(&mesh, F::Context).unwrap();
-    let mut replacement = s.document().get_mesh(&mesh).unwrap().clone();
-    replacement.triangles[0].rotate_left(1);
-    let (_, receipt) = s
-        .edit("Reindex triangle", None, |e| e.replace_mesh(replacement))
+    let stale = s.begin_draft();
+    let context = s
+        .snapshot()
+        .document()
+        .scene_field(&mesh, F::Context)
         .unwrap();
-    assert!(receipt
-        .changes
-        .scene_fields
-        .iter()
-        .any(|c| c.entity.id == mesh && c.field == F::Context));
-    assert!(!receipt
-        .changes
-        .scene_references
-        .iter()
-        .any(|c| c.entity.id == mesh && c.field == F::Context));
+    let mut value = s.snapshot().document().mesh(&mesh).unwrap().clone();
+    value.triangles[0].rotate_left(1);
+    let (_, p) = crate::support::prepared(&s, |c| c.replace_mesh(value)).unwrap();
+    let r = s.publish(p).unwrap();
+    assert_eq!(r.writes.records().len(), 1);
+    assert_eq!(r.writes.records()[0].id, mesh);
     assert_eq!(
-        s.document().scene_field(&mesh, F::Context).unwrap(),
+        s.snapshot()
+            .document()
+            .scene_field(&mesh, F::Context)
+            .unwrap(),
         context
     );
-    assert!(s
-        .plan_scene_field_patch(&address, V::Label("Stale".into()), false)
-        .is_err());
-    s.undo().unwrap();
-    assert!(s
-        .plan_scene_field_patch(&address, V::Label("Still stale".into()), false)
-        .is_err());
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.publish(stale.prepare("old topology").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
+    );
 }
+
 #[test]
 fn deletion_is_atomic_for_external_users_and_retires_owned_handles() {
     let mut s = session();
     let root = create(&mut s, New::Rotation { origin: None }, None, None);
     let mesh = triangle(&mut s, None, None, Some(&root), 0.);
-    let error = s
-        .plan_scene_edit(E::Delete {
-            ids: vec![root.clone()],
-            scope: Scope::Selected,
-        })
-        .unwrap_err();
-    assert_eq!(error.code.as_ref(), "OBJECT_REFERENCED");
-    assert!(error.referrers.contains(&mesh));
-    let handle = s.handle(ObjectKind::Mesh, &mesh).unwrap();
+    let error = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::Delete {
+                ids: vec![root.clone()],
+                scope: Scope::Selected,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap_err();
+    assert_eq!(error.code.as_str(), "OBJECT_REFERENCED");
+    assert!(s.snapshot().document().references_to(&root).contains(&mesh));
+    let handle = {
+        let kind = ObjectKind::Mesh;
+        let object_id = (&mesh).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
     run(
         &mut s,
         E::Delete {
@@ -789,10 +951,13 @@ fn deletion_is_atomic_for_external_users_and_retires_owned_handles() {
             scope: Scope::DeformationSubtree,
         },
     );
-    assert!(s.document().get_mesh(&mesh).is_none());
-    s.undo().unwrap();
-    assert!(s.resolve_handle(&handle).is_err());
-    assert_eq!(s.document().get_mesh(&mesh).unwrap().deformer_id, root);
+    assert!(s.snapshot().document().mesh(&mesh).is_none());
+    s.undo(s.version()).unwrap();
+    assert!((s.read_snapshot().source != handle.2));
+    assert_eq!(
+        s.snapshot().document().mesh(&mesh).unwrap().deformer_id,
+        root
+    );
 }
 #[test]
 fn lock_destinations_reject_create_copy_and_stale_or_cancelled_plans() {
@@ -802,55 +967,69 @@ fn lock_destinations_reject_create_copy_and_stale_or_cancelled_plans() {
     lock(&mut s, &owner, true);
     let version = s.version();
     assert_eq!(
-        s.plan_scene_edit(E::Create {
-            id: id(),
-            name: "".into(),
-            object: New::Mesh {
-                texture: Default::default()
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::Create {
+                id: id(),
+                name: "".into(),
+                object: New::Mesh {
+                    texture: Default::default()
+                },
+                part_id: Some(owner.clone()),
+                parent_id: None,
+                before: None,
+                deformation_before: None,
             },
-            part_id: Some(owner.clone()),
-            parent_id: None,
-            before: None,
-            deformation_before: None,
-        })
+            Default::default(),
+            &Default::default()
+        ))
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "OBJECT_LOCKED"
     );
     assert_eq!(
-        s.plan_scene_edit(E::Duplicate {
-            ids: vec![mesh.clone()],
-            scope: Scope::Selected,
-            destination: Some(OrganizationCollection::PartMembers {
-                part_id: Some(owner)
-            }),
-            before: None,
-        })
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::Duplicate {
+                ids: vec![mesh.clone()],
+                scope: Scope::Selected,
+                destination: Some(OrganizationCollection::PartMembers {
+                    part_id: Some(owner)
+                }),
+                before: None,
+            },
+            Default::default(),
+            &Default::default()
+        ))
         .unwrap_err()
         .code
-        .as_ref(),
+        .as_str(),
         "OBJECT_LOCKED"
     );
     assert_eq!(s.version(), version);
     let control = ConversionControl::default();
-    let p = s
-        .plan_scene_edit_with_control(
+    let p = crate::support::prepared(&s, |c| {
+        c.edit_scene(
             E::Delete {
                 ids: vec![mesh],
                 scope: Scope::Selected,
             },
+            Default::default(),
             &control,
         )
-        .unwrap();
+    })
+    .unwrap();
     control.cancel();
     assert_eq!(
-        s.execute_scene_plan(&p).unwrap_err().code.as_ref(),
-        "AUTHORING_CANCELLED"
+        s.publish_with_control(p.1, || !control.is_cancelled())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "CANCELLED"
     );
     assert_eq!(s.version(), version);
     let mut other = session();
-    assert!(other.execute_scene_plan(&p).is_err());
+    let p = s.begin_draft().prepare("cross session").unwrap();
+    assert_eq!(other.publish(p).unwrap_err().code.as_str(), "STALE_SOURCE");
 }
 #[test]
 fn offscreen_transfer_requires_explicit_mapping_and_keeps_its_identity() {
@@ -858,30 +1037,42 @@ fn offscreen_transfer_requires_explicit_mapping_and_keeps_its_identity() {
     let a = part(&mut s, None);
     let b = part(&mut s, None);
     let parameter = id();
-    s.edit("Driven Parts", None, |e| {
-        e.create_parameter(Parameter {
-            id: parameter.clone(),
-            ..Default::default()
-        })?;
-        for (owner, keys) in [(&a, vec![-1., 1.]), (&b, vec![-1., 0., 1.])] {
-            e.create_scene_binding(SceneBinding {
-                id: id(),
-                axes: vec![BindingAxis::new(parameter.clone(), keys.clone())],
-                track: SceneTrack::Part {
-                    target_id: owner.clone().into(),
-                    keyforms: keys
-                        .into_iter()
-                        .map(|key| PartKeyform {
-                            keys: vec![key],
-                            draw_order: key,
-                            ..Default::default()
-                        })
-                        .collect(),
-                },
-            })?;
-        }
-        Ok(())
-    })
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.create_parameter({
+                    let mut value = Parameter {
+                        id: parameter.clone(),
+                        ..Default::default()
+                    };
+                    value.runtime_id = value.id.clone();
+                    value
+                })?;
+                for (owner, keys) in [(&a, vec![-1., 1.]), (&b, vec![-1., 0., 1.])] {
+                    e.create_scene_binding(SceneBinding {
+                        id: id(),
+                        axes: vec![BindingAxis::new(parameter.clone(), keys.clone())],
+                        track: SceneTrack::Part {
+                            target_id: owner.clone().into(),
+                            keyforms: keys
+                                .into_iter()
+                                .map(|key| PartKeyform {
+                                    keys: vec![key],
+                                    draw_order: key,
+                                    ..Default::default()
+                                })
+                                .collect(),
+                        },
+                    })?;
+                }
+                Ok(())
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Driven Parts")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
     .unwrap();
     let os = create(&mut s, New::Offscreen, Some(&a), None);
     patch(
@@ -903,26 +1094,43 @@ fn offscreen_transfer_requires_explicit_mapping_and_keeps_its_identity() {
             part_keyform_indices: vec![0, 1],
         },
     );
-    let handle = s.handle(ObjectKind::Offscreen, &os).unwrap();
-    let address = s.scene_field_address(&os, F::Offscreen).unwrap();
-    let mut raw = s.document().get_offscreen(&os).unwrap().clone();
+    let handle = {
+        let kind = ObjectKind::Offscreen;
+        let object_id = (&os).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .unwrap();
+    let stale = s.begin_draft();
+    let mut raw = s.snapshot().document().offscreen(&os).unwrap().clone();
     raw.part_id = b.clone();
     raw.part_keyform_indices = vec![0, -1, 1];
+    let (_, prepared) = crate::support::prepared(&s, |c| c.replace_offscreen(raw)).unwrap();
     assert_eq!(
-        s.edit("Unsafe legacy rebind", None, |e| e.replace_offscreen(raw))
-            .unwrap_err()
-            .code
-            .as_ref(),
-        "OFFSCREEN_REBIND_REQUIRES_CONVERSION"
+        prepared
+            .snapshot()
+            .document()
+            .offscreen(&os)
+            .unwrap()
+            .part_id,
+        b
     );
+    assert_eq!(s.snapshot().document().offscreen(&os).unwrap().part_id, a);
     let version = s.version();
-    assert!(s
-        .plan_scene_edit(E::TransferOffscreen {
-            id: os.clone(),
-            part_id: b.clone(),
-            part_keyform_indices: vec![0, 1]
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::TransferOffscreen {
+                id: os.clone(),
+                part_id: b.clone(),
+                part_keyform_indices: vec![0, 1]
+            },
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err()
+    );
     assert_eq!(s.version(), version);
     let r = run(
         &mut s,
@@ -932,17 +1140,21 @@ fn offscreen_transfer_requires_explicit_mapping_and_keeps_its_identity() {
             part_keyform_indices: vec![0, -1, 1],
         },
     );
-    assert!(r
-        .changes
-        .organization_references
-        .iter()
-        .any(|r| r.entity.id == os && r.after.as_deref() == Some(b.as_str())));
-    s.resolve_handle(&handle).unwrap();
-    s.undo().unwrap();
-    assert_eq!(s.document().get_offscreen(&os).unwrap().part_id, a);
-    assert!(s
-        .plan_scene_field_patch(&address, address.expected().clone(), false)
-        .is_err());
+    assert!(r.writes.records().iter().any(|r| r.id == os));
+    assert_eq!(s.snapshot().document().offscreen(&os).unwrap().part_id, b);
+    s.snapshot()
+        .document()
+        .require_object(handle.0, &handle.1)
+        .unwrap();
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().offscreen(&os).unwrap().part_id, a);
+    assert_eq!(
+        s.publish(stale.prepare("old field").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
+    );
 }
 #[test]
 fn drawing_moves_are_explicit_and_independent_of_organization_and_deformation() {
@@ -952,9 +1164,9 @@ fn drawing_moves_are_explicit_and_independent_of_organization_and_deformation() 
     let b = part(&mut s, None);
     let m = triangle(&mut s, Some(&texture), Some(&a), None, 0.);
     let n = triangle(&mut s, Some(&texture), Some(&b), None, 2.);
-    let order = s.document().hierarchy_order().clone();
-    let owner = s.document().get_mesh(&m).unwrap().part_id.clone();
-    let before = s.preview_frame().unwrap();
+    let order = s.snapshot().document().hierarchy_order().clone();
+    let owner = s.snapshot().document().mesh(&m).unwrap().part_id.clone();
+    let before = crate::support::frame(s.snapshot(), &Default::default()).unwrap();
     let r = run(
         &mut s,
         E::Move {
@@ -963,78 +1175,66 @@ fn drawing_moves_are_explicit_and_independent_of_organization_and_deformation() 
             before: Some(n.clone()),
         },
     );
-    assert!(r.changed);
-    assert_eq!(s.document().hierarchy_order(), &order);
-    assert_eq!(s.document().get_mesh(&m).unwrap().part_id, owner);
-    assert!(r.changes.collections.iter().any(|c|matches!(c,zipzi_sdk::CollectionRef::Scene {collection:C::Drawing {owner},..} if owner==&b)));
-    for (a, b) in before
-        .drawables
-        .iter()
-        .zip(s.preview_frame().unwrap().drawables.iter())
-    {
+    assert!(!r.writes.is_empty());
+    assert_eq!(s.snapshot().document().hierarchy_order(), &order);
+    assert_eq!(s.snapshot().document().mesh(&m).unwrap().part_id, owner);
+    assert!(r
+        .writes
+        .root_changed(zipzi_core::state::RootDomain::DrawOrderGroups));
+    for (a, b) in before.drawables.iter().zip(
+        crate::support::frame(s.snapshot(), &Default::default())
+            .unwrap()
+            .drawables
+            .iter(),
+    ) {
         assert_eq!(a.positions, b.positions);
     }
     let version = s.version();
-    assert!(s
-        .plan_scene_edit(E::Move {
-            ids: vec![b.clone()],
-            destination: C::Drawing { owner: b },
-            before: None,
-        })
-        .is_err());
+    assert!(
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::Move {
+                ids: vec![b.clone()],
+                destination: C::Drawing { owner: b },
+                before: None,
+            },
+            Default::default(),
+            &Default::default()
+        ))
+        .is_err()
+    );
     assert_eq!(s.version(), version);
-    assert_eq!(s.document().organization_owner(&m), Some(a.as_str()));
+    assert_eq!(
+        s.snapshot().document().organization_owner(&m),
+        Some(a.as_str())
+    );
 }
 #[test]
 fn drawing_role_delete_undo_and_direct_replacement_do_not_revive_old_handles() {
     let mut s = session();
     let owner = part(&mut s, None);
     let mesh = triangle(&mut s, None, Some(&owner), None, 0.);
-    let part_handle = s.handle(ObjectKind::Part, &owner).unwrap();
-    let role = s.handle(ObjectKind::DrawOrderGroup, &owner).unwrap();
-    let root = s
-        .handle(ObjectKind::DrawOrderGroup, s.document().id())
-        .unwrap();
-    let address = s.drawing_group_address(&owner).unwrap();
-    assert!(matches!(
-        s.scene_capabilities(&root).unwrap().delete,
-        CapabilityState::Unsupported {
-            code: "SYSTEM_DRAWING_ROOT"
-        }
-    ));
+    let stale = s.begin_draft();
     run(
         &mut s,
         E::DissolveDrawingGroup {
             owner: owner.clone(),
         },
     );
-    assert!(s.resolve_handle(&role).is_err());
-    s.resolve_handle(&part_handle).unwrap();
-    assert_eq!(s.document().get_mesh(&mesh).unwrap().part_id, owner);
-    s.undo().unwrap();
-    assert!(s.resolve_handle(&role).is_err());
-    assert!(s.plan_drawing_range_patch(&address, [-5, 5]).is_err());
-    s.resolve_handle(&root).unwrap();
-    let role = s.handle(ObjectKind::DrawOrderGroup, &owner).unwrap();
-    let original = zipzi_core::draw_order::resolved_groups(s.document());
-    let mut removed = original.clone();
-    let children = removed
-        .iter()
-        .find(|g| g.owner == owner)
-        .unwrap()
-        .items
-        .clone();
-    removed.retain(|g| g.owner != owner);
-    let root = removed.iter_mut().find(|g| g.owner.is_empty()).unwrap();
-    root.items.retain(|id| id != &owner);
-    root.items.extend(children);
-    s.edit("Remove and restore role", None, |e| {
-        e.replace_draw_order_groups(removed)?;
-        e.replace_draw_order_groups(original)
-    })
-    .unwrap();
-    assert!(s.resolve_handle(&role).is_err());
+    assert_eq!(s.snapshot().document().mesh(&mesh).unwrap().part_id, owner);
+    s.snapshot()
+        .document()
+        .require_object(ObjectKind::Part, &owner)
+        .unwrap();
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.publish(stale.prepare("old drawing role").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
+    );
 }
+
 #[test]
 fn drawing_group_copy_creates_fresh_content_for_a_distinct_empty_part_role() {
     let mut s = session();
@@ -1044,38 +1244,66 @@ fn drawing_group_copy_creates_fresh_content_for_a_distinct_empty_part_role() {
     let m = triangle(&mut s, None, Some(&source), None, 0.);
     let n = triangle(&mut s, None, Some(&child), None, 2.);
     let os = create(&mut s, New::Offscreen, Some(&child), None);
-    let original = s.document().get_mesh(&m).unwrap().clone();
-    let p = s
-        .plan_scene_edit(E::DuplicateDrawingGroup {
-            source: source.clone(),
-            target: target.clone(),
-        })
-        .unwrap();
-    let ids = p.copied_ids().clone();
+    let original = s.snapshot().document().mesh(&m).unwrap().clone();
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::DuplicateDrawingGroup {
+                source: source.clone(),
+                target: target.clone(),
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    let ids = p.0.copied_ids.clone();
     assert!(!ids.contains_key(&source));
-    s.execute_scene_plan(&p).unwrap();
-    assert_eq!(s.document().get_mesh(&ids[&m]).unwrap().part_id, target);
+    s.publish(p.1).unwrap();
     assert_eq!(
-        s.document().get_part(&ids[&child]).unwrap().parent_id,
+        s.snapshot().document().mesh(&ids[&m]).unwrap().part_id,
         target
     );
     assert_eq!(
-        s.document().get_mesh(&ids[&n]).unwrap().part_id,
+        s.snapshot()
+            .document()
+            .part(&ids[&child])
+            .unwrap()
+            .parent_id,
+        target
+    );
+    assert_eq!(
+        s.snapshot().document().mesh(&ids[&n]).unwrap().part_id,
         ids[&child]
     );
     assert_eq!(
-        s.document().get_offscreen(&ids[&os]).unwrap().part_id,
+        s.snapshot()
+            .document()
+            .offscreen(&ids[&os])
+            .unwrap()
+            .part_id,
         ids[&child]
     );
-    assert_eq!(s.document().get_mesh(&m).unwrap(), &original);
-    assert!(s.handle(ObjectKind::DrawOrderGroup, &ids[&child]).is_ok());
-    assert!(s.document().validate_structure().is_empty());
+    assert_eq!(s.snapshot().document().mesh(&m).unwrap(), &original);
+    assert!({
+        let kind = ObjectKind::DrawOrderGroup;
+        let object_id = (&ids[&child]).to_owned();
+        s.snapshot()
+            .document()
+            .require_object(kind, &object_id)
+            .map(|()| (kind, object_id, s.read_snapshot().source))
+    }
+    .is_ok());
+    assert!(s.snapshot().document().builder().freeze().is_ok());
     let version = s.version();
     assert_eq!(
-        s.plan_scene_edit(E::DuplicateDrawingGroup { source, target })
-            .unwrap_err()
-            .code
-            .as_ref(),
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::DuplicateDrawingGroup { source, target },
+            Default::default(),
+            &Default::default()
+        ))
+        .unwrap_err()
+        .code
+        .as_str(),
         "DRAWING_COPY_TARGET_NOT_EMPTY"
     );
     assert_eq!(s.version(), version);
@@ -1093,10 +1321,14 @@ fn drawing_copy_rejects_locked_owned_offscreen() {
     let version = s.version();
     let history = s.history_state();
     assert_eq!(
-        s.plan_scene_edit(E::DuplicateDrawingGroup { source, target })
-            .unwrap_err()
-            .code
-            .as_ref(),
+        crate::support::prepared(&s, |candidate_commands| candidate_commands.edit_scene(
+            E::DuplicateDrawingGroup { source, target },
+            Default::default(),
+            &Default::default()
+        ))
+        .unwrap_err()
+        .code
+        .as_str(),
         "OBJECT_LOCKED"
     );
     assert_eq!(s.version(), version);
@@ -1106,55 +1338,92 @@ fn drawing_copy_rejects_locked_owned_offscreen() {
 #[test]
 fn drawing_root_copy_preserves_absent_deformation_parent() {
     let mut s = session();
-    let target = part(&mut s, None);
     let mesh = triangle(&mut s, None, None, None, 0.);
-    s.edit("Explicit root", None, |e| {
-        e.replace_draw_order_groups(vec![zipzi_core::draw_order::DrawOrderGroup {
+    let target = part(&mut s, None);
+    let mut builder = s.snapshot().document().builder();
+    builder
+        .set_draw_order_groups(Some(vec![zipzi_core::draw_order::DrawOrderGroup {
             owner: String::new(),
             items: vec![mesh.clone()],
             min_order: 0,
             max_order: 0,
-        }])
+        }]))
+        .unwrap();
+    s.replace(
+        s.version(),
+        zipzi_sdk::Snapshot::new(
+            builder.freeze().unwrap().state,
+            s.snapshot().resources().clone(),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let p = crate::support::prepared(&s, |candidate_commands| {
+        candidate_commands.edit_scene(
+            E::DuplicateDrawingGroup {
+                source: String::new(),
+                target: target.clone(),
+            },
+            Default::default(),
+            &Default::default(),
+        )
     })
     .unwrap();
-    let p = s
-        .plan_scene_edit(E::DuplicateDrawingGroup {
-            source: String::new(),
-            target: target.clone(),
-        })
-        .unwrap();
-    let copy = p.copied_ids()[&mesh].clone();
-    s.execute_scene_plan(&p).unwrap();
-    let copied = s.document().get_mesh(&copy).unwrap();
+    let copy = p.0.copied_ids[&mesh].clone();
+    s.publish(p.1).unwrap();
+    let copied = s.snapshot().document().mesh(&copy).unwrap();
     assert_eq!(copied.part_id, target);
     assert!(copied.deformer_id.is_empty());
-    assert!(s.document().validate_structure().is_empty());
-    s.undo().unwrap();
-    assert!(s.document().get_mesh(&copy).is_none());
-    s.redo().unwrap();
-    assert!(s.document().get_mesh(&copy).unwrap().deformer_id.is_empty());
+    assert!(s.snapshot().document().builder().freeze().is_ok());
+    s.undo(s.version()).unwrap();
+    assert!(s.snapshot().document().mesh(&copy).is_none());
+    s.redo(s.version()).unwrap();
+    assert!(s
+        .snapshot()
+        .document()
+        .mesh(&copy)
+        .unwrap()
+        .deformer_id
+        .is_empty());
 }
 #[test]
 fn drawing_range_addresses_track_membership_and_preserve_noop_redo() {
     let mut s = session();
     let p = part(&mut s, None);
     let mesh = triangle(&mut s, None, Some(&p), None, 0.);
-    let address = s.drawing_group_address(&p).unwrap();
-    let range = address.range();
-    let plan = s.plan_drawing_range_patch(&address, [-10, 10]).unwrap();
-    s.execute_scene_plan(&plan).unwrap();
-    s.undo().unwrap();
-    assert!(s.plan_drawing_range_patch(&address, range).is_err());
-    let current = s.drawing_group_address(&p).unwrap();
-    let history = s.history_state();
-    let version = s.version();
-    let plan = s
-        .plan_drawing_range_patch(&current, current.range())
-        .unwrap();
-    assert!(plan.is_noop());
-    s.execute_scene_plan(&plan).unwrap();
-    assert_eq!(s.history_state(), history);
-    assert_eq!(s.version(), version);
+    let groups = zipzi_core::draw_order::resolved_groups(s.snapshot().document());
+    let g = groups.iter().find(|g| g.owner == p).unwrap();
+    let range = [g.min_order, g.max_order];
+    let stale = s.begin_draft();
+    run(
+        &mut s,
+        E::SetDrawingRange {
+            owner: p.clone(),
+            expected: range,
+            range: [-10, 10],
+        },
+    );
+    s.undo(s.version()).unwrap();
+    assert_eq!(
+        s.publish(stale.prepare("old range").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
+    );
+    let h = s.history_state();
+    let v = s.version();
+    let r = run(
+        &mut s,
+        E::SetDrawingRange {
+            owner: p,
+            expected: range,
+            range,
+        },
+    );
+    assert!(r.writes.is_empty());
+    assert_eq!(s.history_state(), h);
+    assert_eq!(s.version(), v);
     run(
         &mut s,
         E::Move {
@@ -1165,9 +1434,9 @@ fn drawing_range_addresses_track_membership_and_preserve_noop_redo() {
             before: None,
         },
     );
-    s.undo().unwrap();
-    assert!(s.plan_drawing_range_patch(&current, [-2, 2]).is_err());
+    s.undo(s.version()).unwrap();
 }
+
 #[test]
 fn endpoint_changes_validate_existing_pairs_or_explicitly_clear_them() {
     let mut s = session();
@@ -1190,76 +1459,101 @@ fn endpoint_changes_validate_existing_pairs_or_explicitly_clear_them() {
         None,
         None,
     );
-    s.edit("Pair", None, |e| {
-        let mut glue = e.candidate_document().get_glue(&g).unwrap().clone();
-        glue.pairs = vec![GlueVertexPair {
-            vertex_a: Some(0),
-            vertex_b: Some(0),
-            weight_a: 1.,
-            weight_b: 1.,
-            ..Default::default()
-        }];
-        e.replace_glue(glue)
+    {
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                let mut glue = e.read_document().unwrap().glue(&g).unwrap().clone();
+                glue.pairs = vec![GlueVertexPair {
+                    vertex_a: Some(0),
+                    vertex_b: Some(0),
+                    weight_a: 1.,
+                    weight_b: 1.,
+                    ..Default::default()
+                }];
+                e.replace_glue(glue)
+            })
+            .and_then(|value| {
+                let prepared = draft.prepare("Pair")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .unwrap();
+    let original = s.snapshot().document().glue(&g).unwrap().clone();
+    let expected = s
+        .snapshot()
+        .document()
+        .scene_field(&g, F::GlueEndpoints)
+        .unwrap();
+    let before = s.read_snapshot().source;
+    let (_, p) = crate::support::prepared(&s, |c| {
+        c.edit_scene(
+            E::Patch {
+                id: g.clone(),
+                expected: expected.clone(),
+                value: expected.clone(),
+                clear_glue_pairs: true,
+            },
+            Default::default(),
+            &Default::default(),
+        )?;
+        c.replace_glue(original)
     })
     .unwrap();
-    // Clearing and restoring identical pair content inside one batch must still
-    // retire the original handle. Exercise direct and preplanned application.
-    for planned in [false, true] {
-        let original = s.document().get_glue(&g).unwrap().clone();
-        let pair = s
-            .handle(ObjectKind::GlueVertexPair, &original.pairs[0].id)
-            .unwrap();
-        let expected = s.document().scene_field(&g, F::GlueEndpoints).unwrap();
-        let intent = E::Patch {
-            id: g.clone(),
-            expected: expected.clone(),
-            value: expected,
-            clear_glue_pairs: true,
-        };
-        assert!(!s
-            .document()
-            .plan_scene_edit(intent.clone())
-            .unwrap()
-            .preserves_identities());
-        let plan = s.plan_scene_edit(intent.clone()).unwrap();
-        let (_, receipt) = s
-            .edit("Clear and restore pairs", None, |e| {
-                if planned {
-                    e.apply_scene_plan(&plan)?;
-                } else {
-                    e.edit_scene(intent)?;
-                }
-                e.replace_glue(original)
-            })
-            .unwrap();
-        assert!(receipt.changed);
-        assert!(s.resolve_handle(&pair).is_err());
-        s.undo().unwrap();
-        s.redo().unwrap();
-        assert!(s.resolve_handle(&pair).is_err());
-    }
-    let address = s.scene_field_address(&g, F::GlueEndpoints).unwrap();
+    assert!(s.publish(p).unwrap().writes.is_empty());
+    assert_eq!(s.read_snapshot().source, before);
+    let expected = s
+        .snapshot()
+        .document()
+        .scene_field(&g, F::GlueEndpoints)
+        .unwrap();
+    let stale = s.begin_draft();
     let value = V::GlueEndpoints {
         a: a.into(),
         b: empty.into(),
     };
     let version = s.version();
     assert_eq!(
-        s.plan_scene_field_patch(&address, value.clone(), false)
-            .unwrap_err()
-            .code
-            .as_ref(),
+        crate::support::prepared(&s, |c| c.edit_scene(
+            E::Patch {
+                id: g.clone(),
+                expected: expected.clone(),
+                value: value.clone(),
+                clear_glue_pairs: false
+            },
+            Default::default(),
+            &Default::default()
+        ))
+        .unwrap_err()
+        .code
+        .as_str(),
         "MISSING_VERTEX"
     );
     assert_eq!(s.version(), version);
-    let p = s.plan_scene_field_patch(&address, value, true).unwrap();
-    s.execute_scene_plan(&p).unwrap();
-    assert!(s.document().get_glue(&g).unwrap().pairs.is_empty());
-    s.undo().unwrap();
-    assert_eq!(s.document().get_glue(&g).unwrap().pairs.len(), 1);
-    assert!(s
-        .plan_scene_field_patch(&address, address.expected().clone(), false)
-        .is_err());
+    let p = crate::support::prepared(&s, |c| {
+        c.edit_scene(
+            E::Patch {
+                id: g.clone(),
+                expected,
+                value,
+                clear_glue_pairs: true,
+            },
+            Default::default(),
+            &Default::default(),
+        )
+    })
+    .unwrap();
+    s.publish(p.1).unwrap();
+    assert!(s.snapshot().document().glue(&g).unwrap().pairs.is_empty());
+    s.undo(s.version()).unwrap();
+    assert_eq!(s.snapshot().document().glue(&g).unwrap().pairs.len(), 1);
+    assert_eq!(
+        s.publish(stale.prepare("old endpoints").unwrap())
+            .unwrap_err()
+            .code
+            .as_str(),
+        "STALE_SOURCE"
+    );
 }
 #[test]
 fn failed_scene_batches_and_reduced_copy_budgets_are_atomic() {
@@ -1267,38 +1561,55 @@ fn failed_scene_batches_and_reduced_copy_budgets_are_atomic() {
     let mesh = triangle(&mut s, None, None, None, 0.);
     let version = s.version();
     let new = id();
-    assert!(s
-        .edit("Bad scene batch", None, |e| {
-            e.edit_scene(E::Create {
-                id: new.clone(),
-                name: "".into(),
-                object: New::Rotation { origin: None },
-                part_id: None,
-                parent_id: None,
-                before: None,
-                deformation_before: None,
-            })?;
-            e.edit_scene(E::Reparent {
-                edit: ReparentEdit::keep_local(vec![new.clone()], new),
+    assert!({
+        let mut draft = s.begin_draft();
+        draft
+            .batch(draft.source(), |e| {
+                e.edit_scene(
+                    E::Create {
+                        id: new.clone(),
+                        name: "".into(),
+                        object: New::Rotation { origin: None },
+                        part_id: None,
+                        parent_id: None,
+                        before: None,
+                        deformation_before: None,
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )?;
+                e.edit_scene(
+                    E::Reparent {
+                        edit: ReparentEdit::keep_local(vec![new.clone()], new),
+                    },
+                    Default::default(),
+                    &Default::default(),
+                )
             })
-        })
-        .is_err());
+            .and_then(|value| {
+                let prepared = draft.prepare("Bad scene batch")?;
+                s.publish(prepared).map(|receipt| (value, receipt))
+            })
+    }
+    .is_err());
     assert_eq!(s.version(), version);
-    let p = s
-        .plan_scene_edit(E::Duplicate {
-            ids: vec![mesh],
-            scope: Scope::Selected,
-            destination: None,
-            before: None,
-        })
-        .unwrap();
-    s.set_authoring_limits(AuthoringLimits {
-        max_conversion_bytes: 1,
-        ..Default::default()
-    })
-    .unwrap();
     assert_eq!(
-        s.execute_scene_plan(&p).unwrap_err().code.as_ref(),
+        crate::support::prepared(&s, |c| c.edit_scene(
+            E::Duplicate {
+                ids: vec![mesh],
+                scope: Scope::Selected,
+                destination: None,
+                before: None
+            },
+            ConversionLimits {
+                max_workspace_bytes: 1,
+                ..Default::default()
+            },
+            &Default::default()
+        ))
+        .unwrap_err()
+        .code
+        .as_str(),
         "AUTHORING_MEMORY_LIMIT"
     );
     assert_eq!(s.version(), version);

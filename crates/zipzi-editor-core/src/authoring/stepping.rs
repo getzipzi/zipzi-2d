@@ -5,9 +5,10 @@ use super::moving::{MovePlan, PaletteMovePlan, PaletteProjection};
 use super::*;
 use anyhow::{Result, anyhow};
 use std::collections::{HashMap, HashSet};
-use zipzi_sdk::{
-    OrganizationCollection as Collection, OrganizationEdit, SceneCollection, SceneEdit,
-};
+use zipzi_contract::document::OrganizationCollection as Collection;
+use zipzi_contract::document::OrganizationEdit;
+use zipzi_contract::document::SceneCollection;
+use zipzi_contract::document::SceneEdit;
 
 #[derive(Debug)]
 pub struct PaletteMovePlanningError(pub(super) zipzi_core::Status);
@@ -62,7 +63,7 @@ impl StepCollection {
             _ => unreachable!(),
         }
     }
-    fn members(&self, model: &zipzi_core::Document) -> Result<Vec<String>> {
+    fn members(&self, model: &zipzi_core::state::DocumentState) -> Result<Vec<String>> {
         Ok(match self {
             Self::Deformation {
                 parent,
@@ -71,15 +72,13 @@ impl StepCollection {
                 .scene_collection(&self.scene())
                 .map_err(failure)?
                 .into_iter()
-                .filter(|id| {
-                    parent.is_some() || model.get_transform(id).is_some() == *root_deformers
-                })
+                .filter(|id| parent.is_some() || model.transform(id).is_some() == *root_deformers)
                 .collect(),
             Self::Organization { owner, root_parts } => model
                 .organization_collection(&self.organization())
                 .map_err(failure)?
                 .into_iter()
-                .filter(|id| owner.is_some() || model.get_part(id).is_some() == *root_parts)
+                .filter(|id| owner.is_some() || model.part(id).is_some() == *root_parts)
                 .collect(),
             _ => model
                 .organization_collection(&self.organization())
@@ -109,35 +108,27 @@ enum StepEdit {
     Scene(SceneEdit),
 }
 impl StepEdit {
-    fn preflight(&self, candidate: &mut zipzi_core::Document) -> Result<bool> {
-        let (noop, result) = match self {
-            Self::Organization(intent) => {
-                let plan = candidate
-                    .plan_organization_edit(intent.clone())
-                    .map_err(failure)?;
-                (plan.is_noop(), candidate.apply_organization_plan(&plan))
-            }
-            Self::Scene(intent) => {
-                let plan = candidate.plan_scene_edit(intent.clone()).map_err(failure)?;
-                (plan.is_noop(), candidate.apply_scene_plan(&plan))
-            }
-        };
-        if !result.status.is_ok() {
-            return Err(failure(result.status));
-        }
-        Ok(!noop)
+    fn apply(&self, candidate: &mut crate::runtime_host::HostedDraft) -> Result<()> {
+        candidate.batch(|commands| match self {
+            Self::Organization(intent) => commands.edit_organization(intent.clone()).map(|_| ()),
+            Self::Scene(intent) => commands
+                .edit_scene(intent.clone(), Default::default(), &Default::default())
+                .map(|_| ()),
+        })?;
+        Ok(())
     }
 }
 
 #[derive(Clone, Debug)]
 pub(super) struct PaletteStepsPlan {
-    version: zipzi_sdk::Version,
-    edits: Vec<StepEdit>,
-    scene: bool,
+    preview: crate::EditPreview<()>,
 }
 impl PaletteStepsPlan {
+    pub(super) fn version(&self) -> zipzi_sdk::Version {
+        self.preview.version()
+    }
     pub(super) fn is_noop(&self) -> bool {
-        self.edits.is_empty()
+        self.preview.is_noop()
     }
 }
 
@@ -174,7 +165,8 @@ impl Document {
             "Objects do not belong to this palette projection"
         );
         let ids: Vec<_> = objects.iter().map(|object| object.id.clone()).collect();
-        let model = self.model();
+        let source = self.session.capture_authoring();
+        let model = source.captured.snapshot.document();
         let roots = if projection == PaletteProjection::Deformation {
             let parent = model
                 .scene_deformer_parent(&first.id)
@@ -191,7 +183,7 @@ impl Document {
             // Validate every member, including blocks already at a boundary.
             // This native plan is never applied to the live document.
             model
-                .plan_scene_edit(SceneEdit::Move {
+                .validate_scene_edit(&SceneEdit::Move {
                     ids: ids.clone(),
                     destination: SceneCollection::Deformation {
                         parent_id: (!parent.is_empty()).then(|| parent.to_owned()),
@@ -222,13 +214,13 @@ impl Document {
             let owner = model.organization_owner(&id).map(str::to_owned);
             let collection = match projection {
                 PaletteProjection::Organization => StepCollection::Organization {
-                    root_parts: owner.is_none() && model.get_part(&id).is_some(),
+                    root_parts: owner.is_none() && model.part(&id).is_some(),
                     owner,
                 },
-                PaletteProjection::Parameters if model.get_parameter(&id).is_some() => {
+                PaletteProjection::Parameters if model.parameter(&id).is_some() => {
                     StepCollection::Parameters(owner)
                 }
-                PaletteProjection::Parameters if model.get_parameter_group(&id).is_some() => {
+                PaletteProjection::Parameters if model.parameter_group(&id).is_some() => {
                     StepCollection::Folders(owner)
                 }
                 PaletteProjection::Parameters => {
@@ -238,7 +230,7 @@ impl Document {
                     let parent = model.scene_deformer_parent(&id).unwrap();
                     StepCollection::Deformation {
                         parent: (!parent.is_empty()).then(|| parent.to_owned()),
-                        root_deformers: parent.is_empty() && model.get_transform(&id).is_some(),
+                        root_deformers: parent.is_empty() && model.transform(&id).is_some(),
                     }
                 }
             };
@@ -249,8 +241,7 @@ impl Document {
             });
             groups[slot].1.push(id);
         }
-        let mut candidate = model.clone();
-        let mut edits = Vec::new();
+        let mut candidate = source.begin_draft("Move palette selection")?;
         for (collection, sources) in groups {
             let members = collection.members(&model)?;
             let selected: HashSet<_> = sources.iter().map(String::as_str).collect();
@@ -281,7 +272,7 @@ impl Document {
                     continue;
                 };
                 let before = if down {
-                    let current = collection.members(&candidate)?;
+                    let current = collection.members(&candidate.candidate_document())?;
                     let i = current
                         .iter()
                         .position(|id| id == neighbor)
@@ -291,15 +282,15 @@ impl Document {
                     Some(neighbor.clone())
                 };
                 let edit = collection.intent(members[start..end].to_vec(), before);
-                if edit.preflight(&mut candidate)? {
-                    edits.push(edit);
-                }
+                edit.apply(&mut candidate)?;
             }
         }
         Ok(PaletteMovePlan(MovePlan::Steps(PaletteStepsPlan {
-            version: self.session.version(),
-            edits,
-            scene: projection != PaletteProjection::Parameters,
+            preview: crate::EditPreview::from_candidate(
+                candidate,
+                source.captured.snapshot.clone(),
+                (),
+            )?,
         })))
     }
 
@@ -308,22 +299,10 @@ impl Document {
         plan: &PaletteStepsPlan,
     ) -> Result<OperationResult> {
         self.ensure_authoring_idle()?;
-        let (_, receipt) =
-            self.session
-                .edit("Move palette selection", Some(plan.version), |edit| {
-                    for intent in &plan.edits {
-                        match intent {
-                            StepEdit::Organization(intent) => {
-                                edit.edit_organization(intent.clone())?
-                            }
-                            StepEdit::Scene(intent) => edit.edit_scene(intent.clone())?,
-                        }
-                    }
-                    Ok(())
-                })?;
-        if receipt.changed {
+        let receipt = plan.preview.publish(&mut self.session)?;
+        if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
             self.pristine_blank = None;
-            self.consume_authoring_receipt(&receipt, plan.scene);
+            self.consume_authoring_receipt(&receipt, None);
             self.reconcile_parameter_preview()?;
             self.context.reconcile(&self.object_index());
         }

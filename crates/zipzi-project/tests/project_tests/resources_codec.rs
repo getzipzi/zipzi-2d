@@ -1,111 +1,179 @@
-use std::collections::HashMap;
-use std::fs;
-use zipzi_core::{RotationTransform, TransformData};
-
 use super::helpers::*;
-use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
-use zipzi_core::types::{Canvas, ImageAsset, RotationPose, Transform, Vec2};
-use zipzi_core::Document;
-use zipzi_moc3::encode_moc3;
-use zipzi_project::{content_sha256, decode_png, decode_project, encode_project, DocumentStore};
+use std::{collections::HashMap, fs};
+use zipzi_core::{
+    evaluation::{evaluate_frame, DrawableFrame},
+    state::*,
+    *,
+};
+use zipzi_project::{content_sha256, decode_png, ResourceStore, ResourceView};
 
 #[test]
-fn cached_asset_reads_still_validate_disk_content_and_metadata() {
-    use zipzi_project::store::read_project_asset_if_changed;
-    let root = std::env::temp_dir().join(format!("zipzi-cached-resource-{}", std::process::id()));
-    let path = root.join("assets/texture.png");
-    let (_, hash) = create_test_png(&path);
-    let mut asset = ImageAsset {
-        unresolved_source: None,
+fn captured_resource_reads_validate_record_and_keep_owned_bytes_after_source_changes() {
+    let tmp = TestDirectory::new();
+    let path = tmp.0.join("texture.png");
+    let (original, _) = create_test_png(&path);
+    let store = ResourceStore::default();
+    let image = store.import_image(&path).unwrap();
+    let view = ResourceView::default().with_images([image.clone()]);
+    let mut asset = AssetRecord {
         id: id(2),
         name: String::new(),
-        content: Some(zipzi_core::ImageContent {
-            source: "assets/texture.png".into(),
+        content: AssetContent::Image {
+            resource: image.key(),
             width: 8,
             height: 8,
-            sha256: hash.clone(),
-        }),
+        },
     };
-    let decoded = read_project_asset_if_changed(&root, &asset, None)
-        .unwrap()
-        .unwrap();
-    assert_eq!(decoded.rgba.len(), 8 * 8 * 4);
-    let cached = Some((hash.as_str(), 8, 8));
-    assert!(read_project_asset_if_changed(&root, &asset, cached)
-        .unwrap()
-        .is_none());
-    asset.content.as_mut().unwrap().width = 16;
+    let captured = view.read_asset(&asset).unwrap();
+    assert_eq!(captured.rgba.len(), 8 * 8 * 4);
+    asset.content = AssetContent::Image {
+        resource: image.key(),
+        width: 16,
+        height: 8,
+    };
     assert_eq!(
-        read_project_asset_if_changed(&root, &asset, cached)
-            .unwrap_err()
-            .code,
+        view.read_asset(&asset).unwrap_err().code,
         "RESOURCE_DIMENSIONS"
     );
-    asset.content.as_mut().unwrap().width = 8;
-    asset.content.as_mut().unwrap().sha256 = "0".repeat(64);
+    asset.content = AssetContent::Image {
+        resource: Default::default(),
+        width: 8,
+        height: 8,
+    };
     assert_eq!(
-        read_project_asset_if_changed(&root, &asset, cached)
-            .unwrap_err()
-            .code,
-        "RESOURCE_HASH"
+        view.read_asset(&asset).unwrap_err().code,
+        "MISSING_RESOURCE"
     );
-    asset.content.as_mut().unwrap().sha256 = hash.clone();
+    asset.content = AssetContent::Image {
+        resource: image.key(),
+        width: 8,
+        height: 8,
+    };
     fs::write(&path, b"corrupt image").unwrap();
-    assert_eq!(
-        read_project_asset_if_changed(&root, &asset, cached)
-            .unwrap_err()
-            .code,
-        "INVALID_PNG"
-    );
+    assert!(store.import_image(&path).is_err());
+    assert_eq!(view.read_asset(&asset).unwrap().rgba, captured.rgba);
+    fs::write(&path, original).unwrap();
+    let restored = store.import_image(&path).unwrap();
+    assert_ne!(restored.key(), image.key());
+    assert_eq!(restored.texture().rgba, image.texture().rgba);
     fs::remove_file(&path).unwrap();
-    assert_eq!(
-        read_project_asset_if_changed(&root, &asset, cached)
-            .unwrap_err()
-            .code,
-        "PROJECT_IO"
-    );
-    fs::remove_dir_all(root).unwrap();
+    assert!(store.import_image(&path).is_err());
+    assert_eq!(view.read_asset(&asset).unwrap().rgba, captured.rgba);
 }
 
 #[test]
-fn store_png_verification_cache_detects_external_edits() {
-    let root =
-        std::env::temp_dir().join(format!("zipzi-store-resource-cache-{}", std::process::id()));
-    let path = root.join("assets/texture.png");
-    let (original, hash) = create_test_png(&path);
-    let mut document = Document::new();
-    assert!(document
-        .initialize(id(1), Canvas::new(100.0, 100.0, Vec2::default(), 1.0))
-        .is_ok());
-    assert!(document
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: id(2),
-            name: String::new(),
-            content: Some(zipzi_core::ImageContent {
-                source: "assets/texture.png".into(),
-                width: 8,
-                height: 8,
-                sha256: hash,
-            }),
-        })
-        .status
-        .is_ok());
-    let store = DocumentStore::new();
-    assert!(store.diagnose(&document, &root).is_empty());
-    assert!(store.diagnose(&document, &root).is_empty());
-
-    fs::write(&path, b"corrupt image").unwrap();
-    assert_eq!(store.diagnose(&document, &root)[0].code, "INVALID_PNG");
-    fs::write(&path, &original).unwrap();
-    let mut wrong = document.get_asset(&id(2)).unwrap().clone();
-    wrong.content.as_mut().unwrap().width = 9;
-    assert!(document.replace_asset(wrong).status.is_ok());
+fn native_roundtrip_preserves_frames_and_moc3_bytes() {
+    let before = fixture_doc();
+    let encoded = fixture_bytes(&before);
+    let wire = project_json(&encoded);
+    assert_eq!(wire["format"], "zipzi-project");
+    assert_eq!(wire["format_version"], 22);
+    let decoded = load_native(&encoded).unwrap();
+    assert_eq!(project_json(&resaved_native(&encoded)), wire);
+    let p = HashMap::from([(id(6), 0.5)]);
+    let mut a = DrawableFrame::default();
+    let mut b = DrawableFrame::default();
+    assert!(evaluate_frame(&before, &p, &mut a).is_ok());
+    assert!(evaluate_frame(&decoded, &p, &mut b).is_ok());
+    assert_eq!(a.drawables.len(), b.drawables.len());
+    for (a, b) in a.drawables.iter().zip(&b.drawables) {
+        assert_eq!(a.positions, b.positions);
+        assert_eq!(a.uvs, b.uvs);
+        assert_eq!(a.indices, b.indices);
+        assert_eq!(a.draw_order, b.draw_order);
+    }
     assert_eq!(
-        store.diagnose(&document, &root)[0].code,
-        "RESOURCE_DIMENSIONS"
+        zipzi_moc3::encode_moc3(&before).unwrap().bytes,
+        zipzi_moc3::encode_moc3(&decoded).unwrap().bytes
     );
-    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn native_codec_rejects_bad_format_duplicate_keys_versions_and_traversal() {
+    let bytes = fixture_bytes(&fixture_doc());
+    let wire = project_json(&bytes);
+    for (field, value, code) in [
+        (
+            "format",
+            serde_json::json!("unknown-project"),
+            "INVALID_PROJECT",
+        ),
+        (
+            "format",
+            serde_json::json!("zipzi-directory-project"),
+            "INVALID_PROJECT",
+        ),
+        (
+            "format_version",
+            serde_json::json!(99),
+            "UNSUPPORTED_VERSION",
+        ),
+    ] {
+        let mut modified = wire.clone();
+        modified[field] = value;
+        assert_eq!(
+            load_native(&replace_project_json(&bytes, &modified))
+                .unwrap_err()
+                .code,
+            code
+        );
+    }
+    let text = serde_json::to_string(&wire).unwrap();
+    let duplicate = text.replacen("{", "{\"format\":\"duplicate\",", 1);
+    assert_eq!(
+        load_native(&crate::support::replace_project_text(&bytes, &duplicate))
+            .unwrap_err()
+            .code,
+        "INVALID_PROJECT"
+    );
+    let mut traversal = wire;
+    traversal["document"]["assets"][0]["source"] = "../escape.png".into();
+    assert_eq!(
+        load_native(&replace_project_json(&bytes, &traversal))
+            .unwrap_err()
+            .code,
+        "INVALID_PROJECT"
+    );
+}
+
+#[test]
+fn project_roundtrip_preserves_precise_rotation_origin() {
+    let origin = 0.9545455574989319_f64;
+    let document = prepare(
+        &DocumentState::new(id(1), ModelSetup::default()).unwrap(),
+        |b| {
+            b.create_transform(Transform {
+                id: id(2),
+                runtime_id: "rotation".into(),
+                data: TransformData::Rotation(RotationTransform {
+                    base_angle: 0.,
+                    pose: RotationPose {
+                        origin: PreciseVec2::new(0.06838598102331161, origin),
+                        ..Default::default()
+                    },
+                }),
+                ..Default::default()
+            })
+        },
+    );
+    let bytes = fixture_bytes(&document);
+    let reopened = load_native(&bytes).unwrap();
+    assert_eq!(
+        reopened
+            .transform(&id(2))
+            .unwrap()
+            .rotation()
+            .unwrap()
+            .pose
+            .origin
+            .y
+            .to_bits(),
+        origin.to_bits()
+    );
+    assert_eq!(
+        project_json(&bytes),
+        project_json(&fixture_bytes(&reopened))
+    );
 }
 
 #[test]
@@ -144,202 +212,6 @@ fn test_png_decode_and_sha256() {
     assert_eq!(data.rgba.len(), 8 * 8 * 4);
 
     let _ = fs::remove_dir_all(temp_dir);
-}
-
-#[test]
-fn test_project_encode_decode_roundtrip() {
-    let sha1 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    let sha2 = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
-    let before = fixture_doc(sha1, sha2);
-
-    let encoded = encode_project(&before).expect("encode_project failed");
-    assert_eq!(encoded.bytes().filter(|&byte| byte == b'\n').count(), 1);
-    let root: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(root["format"], "zipzi-directory-project");
-    assert_eq!(root["format_version"], 21);
-
-    let decoded = decode_project(&encoded).expect("decode_project failed");
-    assert!(before.same_content(&decoded));
-    assert_eq!(decoded.revision(), 1, "decode publishes one batch revision");
-
-    // Both documents evaluate to identical frames
-    let mut p = HashMap::new();
-    p.insert(id(6), 0.5);
-
-    let mut frame_before = DrawableFrame::default();
-    let mut frame_after = DrawableFrame::default();
-    assert!(evaluate_frame(&before, &p, &mut frame_before).is_ok());
-    assert!(evaluate_frame(&decoded, &p, &mut frame_after).is_ok());
-
-    assert_eq!(frame_before.drawables.len(), frame_after.drawables.len());
-    for i in 0..frame_before.drawables.len() {
-        let d1 = &frame_before.drawables[i];
-        let d2 = &frame_after.drawables[i];
-        assert_eq!(d1.positions, d2.positions);
-        assert_eq!(d1.uvs, d2.uvs);
-        assert_eq!(d1.indices, d2.indices);
-        assert_eq!(d1.draw_order, d2.draw_order);
-    }
-
-    // Both encode to identical MOC3 bytes
-    let moc1 = encode_moc3(&before).unwrap();
-    let moc2 = encode_moc3(&decoded).unwrap();
-    assert_eq!(moc1.bytes, moc2.bytes);
-}
-
-#[test]
-fn rejects_unknown_project_format() {
-    let document = fixture_doc(&"0".repeat(64), &"f".repeat(64));
-    let encoded = encode_project(&document).unwrap();
-    let mut root: serde_json::Value = serde_json::from_str(&encoded).unwrap();
-    root["format"] = "unknown-directory-project".into();
-    let error = decode_project(&serde_json::to_string(&root).unwrap()).unwrap_err();
-    assert_eq!(error.code, "INVALID_PROJECT");
-}
-
-#[cfg(feature = "binary-prototype")]
-#[test]
-fn cbor_prototype_preserves_project_content_and_rejects_bad_header() {
-    use zipzi_project::{decode_project_cbor, encode_project_cbor};
-
-    let mut original = fixture_doc(&"0".repeat(64), &"f".repeat(64));
-    let id = original.mesh_order()[0].clone();
-    assert!(original
-        .replace_editor_state(zipzi_core::document::EditorState {
-            objects: [(
-                id,
-                zipzi_core::document::ObjectEditorState {
-                    locked: true,
-                    ..Default::default()
-                }
-            )]
-            .into(),
-            ..original.editor_state().clone()
-        })
-        .status
-        .is_ok());
-    let binary = encode_project_cbor(&original).unwrap();
-    assert_eq!(&binary[..8], b"ZIPCBOR1");
-    let decoded = decode_project_cbor(&binary).unwrap();
-    assert!(original.same_content(&decoded));
-
-    let mut invalid = binary.clone();
-    invalid[..8].copy_from_slice(b"UNKNOWN1");
-    assert_eq!(
-        decode_project_cbor(&invalid).unwrap_err().code,
-        "INVALID_PROJECT"
-    );
-    assert_eq!(
-        decode_project_cbor(&binary[..binary.len() - 1])
-            .unwrap_err()
-            .code,
-        "INVALID_PROJECT"
-    );
-}
-
-#[test]
-fn project_roundtrip_preserves_precise_rotation_origin() {
-    let mut document = Document::new();
-    assert!(document
-        .initialize(id(1), Canvas::new(640.0, 480.0, Vec2::new(0.0, 0.0), 100.0))
-        .is_ok());
-    let origin = 0.9545455574989319_f64;
-    let transform = Transform {
-        id: id(2),
-        runtime_id: "rotation".into(),
-        data: TransformData::Rotation(RotationTransform {
-            base_angle: 0.0,
-            pose: RotationPose {
-                origin: zipzi_core::types::PreciseVec2::new(0.06838598102331161, origin),
-                ..Default::default()
-            },
-        }),
-        ..Default::default()
-    };
-    assert!(document.create_transform(transform).status.is_ok());
-
-    let reopened = decode_project(&encode_project(&document).unwrap()).unwrap();
-    assert_eq!(
-        reopened
-            .get_transform(&id(2))
-            .unwrap()
-            .rotation()
-            .unwrap()
-            .pose
-            .origin
-            .y
-            .to_bits(),
-        origin.to_bits()
-    );
-    assert!(document.same_content(&reopened));
-
-    #[cfg(feature = "binary-prototype")]
-    {
-        let binary = zipzi_project::encode_project_cbor(&document).unwrap();
-        let binary_reopened = zipzi_project::decode_project_cbor(&binary).unwrap();
-        assert_eq!(
-            binary_reopened
-                .get_transform(&id(2))
-                .unwrap()
-                .rotation()
-                .unwrap()
-                .pose
-                .origin
-                .y
-                .to_bits(),
-            origin.to_bits()
-        );
-        assert!(document.same_content(&binary_reopened));
-    }
-}
-
-#[test]
-fn test_reject_duplicate_keys_and_malformed() {
-    // Duplicate JSON key
-    let json_dup = r#"{
-      "format": "zipzi-directory-project",
-      "format": "duplicate-key",
-      "format_version": 1,
-      "document": {}
-    }"#;
-    let err = decode_project(json_dup).unwrap_err();
-    assert_eq!(err.code, "INVALID_PROJECT");
-
-    // Legacy format
-    let legacy_json = r#"{
-      "format": "zipzi-project",
-      "format_version": 5,
-      "document": {}
-    }"#;
-    let err = decode_project(legacy_json).unwrap_err();
-    assert_eq!(err.code, "LEGACY_PROJECT");
-
-    // Unsupported version
-    let bad_version = r#"{
-      "format": "zipzi-directory-project",
-      "format_version": 99,
-      "document": {
-        "id": "00000001-1111-4111-8111-111111111111",
-        "model_space": {"origin": {"x": 0.0, "y": 0.0}, "y_axis_down": true},
-        "assets": [],
-        "meshes": [],
-        "parts": [],
-        "transforms": [],
-        "parameters": [],
-        "bindings": [],
-        "scene_bindings": []
-      }
-    }"#;
-    let err = decode_project(bad_version).unwrap_err();
-    assert_eq!(err.code, "UNSUPPORTED_VERSION");
-
-    // Invalid asset path (directory traversal)
-    let doc = fixture_doc(&"0".repeat(64), &"1".repeat(64));
-    let mut traversal: serde_json::Value =
-        serde_json::from_str(&encode_project(&doc).unwrap()).unwrap();
-    traversal["document"]["assets"][0]["source"] = "../escape.png".into();
-    let err = decode_project(&traversal.to_string()).unwrap_err();
-    assert_eq!(err.code, "INVALID_PROJECT");
 }
 
 #[test]

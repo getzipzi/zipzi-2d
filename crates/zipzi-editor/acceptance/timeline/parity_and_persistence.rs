@@ -37,7 +37,7 @@ pub(crate) fn result_parity(h: &mut Harness) -> anyhow::Result<()> {
             Ok(request)
         })??;
         let mut sdk =
-            zipzi_sdk::MotionPreview::new(request.source.materialized_snapshot()?.document());
+            zipzi_animation::MotionPreview::new(request.source.evaluation_snapshot().document());
         sdk.set_physics_enabled(!request.physics.bypass);
         for (id, value) in &request.physics.baseline {
             sdk.set_base_parameter(id, *value)?;

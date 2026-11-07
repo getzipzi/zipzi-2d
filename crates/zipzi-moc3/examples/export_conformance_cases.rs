@@ -1,15 +1,16 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
+use zipzi_core::state::*;
 use zipzi_core::{RotationTransform, TransformData, WarpTransform};
 
 use serde::Serialize;
 use zipzi_core::evaluation::{evaluate_frame, DrawableFrame};
 use zipzi_core::types::{
-    Appearance, BindingAxis, BlendMode, Canvas, ImageAsset, Mesh, MeshBinding, MeshKeyform,
-    Parameter, Part, RotationPose, SceneBinding, Transform, Vec2,
+    Appearance, BindingAxis, BlendMode, Canvas, Mesh, MeshBinding, MeshKeyform, Parameter, Part,
+    RotationPose, SceneBinding, Transform, Vec2,
 };
-use zipzi_core::Document;
+
 use zipzi_moc3::encode_moc3;
 
 fn id(n: i32) -> String {
@@ -45,206 +46,186 @@ struct ExpectedDrawable {
     screen_color: [f32; 4],
 }
 
-fn base_doc() -> Document {
-    let mut doc = Document::new();
-    assert!(doc
-        .initialize(
-            id(1),
-            Canvas {
-                width: 640.0,
-                height: 480.0,
-                origin: Vec2::new(271.0, 193.0),
-                pixels_per_unit: 100.0,
-                flag: 1,
-            }
-        )
-        .is_ok());
+fn base_doc() -> DocumentState {
+    let mut doc = DocumentState::new(
+        id(1),
+        Canvas {
+            width: 640.0,
+            height: 480.0,
+            origin: Vec2::new(271.0, 193.0),
+            pixels_per_unit: 100.0,
+            flag: 1,
+        }
+        .into(),
+    )
+    .unwrap()
+    .builder();
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: id(2),
-            name: "Tex0".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/0.png".to_string(),
-                width: 8,
-                height: 8,
-                sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-                    .to_string(),
-            }),
-        })
-        .status
-        .is_ok());
+    doc.create_asset(AssetRecord {
+        id: id(2),
+        name: "Tex0".to_string(),
+        content: AssetContent::Image {
+            resource: ResourceKey::new(),
+            width: 8,
+            height: 8,
+        },
+    })
+    .unwrap();
 
-    assert!(doc
-        .add_asset(ImageAsset {
-            unresolved_source: None,
-            id: id(3),
-            name: "Tex1".to_string(),
-            content: Some(zipzi_core::ImageContent {
-                source: "textures/1.png".to_string(),
-                width: 8,
-                height: 8,
-                sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-                    .to_string(),
-            }),
-        })
-        .status
-        .is_ok());
+    doc.create_asset(AssetRecord {
+        id: id(3),
+        name: "Tex1".to_string(),
+        content: AssetContent::Image {
+            resource: ResourceKey::new(),
+            width: 8,
+            height: 8,
+        },
+    })
+    .unwrap();
 
-    doc
+    doc.freeze().unwrap().state
 }
 
-fn build_1d_case() -> (Document, Vec<Vec<f32>>) {
-    let mut doc = base_doc();
+fn build_1d_case() -> (DocumentState, Vec<Vec<f32>>) {
+    let mut doc = base_doc().builder();
     let p_id = id(10);
-    assert!(doc
-        .create_parameter(Parameter {
-            id: p_id.clone(),
-            runtime_id: "Param_X".to_string(),
-            name: "X".to_string(),
+    doc.create_parameter(Parameter {
+        id: p_id.clone(),
+        runtime_id: "Param_X".to_string(),
+        name: "X".to_string(),
+        minimum: -1.0,
+        maximum: 1.0,
+        default_value: 0.0,
+        decimal_places: 4,
+        ..Default::default()
+    })
+    .unwrap();
+
+    let m_id = id(20);
+    doc.create_mesh(Mesh {
+        id: m_id.clone(),
+        runtime_id: "ArtMesh1".to_string(),
+        name: "Mesh 1".to_string(),
+        texture_asset_id: (id(2)).into(),
+        vertex_ids: vec![1, 2, 3, 4],
+        base_positions: vec![
+            Vec2::new(-30.0, 30.0),
+            Vec2::new(-30.0, -30.0),
+            Vec2::new(30.0, -30.0),
+            Vec2::new(30.0, 30.0),
+        ],
+        uvs: vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.0, 1.0),
+            Vec2::new(1.0, 1.0),
+            Vec2::new(1.0, 0.0),
+        ],
+        triangles: vec![[1, 2, 3], [1, 3, 4]],
+        draw_order: Some(1.0),
+        ..Default::default()
+    })
+    .unwrap();
+
+    doc.create_binding(MeshBinding {
+        id: id(30),
+        mesh_id: m_id,
+        axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
+            parameter_id: p_id,
+            keys: vec![-1.0, 0.0, 1.0],
+        }],
+        keyforms: vec![
+            MeshKeyform {
+                samples: Default::default(),
+                keys: vec![-1.0],
+                positions: vec![
+                    Vec2::new(-40.0, 30.0),
+                    Vec2::new(-40.0, -30.0),
+                    Vec2::new(20.0, -30.0),
+                    Vec2::new(20.0, 30.0),
+                ],
+                appearance: Appearance {
+                    opacity: 0.5,
+                    ..Default::default()
+                },
+                draw_order: None,
+            },
+            MeshKeyform {
+                samples: Default::default(),
+                keys: vec![0.0],
+                positions: vec![
+                    Vec2::new(-30.0, 30.0),
+                    Vec2::new(-30.0, -30.0),
+                    Vec2::new(30.0, -30.0),
+                    Vec2::new(30.0, 30.0),
+                ],
+                appearance: Appearance::default(),
+                draw_order: None,
+            },
+            MeshKeyform {
+                samples: Default::default(),
+                keys: vec![1.0],
+                positions: vec![
+                    Vec2::new(-20.0, 30.0),
+                    Vec2::new(-20.0, -30.0),
+                    Vec2::new(40.0, -30.0),
+                    Vec2::new(40.0, 30.0),
+                ],
+                appearance: Appearance {
+                    opacity: 0.9,
+                    ..Default::default()
+                },
+                draw_order: None,
+            },
+        ],
+    })
+    .unwrap();
+
+    let samples = vec![vec![-1.0], vec![-0.5], vec![0.0], vec![0.5], vec![1.0]];
+    (doc.freeze().unwrap().state, samples)
+}
+
+fn build_2d_case() -> (DocumentState, Vec<Vec<f32>>) {
+    let mut doc = base_doc().builder();
+    let p_x = id(11);
+    let p_y = id(12);
+    for (pid, rid) in [(&p_x, "ParamX"), (&p_y, "ParamY")] {
+        doc.create_parameter(Parameter {
+            id: pid.clone(),
+            runtime_id: rid.to_string(),
+            name: rid.to_string(),
             minimum: -1.0,
             maximum: 1.0,
             default_value: 0.0,
             decimal_places: 4,
             ..Default::default()
         })
-        .status
-        .is_ok());
-
-    let m_id = id(20);
-    assert!(doc
-        .create_mesh(Mesh {
-            id: m_id.clone(),
-            runtime_id: "ArtMesh1".to_string(),
-            name: "Mesh 1".to_string(),
-            texture_asset_id: (id(2)).into(),
-            vertex_ids: vec![1, 2, 3, 4],
-            base_positions: vec![
-                Vec2::new(-30.0, 30.0),
-                Vec2::new(-30.0, -30.0),
-                Vec2::new(30.0, -30.0),
-                Vec2::new(30.0, 30.0),
-            ],
-            uvs: vec![
-                Vec2::new(0.0, 0.0),
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 1.0),
-                Vec2::new(1.0, 0.0),
-            ],
-            triangles: vec![[1, 2, 3], [1, 3, 4]],
-            draw_order: Some(1.0),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
-
-    assert!(doc
-        .create_binding(MeshBinding {
-            id: id(30),
-            mesh_id: m_id,
-            axes: vec![BindingAxis {
-                id: Default::default(),
-                samples: Default::default(),
-                parameter_id: p_id,
-                keys: vec![-1.0, 0.0, 1.0],
-            }],
-            keyforms: vec![
-                MeshKeyform {
-                    samples: Default::default(),
-                    keys: vec![-1.0],
-                    positions: vec![
-                        Vec2::new(-40.0, 30.0),
-                        Vec2::new(-40.0, -30.0),
-                        Vec2::new(20.0, -30.0),
-                        Vec2::new(20.0, 30.0),
-                    ],
-                    appearance: Appearance {
-                        opacity: 0.5,
-                        ..Default::default()
-                    },
-                    draw_order: None,
-                },
-                MeshKeyform {
-                    samples: Default::default(),
-                    keys: vec![0.0],
-                    positions: vec![
-                        Vec2::new(-30.0, 30.0),
-                        Vec2::new(-30.0, -30.0),
-                        Vec2::new(30.0, -30.0),
-                        Vec2::new(30.0, 30.0),
-                    ],
-                    appearance: Appearance::default(),
-                    draw_order: None,
-                },
-                MeshKeyform {
-                    samples: Default::default(),
-                    keys: vec![1.0],
-                    positions: vec![
-                        Vec2::new(-20.0, 30.0),
-                        Vec2::new(-20.0, -30.0),
-                        Vec2::new(40.0, -30.0),
-                        Vec2::new(40.0, 30.0),
-                    ],
-                    appearance: Appearance {
-                        opacity: 0.9,
-                        ..Default::default()
-                    },
-                    draw_order: None,
-                },
-            ],
-        })
-        .status
-        .is_ok());
-
-    let samples = vec![vec![-1.0], vec![-0.5], vec![0.0], vec![0.5], vec![1.0]];
-    (doc, samples)
-}
-
-fn build_2d_case() -> (Document, Vec<Vec<f32>>) {
-    let mut doc = base_doc();
-    let p_x = id(11);
-    let p_y = id(12);
-    for (pid, rid) in [(&p_x, "ParamX"), (&p_y, "ParamY")] {
-        assert!(doc
-            .create_parameter(Parameter {
-                id: pid.clone(),
-                runtime_id: rid.to_string(),
-                name: rid.to_string(),
-                minimum: -1.0,
-                maximum: 1.0,
-                default_value: 0.0,
-                decimal_places: 4,
-                ..Default::default()
-            })
-            .status
-            .is_ok());
+        .unwrap();
     }
 
     let m_id = id(21);
-    assert!(doc
-        .create_mesh(Mesh {
-            id: m_id.clone(),
-            runtime_id: "ArtMesh2D".to_string(),
-            name: "Mesh 2D".to_string(),
-            texture_asset_id: (id(3)).into(),
-            vertex_ids: vec![10, 20, 30],
-            base_positions: vec![
-                Vec2::new(0.0, 40.0),
-                Vec2::new(-30.0, -20.0),
-                Vec2::new(30.0, -20.0),
-            ],
-            uvs: vec![
-                Vec2::new(0.5, 0.0),
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 1.0),
-            ],
-            triangles: vec![[10, 20, 30]],
-            draw_order: Some(2.0),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_mesh(Mesh {
+        id: m_id.clone(),
+        runtime_id: "ArtMesh2D".to_string(),
+        name: "Mesh 2D".to_string(),
+        texture_asset_id: (id(3)).into(),
+        vertex_ids: vec![10, 20, 30],
+        base_positions: vec![
+            Vec2::new(0.0, 40.0),
+            Vec2::new(-30.0, -20.0),
+            Vec2::new(30.0, -20.0),
+        ],
+        uvs: vec![
+            Vec2::new(0.5, 0.0),
+            Vec2::new(0.0, 1.0),
+            Vec2::new(1.0, 1.0),
+        ],
+        triangles: vec![[10, 20, 30]],
+        draw_order: Some(2.0),
+        ..Default::default()
+    })
+    .unwrap();
 
     let mut b = MeshBinding {
         id: id(31),
@@ -281,7 +262,7 @@ fn build_2d_case() -> (Document, Vec<Vec<f32>>) {
             });
         }
     }
-    assert!(doc.create_binding(b).status.is_ok());
+    doc.create_binding(b).unwrap();
 
     let mut samples = Vec::new();
     for &x in &[-1.0, -0.5, 0.0, 0.5, 1.0] {
@@ -289,142 +270,130 @@ fn build_2d_case() -> (Document, Vec<Vec<f32>>) {
             samples.push(vec![x, y]);
         }
     }
-    (doc, samples)
+    (doc.freeze().unwrap().state, samples)
 }
 
-fn build_masks_and_blends_case() -> (Document, Vec<Vec<f32>>) {
-    let mut doc = base_doc();
+fn build_masks_and_blends_case() -> (DocumentState, Vec<Vec<f32>>) {
+    let mut doc = base_doc().builder();
     let p_id = id(15);
-    assert!(doc
-        .create_parameter(Parameter {
-            id: p_id.clone(),
-            runtime_id: "Param_Mask".to_string(),
-            name: "Mask Param".to_string(),
-            minimum: 0.0,
-            maximum: 1.0,
-            default_value: 0.0,
-            decimal_places: 4,
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_parameter(Parameter {
+        id: p_id.clone(),
+        runtime_id: "Param_Mask".to_string(),
+        name: "Mask Param".to_string(),
+        minimum: 0.0,
+        maximum: 1.0,
+        default_value: 0.0,
+        decimal_places: 4,
+        ..Default::default()
+    })
+    .unwrap();
 
     let mask_mesh_id = id(22);
-    assert!(doc
-        .create_mesh(Mesh {
-            id: mask_mesh_id.clone(),
-            runtime_id: "MaskMesh".to_string(),
-            name: "Mask Mesh".to_string(),
-            texture_asset_id: (id(2)).into(),
-            vertex_ids: vec![1, 2, 3],
-            base_positions: vec![
-                Vec2::new(-50.0, 50.0),
-                Vec2::new(-50.0, -50.0),
-                Vec2::new(50.0, -50.0),
-            ],
-            uvs: vec![
-                Vec2::new(0.0, 0.0),
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 1.0),
-            ],
-            triangles: vec![[1, 2, 3]],
-            draw_order: Some(0.0),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_mesh(Mesh {
+        id: mask_mesh_id.clone(),
+        runtime_id: "MaskMesh".to_string(),
+        name: "Mask Mesh".to_string(),
+        texture_asset_id: (id(2)).into(),
+        vertex_ids: vec![1, 2, 3],
+        base_positions: vec![
+            Vec2::new(-50.0, 50.0),
+            Vec2::new(-50.0, -50.0),
+            Vec2::new(50.0, -50.0),
+        ],
+        uvs: vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.0, 1.0),
+            Vec2::new(1.0, 1.0),
+        ],
+        triangles: vec![[1, 2, 3]],
+        draw_order: Some(0.0),
+        ..Default::default()
+    })
+    .unwrap();
 
     // Clipped mesh with Additive blend
     let clipped_mesh_id = id(23);
-    assert!(doc
-        .create_mesh(Mesh {
-            id: clipped_mesh_id,
-            runtime_id: "ClippedAdd".to_string(),
-            name: "Clipped Additive Mesh".to_string(),
-            texture_asset_id: (id(3)).into(),
-            vertex_ids: vec![11, 12, 13],
-            base_positions: vec![
-                Vec2::new(-40.0, 40.0),
-                Vec2::new(-40.0, -40.0),
-                Vec2::new(40.0, -40.0),
-            ],
-            uvs: vec![
-                Vec2::new(0.0, 0.0),
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 1.0),
-            ],
-            triangles: vec![[11, 12, 13]],
-            masks: vec![mask_mesh_id.clone()],
-            inverted_mask: false,
-            blend_mode: BlendMode::Additive,
-            draw_order: Some(1.0),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_mesh(Mesh {
+        id: clipped_mesh_id,
+        runtime_id: "ClippedAdd".to_string(),
+        name: "Clipped Additive Mesh".to_string(),
+        texture_asset_id: (id(3)).into(),
+        vertex_ids: vec![11, 12, 13],
+        base_positions: vec![
+            Vec2::new(-40.0, 40.0),
+            Vec2::new(-40.0, -40.0),
+            Vec2::new(40.0, -40.0),
+        ],
+        uvs: vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.0, 1.0),
+            Vec2::new(1.0, 1.0),
+        ],
+        triangles: vec![[11, 12, 13]],
+        masks: vec![mask_mesh_id.clone()],
+        inverted_mask: false,
+        blend_mode: BlendMode::Additive,
+        draw_order: Some(1.0),
+        ..Default::default()
+    })
+    .unwrap();
 
     // Inverted mask mesh with Multiply blend
     let inv_clipped_id = id(24);
-    assert!(doc
-        .create_mesh(Mesh {
-            id: inv_clipped_id,
-            runtime_id: "InvertedMul".to_string(),
-            name: "Inverted Multiply Mesh".to_string(),
-            texture_asset_id: (id(2)).into(),
-            vertex_ids: vec![21, 22, 23],
-            base_positions: vec![
-                Vec2::new(-30.0, 30.0),
-                Vec2::new(-30.0, -30.0),
-                Vec2::new(30.0, -30.0),
-            ],
-            uvs: vec![
-                Vec2::new(0.0, 0.0),
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 1.0),
-            ],
-            triangles: vec![[21, 22, 23]],
-            masks: vec![mask_mesh_id],
-            inverted_mask: true,
-            blend_mode: BlendMode::Multiplicative,
-            draw_order: Some(2.0),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_mesh(Mesh {
+        id: inv_clipped_id,
+        runtime_id: "InvertedMul".to_string(),
+        name: "Inverted Multiply Mesh".to_string(),
+        texture_asset_id: (id(2)).into(),
+        vertex_ids: vec![21, 22, 23],
+        base_positions: vec![
+            Vec2::new(-30.0, 30.0),
+            Vec2::new(-30.0, -30.0),
+            Vec2::new(30.0, -30.0),
+        ],
+        uvs: vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.0, 1.0),
+            Vec2::new(1.0, 1.0),
+        ],
+        triangles: vec![[21, 22, 23]],
+        masks: vec![mask_mesh_id],
+        inverted_mask: true,
+        blend_mode: BlendMode::Multiplicative,
+        draw_order: Some(2.0),
+        ..Default::default()
+    })
+    .unwrap();
 
     let samples = vec![vec![0.0], vec![0.5], vec![1.0]];
-    (doc, samples)
+    (doc.freeze().unwrap().state, samples)
 }
 
-fn build_nested_deformers_case() -> (Document, Vec<Vec<f32>>) {
-    let mut doc = base_doc();
+fn build_nested_deformers_case() -> (DocumentState, Vec<Vec<f32>>) {
+    let mut doc = base_doc().builder();
     let p_id = id(16);
-    assert!(doc
-        .create_parameter(Parameter {
-            id: p_id.clone(),
-            runtime_id: "Param_Rot".to_string(),
-            name: "Rotation Param".to_string(),
-            minimum: -1.0,
-            maximum: 1.0,
-            default_value: 0.0,
-            decimal_places: 4,
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_parameter(Parameter {
+        id: p_id.clone(),
+        runtime_id: "Param_Rot".to_string(),
+        name: "Rotation Param".to_string(),
+        minimum: -1.0,
+        maximum: 1.0,
+        default_value: 0.0,
+        decimal_places: 4,
+        ..Default::default()
+    })
+    .unwrap();
 
     let part_id = id(40);
-    assert!(doc
-        .create_part(Part {
-            id: part_id.clone(),
-            runtime_id: "Part_Nested".to_string(),
-            name: "Nested Part".to_string(),
-            parent_id: String::new(),
-            enabled: true,
-            draw_order: 1.0,
-        })
-        .status
-        .is_ok());
+    doc.create_part(Part {
+        id: part_id.clone(),
+        runtime_id: "Part_Nested".to_string(),
+        name: "Nested Part".to_string(),
+        parent_id: String::new(),
+        enabled: true,
+        draw_order: 1.0,
+    })
+    .unwrap();
 
     let rot_id = id(50);
     let rot = Transform {
@@ -445,7 +414,7 @@ fn build_nested_deformers_case() -> (Document, Vec<Vec<f32>>) {
         }),
         ..Default::default()
     };
-    assert!(doc.create_transform(rot).status.is_ok());
+    doc.create_transform(rot).unwrap();
 
     let warp_id = id(51);
     let mut warp = Transform {
@@ -471,97 +440,93 @@ fn build_nested_deformers_case() -> (Document, Vec<Vec<f32>>) {
                 .push(Vec2::new(c as f32 * 40.0 - 40.0, r as f32 * 40.0 - 40.0));
         }
     }
-    assert!(doc.create_transform(warp).status.is_ok());
+    doc.create_transform(warp).unwrap();
 
     let m_id = id(25);
-    assert!(doc
-        .create_mesh(Mesh {
-            id: m_id,
-            runtime_id: "Mesh_Deformed".to_string(),
-            name: "Deformed Mesh".to_string(),
-            texture_asset_id: (id(2)).into(),
-            part_id,
-            deformer_id: warp_id,
-            vertex_ids: vec![1, 2, 3, 4],
-            base_positions: vec![
-                Vec2::new(-20.0, 20.0),
-                Vec2::new(-20.0, -20.0),
-                Vec2::new(20.0, -20.0),
-                Vec2::new(20.0, 20.0),
-            ],
-            uvs: vec![
-                Vec2::new(0.0, 0.0),
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 1.0),
-                Vec2::new(1.0, 0.0),
-            ],
-            triangles: vec![[1, 2, 3], [1, 3, 4]],
-            draw_order: Some(5.0),
-            ..Default::default()
-        })
-        .status
-        .is_ok());
+    doc.create_mesh(Mesh {
+        id: m_id,
+        runtime_id: "Mesh_Deformed".to_string(),
+        name: "Deformed Mesh".to_string(),
+        texture_asset_id: (id(2)).into(),
+        part_id,
+        deformer_id: warp_id,
+        vertex_ids: vec![1, 2, 3, 4],
+        base_positions: vec![
+            Vec2::new(-20.0, 20.0),
+            Vec2::new(-20.0, -20.0),
+            Vec2::new(20.0, -20.0),
+            Vec2::new(20.0, 20.0),
+        ],
+        uvs: vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.0, 1.0),
+            Vec2::new(1.0, 1.0),
+            Vec2::new(1.0, 0.0),
+        ],
+        triangles: vec![[1, 2, 3], [1, 3, 4]],
+        draw_order: Some(5.0),
+        ..Default::default()
+    })
+    .unwrap();
 
     // Scene binding on the rotation transform
-    assert!(doc
-        .create_scene_binding(SceneBinding {
-            id: sid(60),
-            axes: vec![BindingAxis {
-                id: Default::default(),
-                samples: Default::default(),
-                parameter_id: p_id,
-                keys: vec![-1.0, 0.0, 1.0],
-            }],
-            track: zipzi_core::SceneTrack::Rotation {
-                target_id: (rot_id).into(),
-                keyforms: vec![
-                    zipzi_core::RotationKeyform {
-                        keys: vec![-1.0],
-                        rotation: RotationPose {
-                            origin: Vec2::new(271.0, 193.0).into(),
-                            angle: -30.0,
-                            scale: 0.8,
-                            reflect_x: false,
-                            reflect_y: false,
-                        },
-                        ..Default::default()
+    doc.create_scene_binding(SceneBinding {
+        id: sid(60),
+        axes: vec![BindingAxis {
+            id: Default::default(),
+            samples: Default::default(),
+            parameter_id: p_id,
+            keys: vec![-1.0, 0.0, 1.0],
+        }],
+        track: zipzi_core::SceneTrack::Rotation {
+            target_id: (rot_id).into(),
+            keyforms: vec![
+                zipzi_core::RotationKeyform {
+                    keys: vec![-1.0],
+                    rotation: RotationPose {
+                        origin: Vec2::new(271.0, 193.0).into(),
+                        angle: -30.0,
+                        scale: 0.8,
+                        reflect_x: false,
+                        reflect_y: false,
                     },
-                    zipzi_core::RotationKeyform {
-                        keys: vec![0.0],
-                        rotation: RotationPose {
-                            origin: Vec2::new(271.0, 193.0).into(),
-                            angle: 0.0,
-                            scale: 1.0,
-                            reflect_x: false,
-                            reflect_y: false,
-                        },
-                        ..Default::default()
+                    ..Default::default()
+                },
+                zipzi_core::RotationKeyform {
+                    keys: vec![0.0],
+                    rotation: RotationPose {
+                        origin: Vec2::new(271.0, 193.0).into(),
+                        angle: 0.0,
+                        scale: 1.0,
+                        reflect_x: false,
+                        reflect_y: false,
                     },
-                    zipzi_core::RotationKeyform {
-                        keys: vec![1.0],
-                        rotation: RotationPose {
-                            origin: Vec2::new(271.0, 193.0).into(),
-                            angle: 30.0,
-                            scale: 1.2,
-                            reflect_x: false,
-                            reflect_y: false,
-                        },
-                        ..Default::default()
+                    ..Default::default()
+                },
+                zipzi_core::RotationKeyform {
+                    keys: vec![1.0],
+                    rotation: RotationPose {
+                        origin: Vec2::new(271.0, 193.0).into(),
+                        angle: 30.0,
+                        scale: 1.2,
+                        reflect_x: false,
+                        reflect_y: false,
                     },
-                ]
-            }
-        })
-        .status
-        .is_ok());
+                    ..Default::default()
+                },
+            ],
+        },
+    })
+    .unwrap();
 
     let samples = vec![vec![-1.0], vec![-0.6], vec![0.0], vec![0.6], vec![1.0]];
-    (doc, samples)
+    (doc.freeze().unwrap().state, samples)
 }
 
 fn export_case(
     out_dir: &std::path::Path,
     case_name: &str,
-    doc: Document,
+    doc: DocumentState,
     param_samples: Vec<Vec<f32>>,
 ) {
     let case_path = out_dir.join(case_name);

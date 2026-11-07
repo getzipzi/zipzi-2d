@@ -10,7 +10,7 @@ use super::helpers::{index_of, write_id};
 impl<'a> Moc3EncoderContext<'a> {
     pub(super) fn encode_parts(&mut self) -> Result<(), Status> {
         for id in &self.parts {
-            let part = self.doc.get_part(id).unwrap();
+            let part = self.doc.part(id).unwrap();
             let b = self.doc.binding_for_scene(id);
             let count = if let Some(b) = b {
                 checked(b.track.len(), id)?

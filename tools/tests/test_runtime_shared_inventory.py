@@ -1,4 +1,4 @@
-"""The Python2 workflow must not inspect the retired client implementation."""
+"""The native inventory must not inspect Python client implementation sources."""
 import importlib.util
 from pathlib import Path
 import unittest
@@ -9,17 +9,14 @@ inventory = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(inventory)
 
 class SharedInventory(unittest.TestCase):
-    def test_shared_refresh_keeps_historical_rows_without_reading_retired_sources(self):
+    def test_native_inventory_is_independent_of_python_sources(self):
         read = Path.read_text
         def guarded(path, *args, **kwargs):
             if '/crates/zipzi-python/' in str(path):
                 raise AssertionError('Retired client source read')
             return read(path, *args, **kwargs)
         with patch.object(Path, 'read_text', guarded):
-            catalog = inventory.collect(shared_only=True)
+            catalog = inventory.collect()
         rows = {row['id']: row for row in catalog['apis']}
-        operation = rows['sdk::SceneOperation.apply']
-        self.assertEqual(operation['classification'], 'connected')
-        self.assertEqual(operation['source_ref'], 'edit + candidate sequence')
-        self.assertEqual(rows['sdk::SceneSummary.response_bytes']['classification'], 'host-only')
-        self.assertTrue(any(v['name']=='SceneOperation' for v in catalog['domain_intents']))
+        self.assertIn('sdk::Draft.batch', rows)
+        self.assertTrue(all(row['location'].startswith('crates/zipzi-sdk/src/') for row in rows.values()))

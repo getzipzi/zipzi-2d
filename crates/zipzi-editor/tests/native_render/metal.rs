@@ -40,13 +40,17 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
         use zipzi_core::{Canvas, Vec2};
         use zipzi_editor_core::{MeshGenerationOptions, MeshSettings, ObjectKind, ObjectRef};
         let dir = tempfile::tempdir()?;
-        let mut session = zipzi_sdk::AuthoringSession::new(
+        let mut session = support::fixture_session(
             &uuid::Uuid::new_v4().to_string(),
             Canvas::new(64., 64., Vec2::default(), 1.),
         )?;
         let asset_id = uuid::Uuid::new_v4().to_string();
         let mesh_id = uuid::Uuid::new_v4().to_string();
-        let image = session.prepare_rgba_image(32, 32, [255, 0, 0, 255].repeat(32 * 32).into())?;
+        let image = zipzi_project::ResourceStore::default().prepare_rgba(
+            32,
+            32,
+            [255, 0, 0, 255].repeat(32 * 32).into(),
+        )?;
         let mesh = zipzi_sdk::rectangle_mesh(
             &mesh_id,
             "solid",
@@ -54,11 +58,12 @@ fn alpha_mesh_outside_texture_renders_transparent_in_preview_and_history() -> an
             Vec2::new(16., 16.),
             Vec2::new(48., 48.),
         )?;
-        session.edit("fixture", None, |edit| {
-            edit.create_prepared_image(asset_id.clone(), "solid".into(), &image)?;
-            edit.create_mesh(mesh)
+        support::publish_fixture(&mut session, "fixture", |edit| {
+            edit.create_empty_asset(asset_id.clone(), "solid".into())?;
+            edit.replace_image(&asset_id, image)?;
+            support::insert_fixture_mesh(edit, mesh)
         })?;
-        let saved = session.save_project(&dir.path().join("solid.zipzi"), None)?;
+        let saved = support::save_fixture(&mut session, &dir.path().join("solid.zipzi"))?;
         let mut doc = Document::open(&saved.path)?;
         let source = doc.mesh_generation_source(&ObjectRef::new(ObjectKind::Mesh, mesh_id))?;
         let plan = source.generate(MeshGenerationOptions::Alpha(MeshSettings {
@@ -204,17 +209,13 @@ fn canvas_zoom_renders_actual_pixels_at_multiple_viewport_sizes_and_display_scal
 #[test]
 fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
-        use zipzi_core::{Canvas, Vec2};
+        use zipzi_core::Vec2;
         let (mut document, directory) = support::sample_document_with_two_layers()?;
         let saved = document.save(&directory.path().join("mask.zipzi"))?;
-        let mut sdk = zipzi_sdk::AuthoringSession::new(
-            &uuid::Uuid::new_v4().to_string(),
-            Canvas::new(256., 256., Vec2::default(), 1.),
-        )?;
-        sdk.open_project(&saved.path, None)?;
-        let ids = sdk.mesh_ids().to_vec();
-        let mut source = sdk.mesh(&ids[0]).unwrap();
-        let mut masked = sdk.mesh(&ids[1]).unwrap();
+        let mut sdk = support::open_fixture(&saved.path)?;
+        let ids = sdk.snapshot().document().mesh_order().to_vec();
+        let mut source = sdk.snapshot().document().mesh(&ids[0]).unwrap().clone();
+        let mut masked = sdk.snapshot().document().mesh(&ids[1]).unwrap().clone();
         for (mesh, right) in [(&mut source, 128.), (&mut masked, 232.)] {
             mesh.vertex_ids = vec![0, 1, 2, 3];
             mesh.base_positions = vec![
@@ -227,11 +228,11 @@ fn editor_hidden_mask_source_still_clips_native_metal_output() -> anyhow::Result
             mesh.triangles = vec![[0, 1, 2], [0, 2, 3]];
         }
         masked.masks = vec![source.id.clone()];
-        sdk.edit("Mask fixture", None, |e| {
+        support::publish_fixture(&mut sdk, "Mask fixture", |e| {
             e.replace_mesh(source)?;
             e.replace_mesh(masked)
         })?;
-        sdk.save_project(&saved.path, None)?;
+        support::save_fixture(&mut sdk, &saved.path)?;
         let mut document = Document::open(&saved.path)?;
         document.set_object_visible(
             &zipzi_editor_core::ObjectRef::new(zipzi_editor_core::ObjectKind::Mesh, &ids[0]),
@@ -675,44 +676,42 @@ fn check_animation_opacity(
     actual_model: bool,
 ) -> anyhow::Result<()> {
     objc2::rc::autoreleasepool(|_| -> anyhow::Result<()> {
-        use zipzi_core::{Canvas, Vec2};
         use zipzi_editor_core::{AnimationEvaluator, Editor, ViewportMetrics, WorkspaceKind};
         use zipzi_observe::{ModelRoi, ObservationInput, Observer, ObserverConfig, RenderRequest};
         let canvas = document
             .source_canvas()
             .expect("fixture has a source rectangle");
         let manifest = document.save(&assets.path().join("opacity.zipzi"))?.path;
-        let mut sdk = zipzi_sdk::AuthoringSession::new(
-            &uuid::Uuid::new_v4().to_string(),
-            Canvas::new(256., 256., Vec2::default(), 1.),
-        )?;
-        sdk.open_project(&manifest, None)?;
+        let mut sdk = support::open_fixture(&manifest)?;
         if actual_model {
             // The bundled Cubism 4 assets have no native Offscreens. Exercise a
             // controlled Zipzi Offscreen on real textured, masked geometry.
-            let part_id = sdk
-                .document()
+            let model = sdk.snapshot().document();
+            let part_id = model
                 .part_order()
                 .iter()
-                .find(|id| sdk.document().get_part(id).unwrap().parent_id.is_empty())
+                .find(|id| model.part(id).unwrap().parent_id.is_empty())
                 .unwrap()
                 .clone();
-            sdk.edit("Actual-model Offscreen", None, |edit| {
-                edit.create_offscreen(zipzi_core::Offscreen {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    name: "Acceptance composite".into(),
-                    part_id,
-                    ..Default::default()
-                })
+            support::publish_fixture(&mut sdk, "Actual-model Offscreen", |edit| {
+                support::insert_offscreen(
+                    edit,
+                    zipzi_core::Offscreen {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        name: "Acceptance composite".into(),
+                        part_id,
+                        ..Default::default()
+                    },
+                )
             })?;
         } else {
-            let ids = sdk.mesh_ids().to_vec();
-            let mut source = sdk.mesh(&ids[0]).unwrap();
+            let ids = sdk.snapshot().document().mesh_order().to_vec();
+            let mut source = sdk.snapshot().document().mesh(&ids[0]).unwrap().clone();
             source.deformer_id.clear();
-            let mut masked = sdk.mesh(&ids[1]).unwrap();
+            let mut masked = sdk.snapshot().document().mesh(&ids[1]).unwrap().clone();
             masked.masks = vec![ids[0].clone()];
             masked.deformer_id.clear();
-            sdk.edit("Masked overlap", None, |edit| {
+            support::publish_fixture(&mut sdk, "Masked overlap", |edit| {
                 edit.replace_mesh(source)?;
                 edit.replace_mesh(masked)
             })?;
@@ -735,21 +734,25 @@ fn check_animation_opacity(
             let source = serde_json::json!({"Version":3,"Meta":{"Duration":1,"Fps":60,"Loop":false,
                 "AreBeziersRestricted":true,"CurveCount":1,"TotalSegmentCount":1,"TotalPointCount":2,"FadeInTime":0,"FadeOutTime":0,"UserDataCount":0,"TotalUserDataSize":0},
                 "Curves":[{"Target":"Model","Id":"Opacity","Segments":[0,opacity,0,1,opacity]}]});
-            sdk.edit("Opacity motion", None, |edit| {
-                edit.import_motion3(
+            support::publish_fixture(&mut sdk, "Opacity motion", |edit| {
+                let model = edit.read_document()?;
+                let imported = zipzi_project::motion::import_motion3(
+                    &model,
                     &motion_id,
                     &format!("Opacity {opacity}"),
                     &source.to_string(),
                 )
-                .map(|_| ())
+                .map_err(|error| zipzi_sdk::Status::error(&error.code, error.to_string()))?;
+                edit.create_motion(imported.candidate.motion(&motion_id).unwrap().clone())
             })?;
-            sdk.save_project(&manifest, None)?;
-            let mut preview = sdk.motion_preview();
+            support::save_fixture(&mut sdk, &manifest)?;
+            let snapshot = sdk.read_snapshot();
+            let mut preview = zipzi_animation::MotionPreview::new(snapshot.snapshot.document());
+            preview.bind_source(snapshot.source);
             preview.schedule_motion(&motion_id, 0.)?;
             preview.seek(0.)?;
             assert_eq!(preview.snapshot().model_opacity, opacity);
-            let input =
-                ObservationInput::capture_motion_from_snapshot(&sdk.read_snapshot(), &preview)?;
+            let input = ObservationInput::capture_motion_from_snapshot(&snapshot, &preview)?;
             let capture = zipzi_observe::ResolvedObservation::capture_many_with_control(
                 vec![input],
                 &zipzi_sdk::ConversionControl::default(),
@@ -804,7 +807,7 @@ fn check_animation_opacity(
                     .any(|d| !d.masks.is_empty())
             );
             let mut reference = preview.evaluate_drawables_including_hidden()?;
-            zipzi_sdk::apply_model_opacity(&mut reference, preview.snapshot().model_opacity)?;
+            zipzi_animation::apply_model_opacity(&mut reference, preview.snapshot().model_opacity)?;
             reference.source_revision = scene.viewport_frame.source_revision;
             assert_eq!(scene.render_frame()?.as_ref(), &reference);
             let submitted = renderer.submit_transformed(
@@ -912,13 +915,21 @@ fn check_modeling_isolation_composite(nested: bool, overlap_opacity: f32) -> any
             ViewportKind, ViewportMetrics,
         };
         let directory = tempfile::tempdir()?;
-        let mut sdk = zipzi_sdk::AuthoringSession::new(
+        let mut sdk = support::fixture_session(
             &uuid::Uuid::new_v4().to_string(),
             Canvas::new(64., 64., Vec2::default(), 1.),
         )?;
         let id = |n| uuid::Uuid::from_u128(n).to_string();
-        let red = sdk.prepare_rgba_image(1, 1, vec![255, 0, 0, 255].into())?;
-        let blue = sdk.prepare_rgba_image(1, 1, vec![0, 0, 255, 255].into())?;
+        let red = zipzi_project::ResourceStore::default().prepare_rgba(
+            1,
+            1,
+            vec![255, 0, 0, 255].into(),
+        )?;
+        let blue = zipzi_project::ResourceStore::default().prepare_rgba(
+            1,
+            1,
+            vec![0, 0, 255, 255].into(),
+        )?;
         let mut mask = zipzi_sdk::rectangle_mesh(
             &id(3),
             "mask",
@@ -957,34 +968,45 @@ fn check_modeling_isolation_composite(nested: bool, overlap_opacity: f32) -> any
                 mesh.part_id = id(8);
             }
         }
-        sdk.edit("Fixture", None, |edit| {
+        support::publish_fixture(&mut sdk, "Fixture", |edit| {
             if nested {
-                edit.create_part(zipzi_core::Part {
-                    id: id(7),
-                    ..Default::default()
-                })?;
-                edit.create_part(zipzi_core::Part {
-                    id: id(8),
-                    parent_id: id(7),
-                    ..Default::default()
-                })?;
-                for (group, part) in [(9, 7), (10, 8)] {
-                    edit.create_offscreen(zipzi_core::Offscreen {
-                        id: id(group),
-                        runtime_id: id(group),
-                        part_id: id(part),
+                support::insert_fixture_part(
+                    edit,
+                    zipzi_core::Part {
+                        id: id(7),
                         ..Default::default()
-                    })?;
+                    },
+                )?;
+                support::insert_fixture_part(
+                    edit,
+                    zipzi_core::Part {
+                        id: id(8),
+                        parent_id: id(7),
+                        ..Default::default()
+                    },
+                )?;
+                for (group, part) in [(9, 7), (10, 8)] {
+                    support::insert_offscreen(
+                        edit,
+                        zipzi_core::Offscreen {
+                            id: id(group),
+                            runtime_id: id(group),
+                            part_id: id(part),
+                            ..Default::default()
+                        },
+                    )?;
                 }
             }
-            edit.create_prepared_image(id(1), "red".into(), &red)?;
-            edit.create_prepared_image(id(2), "blue".into(), &blue)?;
-            edit.create_mesh(mask)?;
-            edit.create_mesh(art)?;
-            edit.create_mesh(other)?;
-            edit.create_mesh(overlap)
+            edit.create_empty_asset(id(1), "red".into())?;
+            edit.replace_image(&id(1), red)?;
+            edit.create_empty_asset(id(2), "blue".into())?;
+            edit.replace_image(&id(2), blue)?;
+            support::insert_fixture_mesh(edit, mask)?;
+            support::insert_fixture_mesh(edit, art)?;
+            support::insert_fixture_mesh(edit, other)?;
+            support::insert_fixture_mesh(edit, overlap)
         })?;
-        let saved = sdk.save_project(&directory.path().join("isolation.zipzi"), None)?;
+        let saved = support::save_fixture(&mut sdk, &directory.path().join("isolation.zipzi"))?;
         let mut editor = Editor::from_document(Document::open(&saved.path)?);
         let viewport = ViewportId::new();
         editor.register_primary_viewport(viewport, ViewportKind::Modeling)?;
