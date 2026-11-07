@@ -1,11 +1,13 @@
-// Native COM smoke test without registry mutation or an Explorer restart.
+// Direct DLL checks, or read-only activation checks against an installed provider.
 #include <windows.h>
 #include <shobjidl.h>
 #include <shlwapi.h>
 #include <thumbcache.h>
 #include <wrl/client.h>
 #include <cstdio>
+#include <filesystem>
 #include <string>
+#include <vector>
 using Microsoft::WRL::ComPtr;
 static const CLSID ClassId = {0xb7666151, 0x0ad8, 0x4b22, {0x82, 0x9e, 0x46, 0x40, 0xcb, 0x90, 0xd3, 0xbe}};
 using CanUnload = HRESULT (WINAPI *)();
@@ -32,8 +34,23 @@ static int Test(IClassFactory *factory, const std::wstring &directory) {
             BITMAP data{};
             REQUIRE(GetObjectW(bitmap, sizeof(data), &data));
             REQUIRE(data.bmWidth == 256 && data.bmHeight == 128 && alpha == WTSAT_ARGB);
-            auto first = static_cast<const BYTE *>(data.bmBits);
-            REQUIRE(first && first[0] == 0 && first[1] == 0 && first[2] == 255 && first[3] == 255);
+            // A cross-process HBITMAP can be marshalled as a DDB with no bmBits.
+            // Read pixels through GDI for both direct and isolated activation.
+            BITMAPINFO info{};
+            info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+            info.bmiHeader.biWidth = data.bmWidth;
+            info.bmiHeader.biHeight = -data.bmHeight;
+            info.bmiHeader.biPlanes = 1;
+            info.bmiHeader.biBitCount = 32;
+            info.bmiHeader.biCompression = BI_RGB;
+            std::vector<BYTE> pixels(data.bmWidth * data.bmHeight * 4);
+            HDC dc = CreateCompatibleDC(nullptr);
+            REQUIRE(dc != nullptr);
+            auto lines = GetDIBits(dc, bitmap, 0, data.bmHeight, pixels.data(), &info, DIB_RGB_COLORS);
+            DeleteDC(dc);
+            REQUIRE(lines == data.bmHeight);
+            REQUIRE(pixels[0] == 0 && pixels[1] == 0 && pixels[2] == 255);
+            if (data.bmBits) REQUIRE(static_cast<const BYTE *>(data.bmBits)[3] == 255);
             DeleteObject(bitmap);
         }
         ComPtr<IPreviewHandler> preview;
@@ -98,6 +115,25 @@ static int TestMultiplePreviews(IClassFactory *factory, const std::wstring &dire
 
 int wmain(int argc, wchar_t **argv) {
     if (argc != 3 || FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED))) return 2;
+    const auto directory = std::filesystem::absolute(argv[2]).make_preferred().wstring();
+    if (std::wstring(argv[1]) == L"--registered") {
+        ComPtr<IClassFactory> factory;
+        REQUIRE(SUCCEEDED(CoGetClassObject(ClassId, CLSCTX_LOCAL_SERVER, nullptr,
+                                          IID_PPV_ARGS(&factory))));
+        REQUIRE(Test(factory.Get(), directory) == 0);
+        ComPtr<IShellItemImageFactory> image;
+        std::wstring path = directory + L"\\image.zipzi";
+        REQUIRE(SUCCEEDED(SHCreateItemFromParsingName(path.c_str(), nullptr, IID_PPV_ARGS(&image))));
+        HBITMAP thumbnail = nullptr;
+        REQUIRE(SUCCEEDED(image->GetImage({256, 256}, SIIGBF_THUMBNAILONLY, &thumbnail)));
+        REQUIRE(thumbnail != nullptr);
+        DeleteObject(thumbnail);
+        image.Reset();
+        factory.Reset();
+        CoUninitialize();
+        std::puts("PASS Windows registered COM: Shell thumbnail lookup, isolated activation, pixels, resize, unload and fallback");
+        return 0;
+    }
     for (int cycle = 0; cycle < 3; ++cycle) {
         HMODULE module = LoadLibraryW(argv[1]);
         REQUIRE(module != nullptr);
@@ -108,8 +144,8 @@ int wmain(int argc, wchar_t **argv) {
         ComPtr<IClassFactory> factory;
         REQUIRE(SUCCEEDED(factoryFunction(ClassId, IID_PPV_ARGS(&factory))));
         REQUIRE(canUnload() == S_FALSE);
-        REQUIRE(Test(factory.Get(), argv[2]) == 0);
-        REQUIRE(TestMultiplePreviews(factory.Get(), argv[2], module, canUnload) == 0);
+        REQUIRE(Test(factory.Get(), directory) == 0);
+        REQUIRE(TestMultiplePreviews(factory.Get(), directory, module, canUnload) == 0);
         // A surviving native window must veto unloading even with no COM owners.
         HWND remaining = CreateWindowExW(0, L"ZipziStaticProjectPreview", L"", WS_POPUP,
             0, 0, 100, 100, nullptr, nullptr, module, nullptr);

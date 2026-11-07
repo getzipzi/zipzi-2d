@@ -219,6 +219,21 @@ jobs:
         run: |
           cargo build --locked --release -p zipzi-editor
           python tools/packaging/build_project_preview.py --dll "${env:CARGO_TARGET_DIR}/release/ZipziProjectPreview.dll" --test
+      - name: Verify Windows Shell registration and isolated previews
+        if: matrix.platform == 'windows'
+        run: |
+          $binary = "${env:CARGO_TARGET_DIR}/release/zipzi-editor.exe"
+          $preview = "${env:CARGO_TARGET_DIR}/release/ZipziProjectPreview.dll"
+          $fixtures = "${env:CARGO_TARGET_DIR}/release/project-preview-test"
+          try {
+            powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/packaging/Register-FileAssociation.ps1 -EditorPath $binary -PreviewPath $preview
+            if ($LASTEXITCODE -ne 0) { throw 'Windows Shell registration failed' }
+            & "$fixtures/provider-test.exe" --registered $fixtures
+            if ($LASTEXITCODE -ne 0) { throw 'Windows isolated preview checks failed' }
+          } finally {
+            powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/packaging/Register-FileAssociation.ps1 -EditorPath $binary -PreviewPath $preview -Unregister
+            if ($LASTEXITCODE -ne 0) { throw 'Windows Shell unregistration failed' }
+          }
       - name: Package and verify Windows Editor
         if: matrix.platform == 'windows' && env.DESKTOP_UPDATES != 'true'
         env:

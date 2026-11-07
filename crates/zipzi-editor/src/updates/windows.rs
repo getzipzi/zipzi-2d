@@ -1,6 +1,24 @@
 //! Explorer loads a content-addressed copy outside Velopack's replaceable `current`.
 use sha2::{Digest, Sha256};
-use std::{os::windows::process::CommandExt, path::Path, process::Command};
+use std::{
+    os::windows::process::CommandExt,
+    path::{Path, PathBuf},
+    process::Command,
+};
+
+fn installed_launcher(root: &Path) -> anyhow::Result<Option<PathBuf>> {
+    if !root.join("Update.exe").is_file() {
+        return Ok(None);
+    }
+    // Velopack names the stable execution stub after --packTitle, not --mainExe.
+    let launcher = root.join("Zipzi Editor.exe");
+    anyhow::ensure!(
+        launcher.is_file(),
+        "Missing installed Editor launcher: {}",
+        launcher.display()
+    );
+    Ok(Some(launcher))
+}
 
 pub(super) fn register(uninstall: bool) -> anyhow::Result<()> {
     let exe = std::env::current_exe()?;
@@ -13,10 +31,9 @@ pub(super) fn register(uninstall: bool) -> anyhow::Result<()> {
     let root = current
         .parent()
         .ok_or_else(|| anyhow::anyhow!("Missing installation directory"))?;
-    let launcher = root.join("zipzi-editor.exe");
-    if !root.join("Update.exe").is_file() || !launcher.is_file() {
+    let Some(launcher) = installed_launcher(root)? else {
         return Ok(());
-    }
+    };
     let source = current.join("ZipziProjectPreview.dll");
     let data = std::fs::read(&source)?;
     let digest: String = Sha256::digest(&data)
@@ -78,5 +95,35 @@ fn clean_unlocked_copies(root: &Path, current: &str) {
             let _ = std::fs::remove_file(entry.path().join("ZipziProjectPreview.dll"));
             let _ = std::fs::remove_dir(entry.path());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn installed_registration_uses_pack_title_launcher() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::write(root.join("Update.exe"), []).unwrap();
+        let launcher = root.join("Zipzi Editor.exe");
+        std::fs::write(&launcher, []).unwrap();
+        assert_eq!(installed_launcher(root).unwrap(), Some(launcher));
+    }
+
+    #[test]
+    fn missing_installed_launcher_reports_error_instead_of_skipping_registration() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        std::fs::write(root.join("Update.exe"), []).unwrap();
+        std::fs::write(root.join("zipzi-editor.exe"), []).unwrap();
+        assert!(installed_launcher(root).is_err());
+    }
+
+    #[test]
+    fn portable_registration_is_left_to_the_registration_script() {
+        let directory = tempfile::tempdir().unwrap();
+        assert_eq!(installed_launcher(directory.path()).unwrap(), None);
     }
 }
