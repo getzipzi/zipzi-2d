@@ -1,5 +1,7 @@
 # Authoring 新内核重写方案
 
+已于 2026-11-07 归档；以下保留实施方案与各阶段验证记录。
+
 第一至第六阶段已于 2026-11-07 完成。Editor、Observe、Runtime、Python Local/Connected 与生成契约直接使用新内核。
 代码审计基线：`main@44111d1c`；实施起点：`main@0262b010`；实施分支：`codex/authoring-kernel`。
 

@@ -2,7 +2,7 @@
 
 macOS Seatbelt limits the sole MCP shell to its packet, installed interpreter and
 system runtime. The agent never receives repository context or verifier criteria.
-Existing frozen P3A experiments are left unchanged. Token usage is report-only.
+Token usage is report-only.
 """
 
 from __future__ import annotations

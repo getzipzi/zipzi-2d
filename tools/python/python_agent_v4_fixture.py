@@ -1,6 +1,6 @@
 """Prepare and independently verify v4 installed-wheel agent tasks.
 
-This is a new diagnostic suite, separate from the frozen historical P3A cohort.
+Historical P3A results remain in the archive.
 Run this controller with a normal installed zipzi + zipzi-native interpreter.
 The participant receives task.json and input files; expectations and observations
 stay in the adjacent private directory. Agent declarations never decide a pass.

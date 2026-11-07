@@ -17,6 +17,7 @@ class TestRunnerTests(unittest.TestCase):
     def test_fast_isolates_session_and_preserves_filter(self):
         with patch.dict(os.environ, ZIPZI_DEV_SESSION_DIR='live'):
             result, call = self.run_gate('fast', 'timeline::', '--', '--exact')
+            self.assertEqual(os.environ['ZIPZI_DEV_SESSION_DIR'], 'live')
         self.assertEqual(result, 0)
         self.assertNotIn('ZIPZI_DEV_SESSION_DIR', call.call_args.kwargs['env'])
         self.assertEqual(call.call_args.args[0][-3:], ['timeline::', '--', '--exact'])

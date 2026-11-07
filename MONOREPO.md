@@ -63,7 +63,7 @@ values and publishes files. SDK owns the Snapshot, isolated Drafts, snapshot
 history and SavedMarker. Runtime keeps SDK Sessions resident and gives workers
 sourced snapshots, isolated Drafts or prepared I/O. Editor, Observe and the two
 Python backends consume these interfaces directly. The
-[authoring implementation plan](docs/plans/authoring-architecture.md) records
+[authoring implementation plan](docs/archive/plans/authoring-architecture.md) records
 remaining regression migrations and the gates actually run.
 
 `zipzi-observe` captures immutable session snapshots and validates image

@@ -45,8 +45,6 @@ class PythonCodegen(unittest.TestCase):
         for path, source in first.items():
             if path.endswith('.py'):
                 ast.parse(source)
-                self.assertNotIn('ObjectHandle', source)
-        self.assertNotIn('client/python/zipzi/values.py', first)
 
     def test_public_types_accept_owned_values_and_reject_wrong_sources(self):
         command = ['uv', 'run', '--locked', 'pyright', '--project',
@@ -224,33 +222,6 @@ class PythonCodegen(unittest.TestCase):
             target.symlink_to(root / 'outside.py')
             with self.assertRaisesRegex(ValueError, 'symlink'):
                 gen.write_outputs(output, package=root)
-
-    def test_retired_modified_outputs_are_not_deleted(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            output = gen.render(fixture())
-            gen.write_outputs(output, package=root)
-            (root / 'client/python/zipzi/values/__init__.py').write_text(gen.HEADER + '# local change\n')
-            with self.assertRaisesRegex(ValueError, 'modified generated file'):
-                gen.write_outputs({'schema/authoring.json': output['schema/authoring.json']}, package=root)
-
-    def test_monolithic_output_is_retired_only_when_unmodified(self):
-        old_path = 'client/python/zipzi/values.py'
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            previous = gen.HEADER + '# previous generated values\n'
-            gen.write_outputs({old_path:previous}, package=root)
-            old = root / old_path
-            old.write_text(previous + '# local edit\n')
-            output = gen.render(fixture())
-            with self.assertRaisesRegex(ValueError, 'modified generated file'):
-                gen.write_outputs(output, package=root)
-            self.assertFalse((root/'client/python/zipzi/values').exists())
-            old.write_text(previous)
-            gen.write_outputs(output, package=root)
-            self.assertFalse(old.exists())
-            self.assertTrue((root/'client/python/zipzi/values/__init__.py').is_file())
-            self.assertEqual(gen.write_outputs(output, check=True, package=root), [])
 
 
 if __name__ == '__main__':

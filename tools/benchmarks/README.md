@@ -63,7 +63,7 @@ and checks an edit after reopening. It records every sample, input and binary
 fingerprint under the output directory. Stop other benchmarks and builds while
 measuring. The first run of each binary primes the filesystem cache. Allocation
 counters measure requested Rust bytes, and `/usr/bin/time -l` supplies process
-peak RSS and peak footprint. [Phase-six results](../../docs/plans/authoring-architecture/phase-6.md)
+peak RSS and peak footprint. [Phase-six results](../../docs/archive/plans/authoring-architecture/phase-6.md)
 
 ## Project import and open
 

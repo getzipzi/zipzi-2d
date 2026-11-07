@@ -1,6 +1,5 @@
-"""Ownership, recovery and static-report controls for generated Python outputs."""
+"""Ownership and recovery controls for generated Python outputs."""
 import importlib.util
-import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -17,7 +16,6 @@ def load(name, path):
 
 
 outputs = load('codegen_outputs', 'crates/zipzi-python/tools/codegen/outputs.py')
-stats = load('codegen_stats', 'tools/python/python_codegen_stats.py')
 HEADER = outputs.HEADERS[0]
 A = 'client/python/zipzi/_generated/a.py'
 B = 'client/python/zipzi/_generated/domain/b.py'
@@ -110,23 +108,6 @@ class OutputManifest(unittest.TestCase):
             with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'Unowned'):
                 self.write({A: HEADER + 'new\n', path: HEADER + 'x\n'})
         self.assertEqual((self.root / A).read_text(), HEADER + 'a\n')
-
-
-class CodegenStats(unittest.TestCase):
-    def test_static_counts_and_domain_coverage(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            generated = root / 'client/python/zipzi/_generated'
-            (generated / 'values').mkdir(parents=True)
-            (generated / 'modeling.py').write_text('class A:\n def __init__(self):\n  object.__setattr__(self, "x", self.x)\n')
-            (generated / 'values/mesh.py').write_text('class B: pass\n')
-            (generated / 'catalog.py').write_text("CATALOG: dict = {'a.summary': {'documentation': 'same'}, 'b.summary': {'documentation': 'same'}, 'A': {'documentation': 'Fields:\\nx', 'fields': [('x', 'x')]}}\n")
-            result = stats.inspect(root)
-            self.assertEqual(result['modeling_classes'], 2)
-            self.assertEqual(result['domain_coverage'], 0.5)
-            self.assertEqual(result['invalid_self_setattrs'], 1)
-            self.assertEqual(result['entries_with_repeated_field_blocks'], 1)
-            self.assertEqual(result['inherited_method_docs']['summary']['duplicate_descriptions'], 1)
 
 
 if __name__ == '__main__':

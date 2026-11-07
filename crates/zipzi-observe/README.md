@@ -121,5 +121,5 @@ cargo test --locked -p zipzi-observe --features wgpu-backend --test capture
 Runtime, Editor and Python adapters are still undergoing stage-four migration;
 their gates are not currently passing. Once wired, Runtime's observation target
 and `./tools/test-sdk.sh python --observation` cover these consumers. See the
-[architecture status](../../docs/plans/authoring-architecture.md).
+[architecture status](../../docs/archive/plans/authoring-architecture.md).
 `ObservedFrame.adapter_backend` distinguishes native `Metal` from `wgpu (Metal)`.

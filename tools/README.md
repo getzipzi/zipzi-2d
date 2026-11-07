@@ -19,7 +19,7 @@ below. Paths in this guide are relative to `tools/` unless a command starts with
 | Directory | Responsibility |
 | --- | --- |
 | `workspace/` | Cargo package domains, shared shell paths, artifact discovery and provenance |
-| `python/` | Python2 contract, comparison and agent test helpers |
+| `python/` | Python client contract and agent test helpers |
 | `packaging/` | Workspace source archives and source/wheel/app verification |
 | `benchmarks/` | Native Editor benchmarks, offscreen measurement and trace reports |
 | `validation/` | SDK acceptance, image comparisons, model/runtime probes and Purism checks |
@@ -43,10 +43,6 @@ arguments and output paths.
 | `test-sdk.sh` | SDK fast, mesh, regression, stress, Python and full gates |
 | `test-editor.sh` | Editor fast, UI, regression, acceptance, tooling and full gates |
 | `dev-python` | Source SDK experiments ([internal developer reference](../docs/references/dev-python.md)) |
-| `python/python_contract.py` | v4 public API inventory, source/artifact freeze and test evidence |
-| `python/python_pairs.py` | Counterbalanced comparisons of frozen Python clients/Release binaries with the unchanged P0 workload and thresholds |
-| `python/python_p0_migration.py` | Freeze an explicit shared P3A API adapter for both generations; guard original inputs, operations, assertions, measurement core and policy |
-| `python/python_codegen_bench.py` | Historical CPU codegen benchmarks against the original client sources |
 | `../crates/zipzi-python/tools/connected.py` | Build/install the independent pure client; real subprocess startup/session acceptance; `--install-only` supplies Editor's interpreter |
 | `workspace/cargo_domain.py`, `workspace/package-domains.json` | Exhaustive SDK/Editor package selection and membership validation |
 | `dev-editor.sh` | Editor development watcher and process lifecycle |
@@ -117,7 +113,7 @@ Python environment. `fmt` selects only the domain's own packages, excluding vend
 
 SDK fast and runtime cover focused v4 targets. The broad SDK and Editor gates
 still include legacy tests and examples awaiting migration. The
-[authoring plan](../docs/plans/authoring-architecture.md) records the verification scope.
+[authoring plan](../docs/archive/plans/authoring-architecture.md) records the verification scope.
 
 SDK and Editor full extra arguments go to Cargo tests. Editor `fast` and `regression` omit
 example compilation and doctests; `full` includes both. Focused Cargo arguments and arguments
@@ -268,49 +264,19 @@ ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=canvas ./tools/benchmarks/win
 ZIPZI_BENCH_ANIMATION=1 ZIPZI_BENCH_ANIMATION_DRAG=number ./tools/benchmarks/window-benchmark.sh MODEL target/animation-number-drag 2400 240
 ```
 
-`runtime/runtime_inventory.py` lists current Rust SDK declarations.
-`runtime/runtime_baseline.py` and `runtime/runtime-migration-inventory.py` support
-[historical Runtime comparisons](../docs/archive/plans/runtime/README.md).
-
 The [Python package](../crates/zipzi-python/README.md) owns v4 generation and
 testing. The generator compiles the independent `zipzi-contract` exporter.
 `--check` verifies the manifest and output bytes, and `--schema` replays an
 exported contract. `test_python_codegen.py` checks output drift, replay, file
 ownership and static types.
 
-Generated reports belong under `target/`. Use a new output path for each run.
-
-```sh
-./tools/test-sdk.sh python
-uv run --locked python tools/python/python_contract.py inventory --output target/python/v4-inventory.json
-uv run --locked python tools/python/python_contract.py freeze --output target/python/v4-freeze.json
-uv run --locked python tools/python/python_contract.py baseline --output target/python/v4-baseline.json
-```
-
-`freeze --wheel /absolute/path/to/package.whl` records the exact wheel identity.
-`--native`, `--host` and `--editor` select artifacts. The baseline uses the
-existing native and private host fixtures and records all test outcomes and input
-identities. Historical P3A checks run against their original sources and inputs.
-[Historical P3A acceptance record](../docs/archive/plans/python-sdk-rewrite/p3a-0.md)
-
 `./tools/test-sdk.sh python --recovery` runs the v4 same-request recovery cases.
 The ordinary `python` gate also checks generated types.
-`python/python_pairs.py --help` describes the layout for two copied client/Release
-trees. Pairing uses the original workload and policy, alternates AB/BA, measures
-latency before separate probes, records every run and rejects noise. Preserve
-historical failures when diagnosing environment drift; paired evidence does not
-overwrite them.
 
-For an explicit public API migration, `python/python_p0_migration.py --help`
-prepares two copied clients running one identical worker and an immutable
-`migration.json` under the requested temporary directory. Pass it to
-`python_pairs.py --migration`; the default path still requires the original
-worker hash. Inputs, operations, assertions, samples, probe loops and original
-thresholds remain guarded. `crates/zipzi-python/tools/test.py --release --build-only
---output <directory>` builds/copies paired timing artifacts without repeating
-behavior/type tests; add `--instrumented` with a different output for probes.
+`runtime/editor_no_window.py BINARY --output target/no-window-check` checks a
+macOS Editor process stays alive without creating WindowServer windows. It
+launches and terminates its own child; an already-built Editor is required.
 
-`runtime/check_editor_boundary.py` checks the R2 Editor ownership boundary;
 `runtime/editor_benchmark_pairs.py` runs five alternating prebuilt Release pairs,
 and `runtime/editor_benchmark_report.py` applies the frozen per-operation gates.
 See [the benchmark guide](benchmarks/README.md#runtime-editor-pairs).
@@ -365,45 +331,15 @@ for the pinned packaging tool, build-time public configuration, private signing
 inputs and installed upgrade gates. It does not publish artifacts.
 
 
-P3A-3/4/5 was committed without acceptance, by user request. Subsequent selected
-checks and remaining gates are recorded in [P3A-6](../docs/archive/plans/python-sdk-rewrite/p3a-6.md).
 The v4 `./tools/test-sdk.sh python --discovery` gate exercises pagination and
 Session attachment, detachment and close. Use `./tools/test-sdk.sh python-connected`
 for the installed client and `./tools/test-sdk.sh python --observation` for GPU
 observation.
-`uv run --locked python tools/python/python_agent_tasks.py --help` describes fixed
-installed-only packets, bounded recording, and a separate `--preflight <directory>`
-service availability probe. Preparation runs no model; preflight executes no SDK task
-and cannot mark G01–G08 passed. Fixture data lives in
-`fixtures/python_sdk_agent/`; private controller manifests and raw run events belong
-under `target/`, while plan directories keep Markdown conclusions only.
-
-`tools/python/python_agent_runner.py --help` runs installed-only diagnostic tasks
-with a macOS Seatbelt MCP shell and a Connected IPC fault relay. It retains every
-failed attempt. Per user instruction on 2026-10-26, token usage has no limit and is
-reported after testing as input/output/total; unavailable counts are not zero-filled
-or failed. Time, tool call/byte and log budgets still apply.
-Local page/Plan interference and pre-close independent state/history capture are
-connected through the controlled `sdk-python` workflow launcher. Shell responses
-are paginated within 16 KiB; raw output stays in external logs and subsequent
-pages consume tool calls. `python_agent_matrix.py --help` freezes one 42-run
-cohort and decides acceptance from functional results. See the
-[agent fixture notes](../fixtures/python_sdk_agent/README.md) and
-[P3A-6 results](../docs/archive/plans/python-sdk-rewrite/p3a-6.md) for coverage and all
-observed failures. The configured model/effort is `gpt-6.1-sol/high`; optional
-service metadata has no effect on acceptance.
-
-On 2026-10-26 the user removed the model/service identity gate. The runner,
-preflight and matrix no longer require actual service revisions, identity
-launchers or private metadata sidecars. Availability preflight requires a
-completed CLI turn. Missing or changing service metadata is report-only; task
-success, independent verification and functional hard stops determine results.
-See the [metadata notes](../fixtures/python_sdk_agent/README.md#modelservice-metadata).
 
 ## Installed SDK agent evaluation (v4)
 
 `python/python_agent_v4.py` runs fresh Codex CLI agents against normal installed
-wheels. This diagnostic suite is separate from the frozen historical P3A cohort.
+wheels. Historical P3A results are retained in [the archive](../docs/archive/plans/python-sdk-rewrite/p3a-6.md).
 It currently requires macOS Seatbelt (`sandbox-exec`) and an authenticated Codex
 CLI. The CLI's default model/effort is used without override; version and actual
 usage are recorded. Tokens have no limits. Each task has finite time/tool limits.

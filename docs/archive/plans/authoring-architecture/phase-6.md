@@ -9,12 +9,12 @@
 
 - 两个独立工作树构建同一套 Release 探针。共享 Rust 工作流定义操作、断言和计时边界，
   两个适配器分别调用基线与完成版本的实际 API。两边使用相同的分配计数器。
-  [共享探针](../../../tools/benchmarks/authoring-workflow/workflow.rs) ·
-  [基线适配器](../../../tools/benchmarks/authoring-workflow/baseline.rs) ·
-  [完成版本适配器](../../../tools/benchmarks/authoring-workflow/candidate.rs)
+  [共享探针](../../../../tools/benchmarks/authoring-workflow/workflow.rs) ·
+  [基线适配器](../../../../tools/benchmarks/authoring-workflow/baseline.rs) ·
+  [完成版本适配器](../../../../tools/benchmarks/authoring-workflow/candidate.rs)
 - Python 驱动交替运行两个版本，核对输入文件、初始模型及重开结果，并记录每步耗时、
   Rust 请求字节、进程峰值、输入与二进制指纹。默认历史容量用单独的进程实测。
-  [配对驱动](../../../tools/benchmarks/authoring-workflow/compare.py)
+  [配对驱动](../../../../tools/benchmarks/authoring-workflow/compare.py)
 
 ## 实验设计
 
@@ -32,7 +32,7 @@ Rust MOC3 解码路径。每个版本先预热一次，再用独立进程交替 
 重开后核对全部纹理像素摘要、模型数量和 160 个参数，并继续编辑同一个稳定顶点。
 本地逐次样本、二进制指纹和输入清单保存在仓库根目录下的
 `target/phase6-authoring-workflow/results.json`。原始输出和私有素材留在忽略目录。
-[构建与复跑命令](../../../tools/benchmarks/README.md#authoring-workflow-comparison)
+[构建与复跑命令](../../../../tools/benchmarks/README.md#authoring-workflow-comparison)
 
 ## 操作耗时
 
@@ -103,12 +103,12 @@ Rust 堆峰值取探针计时步骤内的最大值，进程指标覆盖整个进
    `validate_candidate`，每次在场景初始化前后都校验全图。先验证 Builder 在批次校验后
    至冻结前保持不变时能否复用结果，再单独量化收益。保留预览、无净变化、跨领域引用、
    失败隔离和冻结后的来源语义。
-   [Draft](../../../crates/zipzi-sdk/src/authoring/draft.rs) ·
-   [DocumentBuilder](../../../crates/zipzi-core/src/state.rs)
+   [Draft](../../../../crates/zipzi-sdk/src/authoring/draft.rs) ·
+   [DocumentBuilder](../../../../crates/zipzi-core/src/state.rs)
 2. **在单次校验内共享身份索引。** 针对 `base_identity_set` 与 `motion_identity_exists`
    的重复工作，测量普通绑定、场景绑定与跨领域引用的变化。保留身份冲突和前向引用检查。
-   [绑定规范化](../../../crates/zipzi-core/src/model_validation/bindings.rs) ·
-   [身份查询](../../../crates/zipzi-core/src/model_validation/queries.rs)
+   [绑定规范化](../../../../crates/zipzi-core/src/model_validation/bindings.rs) ·
+   [身份查询](../../../../crates/zipzi-core/src/model_validation/queries.rs)
 3. **分解导入与重开。** 对 Model3 导入和 ZIP 重开分别量化解码、模型冻结校验、
    资源捕获与纹理预解码。重开同时比较首个可读快照、读取全部纹理的总耗时和 Rust
    堆存活量，确认优化是否只是把耗时移到下一次读取。现有改名采样只覆盖编辑路径，
@@ -192,7 +192,7 @@ Model3 输入。ZIP 首帧用同一个由 main 保存的 ZIP。两组对照分�
 
 首帧按进程取中位数和范围。交互按每个进程计算 P50/P95，再取六个进程的中位数。
 输入计时从 GPUI 派发开始，呈现以合成器时间戳为准。
-[原生窗口探针与配对命令](../../../tools/benchmarks/README.md#runtime-editor-pairs)
+[原生窗口探针与配对命令](../../../../tools/benchmarks/README.md#runtime-editor-pairs)
 
 ### 首帧
 
@@ -353,7 +353,7 @@ P50 为 0.52 ms 和 0.50 ms。直接导入的五张原始图集按 RGBA 解码�
 
 独立的播放调用栈采样显示，求值线程反复按对象遍历全模型的 BlendShape 绑定。
 DeepSeek 有 1,007 条绑定，Mao 有 124 条。main 按目标查索引。
-[当前绑定迭代实现](../../../crates/zipzi-core/src/evaluation/model.rs)
+[当前绑定迭代实现](../../../../crates/zipzi-core/src/evaluation/model.rs)
 
 原始 trace、输入和二进制指纹、汇总 `comparison.json`、独立采样和失败试跑均位于
 本地 `target/phase6-ui-deepseek.lDUvgg/`。

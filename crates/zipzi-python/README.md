@@ -94,8 +94,7 @@ Local/Connected scripts; `docs/lifecycle.md` explains owner lifetimes and
 publication/recovery. The first-run scripts are executed by the Python gates.
 Independent installed-package agent evaluation is available through the
 [v4 diagnostic runner](../../tools/README.md#installed-sdk-agent-evaluation-v4).
-It uses isolated CLI participants and a separate artifact/call-observation judge;
-the historical P3A cohort remains unchanged.
+It uses isolated CLI participants and a separate artifact/call-observation judge.
 
 ```sh
 uv run --locked python crates/zipzi-python/tools/generate.py

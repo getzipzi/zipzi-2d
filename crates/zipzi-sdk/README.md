@@ -98,4 +98,4 @@ host migration and final cleanup; these gates do not imply their full coverage.
 Observe, Runtime domain/wire handlers, Editor and Python Local/Connected now use
 this API directly. Workspace production builds are covered separately from the
 legacy aggregate regression targets, which still need stage-five cleanup and
-migration in the [architecture plan](../../docs/plans/authoring-architecture.md).
+migration in the [architecture plan](../../docs/archive/plans/authoring-architecture.md).

@@ -125,7 +125,7 @@ env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test aut
 The CPU gate covers resident ownership, isolated Drafts, immutable source
 identity, cancellation, binary recovery, private transport, native project work
 and CPU sampling. The GPU gate requires a usable device. Track the remaining
-integration migrations in the [authoring plan](../../docs/plans/authoring-architecture.md).
+integration migrations in the [authoring plan](../../docs/archive/plans/authoring-architecture.md).
 
 The optional `deepseek_roundtrip` target requires `models/local/DeepSeek`. It
 imports, saves and reopens the full model under default limits while retaining

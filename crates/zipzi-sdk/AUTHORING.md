@@ -21,5 +21,5 @@ transfer dependent shapes using the domain policies. Owner/child locks and
 dependency checks apply to commands and typed patches.
 
 See the [SDK workflow](README.md) for project I/O and runnable examples, and
-the [implementation plan](../../docs/plans/authoring-architecture.md) for
+the [implementation plan](../../docs/archive/plans/authoring-architecture.md) for
 model validation, conversion, publication and resource ownership details.
