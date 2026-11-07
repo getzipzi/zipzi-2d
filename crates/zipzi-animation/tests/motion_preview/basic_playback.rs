@@ -4,6 +4,26 @@ use zipzi_core::Parameter;
 use zipzi_project::{import_expression3, import_motion3, import_physics3};
 
 #[test]
+fn canonical_sampling_reports_playback_local_time_distinct_from_raw_curve() {
+    let mut source: serde_json::Value = serde_json::from_str(LOOP_MOTION3).unwrap();
+    source["Meta"]["Loop"] = false.into();
+    let imported = import_motion3(&document(), MOTION, "Linear", &source.to_string()).unwrap();
+    let mut playback = MotionPreview::new(&imported.candidate);
+    let mut raw = zipzi_animation::MotionEditingPreview::new(&imported.candidate);
+    playback.schedule_motion(MOTION, 0.0).unwrap();
+    for time in [0.0_f32, 0.001, 0.25, 0.5, 0.75, 1.0] {
+        let state = playback.seek(time).unwrap();
+        // Cold canonical replay starts at 1/60, and an activation starts at its
+        // first update. seek(0) evaluates zero but does not seed a replay cache.
+        let expected_local_time = (time - 1.0 / 60.0).max(0.0);
+        assert_eq!(state.time, time);
+        assert!((state.motion_positions[0].local_time - expected_local_time).abs() < 1e-6);
+        assert!((state.parameters[PARAM] - expected_local_time).abs() < 1e-6);
+        assert!((raw.sample(Some(MOTION), time).unwrap().parameters[PARAM] - time).abs() < 1e-6);
+    }
+}
+
+#[test]
 fn operation_identity_distinguishes_zero_time_actions_and_failed_seek() {
     let mut preview = MotionPreview::new(&document());
     let preview_id = preview.operation().preview_id.clone();

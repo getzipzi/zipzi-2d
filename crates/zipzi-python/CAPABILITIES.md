@@ -3,7 +3,9 @@
 Local and Connected use the same generated v4 operations. Check host support
 with `runtime.capabilities()` and admission limits with `runtime.limits()`.
 The installed package includes the typed `zipzi.values` module, a guide and an
-executable recipe. [Setup and usage](README.md)
+executable recipes. `zipzi.describe(path)` provides paginated offline help;
+`Snapshot.records(Type)` decodes object payloads into domain values. Query and
+save response shapes are available in `zipzi.results`. [Setup and usage](README.md)
 
 | Capability | Public entry | Behavior |
 | --- | --- | --- |

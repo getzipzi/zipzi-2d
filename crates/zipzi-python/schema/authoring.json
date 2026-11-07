@@ -15823,9 +15823,10 @@
           "rust_name": "Parameters"
         },
         {
+          "doc": "Combined playback sampled by canonical 60 Hz replay, including scheduled activations,\nfades and optional physics. This is not stateless raw-clip curve sampling.",
           "fields": [
             {
-              "doc": "",
+              "doc": "Ordered requested times in seconds on the preview timeline. Seeks to times at least\n1/60 second replay from that first update; sampling zero does not seed later replay.",
               "name": "times",
               "rust_name": "times",
               "shape": {
@@ -15838,7 +15839,7 @@
             },
             {
               "default": [],
-              "doc": "",
+              "doc": "Motion clip ID and activation time in seconds; the second value is not a weight.\nA clip starts on the first replay update at or after activation. A clip activated at\nzero therefore has local time max(0, requested_time - 1/60) in its first cycle.\nInspect each result's motion_positions.local_time for the evaluated curve coordinate.",
               "name": "motions",
               "rust_name": "motions",
               "shape": {
@@ -15859,7 +15860,7 @@
             },
             {
               "default": [],
-              "doc": "",
+              "doc": "Expression ID and activation time in seconds on the same preview timeline.",
               "name": "expressions",
               "rust_name": "expressions",
               "shape": {

@@ -3,6 +3,7 @@ import ast
 from copy import deepcopy
 import importlib.util
 import json
+import re
 import subprocess
 from pathlib import Path
 import tempfile
@@ -41,8 +42,11 @@ class PythonCodegen(unittest.TestCase):
     def test_render_is_deterministic_and_valid_python(self):
         first = gen.render(self.contract)
         self.assertEqual(first, gen.render(deepcopy(self.contract)))
-        ast.parse(first['client/python/zipzi/values.py'])
-        self.assertNotIn('ObjectHandle', first['client/python/zipzi/values.py'])
+        for path, source in first.items():
+            if path.endswith('.py'):
+                ast.parse(source)
+                self.assertNotIn('ObjectHandle', source)
+        self.assertNotIn('client/python/zipzi/values.py', first)
 
     def test_public_types_accept_owned_values_and_reject_wrong_sources(self):
         command = ['uv', 'run', '--locked', 'pyright', '--project',
@@ -57,7 +61,8 @@ class PythonCodegen(unittest.TestCase):
         diagnostics = json.loads(rejected.stdout)['generalDiagnostics']
         expected = {line for line, text in enumerate(invalid.read_text().splitlines()) if '# error' in text}
         self.assertEqual({d['range']['start']['line'] for d in diagnostics}, expected)
-        self.assertEqual(len(diagnostics), len(expected))
+        # Overload resolution can emit both a call and an argument diagnostic
+        # for one invalid line. Every marked line must fail, and no other may.
 
     def test_field_default_and_operation_drift_change_outputs(self):
         for change in ('field', 'default', 'type'):
@@ -69,10 +74,106 @@ class PythonCodegen(unittest.TestCase):
                 else: contract['record']['fields'][0]['shape'] = {'kind':'u64'}
                 updated = gen.render(contract)
                 self.assertNotEqual(original['schema/authoring.json'], updated['schema/authoring.json'])
-                self.assertNotEqual(original['client/python/zipzi/values.py'], updated['client/python/zipzi/values.py'])
+                self.assertNotEqual(original['client/python/zipzi/_schema.json'], updated['client/python/zipzi/_schema.json'])
+                if change != 'default':
+                    self.assertNotEqual(original['client/python/zipzi/values/common.py'], updated['client/python/zipzi/values/common.py'])
+
+    def test_field_help_is_preserved_and_codec_metadata_is_not_inline(self):
+        contract = fixture()
+        contract['record']['fields'][0]['doc'] = 'Display label, not a stable object identity.'
+        output = gen.render(contract)
+        source = output['client/python/zipzi/values/common.py']
+        value = next(node for node in ast.parse(source).body if isinstance(node, ast.ClassDef))
+        self.assertIn('name: Display label, not a stable object identity.', ast.get_docstring(value))
+        self.assertNotIn("'kind':", source)
+        for path, source in gen.render(self.contract).items():
+            if path.endswith('.py'):
+                self.assertLess(max(map(len, source.splitlines())), 1024)
+
+    def test_reference_covers_exports_and_links_resolve(self):
+        output = gen.render(self.contract)
+        directory = gen.reference.DIRECTORY
+        for path, source in output.items():
+            if path.startswith('client/python/zipzi/values/') and not path.endswith('__init__.py'):
+                page = output[directory + 'values-' + Path(path).stem + '.md']
+                for exported in gen.reference.exports(ast.parse(source)):
+                    self.assertIn('## zipzi.values.' + exported + '\n', page)
+        entrypoints = ast.parse((PACKAGE / 'client/python/zipzi/__init__.py').read_text())
+        for exported in gen.reference.exports(entrypoints):
+            self.assertIn('zipzi.' + exported, output[directory + 'index.md'])
+        for path, page in output.items():
+            if not path.startswith(directory):
+                continue
+            anchors = re.findall(r'<a id="([^"]+)">', page)
+            self.assertEqual(len(anchors), len(set(anchors)), path)
+            prose = re.sub(r'```.*?```', '', page, flags=re.DOTALL)
+            for link in re.findall(r'\]\(([^)]+)\)', prose):
+                destination, _, anchor = link.partition('#')
+                target = (PACKAGE / path).parent / destination
+                relative = target.resolve().relative_to(PACKAGE.resolve()).as_posix()
+                self.assertTrue(relative in output or target.is_file(), (path, link))
+                if anchor:
+                    self.assertIn(f'<a id="{anchor}">', output[relative], (path, link))
+
+    def test_reference_tracks_contract_defaults_and_public_source(self):
+        contract = fixture()
+        contract['record']['fields'][0]['doc'] = 'Stable | label.\nSecond line.'
+        output = gen.render(contract)
+        page = output[gen.reference.DIRECTORY + 'values-common.md']
+        self.assertIn('Stable \\| label.<br>Second line.', page)
+        self.assertIn('| `name` | `str` | Required |', page)
+        self.assertIn('| `from_` | `str \\| None` | `null` (`None`) |', page)
+        contract['record']['fields'][1]['default'] = [[1., 2.]]
+        changed = gen.render(contract)[gen.reference.DIRECTORY + 'values-common.md']
+        self.assertNotEqual(page, changed)
+        self.assertIn('[[1.0, 2.0]]', changed)
+
+        sources = {p: (PACKAGE / gen.reference.PREFIX / p).read_text() for p in gen.reference.SOURCES}
+        sources['__init__.py'] = sources['__init__.py'].replace('timeout: float = 10.0', 'timeout: float = 12.5').replace('Connect to an Editor', 'Connect to the selected Editor')
+        pages = gen.reference.render(output, {}, PACKAGE, sources=sources)
+        self.assertIn('timeout: float=12.5', pages[gen.reference.DIRECTORY + 'runtime.md'])
+        self.assertIn('Connect to the selected Editor', pages[gen.reference.DIRECTORY + 'runtime.md'])
+
+    def test_reference_preserves_overloads_variants_and_inheritance(self):
+        output = gen.render(self.contract)
+        runtime = output[gen.reference.DIRECTORY + 'runtime.md']
+        query = runtime.split('### zipzi.Session.query\n')[1].split('<a id=')[0]
+        self.assertIn('@overload', query)
+        self.assertIn('Snapshot[r.Objects]', query)
+        self.assertIn('Snapshot[r.Collection]', query)
+        self.assertNotIn('def _call', runtime)
+        parameters = output[gen.reference.DIRECTORY + 'values-parameters.md']
+        self.assertIn('| `NORMAL` |', parameters)
+        self.assertIn('Drives ordinary bindings', parameters)
+        commands = output[gen.reference.DIRECTORY + 'values-commands.md']
+        variants = commands.split('Variants: ', 1)[1].split('\n', 1)[0]
+        self.assertIn('[CommandCreateParameter]', variants)
+        results = output[gen.reference.DIRECTORY + 'results.md']
+        collection = results.split('## zipzi.results.Collection\n')[1].split('<a id=')[0]
+        self.assertIn('[zipzi.results.Objects]', collection)
+        self.assertIn('type Capability =', results)
+
+    def test_public_instance_attributes_are_declared_and_documented(self):
+        output = gen.render(self.contract)
+        runtime = output[gen.reference.DIRECTORY + 'runtime.md']
+        tree = ast.parse((PACKAGE / gen.reference.PREFIX / '_kernel.py').read_text())
+        for cls in tree.body:
+            if not isinstance(cls, ast.ClassDef):
+                continue
+            initializers = [n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == '__init__']
+            declared = {n.target.id for n in cls.body if isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name)}
+            public = {n.attr for init in initializers for n in ast.walk(init)
+                      if isinstance(n, ast.Attribute) and isinstance(n.ctx, ast.Store)
+                      and isinstance(n.value, ast.Name) and n.value.id == 'self'
+                      and not n.attr.startswith('_')}
+            self.assertLessEqual(public, declared, cls.name)
+            if public:
+                section = runtime.split('## zipzi.' + cls.name + '\n')[1].split('\n## ')[0]
+                for field in public:
+                    self.assertIn('| `' + field + '` |', section)
 
     def test_tuple_optional_and_keyword_fields_are_typed(self):
-        output = gen.render(fixture())['client/python/zipzi/values.py']
+        output = gen.render(fixture())['client/python/zipzi/values/common.py']
         ast.parse(output)
         self.assertIn('tuple[tuple[float, float], ...]', output)
         self.assertIn('from_: str | None = None', output)
@@ -114,7 +215,7 @@ class PythonCodegen(unittest.TestCase):
         output = gen.render(fixture())
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            target = root / 'client/python/zipzi/values.py'
+            target = root / 'client/python/zipzi/values/__init__.py'
             target.parent.mkdir(parents=True)
             target.write_text('# handwritten\n')
             with self.assertRaisesRegex(ValueError, 'handwritten'):
@@ -129,9 +230,27 @@ class PythonCodegen(unittest.TestCase):
             root = Path(directory)
             output = gen.render(fixture())
             gen.write_outputs(output, package=root)
-            (root / 'client/python/zipzi/values.py').write_text(gen.HEADER + '# local change\n')
+            (root / 'client/python/zipzi/values/__init__.py').write_text(gen.HEADER + '# local change\n')
             with self.assertRaisesRegex(ValueError, 'modified generated file'):
                 gen.write_outputs({'schema/authoring.json': output['schema/authoring.json']}, package=root)
+
+    def test_monolithic_output_is_retired_only_when_unmodified(self):
+        old_path = 'client/python/zipzi/values.py'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            previous = gen.HEADER + '# previous generated values\n'
+            gen.write_outputs({old_path:previous}, package=root)
+            old = root / old_path
+            old.write_text(previous + '# local edit\n')
+            output = gen.render(fixture())
+            with self.assertRaisesRegex(ValueError, 'modified generated file'):
+                gen.write_outputs(output, package=root)
+            self.assertFalse((root/'client/python/zipzi/values').exists())
+            old.write_text(previous)
+            gen.write_outputs(output, package=root)
+            self.assertFalse(old.exists())
+            self.assertTrue((root/'client/python/zipzi/values/__init__.py').is_file())
+            self.assertEqual(gen.write_outputs(output, check=True, package=root), [])
 
 
 if __name__ == '__main__':

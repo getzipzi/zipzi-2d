@@ -1382,6 +1382,111 @@ fn bulk_upload_ownership_and_failed_image_batch_do_not_publish() {
 }
 
 #[test]
+fn sampled_animation_reports_requested_time_and_playback_curve_coordinate_without_publication() {
+    use zipzi_core::document::{
+        MotionClip, MotionKey, MotionSegment, MotionTrack, MotionTrackTarget,
+    };
+    let (mut rt, client, session) = setup();
+    let d = draft(&mut rt, client, session);
+    let (d, ()) = rt
+        .batch(client, d, |commands| {
+            commands.create_parameter(Parameter {
+                id: id(2),
+                minimum: -30.,
+                maximum: 30.,
+                ..Default::default()
+            })?;
+            commands.create_motion(MotionClip {
+                id: id(30),
+                name: "Linear".into(),
+                duration: 1.,
+                fps: 30.,
+                looping: false,
+                restricted_beziers: false,
+                fade_in: Some(0.),
+                fade_out: Some(0.),
+                track_order: vec![],
+                tracks: vec![MotionTrack {
+                    id: id(31),
+                    target: MotionTrackTarget::Parameter {
+                        parameter_id: id(2),
+                    },
+                    initial: MotionKey {
+                        id: id(32),
+                        time: 0.,
+                        value: -20.,
+                    },
+                    segments: Arc::new(vec![MotionSegment::Linear {
+                        end: MotionKey {
+                            id: id(33),
+                            time: 1.,
+                            value: 20.,
+                        },
+                    }]),
+                    fade_in: Some(0.),
+                    fade_out: Some(0.),
+                    extensions: Default::default(),
+                }]
+                .into(),
+                events: Default::default(),
+                extensions: Default::default(),
+                meta_extensions: Default::default(),
+                opaque_source_ids: None,
+                opaque_source_content_hash: None,
+            })
+        })
+        .unwrap();
+    rt.publish(client, d, "motion").unwrap();
+    let version_before = version(&rt, client, session);
+    let history_before = rt.session_read(client, session).unwrap().history_state();
+    let source = QuerySource::Published(version_before);
+    let times = vec![0., 0.001, 0.25, 0.5, 0.75, 1.];
+    let request = zipzi_contract::kernel_tasks::SampleRequest {
+        input: zipzi_contract::kernel_tasks::SampleInput::Animation {
+            times: times.clone(),
+            motions: vec![(id(30), 0.)],
+            expressions: vec![],
+            inputs: vec![],
+            physics: false,
+            stabilized_start: false,
+        },
+        queries: vec![],
+        quality: false,
+    };
+    let job = rt.request_samples(client, source, request).unwrap();
+    while !rt.job(client, job).unwrap().state.is_terminal() {
+        run(&mut rt);
+    }
+    let JobValue::Read(readback) = result(&rt, client, job).as_ref().unwrap() else {
+        panic!("sample result");
+    };
+    let report: serde_json::Value = serde_json::from_slice(readback.bytes()).unwrap();
+    assert_eq!(report["source"], serde_json::to_value(source).unwrap());
+    for (frame, requested) in report["frames"].as_array().unwrap().iter().zip(times) {
+        let animation = &frame["animation"];
+        let local = (requested - 1. / 60.).max(0.);
+        assert!((animation["time"].as_f64().unwrap() - f64::from(requested)).abs() < 1e-6);
+        assert!(
+            (animation["motion_positions"][0]["local_time"]
+                .as_f64()
+                .unwrap()
+                - f64::from(local))
+            .abs()
+                < 1e-6
+        );
+        assert!(
+            (animation["parameters"][id(2)].as_f64().unwrap() - f64::from(-20. + 40. * local))
+                .abs()
+                < 1e-5
+        );
+    }
+    assert_eq!(version(&rt, client, session), version_before);
+    let history_after = rt.session_read(client, session).unwrap().history_state();
+    assert_eq!(history_after.undo_steps, history_before.undo_steps);
+    assert_eq!(history_after.redo_steps, history_before.redo_steps);
+}
+
+#[test]
 fn sampled_tasks_keep_frozen_provenance_across_publication_and_yield() {
     let (mut rt, client, session) = setup();
     add(&mut rt, client, session, 2);

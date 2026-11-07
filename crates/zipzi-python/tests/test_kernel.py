@@ -73,7 +73,136 @@ def query(id):
     return v.QueryObjects(addresses=(v.ObjectAddress(kind=v.ObjectKind.PARAMETER,id=id),))
 
 
+def documented_example(name, arguments):
+    from contextlib import redirect_stdout
+    from importlib.resources import files
+    import io
+    import re
+    from unittest.mock import patch
+    source = files('zipzi').joinpath('docs/getting-started.md').read_text(encoding='utf-8')
+    match = re.search(r'<!-- example: ' + re.escape(name) + r' -->\n```python\n(.*?)\n```', source, re.DOTALL)
+    if match is None:
+        raise AssertionError('Missing installed example: ' + name)
+    output = io.StringIO()
+    with patch.object(sys, 'argv', [name + '.py', *arguments]), redirect_stdout(output):
+        exec(compile(match[1], name + '.py', 'exec'), {'__name__': '__main__'})
+    return output.getvalue()
+
+
 class Values(unittest.TestCase):
+    def test_installed_reference_is_complete_and_readable_offline(self):
+        from importlib.resources import files
+        from types import ModuleType
+        import re
+
+        package = files('zipzi')
+        reference = package.joinpath('docs/reference')
+        index = reference.joinpath('index.md').read_text(encoding='utf-8')
+        for exported in zipzi.__all__:
+            self.assertIn('zipzi.' + exported, index)
+        for domain in v.__all__:
+            module = getattr(v, domain)
+            if not isinstance(module, ModuleType):
+                continue
+            page = reference.joinpath('values-' + domain + '.md').read_text(encoding='utf-8')
+            for exported in module.__all__:
+                self.assertIn('## zipzi.values.' + exported + '\n', page)
+        for page in reference.iterdir():
+            text = page.read_text(encoding='utf-8')
+            prose = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+            for link in re.findall(r'\]\(([^)]+)\)', prose):
+                destination, _, anchor = link.partition('#')
+                content = reference.joinpath(destination).read_text(encoding='utf-8')
+                if anchor:
+                    self.assertIn(f'<a id="{anchor}">', content)
+
+    def test_domain_imports_share_types_and_resolve_runtime_annotations(self):
+        from importlib import import_module
+        from types import ModuleType
+        from typing import get_type_hints
+        import pickle
+        from zipzi.values.meshes import Mesh, MeshGeometry
+        from zipzi.values.parameters import Parameter
+
+        self.assertIs(v.Mesh, Mesh)
+        self.assertIs(v.Parameter, Parameter)
+        self.assertIs(v.MeshGeometry, MeshGeometry)
+        self.assertIs(get_type_hints(v.CommandCreateMesh)['spec'], v.MeshCreateSpec)
+        self.assertEqual(get_type_hints(v.MeshGeometry)['positions'], tuple[v.Vec2, ...])
+        for name in v.__all__:
+            member = getattr(v, name)
+            if isinstance(member, ModuleType):
+                self.assertIs(member, import_module('zipzi.values.' + name))
+                continue
+            self.assertTrue(member.__module__.startswith('zipzi.values.'))
+            with self.subTest(type=name):
+                get_type_hints(member)
+        self.assertIn('zipzi.values.meshes.Mesh', zipzi.describe('values.meshes').children)
+        self.assertIn('vertex_ids', zipzi.describe('values.meshes.Mesh').format())
+        point = v.Vec2(x=1, y=2)
+        self.assertEqual(pickle.loads(pickle.dumps(point)), point)
+
+    def test_offline_help_follows_public_paths_and_pages_without_a_host(self):
+        from importlib.resources import files
+        from unittest.mock import patch
+        with patch.object(zipzi, 'local', side_effect=AssertionError('No host for help')), \
+             patch.object(zipzi, 'connect', side_effect=AssertionError('No host for help')):
+            self.assertIn('zipzi.Session', zipzi.describe().children)
+            self.assertIn('zipzi.Runtime.sessions', zipzi.describe('Runtime').children)
+            self.assertIn('zipzi.Runtime.sessions.attach', zipzi.describe('Runtime.sessions').children)
+            self.assertIn('zipzi.Blob.length', zipzi.describe('Blob').children)
+            self.assertIn('Type: int', zipzi.describe('Blob.length').documentation)
+            self.assertIn('Type: str', zipzi.describe('Session.id').documentation)
+            self.assertIn('Type: WireMap', zipzi.describe('Blob.info').documentation)
+            self.assertIn('document', zipzi.describe('Runtime.sessions.create').documentation)
+            method = zipzi.describe('Session.query')
+            self.assertIn('source', method.signature)
+            self.assertIn('records', method.documentation)
+            command = zipzi.describe('values.CommandCreateParameter')
+            self.assertIn('spec', command.signature)
+            self.assertIn('zipzi.values.CommandCreateParameter',
+                          zipzi.describe('values.Command', limit=64).children)
+            self.assertIn('from_wire', zipzi.describe('values.Parameter.from_wire').path)
+            self.assertIn('durable', zipzi.describe('results.SaveReceipt').format())
+            self.assertEqual(zipzi.describe('results.SaveReceipt').children, ())
+            self.assertIn('zipzi.values.ObjectKind.MESH', zipzi.describe('values.ObjectKind', limit=64).children)
+            self.assertIn("'mesh'", zipzi.describe('values.ObjectKind.MESH').format())
+            paths, offset = [], 0
+            while True:
+                page = zipzi.describe('values', offset=offset, limit=7)
+                self.assertLessEqual(len(page.children), 7)
+                paths.extend(page.children)
+                if page.next_offset is None: break
+                offset = page.next_offset
+            self.assertEqual(len(paths), len(set(paths)))
+            self.assertEqual(set(paths), {'zipzi.values.' + name for name in v.__all__})
+            self.assertTrue(files('zipzi').joinpath('docs/guide.md').is_file())
+            for path in ('Session.missing', '_kernel', 'values.__dict__', 'values.'):
+                with self.assertRaises(KeyError): zipzi.describe(path)
+            for options in ({'limit': 0}, {'offset': -1}, {'limit': 65}):
+                with self.assertRaises(ValueError): zipzi.describe(**options)
+
+    def test_large_value_previews_preserve_complete_wire_content(self):
+        value = v.ImageInputRgba(width=100, height=100, bytes=tuple(range(256)) * 100)
+        self.assertLess(len(repr(value)), 300)
+        self.assertEqual(len(value.to_wire()['bytes']), 25600)
+        self.assertEqual(v.ImageInput.from_wire(value.to_wire()), value)
+        identity = str(uuid4())
+        reference = v.SceneReferenceResolved(object_id=identity)
+        self.assertIn(identity, repr(reference))
+        command = v.CommandRename(target=v.ObjectAddress(kind=v.ObjectKind.PARAMETER, id=identity), name='Angle')
+        self.assertIn(identity, repr(command))
+
+    def test_snapshot_records_decode_values_and_reject_non_object_queries(self):
+        source = v.QuerySourcePublished(value=v.Version(session=str(uuid4()), generation=0, revision=0))
+        snapshot = zipzi.Snapshot(source, 'content', {'records': (
+            {'address': {'kind': 'parameter', 'id': 'p'},
+             'value': v.ParameterCreateSpec(name='Angle', minimum=0, maximum=1, default_value=0).to_wire()},
+        )})
+        self.assertEqual(snapshot.records(v.ParameterCreateSpec)[0].name, 'Angle')
+        with self.assertRaises(TypeError): zipzi.Snapshot(source, 'content', {}).records(v.Parameter)
+        with self.assertRaises(TypeError): snapshot.records(v.Mesh)
+
     def test_nested_values_are_owned_immutable_and_roundtrip(self):
         commands=[create()]
         source=v.DraftSource(draft=str(uuid4()),base=v.Version(session=str(uuid4()),generation=0,revision=0),sequence=0)
@@ -89,6 +218,55 @@ class Values(unittest.TestCase):
 
 class Lifecycle:
     factory = staticmethod(zipzi.local)
+    def test_motion_recipe_samples_at_reported_playback_local_time(self):
+        from zipzi.docs import recipes
+        with self.factory() as runtime:
+            session = runtime.sessions.create()
+            parameter, _, _ = recipes.create_scene(session)
+            clip = recipes.create_linear_motion(session, parameter)
+            before = session.info()
+            times = (0., .25, .5, .75, 1.)
+            report = recipes.sample_animation(session, times, motions=((clip, 0.),))
+            for requested, frame in zip(times, report['frames']):
+                animation = frame['animation']
+                position, = animation['motion_positions']
+                expected_local = max(0., requested - 1. / 60.)
+                self.assertAlmostEqual(position['local_time'], expected_local, places=5)
+                self.assertAlmostEqual(animation['parameters'][parameter], -20. + 40. * expected_local, places=4)
+            after = session.info()
+            self.assertEqual(after['version'], before['version'])
+            self.assertEqual(after['history'], before['history'])
+            parameter_value, = session.query(v.QueryObjects(addresses=(
+                v.ObjectAddress(kind=v.ObjectKind.PARAMETER, id=parameter),
+            ))).records(v.Parameter)
+            self.assertEqual(parameter_value.default_value, 0)
+
+    def test_installed_recipes_complete_authoring_pagination_sampling_and_save(self):
+        from zipzi.docs import recipes
+        with self.factory() as runtime, tempfile.TemporaryDirectory(prefix='zipzi-recipes-') as directory:
+            session = runtime.sessions.create()
+            parameter, mesh, asset = recipes.create_scene(session)
+            with session.draft('More parameters') as draft:
+                draft.apply(create(), create())
+            self.assertEqual(len(recipes.list_parameters(session, page_size=1)), 3)
+            updated = recipes.rename_parameter(session, parameter, 'Head angle')
+            self.assertEqual(updated.name, 'Head angle')
+            history = session.info()['history']
+            self.assertEqual(history['undo_steps'], 3)
+            self.assertEqual(len(recipes.sample_animation(session, (0., .1))['frames']), 2)
+            self.assertEqual(session.info()['history'], history)
+            with session.image_blob(asset) as image:
+                self.assertEqual(recipes.read_all(image), bytes((255, 0, 0, 255)))
+            path = Path(directory) / 'recipe.zipzi'
+            with session.save(path) as job:
+                receipt = job.wait(timeout=10)
+            self.assertTrue(receipt['published'])
+            self.assertIsInstance(receipt['durable'], bool)
+            self.assertIsInstance(receipt['warnings'], tuple)
+            with session.open(path) as job: job.wait(timeout=10)
+            selection = v.QueryObjects(addresses=(v.ObjectAddress(kind=v.ObjectKind.MESH, id=mesh),))
+            self.assertEqual(session.query(selection).records(v.Mesh)[0].name, 'Triangle')
+
     def test_bulk_image_roundtrip_and_frozen_sampling(self):
         import json
         with self.factory() as runtime:
@@ -195,6 +373,11 @@ class Lifecycle:
             info = json.loads(payload[4:4+length])
             self.assertEqual(info['source'], source.to_wire())
             self.assertEqual(payload[4+length:4+length+8], b'\x89PNG\r\n\x1a\n')
+            from zipzi.docs.recipes import observation_packets
+            packets = observation_packets(payload)
+            self.assertEqual(packets[0][0]['source'], source.to_wire())
+            self.assertTrue(packets[0][1].startswith(b'\x89PNG\r\n\x1a\n'))
+            with self.assertRaises(ValueError): observation_packets(payload[:-1])
 
     def test_import_psd_replaces_content_and_captures_resources(self):
         import shutil
@@ -322,8 +505,39 @@ class Lifecycle:
             self.assertEqual(session.query(query(id)).value['records'][0]['value']['name'],'p')
 
 
-class LocalLifecycle(Lifecycle,unittest.TestCase): pass
-class ConnectedLifecycle(Lifecycle,unittest.TestCase): factory=staticmethod(connected)
+class LocalLifecycle(Lifecycle,unittest.TestCase):
+    def test_documented_first_local_run_saves_a_reopenable_project(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder).resolve() / 'first.zipzi'
+            output = documented_example('first-local', [str(path)])
+            self.assertIn('Angle', output)
+            self.assertIn(str(path), output)
+            with zipzi.local() as runtime:
+                session = runtime.sessions.create()
+                with session.open(path) as job:
+                    job.wait()
+                parameter, = session.query(v.QueryCollection(kind=v.ObjectKind.PARAMETER, offset=0, limit=128)).records(v.Parameter)
+                self.assertEqual((parameter.name, parameter.minimum, parameter.maximum, parameter.default_value), ('Angle', -30, 30, 0))
+
+
+class ConnectedLifecycle(Lifecycle,unittest.TestCase):
+    factory=staticmethod(connected)
+
+    def test_documented_first_connected_run_selects_without_editing(self):
+        with connected() as runtime:
+            session = runtime.sessions.create()
+            decoy = runtime.sessions.create()
+            before = session.info()
+            # The fixture owns the explicit endpoint; the documentation script
+            # creates its own real client and attaches by the printed session ID.
+            arguments = ['--endpoint', str(runtime._backend._endpoint)]
+            listing = documented_example('first-connected', arguments)
+            self.assertIn(session.id, listing)
+            self.assertIn(decoy.id, listing)
+            output = documented_example('first-connected', [*arguments, '--session', session.id])
+            self.assertIn(session.id, output)
+            self.assertIn(before['document_id'], output)
+            self.assertEqual(session.info(), before)
 
 
 class Recovery(unittest.TestCase):

@@ -399,3 +399,57 @@ launchers or private metadata sidecars. Availability preflight requires a
 completed CLI turn. Missing or changing service metadata is report-only; task
 success, independent verification and functional hard stops determine results.
 See the [metadata notes](../fixtures/python_sdk_agent/README.md#modelservice-metadata).
+
+## Installed SDK agent evaluation (v4)
+
+`python/python_agent_v4.py` runs fresh Codex CLI agents against normal installed
+wheels. This diagnostic suite is separate from the frozen historical P3A cohort.
+It currently requires macOS Seatbelt (`sandbox-exec`) and an authenticated Codex
+CLI. The CLI's default model/effort is used without override; version and actual
+usage are recorded. Tokens have no limits. Each task has finite time/tool limits.
+
+Build a client wheel and a normal optional native wheel, then select a new output
+directory for each cohort (do not overwrite an earlier wheel or result):
+
+```sh
+uv build --wheel --out-dir target/python/agent-wheels crates/zipzi-python/client
+uv run --locked maturin build --manifest-path crates/zipzi-python/Cargo.toml --interpreter .venv/bin/python --out target/python/agent-wheels
+uv run --locked python tools/python/python_agent_v4.py suite --output target/python/agent-cohort-1 --wheel target/python/agent-wheels/zipzi-0.1.0a8-py3-none-any.whl --wheel target/python/agent-wheels/zipzi_native-0.1.0a8-cp314-cp314-macosx_11_0_arm64.whl --host target/python/local_host_fixture
+```
+
+Replace filenames with the wheels actually built for the current platform/version.
+The host fixture is built by `./tools/test-sdk.sh python`. `suite --environment
+connected` or `--environment local` selects one environment; `run --help` describes
+single-case execution. `--parallel` accepts 1–3. Keep wheel and host inputs immutable
+while a cohort runs. Failures are retained; a rerun uses a new output directory.
+
+The participant receives outcome goals and input projects, an isolated virtual
+environment, installed package documentation, and one MCP shell. Local installs
+both wheels; Connected installs only the pure client. Its shell cannot read the
+repository/private controller, change installed packages, or access the Internet.
+Actual isolation probes and package/harness/host fingerprints are retained.
+Workflow scripts run through `sdk-python work/script.py`, which records actual
+public-call results/errors over a private inherited channel. These observations
+do not change SDK outcomes. This is cooperative evaluation, not a hostile-code
+security boundary against Python introspection.
+
+`python/python_agent_v4_fixture.py` prepares and independently grades four tasks:
+300-record pagination with duplicate names and exact-target editing; multi-chunk
+RGBA/mesh edits with Undo/Redo; real motion authoring and preview-clock sampling;
+and stale-source/failing-Draft/zero-timeout Job handling. A separate installed
+judge process reopens outputs, compares unrelated content and connected decoys,
+and checks transient claims against trusted call observations. Agent completion
+text never decides correctness. Animation expectations use independent curve math
+and the documented canonical playback clock, not measured runtime outputs.
+Sample readback evidence is assembled by Blob ID and byte offset, so partial or
+out-of-order reads count once they cover the complete payload. Async recovery
+checks associate the requested create command with its Job, zero-timeout wait,
+completed Draft source and subsequent publication. Deadline cleanup stops the
+independent workflow process group before artifact verification. Delivered tool
+text uses the same UTF-8 serialization as the 16 KiB pagination budget.
+
+Per-case controller directories retain prompts, CLI events, shell attempts,
+observations, wheel/document hashes, isolation probes, verification and results.
+`summary.json` keeps completed results, including infrastructure failures before
+agent dispatch; those must be distinguished from SDK task failures in analysis.
+A small diagnostic sample does not establish a population success rate.

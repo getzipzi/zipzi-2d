@@ -10,3 +10,6 @@ def invalid(draft: zipzi.Draft, session: zipzi.Session) -> None:
     v.ObjectAddress(kind='parameter',id='id')  # error
     session.query(v.QuerySummary(),source=session.version)  # error
     draft.source.sequence=2  # error
+    session.query(v.QuerySummary()).value['missing']  # error
+    session.query(v.QuerySummary()).value['meshes'] = 2  # error
+    session.save().wait()['published'] = False  # error

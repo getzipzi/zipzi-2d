@@ -50,7 +50,7 @@ def main() -> None:
                      'ZIPZI_KERNEL_SOURCE_CLIENT', 'ZIPZI_KERNEL_NATIVE'):
             environment.pop(name, None)
         command = [str(python), '-I', str(PACKAGE / 'tests/test_kernel.py'), '-v']
-        subprocess.run([*command, *(args.tests or ['ConnectedLifecycle', 'Recovery'])],
+        subprocess.run([*command, *(args.tests or ['Values', 'ConnectedLifecycle', 'Recovery'])],
                        cwd=tempfile.gettempdir(), env=environment, check=True)
         if not args.tests:
             subprocess.run([str(python), '-I', str(PACKAGE / 'tests/test_connection.py'), '-v'],

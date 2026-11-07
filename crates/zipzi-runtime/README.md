@@ -80,6 +80,16 @@ JSON metadata followed by each PNG. GPU availability is a host capability.
 `request_export` captures resources and source protection, reserves the output,
 and returns actual publication/durability even after late cancellation.
 
+Animation inputs are playback schedules: each motion/expression tuple contains
+an ID and an absolute activation time, rather than a blend weight. Playback
+activates a motion on its first update at or after that time. Canonical seeks to
+at least 1/60 second replay from the first 60 Hz update, so a motion scheduled at
+zero has local time `max(0, requested_time - 1/60)` for samples within its first
+cycle. The reported `motion_positions.local_time` is the coordinate at which its authored
+curve was evaluated. A zero-time sample does not seed later positive replay.
+This differs from stateless raw-clip inspection through Rust's
+`MotionEditingPreview`, which directly samples the requested clip-local time.
+
 Client-owned blobs provide bounded upload/read chunks. Binary requests use the
 same authentication, request IDs, payload digests and recovery cache as control
 requests. Cached reads retain just their requested chunk and its allocation

@@ -39,7 +39,10 @@ undo history; saving is separate. `zipzi.local()` provides the same Runtime API
 without an Editor window.
 
 For examples and API details, see the [package README](python/zipzi/README.md),
+[quickstart](python/zipzi/docs/getting-started.md),
+[lifecycle guide](python/zipzi/docs/lifecycle.md),
 [usage guide](python/zipzi/docs/guide.md),
+[generated API reference](python/zipzi/docs/reference/index.md),
 and [recipes](python/zipzi/docs/recipes.py).
 These documents are also included in the installed package. Locate the local
 README without a host or network connection:
@@ -51,6 +54,16 @@ print(files("zipzi").joinpath("README.md").read_text(encoding="utf-8"))
 ```
 
 Generated commands and queries are available in `zipzi.values`.
+Read-only response shapes are declared in `zipzi.results`. Decode object payloads
+with `snapshot.records(zipzi.values.Parameter)` for typed attribute access.
+Discover installed API entries without a host or native adapter:
+
+```python
+print(zipzi.describe("Session.query").format())
+print(zipzi.describe("values.Command").format())
+```
+
+Follow `children` paths and `next_offset` to inspect only the relevant entries.
 
 If a response is lost, recover the original call with `zipzi.recover_call(error)` using the caught exception. A timed-out `job.wait()`
 does not cancel the job. The guide covers recovery and resource ownership.

@@ -54,7 +54,39 @@ PNG, repeated for each sample. The first header includes the shared texture repo
 ## Generation and validation
 
 The Contract exporter builds without SDK or Runtime dependencies. It generates
-`values.py` and `schema/authoring.json` from Rust `ApiShape` declarations.
+the `values/` package, the installed `_schema.json` codec resource and
+`schema/authoring.json` from Rust `ApiShape` declarations. Class and field help
+come from the same declarations; generated public source contains no inline
+schema dictionary. Constructor defaults are decoded from that resource.
+`values/__init__.py` re-exports every type and registers the shared codec once.
+Domain modules contain the definitions; the existing `values.Mesh` and the
+focused `values.meshes.Mesh` refer to the same class. Cross-domain annotations
+use explicit module imports, including cycles, so runtime type-hint inspection
+works without constructing a host. Module routing lives in
+`tools/codegen/value_modules.py`; fields remain derived from Rust.
+
+The public Python layer lives in `_kernel.py`: Runtime, Sessions, Session, Draft,
+Job, Snapshot and Blob. `results.py` describes immutable response keys and query
+overloads; `Snapshot.records(Type)` projects object payloads into generated domain
+values. `_documentation.py` derives paginated offline help from installed public
+objects rather than maintaining another API catalog. The installed guide and
+recipes are under `client/python/zipzi/docs/`; recipe workflows are exercised by
+both Local and Connected lifecycle tests, including the installed-wheel gate.
+The [generated API reference](client/python/zipzi/docs/reference/index.md) ships
+beside them. `generate.py` renders domain fields, constructor defaults and enum
+members from the same contract/generated declarations, and public signatures,
+overloads and docstrings from Python source using AST parsing. Generation does
+not import the SDK or native backend. Update Rust contract documentation for
+value semantics and Python docstrings for runtime semantics; regenerate rather
+than editing `docs/reference/`. The manifest and `--check` cover every reference
+page. Guide and recipe prose remains handwritten.
+The installed `docs/getting-started.md` covers installation and runnable first
+Local/Connected scripts; `docs/lifecycle.md` explains owner lifetimes and
+publication/recovery. The first-run scripts are executed by the Python gates.
+Independent installed-package agent evaluation is available through the
+[v4 diagnostic runner](../../tools/README.md#installed-sdk-agent-evaluation-v4).
+It uses isolated CLI participants and a separate artifact/call-observation judge;
+the historical P3A cohort remains unchanged.
 
 ```sh
 uv run --locked python crates/zipzi-python/tools/generate.py
