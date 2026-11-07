@@ -42,7 +42,8 @@ def payload(binary, revision, root=ROOT, preview_dll=None):
                  'Unregister this location:\r\n'
                  '  powershell -ExecutionPolicy Bypass -File .\\Register-FileAssociation.ps1 -Unregister\r\n'
                  'Select Zipzi Editor in Windows Open With / Default apps. Moving the portable app requires registering again.\r\n'
-                 'Registration also enables static thumbnails and the Explorer preview pane.\r\n'
+                 'Per-user registration enables the Explorer preview pane.\r\n'
+                 'For static thumbnails, run an elevated PowerShell with -MachineWide; use the same flag when unregistering.\r\n'
              ).encode()}
     for name in NOTICES:
         files[name] = (root / name).read_bytes()

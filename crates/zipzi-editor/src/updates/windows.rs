@@ -69,33 +69,9 @@ pub(super) fn register(uninstall: bool) -> anyhow::Result<()> {
         .creation_flags(0x08000000)
         .status()?;
     anyhow::ensure!(status.success(), "Shell registration failed ({status})");
-    if !uninstall {
-        clean_unlocked_copies(&shells, &digest);
-    }
+    // A manually registered machine-wide handler can still point to an older
+    // copy after this per-user update. Retain it until the installation is removed.
     Ok(())
-}
-
-fn clean_unlocked_copies(root: &Path, current: &str) {
-    let Ok(entries) = std::fs::read_dir(root) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let Some(name) = name.to_str() else {
-            continue;
-        };
-        if name == current || name.len() != 64 || !name.bytes().all(|b| b.is_ascii_hexdigit()) {
-            continue;
-        }
-        // Only the exact generated file, never traverse junctions or unknown contents.
-        if entry
-            .file_type()
-            .is_ok_and(|kind| kind.is_dir() && !kind.is_symlink())
-        {
-            let _ = std::fs::remove_file(entry.path().join("ZipziProjectPreview.dll"));
-            let _ = std::fs::remove_dir(entry.path());
-        }
-    }
 }
 
 #[cfg(test)]

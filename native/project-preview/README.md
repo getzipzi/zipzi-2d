@@ -46,7 +46,12 @@ The portable archive's `Register-FileAssociation.ps1` registers Open With and th
 Shell provider for the current user. It also calls `Register-ProjectPreview.ps1`.
 Use `-Unregister` before removal or relocation. Unregistration checks the current
 DLL path and preserves registrations owned by another location. It does not change
-the user's default application. No administrator or `regsvr32` is needed.
+the user's default application. Per-user preview registration needs no administrator or `regsvr32`.
+Windows thumbnail activation requires machine-wide COM registration. To enable it,
+run the same script from an elevated PowerShell with `-MachineWide`; also pass
+`-MachineWide` when unregistering. File Open With registration remains per-user.
+The per-user installer enables the preview pane; thumbnails require this explicit
+administrator registration. Re-register after moving or upgrading a portable DLL.
 Preview handlers are also registered under `SystemFileAssociations\.zipzi` so
 Shell discovery works before a default application is selected and after it changes.
 
@@ -61,10 +66,8 @@ This checks isolated activation, thumbnail pixels, preview resizing/unloading an
 missing/corrupt image fallback. Direct DLL tests alone do not exercise the system's
 registration view. If a development process sees a registration that Explorer does
 not, compare with a process launched from Explorer before diagnosing the DLL.
-The registered test always checks Shell handler binding and isolated COM activation.
-If Windows omits the system thumbnail-cache COM class (as can happen on Server
-images), it reports that cache check as unavailable; desktop hosts with the cache
-must also pass `IShellItemImageFactory::GetImage`.
+The registered test requires machine-wide registration and checks Shell handler
+binding, isolated COM activation and `IShellItemImageFactory::GetImage`.
 
 The provider implements `IInitializeWithStream`, `IThumbnailProvider` and
 `IPreviewHandler` in an Apartment COM server. Explorer uses thumbnail isolation;

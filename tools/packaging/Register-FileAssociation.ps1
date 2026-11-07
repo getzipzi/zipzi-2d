@@ -1,12 +1,13 @@
 # Register this portable Editor for Open With without changing the user's default app.
 param(
     [switch]$Unregister,
+    [switch]$MachineWide,
     [string]$EditorPath = (Join-Path $PSScriptRoot 'zipzi-editor.exe'),
     [string]$PreviewPath = (Join-Path $PSScriptRoot 'ZipziProjectPreview.dll')
 )
 $ErrorActionPreference = 'Stop'
 # Register/remove previews first, while the owned ProgID still exists.
-& (Join-Path $PSScriptRoot 'Register-ProjectPreview.ps1') -Unregister:$Unregister -PreviewPath $PreviewPath
+& (Join-Path $PSScriptRoot 'Register-ProjectPreview.ps1') -Unregister:$Unregister -MachineWide:$MachineWide -PreviewPath $PreviewPath
 $editorPath = [System.IO.Path]::GetFullPath($EditorPath)
 $openCommand = '"' + $editorPath + '" -- "%1"'
 $classes = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Classes')

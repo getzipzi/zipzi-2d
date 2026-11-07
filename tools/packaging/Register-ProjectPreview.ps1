@@ -1,5 +1,5 @@
-# Per-user Shell registration. Explorer/prevhost instantiate the DLL from IStream.
-param([switch]$Unregister, [string]$PreviewPath = (Join-Path $PSScriptRoot 'ZipziProjectPreview.dll'))
+# Explorer/prevhost instantiate the DLL from IStream.
+param([switch]$Unregister, [switch]$MachineWide, [string]$PreviewPath = (Join-Path $PSScriptRoot 'ZipziProjectPreview.dll'))
 $ErrorActionPreference = 'Stop'
 $previewPath = [System.IO.Path]::GetFullPath($PreviewPath)
 $classId = '{B7666151-0AD8-4B22-829E-4640CB90D3BE}'
@@ -7,8 +7,16 @@ $thumbnailId = '{E357FCCD-A995-4576-B01F-234630154E96}'
 $previewId = '{8895B1C6-B41F-4C1C-A562-0D564250836F}'
 # Shared associations remain discoverable without selecting Zipzi as the default app.
 $associationTypes = @('.zipzi', 'Zipzi.Project', 'SystemFileAssociations\.zipzi')
-$classes = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Classes')
-$handlers = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows\CurrentVersion\PreviewHandlers')
+$registryRoot = [Microsoft.Win32.Registry]::CurrentUser
+if ($MachineWide) {
+    $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        throw 'Machine-wide thumbnail registration requires an elevated PowerShell'
+    }
+    $registryRoot = [Microsoft.Win32.Registry]::LocalMachine
+}
+$classes = $registryRoot.CreateSubKey('Software\Classes')
+$handlers = $registryRoot.CreateSubKey('Software\Microsoft\Windows\CurrentVersion\PreviewHandlers')
 try {
     if ($Unregister) {
         $current = $classes.OpenSubKey("CLSID\$classId\InprocServer32")

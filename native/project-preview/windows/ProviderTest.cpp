@@ -136,23 +136,12 @@ int wmain(int argc, wchar_t **argv) {
         REQUIRE(SUCCEEDED(handler->GetThumbnail(256, &thumbnail, &alpha)));
         REQUIRE(thumbnail != nullptr);
         DeleteObject(thumbnail);
-        // Server images can omit the OS thumbnail cache. Shell association lookup
-        // and isolated provider activation above are still required there.
-        ComPtr<IThumbnailCache> cache;
-        HRESULT cacheResult = CoCreateInstance(CLSID_LocalThumbnailCache, nullptr,
-            CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&cache));
-        if (cacheResult == REGDB_E_CLASSNOTREG) {
-            std::puts("UNAVAILABLE Windows OS thumbnail cache (class not registered); Shell binding and isolated provider checks passed");
-        } else {
-            REQUIRE(SUCCEEDED(cacheResult));
-            thumbnail = nullptr;
-            HRESULT result = image->GetImage({256, 256}, SIIGBF_THUMBNAILONLY, &thumbnail);
-            if (FAILED(result)) std::fprintf(stderr, "Shell GetImage failed: 0x%08lX\n", static_cast<unsigned long>(result));
-            REQUIRE(SUCCEEDED(result));
-            REQUIRE(thumbnail != nullptr);
-            DeleteObject(thumbnail);
-        }
-        cache.Reset();
+        thumbnail = nullptr;
+        HRESULT result = image->GetImage({256, 256}, SIIGBF_THUMBNAILONLY, &thumbnail);
+        if (FAILED(result)) std::fprintf(stderr, "Shell GetImage failed: 0x%08lX\n", static_cast<unsigned long>(result));
+        REQUIRE(SUCCEEDED(result));
+        REQUIRE(thumbnail != nullptr);
+        DeleteObject(thumbnail);
         handler.Reset();
         item.Reset();
         image.Reset();
