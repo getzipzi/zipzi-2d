@@ -1,6 +1,7 @@
 // Direct DLL checks, or read-only activation checks against an installed provider.
 #include <windows.h>
 #include <shobjidl.h>
+#include <shlguid.h>
 #include <shlwapi.h>
 #include <thumbcache.h>
 #include <wrl/client.h>
@@ -124,12 +125,36 @@ int wmain(int argc, wchar_t **argv) {
         ComPtr<IShellItemImageFactory> image;
         std::wstring path = directory + L"\\image.zipzi";
         REQUIRE(SUCCEEDED(SHCreateItemFromParsingName(path.c_str(), nullptr, IID_PPV_ARGS(&image))));
+        ComPtr<IShellItem> item;
+        REQUIRE(SUCCEEDED(image.As(&item)));
+        ComPtr<IThumbnailProvider> handler;
+        HRESULT binding = item->BindToHandler(nullptr, BHID_ThumbnailHandler, IID_PPV_ARGS(&handler));
+        if (FAILED(binding)) std::fprintf(stderr, "Shell thumbnail binding failed: 0x%08lX\n", static_cast<unsigned long>(binding));
+        REQUIRE(SUCCEEDED(binding));
         HBITMAP thumbnail = nullptr;
-        HRESULT result = image->GetImage({256, 256}, SIIGBF_THUMBNAILONLY, &thumbnail);
-        if (FAILED(result)) std::fprintf(stderr, "Shell GetImage failed: 0x%08lX\n", static_cast<unsigned long>(result));
-        REQUIRE(SUCCEEDED(result));
+        WTS_ALPHATYPE alpha = WTSAT_UNKNOWN;
+        REQUIRE(SUCCEEDED(handler->GetThumbnail(256, &thumbnail, &alpha)));
         REQUIRE(thumbnail != nullptr);
         DeleteObject(thumbnail);
+        // Server images can omit the OS thumbnail cache. Shell association lookup
+        // and isolated provider activation above are still required there.
+        ComPtr<IThumbnailCache> cache;
+        HRESULT cacheResult = CoCreateInstance(CLSID_LocalThumbnailCache, nullptr,
+            CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&cache));
+        if (cacheResult == REGDB_E_CLASSNOTREG) {
+            std::puts("UNAVAILABLE Windows OS thumbnail cache (class not registered); Shell binding and isolated provider checks passed");
+        } else {
+            REQUIRE(SUCCEEDED(cacheResult));
+            thumbnail = nullptr;
+            HRESULT result = image->GetImage({256, 256}, SIIGBF_THUMBNAILONLY, &thumbnail);
+            if (FAILED(result)) std::fprintf(stderr, "Shell GetImage failed: 0x%08lX\n", static_cast<unsigned long>(result));
+            REQUIRE(SUCCEEDED(result));
+            REQUIRE(thumbnail != nullptr);
+            DeleteObject(thumbnail);
+        }
+        cache.Reset();
+        handler.Reset();
+        item.Reset();
         image.Reset();
         factory.Reset();
         CoUninitialize();

@@ -61,6 +61,10 @@ This checks isolated activation, thumbnail pixels, preview resizing/unloading an
 missing/corrupt image fallback. Direct DLL tests alone do not exercise the system's
 registration view. If a development process sees a registration that Explorer does
 not, compare with a process launched from Explorer before diagnosing the DLL.
+The registered test always checks Shell handler binding and isolated COM activation.
+If Windows omits the system thumbnail-cache COM class (as can happen on Server
+images), it reports that cache check as unavailable; desktop hosts with the cache
+must also pass `IShellItemImageFactory::GetImage`.
 
 The provider implements `IInitializeWithStream`, `IThumbnailProvider` and
 `IPreviewHandler` in an Apartment COM server. Explorer uses thumbnail isolation;
