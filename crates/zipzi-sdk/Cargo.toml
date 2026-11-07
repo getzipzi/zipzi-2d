@@ -24,10 +24,10 @@ bench-instrumentation = ["zipzi-core/bench-instrumentation"]
 
 [dependencies]
 zipzi-contract.workspace = true
-zipzi-api-derive = { version = "=0.1.0-alpha.8", path = "../zipzi-api-derive" }
-zipzi-core = { version = "=0.1.0-alpha.8", path = "../zipzi-core" }
-zipzi-animation = { version = "=0.1.0-alpha.8", path = "../zipzi-animation" }
-zipzi-project = { version = "=0.1.0-alpha.8", path = "../zipzi-project" }
+zipzi-api-derive = { version = "=0.1.0-alpha.9", path = "../zipzi-api-derive" }
+zipzi-core = { version = "=0.1.0-alpha.9", path = "../zipzi-core" }
+zipzi-animation = { version = "=0.1.0-alpha.9", path = "../zipzi-animation" }
+zipzi-project = { version = "=0.1.0-alpha.9", path = "../zipzi-project" }
 serde = { workspace = true }
 uuid.workspace = true
 geo = { version = "0.33.1", default-features = false }
@@ -40,4 +40,4 @@ png = { workspace = true }
 serde_json = { workspace = true }
 sha2.workspace = true
 zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2-zlib-rs"] }
-zipzi-cmo3 = { version = "=0.1.0-alpha.8", path = "../zipzi-cmo3" }
+zipzi-cmo3 = { version = "=0.1.0-alpha.9", path = "../zipzi-cmo3" }

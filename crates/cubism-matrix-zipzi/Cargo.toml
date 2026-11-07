@@ -8,11 +8,11 @@ publish = false
 
 [dependencies]
 zipzi-animation.workspace = true
-zipzi-core = { version = "=0.1.0-alpha.8", path = "../zipzi-core" }
-zipzi-render = { version = "=0.1.0-alpha.8", path = "../zipzi-render" }
-zipzi-render-metal = { version = "=0.1.0-alpha.8", path = "../zipzi-render-metal" }
-zipzi-sdk = { version = "=0.1.0-alpha.8", path = "../zipzi-sdk" }
-zipzi-project = { version = "=0.1.0-alpha.8", path = "../zipzi-project" }
+zipzi-core = { version = "=0.1.0-alpha.9", path = "../zipzi-core" }
+zipzi-render = { version = "=0.1.0-alpha.9", path = "../zipzi-render" }
+zipzi-render-metal = { version = "=0.1.0-alpha.9", path = "../zipzi-render-metal" }
+zipzi-sdk = { version = "=0.1.0-alpha.9", path = "../zipzi-sdk" }
+zipzi-project = { version = "=0.1.0-alpha.9", path = "../zipzi-project" }
 png = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
