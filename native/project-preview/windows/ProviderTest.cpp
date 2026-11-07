@@ -125,7 +125,9 @@ int wmain(int argc, wchar_t **argv) {
         std::wstring path = directory + L"\\image.zipzi";
         REQUIRE(SUCCEEDED(SHCreateItemFromParsingName(path.c_str(), nullptr, IID_PPV_ARGS(&image))));
         HBITMAP thumbnail = nullptr;
-        REQUIRE(SUCCEEDED(image->GetImage({256, 256}, SIIGBF_THUMBNAILONLY, &thumbnail)));
+        HRESULT result = image->GetImage({256, 256}, SIIGBF_THUMBNAILONLY, &thumbnail);
+        if (FAILED(result)) std::fprintf(stderr, "Shell GetImage failed: 0x%08lX\n", static_cast<unsigned long>(result));
+        REQUIRE(SUCCEEDED(result));
         REQUIRE(thumbnail != nullptr);
         DeleteObject(thumbnail);
         image.Reset();

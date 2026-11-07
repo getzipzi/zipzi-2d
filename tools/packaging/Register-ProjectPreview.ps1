@@ -5,6 +5,8 @@ $previewPath = [System.IO.Path]::GetFullPath($PreviewPath)
 $classId = '{B7666151-0AD8-4B22-829E-4640CB90D3BE}'
 $thumbnailId = '{E357FCCD-A995-4576-B01F-234630154E96}'
 $previewId = '{8895B1C6-B41F-4C1C-A562-0D564250836F}'
+# Shared associations remain discoverable without selecting Zipzi as the default app.
+$associationTypes = @('.zipzi', 'Zipzi.Project', 'SystemFileAssociations\.zipzi')
 $classes = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Classes')
 $handlers = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\Microsoft\Windows\CurrentVersion\PreviewHandlers')
 try {
@@ -15,7 +17,7 @@ try {
             try { $owned = $current.GetValue('') -eq $previewPath } finally { $current.Dispose() }
         }
         if ($owned) {
-            foreach ($type in @('.zipzi', 'Zipzi.Project')) {
+            foreach ($type in $associationTypes) {
                 foreach ($handler in @($thumbnailId, $previewId)) {
                     $path = "$type\shellex\$handler"
                     $key = $classes.OpenSubKey($path)
@@ -43,7 +45,7 @@ try {
             $key.SetValue('', $previewPath)
             $key.SetValue('ThreadingModel', 'Apartment')
         } finally { $key.Dispose() }
-        foreach ($type in @('.zipzi', 'Zipzi.Project')) {
+        foreach ($type in $associationTypes) {
             foreach ($handler in @($thumbnailId, $previewId)) {
                 $key = $classes.CreateSubKey("$type\shellex\$handler")
                 try { $key.SetValue('', $classId) } finally { $key.Dispose() }

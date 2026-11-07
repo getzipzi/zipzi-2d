@@ -47,6 +47,8 @@ Shell provider for the current user. It also calls `Register-ProjectPreview.ps1`
 Use `-Unregister` before removal or relocation. Unregistration checks the current
 DLL path and preserves registrations owned by another location. It does not change
 the user's default application. No administrator or `regsvr32` is needed.
+Preview handlers are also registered under `SystemFileAssociations\.zipzi` so
+Shell discovery works before a default application is selected and after it changes.
 
 After registration, run the generated native test runner against the installed
 provider through the system COM host (read-only; it does not register anything):
