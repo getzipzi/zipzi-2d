@@ -150,6 +150,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                         if let Err(error) = renderer.scene.retain_cached_textures(&keys) {
                             eprintln!("Preview cache release failed: {error}");
                         }
+                        renderer.presenter.release_cached_slots();
                         let _ = renderer.scene.context().device().poll(wgpu::PollType::Poll);
                         continue;
                     }
@@ -174,11 +175,7 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                         if inbox.closed {
                             break;
                         }
-                        let latest = inbox
-                            .pending
-                            .remove(request.binding.viewport)
-                            .unwrap_or(request);
-                        inbox.pending.insert(latest.binding.viewport, latest);
+                        inbox.requeue_after_backpressure(request);
                         drop(
                             ready
                                 .wait_timeout(inbox, std::time::Duration::from_millis(2))

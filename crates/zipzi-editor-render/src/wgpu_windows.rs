@@ -382,11 +382,20 @@ struct Retirement {
 }
 impl Drop for WindowsPresenter {
     fn drop(&mut self) {
+        self.release_cached_slots();
+    }
+}
+
+impl WindowsPresenter {
+    /// Release all pooled outputs, retiring unfinished native copies off-thread.
+    /// Previously published surfaces can remain in use by the UI.
+    pub fn release_cached_slots(&mut self) {
         let complete = |slot: &Slot| {
             let value = unsafe { slot.ready.GetCompletedValue() };
             slot.job.is_none() || value == u64::MAX || value >= slot.image.ready_value
         };
         if self.slots.iter().all(complete) {
+            self.slots.clear();
             return;
         }
         let retirement = Arc::new(Retirement {

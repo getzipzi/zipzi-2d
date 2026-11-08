@@ -56,8 +56,12 @@ type Connection = (
 #[derive(Default)]
 struct Inbox {
     pending: Coalesced<ViewportId, Request>,
-    retain_documents: Option<HashSet<DocumentId>>,
+    retain_documents: Option<RetainDocuments>,
     closed: bool,
+}
+struct RetainDocuments {
+    live: HashSet<DocumentId>,
+    closed: HashSet<DocumentId>,
 }
 enum PreviewWork {
     Render(Request),
@@ -70,8 +74,26 @@ impl Inbox {
     fn pop_work(&mut self) -> Option<PreviewWork> {
         self.retain_documents
             .take()
-            .map(PreviewWork::Retain)
+            .map(|retention| PreviewWork::Retain(retention.live))
             .or_else(|| self.pending.pop().map(PreviewWork::Render))
+    }
+    /// A Windows preview can be held outside the queue while all presentation
+    /// slots are busy. Do not requeue it after its document has closed.
+    #[cfg(any(test, target_os = "windows"))]
+    fn requeue_after_backpressure(&mut self, request: Request) {
+        let latest = self
+            .pending
+            .remove(request.binding.viewport)
+            .unwrap_or(request);
+        if self
+            .retain_documents
+            .as_ref()
+            .is_some_and(|retention| retention.closed.contains(&latest.binding.document))
+        {
+            frame_trace::emit(latest.trace_id, "cancelled", &[]);
+        } else {
+            self.pending.insert(latest.binding.viewport, latest);
+        }
     }
 }
 #[derive(Default)]
@@ -118,7 +140,7 @@ impl RequestSender {
             }
         }
     }
-    pub fn retain_documents(&self, live: HashSet<DocumentId>) {
+    pub fn retain_documents(&self, live: HashSet<DocumentId>, closed: DocumentId) {
         let (lock, ready) = &*self.shared;
         if let Ok(mut inbox) = lock.lock() {
             let mut pending = Vec::new();
@@ -132,7 +154,15 @@ impl RequestSender {
             for request in pending {
                 inbox.pending.insert(request.binding.viewport, request);
             }
-            inbox.retain_documents = Some(live);
+            let mut closed_documents = inbox
+                .retain_documents
+                .take()
+                .map_or_else(HashSet::new, |retention| retention.closed);
+            closed_documents.insert(closed);
+            inbox.retain_documents = Some(RetainDocuments {
+                live,
+                closed: closed_documents,
+            });
             ready.notify_one();
         }
     }
@@ -167,6 +197,79 @@ impl Drop for RequestSender {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn request(document: DocumentId, viewport: ViewportId) -> Request {
+        let frame: Arc<zipzi_core::DrawableFrame> = Arc::default();
+        Request {
+            binding: ViewportBinding {
+                viewport,
+                kind: zipzi_editor_core::ViewportKind::Modeling,
+                document,
+                generation: 0,
+            },
+            trace_id: 0,
+            revision: 0,
+            canvas: None,
+            animation: None,
+            transform: zipzi_editor_core::ViewportTransform::new(
+                zipzi_editor_core::ViewportMetrics {
+                    width: 1.,
+                    height: 1.,
+                    scale_factor: 1.,
+                },
+                zipzi_editor_core::ViewState::default(),
+            )
+            .unwrap(),
+            scene: SceneSnapshot {
+                model_opacity: 1.,
+                runtime_frame: frame.clone(),
+                viewport_frame: frame,
+                textures: Arc::from([]),
+            },
+            target: Target {
+                width: 1,
+                height: 1,
+            },
+        }
+    }
+
+    #[test]
+    fn backpressured_closed_document_does_not_return_after_retention() {
+        let mut editor = zipzi_editor_core::Editor::new().unwrap();
+        let closed = editor.active_id().unwrap();
+        let live = editor.new_document().unwrap();
+        let viewport = ViewportId::new();
+        let sender = RequestSender::deferred();
+        sender.send(request(closed, viewport)).unwrap();
+        let in_flight = sender.take_pending().unwrap();
+        sender.retain_documents(HashSet::from([live]), closed);
+
+        let mut inbox = sender.shared.0.lock().unwrap();
+        inbox.requeue_after_backpressure(in_flight);
+        assert!(matches!(inbox.pop_work(), Some(PreviewWork::Retain(_))));
+        assert!(inbox.pop_work().is_none());
+    }
+
+    #[test]
+    fn backpressure_keeps_a_request_sent_after_retention() {
+        let mut editor = zipzi_editor_core::Editor::new().unwrap();
+        let closed = editor.active_id().unwrap();
+        let viewport = ViewportId::new();
+        let sender = RequestSender::deferred();
+        sender.send(request(closed, viewport)).unwrap();
+        let in_flight = sender.take_pending().unwrap();
+        assert!(editor.close_document(closed, false).unwrap());
+        sender.retain_documents(HashSet::new(), closed);
+        let opened_later = editor.new_document().unwrap();
+        sender.send(request(opened_later, viewport)).unwrap();
+
+        let mut inbox = sender.shared.0.lock().unwrap();
+        inbox.requeue_after_backpressure(in_flight);
+        assert!(matches!(inbox.pop_work(), Some(PreviewWork::Retain(_))));
+        assert!(
+            matches!(inbox.pop_work(), Some(PreviewWork::Render(next)) if next.binding.document == opened_later)
+        );
+    }
 
     #[test]
     fn closing_a_document_keeps_only_textures_used_by_other_documents() {
