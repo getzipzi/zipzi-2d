@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use super::harness::Harness;
 
 mod animation_scene;
+mod brush_scene;
 mod common;
 mod deformer_original_scene;
 mod deletion_scene;
@@ -39,6 +40,11 @@ pub(super) fn run() -> anyhow::Result<()> {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/headless-screenshots")
         });
     std::fs::create_dir_all(&directory)?;
+    if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("brush-selection") {
+        brush_scene::run(&directory)?;
+        println!("Weighted brush selection screenshots passed.");
+        return Ok(());
+    }
     if std::env::var("ZIPZI_SCREENSHOT_SCENE").as_deref() == Ok("rotation") {
         rotation_scene::run(&directory)?;
         println!("Rotation interaction screenshots passed.");

@@ -159,6 +159,11 @@ impl Render for EditorView {
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 this.route_key(event, window, cx)
             }))
+            .capture_key_up(cx.listener(|this, event: &KeyUpEvent, _, _| {
+                if event.keystroke.key == "b" {
+                    this.input_router.brush_size_key.set(None);
+                }
+            }))
             .child(workspace::render_title_bar(self, modal, window, cx))
             .children(workspace)
             .child(self.status_bar.clone())

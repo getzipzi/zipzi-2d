@@ -62,6 +62,7 @@ impl ToolController {
         shift: bool,
         alt: bool,
         primary: bool,
+        resize_brush: bool,
     ) {
         let locks = document.object_state_index();
         let scene = &frame.geometry;
@@ -73,8 +74,18 @@ impl ToolController {
             .filter(|object| scene.in_isolation_scope(object))
             .cloned()
             .collect();
-        let hit = self.canvas_hit(document, frame, point);
-        if matches!(&hit,Some(HitTarget::Component(c)) if self.warp_frame_info(document,frame,&c.object).is_some_and(|i|i.adjusting))
+        let brush_drag = self.active == super::ToolId::BrushSelect && primary && !resize_brush;
+        let hit = if brush_drag {
+            self.brush_drag_hit(document, frame, point)
+        } else {
+            self.canvas_hit(document, frame, point)
+        };
+        if brush_drag && hit.is_none() {
+            return;
+        }
+        // Brush dragging edits painted points independently of the hidden Warp frame.
+        if !brush_drag
+            && matches!(&hit,Some(HitTarget::Component(c)) if self.warp_frame_info(document,frame,&c.object).is_some_and(|i|i.adjusting))
         {
             return;
         }
@@ -96,6 +107,7 @@ impl ToolController {
         let access = self.edit_access(document, scene, &selection);
         let mut deferred_toggle = None;
         match &hit {
+            _ if brush_drag => {}
             Some(HitTarget::Component(c)) => {
                 let rotation_center_drag = c.id == 0
                     && scene
@@ -128,30 +140,45 @@ impl ToolController {
             }
             _ => {}
         }
-        self.gesture = self.active.begin(
-            Press {
-                version: frame.version,
-                point,
-                transform: t,
-                scene: scene.clone(),
-                shift,
-                alt,
-                deferred_toggle,
-                components: self.components.clone(),
-                warp_selection: self.warp_selection_gizmo(document, frame),
-                adjust_frame: matches!(&hit,Some(HitTarget::DeformerHandle(object,_))
+        let press = Press {
+            version: frame.version,
+            point,
+            transform: t,
+            scene: scene.clone(),
+            shift,
+            alt,
+            deferred_toggle,
+            components: self.components.clone(),
+            weights: self.component_weights.clone(),
+            warp_selection: self.warp_selection_gizmo(document, frame),
+            adjust_frame: matches!(&hit,Some(HitTarget::DeformerHandle(object,_))
                     if self.warp_frame_info(document,frame,object).is_some_and(|i|i.adjusting)),
-                operation,
-                access,
-                original_points: self.original_points,
-                keep_children: primary,
-                selection,
-                current: point,
-                dragged: false,
-            },
-            hit,
-            component_surface,
-        );
+            operation,
+            access,
+            original_points: self.original_points,
+            keep_children: primary && !brush_drag,
+            selection,
+            current: point,
+            dragged: false,
+        };
+        self.gesture = if self.active == super::ToolId::BrushSelect && !brush_drag {
+            super::brush_select::BrushSelectionGesture::new(
+                document,
+                press,
+                self.brush_selection,
+                resize_brush,
+            )
+            .map(|mut brush| {
+                brush.update(
+                    &mut self.components,
+                    &mut self.brush_selection,
+                    &mut self.component_weights,
+                );
+                super::gesture::Gesture::BrushSelect(brush)
+            })
+        } else {
+            self.active.begin(press, hit, component_surface)
+        };
         self.prune_warp_frames(document);
     }
 }

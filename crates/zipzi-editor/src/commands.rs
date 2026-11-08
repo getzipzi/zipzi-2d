@@ -178,6 +178,7 @@ impl EditorView {
                     id,
                     CommandId::SelectTool
                         | CommandId::LassoTool
+                        | CommandId::BrushSelectTool
                         | CommandId::GlueTool
                         | CommandId::HandTool
                         | CommandId::ManualMesh

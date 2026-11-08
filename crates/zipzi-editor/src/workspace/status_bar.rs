@@ -302,6 +302,8 @@ fn build_hints(state: &StatusBarState) -> Vec<ShortcutHint> {
             HintAction::Scale => "status.hint_scale",
             HintAction::BoneLength => "status.hint_bone_length",
             HintAction::LassoSelect => "status.hint_lasso_select",
+            HintAction::BrushSelect => "status.hint_brush_select",
+            HintAction::BrushSize => "status.hint_brush_size",
             HintAction::AddSelection => "status.hint_add_selection",
             HintAction::RemoveSelection => "status.hint_remove_selection",
             HintAction::GlueBind => "status.hint_glue_bind",

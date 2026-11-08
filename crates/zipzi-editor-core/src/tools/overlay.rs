@@ -62,6 +62,9 @@ pub struct OverlayGluePoint {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OverlaySnapshot {
+    pub selection_weights: Option<OverlaySelectionWeights>,
+    /// A selection brush in viewport logical pixels; never a geometry edit.
+    pub selection_brush: Option<OverlaySelectionBrush>,
     /// Name of the object beneath the pointer in this presented viewport.
     pub hovered_object_label: Option<String>,
     pub manual_mesh_feedback: Option<super::ManualMeshFeedback>,
@@ -109,6 +112,20 @@ pub struct OverlaySnapshot {
     /// A component under the pointer, or captured by the current edit.
     pub active_component: Option<ComponentRef>,
     pub origin_crosshair: Option<ViewportPoint>,
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OverlaySelectionBrush {
+    pub position: ViewportPoint,
+    pub radius: f32,
+    pub subtract: bool,
+    pub shape: super::BrushShape,
+    pub angle: f32,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct OverlaySelectionWeights {
+    pub color: [f32; 4],
+    pub points: Vec<(ViewportPoint, f32, OverlayVertexKind)>,
+    pub triangles: Vec<([ViewportPoint; 3], [f32; 3])>,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct OverlayHandle {
@@ -538,11 +555,15 @@ impl ToolController {
                 selected,
                 hovered,
             };
-            let adjusting_frame = control.kind == ControlKind::Warp
+            let adjusting_frame = self.active != super::ToolId::BrushSelect
+                && control.kind == ControlKind::Warp
                 && self
                     .warp_frame_state(document, frame.version.binding.viewport, &control.object)
                     .is_some_and(|state| state.info.adjusting);
-            if let Some(bezier) = selected.then(|| scene.bezier(&control.object.id)).flatten() {
+            if let Some(bezier) = (selected && self.active != super::ToolId::BrushSelect)
+                .then(|| scene.bezier(&control.object.id))
+                .flatten()
+            {
                 out.bezier_lines.extend(
                     bezier
                         .curves
@@ -755,6 +776,124 @@ impl ToolController {
         if let Err(error) = document.ensure_editable(selection) {
             out.unavailable = Some(error.to_string());
             out.unavailable_on_edit_only = false;
+        }
+        if self.active == super::ToolId::BrushSelect {
+            out.handles.clear();
+            out.warp_frame_lines.clear();
+            out.warp_frame_adjusting = false;
+            out.warp_transform_points = None;
+            out.warp_bezier_mode = None;
+            out.selection_brush = self
+                .pointer
+                .filter(|(binding, _)| {
+                    *binding == frame.version.binding
+                        && !matches!(self.gesture, Some(super::gesture::Gesture::Controls(_)))
+                })
+                .map(|(_, position)| OverlaySelectionBrush {
+                    position: self
+                        .gesture
+                        .as_ref()
+                        .and_then(|g| match g {
+                            super::gesture::Gesture::BrushSelect(g) if g.resizing => {
+                                Some(g.press.point)
+                            }
+                            _ => None,
+                        })
+                        .unwrap_or(position),
+                    radius: self.brush_selection.diameter / 2.,
+                    shape: self.brush_selection.shape,
+                    angle: self.brush_selection.angle,
+                    subtract: self.gesture.as_ref().map_or(self.alt, |g| {
+                        g.press().operation == super::region::SelectionOperation::Remove
+                    }),
+                });
+        }
+        if !self.component_weights.is_empty() {
+            let mut weights = OverlaySelectionWeights {
+                color: self.brush_selection.color,
+                points: Vec::new(),
+                triangles: Vec::new(),
+            };
+            let selected: std::collections::HashSet<_> = self.components.iter().collect();
+            let weight = |object: &ObjectRef, id| {
+                let c = ComponentRef {
+                    object: object.clone(),
+                    id,
+                };
+                if selected.contains(&c) {
+                    self.component_weights.get(&c).copied().unwrap_or(1.)
+                } else {
+                    0.
+                }
+            };
+            for object in selection {
+                if object.kind == ObjectKind::Mesh && scene.mesh_visible(&object.id) {
+                    if let Some(mesh) = scene.mesh(&object.id) {
+                        let positions: std::collections::HashMap<_, _> = mesh
+                            .vertices
+                            .iter()
+                            .map(|(id, p)| (*id, t.to_viewport(*p)))
+                            .collect();
+                        for &(id, model_position) in &mesh.vertices {
+                            let position = t.to_viewport(model_position);
+                            let w = weight(object, id);
+                            if w > 0. {
+                                weights.points.push((position, w, OverlayVertexKind::Mesh));
+                            }
+                        }
+                        for ids in mesh.triangles.iter() {
+                            let w = ids.map(|id| weight(object, id));
+                            if w.iter().any(|w| *w > 0.) {
+                                if let [Some(a), Some(b), Some(c)] =
+                                    ids.map(|id| positions.get(&id).copied())
+                                {
+                                    weights.triangles.push(([a, b, c], w));
+                                }
+                            }
+                        }
+                    }
+                } else if let Some(control) = scene
+                    .control(&object.id)
+                    .filter(|c| c.kind == ControlKind::Warp && c.enabled && c.visible)
+                {
+                    for (id, p) in control.points.iter().enumerate() {
+                        let w = weight(object, id as u32);
+                        if w > 0. {
+                            weights.points.push((
+                                t.to_viewport(*p),
+                                w,
+                                OverlayVertexKind::WarpGrid,
+                            ));
+                        }
+                    }
+                    if let Some((rows, columns, _)) = scene
+                        .topology
+                        .controls
+                        .get(&object.id)
+                        .and_then(|c| c.warp_shape)
+                    {
+                        let (rows, columns) = (rows as usize, columns as usize);
+                        for y in 0..rows {
+                            for x in 0..columns {
+                                let a = y * (columns + 1) + x;
+                                let b = a + 1;
+                                let c = a + columns + 1;
+                                let d = c + 1;
+                                for ids in [[a, b, c], [b, d, c]] {
+                                    let w = ids.map(|id| weight(object, id as u32));
+                                    if w.iter().any(|w| *w > 0.) {
+                                        weights.triangles.push((
+                                            ids.map(|id| t.to_viewport(control.points[id])),
+                                            w,
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            out.selection_weights = Some(weights);
         }
         out
     }

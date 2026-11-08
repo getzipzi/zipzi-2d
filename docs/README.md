@@ -22,6 +22,7 @@
 - [Authoring 新内核重写方案](archive/plans/authoring-architecture.md)涵盖所有权、任务协议、API 与旧实现删除清单。[各阶段实施记录](archive/plans/authoring-architecture.md#实施记录)包含验证范围和提交，[阶段 6 对照实验](archive/plans/authoring-architecture/phase-6.md)记录优化基线。
 - [Warp Deformer 交互与属性面板方案](archive/plans/warp-deformer-interaction.md): 画布变换、Warp／Rotation 属性透出、Bezier 整形、子对象保形编辑与原始形状恢复
 - [Cubism 笔刷交互与需求方案](plans/cubism-brush-interaction.md): Mesh 与 Warp 的四种笔刷、Cubism 操作对齐、Zipzi 面板、待确认交互与验收草案；需求讨论稿，尚未实施
+- [Editor 专用工具光标方案](plans/editor-tool-cursors.md): 操作清单、首批范围、macOS 与 Windows 原生实现、状态解析及双平台验收；设计方案，尚未实施
 - [对象删除与依赖清理方案](archive/plans/object-deletion.md): 按关系清理引用、统一删除范围、跨域原子计划与影响审阅
 - [观察纹理策略实施方案](archive/plans/observation-texture-policy.md): 显式原图与预算缩图、共同尺寸规划、资源预估、批级报告和任务预算生命周期
 - [Manual Mesh 编辑实施方案](archive/plans/manual-mesh-editing.md): authoring topology, dashed-edge caches, atomic editing and staged mesh generation

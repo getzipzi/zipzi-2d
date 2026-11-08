@@ -216,12 +216,22 @@ impl Editor {
             roots(&scene, members)
         };
         ensure!(!objects.is_empty(), "Select an editable canvas object");
-        let edits = ControlEdit::prepare_targets(
+        let mut edits = ControlEdit::prepare_targets(
             document,
             &scene,
             &objects,
             session.modeling.tools.original_points,
         )?;
+        for target in &mut edits {
+            target.point_weights = session
+                .modeling
+                .tools
+                .component_weights
+                .iter()
+                .filter(|(c, _)| c.object == target.object)
+                .map(|(c, w)| (c.id, *w))
+                .collect();
+        }
         document.begin_control_edit(&edits)?;
         let change = if local {
             ControlChange::Translate(delta)

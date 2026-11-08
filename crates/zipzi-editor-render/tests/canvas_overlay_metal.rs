@@ -301,3 +301,49 @@ fn bone_alpha_marker_order_and_even_odd_lasso_are_visible() -> anyhow::Result<()
     );
     Ok(())
 }
+
+#[test]
+fn weighted_selection_triangle_interpolates_vertex_alpha_on_gpu() -> anyhow::Result<()> {
+    let device = Device::system_default().expect("Metal GPU");
+    let queue = device.new_command_queue();
+    let mut renderer = MetalOverlayRenderer::new(device.clone())?;
+    let overlay = OverlaySnapshot {
+        selection_weights: Some(zipzi_editor_core::OverlaySelectionWeights {
+            color: [1., 0., 0., 0.8],
+            points: vec![],
+            triangles: vec![([p(8., 8.), p(56., 8.), p(8., 56.)], [1., 0., 0.])],
+        }),
+        ..Default::default()
+    };
+    let list = Arc::new(CanvasDrawList::new(
+        &overlay,
+        [64.; 2],
+        CanvasPalette::new(false),
+        CanvasOptions {
+            lines: false,
+            markers: false,
+        },
+    )?);
+    let image = renderer
+        .draw_prepared(
+            &queue,
+            OverlayViewport {
+                extent: [64; 2],
+                scale: 1.,
+                origin: [0.; 2],
+            },
+            list,
+        )?
+        .unwrap();
+    let bytes = pixels(&device, &queue, &image);
+    for (x, y) in [(12, 12), (40, 12)] {
+        let weight = 1. - ((x as f32 + 0.5 - 8.) + (y as f32 + 0.5 - 8.)) / 48.;
+        let actual = pixel(&bytes, 64, x, y);
+        let wanted = expected([1., 0., 0., 0.8 * weight]);
+        assert!(
+            actual.iter().zip(wanted).all(|(a, b)| a.abs_diff(b) <= 2),
+            "({x},{y}): {actual:?} vs {wanted:?}"
+        );
+    }
+    Ok(())
+}

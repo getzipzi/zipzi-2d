@@ -5,6 +5,30 @@ fn p(x: f32, y: f32) -> ViewportPoint {
     ViewportPoint { x, y }
 }
 #[test]
+fn selection_brush_outline_uses_its_logical_radius_and_erase_marker() {
+    let mut snapshot = OverlaySnapshot {
+        selection_brush: Some(zipzi_editor_core::OverlaySelectionBrush {
+            position: p(40., 50.),
+            radius: 24.,
+            subtract: false,
+            shape: zipzi_editor_core::BrushShape::Circle,
+            angle: 0.,
+        }),
+        ..Default::default()
+    };
+    let palette = CanvasPalette::new(true);
+    let ordinary =
+        CanvasDrawList::new(&snapshot, [100.; 2], palette, CanvasOptions::default()).unwrap();
+    assert_eq!(ordinary.primitives.len(), 1);
+    assert_eq!(ordinary.primitives[0].geometry, [40., 50., 24., 24.]);
+    assert_eq!(ordinary.primitives[0].color, [0.; 4]);
+    snapshot.selection_brush.as_mut().unwrap().subtract = true;
+    let erase =
+        CanvasDrawList::new(&snapshot, [100.; 2], palette, CanvasOptions::default()).unwrap();
+    assert_eq!(erase.primitives.len(), 2);
+    assert_eq!(erase.primitives[1].kind(), PrimitiveKind::Line);
+}
+#[test]
 fn ordering_keeps_bones_below_controls_and_feedback_above_controls() {
     let palette = CanvasPalette::new(true);
     let snapshot = OverlaySnapshot {

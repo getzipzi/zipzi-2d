@@ -24,6 +24,9 @@ pub fn render_deformer_bar(
     if state.editor.manual_for_viewport(canvas.viewport) {
         return render_mesh_edit_bar(canvas, modal, cx);
     }
+    if state.editor.active_tool() == zipzi_editor_core::ToolId::BrushSelect {
+        return canvas.brush_bar.clone().into_any_element();
+    }
     if !state.editor.document().is_some_and(|d| {
         d.context()
             .selections

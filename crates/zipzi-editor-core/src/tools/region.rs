@@ -169,6 +169,20 @@ pub(super) fn select_region(
     .apply(components, document, Some(region), press.operation)
 }
 
+/// Brush selection paints only Mesh vertices and Warp lattice points.
+pub(super) fn brush_points(
+    document: &Document,
+    press: &Press,
+) -> Vec<(ComponentRef, ViewportPoint)> {
+    RegionSelection {
+        scene: &press.scene,
+        selection: &press.selection,
+        transform: press.transform,
+        access: &press.access,
+    }
+    .component_points(document, press.operation, false)
+}
+
 impl ToolController {
     pub(crate) fn select_all(
         &mut self,
@@ -183,13 +197,22 @@ impl ToolController {
             .cloned()
             .collect();
         let access = self.edit_access(document, &frame.geometry, &selection);
-        RegionSelection {
+        self.component_weights.clear();
+        let region = RegionSelection {
             scene: &frame.geometry,
             selection: &selection,
             transform: frame.transform,
             access: &access,
+        };
+        if self.active == super::ToolId::BrushSelect {
+            self.components = region
+                .component_points(document, SelectionOperation::Replace, false)
+                .into_iter()
+                .map(|(component, _)| component)
+                .collect();
+            return Ok(());
         }
-        .apply(
+        region.apply(
             &mut self.components,
             document,
             None,
@@ -205,6 +228,66 @@ struct RegionSelection<'a> {
     access: &'a EditAccess,
 }
 impl RegionSelection<'_> {
+    fn component_points(
+        &self,
+        document: &Document,
+        operation: SelectionOperation,
+        include_bezier: bool,
+    ) -> Vec<(ComponentRef, ViewportPoint)> {
+        let locks = document.object_state_index();
+        let mut hits = Vec::new();
+        for c in &self.scene.controls {
+            if c.kind != ControlKind::Warp
+                || locks.is_locked(&c.object)
+                || !c.enabled
+                || !c.visible
+                || !self.selection.contains(&c.object)
+                || !self.scene.in_isolation_scope(&c.object)
+            {
+                continue;
+            }
+            let mut add = |id, point| {
+                let component = ComponentRef {
+                    object: c.object.clone(),
+                    id,
+                };
+                if operation == SelectionOperation::Remove
+                    || matches!(self.access.probe(&component), Some(Ok(())))
+                {
+                    hits.push((component, self.transform.to_viewport(point)));
+                }
+            };
+            if include_bezier && let Some(bezier) = self.scene.bezier(&c.object.id) {
+                for (i, &p) in bezier.anchors.iter().enumerate() {
+                    add(crate::warp_bezier::component_id(i, 0), p);
+                }
+            }
+            for (i, &p) in c.points.iter().enumerate() {
+                add(i as u32, p);
+            }
+        }
+        for r in self.selection {
+            if let Some(mesh) = self.scene.mesh(&r.id).filter(|_| {
+                r.kind == ObjectKind::Mesh
+                    && !locks.is_locked(r)
+                    && self.scene.mesh_visible(&r.id)
+                    && self.scene.in_isolation_scope(r)
+            }) {
+                for &(id, point) in &mesh.vertices {
+                    let component = ComponentRef {
+                        object: r.clone(),
+                        id,
+                    };
+                    if operation == SelectionOperation::Remove
+                        || matches!(self.access.probe(&component), Some(Ok(())))
+                    {
+                        hits.push((component, self.transform.to_viewport(point)));
+                    }
+                }
+            }
+        }
+        hits
+    }
     fn apply(
         &self,
         components: &mut Vec<ComponentRef>,
@@ -215,57 +298,12 @@ impl RegionSelection<'_> {
         let contains = |point| region.is_none_or(|region| region.contains(point));
         let locks = document.object_state_index();
         if has_region_components(self.scene, self.selection, &locks) {
-            let mut hits = Vec::new();
-            for c in &self.scene.controls {
-                if c.kind != ControlKind::Warp
-                    || locks.is_locked(&c.object)
-                    || !c.enabled
-                    || !c.visible
-                    || !self.selection.contains(&c.object)
-                {
-                    continue;
-                }
-                let mut add = |id, point| {
-                    let component = ComponentRef {
-                        object: c.object.clone(),
-                        id,
-                    };
-                    if (operation == SelectionOperation::Remove
-                        || matches!(self.access.probe(&component), Some(Ok(()))))
-                        && contains(self.transform.to_viewport(point))
-                    {
-                        hits.push(component);
-                    }
-                };
-                if let Some(bezier) = self.scene.bezier(&c.object.id) {
-                    for (i, &p) in bezier.anchors.iter().enumerate() {
-                        add(crate::warp_bezier::component_id(i, 0), p);
-                    }
-                }
-                for (i, &p) in c.points.iter().enumerate() {
-                    add(i as u32, p);
-                }
-            }
-            for r in self.selection {
-                if let Some(mesh) = self.scene.mesh(&r.id).filter(|_| {
-                    r.kind == ObjectKind::Mesh
-                        && !locks.is_locked(r)
-                        && self.scene.mesh_visible(&r.id)
-                }) {
-                    for &(id, point) in &mesh.vertices {
-                        let component = ComponentRef {
-                            object: r.clone(),
-                            id,
-                        };
-                        if (operation == SelectionOperation::Remove
-                            || matches!(self.access.probe(&component), Some(Ok(()))))
-                            && contains(self.transform.to_viewport(point))
-                        {
-                            hits.push(component);
-                        }
-                    }
-                }
-            }
+            let hits = self
+                .component_points(document, operation, true)
+                .into_iter()
+                .filter(|(_, point)| contains(*point))
+                .map(|(component, _)| component)
+                .collect();
             operation.apply(components, hits);
         } else {
             let hits = self

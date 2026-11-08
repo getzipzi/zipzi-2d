@@ -18,6 +18,9 @@ impl super::ToolController {
         frame: &CanvasFrame,
         point: ViewportPoint,
     ) -> Option<HitTarget> {
+        if self.active == super::ToolId::BrushSelect {
+            return None;
+        }
         let scene = &frame.geometry;
         let selection: Vec<_> = document
             .context()

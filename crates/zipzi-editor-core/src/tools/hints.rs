@@ -8,6 +8,8 @@ pub enum HintAction {
     Scale,
     BoneLength,
     LassoSelect,
+    BrushSelect,
+    BrushSize,
     AddSelection,
     RemoveSelection,
     GlueBind,

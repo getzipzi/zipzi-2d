@@ -427,6 +427,10 @@ impl Editor {
         self.active_session()
             .is_some_and(|s| s.modeling.tools.manual_active())
     }
+    pub fn brush_selection_settings(&self) -> crate::BrushSelectionSettings {
+        self.active_session()
+            .map_or_else(Default::default, |s| s.modeling.tools.brush_selection)
+    }
     pub fn manual_for_viewport(&self, viewport: crate::ViewportId) -> bool {
         self.active_session()
             .is_some_and(|s| s.modeling.tools.manual_viewport() == Some(viewport))

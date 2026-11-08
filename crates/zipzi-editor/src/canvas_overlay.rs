@@ -225,6 +225,51 @@ pub(crate) fn paint_prepared_with_options<P: Painter>(
                     mesh_edges::paint_edges_with_width(&edges, origin, width, paint);
                 }
             }
+            K::WeightedTriangle => {
+                // The native shader interpolates vertex alpha. The fallback
+                // tessellates only weighted faces, retaining the same painter order.
+                for primitive in run {
+                    let [x, y, a, b] = primitive.geometry;
+                    let points = [
+                        [x, y],
+                        [a, b],
+                        [primitive.parameters[1], primitive.parameters[2]],
+                    ];
+                    let weights = primitive.border;
+                    let steps = 16;
+                    let sample = |i: usize, j: usize| {
+                        let u = i as f32 / steps as f32;
+                        let v = j as f32 / steps as f32;
+                        (
+                            [
+                                points[0][0] * (1. - u - v) + points[1][0] * u + points[2][0] * v,
+                                points[0][1] * (1. - u - v) + points[1][1] * u + points[2][1] * v,
+                            ],
+                            weights[0] * (1. - u - v) + weights[1] * u + weights[2] * v,
+                        )
+                    };
+                    let mut paint = |vertices: [([f32; 2], f32); 3]| {
+                        let p = vertices.map(|(p, _)| point_at(p[0], p[1]));
+                        let mut path = gpui_kit::Path::new(p[0]);
+                        path.push_triangle(
+                            (p[0], p[1], p[2]),
+                            (point(0., 1.), point(0., 1.), point(0., 1.)),
+                        );
+                        path.bounds = path.bounds.dilate(px(1.));
+                        let mut c = primitive.color;
+                        c[3] *= vertices.iter().map(|(_, w)| *w).sum::<f32>() / 3.;
+                        window.paint_path(path, color(c));
+                    };
+                    for i in 0..steps {
+                        for j in 0..steps - i {
+                            paint([sample(i, j), sample(i + 1, j), sample(i, j + 1)]);
+                            if i + j + 1 < steps {
+                                paint([sample(i + 1, j), sample(i + 1, j + 1), sample(i, j + 1)]);
+                            }
+                        }
+                    }
+                }
+            }
             K::Triangle => {
                 let first = run[0].geometry;
                 let mut path = gpui_kit::Path::new(point_at(first[0], first[1]));

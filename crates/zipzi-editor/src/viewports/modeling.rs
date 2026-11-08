@@ -129,7 +129,10 @@ impl ModelingViewport {
                             zipzi_editor_core::ManualTool::Delete => CursorStyle::Arrow,
                             _ => CursorStyle::Crosshair,
                         })
-                    } else if owner.editor.active_tool() == ToolId::Lasso {
+                    } else if matches!(
+                        owner.editor.active_tool(),
+                        ToolId::Lasso | ToolId::BrushSelect
+                    ) {
                         Some(CursorStyle::Crosshair)
                     } else {
                         None
@@ -155,7 +158,10 @@ impl ViewportSurface {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if matches!(input, CanvasInput::Down { .. }) {
+        if matches!(
+            input,
+            CanvasInput::Down { .. } | CanvasInput::BrushResizeDown { .. }
+        ) {
             self.navigation.wheel_zoom = None;
         }
         if window.has_active_dialog(cx) {
@@ -179,7 +185,10 @@ impl ViewportSurface {
                 .is_some_and(|token| !owner.editor.viewport_interaction_valid(token))
             {
                 self.cancel_pointer();
-                if !matches!(input, CanvasInput::Down { .. }) {
+                if !matches!(
+                    input,
+                    CanvasInput::Down { .. } | CanvasInput::BrushResizeDown { .. }
+                ) {
                     return;
                 }
             }
@@ -220,6 +229,9 @@ impl ViewportSurface {
                     | CanvasInput::ModifiersChanged { .. }
             );
             let result = match input {
+                CanvasInput::BrushResizeDown { point } => {
+                    owner.editor.begin_brush_size_gesture(binding, point)
+                }
                 CanvasInput::Down {
                     point,
                     shift,
@@ -264,7 +276,10 @@ impl ViewportSurface {
                     if previous != self.interaction {
                         crate::workspace::status_bar::StatusBar::sync(&owner.status_bar, owner, cx);
                     }
-                    if matches!(input, CanvasInput::Down { .. }) {
+                    if matches!(
+                        input,
+                        CanvasInput::Down { .. } | CanvasInput::BrushResizeDown { .. }
+                    ) {
                         owner.clear_edit_error(cx);
                     }
                     if update.model_changed {

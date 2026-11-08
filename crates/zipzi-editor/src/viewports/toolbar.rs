@@ -90,6 +90,11 @@ impl ToolbarRegistry {
                 command: CommandId::LassoTool,
             },
             ToolbarItemConfig {
+                id: "tool_brush_select",
+                icon: ToolbarIcon::Svg(include_bytes!("../../assets/icons/brush-select.svg")),
+                command: CommandId::BrushSelectTool,
+            },
+            ToolbarItemConfig {
                 id: "tool_manual_mesh",
                 icon: ToolbarIcon::Svg(include_bytes!("../../assets/icons/mesh-edit.svg")),
                 command: CommandId::ManualMesh,
@@ -170,6 +175,7 @@ impl RenderOnce for CanvasToolbar {
                     .tooltip(t!(match command {
                         CommandId::SelectTool => "editor.tool_select_hint",
                         CommandId::LassoTool => "editor.tool_lasso_hint",
+                        CommandId::BrushSelectTool => "editor.tool_brush_select_hint",
                         CommandId::ManualMesh => "editor.manual_mesh_edit_hint",
                         _ => command.spec().label,
                     }))

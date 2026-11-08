@@ -99,12 +99,8 @@ impl Editor {
         alt: bool,
         primary: bool,
     ) -> Result<ViewportInputUpdate> {
-        self.validate_modeling_binding(binding)?;
-        self.validate_modeling_press(binding)?;
-        let token =
-            self.acquire_viewport_interaction(binding, ViewportInteractionKind::Modeling)?;
-        self.process_canvas_gesture(
-            token,
+        self.begin_canvas_input(
+            binding,
             CanvasInput::Down {
                 point,
                 shift,
@@ -112,6 +108,30 @@ impl Editor {
                 primary,
             },
         )
+    }
+
+    pub fn begin_brush_size_gesture(
+        &mut self,
+        binding: ViewportBinding,
+        point: crate::ViewportPoint,
+    ) -> Result<ViewportInputUpdate> {
+        ensure!(
+            self.active_tool() == crate::ToolId::BrushSelect && !self.manual_active(),
+            "Brush selection is not active"
+        );
+        self.begin_canvas_input(binding, CanvasInput::BrushResizeDown { point })
+    }
+
+    fn begin_canvas_input(
+        &mut self,
+        binding: ViewportBinding,
+        input: CanvasInput,
+    ) -> Result<ViewportInputUpdate> {
+        self.validate_modeling_binding(binding)?;
+        self.validate_modeling_press(binding)?;
+        let token =
+            self.acquire_viewport_interaction(binding, ViewportInteractionKind::Modeling)?;
+        self.process_canvas_gesture(token, input)
     }
 
     /// Continue the captured gesture. A new press must acquire a new owner through begin.
@@ -157,7 +177,10 @@ impl Editor {
             "Interaction owner changed"
         );
         ensure!(
-            !matches!(input, CanvasInput::Down { .. }),
+            !matches!(
+                input,
+                CanvasInput::Down { .. } | CanvasInput::BrushResizeDown { .. }
+            ),
             "Begin a new canvas gesture for a pointer press"
         );
         Ok(())

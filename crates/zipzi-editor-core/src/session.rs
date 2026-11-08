@@ -332,6 +332,14 @@ impl DocumentSession {
                 self.modeling.tools.set_tool(tool, &mut self.document);
                 return Ok(());
             }
+            EditorCommand::SetBrushSelectionSettings(settings) => {
+                self.modeling.tools.brush_selection = settings.validate()?;
+                return Ok(());
+            }
+            EditorCommand::SetBrushSelectionSize(diameter) => {
+                self.modeling.tools.brush_selection.set_diameter(diameter)?;
+                return Ok(());
+            }
             EditorCommand::GenerateMeshGrid {
                 object,
                 options,
@@ -602,12 +610,18 @@ impl DocumentSession {
         }
         let Some(frame) = frame else {
             ensure!(
-                !matches!(event, crate::CanvasInput::Down { .. }),
+                !matches!(
+                    event,
+                    crate::CanvasInput::Down { .. } | crate::CanvasInput::BrushResizeDown { .. }
+                ),
                 "Wait for the current model frame"
             );
             return Ok(false);
         };
-        if matches!(event, crate::CanvasInput::Down { .. }) {
+        if matches!(
+            event,
+            crate::CanvasInput::Down { .. } | crate::CanvasInput::BrushResizeDown { .. }
+        ) {
             ensure!(
                 frame.version.scene == self.scene_revision
                     && frame.version.viewport == self.view_state(viewport).revision,
@@ -620,7 +634,9 @@ impl DocumentSession {
         }
         if matches!(
             event,
-            crate::CanvasInput::Down { .. } | crate::CanvasInput::Move { .. }
+            crate::CanvasInput::Down { .. }
+                | crate::CanvasInput::BrushResizeDown { .. }
+                | crate::CanvasInput::Move { .. }
         ) {
             self.modeling.active_viewport = Some(viewport);
         }

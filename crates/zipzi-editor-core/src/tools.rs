@@ -1,6 +1,7 @@
 //! Canvas interaction state machine. Object selection, component selection and
 //! write targets are independent; a click never opens a model transaction.
 mod access;
+mod brush_select;
 mod controls;
 mod gesture;
 mod glue;
@@ -13,6 +14,7 @@ mod overlay;
 mod region;
 mod select;
 mod transform_constraints;
+pub use brush_select::{BrushSelectionSettings, BrushShape};
 pub use hints::{HintAction, InteractionHint};
 pub use manual_mesh::{ManualMeshEdge, ManualMeshFeedback, ManualTool};
 
@@ -25,7 +27,8 @@ use std::sync::Arc;
 
 pub use overlay::{
     GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint, OverlayHandle,
-    OverlayRotationBone, OverlaySnapshot, OverlayVertex, OverlayVertexKind,
+    OverlayRotationBone, OverlaySelectionBrush, OverlaySelectionWeights, OverlaySnapshot,
+    OverlayVertex, OverlayVertexKind,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -33,6 +36,7 @@ pub enum ToolId {
     #[default]
     Select,
     Lasso,
+    BrushSelect,
     Glue,
     Hand,
 }
@@ -65,6 +69,9 @@ pub struct ToolController {
     pub deformer_grid: bool,
     pub warp_whole: bool,
     pub original_points: bool,
+    pub(crate) brush_selection: BrushSelectionSettings,
+    pub(crate) component_weights: std::collections::HashMap<ComponentRef, f32>,
+    pub(crate) pointer: Option<(crate::ViewportBinding, ViewportPoint)>,
     pub(crate) components: Vec<ComponentRef>,
     pub(crate) warp_frames: std::collections::HashMap<
         (crate::ViewportId, ObjectRef),
@@ -96,6 +103,7 @@ impl ToolController {
     pub(crate) fn clear_hover(&mut self) {
         self.hovered = None;
         self.hovered_binding = None;
+        self.pointer = None;
     }
     fn rotation_length_target(&self) -> Option<&crate::ObjectRef> {
         match &self.gesture {
@@ -262,6 +270,10 @@ impl ToolController {
             self.active.idle_hints()
         }
     }
+    pub(crate) fn reconcile_component_weights(&mut self) {
+        let selected: std::collections::HashSet<_> = self.components.iter().collect();
+        self.component_weights.retain(|c, _| selected.contains(c));
+    }
     pub fn dragging(&self) -> bool {
         self.gesture.is_some() || self.manual.as_ref().is_some_and(|mode| mode.dragging())
     }
@@ -279,9 +291,11 @@ impl ToolController {
     /// Clear ordinary tool projections. Document modes have an explicit lifecycle.
     pub fn clear_selection(&mut self) {
         self.components.clear();
+        self.component_weights.clear();
         self.warp_frames.clear();
         self.hovered = None;
         self.hovered_binding = None;
+        self.pointer = None;
     }
     pub fn reconcile(&mut self, document: &mut Document) {
         if let Some(mode) = &mut self.manual {
@@ -303,6 +317,7 @@ impl ToolController {
         });
         self.hovered = None;
         self.hovered_binding = None;
+        self.reconcile_component_weights();
         self.prune_warp_frames(document);
     }
     pub fn cancel(&mut self, document: &mut Document) -> bool {
@@ -315,16 +330,23 @@ impl ToolController {
                 None
             }
         });
-        let changed = gesture.is_some_and(|g| g.cancel(document))
-            | self
-                .manual
-                .as_mut()
-                .is_some_and(|mode| mode.cancel(document));
+        let changed = gesture.is_some_and(|g| {
+            g.cancel(
+                document,
+                &mut self.components,
+                &mut self.brush_selection,
+                &mut self.component_weights,
+            )
+        }) | self
+            .manual
+            .as_mut()
+            .is_some_and(|mode| mode.cancel(document));
         if let Some((viewport, object, info)) = original {
             self.set_warp_frame(document, viewport, object, info);
         }
         self.hovered = None;
         self.hovered_binding = None;
+        self.pointer = None;
         changed
     }
     pub fn set_tool(&mut self, tool: ToolId, document: &mut Document) -> bool {
@@ -333,7 +355,23 @@ impl ToolController {
         self.active = tool;
         if !preserve_components {
             self.clear_selection();
+        } else if tool == ToolId::BrushSelect {
+            let model = document.model();
+            self.components
+                .retain(|component| match component.object.kind {
+                    ObjectKind::Mesh => true,
+                    ObjectKind::Deformer => {
+                        crate::warp_bezier::component(component.id).is_none()
+                            && model
+                                .transform(&component.object.id)
+                                .is_some_and(|transform| {
+                                    matches!(transform.data, zipzi_core::TransformData::Warp(_))
+                                })
+                    }
+                    _ => false,
+                });
         }
+        self.reconcile_component_weights();
         changed
     }
     pub fn manual_active(&self) -> bool {
@@ -417,6 +455,7 @@ impl ToolController {
     pub fn enter_manual(&mut self, document: &mut Document, targets: Vec<crate::ManualMeshTarget>) {
         self.cancel(document);
         self.components.clear();
+        self.component_weights.clear();
         self.active = ToolId::Select;
         self.manual = Some(manual_mesh::ManualMeshSession::new(targets, document));
     }
@@ -451,6 +490,10 @@ impl ToolController {
 }
 #[derive(Clone, Copy, Debug)]
 pub enum CanvasInput {
+    /// Start a size-only gesture. The same capture/rollback rules apply as painting.
+    BrushResizeDown {
+        point: ViewportPoint,
+    },
     Down {
         point: ViewportPoint,
         shift: bool,

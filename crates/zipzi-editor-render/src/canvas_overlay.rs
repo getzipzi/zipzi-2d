@@ -67,6 +67,7 @@ pub enum PrimitiveKind {
     Line,
     Marker,
     Triangle,
+    WeightedTriangle,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -94,6 +95,7 @@ impl CanvasPrimitive {
         match self.parameters[0] {
             0. => PrimitiveKind::Line,
             1. => PrimitiveKind::Marker,
+            3. => PrimitiveKind::WeightedTriangle,
             _ => PrimitiveKind::Triangle,
         }
     }
@@ -105,7 +107,7 @@ impl CanvasPrimitive {
                 [x.min(a) - r, y.min(b) - r, x.max(a) + r, y.max(b) + r]
             }
             PrimitiveKind::Marker => [x - a - 1., y - b - 1., x + a + 1., y + b + 1.],
-            PrimitiveKind::Triangle => {
+            PrimitiveKind::Triangle | PrimitiveKind::WeightedTriangle => {
                 let [_, c, d, _] = self.parameters;
                 [
                     x.min(a).min(c) - 1.,
@@ -169,6 +171,16 @@ impl CanvasDrawList {
             extent,
             overflow: false,
         };
+        if let Some(weights) = &overlay.selection_weights {
+            for (points, influences) in &weights.triangles {
+                b.push(CanvasPrimitive {
+                    geometry: [points[0].x, points[0].y, points[1].x, points[1].y],
+                    parameters: [3., points[2].x, points[2].y, 0.],
+                    color: weights.color,
+                    border: [influences[0], influences[1], influences[2], 0.],
+                });
+            }
+        }
         if options.lines {
             b.lines(&overlay.lines, 1., alpha(p.mesh, 0.45));
             b.lines(
@@ -279,6 +291,28 @@ impl CanvasDrawList {
                     }) {
                         b.vertex(v, p);
                     }
+                }
+            }
+            if let Some(weights) = &overlay.selection_weights {
+                for &(position, weight, kind) in &weights.points {
+                    let r = if kind == K::WarpGrid {
+                        style::WARP_GRID_POINT_RADIUS
+                    } else {
+                        style::POINT_RADIUS
+                    };
+                    let mut color = weights.color;
+                    for c in &mut color[..3] {
+                        *c = 1. - (1. - *c) * weight;
+                    }
+                    color[3] = 1.;
+                    b.marker(
+                        pt(position),
+                        [r; 2],
+                        if kind == K::Mesh { r } else { 0. },
+                        1.,
+                        color,
+                        [0., 0., 0., 1.],
+                    );
                 }
             }
             for h in &overlay.handles {
@@ -395,6 +429,34 @@ impl CanvasDrawList {
                     at((i as f32 + 0.5) / steps as f32),
                     1.,
                     alpha(p.selection_region, 0.7),
+                );
+            }
+        }
+        if let Some(brush) = overlay.selection_brush {
+            let center = pt(brush.position);
+            let r = brush.radius;
+            if brush.shape == zipzi_editor_core::BrushShape::Circle {
+                b.marker(center, [r; 2], r, 1., [0.; 4], p.selection_region);
+            } else {
+                let h = if brush.shape == zipzi_editor_core::BrushShape::Line {
+                    r * 0.1
+                } else {
+                    r
+                };
+                let (sin, cos) = brush.angle.to_radians().sin_cos();
+                let corners = [[-r, -h], [r, -h], [r, h], [-r, h]]
+                    .map(|[x, y]| [center[0] + x * cos - y * sin, center[1] + x * sin + y * cos]);
+                for i in 0..4 {
+                    b.line(corners[i], corners[(i + 1) % 4], 1., p.selection_region);
+                }
+            }
+            // An erase stroke has a minus sign distinct from ordinary painting.
+            if brush.subtract {
+                b.line(
+                    [center[0] - 4., center[1]],
+                    [center[0] + 4., center[1]],
+                    1.,
+                    p.selection_region,
                 );
             }
         }

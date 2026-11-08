@@ -60,7 +60,7 @@ fragment float4 solid_fragment(Out input [[stage_in]]) { return input.color; }
 struct CanvasInstance { float4 geometry; float4 parameters; float4 color; float4 border; };
 struct CanvasOut {
     float4 position [[position]];
-    float4 color [[flat]]; float4 border [[flat]];
+    float4 color; float4 border [[flat]];
     float2 local; float2 half_size [[flat]];
     float radius [[flat]]; float width [[flat]]; uint kind [[flat]];
 };
@@ -86,7 +86,9 @@ vertex CanvasOut canvas_vertex(uint v [[vertex_id]], uint id [[instance_id]],
         float2 c = (i.parameters.yz + u.origin)*u.scale-u.texture_origin;
         position = v == 0 ? a : v == 1 ? b : c;
     }
-    Out base = output(position,i.color,u);
+    float4 color=i.color;
+    if (kind==3) color.a *= v==0 ? i.border.x : v==1 ? i.border.y : i.border.z;
+    Out base = output(position,color,u);
     return {base.position,base.color,float4(i.border.rgb*i.border.a,i.border.a),local,half_size,
         i.parameters.y*u.scale,i.parameters.z*u.scale,kind};
 }

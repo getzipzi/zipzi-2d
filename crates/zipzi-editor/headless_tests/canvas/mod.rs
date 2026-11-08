@@ -1,3 +1,4 @@
+mod brush_select;
 mod common;
 mod lasso;
 mod object_frames;

@@ -42,6 +42,8 @@ pub enum EditorCommand {
         locked: bool,
     },
     SetTool(crate::ToolId),
+    SetBrushSelectionSize(f32),
+    SetBrushSelectionSettings(crate::BrushSelectionSettings),
     GenerateMeshGrid {
         object: crate::ObjectRef,
         options: crate::MeshGridOptions,

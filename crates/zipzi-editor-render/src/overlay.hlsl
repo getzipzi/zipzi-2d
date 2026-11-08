@@ -5,7 +5,7 @@ cbuffer Uniforms : register(b0) {
     float2 origin; float2 texture_origin;
     float4 edge; float4 vertex_color; float4 selected_color; float4 restricted_color; float4 hover_color;
 };
-struct Out { float4 position : SV_Position; nointerpolation float4 color : COLOR0; };
+struct Out { float4 position : SV_Position; float4 color : COLOR0; };
 Out output(float2 p, float4 color) {
     Out o;
     o.position = float4(p / viewport * float2(2,-2) + float2(-1,1),0,1);
@@ -23,7 +23,7 @@ Out edge_vertex(uint v : SV_VertexID, uint id : SV_InstanceID) {
 }
 struct MarkerOut {
     float4 position : SV_Position;
-    nointerpolation float4 color : COLOR0;
+    float4 color : COLOR0;
     float2 local : TEXCOORD0;
     nointerpolation float radius : TEXCOORD1;
     nointerpolation float hovered : TEXCOORD2;
@@ -64,7 +64,7 @@ struct CanvasInstance { float4 geometry; float4 parameters; float4 color; float4
 StructuredBuffer<CanvasInstance> canvas_instances : register(t1);
 struct CanvasOut {
     float4 position : SV_Position;
-    nointerpolation float4 color : COLOR0; nointerpolation float4 border : COLOR1;
+    float4 color : COLOR0; nointerpolation float4 border : COLOR1;
     float2 local : TEXCOORD0; nointerpolation float2 half_size : TEXCOORD1;
     nointerpolation float radius : TEXCOORD2; nointerpolation float width : TEXCOORD3;
     nointerpolation uint kind : TEXCOORD4;
@@ -90,7 +90,9 @@ CanvasOut canvas_vertex(uint v : SV_VertexID, uint id : SV_InstanceID) {
         float2 c = (i.parameters.yz+origin)*scale-texture_origin;
         position = v == 0 ? a : v == 1 ? b : c;
     }
-    Out base = output(position,i.color);
+    float4 color=i.color;
+    if (kind==3) color.a *= v==0 ? i.border.x : v==1 ? i.border.y : i.border.z;
+    Out base = output(position,color);
     CanvasOut o;
     o.position=base.position; o.color=base.color;
     o.border=float4(i.border.rgb*i.border.a,i.border.a);

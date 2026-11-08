@@ -58,6 +58,7 @@ macro_rules! viewport_panel {
     };
 }
 
+mod brush_bar;
 mod context_menu;
 mod deformer_bar;
 mod input;
@@ -114,8 +115,11 @@ pub struct ViewportSurface {
     bounds: Bounds<Pixels>,
     #[cfg(test)]
     pub(crate) layout_syncs: usize,
+    #[cfg(test)]
+    pub(crate) tool_cursor: Option<CursorStyle>,
     navigation: navigation::ViewportNavigation,
     interaction: Option<zipzi_editor_core::ViewportInteractionToken>,
+    brush_bar: Entity<brush_bar::BrushSelectionBar>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -138,6 +142,7 @@ impl ViewportSurface {
         cx: &mut App,
     ) -> Entity<Self> {
         cx.new(|cx: &mut Context<Self>| {
+            let brush_bar = brush_bar::BrushSelectionBar::new(owner.clone(), viewport, window, cx);
             let upgraded = owner.upgrade().unwrap();
             let focus = cx.focus_handle();
             let subscriptions = vec![
@@ -232,8 +237,11 @@ impl ViewportSurface {
                 bounds: Bounds::default(),
                 #[cfg(test)]
                 layout_syncs: 0,
+                #[cfg(test)]
+                tool_cursor: None,
                 navigation: Default::default(),
                 interaction: None,
+                brush_bar,
                 _subscriptions: subscriptions,
             }
         })
@@ -330,6 +338,32 @@ impl Render for ViewportSurface {
             .cloned();
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
+        let brush_cursor = (self.kind == zipzi_editor_core::ViewportKind::Modeling
+            && state.editor.active_tool() == ToolId::BrushSelect
+            && !state.editor.manual_for_viewport(self.viewport))
+        .then(|| {
+            let captured = self
+                .binding(&state.editor)
+                .is_some_and(|binding| state.editor.gesture_active_for(binding));
+            if captured {
+                // A gesture keeps the operation chosen on press, even if Cmd changes.
+                if overlay.active_component.is_some() {
+                    CursorStyle::ClosedHand
+                } else {
+                    CursorStyle::Crosshair
+                }
+            } else if window.is_window_active() && window.modifiers().platform {
+                CursorStyle::OpenHand
+            } else {
+                CursorStyle::Crosshair
+            }
+        });
+        if matches!(
+            brush_cursor,
+            Some(CursorStyle::OpenHand | CursorStyle::ClosedHand)
+        ) {
+            overlay.selection_brush = None;
+        }
         let connection_cursor = (!modal && !hand_tool)
             .then(|| {
                 crate::ui::manual_mesh::connection_cursor(
@@ -343,8 +377,13 @@ impl Render for ViewportSurface {
         let cursor = if overlay.point_unavailable.is_some() {
             cursor
         } else {
-            connection_cursor.or(cursor)
+            connection_cursor.or(brush_cursor).or(cursor)
         };
+        let cursor = cursor.filter(|_| !modal && !hand_tool);
+        #[cfg(test)]
+        {
+            self.tool_cursor = cursor;
+        }
         if modal {
             self.cancel_pointer();
         }
@@ -357,9 +396,7 @@ impl Render for ViewportSurface {
         let body = div()
             .id("canvas-body")
             .test_support()
-            .when_some(cursor.filter(|_| !modal && !hand_tool), |e, cursor| {
-                e.cursor(cursor)
-            })
+            .when_some(cursor, |e, cursor| e.cursor(cursor))
             .relative()
             .flex_1()
             .min_h_0()

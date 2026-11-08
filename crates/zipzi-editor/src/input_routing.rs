@@ -16,11 +16,13 @@ pub(crate) use target::{InputTarget, LocalTarget};
 pub(crate) struct InputRouter {
     inside: Rc<Cell<bool>>,
     pub menu_target: Rc<Cell<Option<LocalTarget>>>,
+    pub brush_size_key: Cell<Option<zipzi_editor_core::ViewportBinding>>,
 }
 impl InputRouter {
     pub fn deactivate(&self) {
         self.inside.set(false);
         self.menu_target.set(None);
+        self.brush_size_key.set(None);
     }
 }
 
@@ -32,6 +34,21 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         let snapshot = self.collect_key_facts(event, window, cx);
+        if event.keystroke.key == "b"
+            && !event.keystroke.modifiers.modified()
+            && !snapshot.facts.focus.blocked
+            && !snapshot.facts.focus.text_focused
+            && snapshot.facts.focus.editor_focused
+            && snapshot.capture.is_none()
+            && !event.prefer_character_input
+        {
+            let target = snapshot.facts.hovered.or(snapshot.facts.focused);
+            if let Some(LocalTarget::Viewport(binding)) = target.map(|t| t.local)
+                && binding.kind == zipzi_editor_core::ViewportKind::Modeling
+            {
+                self.input_router.brush_size_key.set(Some(binding));
+            }
+        }
         // Canvas nudges must not consume text caret movement, tree navigation,
         // timeline stepping, modal input or an active pointer capture.
         if !snapshot.facts.focus.blocked
@@ -90,6 +107,19 @@ impl EditorView {
                     ))
             },
         );
+        // Holding B over the active brush arms sizing without reselecting the
+        // tool. Other user-configured B bindings retain their ordinary dispatch.
+        if matches!(
+            decision,
+            KeyDecision::Invoke {
+                id: zipzi_editor_core::CommandId::BrushSelectTool,
+                ..
+            }
+        ) && self.editor.active_tool() == zipzi_editor_core::ToolId::BrushSelect
+        {
+            cx.stop_propagation();
+            return;
+        }
         self.execute_key_decision(decision, snapshot.capture, window, cx);
     }
 

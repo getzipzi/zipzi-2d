@@ -143,6 +143,8 @@ pub enum CommandId {
     SelectTool,
     #[serde(rename = "tool.lasso")]
     LassoTool,
+    #[serde(rename = "tool.brush-select")]
+    BrushSelectTool,
     #[serde(rename = "tool.hand")]
     HandTool,
     #[serde(rename = "tool.glue")]
@@ -531,6 +533,13 @@ specs![
     (SelectTool, "editor.tool_select", Viewport, false, ["v"]),
     (LassoTool, "editor.tool_lasso", Viewport, false, ["l"]),
     (
+        BrushSelectTool,
+        "editor.tool_brush_select",
+        Viewport,
+        false,
+        ["b"]
+    ),
+    (
         GenerateMesh,
         "editor.tool_generate_mesh",
         Viewport,
@@ -909,6 +918,11 @@ impl Editor {
                     && !self.manual_active()
                     && self.active_tool() == crate::ToolId::Lasso
             }
+            BrushSelectTool => {
+                !animation_navigation
+                    && !self.manual_active()
+                    && self.active_tool() == crate::ToolId::BrushSelect
+            }
             GlueTool => {
                 !animation_navigation
                     && !self.manual_active()
@@ -1150,7 +1164,7 @@ impl Editor {
                 CommandTarget::Viewport(binding) if self.can_toggle_viewport_isolation(binding))
             }
             CancelGesture => target && !self.is_busy(),
-            LassoTool | GlueTool => modeling && target && !self.is_busy(),
+            LassoTool | BrushSelectTool | GlueTool => modeling && target && !self.is_busy(),
             HandTool => target && !self.is_busy() && (modeling || animation_navigation),
             _ => modeling && target && !self.is_busy(),
         }
@@ -1224,10 +1238,11 @@ impl Editor {
             {
                 // Animation exposes navigation without changing the document's Modeling tool.
             }
-            SelectTool | LassoTool | GlueTool | HandTool => {
+            SelectTool | LassoTool | BrushSelectTool | GlueTool | HandTool => {
                 let tool = match command.id {
                     SelectTool => crate::ToolId::Select,
                     LassoTool => crate::ToolId::Lasso,
+                    BrushSelectTool => crate::ToolId::BrushSelect,
                     GlueTool => crate::ToolId::Glue,
                     _ => crate::ToolId::Hand,
                 };

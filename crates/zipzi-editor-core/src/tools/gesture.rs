@@ -1,5 +1,8 @@
 //! Shared press projection and explicit gesture dispatch. Each variant owns its operation.
-use super::{controls::ControlGesture, lasso::LassoGesture, select::SelectGesture, *};
+use super::{
+    brush_select::BrushSelectionGesture, controls::ControlGesture, lasso::LassoGesture,
+    select::SelectGesture, *,
+};
 use anyhow::{Result, ensure};
 
 pub(super) struct Press {
@@ -11,6 +14,7 @@ pub(super) struct Press {
     pub alt: bool,
     pub deferred_toggle: Option<ComponentRef>,
     pub components: Vec<ComponentRef>,
+    pub weights: std::collections::HashMap<ComponentRef, f32>,
     pub warp_selection: Option<crate::deformer::WarpGizmos>,
     pub adjust_frame: bool,
     pub operation: region::SelectionOperation,
@@ -25,6 +29,7 @@ pub(super) struct Press {
 pub(super) enum Gesture {
     Select(SelectGesture),
     Lasso(LassoGesture),
+    BrushSelect(BrushSelectionGesture),
     Controls(ControlGesture),
 }
 impl Gesture {
@@ -38,6 +43,7 @@ impl Gesture {
         match self {
             Self::Select(g) => &g.press,
             Self::Lasso(g) => &g.press,
+            Self::BrushSelect(g) => &g.press,
             Self::Controls(g) => &g.press,
         }
     }
@@ -45,13 +51,14 @@ impl Gesture {
         match self {
             Self::Select(g) => &mut g.press,
             Self::Lasso(g) => &mut g.press,
+            Self::BrushSelect(g) => &mut g.press,
             Self::Controls(g) => &mut g.press,
         }
     }
     pub fn target(&self) -> Option<&HitTarget> {
         match self {
             Self::Select(g) => g.target.as_ref(),
-            Self::Lasso(_) => None,
+            Self::Lasso(_) | Self::BrushSelect(_) => None,
             Self::Controls(g) => Some(&g.target),
         }
     }
@@ -61,8 +68,10 @@ impl Gesture {
     pub fn update(
         &mut self,
         document: &mut Document,
-        components: &[ComponentRef],
+        components: &mut Vec<ComponentRef>,
         point: ViewportPoint,
+        brush_settings: &mut BrushSelectionSettings,
+        weights: &mut std::collections::HashMap<ComponentRef, f32>,
     ) -> Result<bool> {
         ensure!(
             point.x.is_finite() && point.y.is_finite(),
@@ -78,6 +87,10 @@ impl Gesture {
                 Ok(false)
             }
             Self::Controls(g) => g.update(document, components),
+            Self::BrushSelect(g) => {
+                g.update(components, brush_settings, weights);
+                Ok(false)
+            }
         }
     }
     pub fn finish(
@@ -89,11 +102,22 @@ impl Gesture {
             Self::Select(g) => g.finish(document, components),
             Self::Lasso(g) => g.finish(document, components),
             Self::Controls(g) => g.finish(document, components),
+            Self::BrushSelect(_) => Ok(()),
         }
     }
-    pub fn cancel(&self, document: &mut Document) -> bool {
+    pub fn cancel(
+        &self,
+        document: &mut Document,
+        components: &mut Vec<ComponentRef>,
+        brush_settings: &mut BrushSelectionSettings,
+        weights: &mut std::collections::HashMap<ComponentRef, f32>,
+    ) -> bool {
         match self {
             Self::Controls(g) => g.cancel(document),
+            Self::BrushSelect(g) => {
+                g.cancel(components, brush_settings, weights);
+                false
+            }
             _ => false,
         }
     }
@@ -102,6 +126,7 @@ impl Gesture {
             Self::Select(g) => g.overlay(out),
             Self::Lasso(g) => g.overlay(out),
             Self::Controls(g) => g.overlay(out),
+            Self::BrushSelect(_) => {}
         }
     }
     pub fn hints(&self) -> &'static [InteractionHint] {
@@ -109,6 +134,8 @@ impl Gesture {
             Self::Lasso(_) => lasso::CAPTURE_HINTS,
             Self::Select(_) => select::CAPTURE_HINTS,
             Self::Controls(g) => g.hints(),
+            Self::BrushSelect(g) if g.resizing => brush_select::RESIZE_HINTS,
+            Self::BrushSelect(_) => brush_select::CAPTURE_HINTS,
         }
     }
 }
@@ -145,6 +172,7 @@ impl ToolId {
         match self {
             Self::Select => &[],
             Self::Lasso => lasso::IDLE_HINTS,
+            Self::BrushSelect => brush_select::IDLE_HINTS,
             Self::Glue => glue::HINTS,
             Self::Hand => hand::IDLE_HINTS,
         }
@@ -154,7 +182,7 @@ impl ToolId {
             .then_some(crate::CommandId::Deselect)
     }
     fn uses_component_selection(self) -> bool {
-        matches!(self, Self::Select | Self::Lasso)
+        matches!(self, Self::Select | Self::Lasso | Self::BrushSelect)
     }
     pub(super) fn preserves_components(self, next: Self) -> bool {
         self.uses_component_selection() && next.uses_component_selection()

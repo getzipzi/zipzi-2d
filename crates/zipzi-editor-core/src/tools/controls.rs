@@ -232,6 +232,12 @@ impl ControlGesture {
                     "Keep children requires a selection of deformer controls"
                 );
                 for target in &mut edits {
+                    target.point_weights = press
+                        .weights
+                        .iter()
+                        .filter(|(component, _)| component.object == target.object)
+                        .map(|(component, weight)| (component.id, *weight))
+                        .collect();
                     if press.keep_children && (target.warp.is_some() || target.rotation) {
                         target.keep_deformer_children(document)?;
                     }

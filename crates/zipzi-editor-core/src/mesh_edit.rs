@@ -238,11 +238,16 @@ pub(crate) fn positions(
                 mesh.displayed[slot]
             };
             let after = change.apply_to(before);
+            let weight = if change.moves_all() {
+                1.
+            } else {
+                *target.point_weights.get(&id).unwrap_or(&1.)
+            };
             requested.push((
                 (target.object.id.clone(), id),
                 crate::ModelVector {
-                    x: after.x - before.x,
-                    y: after.y - before.y,
+                    x: (after.x - before.x) * weight,
+                    y: (after.y - before.y) * weight,
                 },
             ));
             destinations.push((target_index, slot));

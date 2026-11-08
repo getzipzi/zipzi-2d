@@ -244,6 +244,8 @@ impl EditOriginal {
 }
 #[derive(Clone)]
 pub(crate) struct ControlEdit {
+    /// Soft selection acts in evaluated canvas space, before parent/glue inversion.
+    pub point_weights: std::collections::HashMap<u32, f32>,
     pub object: ObjectRef,
     pub original: EditOriginal,
     pub ids: Vec<u32>,
@@ -792,6 +794,7 @@ impl ControlEdit {
         };
         Ok(Self {
             object: object.clone(),
+            point_weights: Default::default(),
             original,
             ids,
             positions,
@@ -1288,6 +1291,20 @@ impl ControlEdit {
             self.from_model(desired, p)
         }
     }
+    fn changed_weighted_point(&self, id: u32, p: Vec2, change: ControlChange) -> Result<Vec2> {
+        let before = self.to_model(p);
+        let after = change.apply_to(before);
+        let weight = *self.point_weights.get(&id).unwrap_or(&1.);
+        let desired = ModelPoint {
+            x: before.x + (after.x - before.x) * weight,
+            y: before.y + (after.y - before.y) * weight,
+        };
+        if desired == before {
+            Ok(p)
+        } else {
+            self.from_model(desired, p)
+        }
+    }
     fn preview_warp(
         &self,
         edit: &mut zipzi_sdk::Commands<'_>,
@@ -1369,7 +1386,7 @@ impl ControlEdit {
                 .enumerate()
                 .map(|(i, p)| {
                     if selected.contains(&(i as u32)) {
-                        self.changed_point(p, change)
+                        self.changed_weighted_point(i as u32, p, change)
                     } else {
                         Ok(p)
                     }
@@ -1381,7 +1398,7 @@ impl ControlEdit {
             // once, even when a selected Bezier anchor also influences it.
             for (i, p) in positions.iter_mut().enumerate() {
                 if selected.contains(&(i as u32)) {
-                    *p = self.changed_point(self.positions[i], change)?;
+                    *p = self.changed_weighted_point(i as u32, self.positions[i], change)?;
                 }
             }
         }

@@ -172,12 +172,26 @@ impl ViewportSurface {
             self.sync_status_bar(cx);
             cx.notify();
         } else {
+            let resize_brush = self.owner.upgrade().is_some_and(|owner| {
+                let state = owner.read(cx);
+                state.editor.active_tool() == ToolId::BrushSelect
+                    && !event.modifiers.platform
+                    && self.binding(&state.editor).is_some_and(|binding| {
+                        state.input_router.brush_size_key.get() == Some(binding)
+                    })
+            });
             self.input(
-                CanvasInput::Down {
-                    primary: event.modifiers.platform,
-                    point: self.local(event.position),
-                    shift: event.modifiers.shift,
-                    alt: event.modifiers.alt,
+                if resize_brush {
+                    CanvasInput::BrushResizeDown {
+                        point: self.local(event.position),
+                    }
+                } else {
+                    CanvasInput::Down {
+                        primary: event.modifiers.platform,
+                        point: self.local(event.position),
+                        shift: event.modifiers.shift,
+                        alt: event.modifiers.alt,
+                    }
                 },
                 window,
                 cx,
@@ -244,10 +258,10 @@ impl ViewportSurface {
             );
         }
         if self.kind == zipzi_editor_core::ViewportKind::Modeling
-            && self
-                .owner
-                .upgrade()
-                .is_some_and(|owner| owner.read(cx).editor.manual_active())
+            && self.owner.upgrade().is_some_and(|owner| {
+                let editor = &owner.read(cx).editor;
+                editor.manual_active() || editor.active_tool() == ToolId::BrushSelect
+            })
         {
             cx.notify();
         }
