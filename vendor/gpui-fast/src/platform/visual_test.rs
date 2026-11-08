@@ -210,6 +210,10 @@ impl Platform for VisualTestPlatform {
         self.platform.set_cursor_style(style)
     }
 
+    fn register_custom_cursor(&self, cursor: crate::CustomCursor) -> CursorStyle {
+        self.platform.register_custom_cursor(cursor)
+    }
+
     fn hide_cursor_until_mouse_moves(&self) {
         self.platform.hide_cursor_until_mouse_moves();
     }

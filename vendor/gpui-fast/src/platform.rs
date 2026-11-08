@@ -576,6 +576,11 @@ pub trait Platform: 'static {
 
     fn set_cursor_style(&self, style: CursorStyle);
 
+    /// Registers immutable cursor artwork, or returns its standard fallback.
+    fn register_custom_cursor(&self, cursor: crate::CustomCursor) -> CursorStyle {
+        cursor.fallback()
+    }
+
     /// Hides the mouse cursor until the user moves the mouse over one of
     /// this application's windows.
     fn hide_cursor_until_mouse_moves(&self);
@@ -1216,6 +1221,10 @@ pub enum TextInputStateChange {
 
 #[expect(missing_docs)]
 pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
+    /// Sets this window's cursor. Returns false when only the legacy platform API is supported.
+    fn set_cursor_style(&self, _style: CursorStyle) -> bool {
+        false
+    }
     /// D3D11 device used by the window. The immediate context stays on the UI thread.
     #[cfg(target_os = "windows")]
     fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
@@ -2938,6 +2947,9 @@ impl From<&str> for PromptButton {
 /// The style of the cursor (pointer)
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub enum CursorStyle {
+    /// Registered, process-local artwork. Unknown IDs use the arrow cursor.
+    Custom(crate::CustomCursorId),
+
     /// The default cursor
     #[default]
     Arrow,

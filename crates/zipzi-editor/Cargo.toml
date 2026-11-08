@@ -82,6 +82,12 @@ path = "tests/native_render.rs"
 required-features = ["test-support"]
 
 [[test]]
+name = "native_cursors"
+path = "tests/native_cursors.rs"
+harness = false
+required-features = ["test-support"]
+
+[[test]]
 name = "runtime_interaction_acceptance"
 path = "tests/runtime_interaction_acceptance.rs"
 harness = false

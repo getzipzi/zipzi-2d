@@ -76,7 +76,10 @@ pub struct WindowsWindowState {
     pub force_render_pending: Cell<bool>,
 
     pub click_state: ClickState,
-    pub current_cursor: Cell<Option<HCURSOR>>,
+    pub current_cursor: RefCell<crate::cursor::ResolvedCursor>,
+    pub cursor_style: Cell<CursorStyle>,
+    cursor_scale: Cell<f32>,
+    pub cursors: Rc<RefCell<crate::cursor::CursorCache>>,
     /// Shared with [`WindowsPlatformState::cursor_visible`].
     pub cursor_visible: Arc<AtomicBool>,
     pub nc_button_pressed: Cell<Option<u32>>,
@@ -116,7 +119,7 @@ impl WindowsWindowState {
         hwnd: HWND,
         directx_devices: &DirectXDevices,
         window_params: &CREATESTRUCTW,
-        current_cursor: Option<HCURSOR>,
+        cursors: Rc<RefCell<crate::cursor::CursorCache>>,
         cursor_visible: Arc<AtomicBool>,
         display: WindowsDisplay,
         min_size: Option<Size<Pixels>>,
@@ -181,7 +184,14 @@ impl WindowsWindowState {
             renderer: RefCell::new(renderer),
             force_render_pending: Cell::new(false),
             click_state,
-            current_cursor: Cell::new(current_cursor),
+            current_cursor: RefCell::new(
+                cursors
+                    .borrow_mut()
+                    .resolve(CursorStyle::Arrow, scale_factor),
+            ),
+            cursor_style: Cell::new(CursorStyle::Arrow),
+            cursor_scale: Cell::new(scale_factor),
+            cursors: cursors.clone(),
             cursor_visible,
             nc_button_pressed: Cell::new(nc_button_pressed),
             display: Cell::new(display),
@@ -255,6 +265,66 @@ impl WindowsWindowState {
 }
 
 impl WindowsWindowInner {
+    /// Whether it is safe for this window to change the displayed pointer.
+    pub(crate) fn owns_cursor(&self) -> bool {
+        unsafe {
+            if !IsWindowEnabled(self.hwnd).as_bool() || !IsWindowVisible(self.hwnd).as_bool() {
+                return false;
+            }
+            let mut gui = GUITHREADINFO {
+                cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
+                ..Default::default()
+            };
+            if GetGUIThreadInfo(0, &mut gui).is_ok()
+                && (gui.flags.0 & (GUI_INMENUMODE.0 | GUI_INMOVESIZE.0)) != 0
+            {
+                return false;
+            }
+            let capture = GetCapture();
+            if !capture.is_invalid() {
+                return capture == self.hwnd;
+            }
+            let mut position = POINT::default();
+            if GetCursorPos(&mut position).is_err() || WindowFromPoint(position) != self.hwnd {
+                return false;
+            }
+            let packed = (position.x as u16 as u32) | ((position.y as u16 as u32) << 16);
+            SendMessageW(self.hwnd, WM_NCHITTEST, None, Some(LPARAM(packed as isize))).0 as u32
+                == HTCLIENT
+        }
+    }
+
+    pub(crate) fn apply_cursor_if_owned(&self) {
+        if self.owns_cursor() {
+            let handle = if self
+                .state
+                .cursor_visible
+                .load(std::sync::atomic::Ordering::Relaxed)
+            {
+                self.state.current_cursor.borrow().handle
+            } else {
+                None
+            };
+            unsafe {
+                SetCursor(handle);
+            }
+        }
+    }
+
+    pub(crate) fn update_cursor(&self, style: CursorStyle) {
+        let scale = self.state.scale_factor.get();
+        if self.state.cursor_style.get() == style && self.state.cursor_scale.get() == scale {
+            return;
+        }
+        self.state.cursor_style.set(style);
+        self.state.cursor_scale.set(scale);
+        let cursor = self.state.cursors.borrow_mut().resolve(style, scale);
+        let previous = self.state.current_cursor.replace(cursor);
+        // Keep the old handle alive until the displayed pointer has changed.
+        self.apply_cursor_if_owned();
+        drop(previous);
+    }
+
     /// Whether the window is being presented: shown and not minimized. Windows
     /// has no notification for a window fully covered by other windows, so
     /// that case reports `Visible`.
@@ -273,7 +343,7 @@ impl WindowsWindowInner {
             hwnd,
             &context.directx_devices,
             cs,
-            context.current_cursor,
+            context.cursors.clone(),
             context.cursor_visible.clone(),
             context.display,
             context.min_size,
@@ -421,7 +491,7 @@ struct WindowCreateContext {
     is_minimizable: bool,
     min_size: Option<Size<Pixels>>,
     executor: ForegroundExecutor,
-    current_cursor: Option<HCURSOR>,
+    cursors: Rc<RefCell<crate::cursor::CursorCache>>,
     cursor_visible: Arc<AtomicBool>,
     drop_target_helper: IDropTargetHelper,
     validation_number: usize,
@@ -450,7 +520,7 @@ impl WindowsWindow {
         let WindowCreationInfo {
             icon,
             executor,
-            current_cursor,
+            cursors,
             cursor_visible,
             drop_target_helper,
             validation_number,
@@ -534,7 +604,7 @@ impl WindowsWindow {
             is_minimizable: params.is_minimizable,
             min_size: params.window_min_size,
             executor,
-            current_cursor,
+            cursors,
             cursor_visible,
             drop_target_helper,
             validation_number,
@@ -633,6 +703,11 @@ impl Drop for WindowsWindow {
 }
 
 impl PlatformWindow for WindowsWindow {
+    fn set_cursor_style(&self, style: CursorStyle) -> bool {
+        self.update_cursor(style);
+        true
+    }
+
     fn bounds(&self) -> Bounds<Pixels> {
         self.state.bounds()
     }

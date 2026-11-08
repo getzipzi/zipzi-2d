@@ -667,6 +667,7 @@ pub(crate) struct MacWindowState {
     blurred_view: Option<id>,
     background_appearance: WindowBackgroundAppearance,
     cursor_style: CursorStyle,
+    custom_cursors: crate::cursor::CustomCursors,
     cursor_visible: Arc<AtomicBool>,
     frame_source: Option<WindowFrameSource>,
     pub(crate) renderer: renderer::Renderer,
@@ -979,6 +980,7 @@ impl MacWindow {
             ..
         }: WindowParams,
         cursor_visible: Arc<AtomicBool>,
+        custom_cursors: crate::cursor::CustomCursors,
         foreground_executor: ForegroundExecutor,
         background_executor: BackgroundExecutor,
         renderer_context: renderer::Context,
@@ -1104,6 +1106,7 @@ impl MacWindow {
                 blurred_view: None,
                 background_appearance: WindowBackgroundAppearance::Opaque,
                 cursor_style: CursorStyle::Arrow,
+                custom_cursors,
                 cursor_visible,
                 frame_source: None,
                 renderer: renderer::new_renderer(
@@ -1430,6 +1433,24 @@ fn if_window_not_closed(closed: Arc<AtomicBool>, f: impl FnOnce()) {
 }
 
 impl PlatformWindow for MacWindow {
+    fn set_cursor_style(&self, style: CursorStyle) -> bool {
+        let (native_window, native_view) = {
+            let mut state = self.0.lock();
+            if state.cursor_style == style {
+                return true;
+            }
+            state.cursor_style = style;
+            (state.native_window, state.native_view)
+        };
+        // Invalidate the requesting view, including inactive hovered windows.
+        // Release the state lock before AppKit can call resetCursorRects.
+        unsafe {
+            let _: () =
+                msg_send![native_window, invalidateCursorRectsForView: native_view.as_ptr()];
+        }
+        true
+    }
+
     fn bounds(&self) -> Bounds<Pixels> {
         self.0.as_ref().lock().bounds()
     }
@@ -2555,9 +2576,21 @@ extern "C" fn reset_cursor_rects(this: &Object, _: Sel) {
         let _: () = msg_send![super(this, class!(NSView)), resetCursorRects];
 
         let window_state = get_window_state(this);
-        let cursor_style = window_state.lock().cursor_style;
+        let (cursor_style, custom) = {
+            let state = window_state.lock();
+            let custom = if let CursorStyle::Custom(id) = state.cursor_style {
+                state.custom_cursors.borrow().get(&id).cloned()
+            } else {
+                None
+            };
+            (state.cursor_style, custom)
+        };
 
         let cursor: id = match cursor_style {
+            CursorStyle::Custom(_) => custom
+                .as_ref()
+                .map(|cursor| Retained::as_ptr(cursor) as id)
+                .unwrap_or_else(|| msg_send![class!(NSCursor), arrowCursor]),
             CursorStyle::Arrow => msg_send![class!(NSCursor), arrowCursor],
             CursorStyle::IBeam => msg_send![class!(NSCursor), IBeamCursor],
             CursorStyle::Crosshair => msg_send![class!(NSCursor), crosshairCursor],

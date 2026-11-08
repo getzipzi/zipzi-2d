@@ -21,7 +21,6 @@ use windows::{
 use crate::*;
 use gpui::*;
 
-pub(crate) const WM_GPUI_CURSOR_STYLE_CHANGED: u32 = WM_USER + 1;
 pub(crate) const WM_GPUI_CLOSE_ONE_WINDOW: u32 = WM_USER + 2;
 pub(crate) const WM_GPUI_TASK_DISPATCHED_ON_MAIN_THREAD: u32 = WM_USER + 3;
 pub(crate) const WM_GPUI_DOCK_MENU_ACTION: u32 = WM_USER + 4;
@@ -158,7 +157,6 @@ impl WindowsWindowInner {
             WM_SETTINGCHANGE => self.handle_system_settings_changed(handle, wparam, lparam),
             WM_INPUTLANGCHANGE => self.handle_input_language_changed(),
             WM_SHOWWINDOW => self.handle_window_visibility_changed(handle, wparam),
-            WM_GPUI_CURSOR_STYLE_CHANGED => self.handle_cursor_changed(lparam),
             WM_GPUI_FORCE_UPDATE_WINDOW => self.draw_window(handle, true),
             WM_GPUI_GPU_DEVICE_LOST => self.handle_device_lost(lparam),
             DM_POINTERHITTEST => self.handle_dm_pointer_hit_test(wparam),
@@ -871,6 +869,7 @@ impl WindowsWindowInner {
         let is_maximized = self.state.is_maximized();
         let new_scale_factor = new_dpi / USER_DEFAULT_SCREEN_DPI as f32;
         self.state.scale_factor.set(new_scale_factor);
+        self.update_cursor(self.state.cursor_style.get());
         crate::fast::layers::release_tiles(&mut self.state.renderer.borrow_mut());
         self.state.border_offset.update(handle).log_err();
 
@@ -1158,47 +1157,22 @@ impl WindowsWindowInner {
         None
     }
 
-    fn handle_cursor_changed(&self, lparam: LPARAM) -> Option<isize> {
-        let had_cursor = self.state.current_cursor.get().is_some();
-
-        self.state.current_cursor.set(if lparam.0 == 0 {
-            None
-        } else {
-            Some(HCURSOR(lparam.0 as _))
-        });
-
-        if had_cursor != self.state.current_cursor.get().is_some() {
-            unsafe { SetCursor(self.state.current_cursor.get()) };
-        }
-
-        Some(0)
-    }
-
     fn handle_set_cursor(&self, handle: HWND, lparam: LPARAM) -> Option<isize> {
         if unsafe { !IsWindowEnabled(handle).as_bool() }
-            || matches!(
-                lparam.loword() as u32,
-                HTLEFT
-                    | HTRIGHT
-                    | HTTOP
-                    | HTTOPLEFT
-                    | HTTOPRIGHT
-                    | HTBOTTOM
-                    | HTBOTTOMLEFT
-                    | HTBOTTOMRIGHT
-            )
+            || lparam.loword() as u32 != HTCLIENT
+            || !self.owns_cursor()
         {
             return None;
         }
         let cursor = if self.state.cursor_visible.load(Ordering::Relaxed) {
-            self.state.current_cursor.get()
+            self.state.current_cursor.borrow().handle
         } else {
             None
         };
         unsafe {
             SetCursor(cursor);
         };
-        Some(0)
+        Some(1)
     }
 
     fn handle_system_settings_changed(
@@ -1408,9 +1382,7 @@ impl WindowsWindowInner {
     /// Clear the hidden flag and restore the cursor immediately
     fn restore_cursor_after_hide(&self) {
         if !self.state.cursor_visible.swap(true, Ordering::Relaxed) {
-            unsafe {
-                SetCursor(self.state.current_cursor.get());
-            }
+            self.apply_cursor_if_owned();
         }
     }
 

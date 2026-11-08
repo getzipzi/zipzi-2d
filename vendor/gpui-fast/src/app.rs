@@ -1973,6 +1973,12 @@ impl App {
         self.svg_renderer.clone()
     }
 
+    /// Registers cursor artwork once for reuse by hitboxes and active drags.
+    /// Unsupported platforms return the artwork's standard fallback.
+    pub fn register_custom_cursor(&self, cursor: crate::CustomCursor) -> CursorStyle {
+        self.platform.register_custom_cursor(cursor)
+    }
+
     pub(crate) fn push_effect(&mut self, effect: Effect) {
         match &effect {
             Effect::Notify { emitter } => {

@@ -38,6 +38,7 @@ mod status;
 #[path = "../../zipzi-editor-core/tests/support/mod.rs"]
 pub(crate) mod test_fixture;
 mod theme;
+mod tool_cursors;
 mod transfer;
 mod ui;
 mod updates;
@@ -51,6 +52,7 @@ use rust_i18n::t;
 use zipzi_editor_core::{CloseDisposition, Editor, EditorCommand, LoadRequest};
 
 struct EditorView {
+    tool_cursors: tool_cursors::ToolCursors,
     host: Option<host::DesktopHost>,
     _runtime_events: Option<Task<()>>,
     project_queue: std::sync::Arc<std::sync::Mutex<zipzi_runtime::protocol::ProjectOpenQueue>>,
@@ -113,6 +115,7 @@ impl EditorView {
         let focus = cx.focus_handle();
         window.focus(&focus, cx);
         let mut editor = Self {
+            tool_cursors: tool_cursors::ToolCursors::get_or_init(cx),
             host: host.clone(),
             project_queue: host
                 .as_ref()

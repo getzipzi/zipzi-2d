@@ -91,8 +91,7 @@ pub(crate) struct WindowsPlatformState {
     callbacks: PlatformCallbacks,
     menus: RefCell<Vec<OwnedMenu>>,
     jump_list: RefCell<JumpList>,
-    // NOTE: standard cursor handles don't need to close.
-    pub(crate) current_cursor: Cell<Option<HCURSOR>>,
+    pub(crate) cursors: Rc<RefCell<crate::cursor::CursorCache>>,
     /// Shared with each window so `WM_SETCURSOR` can read it directly.
     pub(crate) cursor_visible: Arc<AtomicBool>,
     /// Shared with each window to coordinate draws across windows on the UI
@@ -119,12 +118,11 @@ impl WindowsPlatformState {
     fn new(directx_devices: Option<DirectXDevices>) -> Self {
         let callbacks = PlatformCallbacks::default();
         let jump_list = JumpList::new();
-        let current_cursor = load_cursor(CursorStyle::Arrow);
 
         Self {
             callbacks,
             jump_list: RefCell::new(jump_list),
-            current_cursor: Cell::new(current_cursor),
+            cursors: Rc::new(RefCell::new(crate::cursor::CursorCache::new())),
             cursor_visible: Arc::new(AtomicBool::new(true)),
             draw_coordinator: Rc::new(DrawCoordinator::new()),
             directx_devices: RefCell::new(directx_devices),
@@ -297,20 +295,11 @@ impl WindowsPlatform {
     }
 
     #[inline]
-    fn post_message(&self, message: u32, wparam: WPARAM, lparam: LPARAM) {
-        self.raw_window_handles
-            .read()
-            .iter()
-            .for_each(|handle| unsafe {
-                PostMessageW(Some(handle.as_raw()), message, wparam, lparam).log_err();
-            });
-    }
-
     fn generate_creation_info(&self) -> WindowCreationInfo {
         WindowCreationInfo {
             icon: self.icon,
             executor: self.foreground_executor.clone(),
-            current_cursor: self.inner.state.current_cursor.get(),
+            cursors: self.inner.state.cursors.clone(),
             cursor_visible: self.inner.state.cursor_visible.clone(),
             drop_target_helper: self.drop_target_helper.clone().unwrap(),
             validation_number: self.inner.validation_number,
@@ -1003,15 +992,20 @@ impl Platform for WindowsPlatform {
     }
 
     fn set_cursor_style(&self, style: CursorStyle) {
-        let hcursor = load_cursor(style);
-        if self.inner.state.current_cursor.get().map(|c| c.0) != hcursor.map(|c| c.0) {
-            self.post_message(
-                WM_GPUI_CURSOR_STYLE_CHANGED,
-                WPARAM(0),
-                LPARAM(hcursor.map_or(0, |c| c.0 as isize)),
-            );
-            self.inner.state.current_cursor.set(hcursor);
+        // Legacy callers also select the actual pointer/capture owner. Never
+        // broadcast a native cursor handle to unrelated windows.
+        for handle in self.raw_window_handles.read().iter() {
+            if let Some(window) = window_from_hwnd(handle.as_raw())
+                && window.owns_cursor()
+            {
+                window.update_cursor(style);
+                break;
+            }
         }
+    }
+
+    fn register_custom_cursor(&self, cursor: CustomCursor) -> CursorStyle {
+        self.inner.state.cursors.borrow_mut().register(cursor)
     }
 
     fn hide_cursor_until_mouse_moves(&self) {
@@ -1444,7 +1438,7 @@ impl Drop for WindowsPlatform {
 pub(crate) struct WindowCreationInfo {
     pub(crate) icon: HICON,
     pub(crate) executor: ForegroundExecutor,
-    pub(crate) current_cursor: Option<HCURSOR>,
+    pub(crate) cursors: Rc<RefCell<crate::cursor::CursorCache>>,
     pub(crate) cursor_visible: Arc<AtomicBool>,
     pub(crate) drop_target_helper: IDropTargetHelper,
     pub(crate) validation_number: usize,

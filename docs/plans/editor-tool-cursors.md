@@ -1,6 +1,7 @@
 # Editor 专用工具光标方案
 
-状态：设计方案，尚未实施。创建：2026-11-08。
+状态：第 1 阶段实施中，已加入基础接口与加点光标原型；双平台原生交互验收待完成。
+创建：2026-11-08。
 
 为 Zipzi Editor 的网格编辑、变形器操作和选择工具提供可辨识的专用光标，
 让用户在操作前看到将要执行的动作，并在拖动期间保持准确反馈。
@@ -256,3 +257,49 @@ macOS 测试通过不能替代 Windows 验收；当前 Windows 静止指针换�
 - 自定义资源对系统指针放大偏好的实际响应，以及相应的标准光标回退策略。
 
 这些细节通过首批原型确定，不影响“原生光标负责指针、画布覆盖层负责操作预览”的实现边界。
+
+## 9 实施记录（2026-11-08）
+
+第 1 阶段的代码已加入，原生交互验收仍在待办中：
+
+- GPUI 增加 `CustomCursor`、`CustomCursorImage`、`CustomCursorId` 和
+  `App::register_custom_cursor`；`CursorStyle::Custom` 沿用既有命中区域与拖拽请求路径。
+  图像使用预乘 RGBA，注册前检查尺寸、热点、表示比例和标准回退。
+- macOS 使用多分辨率 `NSImage` 创建 `NSCursor`，平台与窗口共同持有资源；
+  更新请求直接失效对应窗口的 cursor rect，不再只依赖 key/main window。
+- Windows 使用带 alpha 的位图创建自有光标，分别管理临时 GDI 位图、自有光标和共享系统句柄。
+  每个资源最多缓存 16 种位图尺寸；窗口保留当前句柄，淘汰缓存不会提前释放正在使用的资源。
+  DPI 变化时重新选择尺寸与热点。换形直接更新所属窗口，移除了携带裸句柄的广播消息。
+  即时显示前检查指针或捕获归属、原生菜单、移动缩放和非客户区。
+- Windows 增加原创张手、握手 SVG；macOS 保留系统手形。
+- Editor 注册 24 × 24、热点 (7, 7) 的加点 SVG 原型，生成 1x/2x/3x/4x 表示。
+  当前只接入空闲的显式加点工具；快捷操作和活动手势暂沿用原来的样式。
+  集中操作解析器及其余五类首批工具仍属于第 2 阶段。
+
+资源与接口见 [Editor 光标母版](../../crates/zipzi-editor/assets/cursors/README.md)、
+[通用资源实现](../../vendor/gpui-fast/src/custom_cursor.rs)及
+[vendor 补丁说明](../../vendor/README.md#native-custom-cursors)。
+
+本次验证环境为 macOS 27.0.1 / arm64；分数倍率测试使用生成位图验证，
+不代表完成真实屏幕倍率或跨屏验收。Windows 使用 `aarch64-pc-windows-msvc`
+交叉编译检查，不执行 Windows 测试，也不替代实机验收。
+
+本次结果：Editor 编译检查通过；资源/DPI/回退测试 6 项通过；UI `cursor`
+过滤测试 7 项通过；macOS 原生资源注册与同 ID 复用冒烟测试通过；
+Windows 后端及其 4 项原生资源测试的交叉编译检查通过。
+
+聚焦检查入口：
+
+```sh
+cargo check --locked -p zipzi-editor
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --test custom_cursors
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --features test-support --test native_cursors
+./tools/test-editor.sh ui cursor
+cargo check --locked -p gpui-fast-windows --tests --target aarch64-pc-windows-msvc
+# 在 Windows 上执行原生资源、热点、缓存淘汰和手形测试：
+cargo test --locked -p gpui-fast-windows --lib cursor::tests
+```
+
+第 7.2 节的交互矩阵仍待逐项验收，尤其是 Windows 静止指针、捕获期间换形、
+100%/125%/150%/200% 跨屏、多窗口、原生菜单以及两端系统指针偏好。
+原生注册冒烟测试只覆盖资源创建和同 ID 复用，不验证屏幕上的实际热点与换形时机。

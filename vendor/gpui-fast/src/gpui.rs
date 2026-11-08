@@ -16,6 +16,8 @@ mod assets;
 #[path = "fast/bounds_tree.rs"]
 mod bounds_tree;
 mod color;
+mod custom_cursor;
+pub use custom_cursor::*;
 /// The default colors used by GPUI.
 pub mod colors;
 #[cfg(feature = "profiler")]

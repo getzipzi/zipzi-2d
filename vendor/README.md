@@ -34,6 +34,7 @@ upstream README and files needed by relative test paths are also retained.
 | [windows-shared-texture.patch](windows-shared-texture.patch) | Adds Windows shared GPU surface composition. |
 | [native-metal.patch](native-metal.patch) | Exposes the window's Metal device and queue, composites native textures, and adds optional frame tracing and headless support. |
 | [drag-ownership.patch](drag-ownership.patch) | Adds drag identity and targeted cancellation so a stale token cannot stop a later drag. |
+| [tool-cursors.patch](tool-cursors.patch) | Registers custom native cursors, targets cursor requests to their window, and adds Windows hand cursors, bounded DPI variants and immediate updates. |
 | [cache-boundary.patch](cache-boundary.patch) | Preserves explicit virtual-list cache boundaries across frame reuse and splicing. |
 | [list-height-estimates.patch](list-height-estimates.patch) | Retains list height estimates across width changes until rows are remeasured. |
 | [list-layout-reparent.patch](list-layout-reparent.patch) | Compares actual Taffy children without a duplicate child-list cache. |
@@ -47,6 +48,30 @@ The three Fast crates serve different roles: the core defines interfaces, the
 macOS crate connects window access, and the Apple crate implements Metal
 composition. `gpui-fast-apple/src/fast/release_gpui` is shader-binding input used
 by `build.rs` and must be retained.
+
+## Native custom cursors
+
+`CustomCursor` validates immutable premultiplied RGBA representations, logical
+size, hotspot and a standard fallback. `CustomCursor::from_svg` rasterizes SVG
+masters at 1x through 4x. Register once with `App::register_custom_cursor` and
+reuse the returned `CursorStyle` with existing hitbox and active-drag APIs.
+IDs are process-local; serialized IDs cannot restore artwork in a later run.
+Unsupported platforms return the fallback at registration.
+
+macOS owns multi-representation `NSCursor` objects in a platform/window-shared
+cache and updates the requesting view's cursor rects. Windows owns custom
+`HCURSOR` handles separately from shared system handles, caches up to 16 physical
+sizes per resource, and retains selected handles through cache eviction. Its
+window-local setter updates stationary/captured pointers immediately when that
+window owns display responsibility, preserving native menus and non-client areas.
+`WM_DPICHANGED` selects the new size and hotspot. The hand SVGs are original
+artwork added for this repository; macOS continues to use its system hands.
+
+Apply this patch after the existing GPUI patches. The workspace's
+`zipzi-editor/tests/custom_cursors.rs` covers resource validation, identity,
+fallback and fractional DPI. `native_cursors` is a main-thread native registration
+smoke test. Interactive acceptance remains tracked in
+[the cursor plan](../docs/plans/editor-tool-cursors.md).
 
 ## Owned path scaling
 

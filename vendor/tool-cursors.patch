@@ -1,0 +1,1239 @@
+diff --git a/vendor/gpui-fast-macos/Cargo.toml b/vendor/gpui-fast-macos/Cargo.toml
+index 63702fc4..2ce89661 100644
+--- a/vendor/gpui-fast-macos/Cargo.toml
++++ b/vendor/gpui-fast-macos/Cargo.toml
+@@ -163,10 +163,13 @@ features = [
+     "NSAlert",
+     "NSApplication",
+     "NSButton",
++    "NSBitmapImageRep",
++    "NSCursor",
+     "NSControl",
+     "NSDraggingItem",
+     "NSGraphics",
+     "NSImage",
++    "NSImageRep",
+     "NSOpenPanel",
+     "NSPanel",
+     "NSPasteboard",
+diff --git a/vendor/gpui-fast-macos/src/gpui_macos.rs b/vendor/gpui-fast-macos/src/gpui_macos.rs
+index 410871e7..1f0b7222 100644
+--- a/vendor/gpui-fast-macos/src/gpui_macos.rs
++++ b/vendor/gpui-fast-macos/src/gpui_macos.rs
+@@ -5,6 +5,7 @@
+ //! macOS screens have a y axis that goes up from the bottom of the screen and
+ //! an origin at the bottom left of the main display.
+ 
++mod cursor;
+ mod display;
+ mod display_link;
+ mod events;
+diff --git a/vendor/gpui-fast-macos/src/platform.rs b/vendor/gpui-fast-macos/src/platform.rs
+index 8ce9f0d0..11cf1ccd 100644
+--- a/vendor/gpui-fast-macos/src/platform.rs
++++ b/vendor/gpui-fast-macos/src/platform.rs
+@@ -206,6 +206,7 @@ pub(crate) struct MacPlatformState {
+     keyboard_mapper: Rc<MacKeyboardMapper>,
+     /// Mirrors `[NSCursor setHiddenUntilMouseMoves:]` state, which AppKit doesn't expose.
+     cursor_visible: Arc<AtomicBool>,
++    custom_cursors: crate::cursor::CustomCursors,
+     system_notifications: crate::system_notifications::SystemNotificationState,
+ }
+ 
+@@ -274,6 +275,7 @@ impl MacPlatform {
+             menus: None,
+             keyboard_mapper,
+             cursor_visible: Arc::new(AtomicBool::new(true)),
++            custom_cursors: Default::default(),
+             system_notifications: crate::system_notifications::SystemNotificationState::new(),
+         });
+         Self(state, marker)
+@@ -776,10 +778,11 @@ impl Platform for MacPlatform {
+             return Err(PopupNotSupportedError.into());
+         }
+ 
+-        let (cursor_visible, foreground_executor, background_executor, renderer_context) = {
++        let (cursor_visible, custom_cursors, foreground_executor, background_executor, renderer_context) = {
+             let guard = self.0.lock();
+             (
+                 guard.cursor_visible.clone(),
++                guard.custom_cursors.clone(),
+                 guard.foreground_executor.clone(),
+                 guard.background_executor.clone(),
+                 guard.renderer_context.clone(),
+@@ -790,6 +793,7 @@ impl Platform for MacPlatform {
+             handle,
+             options,
+             cursor_visible,
++            custom_cursors,
+             foreground_executor,
+             background_executor,
+             renderer_context,
+@@ -1238,6 +1242,11 @@ impl Platform for MacPlatform {
+         }
+     }
+ 
++    fn register_custom_cursor(&self, cursor: gpui::CustomCursor) -> CursorStyle {
++        let cursors = self.0.lock().custom_cursors.clone();
++        crate::cursor::register(&cursors, cursor, self.1)
++    }
++
+     fn hide_cursor_until_mouse_moves(&self) {
+         let cursor_visible = self.0.lock().cursor_visible.clone();
+         if !cursor_visible.swap(false, Ordering::Relaxed) {
+diff --git a/vendor/gpui-fast-macos/src/window.rs b/vendor/gpui-fast-macos/src/window.rs
+index cc169474..4d50f8e4 100644
+--- a/vendor/gpui-fast-macos/src/window.rs
++++ b/vendor/gpui-fast-macos/src/window.rs
+@@ -667,6 +667,7 @@ pub(crate) struct MacWindowState {
+     blurred_view: Option<id>,
+     background_appearance: WindowBackgroundAppearance,
+     cursor_style: CursorStyle,
++    custom_cursors: crate::cursor::CustomCursors,
+     cursor_visible: Arc<AtomicBool>,
+     frame_source: Option<WindowFrameSource>,
+     pub(crate) renderer: renderer::Renderer,
+@@ -979,6 +980,7 @@ impl MacWindow {
+             ..
+         }: WindowParams,
+         cursor_visible: Arc<AtomicBool>,
++        custom_cursors: crate::cursor::CustomCursors,
+         foreground_executor: ForegroundExecutor,
+         background_executor: BackgroundExecutor,
+         renderer_context: renderer::Context,
+@@ -1104,6 +1106,7 @@ impl MacWindow {
+                 blurred_view: None,
+                 background_appearance: WindowBackgroundAppearance::Opaque,
+                 cursor_style: CursorStyle::Arrow,
++                custom_cursors,
+                 cursor_visible,
+                 frame_source: None,
+                 renderer: renderer::new_renderer(
+@@ -1430,6 +1433,24 @@ fn if_window_not_closed(closed: Arc<AtomicBool>, f: impl FnOnce()) {
+ }
+ 
+ impl PlatformWindow for MacWindow {
++    fn set_cursor_style(&self, style: CursorStyle) -> bool {
++        let (native_window, native_view) = {
++            let mut state = self.0.lock();
++            if state.cursor_style == style {
++                return true;
++            }
++            state.cursor_style = style;
++            (state.native_window, state.native_view)
++        };
++        // Invalidate the requesting view, including inactive hovered windows.
++        // Release the state lock before AppKit can call resetCursorRects.
++        unsafe {
++            let _: () =
++                msg_send![native_window, invalidateCursorRectsForView: native_view.as_ptr()];
++        }
++        true
++    }
++
+     fn bounds(&self) -> Bounds<Pixels> {
+         self.0.as_ref().lock().bounds()
+     }
+@@ -2555,9 +2576,21 @@ extern "C" fn reset_cursor_rects(this: &Object, _: Sel) {
+         let _: () = msg_send![super(this, class!(NSView)), resetCursorRects];
+ 
+         let window_state = get_window_state(this);
+-        let cursor_style = window_state.lock().cursor_style;
++        let (cursor_style, custom) = {
++            let state = window_state.lock();
++            let custom = if let CursorStyle::Custom(id) = state.cursor_style {
++                state.custom_cursors.borrow().get(&id).cloned()
++            } else {
++                None
++            };
++            (state.cursor_style, custom)
++        };
+ 
+         let cursor: id = match cursor_style {
++            CursorStyle::Custom(_) => custom
++                .as_ref()
++                .map(|cursor| Retained::as_ptr(cursor) as id)
++                .unwrap_or_else(|| msg_send![class!(NSCursor), arrowCursor]),
+             CursorStyle::Arrow => msg_send![class!(NSCursor), arrowCursor],
+             CursorStyle::IBeam => msg_send![class!(NSCursor), IBeamCursor],
+             CursorStyle::Crosshair => msg_send![class!(NSCursor), crosshairCursor],
+diff --git a/vendor/gpui-fast-windows/src/events.rs b/vendor/gpui-fast-windows/src/events.rs
+index bbad3c0e..a3f75288 100644
+--- a/vendor/gpui-fast-windows/src/events.rs
++++ b/vendor/gpui-fast-windows/src/events.rs
+@@ -21,7 +21,6 @@ use windows::{
+ use crate::*;
+ use gpui::*;
+ 
+-pub(crate) const WM_GPUI_CURSOR_STYLE_CHANGED: u32 = WM_USER + 1;
+ pub(crate) const WM_GPUI_CLOSE_ONE_WINDOW: u32 = WM_USER + 2;
+ pub(crate) const WM_GPUI_TASK_DISPATCHED_ON_MAIN_THREAD: u32 = WM_USER + 3;
+ pub(crate) const WM_GPUI_DOCK_MENU_ACTION: u32 = WM_USER + 4;
+@@ -158,7 +157,6 @@ impl WindowsWindowInner {
+             WM_SETTINGCHANGE => self.handle_system_settings_changed(handle, wparam, lparam),
+             WM_INPUTLANGCHANGE => self.handle_input_language_changed(),
+             WM_SHOWWINDOW => self.handle_window_visibility_changed(handle, wparam),
+-            WM_GPUI_CURSOR_STYLE_CHANGED => self.handle_cursor_changed(lparam),
+             WM_GPUI_FORCE_UPDATE_WINDOW => self.draw_window(handle, true),
+             WM_GPUI_GPU_DEVICE_LOST => self.handle_device_lost(lparam),
+             DM_POINTERHITTEST => self.handle_dm_pointer_hit_test(wparam),
+@@ -871,6 +869,7 @@ impl WindowsWindowInner {
+         let is_maximized = self.state.is_maximized();
+         let new_scale_factor = new_dpi / USER_DEFAULT_SCREEN_DPI as f32;
+         self.state.scale_factor.set(new_scale_factor);
++        self.update_cursor(self.state.cursor_style.get());
+         crate::fast::layers::release_tiles(&mut self.state.renderer.borrow_mut());
+         self.state.border_offset.update(handle).log_err();
+ 
+@@ -1158,47 +1157,22 @@ impl WindowsWindowInner {
+         None
+     }
+ 
+-    fn handle_cursor_changed(&self, lparam: LPARAM) -> Option<isize> {
+-        let had_cursor = self.state.current_cursor.get().is_some();
+-
+-        self.state.current_cursor.set(if lparam.0 == 0 {
+-            None
+-        } else {
+-            Some(HCURSOR(lparam.0 as _))
+-        });
+-
+-        if had_cursor != self.state.current_cursor.get().is_some() {
+-            unsafe { SetCursor(self.state.current_cursor.get()) };
+-        }
+-
+-        Some(0)
+-    }
+-
+     fn handle_set_cursor(&self, handle: HWND, lparam: LPARAM) -> Option<isize> {
+         if unsafe { !IsWindowEnabled(handle).as_bool() }
+-            || matches!(
+-                lparam.loword() as u32,
+-                HTLEFT
+-                    | HTRIGHT
+-                    | HTTOP
+-                    | HTTOPLEFT
+-                    | HTTOPRIGHT
+-                    | HTBOTTOM
+-                    | HTBOTTOMLEFT
+-                    | HTBOTTOMRIGHT
+-            )
++            || lparam.loword() as u32 != HTCLIENT
++            || !self.owns_cursor()
+         {
+             return None;
+         }
+         let cursor = if self.state.cursor_visible.load(Ordering::Relaxed) {
+-            self.state.current_cursor.get()
++            self.state.current_cursor.borrow().handle
+         } else {
+             None
+         };
+         unsafe {
+             SetCursor(cursor);
+         };
+-        Some(0)
++        Some(1)
+     }
+ 
+     fn handle_system_settings_changed(
+@@ -1408,9 +1382,7 @@ impl WindowsWindowInner {
+     /// Clear the hidden flag and restore the cursor immediately
+     fn restore_cursor_after_hide(&self) {
+         if !self.state.cursor_visible.swap(true, Ordering::Relaxed) {
+-            unsafe {
+-                SetCursor(self.state.current_cursor.get());
+-            }
++            self.apply_cursor_if_owned();
+         }
+     }
+ 
+diff --git a/vendor/gpui-fast-windows/src/gpui_windows.rs b/vendor/gpui-fast-windows/src/gpui_windows.rs
+index 9c97dae8..3ff5186c 100644
+--- a/vendor/gpui-fast-windows/src/gpui_windows.rs
++++ b/vendor/gpui-fast-windows/src/gpui_windows.rs
+@@ -2,6 +2,7 @@
+ #![cfg(target_os = "windows")]
+ 
+ mod clipboard;
++mod cursor;
+ mod destination_list;
+ mod dialog;
+ mod direct_manipulation;
+diff --git a/vendor/gpui-fast-windows/src/platform.rs b/vendor/gpui-fast-windows/src/platform.rs
+index d852cd8b..93ab8ea6 100644
+--- a/vendor/gpui-fast-windows/src/platform.rs
++++ b/vendor/gpui-fast-windows/src/platform.rs
+@@ -91,8 +91,7 @@ pub(crate) struct WindowsPlatformState {
+     callbacks: PlatformCallbacks,
+     menus: RefCell<Vec<OwnedMenu>>,
+     jump_list: RefCell<JumpList>,
+-    // NOTE: standard cursor handles don't need to close.
+-    pub(crate) current_cursor: Cell<Option<HCURSOR>>,
++    pub(crate) cursors: Rc<RefCell<crate::cursor::CursorCache>>,
+     /// Shared with each window so `WM_SETCURSOR` can read it directly.
+     pub(crate) cursor_visible: Arc<AtomicBool>,
+     /// Shared with each window to coordinate draws across windows on the UI
+@@ -119,12 +118,11 @@ impl WindowsPlatformState {
+     fn new(directx_devices: Option<DirectXDevices>) -> Self {
+         let callbacks = PlatformCallbacks::default();
+         let jump_list = JumpList::new();
+-        let current_cursor = load_cursor(CursorStyle::Arrow);
+ 
+         Self {
+             callbacks,
+             jump_list: RefCell::new(jump_list),
+-            current_cursor: Cell::new(current_cursor),
++            cursors: Rc::new(RefCell::new(crate::cursor::CursorCache::new())),
+             cursor_visible: Arc::new(AtomicBool::new(true)),
+             draw_coordinator: Rc::new(DrawCoordinator::new()),
+             directx_devices: RefCell::new(directx_devices),
+@@ -297,20 +295,11 @@ impl WindowsPlatform {
+     }
+ 
+     #[inline]
+-    fn post_message(&self, message: u32, wparam: WPARAM, lparam: LPARAM) {
+-        self.raw_window_handles
+-            .read()
+-            .iter()
+-            .for_each(|handle| unsafe {
+-                PostMessageW(Some(handle.as_raw()), message, wparam, lparam).log_err();
+-            });
+-    }
+-
+     fn generate_creation_info(&self) -> WindowCreationInfo {
+         WindowCreationInfo {
+             icon: self.icon,
+             executor: self.foreground_executor.clone(),
+-            current_cursor: self.inner.state.current_cursor.get(),
++            cursors: self.inner.state.cursors.clone(),
+             cursor_visible: self.inner.state.cursor_visible.clone(),
+             drop_target_helper: self.drop_target_helper.clone().unwrap(),
+             validation_number: self.inner.validation_number,
+@@ -1003,17 +992,22 @@ impl Platform for WindowsPlatform {
+     }
+ 
+     fn set_cursor_style(&self, style: CursorStyle) {
+-        let hcursor = load_cursor(style);
+-        if self.inner.state.current_cursor.get().map(|c| c.0) != hcursor.map(|c| c.0) {
+-            self.post_message(
+-                WM_GPUI_CURSOR_STYLE_CHANGED,
+-                WPARAM(0),
+-                LPARAM(hcursor.map_or(0, |c| c.0 as isize)),
+-            );
+-            self.inner.state.current_cursor.set(hcursor);
++        // Legacy callers also select the actual pointer/capture owner. Never
++        // broadcast a native cursor handle to unrelated windows.
++        for handle in self.raw_window_handles.read().iter() {
++            if let Some(window) = window_from_hwnd(handle.as_raw())
++                && window.owns_cursor()
++            {
++                window.update_cursor(style);
++                break;
++            }
+         }
+     }
+ 
++    fn register_custom_cursor(&self, cursor: CustomCursor) -> CursorStyle {
++        self.inner.state.cursors.borrow_mut().register(cursor)
++    }
++
+     fn hide_cursor_until_mouse_moves(&self) {
+         if !self
+             .inner
+@@ -1444,7 +1438,7 @@ impl Drop for WindowsPlatform {
+ pub(crate) struct WindowCreationInfo {
+     pub(crate) icon: HICON,
+     pub(crate) executor: ForegroundExecutor,
+-    pub(crate) current_cursor: Option<HCURSOR>,
++    pub(crate) cursors: Rc<RefCell<crate::cursor::CursorCache>>,
+     pub(crate) cursor_visible: Arc<AtomicBool>,
+     pub(crate) drop_target_helper: IDropTargetHelper,
+     pub(crate) validation_number: usize,
+diff --git a/vendor/gpui-fast-windows/src/window.rs b/vendor/gpui-fast-windows/src/window.rs
+index 60378204..f0138f3f 100644
+--- a/vendor/gpui-fast-windows/src/window.rs
++++ b/vendor/gpui-fast-windows/src/window.rs
+@@ -76,7 +76,10 @@ pub struct WindowsWindowState {
+     pub force_render_pending: Cell<bool>,
+ 
+     pub click_state: ClickState,
+-    pub current_cursor: Cell<Option<HCURSOR>>,
++    pub current_cursor: RefCell<crate::cursor::ResolvedCursor>,
++    pub cursor_style: Cell<CursorStyle>,
++    cursor_scale: Cell<f32>,
++    pub cursors: Rc<RefCell<crate::cursor::CursorCache>>,
+     /// Shared with [`WindowsPlatformState::cursor_visible`].
+     pub cursor_visible: Arc<AtomicBool>,
+     pub nc_button_pressed: Cell<Option<u32>>,
+@@ -116,7 +119,7 @@ impl WindowsWindowState {
+         hwnd: HWND,
+         directx_devices: &DirectXDevices,
+         window_params: &CREATESTRUCTW,
+-        current_cursor: Option<HCURSOR>,
++        cursors: Rc<RefCell<crate::cursor::CursorCache>>,
+         cursor_visible: Arc<AtomicBool>,
+         display: WindowsDisplay,
+         min_size: Option<Size<Pixels>>,
+@@ -181,7 +184,14 @@ impl WindowsWindowState {
+             renderer: RefCell::new(renderer),
+             force_render_pending: Cell::new(false),
+             click_state,
+-            current_cursor: Cell::new(current_cursor),
++            current_cursor: RefCell::new(
++                cursors
++                    .borrow_mut()
++                    .resolve(CursorStyle::Arrow, scale_factor),
++            ),
++            cursor_style: Cell::new(CursorStyle::Arrow),
++            cursor_scale: Cell::new(scale_factor),
++            cursors: cursors.clone(),
+             cursor_visible,
+             nc_button_pressed: Cell::new(nc_button_pressed),
+             display: Cell::new(display),
+@@ -255,6 +265,66 @@ impl WindowsWindowState {
+ }
+ 
+ impl WindowsWindowInner {
++    /// Whether it is safe for this window to change the displayed pointer.
++    pub(crate) fn owns_cursor(&self) -> bool {
++        unsafe {
++            if !IsWindowEnabled(self.hwnd).as_bool() || !IsWindowVisible(self.hwnd).as_bool() {
++                return false;
++            }
++            let mut gui = GUITHREADINFO {
++                cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
++                ..Default::default()
++            };
++            if GetGUIThreadInfo(0, &mut gui).is_ok()
++                && (gui.flags.0 & (GUI_INMENUMODE.0 | GUI_INMOVESIZE.0)) != 0
++            {
++                return false;
++            }
++            let capture = GetCapture();
++            if !capture.is_invalid() {
++                return capture == self.hwnd;
++            }
++            let mut position = POINT::default();
++            if GetCursorPos(&mut position).is_err() || WindowFromPoint(position) != self.hwnd {
++                return false;
++            }
++            let packed = (position.x as u16 as u32) | ((position.y as u16 as u32) << 16);
++            SendMessageW(self.hwnd, WM_NCHITTEST, None, Some(LPARAM(packed as isize))).0 as u32
++                == HTCLIENT
++        }
++    }
++
++    pub(crate) fn apply_cursor_if_owned(&self) {
++        if self.owns_cursor() {
++            let handle = if self
++                .state
++                .cursor_visible
++                .load(std::sync::atomic::Ordering::Relaxed)
++            {
++                self.state.current_cursor.borrow().handle
++            } else {
++                None
++            };
++            unsafe {
++                SetCursor(handle);
++            }
++        }
++    }
++
++    pub(crate) fn update_cursor(&self, style: CursorStyle) {
++        let scale = self.state.scale_factor.get();
++        if self.state.cursor_style.get() == style && self.state.cursor_scale.get() == scale {
++            return;
++        }
++        self.state.cursor_style.set(style);
++        self.state.cursor_scale.set(scale);
++        let cursor = self.state.cursors.borrow_mut().resolve(style, scale);
++        let previous = self.state.current_cursor.replace(cursor);
++        // Keep the old handle alive until the displayed pointer has changed.
++        self.apply_cursor_if_owned();
++        drop(previous);
++    }
++
+     /// Whether the window is being presented: shown and not minimized. Windows
+     /// has no notification for a window fully covered by other windows, so
+     /// that case reports `Visible`.
+@@ -273,7 +343,7 @@ impl WindowsWindowInner {
+             hwnd,
+             &context.directx_devices,
+             cs,
+-            context.current_cursor,
++            context.cursors.clone(),
+             context.cursor_visible.clone(),
+             context.display,
+             context.min_size,
+@@ -421,7 +491,7 @@ struct WindowCreateContext {
+     is_minimizable: bool,
+     min_size: Option<Size<Pixels>>,
+     executor: ForegroundExecutor,
+-    current_cursor: Option<HCURSOR>,
++    cursors: Rc<RefCell<crate::cursor::CursorCache>>,
+     cursor_visible: Arc<AtomicBool>,
+     drop_target_helper: IDropTargetHelper,
+     validation_number: usize,
+@@ -450,7 +520,7 @@ impl WindowsWindow {
+         let WindowCreationInfo {
+             icon,
+             executor,
+-            current_cursor,
++            cursors,
+             cursor_visible,
+             drop_target_helper,
+             validation_number,
+@@ -534,7 +604,7 @@ impl WindowsWindow {
+             is_minimizable: params.is_minimizable,
+             min_size: params.window_min_size,
+             executor,
+-            current_cursor,
++            cursors,
+             cursor_visible,
+             drop_target_helper,
+             validation_number,
+@@ -633,6 +703,11 @@ impl Drop for WindowsWindow {
+ }
+ 
+ impl PlatformWindow for WindowsWindow {
++    fn set_cursor_style(&self, style: CursorStyle) -> bool {
++        self.update_cursor(style);
++        true
++    }
++
+     fn bounds(&self) -> Bounds<Pixels> {
+         self.state.bounds()
+     }
+diff --git a/vendor/gpui-fast/src/app.rs b/vendor/gpui-fast/src/app.rs
+index 260b27cb..8c49abf7 100644
+--- a/vendor/gpui-fast/src/app.rs
++++ b/vendor/gpui-fast/src/app.rs
+@@ -1973,6 +1973,12 @@ impl App {
+         self.svg_renderer.clone()
+     }
+ 
++    /// Registers cursor artwork once for reuse by hitboxes and active drags.
++    /// Unsupported platforms return the artwork's standard fallback.
++    pub fn register_custom_cursor(&self, cursor: crate::CustomCursor) -> CursorStyle {
++        self.platform.register_custom_cursor(cursor)
++    }
++
+     pub(crate) fn push_effect(&mut self, effect: Effect) {
+         match &effect {
+             Effect::Notify { emitter } => {
+diff --git a/vendor/gpui-fast/src/gpui.rs b/vendor/gpui-fast/src/gpui.rs
+index 33f34aae..9f620374 100644
+--- a/vendor/gpui-fast/src/gpui.rs
++++ b/vendor/gpui-fast/src/gpui.rs
+@@ -16,6 +16,8 @@ mod assets;
+ #[path = "fast/bounds_tree.rs"]
+ mod bounds_tree;
+ mod color;
++mod custom_cursor;
++pub use custom_cursor::*;
+ /// The default colors used by GPUI.
+ pub mod colors;
+ #[cfg(feature = "profiler")]
+diff --git a/vendor/gpui-fast/src/platform.rs b/vendor/gpui-fast/src/platform.rs
+index 4ed688d6..3339e8a5 100644
+--- a/vendor/gpui-fast/src/platform.rs
++++ b/vendor/gpui-fast/src/platform.rs
+@@ -576,6 +576,11 @@ pub trait Platform: 'static {
+ 
+     fn set_cursor_style(&self, style: CursorStyle);
+ 
++    /// Registers immutable cursor artwork, or returns its standard fallback.
++    fn register_custom_cursor(&self, cursor: crate::CustomCursor) -> CursorStyle {
++        cursor.fallback()
++    }
++
+     /// Hides the mouse cursor until the user moves the mouse over one of
+     /// this application's windows.
+     fn hide_cursor_until_mouse_moves(&self);
+@@ -1216,6 +1221,10 @@ pub enum TextInputStateChange {
+ 
+ #[expect(missing_docs)]
+ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
++    /// Sets this window's cursor. Returns false when only the legacy platform API is supported.
++    fn set_cursor_style(&self, _style: CursorStyle) -> bool {
++        false
++    }
+     /// D3D11 device used by the window. The immediate context stays on the UI thread.
+     #[cfg(target_os = "windows")]
+     fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
+@@ -2938,6 +2947,9 @@ impl From<&str> for PromptButton {
+ /// The style of the cursor (pointer)
+ #[derive(Copy, Clone, Default, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+ pub enum CursorStyle {
++    /// Registered, process-local artwork. Unknown IDs use the arrow cursor.
++    Custom(crate::CustomCursorId),
++
+     /// The default cursor
+     #[default]
+     Arrow,
+diff --git a/vendor/gpui-fast/src/platform/visual_test.rs b/vendor/gpui-fast/src/platform/visual_test.rs
+index c4736477..480c0e2e 100644
+--- a/vendor/gpui-fast/src/platform/visual_test.rs
++++ b/vendor/gpui-fast/src/platform/visual_test.rs
+@@ -210,6 +210,10 @@ impl Platform for VisualTestPlatform {
+         self.platform.set_cursor_style(style)
+     }
+ 
++    fn register_custom_cursor(&self, cursor: crate::CustomCursor) -> CursorStyle {
++        self.platform.register_custom_cursor(cursor)
++    }
++
+     fn hide_cursor_until_mouse_moves(&self) {
+         self.platform.hide_cursor_until_mouse_moves();
+     }
+diff --git a/vendor/gpui-fast/src/window.rs b/vendor/gpui-fast/src/window.rs
+index b25cb830..d111873c 100644
+--- a/vendor/gpui-fast/src/window.rs
++++ b/vendor/gpui-fast/src/window.rs
+@@ -5649,7 +5649,9 @@ impl Window {
+                 .rendered_frame
+                 .cursor_style(self)
+                 .unwrap_or(CursorStyle::Arrow);
+-            cx.platform.set_cursor_style(style);
++            if !self.platform_window.set_cursor_style(style) {
++                cx.platform.set_cursor_style(style);
++            }
+         }
+     }
+ 
+diff --git a/vendor/gpui-fast-macos/src/cursor.rs b/vendor/gpui-fast-macos/src/cursor.rs
+new file mode 100644
+index 00000000..535555f8
+--- /dev/null
++++ b/vendor/gpui-fast-macos/src/cursor.rs
+@@ -0,0 +1,58 @@
++use gpui::{CursorStyle, CustomCursor, CustomCursorId};
++use objc2::{AnyThread, MainThreadMarker, rc::Retained};
++use objc2_app_kit::{NSBitmapImageRep, NSCursor, NSDeviceRGBColorSpace, NSImage};
++use objc2_foundation::{NSPoint, NSSize};
++use std::{cell::RefCell, collections::HashMap, rc::Rc};
++
++/// Shared by the platform and its windows; all access stays on the AppKit thread.
++pub(crate) type CustomCursors = Rc<RefCell<HashMap<CustomCursorId, Retained<NSCursor>>>>;
++
++pub(crate) fn register(
++    cursors: &CustomCursors,
++    cursor: CustomCursor,
++    marker: MainThreadMarker,
++) -> CursorStyle {
++    if cursors.borrow().contains_key(&cursor.id()) {
++        return CursorStyle::Custom(cursor.id());
++    }
++    match create(&cursor, marker) {
++        Some(native) => {
++            cursors.borrow_mut().insert(cursor.id(), native);
++            CursorStyle::Custom(cursor.id())
++        }
++        None => cursor.fallback(),
++    }
++}
++
++fn create(cursor: &CustomCursor, _marker: MainThreadMarker) -> Option<Retained<NSCursor>> {
++    let logical_size = NSSize::new(cursor.size().width as f64, cursor.size().height as f64);
++    let image = NSImage::initWithSize(NSImage::alloc(), logical_size);
++    for bitmap in cursor.images() {
++        // A null planes pointer asks AppKit to own the backing storage. The default
++        // bitmap format is premultiplied RGBA, matching CustomCursorImage.
++        let representation = unsafe {
++            NSBitmapImageRep::initWithBitmapDataPlanes_pixelsWide_pixelsHigh_bitsPerSample_samplesPerPixel_hasAlpha_isPlanar_colorSpaceName_bytesPerRow_bitsPerPixel(
++                NSBitmapImageRep::alloc(), std::ptr::null_mut(),
++                bitmap.size().width as isize, bitmap.size().height as isize,
++                8, 4, true, false, NSDeviceRGBColorSpace,
++                bitmap.size().width as isize * 4, 32,
++            )
++        }?;
++        let destination = representation.bitmapData();
++        if destination.is_null() {
++            return None;
++        }
++        // AppKit allocated height * bytesPerRow bytes; the validated source has
++        // exactly that length and does not overlap the new representation.
++        unsafe {
++            std::ptr::copy_nonoverlapping(bitmap.rgba().as_ptr(), destination, bitmap.rgba().len());
++        }
++        representation.setSize(logical_size);
++        image.addRepresentation(&representation);
++    }
++    Some(NSCursor::initWithImage_hotSpot(
++        NSCursor::alloc(),
++        &image,
++        NSPoint::new(cursor.hotspot().x as f64, cursor.hotspot().y as f64),
++    ))
++}
+diff --git a/vendor/gpui-fast-windows/resources/cursors/closed-hand.svg b/vendor/gpui-fast-windows/resources/cursors/closed-hand.svg
+new file mode 100644
+index 00000000..3af88325
+--- /dev/null
++++ b/vendor/gpui-fast-windows/resources/cursors/closed-hand.svg
+@@ -0,0 +1,4 @@
++<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
++  <path d="M6 13V9a1.5 1.5 0 0 1 3 0V8a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v5c0 2-1 4-3 6H9l-5-6c-1-2 1-3 2-2l2 2" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
++  <path d="M6 13V9a1.5 1.5 0 0 1 3 0V8a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v5c0 2-1 4-3 6H9l-5-6c-1-2 1-3 2-2l2 2" fill="white" stroke="#171717" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
++</svg>
+diff --git a/vendor/gpui-fast-windows/resources/cursors/open-hand.svg b/vendor/gpui-fast-windows/resources/cursors/open-hand.svg
+new file mode 100644
+index 00000000..20825612
+--- /dev/null
++++ b/vendor/gpui-fast-windows/resources/cursors/open-hand.svg
+@@ -0,0 +1,4 @@
++<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
++  <path d="M7 13V5.5a1.5 1.5 0 0 1 3 0V11 3.5a1.5 1.5 0 0 1 3 0V11 5a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7c0 3-2 5-3 6H9l-5-7c-1-2 1-3 2-2l2 2" fill="white" stroke="white" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
++  <path d="M7 13V5.5a1.5 1.5 0 0 1 3 0V11 3.5a1.5 1.5 0 0 1 3 0V11 5a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7c0 3-2 5-3 6H9l-5-7c-1-2 1-3 2-2l2 2" fill="white" stroke="#171717" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
++</svg>
+diff --git a/vendor/gpui-fast-windows/src/cursor.rs b/vendor/gpui-fast-windows/src/cursor.rs
+new file mode 100644
+index 00000000..5bb447ae
+--- /dev/null
++++ b/vendor/gpui-fast-windows/src/cursor.rs
+@@ -0,0 +1,334 @@
++use gpui::{CursorStyle, CustomCursor, CustomCursorId};
++use std::{
++    collections::{HashMap, VecDeque},
++    rc::Rc,
++};
++use windows::Win32::{Foundation::*, Graphics::Gdi::*, UI::WindowsAndMessaging::*};
++
++/// Only handles created here are destroyed. LoadImage(..., LR_SHARED) handles
++/// remain owned by the OS and never enter this wrapper.
++pub(crate) struct OwnedCursor(HCURSOR);
++impl Drop for OwnedCursor {
++    fn drop(&mut self) {
++        unsafe {
++            let _ = DestroyCursor(self.0);
++        }
++    }
++}
++
++pub(crate) struct ResolvedCursor {
++    pub(crate) handle: Option<HCURSOR>,
++    // Windows keep their selected resource alive even after cache eviction.
++    _owned: Option<Rc<OwnedCursor>>,
++}
++impl ResolvedCursor {
++    fn system(style: CursorStyle) -> Self {
++        Self {
++            handle: crate::load_cursor(style),
++            _owned: None,
++        }
++    }
++}
++
++struct Resource {
++    artwork: CustomCursor,
++    // Both failures and successes are cached. No allocation on repeated requests.
++    variants: VecDeque<(gpui::Size<u32>, Option<Rc<OwnedCursor>>)>,
++}
++
++pub(crate) struct CursorCache {
++    resources: HashMap<CustomCursorId, Resource>,
++    open_hand: Option<CustomCursorId>,
++    closed_hand: Option<CustomCursorId>,
++}
++
++impl CursorCache {
++    pub(crate) fn new() -> Self {
++        let mut cache = Self {
++            resources: HashMap::new(),
++            open_hand: None,
++            closed_hand: None,
++        };
++        cache.open_hand = cache.hand(
++            include_bytes!("../resources/cursors/open-hand.svg"),
++            gpui::point(10, 10),
++        );
++        cache.closed_hand = cache.hand(
++            include_bytes!("../resources/cursors/closed-hand.svg"),
++            gpui::point(10, 10),
++        );
++        cache
++    }
++
++    fn hand(&mut self, svg: &[u8], hotspot: gpui::Point<u32>) -> Option<CustomCursorId> {
++        let cursor =
++            CustomCursor::from_svg(svg, gpui::size(24, 24), hotspot, CursorStyle::Arrow).ok()?;
++        match self.register(cursor) {
++            CursorStyle::Custom(id) => Some(id),
++            _ => None,
++        }
++    }
++
++    pub(crate) fn register(&mut self, artwork: CustomCursor) -> CursorStyle {
++        let id = artwork.id();
++        let fallback = artwork.fallback();
++        let size = artwork.size();
++        self.resources.entry(id).or_insert_with(|| Resource {
++            artwork,
++            variants: VecDeque::new(),
++        });
++        // Test native creation now so callers get a usable standard style on failure.
++        self.resolve(CursorStyle::Custom(id), 1.);
++        if self.resources[&id]
++            .variants
++            .iter()
++            .any(|(key, cursor)| *key == size && cursor.is_some())
++        {
++            CursorStyle::Custom(id)
++        } else {
++            fallback
++        }
++    }
++
++    pub(crate) fn resolve(&mut self, style: CursorStyle, scale: f32) -> ResolvedCursor {
++        let id = match style {
++            CursorStyle::Custom(id) => Some(id),
++            CursorStyle::OpenHand => self.open_hand,
++            CursorStyle::ClosedHand => self.closed_hand,
++            _ => None,
++        };
++        let Some(resource) = id.and_then(|id| self.resources.get_mut(&id)) else {
++            return ResolvedCursor::system(style);
++        };
++        // Compute the cache key without rasterizing or allocating an image.
++        let scale = if scale.is_finite() {
++            scale.clamp(0.5, 4.)
++        } else {
++            1.
++        };
++        let size = gpui::size(
++            (resource.artwork.size().width as f32 * scale)
++                .round()
++                .max(1.) as u32,
++            (resource.artwork.size().height as f32 * scale)
++                .round()
++                .max(1.) as u32,
++        );
++        let native = if let Some(index) = resource.variants.iter().position(|(key, _)| *key == size)
++        {
++            let variant = resource.variants.remove(index).unwrap();
++            let native = variant.1.clone();
++            resource.variants.push_back(variant);
++            native
++        } else {
++            let (image, hotspot) = resource.artwork.image_for_scale(scale);
++            let native = create(&image, hotspot).map(Rc::new);
++            // At most 16 DPI variants per registered resource. Window-held Rc's
++            // keep evicted, displayed cursors alive until their replacement is set.
++            if resource.variants.len() == 16 {
++                resource.variants.pop_front();
++            }
++            resource.variants.push_back((size, native.clone()));
++            native
++        };
++        match native {
++            Some(native) => ResolvedCursor {
++                handle: Some(native.0),
++                _owned: Some(native),
++            },
++            None => {
++                let fallback = resource.artwork.fallback();
++                self.resolve(fallback, scale)
++            }
++        }
++    }
++}
++
++struct Bitmap(HBITMAP);
++impl Drop for Bitmap {
++    fn drop(&mut self) {
++        unsafe {
++            let _ = DeleteObject(self.0.into());
++        }
++    }
++}
++
++fn create(image: &gpui::CustomCursorImage, hotspot: gpui::Point<u32>) -> Option<OwnedCursor> {
++    let size = image.size();
++    let info = BITMAPINFO {
++        bmiHeader: BITMAPINFOHEADER {
++            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
++            biWidth: size.width as i32,
++            biHeight: -(size.height as i32), // top-down DIB
++            biPlanes: 1,
++            biBitCount: 32,
++            biCompression: BI_RGB.0,
++            ..Default::default()
++        },
++        ..Default::default()
++    };
++    let mut bits = std::ptr::null_mut();
++    // The OS owns DIB storage until DeleteObject; CreateIconIndirect copies it.
++    let color =
++        Bitmap(unsafe { CreateDIBSection(None, &info, DIB_RGB_COLORS, &mut bits, None, 0) }.ok()?);
++    if bits.is_null() {
++        return None;
++    }
++    let destination =
++        unsafe { std::slice::from_raw_parts_mut(bits as *mut u8, image.rgba().len()) };
++    for (source, pixel) in image
++        .rgba()
++        .chunks_exact(4)
++        .zip(destination.chunks_exact_mut(4))
++    {
++        pixel.copy_from_slice(&[source[2], source[1], source[0], source[3]]);
++    }
++    // The monochrome AND mask uses word-aligned rows. Transparent pixels are
++    // masked out for systems which fall back from the alpha color bitmap.
++    let stride = size.width.div_ceil(16) as usize * 2;
++    let mut mask_bytes = vec![0u8; stride * size.height as usize];
++    for y in 0..size.height as usize {
++        for x in 0..size.width as usize {
++            if image.rgba()[(y * size.width as usize + x) * 4 + 3] == 0 {
++                mask_bytes[y * stride + x / 8] |= 0x80 >> (x % 8);
++            }
++        }
++    }
++    let mask = Bitmap(unsafe {
++        CreateBitmap(
++            size.width as i32,
++            size.height as i32,
++            1,
++            1,
++            Some(mask_bytes.as_ptr().cast()),
++        )
++    });
++    if mask.0.is_invalid() {
++        return None;
++    }
++    let info = ICONINFO {
++        fIcon: FALSE,
++        xHotspot: hotspot.x,
++        yHotspot: hotspot.y,
++        hbmMask: mask.0,
++        hbmColor: color.0,
++    };
++    unsafe { CreateIconIndirect(&info) }
++        .ok()
++        .map(|icon| OwnedCursor(HCURSOR(icon.0)))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    fn artwork() -> CustomCursor {
++        CustomCursor::from_svg(
++            include_bytes!("../resources/cursors/open-hand.svg"),
++            gpui::size(24, 24),
++            gpui::point(10, 10),
++            CursorStyle::Crosshair,
++        )
++        .unwrap()
++    }
++
++    fn native_info(cursor: &ResolvedCursor) -> (gpui::Size<u32>, gpui::Point<u32>) {
++        let mut info = ICONINFO::default();
++        unsafe { GetIconInfo(HICON(cursor.handle.unwrap().0), &mut info) }.unwrap();
++        let color = Bitmap(info.hbmColor);
++        let _mask = Bitmap(info.hbmMask);
++        let mut bitmap = BITMAP::default();
++        let bytes = unsafe {
++            GetObjectW(
++                color.0.into(),
++                std::mem::size_of::<BITMAP>() as i32,
++                Some((&mut bitmap as *mut BITMAP).cast()),
++            )
++        };
++        assert_eq!(bytes, std::mem::size_of::<BITMAP>() as i32);
++        assert!(!info.fIcon.as_bool());
++        (
++            gpui::size(bitmap.bmWidth as u32, bitmap.bmHeight.unsigned_abs()),
++            gpui::point(info.xHotspot, info.yHotspot),
++        )
++    }
++
++    #[test]
++    fn native_hotspot_and_size_follow_fractional_dpi() {
++        let mut cache = CursorCache::new();
++        let cursor = cache.register(artwork());
++        assert!(matches!(cursor, CursorStyle::Custom(_)));
++        for (scale, pixels, hotspot) in [(1., 24, 10), (1.25, 30, 13), (1.5, 36, 15), (2., 48, 20)]
++        {
++            assert_eq!(
++                native_info(&cache.resolve(cursor, scale)),
++                (gpui::size(pixels, pixels), gpui::point(hotspot, hotspot))
++            );
++        }
++    }
++
++    #[test]
++    fn cache_reuses_handles_and_preserves_selected_handles_after_eviction() {
++        let mut cache = CursorCache::new();
++        let artwork = artwork();
++        let id = artwork.id();
++        let style = cache.register(artwork);
++        let first = cache.resolve(style, 1.);
++        let again = cache.resolve(style, 1.);
++        assert!(Rc::ptr_eq(
++            first._owned.as_ref().unwrap(),
++            again._owned.as_ref().unwrap()
++        ));
++        for step in 1..=48 {
++            cache.resolve(style, 1. + step as f32 / 24.);
++        }
++        assert_eq!(cache.resources[&id].variants.len(), 16);
++        assert!(
++            !cache.resources[&id]
++                .variants
++                .iter()
++                .any(|(size, _)| *size == gpui::size(24, 24))
++        );
++        assert_eq!(
++            native_info(&first),
++            (gpui::size(24, 24), gpui::point(10, 10))
++        );
++    }
++
++    #[test]
++    fn standard_hands_resolve_to_distinct_owned_cursors() {
++        let mut cache = CursorCache::new();
++        let open = cache.resolve(CursorStyle::OpenHand, 1.);
++        let closed = cache.resolve(CursorStyle::ClosedHand, 1.);
++        assert!(open._owned.is_some() && closed._owned.is_some());
++        assert_ne!(open.handle.unwrap().0, closed.handle.unwrap().0);
++        let unregistered = artwork();
++        let unknown = cache.resolve(CursorStyle::Custom(unregistered.id()), 1.);
++        assert!(unknown._owned.is_none());
++        assert_eq!(
++            unknown.handle.unwrap().0,
++            crate::load_cursor(CursorStyle::Arrow).unwrap().0
++        );
++    }
++
++    #[test]
++    fn failed_custom_creation_can_fall_back_to_a_native_standard_hand() {
++        let mut cache = CursorCache::new();
++        let artwork = CustomCursor::from_svg(
++            include_bytes!("../resources/cursors/open-hand.svg"),
++            gpui::size(24, 24),
++            gpui::point(10, 10),
++            CursorStyle::ClosedHand,
++        )
++        .unwrap();
++        let id = artwork.id();
++        let style = cache.register(artwork.clone());
++        // Model a cached native allocation failure without exhausting OS resources.
++        cache.resources.get_mut(&id).unwrap().variants[0].1 = None;
++        let fallback = cache.resolve(style, 1.);
++        let hand = cache.resolve(CursorStyle::ClosedHand, 1.);
++        assert!(fallback._owned.is_some());
++        assert_eq!(fallback.handle.unwrap().0, hand.handle.unwrap().0);
++        assert_eq!(cache.register(artwork), CursorStyle::ClosedHand);
++    }
++}
+diff --git a/vendor/gpui-fast/src/custom_cursor.rs b/vendor/gpui-fast/src/custom_cursor.rs
+new file mode 100644
+index 00000000..b077d98f
+--- /dev/null
++++ b/vendor/gpui-fast/src/custom_cursor.rs
+@@ -0,0 +1,204 @@
++//! Immutable cursor artwork, registered once and requested by a small identifier.
++use crate::{CursorStyle, Point, Size};
++use anyhow::{Result, ensure};
++use schemars::JsonSchema;
++use serde::{Deserialize, Serialize};
++use std::sync::{
++    Arc,
++    atomic::{AtomicU64, Ordering},
++};
++
++/// A process-local resource identifier. Serialized IDs are not portable between runs.
++#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
++pub struct CustomCursorId(u64);
++
++/// One resolution of a cursor, in top-down, premultiplied RGBA8 pixels.
++#[derive(Clone, Debug)]
++pub struct CustomCursorImage {
++    size: Size<u32>,
++    rgba: Arc<[u8]>,
++}
++
++impl CustomCursorImage {
++    /// Creates an image. Each dimension must be in 1..=512.
++    pub fn new(size: Size<u32>, rgba: impl Into<Arc<[u8]>>) -> Result<Self> {
++        ensure!(
++            (1..=512).contains(&size.width) && (1..=512).contains(&size.height),
++            "invalid cursor image size"
++        );
++        let rgba = rgba.into();
++        ensure!(
++            rgba.len() == size.width as usize * size.height as usize * 4,
++            "invalid cursor RGBA length"
++        );
++        ensure!(
++            rgba.chunks_exact(4)
++                .all(|p| p[..3].iter().all(|c| *c <= p[3])),
++            "cursor pixels must be premultiplied"
++        );
++        Ok(Self { size, rgba })
++    }
++
++    /// The bitmap dimensions in physical pixels.
++    pub fn size(&self) -> Size<u32> {
++        self.size
++    }
++
++    /// Top-down, premultiplied RGBA8 bytes.
++    pub fn rgba(&self) -> &[u8] {
++        &self.rgba
++    }
++}
++
++/// Cursor artwork with a logical size, a stable hotspot and a standard fallback.
++///
++/// Register during application initialization. Platforms retain registered resources
++/// for their lifetime; do not register per frame. Native caches may also be held by
++/// windows until those windows are dropped.
++#[derive(Clone, Debug)]
++pub struct CustomCursor {
++    id: CustomCursorId,
++    size: Size<u32>,
++    hotspot: Point<u32>,
++    images: Vec<CustomCursorImage>,
++    fallback: CursorStyle,
++}
++
++impl CustomCursor {
++    /// Creates immutable artwork. All representations must have the logical aspect ratio.
++    pub fn new(
++        size: Size<u32>,
++        hotspot: Point<u32>,
++        mut images: Vec<CustomCursorImage>,
++        fallback: CursorStyle,
++    ) -> Result<Self> {
++        ensure!(
++            (1..=128).contains(&size.width) && (1..=128).contains(&size.height),
++            "invalid logical cursor size"
++        );
++        ensure!(
++            hotspot.x < size.width && hotspot.y < size.height,
++            "cursor hotspot outside image"
++        );
++        ensure!(
++            !matches!(fallback, CursorStyle::Custom(_)),
++            "cursor fallback must be a standard style"
++        );
++        ensure!(
++            !images.is_empty() && images.len() <= 8,
++            "cursor requires 1..=8 representations"
++        );
++        ensure!(
++            images
++                .iter()
++                .all(|image| image.size.width * size.height == image.size.height * size.width),
++            "cursor representation aspect ratio differs"
++        );
++        images.sort_by_key(|image| image.size.width);
++        images.dedup_by_key(|image| image.size.width);
++        static NEXT_ID: AtomicU64 = AtomicU64::new(1);
++        Ok(Self {
++            id: CustomCursorId(NEXT_ID.fetch_add(1, Ordering::Relaxed)),
++            size,
++            hotspot,
++            images,
++            fallback,
++        })
++    }
++
++    /// Rasterizes a path-only SVG at 1x, 2x, 3x and 4x before registration.
++    pub fn from_svg(
++        svg: &[u8],
++        size: Size<u32>,
++        hotspot: Point<u32>,
++        fallback: CursorStyle,
++    ) -> Result<Self> {
++        ensure!(
++            (1..=128).contains(&size.width) && (1..=128).contains(&size.height),
++            "invalid logical cursor size"
++        );
++        let tree = usvg::Tree::from_data(svg, &usvg::Options::default())?;
++        let mut images = Vec::new();
++        for scale in 1..=4 {
++            let width = size.width * scale;
++            let height = size.height * scale;
++            let mut pixmap = resvg::tiny_skia::Pixmap::new(width, height)
++                .ok_or_else(|| anyhow::anyhow!("allocating cursor bitmap"))?;
++            let transform = resvg::tiny_skia::Transform::from_scale(
++                width as f32 / tree.size().width(),
++                height as f32 / tree.size().height(),
++            );
++            resvg::render(&tree, transform, &mut pixmap.as_mut());
++            images.push(CustomCursorImage::new(
++                crate::size(width, height),
++                pixmap.take(),
++            )?);
++        }
++        Self::new(size, hotspot, images, fallback)
++    }
++
++    /// The resource identifier, preserved by cloning this artwork.
++    pub fn id(&self) -> CustomCursorId {
++        self.id
++    }
++    /// The logical dimensions, independent of document zoom.
++    pub fn size(&self) -> Size<u32> {
++        self.size
++    }
++    /// The click location, measured from the top-left in logical pixels.
++    pub fn hotspot(&self) -> Point<u32> {
++        self.hotspot
++    }
++    /// The standard cursor to use when registration or native creation fails.
++    pub fn fallback(&self) -> CursorStyle {
++        self.fallback
++    }
++    /// All registered bitmap resolutions.
++    pub fn images(&self) -> &[CustomCursorImage] {
++        &self.images
++    }
++
++    /// Selects or resamples artwork and scales the hotspot for a physical DPI.
++    /// Output dimensions are bounded to 512 pixels, even for unusual OS scaling.
++    pub fn image_for_scale(&self, scale: f32) -> (CustomCursorImage, Point<u32>) {
++        let scale = if scale.is_finite() {
++            scale.clamp(0.5, 4.)
++        } else {
++            1.
++        };
++        let width = (self.size.width as f32 * scale).round().max(1.) as u32;
++        let height = (self.size.height as f32 * scale).round().max(1.) as u32;
++        let source = self
++            .images
++            .iter()
++            .find(|image| image.size.width >= width)
++            .unwrap_or_else(|| self.images.last().unwrap());
++        let image = if source.size == crate::size(width, height) {
++            source.clone()
++        } else {
++            let source = image::RgbaImage::from_raw(
++                source.size.width,
++                source.size.height,
++                source.rgba.to_vec(),
++            )
++            .unwrap();
++            let resized = image::imageops::resize(
++                &source,
++                width,
++                height,
++                image::imageops::FilterType::Triangle,
++            );
++            CustomCursorImage {
++                size: crate::size(width, height),
++                rgba: resized.into_raw().into(),
++            }
++        };
++        let hotspot = crate::point(
++            ((self.hotspot.x as f32 * width as f32 / self.size.width as f32).round() as u32)
++                .min(width - 1),
++            ((self.hotspot.y as f32 * height as f32 / self.size.height as f32).round() as u32)
++                .min(height - 1),
++        );
++        (image, hotspot)
++    }
++}

@@ -411,6 +411,89 @@ fn manual_mesh_primary_connect_keeps_gesture_after_modifier_release(cx: &mut Tes
 }
 
 #[gpui_kit::test]
+fn manual_mesh_native_cursor_prototype_yields_to_shortcuts_and_modal(cx: &mut TestAppContext) {
+    use gpui_kit::{
+        CursorStyle, CustomCursor, InputEvent as _, Modifiers, ModifiersChangedEvent,
+        MouseMoveEvent, size,
+    };
+    let h = enter(cx);
+    // The test platform intentionally falls back during registration. Supply a
+    // resource ID here to exercise viewport request routing independently of OS creation.
+    let custom = CursorStyle::Custom(
+        CustomCursor::from_svg(
+            include_bytes!("../assets/cursors/mesh-add.svg"),
+            size(24, 24),
+            point(7, 7),
+            CursorStyle::Crosshair,
+        )
+        .unwrap()
+        .id(),
+    );
+    cx.update_window(h.window, |_, window, cx| {
+        h.view.update(cx, |view, cx| {
+            view.tool_cursors.mesh_add = custom;
+            let command = view
+                .editor
+                .command(zipzi_editor_core::CommandId::ManualCreate)
+                .with_source(zipzi_editor_core::CommandSource::NativeMenu);
+            view.run_invocation(command, window, cx);
+        });
+        let transform = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
+        let point_on_canvas =
+            transform.to_viewport(zipzi_editor_core::ModelPoint { x: 128., y: 128. });
+        let position = window.find("canvas-body").bounds().origin
+            + point(px(point_on_canvas.x), px(point_on_canvas.y));
+        window.dispatch_event(
+            MouseMoveEvent {
+                position,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        let cursor = |cx: &gpui_kit::App| {
+            let view = h.view.read(cx);
+            view.viewport_surface(view.viewport_slots[0], cx)
+                .unwrap()
+                .read(cx)
+                .tool_cursor
+        };
+        assert_eq!(cursor(cx), Some(custom));
+        for modifiers in [
+            Modifiers {
+                platform: true,
+                shift: true,
+                ..Default::default()
+            },
+            Modifiers::default(),
+        ] {
+            window.dispatch_event(
+                ModifiersChangedEvent {
+                    modifiers,
+                    capslock: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            if modifiers.platform {
+                assert_ne!(cursor(cx), Some(custom));
+            } else {
+                assert_eq!(cursor(cx), Some(custom));
+            }
+        }
+        h.view.update(cx, |view, cx| {
+            view.modal = true;
+            cx.notify();
+        });
+        window.render_frame(cx);
+        assert_eq!(cursor(cx), None);
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn manual_mesh_cmd_cursor_updates_without_hint_overlay_and_click_fixes_an_edge(
     cx: &mut TestAppContext,
 ) {

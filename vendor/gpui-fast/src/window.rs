@@ -5649,7 +5649,9 @@ impl Window {
                 .rendered_frame
                 .cursor_style(self)
                 .unwrap_or(CursorStyle::Arrow);
-            cx.platform.set_cursor_style(style);
+            if !self.platform_window.set_cursor_style(style) {
+                cx.platform.set_cursor_style(style);
+            }
         }
     }
 

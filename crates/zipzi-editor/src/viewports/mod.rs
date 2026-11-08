@@ -379,6 +379,18 @@ impl Render for ViewportSurface {
         } else {
             connection_cursor.or(brush_cursor).or(cursor)
         };
+        // The first native-resource prototype covers idle, explicit point creation.
+        // Shortcut and captured-operation semantics join the resolver in phase 2.
+        let cursor = if cursor == Some(CursorStyle::Crosshair)
+            && state.editor.manual_for_viewport(self.viewport)
+            && state.editor.manual_tool() == Some(zipzi_editor_core::ManualTool::Create)
+            && !window.modifiers().platform
+            && self.interaction.is_none()
+        {
+            Some(state.tool_cursors.mesh_add)
+        } else {
+            cursor
+        };
         let cursor = cursor.filter(|_| !modal && !hand_tool);
         #[cfg(test)]
         {

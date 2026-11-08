@@ -206,6 +206,7 @@ pub(crate) struct MacPlatformState {
     keyboard_mapper: Rc<MacKeyboardMapper>,
     /// Mirrors `[NSCursor setHiddenUntilMouseMoves:]` state, which AppKit doesn't expose.
     cursor_visible: Arc<AtomicBool>,
+    custom_cursors: crate::cursor::CustomCursors,
     system_notifications: crate::system_notifications::SystemNotificationState,
 }
 
@@ -274,6 +275,7 @@ impl MacPlatform {
             menus: None,
             keyboard_mapper,
             cursor_visible: Arc::new(AtomicBool::new(true)),
+            custom_cursors: Default::default(),
             system_notifications: crate::system_notifications::SystemNotificationState::new(),
         });
         Self(state, marker)
@@ -776,10 +778,11 @@ impl Platform for MacPlatform {
             return Err(PopupNotSupportedError.into());
         }
 
-        let (cursor_visible, foreground_executor, background_executor, renderer_context) = {
+        let (cursor_visible, custom_cursors, foreground_executor, background_executor, renderer_context) = {
             let guard = self.0.lock();
             (
                 guard.cursor_visible.clone(),
+                guard.custom_cursors.clone(),
                 guard.foreground_executor.clone(),
                 guard.background_executor.clone(),
                 guard.renderer_context.clone(),
@@ -790,6 +793,7 @@ impl Platform for MacPlatform {
             handle,
             options,
             cursor_visible,
+            custom_cursors,
             foreground_executor,
             background_executor,
             renderer_context,
@@ -1236,6 +1240,11 @@ impl Platform for MacPlatform {
         unsafe {
             set_active_window_cursor_style(style);
         }
+    }
+
+    fn register_custom_cursor(&self, cursor: gpui::CustomCursor) -> CursorStyle {
+        let cursors = self.0.lock().custom_cursors.clone();
+        crate::cursor::register(&cursors, cursor, self.1)
     }
 
     fn hide_cursor_until_mouse_moves(&self) {
