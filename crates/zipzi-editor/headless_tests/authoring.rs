@@ -73,9 +73,7 @@ fn deleting_a_parameter_settles_text_once_and_undo_restores_the_committed_name(
 }
 
 #[gpui_kit::test]
-fn creation_focuses_name_and_keeps_rename_and_creation_in_separate_history(
-    cx: &mut TestAppContext,
-) {
+fn creation_keeps_rename_and_creation_in_separate_history(cx: &mut TestAppContext) {
     let h = setup_with_document(
         cx,
         Document::new_blank().unwrap(),
@@ -88,7 +86,8 @@ fn creation_focuses_name_and_keeps_rename_and_creation_in_separate_history(
     .unwrap();
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
-        // Creation selected the name; typing replaces it without another click.
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Renamed", cx);
         window.press("enter", cx);
         window.render_frame(cx);
@@ -412,6 +411,8 @@ fn new_folder_inside_a_collapsed_folder_is_visible_and_escape_keeps_it(cx: &mut 
             Some(parent)
         );
         assert!(window.find(format!("parameter-group-{child}")).visible());
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Draft", cx);
         window.press("escape", cx);
     })

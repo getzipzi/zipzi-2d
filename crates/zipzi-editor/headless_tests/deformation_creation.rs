@@ -107,7 +107,7 @@ fn children(h: &Harness, id: &str, cx: &TestAppContext) -> Vec<String> {
 }
 
 #[gpui_kit::test]
-fn toolbar_exposes_only_supported_types_wraps_selection_and_focuses_name(cx: &mut TestAppContext) {
+fn toolbar_exposes_only_supported_types_and_wraps_selection(cx: &mut TestAppContext) {
     let (h, parent, _, _) = fixture(cx, false);
     cx.update_window(h.window, |_, window, cx| {
         window.click("deformer-tree-create", cx)
@@ -135,6 +135,8 @@ fn toolbar_exposes_only_supported_types_wraps_selection_and_focuses_name(cx: &mu
                 .find(format!("deformer-item-RotationDeformer:{}", new.id))
                 .visible()
         );
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Nested rotation", cx);
         window.press("enter", cx);
     })

@@ -254,9 +254,7 @@ fn deferred_created_focus_and_location_do_not_overwrite_later_inspection(cx: &mu
 }
 
 #[gpui_kit::test]
-fn created_resource_focuses_name_and_locates_when_shared_collection_tab_reopens(
-    cx: &mut TestAppContext,
-) {
+fn created_resource_locates_when_shared_collection_tab_reopens(cx: &mut TestAppContext) {
     let mut d = Document::new_blank().unwrap();
     for n in 0..48 {
         let p = d
@@ -305,6 +303,8 @@ fn created_resource_focuses_name_and_locates_when_shared_collection_tab_reopens(
         window.render_frame(cx);
         window.render_frame(cx);
         assert!(window.find("property-input-name").visible());
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Loaded later", cx);
         window.press("enter", cx);
     })
@@ -346,9 +346,7 @@ fn created_resource_focuses_name_and_locates_when_shared_collection_tab_reopens(
 }
 
 #[gpui_kit::test]
-fn legacy_new_motion_uses_shared_result_focus_and_keeps_its_existing_activation(
-    cx: &mut TestAppContext,
-) {
+fn legacy_new_motion_keeps_its_existing_activation(cx: &mut TestAppContext) {
     let (d, assets) = document_fixture::animation_document().unwrap();
     let h = setup_with_document(cx, d, assets);
     cx.update_window(h.window, |_, window, cx| {
@@ -375,6 +373,8 @@ fn legacy_new_motion_uses_shared_result_focus_and_keeps_its_existing_activation(
         );
         assert_eq!(v.editor.document().unwrap().history_lengths(), (1, 0));
         assert!(window.find("property-input-name").visible());
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("New clip", cx);
         window.press("enter", cx);
     })

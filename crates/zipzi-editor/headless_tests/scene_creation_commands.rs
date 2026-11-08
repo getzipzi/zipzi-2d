@@ -300,9 +300,7 @@ fn configured_creation_shortcut_ignores_text_and_repeat_but_creates_from_editor_
 }
 
 #[gpui_kit::test]
-fn creation_settles_text_and_filtered_command_result_is_revealed_and_name_focused(
-    cx: &mut TestAppContext,
-) {
+fn creation_settles_text_and_reveals_filtered_command_result(cx: &mut TestAppContext) {
     let h = blank(cx);
     invoke(&h, C::CreatePart, CommandSource::Direct, cx);
     let part = inspected(&h, cx);
@@ -332,7 +330,9 @@ fn creation_settles_text_and_filtered_command_result_is_revealed_and_name_focuse
                 .visible()
         );
         assert!(window.find("tree-created-item").visible());
-        window.input("Warp renamed", cx); // default name was selected
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
+        window.input("Warp renamed", cx);
         window.press("enter", cx);
     })
     .unwrap();
@@ -376,9 +376,7 @@ fn saved_native_command_and_creation_in_animation_or_modal_do_not_publish(cx: &m
 }
 
 #[gpui_kit::test]
-fn creating_from_native_menu_reopens_hidden_tree_and_properties_and_focuses_the_name(
-    cx: &mut TestAppContext,
-) {
+fn creating_from_native_menu_reopens_hidden_tree_and_properties(cx: &mut TestAppContext) {
     let h = blank(cx);
     cx.update_window(h.window, |_, window, cx| {
         h.view.update(cx, |view, cx| {
@@ -399,6 +397,8 @@ fn creating_from_native_menu_reopens_hidden_tree_and_properties_and_focuses_the_
                 .visible()
         );
         assert!(window.find("property-input-name").visible());
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Named after reopening", cx);
         window.press("enter", cx);
     })
@@ -411,7 +411,7 @@ fn creating_from_native_menu_reopens_hidden_tree_and_properties_and_focuses_the_
 }
 
 #[gpui_kit::test]
-fn creation_name_focus_wins_when_tree_and_properties_share_a_tab_group(cx: &mut TestAppContext) {
+fn creation_shows_properties_when_tree_and_properties_share_a_tab_group(cx: &mut TestAppContext) {
     use gpui_kit::component::dock::{DockLayout, PanelId, panel_handle};
     let h = blank(cx);
     cx.update_window(h.window, |_, window, cx| {
@@ -440,6 +440,8 @@ fn creation_name_focus_wins_when_tree_and_properties_share_a_tab_group(cx: &mut 
     let part = inspected(&h, cx);
     cx.update_window(h.window, |_, window, cx| {
         assert!(window.find("property-input-name").visible());
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Shared tabs", cx);
         window.press("enter", cx);
     })

@@ -112,7 +112,7 @@ fn row_creation_captures_the_existing_multi_selection(cx: &mut TestAppContext) {
 }
 
 #[gpui_kit::test]
-fn toolbar_creation_focuses_name_and_rename_has_separate_history(cx: &mut TestAppContext) {
+fn toolbar_creation_leaves_name_unfocused_and_rename_has_separate_history(cx: &mut TestAppContext) {
     let h = setup_with_document(
         cx,
         Document::new_blank().unwrap(),
@@ -133,6 +133,20 @@ fn toolbar_creation_focuses_name_and_rename_has_separate_history(cx: &mut TestAp
                 .visible()
         );
         assert!(window.find("property-input-name").visible());
+        window.input("Ignored", cx);
+        window.press("enter", cx);
+        assert_eq!(
+            h.view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .object_index()
+                .name(&part),
+            "Part"
+        );
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Character", cx);
         window.press("enter", cx);
     })
@@ -455,6 +469,8 @@ fn parts_header_creates_a_part_through_new_object_and_reports_a_locked_parent(
     });
     cx.update_window(h.window, |_, window, cx| {
         window.render_frame(cx);
+        window.click("property-input-name", cx);
+        super::properties::select_all(window, cx);
         window.input("Header part", cx);
         window.press("enter", cx);
         h.view.update(cx, |v, cx| {

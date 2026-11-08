@@ -102,7 +102,7 @@ impl EditorView {
         if !(result.receipt.kind != zipzi_sdk::PublicationKind::Unchanged) {
             return Ok(None);
         }
-        let (object, projection, created, inspect, focus) = match intent {
+        let (object, projection, created, inspect) = match intent {
             AuthoringPresentation::Created { kind, projection } => {
                 let Some(object) = result
                     .suggested_selection
@@ -112,17 +112,17 @@ impl EditorView {
                 else {
                     return Ok(None);
                 };
-                (object, projection, true, true, true)
+                (object, projection, true, true)
             }
             AuthoringPresentation::Moved { object, projection } => {
-                (object, Some(projection), false, false, false)
+                (object, Some(projection), false, false)
             }
             AuthoringPresentation::AfterDelete { candidates } => {
                 let index = self.editor.document().unwrap().object_index();
                 let Some(object) = candidates.into_iter().find(|r| index.get(r).is_some()) else {
                     return Ok(None);
                 };
-                (object, None, false, true, false)
+                (object, None, false, true)
             }
         };
         if inspect {
@@ -139,7 +139,7 @@ impl EditorView {
                     cx,
                 );
             }
-            self.inspect_authoring_object(document, object.clone(), focus, window, cx)?;
+            self.inspect_authoring_object(document, object.clone(), false, window, cx)?;
         }
         self.defer_authoring_location(
             document,
