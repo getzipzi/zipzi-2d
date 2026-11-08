@@ -98,6 +98,9 @@ pub struct OverlaySnapshot {
     pub warp_frame_adjusting: bool,
     pub warp_bezier_mode: Option<zipzi_core::WarpBezierEditMode>,
     pub deformer_keep_children: bool,
+    /// Control supplying the hovered or captured handle/component's orientation.
+    pub active_control_kind: Option<ControlKind>,
+    /// Screen-space frame orientation, or bone-axis direction for Rotation controls.
     pub active_handle_radians: f32,
     /// Context for a hovered control, separate from edit errors and parameter previews.
     pub point_unavailable: Option<String>,
@@ -439,8 +442,9 @@ impl ToolController {
             Some(_) => false,
             None => self.alt && out.active_handle == Some(crate::DeformerHandle::RotationScale),
         };
-        out.active_handle_radians = active_target
-            .and_then(|hit| scene.control(&hit.object().id))
+        let active_control = active_target.and_then(|hit| scene.control(&hit.object().id));
+        out.active_control_kind = active_control.map(|control| control.kind);
+        out.active_handle_radians = active_control
             .and_then(|control| scene.gizmo_for_selection(control, t, warp_selection.as_ref()))
             .map_or(0., |g| g.frame_angle);
         let access = self.edit_access(document, scene, selection);

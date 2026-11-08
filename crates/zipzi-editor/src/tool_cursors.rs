@@ -2,12 +2,14 @@
 //! Register artwork once per application; viewport requests only copy a style ID.
 use gpui_kit::{App, CursorStyle, CustomCursor, Global, Modifiers, point, size};
 use zipzi_editor_core::{
-    CanvasGestureKind, CanvasSelectionOperation, DeformerHandle, ManualMeshFeedback, ManualTool,
-    OverlaySnapshot, ToolId,
+    CanvasGestureKind, CanvasSelectionOperation, ControlKind, DeformerHandle, ManualMeshFeedback,
+    ManualTool, OverlaySnapshot, ToolId,
 };
 
 #[cfg(test)]
 mod tests;
+
+const ROTATION_DIRECTIONS: usize = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ToolCursor {
@@ -16,7 +18,7 @@ pub(crate) enum ToolCursor {
     MeshDelete,
     MeshConnect { new_vertex: bool },
     MeshFixEdge,
-    Rotate,
+    Rotate(u8),
     BoneLength(u8),
     Move,
     Lasso(CanvasSelectionOperation),
@@ -97,7 +99,7 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
                     == Some(ManualMeshFeedback::ConnectNewVertex),
             }),
             G::MeshFixEdge => Some(T::MeshFixEdge),
-            G::Rotate => Some(T::Rotate),
+            G::Rotate => Some(T::Rotate(rotation_direction(overlay))),
             G::BoneLength => Some(T::BoneLength(handle_direction(overlay))),
             G::Scale => standard(resize_style(handle_direction(overlay))),
             G::Move if selection_only => standard(C::Arrow),
@@ -147,7 +149,7 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
     }
     if let Some(handle) = overlay.active_handle {
         return match handle {
-            DeformerHandle::Rotate => Some(T::Rotate),
+            DeformerHandle::Rotate => Some(T::Rotate(rotation_direction(overlay))),
             DeformerHandle::RotationScale if input.modifiers.alt => {
                 Some(T::BoneLength(handle_direction(overlay)))
             }
@@ -221,6 +223,37 @@ fn handle_direction(overlay: &OverlaySnapshot) -> u8 {
         .rem_euclid(4.) as u8
 }
 
+fn rotation_direction(overlay: &OverlaySnapshot) -> u8 {
+    let mut radians = if overlay.active_handle_radians.is_finite() {
+        overlay.active_handle_radians
+    } else {
+        0.
+    };
+    // The artwork's outward normal is -Y, matching a frame's top rotation handle.
+    // A Rotation gizmo reports its +X bone axis, so align the normal clockwise.
+    if overlay.active_control_kind == Some(ControlKind::Rotation) {
+        radians += std::f32::consts::FRAC_PI_2;
+    }
+    (radians.rem_euclid(std::f32::consts::TAU) * ROTATION_DIRECTIONS as f32 / std::f32::consts::TAU)
+        .round()
+        .rem_euclid(ROTATION_DIRECTIONS as f32) as u8
+}
+
+/// Build the finite direction set once; rotating a gesture only selects its ID.
+fn rotation_artwork(direction: usize) -> anyhow::Result<CustomCursor> {
+    let degrees = (direction % ROTATION_DIRECTIONS) as f32 * 360. / ROTATION_DIRECTIONS as f32;
+    let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g transform="rotate({degrees} 12 12)">{}</g></svg>"#,
+        include_str!("../assets/cursors/rotate.svg")
+    );
+    CustomCursor::from_svg(
+        svg.as_bytes(),
+        size(24, 24),
+        point(12, 12),
+        CursorStyle::OpenHand,
+    )
+}
+
 fn resize_style(direction: u8) -> CursorStyle {
     match direction % 4 {
         0 => CursorStyle::ResizeLeftRight,
@@ -246,9 +279,8 @@ pub(crate) struct ToolCursors {
     mesh_connect: CursorStyle,
     mesh_connect_new: CursorStyle,
     mesh_fix: CursorStyle,
-    rotate: CursorStyle,
+    rotate: [CursorStyle; ROTATION_DIRECTIONS],
     bone_length: [CursorStyle; 4],
-    move_points: CursorStyle,
     lasso: [CursorStyle; 4],
     brush: [CursorStyle; 3],
 }
@@ -263,9 +295,9 @@ impl ToolCursors {
             ToolCursor::MeshConnect { new_vertex: false } => self.mesh_connect,
             ToolCursor::MeshConnect { new_vertex: true } => self.mesh_connect_new,
             ToolCursor::MeshFixEdge => self.mesh_fix,
-            ToolCursor::Rotate => self.rotate,
+            ToolCursor::Rotate(direction) => self.rotate[direction as usize % ROTATION_DIRECTIONS],
             ToolCursor::BoneLength(direction) => self.bone_length[direction as usize % 4],
-            ToolCursor::Move => self.move_points,
+            ToolCursor::Move => CursorStyle::Arrow,
             ToolCursor::Lasso(operation) => self.lasso[selection_index(operation)],
             ToolCursor::Brush(operation) => self
                 .brush
@@ -322,17 +354,14 @@ impl ToolCursors {
                 include_bytes!("../assets/cursors/mesh-fix.svg"),
                 CursorStyle::PointingHand,
             ),
-            rotate: register(
-                include_bytes!("../assets/cursors/rotate.svg"),
-                CursorStyle::OpenHand,
-            ),
+            rotate: std::array::from_fn(|direction| {
+                rotation_artwork(direction)
+                    .map(|cursor| cx.register_custom_cursor(cursor))
+                    .unwrap_or(CursorStyle::OpenHand)
+            }),
             bone_length: std::array::from_fn(|index| {
                 register(length_images[index], resize_style(index as u8))
             }),
-            move_points: register(
-                include_bytes!("../assets/cursors/move.svg"),
-                CursorStyle::OpenHand,
-            ),
             lasso: lasso_images.map(|svg| register(svg, CursorStyle::Crosshair)),
             brush: brush_images.map(|svg| register(svg, CursorStyle::Crosshair)),
         };

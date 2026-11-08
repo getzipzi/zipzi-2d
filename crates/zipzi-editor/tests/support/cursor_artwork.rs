@@ -1,4 +1,9 @@
-pub const ARTWORK: [(&str, &[u8]); 18] = [
+pub fn hotspot(name: &str) -> gpui_kit::Point<u32> {
+    let coordinate = if name == "rotate" { 12 } else { 7 };
+    gpui_kit::point(coordinate, coordinate)
+}
+
+pub const ARTWORK: [(&str, &[u8]); 17] = [
     (
         "mesh-add",
         include_bytes!("../../assets/cursors/mesh-add.svg"),
@@ -36,7 +41,6 @@ pub const ARTWORK: [(&str, &[u8]); 18] = [
         "bone-length-135",
         include_bytes!("../../assets/cursors/bone-length-135.svg"),
     ),
-    ("move", include_bytes!("../../assets/cursors/move.svg")),
     ("lasso", include_bytes!("../../assets/cursors/lasso.svg")),
     (
         "lasso-add",

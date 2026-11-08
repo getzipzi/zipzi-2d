@@ -4,15 +4,19 @@ use gpui_kit::{CursorStyle, CustomCursor, CustomCursorImage, point, size};
 mod cursor_artwork;
 
 #[test]
-fn first_batch_cursor_artwork_shares_a_stable_hotspot_at_every_dpi() {
+fn cursor_artwork_keeps_its_hotspot_at_every_dpi() {
     for (name, svg) in cursor_artwork::ARTWORK {
+        let hotspot = cursor_artwork::hotspot(name);
         let cursor =
-            CustomCursor::from_svg(svg, size(24, 24), point(7, 7), CursorStyle::Crosshair).unwrap();
+            CustomCursor::from_svg(svg, size(24, 24), hotspot, CursorStyle::Crosshair).unwrap();
         for scale in [1., 1.25, 1.5, 2.] {
-            let (image, hotspot) = cursor.image_for_scale(scale);
+            let (image, actual_hotspot) = cursor.image_for_scale(scale);
             assert_eq!(
-                hotspot,
-                point((7. * scale).round() as u32, (7. * scale).round() as u32),
+                actual_hotspot,
+                point(
+                    (hotspot.x as f32 * scale).round() as u32,
+                    (hotspot.y as f32 * scale).round() as u32,
+                ),
                 "{name}"
             );
             assert!(

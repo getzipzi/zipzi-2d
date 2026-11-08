@@ -112,7 +112,7 @@ fn tool_cursor_captured_operations_ignore_toolbar_and_released_modifiers() {
             T::MeshConnect { new_vertex: true },
         ),
         (G::MeshFixEdge, F::FixEdge, T::MeshFixEdge),
-        (G::Rotate, F::Empty, T::Rotate),
+        (G::Rotate, F::Empty, T::Rotate(0)),
         (G::Scale, F::Empty, T::Standard(C::ResizeLeftRight)),
         (G::BoneLength, F::Empty, T::BoneLength(0)),
         (G::Move, F::Vertex, T::Move),
@@ -257,6 +257,7 @@ fn tool_cursor_bone_length_is_distinct_from_scaling_at_each_axis() {
     ] {
         let overlay = OverlaySnapshot {
             active_handle: Some(DeformerHandle::RotationScale),
+            active_control_kind: Some(ControlKind::Rotation),
             active_handle_radians: radians,
             ..Default::default()
         };
@@ -272,6 +273,61 @@ fn tool_cursor_bone_length_is_distinct_from_scaling_at_each_axis() {
             resolve(input(&captured)).cursor,
             Some(T::BoneLength(direction))
         );
+    }
+}
+
+#[test]
+fn tool_cursor_rotation_follows_displayed_orientation_before_and_during_drag() {
+    for (radians, frame_direction, bone_direction) in [
+        (0., 0, 4),
+        (std::f32::consts::FRAC_PI_4, 2, 6),
+        (std::f32::consts::FRAC_PI_2, 4, 8),
+        (std::f32::consts::PI, 8, 12),
+        (-std::f32::consts::FRAC_PI_4, 14, 2),
+        (std::f32::consts::TAU + std::f32::consts::FRAC_PI_4, 2, 6),
+        (f32::NAN, 0, 4),
+        (f32::INFINITY, 0, 4),
+    ] {
+        for (kind, expected) in [
+            (None, frame_direction),
+            (Some(ControlKind::Warp), frame_direction),
+            (Some(ControlKind::Rotation), bone_direction),
+        ] {
+            for gesture in [None, Some(G::Rotate)] {
+                let overlay = OverlaySnapshot {
+                    active_handle: Some(DeformerHandle::Rotate),
+                    active_control_kind: kind,
+                    active_handle_radians: radians,
+                    active_gesture: gesture,
+                    ..Default::default()
+                };
+                assert_eq!(
+                    resolve(input(&overlay)).cursor,
+                    Some(T::Rotate(expected)),
+                    "{kind:?}, {radians}, {gesture:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn tool_cursor_rotated_artwork_keeps_its_center_and_fits_the_bitmap() {
+    for direction in 0..ROTATION_DIRECTIONS {
+        let cursor = rotation_artwork(direction).unwrap();
+        assert_eq!(cursor.hotspot(), point(12, 12));
+        for image in cursor.images() {
+            let width = image.size().width as usize;
+            let height = image.size().height as usize;
+            for (index, pixel) in image.rgba().chunks_exact(4).enumerate() {
+                let x = index % width;
+                let y = index / width;
+                if x == 0 || y == 0 || x + 1 == width || y + 1 == height {
+                    assert_eq!(pixel[3], 0, "direction {direction}, pixel {x},{y}");
+                }
+            }
+            assert!(image.rgba().chunks_exact(4).any(|pixel| pixel[3] > 0));
+        }
     }
 }
 

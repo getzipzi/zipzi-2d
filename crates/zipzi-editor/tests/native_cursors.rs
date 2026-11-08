@@ -4,11 +4,15 @@
 mod cursor_artwork;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 fn run() -> anyhow::Result<()> {
-    use gpui_kit::{CursorStyle, CustomCursor, point, size};
+    use gpui_kit::{CursorStyle, CustomCursor, size};
     let platform = gpui_kit::platform::current_platform(true);
     for (name, svg) in cursor_artwork::ARTWORK {
-        let artwork =
-            CustomCursor::from_svg(svg, size(24, 24), point(7, 7), CursorStyle::Crosshair)?;
+        let artwork = CustomCursor::from_svg(
+            svg,
+            size(24, 24),
+            cursor_artwork::hotspot(name),
+            CursorStyle::Crosshair,
+        )?;
         let expected = CursorStyle::Custom(artwork.id());
         anyhow::ensure!(
             platform.register_custom_cursor(artwork.clone()) == expected,

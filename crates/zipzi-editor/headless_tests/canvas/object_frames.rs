@@ -20,6 +20,149 @@ fn positions(h: &Harness, object: &ObjectRef, cx: &mut TestAppContext) -> Vec<Mo
 }
 
 #[gpui_kit::test]
+fn rotation_deformer_cursor_uses_bone_normal_during_hover_and_capture(cx: &mut TestAppContext) {
+    use super::super::{document_fixture, setup_with_document};
+    use crate::tool_cursors::ToolCursor;
+    use gpui_kit::{InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    use zipzi_editor_core::{DeformerAdjustment, HitTarget, ToolId, ViewportPoint};
+
+    let (document, assets) = document_fixture::sample_document_with_scene_objects().unwrap();
+    let rotation = document_fixture::object(ObjectKind::Deformer, 501);
+    let h = setup_with_document(cx, document, assets);
+    h.view.update(cx, |view, cx| {
+        let meshes: Vec<_> = view
+            .editor
+            .layers()
+            .iter()
+            .map(|mesh| ObjectRef::new(ObjectKind::Mesh, &mesh.id))
+            .collect();
+        // Isolate the bone from child artwork and the overlapping Warp pick surface.
+        for object in meshes
+            .into_iter()
+            .chain([document_fixture::object(ObjectKind::Deformer, 502)])
+        {
+            view.editor
+                .execute(EditorCommand::SetObjectVisible {
+                    object,
+                    visible: false,
+                })
+                .unwrap();
+        }
+        view.editor
+            .execute(EditorCommand::SelectObject(rotation.clone()))
+            .unwrap();
+        view.editor.reset_view();
+        view.redraw(cx);
+    });
+    // Authored rotation is counterclockwise; cursor variants use screen-space clockwise angles.
+    // A horizontal bone therefore needs the 90-degree variant, not the default top handle.
+    for (delta, expected) in [(0., 4), (45., 2), (45., 0), (90., 12)] {
+        h.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::AdjustDeformer {
+                    object: rotation.clone(),
+                    adjustment: DeformerAdjustment {
+                        translation: Default::default(),
+                        angle: delta,
+                        scale: 1.,
+                    },
+                })
+                .unwrap();
+            view.redraw(cx);
+        });
+        present_canvas(&h, cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            let start = h.view.read_with(cx, |view, _| {
+                let frame = &view.modeling_frame().unwrap().canvas;
+                let control = frame
+                    .geometry
+                    .controls
+                    .iter()
+                    .find(|c| c.object == rotation)
+                    .unwrap();
+                let gizmo = frame
+                    .geometry
+                    .deformer_gizmo(control, frame.transform)
+                    .unwrap();
+                let tip = gizmo.handles[0].1;
+                let dx = tip.x - gizmo.center.x;
+                let dy = tip.y - gizmo.center.y;
+                let length = dx.hypot(dy);
+                // Pick the bone interior, away from its center and scale endpoint.
+                let start = ViewportPoint {
+                    x: (gizmo.center.x + tip.x) * 0.5 - dy / length * 2.,
+                    y: (gizmo.center.y + tip.y) * 0.5 + dx / length * 2.,
+                };
+                assert_eq!(
+                    frame.geometry.hit(
+                        start,
+                        frame.transform,
+                        std::slice::from_ref(&rotation),
+                        ToolId::Select,
+                        Default::default(),
+                    ),
+                    Some(HitTarget::RotationHandle(rotation.clone()))
+                );
+                start
+            });
+            let body = window.find("canvas-body").bounds();
+            let position = body.origin + point(px(start.x), px(start.y));
+            assert!(body.contains(&position));
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            let check = |window: &gpui_kit::Window, cx: &gpui_kit::App| {
+                let view = h.view.read(cx);
+                assert_eq!(
+                    view.editor.overlay().active_control_kind,
+                    Some(zipzi_editor_core::ControlKind::Rotation)
+                );
+                let surface = view.viewport_surface(view.viewport_slots[0], cx).unwrap();
+                assert_eq!(
+                    surface.read(cx).tool_cursor_kind,
+                    Some(ToolCursor::Rotate(expected))
+                );
+                assert_eq!(
+                    window.requested_cursor_style(),
+                    view.tool_cursors.style(ToolCursor::Rotate(expected))
+                );
+            };
+            check(window, cx);
+            window.dispatch_event(
+                MouseDownEvent {
+                    position,
+                    button: MouseButton::Left,
+                    click_count: 1,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            check(window, cx);
+            window.dispatch_event(
+                MouseUpEvent {
+                    position,
+                    button: MouseButton::Left,
+                    click_count: 1,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
 fn command_rotation_drag_keeps_child_artwork_fixed_through_native_events(cx: &mut TestAppContext) {
     use gpui_kit::{
         InputEvent as _, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
