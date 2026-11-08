@@ -1,24 +1,24 @@
 //! A main-thread native resource smoke test. Pointer ownership, visual quality and
 //! OS accessibility preferences still require the interactive acceptance matrix.
+#[path = "support/cursor_artwork.rs"]
+mod cursor_artwork;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 fn run() -> anyhow::Result<()> {
     use gpui_kit::{CursorStyle, CustomCursor, point, size};
     let platform = gpui_kit::platform::current_platform(true);
-    let artwork = CustomCursor::from_svg(
-        include_bytes!("../assets/cursors/mesh-add.svg"),
-        size(24, 24),
-        point(7, 7),
-        CursorStyle::Crosshair,
-    )?;
-    let expected = CursorStyle::Custom(artwork.id());
-    anyhow::ensure!(
-        platform.register_custom_cursor(artwork.clone()) == expected,
-        "native registration fell back to the standard cursor"
-    );
-    anyhow::ensure!(
-        platform.register_custom_cursor(artwork) == expected,
-        "duplicate registration changed the cursor ID"
-    );
+    for (name, svg) in cursor_artwork::ARTWORK {
+        let artwork =
+            CustomCursor::from_svg(svg, size(24, 24), point(7, 7), CursorStyle::Crosshair)?;
+        let expected = CursorStyle::Custom(artwork.id());
+        anyhow::ensure!(
+            platform.register_custom_cursor(artwork.clone()) == expected,
+            "{name}: native registration fell back to the standard cursor"
+        );
+        anyhow::ensure!(
+            platform.register_custom_cursor(artwork) == expected,
+            "{name}: duplicate registration changed the cursor ID"
+        );
+    }
     println!(
         "native cursor registration and reuse passed on {}",
         std::env::consts::OS

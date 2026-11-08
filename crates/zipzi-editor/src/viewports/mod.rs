@@ -117,6 +117,8 @@ pub struct ViewportSurface {
     pub(crate) layout_syncs: usize,
     #[cfg(test)]
     pub(crate) tool_cursor: Option<CursorStyle>,
+    #[cfg(test)]
+    pub(crate) tool_cursor_kind: Option<crate::tool_cursors::ToolCursor>,
     navigation: navigation::ViewportNavigation,
     interaction: Option<zipzi_editor_core::ViewportInteractionToken>,
     brush_bar: Entity<brush_bar::BrushSelectionBar>,
@@ -239,6 +241,8 @@ impl ViewportSurface {
                 layout_syncs: 0,
                 #[cfg(test)]
                 tool_cursor: None,
+                #[cfg(test)]
+                tool_cursor_kind: None,
                 navigation: Default::default(),
                 interaction: None,
                 brush_bar,
@@ -323,7 +327,6 @@ impl Render for ViewportSurface {
             error,
             hand_tool,
             controls,
-            cursor,
         } = (self.content)(state, self.viewport);
         if !self.show_origin_crosshair {
             overlay.origin_crosshair = None;
@@ -338,63 +341,30 @@ impl Render for ViewportSurface {
             .cloned();
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
-        let brush_cursor = (self.kind == zipzi_editor_core::ViewportKind::Modeling
-            && state.editor.active_tool() == ToolId::BrushSelect
-            && !state.editor.manual_for_viewport(self.viewport))
-        .then(|| {
-            let captured = self
-                .binding(&state.editor)
-                .is_some_and(|binding| state.editor.gesture_active_for(binding));
-            if captured {
-                // A gesture keeps the operation chosen on press, even if Cmd changes.
-                if overlay.active_component.is_some() {
-                    CursorStyle::ClosedHand
-                } else {
-                    CursorStyle::Crosshair
-                }
-            } else if window.is_window_active() && window.modifiers().platform {
-                CursorStyle::OpenHand
-            } else {
-                CursorStyle::Crosshair
-            }
+        let cursor_feedback = crate::tool_cursors::resolve(crate::tool_cursors::CursorInput {
+            overlay: &overlay,
+            tool: state.editor.active_tool(),
+            manual_tool: state
+                .editor
+                .manual_for_viewport(self.viewport)
+                .then(|| state.editor.manual_tool())
+                .flatten(),
+            modifiers: window.modifiers(),
+            window_active: window.is_window_active(),
+            modal: modal || generation_panel.is_some() || state.editor.is_busy(),
+            panning: self.navigation.pan.is_some(),
+            hand_tool,
         });
-        if matches!(
-            brush_cursor,
-            Some(CursorStyle::OpenHand | CursorStyle::ClosedHand)
-        ) {
+        if cursor_feedback.hide_selection_brush {
             overlay.selection_brush = None;
         }
-        let connection_cursor = (!modal && !hand_tool)
-            .then(|| {
-                crate::ui::manual_mesh::connection_cursor(
-                    overlay.manual_mesh_feedback,
-                    window.modifiers(),
-                    self.binding(&state.editor)
-                        .is_some_and(|binding| state.editor.gesture_active_for(binding)),
-                )
-            })
-            .flatten();
-        let cursor = if overlay.point_unavailable.is_some() {
-            cursor
-        } else {
-            connection_cursor.or(brush_cursor).or(cursor)
-        };
-        // The first native-resource prototype covers idle, explicit point creation.
-        // Shortcut and captured-operation semantics join the resolver in phase 2.
-        let cursor = if cursor == Some(CursorStyle::Crosshair)
-            && state.editor.manual_for_viewport(self.viewport)
-            && state.editor.manual_tool() == Some(zipzi_editor_core::ManualTool::Create)
-            && !window.modifiers().platform
-            && self.interaction.is_none()
-        {
-            Some(state.tool_cursors.mesh_add)
-        } else {
-            cursor
-        };
-        let cursor = cursor.filter(|_| !modal && !hand_tool);
+        let cursor = cursor_feedback
+            .cursor
+            .map(|cursor| state.tool_cursors.style(cursor));
         #[cfg(test)]
         {
             self.tool_cursor = cursor;
+            self.tool_cursor_kind = cursor_feedback.cursor;
         }
         if modal {
             self.cancel_pointer();
@@ -415,12 +385,6 @@ impl Render for ViewportSurface {
             .w_full()
             .overflow_hidden()
             .bg(crate::theme::viewport_background(cx))
-            .when(!modal && self.navigation.pan.is_some(), |e| {
-                e.cursor_grabbing()
-            })
-            .when(!modal && self.navigation.pan.is_none() && hand_tool, |e| {
-                e.cursor_grab()
-            })
             .map(|element| self.bind_input(element, capture, cx))
             .when(self.show_transparency_grid, |body| {
                 body.child(background::transparency_grid(cx))
@@ -543,7 +507,6 @@ pub(super) struct SurfaceContent {
     error: Option<String>,
     hand_tool: bool,
     controls: Option<fn(&ViewportSurface, bool, &mut Context<ViewportSurface>) -> AnyElement>,
-    cursor: Option<CursorStyle>,
 }
 
 impl SurfaceContent {
@@ -554,7 +517,6 @@ impl SurfaceContent {
             overlay: Default::default(),
             hand_tool: true,
             controls: None,
-            cursor: None,
         }
     }
 }

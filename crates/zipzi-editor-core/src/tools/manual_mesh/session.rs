@@ -556,9 +556,13 @@ impl ManualMeshSession {
             out.glues.extend(other.glues);
             if self.hovered == Some(index) {
                 out.manual_mesh_feedback = other.manual_mesh_feedback;
+                out.manual_mesh_delete_unavailable = other.manual_mesh_delete_unavailable;
             }
         }
-        if let Some(shared) = &self.shared {
+        if let Some(shared) = &self.shared
+            && shared.press().version.binding == frame.version.binding
+        {
+            out.active_gesture = Some(shared.press().kind());
             if let SharedGesture::Region(g) = shared {
                 g.selection_overlay(&mut out);
             }

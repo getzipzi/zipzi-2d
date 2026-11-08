@@ -33,6 +33,23 @@ pub(super) enum Gesture {
     Controls(ControlGesture),
 }
 impl Gesture {
+    pub fn kind(&self) -> CanvasGestureKind {
+        use crate::DeformerHandle as H;
+        use CanvasGestureKind as K;
+        match self {
+            Self::Select(_) => K::BoxSelect,
+            Self::Lasso(_) => K::LassoSelect,
+            Self::BrushSelect(g) if g.resizing => K::BrushResize,
+            Self::BrushSelect(_) => K::BrushSelect,
+            Self::Controls(g) if g.adjusting_bone_length() => K::BoneLength,
+            Self::Controls(g) => match g.target {
+                HitTarget::RotationHandle(_) | HitTarget::DeformerHandle(_, H::Rotate) => K::Rotate,
+                HitTarget::DeformerHandle(_, H::RotationScale | H::Scale(_)) => K::Scale,
+                _ => K::Move,
+            },
+        }
+    }
+
     pub fn set_modifiers(&mut self, shift: bool, alt: bool) -> bool {
         match self {
             Self::Controls(g) => g.set_modifiers(shift, alt),

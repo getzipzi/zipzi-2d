@@ -1,6 +1,21 @@
 use super::{Harness, document_fixture, setup_with_document};
 use gpui_kit::{AppContext as _, TestAppContext, point, px, test::TestWindowExt};
 
+fn canvas_cursor(h: &Harness, cx: &gpui_kit::App) -> Option<gpui_kit::CursorStyle> {
+    let view = h.view.read(cx);
+    view.viewport_surface(view.viewport_slots[0], cx)
+        .unwrap()
+        .read(cx)
+        .tool_cursor
+}
+fn canvas_cursor_kind(h: &Harness, cx: &gpui_kit::App) -> Option<crate::tool_cursors::ToolCursor> {
+    let view = h.view.read(cx);
+    view.viewport_surface(view.viewport_slots[0], cx)
+        .unwrap()
+        .read(cx)
+        .tool_cursor_kind
+}
+
 pub(super) fn present(h: &Harness, cx: &mut TestAppContext) {
     cx.run_until_parked();
     cx.update_window(h.window, |_, window, cx| {
@@ -411,7 +426,61 @@ fn manual_mesh_primary_connect_keeps_gesture_after_modifier_release(cx: &mut Tes
 }
 
 #[gpui_kit::test]
-fn manual_mesh_native_cursor_prototype_yields_to_shortcuts_and_modal(cx: &mut TestAppContext) {
+fn manual_mesh_delete_cursor_keeps_the_pressed_operation_until_cancel(cx: &mut TestAppContext) {
+    use crate::tool_cursors::ToolCursor;
+    use gpui_kit::{
+        InputEvent as _, Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent,
+    };
+    let h = enter(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        let vertex = h.view.read(cx).editor.overlay().vertices[0].position;
+        let position =
+            window.find("canvas-body").bounds().origin + point(px(vertex.x), px(vertex.y));
+        let modifiers = Modifiers {
+            platform: true,
+            shift: true,
+            ..Default::default()
+        };
+        window.dispatch_event(
+            MouseDownEvent {
+                position,
+                button: MouseButton::Left,
+                modifiers,
+                click_count: 1,
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        assert_eq!(canvas_cursor_kind(&h, cx), Some(ToolCursor::MeshDelete));
+        window.dispatch_event(
+            ModifiersChangedEvent {
+                modifiers: Modifiers::default(),
+                capslock: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        assert_eq!(canvas_cursor_kind(&h, cx), Some(ToolCursor::MeshDelete));
+        assert_eq!(
+            h.view.read(cx).editor.manual_tool(),
+            Some(zipzi_editor_core::ManualTool::Select)
+        );
+        window.press("escape", cx);
+        window.render_frame(cx);
+        assert_ne!(canvas_cursor_kind(&h, cx), Some(ToolCursor::MeshDelete));
+        assert_eq!(
+            h.view.read(cx).editor.document().unwrap().history_lengths(),
+            (0, 0)
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn manual_mesh_native_cursor_yields_to_shortcuts_and_modal(cx: &mut TestAppContext) {
     use gpui_kit::{
         CursorStyle, CustomCursor, InputEvent as _, Modifiers, ModifiersChangedEvent,
         MouseMoveEvent, size,
@@ -533,15 +602,10 @@ fn manual_mesh_cmd_cursor_updates_without_hint_overlay_and_click_fixes_an_edge(
         );
         window.render_frame(cx);
         assert!(window.try_find("manual-mesh-connection-hint").is_none());
-        let feedback = h
-            .view
-            .read(cx)
-            .editor
-            .overlay_for_viewport(binding)
-            .manual_mesh_feedback;
+        assert_eq!(canvas_cursor(&h, cx), Some(CursorStyle::PointingHand));
         assert_eq!(
-            crate::ui::manual_mesh::connection_cursor(feedback, window.modifiers(), false),
-            Some(CursorStyle::PointingHand)
+            canvas_cursor_kind(&h, cx),
+            Some(crate::tool_cursors::ToolCursor::MeshFixEdge)
         );
         window.dispatch_event(
             MouseDownEvent {
@@ -563,15 +627,10 @@ fn manual_mesh_cmd_cursor_updates_without_hint_overlay_and_click_fixes_an_edge(
             cx,
         );
         window.render_frame(cx);
-        let feedback = h
-            .view
-            .read(cx)
-            .editor
-            .overlay_for_viewport(binding)
-            .manual_mesh_feedback;
+        assert_eq!(canvas_cursor(&h, cx), Some(CursorStyle::PointingHand));
         assert_eq!(
-            crate::ui::manual_mesh::connection_cursor(feedback, window.modifiers(), true),
-            Some(CursorStyle::PointingHand)
+            canvas_cursor_kind(&h, cx),
+            Some(crate::tool_cursors::ToolCursor::MeshFixEdge)
         );
         window.dispatch_event(
             MouseUpEvent {
@@ -600,7 +659,6 @@ fn manual_mesh_cmd_cursor_updates_without_hint_overlay_and_click_fixes_an_edge(
                 .automatic_lines
                 .is_empty()
         );
-        let binding = editor.primary_viewport_binding().unwrap();
         window.dispatch_event(
             ModifiersChangedEvent {
                 modifiers: Modifiers {
@@ -614,15 +672,7 @@ fn manual_mesh_cmd_cursor_updates_without_hint_overlay_and_click_fixes_an_edge(
         );
         window.render_frame(cx);
         assert_eq!(
-            crate::ui::manual_mesh::connection_cursor(
-                h.view
-                    .read(cx)
-                    .editor
-                    .overlay_for_viewport(binding)
-                    .manual_mesh_feedback,
-                window.modifiers(),
-                false,
-            ),
+            canvas_cursor(&h, cx),
             Some(CursorStyle::OperationNotAllowed)
         );
         window.dispatch_event(
@@ -700,14 +750,12 @@ fn manual_mesh_connect_preview_tracks_target_after_cmd_release(cx: &mut TestAppC
             let overlay = h.view.read(cx).editor.overlay_for_viewport(binding);
             assert_eq!(overlay.manual_mesh_feedback, Some(expected));
             assert_eq!(overlay.gizmo_lines.len(), 1);
+            assert_eq!(canvas_cursor(&h, cx), Some(cursor));
             assert_eq!(
-                crate::ui::manual_mesh::connection_cursor(
-                    overlay.manual_mesh_feedback,
-                    Modifiers::default(),
-                    true
-                )
-                .unwrap(),
-                cursor
+                canvas_cursor_kind(&h, cx),
+                Some(crate::tool_cursors::ToolCursor::MeshConnect {
+                    new_vertex: expected == ManualMeshFeedback::ConnectNewVertex,
+                })
             );
             assert!(window.try_find("manual-mesh-connection-hint").is_none());
             assert!(h.view.read(cx).status_bar.read(cx).hints().is_empty());

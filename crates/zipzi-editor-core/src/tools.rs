@@ -26,9 +26,9 @@ use gesture::Gesture;
 use std::sync::Arc;
 
 pub use overlay::{
-    GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint, OverlayHandle,
-    OverlayRotationBone, OverlaySelectionBrush, OverlaySelectionWeights, OverlaySnapshot,
-    OverlayVertex, OverlayVertexKind,
+    CanvasGestureKind, GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint,
+    OverlayHandle, OverlayRotationBone, OverlaySelectionBrush, OverlaySelectionWeights,
+    OverlaySnapshot, OverlayVertex, OverlayVertexKind,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

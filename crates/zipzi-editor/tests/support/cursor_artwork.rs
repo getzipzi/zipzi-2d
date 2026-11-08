@@ -1,0 +1,39 @@
+pub const ARTWORK: [(&str, &[u8]); 10] = [
+    (
+        "mesh-add",
+        include_bytes!("../../assets/cursors/mesh-add.svg"),
+    ),
+    (
+        "mesh-delete",
+        include_bytes!("../../assets/cursors/mesh-delete.svg"),
+    ),
+    (
+        "mesh-connect",
+        include_bytes!("../../assets/cursors/mesh-connect.svg"),
+    ),
+    (
+        "mesh-connect-new",
+        include_bytes!("../../assets/cursors/mesh-connect-new.svg"),
+    ),
+    (
+        "mesh-fix",
+        include_bytes!("../../assets/cursors/mesh-fix.svg"),
+    ),
+    ("rotate", include_bytes!("../../assets/cursors/rotate.svg")),
+    (
+        "bone-length-0",
+        include_bytes!("../../assets/cursors/bone-length-0.svg"),
+    ),
+    (
+        "bone-length-45",
+        include_bytes!("../../assets/cursors/bone-length-45.svg"),
+    ),
+    (
+        "bone-length-90",
+        include_bytes!("../../assets/cursors/bone-length-90.svg"),
+    ),
+    (
+        "bone-length-135",
+        include_bytes!("../../assets/cursors/bone-length-135.svg"),
+    ),
+];

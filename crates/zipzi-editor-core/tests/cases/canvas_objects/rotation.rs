@@ -1078,6 +1078,10 @@ fn alt_rotation_tip_length_is_pose_independent_captured_and_one_undo_step() -> a
             (bone_length(&frame, &object) - bone_length(&original, &object) * 1.5).abs() < 0.001
         );
         assert!(editor.overlay().rotation_length_adjusting);
+        assert_eq!(
+            editor.overlay().active_gesture,
+            Some(CanvasGestureKind::BoneLength)
+        );
         assert!(!editor.overlay().handles[0].selected);
         assert_eq!(meshes(&frame), children);
         assert_eq!(
@@ -1174,6 +1178,10 @@ fn rotation_tip_scale_ignores_perpendicular_motion_and_keeps_the_press_operation
             alt: true,
         },
     )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::Scale)
+    );
     let end = ViewportPoint {
         x: side.x + dx * 0.5,
         y: side.y + dy * 0.5,

@@ -1271,6 +1271,10 @@ fn manual_mesh_create_drag_from_empty_space_does_not_insert_a_point() -> anyhow:
             left_down: true,
         },
     )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::Cancelled)
+    );
     crate::support::pointer_input(&mut editor, CanvasInput::Up { point: end })?;
     assert_eq!(
         editor.document().unwrap().history_lengths(),

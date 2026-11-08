@@ -90,6 +90,106 @@ fn selected(editor: &Editor) -> usize {
         .filter(|v| v.selected)
         .count()
 }
+
+#[test]
+fn manual_cursor_gestures_keep_the_pressed_operation_and_scope() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let other = ViewportId::new();
+    editor.register_viewport(other, ViewportKind::Modeling)?;
+    editor.set_viewport_metrics(
+        other,
+        ViewportMetrics {
+            width: 512.,
+            height: 512.,
+            scale_factor: 1.,
+        },
+    );
+    let secondary = editor.viewport_binding(other).unwrap();
+    let frame = editor.preview_for(secondary)?.canvas.unwrap();
+    assert!(editor.present_frame(frame));
+    let point = screen(&mut editor, 60., 60.)?;
+    // Plain Select clicks create points; crossing the threshold becomes a region.
+    support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::MeshAdd)
+    );
+    let end = ViewportPoint {
+        x: point.x + 12.,
+        y: point.y + 12.,
+    };
+    support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::BoxSelect)
+    );
+    let other_overlay = editor.overlay_for_viewport(secondary);
+    assert_eq!(other_overlay.active_gesture, None);
+    assert_eq!(other_overlay.marquee, None);
+    support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+    assert_eq!(editor.overlay().active_gesture, None);
+    click(&mut editor, 60., 60., false)?;
+    for (shift, kind) in [
+        (false, CanvasGestureKind::MeshConnect),
+        (true, CanvasGestureKind::MeshDelete),
+    ] {
+        let point = screen(&mut editor, 60., 60.)?;
+        support::pointer_input(
+            &mut editor,
+            CanvasInput::Down {
+                point,
+                shift,
+                alt: false,
+                primary: true,
+            },
+        )?;
+        assert_eq!(editor.overlay().active_gesture, Some(kind));
+        support::pointer_input(
+            &mut editor,
+            CanvasInput::ModifiersChanged {
+                shift: false,
+                alt: false,
+            },
+        )?;
+        assert_eq!(editor.overlay().active_gesture, Some(kind));
+        support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+        assert_eq!(editor.overlay().active_gesture, None);
+    }
+    // Selecting points on two meshes promotes dragging into the shared gesture.
+    click(&mut editor, 160., 180., false)?;
+    click(&mut editor, 60., 60., false)?;
+    click(&mut editor, 160., 180., true)?;
+    let point = screen(&mut editor, 60., 60.)?;
+    support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::Move)
+    );
+    support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+    Ok(())
+}
 fn region(editor: &mut Editor, lasso: bool, shift: bool, alt: bool) -> anyhow::Result<()> {
     editor.dispatch(editor.command(if lasso {
         CommandId::ManualLasso
@@ -372,6 +472,8 @@ fn multi_mesh_glue_endpoints_move_jointly_and_refuse_deletion_atomically() -> an
     assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
     let frame = support::present_canvas(&mut editor)?;
     let start = frame.transform.to_viewport(points[1]);
+    editor.hover_canvas(frame.version.binding, Some(start))?;
+    assert!(editor.overlay().manual_mesh_delete_unavailable);
     let end = frame.transform.to_viewport(ModelPoint {
         x: points[1].x + 4.,
         y: points[1].y + 3.,

@@ -1,6 +1,6 @@
 # Editor 专用工具光标方案
 
-状态：第 1 阶段实施中，已加入基础接口与加点光标原型；双平台原生交互验收待完成。
+状态：第 1、2 阶段代码已落地；选择与移动光标、双平台原生交互验收待完成。
 创建：2026-11-08。
 
 为 Zipzi Editor 的网格编辑、变形器操作和选择工具提供可辨识的专用光标，
@@ -13,7 +13,7 @@
 本方案以当前工作区实现为基线；独立的变形、扩展收缩和 Warp 整形笔刷
 沿用[笔刷交互方案](cubism-brush-interaction.md)，待对应操作落地后再扩充光标。
 
-## 1 当前实现与问题
+## 1 实施前的基线与问题
 
 画布的主要光标选择位于
 [`viewports/modeling.rs`](../../crates/zipzi-editor/src/viewports/modeling.rs)，
@@ -273,8 +273,8 @@ macOS 测试通过不能替代 Windows 验收；当前 Windows 静止指针换�
   即时显示前检查指针或捕获归属、原生菜单、移动缩放和非客户区。
 - Windows 增加原创张手、握手 SVG；macOS 保留系统手形。
 - Editor 注册 24 × 24、热点 (7, 7) 的加点 SVG 原型，生成 1x/2x/3x/4x 表示。
-  当前只接入空闲的显式加点工具；快捷操作和活动手势暂沿用原来的样式。
-  集中操作解析器及其余五类首批工具仍属于第 2 阶段。
+  首轮只接入空闲的显式加点工具；快捷操作和活动手势沿用原来的样式。
+  其后的第 2 阶段接入记录见下一节。
 
 资源与接口见 [Editor 光标母版](../../crates/zipzi-editor/assets/cursors/README.md)、
 [通用资源实现](../../vendor/gpui-fast/src/custom_cursor.rs)及
@@ -303,3 +303,36 @@ cargo test --locked -p gpui-fast-windows --lib cursor::tests
 第 7.2 节的交互矩阵仍待逐项验收，尤其是 Windows 静止指针、捕获期间换形、
 100%/125%/150%/200% 跨屏、多窗口、原生菜单以及两端系统指针偏好。
 原生注册冒烟测试只覆盖资源创建和同 ID 复用，不验证屏幕上的实际热点与换形时机。
+
+## 10 第 2 阶段实施记录（2026-11-08）
+
+基础接口提交为 `3367d141`。本轮接入六类首批工具语义，仍不代表完成原生交互验收。
+
+- `tool_cursors::resolve` 集中处理模态界面、捕获平移、活动手势、空闲快捷操作和工具默认值。
+  移除 Modeling 内容、连边提示和视口样式之间的多次光标覆盖；平移不再被点编辑权限禁止。
+- Core 的 `OverlaySnapshot.active_gesture` 导出实际捕获的操作，覆盖普通和共享网格手势。
+  快捷删除、连接、骨骼缩放或显示长度不会因松开修饰键改变含义。
+  普通 Mesh Edit 点击加点、拖动转为区域选择，显式加点的空白拖动取消，均按现有输入实现反馈。
+  共享区域手势只向所属视口提供操作和预览。
+- Core 同时提供 Glue 引用端点的删除限制；这些点可移动、可连接，删除时显示禁止光标。
+  笔刷的选择和点移动从实际手势区分；选择范围仍由原有覆盖层绘制。
+- 注册加点、删除、连接、连接并新建终点、固定自动边、旋转及四方向骨骼长度资源，共 10 张 SVG。
+  全部采用 24 × 24 逻辑尺寸、(7, 7) 热点；长度方向按既有四方向规则量化，注册后复用。
+  其余操作继续使用原生标准样式。资源创建失败继续沿用第 1 阶段的标准回退。
+- 空闲鼠标进入视口时同步修饰键，修饰键事件也会刷新光标，无需额外移动指针。
+
+验证使用 macOS 27.0.1 / arm64：资源及 DPI 测试 7 项、UI `cursor` 过滤测试 14 项、
+多网格集成回归 7 项、骨骼长度与缩放集成回归 2 项、空白拖动取消加点回归 1 项通过；
+Editor 编译检查通过，全部 10 个资源通过原生创建与同 ID 复用检查。
+Windows 平台层本轮未修改；Windows 实机交互和第 7.2 节其余场景仍待验收。
+
+```sh
+./tools/test-editor.sh ui cursor
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration multi_mesh_edit::
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration rotation_tip_
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration manual_mesh_create_drag_from_empty_space
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --features test-support --test custom_cursors --test native_cursors
+```
+
+下一阶段为套索、笔刷选择/减选及控制点移动的专用资源和选择操作角标。
+当前这些操作仍用标准十字、箭头和手形；没有新增笔刷范围状态或时间线功能。

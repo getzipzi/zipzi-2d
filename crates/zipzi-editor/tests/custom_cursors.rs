@@ -1,5 +1,27 @@
 //! Cursor contracts live here so they use the workspace lockfile and normal GPUI features.
 use gpui_kit::{CursorStyle, CustomCursor, CustomCursorImage, point, size};
+#[path = "support/cursor_artwork.rs"]
+mod cursor_artwork;
+
+#[test]
+fn first_batch_cursor_artwork_shares_a_stable_hotspot_at_every_dpi() {
+    for (name, svg) in cursor_artwork::ARTWORK {
+        let cursor =
+            CustomCursor::from_svg(svg, size(24, 24), point(7, 7), CursorStyle::Crosshair).unwrap();
+        for scale in [1., 1.25, 1.5, 2.] {
+            let (image, hotspot) = cursor.image_for_scale(scale);
+            assert_eq!(
+                hotspot,
+                point((7. * scale).round() as u32, (7. * scale).round() as u32),
+                "{name}"
+            );
+            assert!(
+                image.rgba().chunks_exact(4).any(|pixel| pixel[3] > 0),
+                "{name}"
+            );
+        }
+    }
+}
 
 fn mesh_add() -> CustomCursor {
     CustomCursor::from_svg(

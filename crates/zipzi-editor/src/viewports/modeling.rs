@@ -63,89 +63,12 @@ impl ModelingViewport {
                 .editor
                 .overlay_for_frame(frame.map(|f| f.canvas.version))
         });
-        let active_handle = overlay.active_handle;
-        let cursor = if overlay.point_unavailable.is_some() {
-            Some(CursorStyle::OperationNotAllowed)
-        } else {
-            active_handle
-                .map(|handle| {
-                    use zipzi_editor_core::DeformerHandle as H;
-                    match handle {
-                        H::Move => CursorStyle::OpenHand,
-                        H::Rotate => {
-                            if owner.editor.current_viewport_interaction().is_some() {
-                                CursorStyle::ClosedHand
-                            } else {
-                                CursorStyle::OpenHand
-                            }
-                        }
-                        H::RotationScale | H::Scale(_) => {
-                            let base = if let H::Scale(index) = handle {
-                                [1., 2., 3., 0.][index as usize % 4]
-                            } else {
-                                0.
-                            };
-                            let direction = (base
-                                + overlay.active_handle_radians / std::f32::consts::FRAC_PI_4)
-                                .round()
-                                .rem_euclid(4.) as u8;
-                            match direction {
-                                0 => CursorStyle::ResizeLeftRight,
-                                1 => CursorStyle::ResizeUpLeftDownRight,
-                                2 => CursorStyle::ResizeUpDown,
-                                _ => CursorStyle::ResizeUpRightDownLeft,
-                            }
-                        }
-                    }
-                })
-                .or_else(|| {
-                    if overlay.point_unavailable.is_some() {
-                        Some(CursorStyle::OperationNotAllowed)
-                    } else if overlay.active_component.is_some() {
-                        if overlay.glues.iter().flat_map(|g| &g.points).any(|p| {
-                            p.hovered && p.state == zipzi_editor_core::GluePointState::Editable
-                        }) {
-                            Some(if owner.editor.current_viewport_interaction().is_some() {
-                                CursorStyle::ClosedHand
-                            } else {
-                                CursorStyle::OpenHand
-                            })
-                        } else {
-                            Some(CursorStyle::Arrow)
-                        }
-                    } else if owner.editor.manual_for_viewport(viewport)
-                        && let Some(tool) = owner.editor.manual_tool()
-                    {
-                        Some(match tool {
-                            zipzi_editor_core::ManualTool::Select
-                                if overlay.vertices.iter().any(|v| v.hovered) =>
-                            {
-                                if owner.editor.current_viewport_interaction().is_some() {
-                                    CursorStyle::ClosedHand
-                                } else {
-                                    CursorStyle::OpenHand
-                                }
-                            }
-                            zipzi_editor_core::ManualTool::Delete => CursorStyle::Arrow,
-                            _ => CursorStyle::Crosshair,
-                        })
-                    } else if matches!(
-                        owner.editor.active_tool(),
-                        ToolId::Lasso | ToolId::BrushSelect
-                    ) {
-                        Some(CursorStyle::Crosshair)
-                    } else {
-                        None
-                    }
-                })
-        };
         SurfaceContent {
             image: frame.map(|f| (f.image.clone(), f.canvas.transform.metrics)),
             overlay,
             error: owner.viewport_error(viewport).cloned(),
             hand_tool: owner.editor.active_tool() == ToolId::Hand,
             controls: Some(deformer_bar::render_deformer_bar),
-            cursor,
         }
     }
 }
@@ -254,10 +177,16 @@ impl ViewportSurface {
                 input if self.interaction.is_some() => owner
                     .editor
                     .update_canvas_gesture(self.interaction.unwrap(), input),
-                CanvasInput::Move { point, .. } => owner
-                    .editor
-                    .hover_canvas(binding, Some(point))
-                    .map(|_| Default::default()),
+                CanvasInput::Move { point, .. } => {
+                    // The pointer may enter this window with Alt already held.
+                    // Synchronize access feedback before picking its hovered handle.
+                    let modifiers = window.modifiers();
+                    owner
+                        .editor
+                        .update_canvas_modifiers(binding, modifiers.shift, modifiers.alt)
+                        .and_then(|_| owner.editor.hover_canvas(binding, Some(point)))
+                        .map(|_| Default::default())
+                }
                 CanvasInput::Leave => owner
                     .editor
                     .hover_canvas(binding, None)

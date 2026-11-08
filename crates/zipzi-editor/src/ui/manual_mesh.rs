@@ -1,25 +1,6 @@
 //! User-facing explanations for the manual mesh operation boundary.
 use crate::t;
 
-/// Feedback follows the latched gesture before looking at live modifiers.
-pub(crate) fn connection_cursor(
-    feedback: Option<zipzi_editor_core::ManualMeshFeedback>,
-    modifiers: gpui_kit::Modifiers,
-    gesture_active: bool,
-) -> Option<gpui_kit::CursorStyle> {
-    use gpui_kit::CursorStyle as C;
-    use zipzi_editor_core::ManualMeshFeedback as F;
-    Some(match feedback? {
-        F::ConnectStart | F::ConnectVertex | F::ConnectNewVertex | F::FixEdge => C::PointingHand,
-        F::Cancelled => C::Arrow,
-        hit if modifiers.platform && !modifiers.shift && !gesture_active => match hit {
-            F::FixedEdge | F::Empty => C::OperationNotAllowed,
-            _ => C::PointingHand,
-        },
-        _ => return None,
-    })
-}
-
 pub(crate) fn diagnostic(message: &str) -> String {
     if let Some(reason) = message.strip_prefix("Mesh Edit paused: ") {
         return t!("manual_mesh.paused", reason = diagnostic(reason)).into_owned();

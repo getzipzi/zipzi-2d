@@ -62,12 +62,16 @@ pub struct OverlayGluePoint {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OverlaySnapshot {
+    /// The operation owned by this viewport's captured gesture, independent of live keys.
+    pub active_gesture: Option<CanvasGestureKind>,
     pub selection_weights: Option<OverlaySelectionWeights>,
     /// A selection brush in viewport logical pixels; never a geometry edit.
     pub selection_brush: Option<OverlaySelectionBrush>,
     /// Name of the object beneath the pointer in this presented viewport.
     pub hovered_object_label: Option<String>,
     pub manual_mesh_feedback: Option<super::ManualMeshFeedback>,
+    /// Referenced Glue endpoints can move and connect, but cannot be deleted.
+    pub manual_mesh_delete_unavailable: bool,
     pub vertices: Vec<OverlayVertex>,
     /// Mesh topology; controls retain their own semantic line groups below.
     pub lines: Vec<(ViewportPoint, ViewportPoint)>,
@@ -112,6 +116,24 @@ pub struct OverlaySnapshot {
     /// A component under the pointer, or captured by the current edit.
     pub active_component: Option<ComponentRef>,
     pub origin_crosshair: Option<ViewportPoint>,
+}
+/// Actual captured canvas operations. Rendering clients choose their own cursor artwork.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CanvasGestureKind {
+    BoxSelect,
+    LassoSelect,
+    BrushSelect,
+    BrushResize,
+    Move,
+    Rotate,
+    Scale,
+    BoneLength,
+    MeshAdd,
+    MeshDelete,
+    MeshConnect,
+    MeshFixEdge,
+    Unavailable,
+    Cancelled,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OverlaySelectionBrush {
@@ -244,7 +266,14 @@ impl ToolController {
             .hovered
             .clone()
             .filter(|_| self.hovered_binding == Some(frame.version.binding));
-        let mut out = OverlaySnapshot::default();
+        let mut out = OverlaySnapshot {
+            active_gesture: self
+                .gesture
+                .as_ref()
+                .filter(|g| g.press().version.binding == frame.version.binding)
+                .map(super::gesture::Gesture::kind),
+            ..Default::default()
+        };
         out.hovered_object_label = hovered_target
             .as_ref()
             .filter(|hit| {

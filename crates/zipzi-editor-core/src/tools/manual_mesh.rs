@@ -112,6 +112,35 @@ struct Gesture {
     pose: Option<PoseMapping>,
 }
 impl Gesture {
+    fn kind(&self) -> super::CanvasGestureKind {
+        use super::CanvasGestureKind as K;
+        match &self.kind {
+            GestureKind::Drag(_) => K::Move,
+            GestureKind::Region {
+                operation: SelectionOperation::Replace,
+                ..
+            } if !self.moved => K::MeshAdd,
+            GestureKind::Region {
+                path: SelectionPath::Lasso(_),
+                ..
+            } => K::LassoSelect,
+            GestureKind::Region { .. } => K::BoxSelect,
+            GestureKind::Create(Hit::Vertex(_)) | GestureKind::Connect(Hit::Vertex(_)) => {
+                K::MeshConnect
+            }
+            GestureKind::Create(_) if self.moved => K::Cancelled,
+            GestureKind::Create(_) => K::MeshAdd,
+            GestureKind::Connect(Hit::Edge(_, EdgeHitKind::Automatic)) if !self.moved => {
+                K::MeshFixEdge
+            }
+            GestureKind::Connect(Hit::Edge(_, EdgeHitKind::Automatic)) => K::Cancelled,
+            GestureKind::Connect(_) => K::Unavailable,
+            GestureKind::Delete(Hit::Empty) => K::Unavailable,
+            GestureKind::Delete(_) if self.moved => K::Cancelled,
+            GestureKind::Delete(_) => K::MeshDelete,
+        }
+    }
+
     fn update(&mut self, point: ViewportPoint, complete: bool) {
         self.current = point;
         self.moved |= crate::picking::distance2(self.start, point) >= 9.;
@@ -916,7 +945,13 @@ impl ManualMeshMode {
             Hit::Edge(..) => ManualMeshFeedback::FixedEdge,
             Hit::Empty => ManualMeshFeedback::Empty,
         });
+        out.manual_mesh_delete_unavailable =
+            matches!(self.hover, Hit::Vertex(id) if self.target.glue_vertices.contains(&id));
         if let Some(gesture) = &self.gesture {
+            out.active_gesture = Some(gesture.kind());
+            if let GestureKind::Delete(Hit::Vertex(id)) = gesture.kind {
+                out.manual_mesh_delete_unavailable = self.target.glue_vertices.contains(&id);
+            }
             gesture.selection_overlay(&mut out);
             match gesture.kind {
                 GestureKind::Create(Hit::Vertex(id)) | GestureKind::Connect(Hit::Vertex(id)) => {
