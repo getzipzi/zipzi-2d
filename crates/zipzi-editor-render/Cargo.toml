@@ -20,7 +20,7 @@ zipzi-core.workspace = true
 zipzi-render.workspace = true
 lyon = "1.0.19"
 
-zipzi-render-wgpu = { version = "=0.1.0-alpha.9", path = "../zipzi-render-wgpu", optional = true }
+zipzi-render-wgpu = { version = "=0.1.0-alpha.10", path = "../zipzi-render-wgpu", optional = true }
 wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
