@@ -118,7 +118,9 @@ The Python SDK can connect to the resident host and share its Runtime sessions,
 documents and history. When connected clients, pending jobs or an explicit
 `--no-window` launch keep the host resident, closing a window detaches its view;
 reopening a window attaches the resident sessions. **Close Project** resolves
-unsaved changes and releases the project's Runtime session and history.
+unsaved changes and releases the project's Runtime session and history. Once
+in-flight preview work completes, its unused GPU textures are released; shared
+textures still used by open projects remain cached.
 Otherwise, closing the last window exits after any unsaved
 documents are resolved. Use Quit to explicitly exit. See the
 [Python SDK guide](../zipzi-python/client/python/zipzi/docs/guide.md) for

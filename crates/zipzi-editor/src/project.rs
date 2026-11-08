@@ -24,6 +24,11 @@ pub(super) enum ImportKind {
 }
 
 impl EditorView {
+    fn release_closed_preview_resources(&self) {
+        if let Some(requests) = &self.requests {
+            requests.retain_documents(self.editor.documents().into_iter().map(|d| d.id).collect());
+        }
+    }
     pub(super) fn activate_document(
         &mut self,
         id: DocumentId,
@@ -297,6 +302,7 @@ impl EditorView {
                     .iter()
                     .any(|document| document.id == id)
                 {
+                    this.release_closed_preview_resources();
                     let notices = this.editor.sync_runtime_jobs();
                     if !notices.is_empty() {
                         this.set_edit_error(notices.join("; "), cx);
@@ -342,6 +348,14 @@ impl EditorView {
                             this.resolve_save_conflict(id, path.clone(), window, cx);
                         }
                     }
+                }
+                if !this
+                    .editor
+                    .documents()
+                    .iter()
+                    .any(|document| document.id == id)
+                {
+                    this.release_closed_preview_resources();
                 }
                 // A background save must not blur or rewrite another document's input.
                 if active_before == Some(id) || active_before != this.editor.active_id() {
@@ -821,6 +835,7 @@ impl EditorView {
                         return;
                     }
                 }
+                self.release_closed_preview_resources();
                 if was_active {
                     self.refresh_document(window, cx);
                 }
@@ -864,9 +879,14 @@ impl EditorView {
                                     .entries
                                     .retain(|target, _| target.document != id);
                                 let was_active = this.editor.active_id() == Some(id);
-                                if let Err(error) = this.editor.close_document(id, true) {
-                                    this.set_edit_error(error.to_string(), cx);
-                                    this.editor.cancel_exit();
+                                match this.editor.close_document(id, true) {
+                                    Ok(true) => this.release_closed_preview_resources(),
+                                    Ok(false) => return,
+                                    Err(error) => {
+                                        this.set_edit_error(error.to_string(), cx);
+                                        this.editor.cancel_exit();
+                                        return;
+                                    }
                                 }
                                 if was_active {
                                     this.refresh_document(window, cx);

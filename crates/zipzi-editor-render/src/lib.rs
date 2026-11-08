@@ -28,6 +28,11 @@ pub use wgpu_windows::{WindowsPresenter, windows_context};
 /// Shared screen-space radius for filled and hollow editing markers.
 pub use zipzi_editor_core::canvas_style::POINT_RADIUS as OVERLAY_MARKER_RADIUS;
 
+/// Stable identity used by both preview backends and their document cache owner.
+pub fn scene_texture_key(source: &zipzi_editor_core::SceneTexture) -> String {
+    format!("{}:{}:{}", source.cache_key, source.width, source.height)
+}
+
 /// Separate textures let the canvas insert control lines beneath all markers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OverlayPass {

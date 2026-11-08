@@ -1,6 +1,6 @@
 //! Editor scene adapter using the cross-platform wgpu renderer.
 use anyhow::{Result, anyhow, ensure};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use zipzi_core::Vec2;
 use zipzi_editor_core::{SceneSnapshot, ViewState, ViewportMetrics, ViewportTransform};
@@ -91,6 +91,15 @@ impl WgpuSceneRenderer {
             self.textures.values().map(|t| t.bytes).sum(),
         )
     }
+    /// Called on the render worker after the preceding GPU submission is retired.
+    pub fn retain_cached_textures(&mut self, live: &HashSet<String>) -> Result<()> {
+        let renderer =
+            WgpuRenderer::new(self.context.device(), self.renderer.target()).map_err(status)?;
+        self.renderer = renderer;
+        self.synced_scene = None;
+        self.textures.retain(|key, _| live.contains(key));
+        Ok(())
+    }
     pub fn last_frame_stats(&self) -> zipzi_render_wgpu::WgpuRenderStats {
         self.last_stats
     }
@@ -122,9 +131,7 @@ impl WgpuSceneRenderer {
     ) -> Result<WgpuSubmittedFrame> {
         ensure!(transform.metrics.visible(), "Hidden canvas");
         self.draws += 1;
-        let key = |source: &zipzi_editor_core::SceneTexture| {
-            format!("{}:{}:{}", source.cache_key, source.width, source.height)
-        };
+        let key = crate::scene_texture_key;
         for source in scene.textures.iter() {
             let key = key(source);
             if let Some(cached) = self.textures.get_mut(&key) {

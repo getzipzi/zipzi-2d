@@ -131,18 +131,31 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 renderer.scene.context().adapter_name(),
                 renderer.scene.context().adapter_backend()
             );
+            let mut cache_owners = PreviewCacheOwners::default();
             loop {
-                let request = {
+                let work = {
                     let (lock, ready) = &*shared;
                     let mut inbox = lock.lock().unwrap();
-                    while inbox.pending.is_empty() && !inbox.closed {
+                    while !inbox.has_work() && !inbox.closed {
                         inbox = ready.wait(inbox).unwrap();
                     }
                     if inbox.closed {
                         break;
                     }
-                    inbox.pending.pop().unwrap()
+                    inbox.pop_work().unwrap()
                 };
+                let request = match work {
+                    PreviewWork::Retain(live) => {
+                        let keys = cache_owners.retain(&live);
+                        if let Err(error) = renderer.scene.retain_cached_textures(&keys) {
+                            eprintln!("Preview cache release failed: {error}");
+                        }
+                        let _ = renderer.scene.context().device().poll(wgpu::PollType::Poll);
+                        continue;
+                    }
+                    PreviewWork::Render(request) => request,
+                };
+                cache_owners.note(&request);
                 let trace_id = request.trace_id;
                 // Backpressure before encoding; pending requests continue coalescing.
                 let prepared = WindowsPresenter::fit_preview(

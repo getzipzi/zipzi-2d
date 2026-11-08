@@ -188,6 +188,14 @@ impl MetalSceneRenderer {
             self.textures.values().map(|t| t.bytes).sum(),
         )
     }
+    /// Called on the render worker after the preceding GPU command completes.
+    pub fn retain_cached_textures(&mut self, live: &HashSet<String>) -> Result<()> {
+        let renderer = MetalRenderer::new(&self.context, self.renderer.target()).map_err(status)?;
+        self.renderer = renderer;
+        self.synced_scene = None;
+        self.textures.retain(|key, _| live.contains(key));
+        Ok(())
+    }
     pub fn last_frame_stats(&self) -> zipzi_render_metal::MetalRenderStats {
         self.last_stats
     }
@@ -224,9 +232,7 @@ impl MetalSceneRenderer {
     ) -> Result<SubmittedFrame> {
         ensure!(transform.metrics.visible(), "Hidden canvas");
         self.draws += 1;
-        let key = |source: &zipzi_editor_core::SceneTexture| {
-            format!("{}:{}:{}", source.cache_key, source.width, source.height)
-        };
+        let key = crate::scene_texture_key;
         let mut missing = Vec::new();
         let mut scheduled = HashSet::new();
         for source in scene.textures.iter() {
@@ -575,6 +581,11 @@ mod tests {
             assert_eq!(draw(&["a", "d"])?, (6, 6, 12));
             // The oldest source was evicted and must upload again.
             assert_eq!(draw(&["c"])?, (7, 7, 12));
+            drop(draw);
+            renderer.retain_cached_textures(&HashSet::from(["a:1:1".to_owned()]))?;
+            assert_eq!(renderer.stats().2, 4);
+            renderer.retain_cached_textures(&HashSet::new())?;
+            assert_eq!(renderer.stats().2, 0);
             Ok(())
         })
     }

@@ -53,20 +53,33 @@ pub fn start(window: &Window) -> anyhow::Result<Connection> {
                 return;
             }
         };
+        let mut cache_owners = PreviewCacheOwners::default();
         loop {
-            let request = {
+            let work = {
                 let (lock, ready) = &*shared;
                 let mut inbox = lock.lock().unwrap();
-                while inbox.pending.is_empty() && !inbox.closed {
+                while !inbox.has_work() && !inbox.closed {
                     inbox = ready.wait(inbox).unwrap();
                 }
                 if inbox.closed {
                     break;
                 }
-                let request = inbox.pending.pop().unwrap();
-                frame_trace::emit(request.trace_id, "dequeued", &[]);
-                request
+                inbox.pop_work().unwrap()
             };
+            let request = match work {
+                PreviewWork::Retain(live) => {
+                    let keys = cache_owners.retain(&live);
+                    objc2::rc::autoreleasepool(|_| {
+                        if let Err(error) = renderer.retain_cached_textures(&keys) {
+                            eprintln!("Preview cache release failed: {error}");
+                        }
+                    });
+                    continue;
+                }
+                PreviewWork::Render(request) => request,
+            };
+            cache_owners.note(&request);
+            frame_trace::emit(request.trace_id, "dequeued", &[]);
             let trace_id = request.trace_id;
             frame_trace::emit(trace_id, "worker_begin", &[]);
             // Background Metal calls need a pool per frame; NSApplication's pool

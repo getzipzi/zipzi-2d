@@ -42,6 +42,12 @@ impl WgpuMetalSceneRenderer {
     pub fn stats(&self) -> (u64, u64, u64) {
         self.inner.stats()
     }
+    pub fn retain_cached_textures(
+        &mut self,
+        live: &std::collections::HashSet<String>,
+    ) -> Result<()> {
+        self.inner.retain_cached_textures(live)
+    }
     pub fn last_frame_stats(&self) -> MetalRenderStats {
         let s = self.inner.last_frame_stats();
         MetalRenderStats {
