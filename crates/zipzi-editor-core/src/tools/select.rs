@@ -54,6 +54,20 @@ impl SelectGesture {
 }
 
 impl ToolController {
+    pub(super) fn component_surface(
+        scene: &crate::CanvasScene,
+        selection: &[crate::ObjectRef],
+        hit: Option<&HitTarget>,
+        locks: &crate::ObjectStateIndex,
+    ) -> bool {
+        matches!(hit, Some(HitTarget::Object(object)) if selection.iter().any(|selected|
+            !locks.is_locked(selected) && ((selected.kind == ObjectKind::Mesh && selected == object)
+            || (selected.kind == ObjectKind::Deformer && (selected == object
+                || (object.kind == ObjectKind::Mesh
+                    && scene.control(&selected.id).is_some_and(|c| c.kind == crate::ControlKind::Warp)
+                    && scene.ancestors(object).contains(selected)))))))
+    }
+
     pub(super) fn begin_selection(
         &mut self,
         document: &Document,
@@ -91,12 +105,8 @@ impl ToolController {
         }
         self.hovered = hit.clone();
         self.hovered_binding = Some(frame.version.binding);
-        let mut component_surface = matches!(&hit, Some(HitTarget::Object(r)) if selection.iter().any(|selected|
-                    !locks.is_locked(selected) && ((selected.kind == ObjectKind::Mesh && selected == r)
-                    || (selected.kind == ObjectKind::Deformer
-                        && (selected == r || (r.kind == ObjectKind::Mesh
-                            && scene.control(&selected.id).is_some_and(|c| c.kind == crate::ControlKind::Warp)
-                            && scene.ancestors(r).contains(selected)))))));
+        let mut component_surface =
+            Self::component_surface(scene, &selection, hit.as_ref(), &locks);
         // A selected Warp surface permits component marquee selection without
         // replacing the shared object selection.
         let mut hit = match hit {

@@ -1,5 +1,6 @@
 use super::*;
 use CanvasGestureKind as G;
+use CanvasSelectionOperation as O;
 use CursorStyle as C;
 use ManualMeshFeedback as F;
 use ManualTool as M;
@@ -33,21 +34,11 @@ fn tool_cursor_manual_idle_matches_click_and_shortcut_routes() {
         shift: true,
         ..Default::default()
     };
-    let alt = Modifiers {
-        alt: true,
-        ..Default::default()
-    };
     for (tool, feedback, modifiers, expected) in [
         (M::Select, F::Empty, Modifiers::default(), T::MeshAdd),
         (M::Lasso, F::AutomaticEdge, Modifiers::default(), T::MeshAdd),
-        (
-            M::Select,
-            F::Vertex,
-            Modifiers::default(),
-            T::Standard(C::OpenHand),
-        ),
+        (M::Select, F::Vertex, Modifiers::default(), T::Move),
         (M::Select, F::FixedEdge, shift, T::Standard(C::Crosshair)),
-        (M::Lasso, F::Empty, alt, T::Standard(C::Crosshair)),
         (M::Create, F::FixedEdge, Modifiers::default(), T::MeshAdd),
         (
             M::Create,
@@ -124,7 +115,7 @@ fn tool_cursor_captured_operations_ignore_toolbar_and_released_modifiers() {
         (G::Rotate, F::Empty, T::Rotate),
         (G::Scale, F::Empty, T::Standard(C::ResizeLeftRight)),
         (G::BoneLength, F::Empty, T::BoneLength(0)),
-        (G::Move, F::Vertex, T::Standard(C::ClosedHand)),
+        (G::Move, F::Vertex, T::Move),
         (G::Cancelled, F::Cancelled, T::Standard(C::Arrow)),
         (
             G::Unavailable,
@@ -196,7 +187,7 @@ fn tool_cursor_glue_references_block_deletion_without_blocking_move_or_connect()
     };
     let mut moving = input(&overlay);
     moving.manual_tool = Some(M::Select);
-    assert_eq!(resolve(moving).cursor, Some(T::Standard(C::OpenHand)));
+    assert_eq!(resolve(moving).cursor, Some(T::Move));
     let mut connecting = input(&overlay);
     connecting.manual_tool = Some(M::Select);
     connecting.modifiers.platform = true;
@@ -228,10 +219,10 @@ fn tool_cursor_glue_references_block_deletion_without_blocking_move_or_connect()
 #[test]
 fn tool_cursor_brush_capture_uses_actual_operation_and_controls_preview() {
     for (gesture, expected, hidden) in [
-        (Some(G::BrushSelect), C::Crosshair, false),
-        (Some(G::BrushResize), C::Crosshair, false),
-        (Some(G::Move), C::ClosedHand, true),
-        (None, C::OpenHand, true),
+        (Some(G::BrushSelect), T::Brush(O::Replace), false),
+        (Some(G::BrushResize), T::Standard(C::Crosshair), false),
+        (Some(G::Move), T::Move, true),
+        (None, T::Move, true),
     ] {
         let overlay = OverlaySnapshot {
             active_gesture: gesture,
@@ -243,7 +234,7 @@ fn tool_cursor_brush_capture_uses_actual_operation_and_controls_preview() {
         assert_eq!(
             resolve(input),
             CursorFeedback {
-                cursor: Some(T::Standard(expected)),
+                cursor: Some(expected),
                 hide_selection_brush: hidden
             }
         );
@@ -253,10 +244,7 @@ fn tool_cursor_brush_capture_uses_actual_operation_and_controls_preview() {
         point_unavailable: Some("locked".into()),
         ..Default::default()
     };
-    assert_eq!(
-        resolve(input(&overlay)).cursor,
-        Some(T::Standard(C::Crosshair))
-    );
+    assert_eq!(resolve(input(&overlay)).cursor, Some(T::Brush(O::Replace)));
 }
 
 #[test]
@@ -285,4 +273,115 @@ fn tool_cursor_bone_length_is_distinct_from_scaling_at_each_axis() {
             Some(T::BoneLength(direction))
         );
     }
+}
+
+#[test]
+fn tool_cursor_selection_badges_use_core_operations_instead_of_live_keys() {
+    for operation in [O::Replace, O::Add, O::Remove, O::Toggle] {
+        let overlay = OverlaySnapshot {
+            active_gesture: Some(G::LassoSelect),
+            selection_operation: Some(operation),
+            ..Default::default()
+        };
+        let mut captured = input(&overlay);
+        captured.modifiers = Modifiers {
+            shift: true,
+            alt: true,
+            platform: true,
+            ..Default::default()
+        };
+        assert_eq!(resolve(captured).cursor, Some(T::Lasso(operation)));
+        let idle_overlay = OverlaySnapshot {
+            active_gesture: None,
+            ..overlay
+        };
+        let mut idle = input(&idle_overlay);
+        idle.tool = ToolId::Lasso;
+        assert_eq!(resolve(idle).cursor, Some(T::Lasso(operation)));
+        if operation != O::Toggle {
+            let overlay = OverlaySnapshot {
+                active_gesture: Some(G::BrushSelect),
+                ..idle_overlay
+            };
+            assert_eq!(resolve(input(&overlay)).cursor, Some(T::Brush(operation)));
+            let idle_overlay = OverlaySnapshot {
+                active_gesture: None,
+                ..overlay
+            };
+            let mut brush = input(&idle_overlay);
+            brush.tool = ToolId::BrushSelect;
+            brush.modifiers.alt = operation != O::Remove;
+            assert_eq!(resolve(brush).cursor, Some(T::Brush(operation)));
+        }
+    }
+    let overlay = OverlaySnapshot {
+        manual_mesh_feedback: Some(F::Empty),
+        selection_operation: Some(O::Remove),
+        ..Default::default()
+    };
+    let mut manual = input(&overlay);
+    manual.manual_tool = Some(M::Lasso);
+    manual.modifiers.shift = true;
+    assert_eq!(resolve(manual).cursor, Some(T::Lasso(O::Remove)));
+}
+
+#[test]
+fn tool_cursor_control_points_distinguish_motion_from_selection_only_clicks() {
+    let component = zipzi_editor_core::ComponentRef {
+        object: zipzi_editor_core::ObjectRef::new(zipzi_editor_core::ObjectKind::Mesh, "mesh"),
+        id: 0,
+    };
+    for operation in [None, Some(O::Add), Some(O::Remove), Some(O::Toggle)] {
+        let overlay = OverlaySnapshot {
+            active_component: Some(component.clone()),
+            selection_operation: operation,
+            ..Default::default()
+        };
+        let expected = if matches!(operation, Some(O::Remove | O::Toggle)) {
+            T::Standard(C::Arrow)
+        } else {
+            T::Move
+        };
+        assert_eq!(resolve(input(&overlay)).cursor, Some(expected));
+        let captured = OverlaySnapshot {
+            active_gesture: Some(G::Move),
+            ..overlay
+        };
+        assert_eq!(resolve(input(&captured)).cursor, Some(expected));
+        let restricted = OverlaySnapshot {
+            active_gesture: None,
+            point_unavailable: Some("locked".into()),
+            ..captured
+        };
+        let expected = if expected == T::Move {
+            T::Standard(C::OperationNotAllowed)
+        } else {
+            expected
+        };
+        assert_eq!(resolve(input(&restricted)).cursor, Some(expected));
+    }
+}
+
+#[test]
+fn tool_cursor_view_panning_keeps_hands_separate_from_point_motion() {
+    let overlay = OverlaySnapshot {
+        active_gesture: Some(G::Move),
+        ..Default::default()
+    };
+    assert_eq!(resolve(input(&overlay)).cursor, Some(T::Move));
+    let mut pan = input(&overlay);
+    pan.panning = true;
+    assert_eq!(resolve(pan).cursor, Some(T::Standard(C::ClosedHand)));
+    let idle = OverlaySnapshot::default();
+    let mut hand = input(&idle);
+    hand.hand_tool = true;
+    assert_eq!(resolve(hand).cursor, Some(T::Standard(C::OpenHand)));
+    let box_selection = OverlaySnapshot {
+        active_gesture: Some(G::BoxSelect),
+        ..Default::default()
+    };
+    assert_eq!(
+        resolve(input(&box_selection)).cursor,
+        Some(T::Standard(C::Arrow))
+    );
 }

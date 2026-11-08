@@ -2,7 +2,8 @@
 //! Register artwork once per application; viewport requests only copy a style ID.
 use gpui_kit::{App, CursorStyle, CustomCursor, Global, Modifiers, point, size};
 use zipzi_editor_core::{
-    CanvasGestureKind, DeformerHandle, ManualMeshFeedback, ManualTool, OverlaySnapshot, ToolId,
+    CanvasGestureKind, CanvasSelectionOperation, DeformerHandle, ManualMeshFeedback, ManualTool,
+    OverlaySnapshot, ToolId,
 };
 
 #[cfg(test)]
@@ -17,6 +18,9 @@ pub(crate) enum ToolCursor {
     MeshFixEdge,
     Rotate,
     BoneLength(u8),
+    Move,
+    Lasso(CanvasSelectionOperation),
+    Brush(CanvasSelectionOperation),
 }
 
 pub(crate) struct CursorInput<'a> {
@@ -43,9 +47,10 @@ pub(crate) fn resolve(input: CursorInput<'_>) -> CursorFeedback {
         hide_selection_brush: input.tool == ToolId::BrushSelect
             && matches!(
                 cursor,
-                Some(ToolCursor::Standard(
-                    CursorStyle::OpenHand | CursorStyle::ClosedHand
-                ))
+                Some(
+                    ToolCursor::Move
+                        | ToolCursor::Standard(CursorStyle::OpenHand | CursorStyle::ClosedHand)
+                )
             ),
         cursor,
     }
@@ -56,6 +61,13 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
     use CursorStyle as C;
     use ToolCursor as T;
     let overlay = input.overlay;
+    let operation = overlay
+        .selection_operation
+        .unwrap_or(CanvasSelectionOperation::Replace);
+    let selection_only = matches!(
+        overlay.selection_operation,
+        Some(CanvasSelectionOperation::Remove | CanvasSelectionOperation::Toggle)
+    );
     let standard = |style| Some(T::Standard(style));
     if input.modal {
         return None;
@@ -68,7 +80,10 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
             gesture,
             G::BoxSelect | G::LassoSelect | G::BrushSelect | G::BrushResize
         );
-        if !selecting && overlay.point_unavailable.is_some() {
+        if !selecting
+            && !(gesture == G::Move && selection_only)
+            && overlay.point_unavailable.is_some()
+        {
             return standard(C::OperationNotAllowed);
         }
         return match gesture {
@@ -85,10 +100,13 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
             G::Rotate => Some(T::Rotate),
             G::BoneLength => Some(T::BoneLength(handle_direction(overlay))),
             G::Scale => standard(resize_style(handle_direction(overlay))),
-            G::Move => standard(C::ClosedHand),
+            G::Move if selection_only => standard(C::Arrow),
+            G::Move => Some(T::Move),
             G::Unavailable => standard(C::OperationNotAllowed),
             G::Cancelled => standard(C::Arrow),
-            G::BoxSelect if input.manual_tool.is_none() => None,
+            G::BoxSelect if input.manual_tool.is_none() => standard(C::Arrow),
+            G::LassoSelect => Some(T::Lasso(operation)),
+            G::BrushSelect => Some(T::Brush(operation)),
             _ => standard(C::Crosshair),
         };
     }
@@ -98,20 +116,27 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
     // Painting a selection is available even when the hovered point cannot be edited.
     if input.tool == ToolId::BrushSelect && input.manual_tool.is_none() {
         return if input.window_active && input.modifiers.platform {
-            standard(if overlay.point_unavailable.is_some() {
-                C::OperationNotAllowed
+            if overlay.point_unavailable.is_some() {
+                standard(C::OperationNotAllowed)
             } else {
-                C::OpenHand
-            })
+                Some(T::Move)
+            }
         } else {
-            standard(C::Crosshair)
+            Some(T::Brush(operation))
         };
     }
-    if overlay.point_unavailable.is_some() {
+    if overlay.point_unavailable.is_some()
+        && !(overlay.active_component.is_some() && selection_only)
+    {
         return standard(C::OperationNotAllowed);
     }
     if let Some(tool) = input.manual_tool {
-        let cursor = manual_cursor(tool, overlay.manual_mesh_feedback, input.modifiers);
+        let cursor = manual_cursor(
+            tool,
+            overlay.manual_mesh_feedback,
+            overlay.selection_operation,
+            input.modifiers,
+        );
         return Some(
             if cursor == T::MeshDelete && overlay.manual_mesh_delete_unavailable {
                 T::Standard(C::OperationNotAllowed)
@@ -129,29 +154,23 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
             DeformerHandle::RotationScale | DeformerHandle::Scale(_) => {
                 standard(resize_style(handle_direction(overlay)))
             }
-            DeformerHandle::Move => standard(C::OpenHand),
+            DeformerHandle::Move => Some(T::Move),
         };
     }
     if overlay.active_component.is_some() {
-        return standard(
-            if overlay
-                .glues
-                .iter()
-                .flat_map(|g| &g.points)
-                .any(|p| p.hovered && p.state == zipzi_editor_core::GluePointState::Editable)
-            {
-                C::OpenHand
-            } else {
-                C::Arrow
-            },
-        );
+        return if selection_only {
+            standard(C::Arrow)
+        } else {
+            Some(T::Move)
+        };
     }
-    (input.tool == ToolId::Lasso).then_some(T::Standard(C::Crosshair))
+    (input.tool == ToolId::Lasso).then_some(T::Lasso(operation))
 }
 
 fn manual_cursor(
     tool: ManualTool,
     feedback: Option<ManualMeshFeedback>,
+    operation: Option<CanvasSelectionOperation>,
     modifiers: Modifiers,
 ) -> ToolCursor {
     use CursorStyle as C;
@@ -177,8 +196,17 @@ fn manual_cursor(
         ManualTool::Delete => T::MeshDelete,
         ManualTool::Create if feedback == F::Vertex => T::MeshConnect { new_vertex: false },
         ManualTool::Create => T::MeshAdd,
-        _ if feedback == F::Vertex => T::Standard(C::OpenHand),
+        _ if feedback == F::Vertex
+            && matches!(
+                operation,
+                Some(CanvasSelectionOperation::Remove | CanvasSelectionOperation::Toggle)
+            ) =>
+        {
+            T::Standard(C::Arrow)
+        }
+        _ if feedback == F::Vertex => T::Move,
         _ if !modifiers.shift && !modifiers.alt => T::MeshAdd,
+        ManualTool::Lasso => T::Lasso(operation.unwrap_or(CanvasSelectionOperation::Replace)),
         _ => T::Standard(C::Crosshair),
     }
 }
@@ -202,6 +230,15 @@ fn resize_style(direction: u8) -> CursorStyle {
     }
 }
 
+fn selection_index(operation: CanvasSelectionOperation) -> usize {
+    match operation {
+        CanvasSelectionOperation::Replace => 0,
+        CanvasSelectionOperation::Add => 1,
+        CanvasSelectionOperation::Remove => 2,
+        CanvasSelectionOperation::Toggle => 3,
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(crate) struct ToolCursors {
     pub(crate) mesh_add: CursorStyle,
@@ -211,6 +248,9 @@ pub(crate) struct ToolCursors {
     mesh_fix: CursorStyle,
     rotate: CursorStyle,
     bone_length: [CursorStyle; 4],
+    move_points: CursorStyle,
+    lasso: [CursorStyle; 4],
+    brush: [CursorStyle; 3],
 }
 impl Global for ToolCursors {}
 
@@ -225,6 +265,13 @@ impl ToolCursors {
             ToolCursor::MeshFixEdge => self.mesh_fix,
             ToolCursor::Rotate => self.rotate,
             ToolCursor::BoneLength(direction) => self.bone_length[direction as usize % 4],
+            ToolCursor::Move => self.move_points,
+            ToolCursor::Lasso(operation) => self.lasso[selection_index(operation)],
+            ToolCursor::Brush(operation) => self
+                .brush
+                .get(selection_index(operation))
+                .copied()
+                .unwrap_or(CursorStyle::Crosshair),
         }
     }
 
@@ -242,6 +289,17 @@ impl ToolCursors {
             include_bytes!("../assets/cursors/bone-length-45.svg").as_slice(),
             include_bytes!("../assets/cursors/bone-length-90.svg").as_slice(),
             include_bytes!("../assets/cursors/bone-length-135.svg").as_slice(),
+        ];
+        let lasso_images = [
+            include_bytes!("../assets/cursors/lasso.svg").as_slice(),
+            include_bytes!("../assets/cursors/lasso-add.svg").as_slice(),
+            include_bytes!("../assets/cursors/lasso-remove.svg").as_slice(),
+            include_bytes!("../assets/cursors/lasso-toggle.svg").as_slice(),
+        ];
+        let brush_images = [
+            include_bytes!("../assets/cursors/brush-select.svg").as_slice(),
+            include_bytes!("../assets/cursors/brush-add.svg").as_slice(),
+            include_bytes!("../assets/cursors/brush-remove.svg").as_slice(),
         ];
         let cursors = Self {
             mesh_add: register(
@@ -271,6 +329,12 @@ impl ToolCursors {
             bone_length: std::array::from_fn(|index| {
                 register(length_images[index], resize_style(index as u8))
             }),
+            move_points: register(
+                include_bytes!("../assets/cursors/move.svg"),
+                CursorStyle::OpenHand,
+            ),
+            lasso: lasso_images.map(|svg| register(svg, CursorStyle::Crosshair)),
+            brush: brush_images.map(|svg| register(svg, CursorStyle::Crosshair)),
         };
         cx.set_global(cursors);
         cursors

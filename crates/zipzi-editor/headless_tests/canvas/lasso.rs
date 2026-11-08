@@ -21,6 +21,155 @@ fn selected(harness: &Harness, cx: &App) -> Vec<u32> {
 }
 
 #[gpui_kit::test]
+fn canvas_cursor_capture_survives_leaving_canvas_and_restores_after_release(
+    cx: &mut TestAppContext,
+) {
+    use gpui_kit::CursorStyle;
+    let h = setup(cx);
+    present_canvas(&h, cx);
+    cx.update_window(h.window, |_, window, cx| window.click("tool_lasso", cx))
+        .unwrap();
+    present_canvas(&h, cx);
+    for (button, expected, cancel) in [
+        (MouseButton::Left, CursorStyle::Crosshair, false),
+        (MouseButton::Middle, CursorStyle::ClosedHand, false),
+        (MouseButton::Left, CursorStyle::Crosshair, true),
+        (MouseButton::Middle, CursorStyle::ClosedHand, true),
+    ] {
+        h.view.update(cx, |view, cx| {
+            view.editor.reset_view();
+            view.redraw(cx);
+        });
+        present_canvas(&h, cx);
+        cx.update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            let body = window.find("canvas-body").bounds();
+            let vertex = h.view.read(cx).editor.overlay().vertices[0].position;
+            let start = body.origin + point(px(vertex.x - 22.), px(vertex.y - 22.));
+            assert!(body.contains(&start));
+            let outside = body.origin + point(px(10.), px(-10.));
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: outside,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            let idle_cursor = window.requested_cursor_style();
+            assert_ne!(
+                idle_cursor, expected,
+                "the header must exercise a different cursor"
+            );
+            window.dispatch_event(
+                MouseDownEvent {
+                    position: start,
+                    button,
+                    click_count: 1,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            assert!(
+                h.view.read(cx).editor.viewport_interaction_active(),
+                "{button:?}, cancel={cancel}"
+            );
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: outside,
+                    pressed_button: Some(button),
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            assert_eq!(window.requested_cursor_style(), expected);
+            if cancel {
+                window.press("escape", cx);
+                window.render_frame(cx);
+                assert_eq!(window.requested_cursor_style(), idle_cursor);
+            }
+            window.dispatch_event(
+                MouseUpEvent {
+                    position: outside,
+                    button,
+                    click_count: 1,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            assert_eq!(window.requested_cursor_style(), idle_cursor);
+            assert!(!h.view.read(cx).editor.viewport_interaction_active());
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
+fn lasso_cursor_keeps_press_time_selection_after_modifiers_are_released(cx: &mut TestAppContext) {
+    use crate::tool_cursors::ToolCursor;
+    use gpui_kit::ModifiersChangedEvent;
+    use zipzi_editor_core::CanvasSelectionOperation as O;
+    let h = setup(cx);
+    present_canvas(&h, cx);
+    for (modifiers, operation) in [
+        (Modifiers::default(), O::Replace),
+        (
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+            O::Add,
+        ),
+        (
+            Modifiers {
+                alt: true,
+                ..Default::default()
+            },
+            O::Remove,
+        ),
+    ] {
+        cx.update_window(h.window, |_, window, cx| {
+            window.activate_window();
+            window.click("tool_lasso", cx);
+            let point = h.view.read(cx).editor.overlay().vertices[0].position;
+            draw(&h, point, modifiers, false, window, cx);
+            window.dispatch_event(
+                ModifiersChangedEvent {
+                    modifiers: Modifiers::default(),
+                    capslock: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            let cursor = |cx: &App| {
+                let view = h.view.read(cx);
+                view.viewport_surface(view.viewport_slots[0], cx)
+                    .unwrap()
+                    .read(cx)
+                    .tool_cursor_kind
+            };
+            assert_eq!(cursor(cx), Some(ToolCursor::Lasso(operation)));
+            window.press("escape", cx);
+            window.render_frame(cx);
+            assert_eq!(cursor(cx), Some(ToolCursor::Lasso(O::Replace)));
+            assert_eq!(
+                h.view.read(cx).editor.document().unwrap().history_lengths(),
+                (0, 0)
+            );
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
 fn select_all_shortcut_selects_canvas_vertices_and_leaves_text_selection_to_inputs(
     cx: &mut TestAppContext,
 ) {
@@ -119,6 +268,22 @@ fn draw(
     let is_lasso = view.editor.active_tool() == ToolId::Lasso;
     assert_eq!(!view.editor.overlay().lasso.is_empty(), is_lasso);
     assert_eq!(view.editor.overlay().marquee.is_some(), !is_lasso);
+    if is_lasso {
+        let operation = if modifiers.alt {
+            zipzi_editor_core::CanvasSelectionOperation::Remove
+        } else if modifiers.shift {
+            zipzi_editor_core::CanvasSelectionOperation::Add
+        } else {
+            zipzi_editor_core::CanvasSelectionOperation::Replace
+        };
+        assert_eq!(
+            view.viewport_surface(view.viewport_slots[0], cx)
+                .unwrap()
+                .read(cx)
+                .tool_cursor_kind,
+            Some(crate::tool_cursors::ToolCursor::Lasso(operation))
+        );
+    }
     assert!(!view.editor.document().unwrap().has_pending_edit());
     assert_eq!(
         crate::workspace::status_bar::resolve_hint_context(view, cx),
@@ -229,7 +394,7 @@ fn selection_tools_native_modifiers_and_shortcuts_preserve_components(cx: &mut T
 }
 
 #[gpui_kit::test]
-fn lasso_hover_then_vertex_drag_uses_select_editing_and_preserves_the_tool(
+fn lasso_hover_cursor_and_vertex_drag_use_select_editing_and_preserve_the_tool(
     cx: &mut TestAppContext,
 ) {
     use crate::workspace::status_bar::resolve_hint_context;
@@ -291,6 +456,16 @@ fn lasso_hover_then_vertex_drag_uses_select_editing_and_preserves_the_tool(
                 Some(vertices[0].id)
             );
             assert_eq!(harness.view.read(cx).editor.active_tool(), ToolId::Lasso);
+            {
+                let view = harness.view.read(cx);
+                assert_eq!(
+                    view.viewport_surface(view.viewport_slots[0], cx)
+                        .unwrap()
+                        .read(cx)
+                        .tool_cursor_kind,
+                    Some(crate::tool_cursors::ToolCursor::Move)
+                );
+            }
             window.dispatch_event(
                 MouseDownEvent {
                     button: MouseButton::Left,

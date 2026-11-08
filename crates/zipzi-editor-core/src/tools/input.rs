@@ -24,6 +24,12 @@ impl ToolController {
         event: CanvasInput,
     ) -> Result<bool> {
         if let Some(manual) = &mut self.manual {
+            if let CanvasInput::Down { shift, alt, .. }
+            | CanvasInput::ModifiersChanged { shift, alt } = event
+            {
+                self.shift = shift;
+                self.alt = alt;
+            }
             return manual.input(document, frame, event);
         }
         match event {
@@ -65,6 +71,7 @@ impl ToolController {
                 );
                 self.cancel(document);
                 self.alt = alt;
+                self.shift = shift;
                 self.pointer = Some((frame.version.binding, point));
                 self.begin_selection(document, frame, point, shift, alt, primary, false);
                 Ok(false)

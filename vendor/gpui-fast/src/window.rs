@@ -4207,6 +4207,14 @@ impl Window {
         })
     }
 
+    /// The cursor selected by the last painted frame, before native resource lookup.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn requested_cursor_style(&self) -> CursorStyle {
+        self.rendered_frame
+            .cursor_style(self)
+            .unwrap_or(CursorStyle::Arrow)
+    }
+
     /// Sets a tooltip to be rendered for the upcoming frame. This method should only be called
     /// during the paint phase of element drawing.
     pub fn set_tooltip(&mut self, tooltip: AnyTooltip) -> TooltipId {
@@ -5643,15 +5651,15 @@ impl Window {
     }
 
     fn reset_cursor_style(&self, cx: &mut App) {
-        // Set the cursor only if we're the active window.
-        if self.is_window_hovered() {
-            let style = self
-                .rendered_frame
-                .cursor_style(self)
-                .unwrap_or(CursorStyle::Arrow);
-            if !self.platform_window.set_cursor_style(style) {
-                cx.platform.set_cursor_style(style);
-            }
+        let style = self
+            .rendered_frame
+            .cursor_style(self)
+            .unwrap_or(CursorStyle::Arrow);
+        // Window-local backends check pointer/capture ownership themselves. They
+        // must receive updates even while a captured pointer is outside the window.
+        // Legacy platform-wide setters remain restricted to the hovered window.
+        if !self.platform_window.set_cursor_style(style) && self.is_window_hovered() {
+            cx.platform.set_cursor_style(style);
         }
     }
 

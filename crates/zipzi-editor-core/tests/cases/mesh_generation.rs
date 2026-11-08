@@ -943,6 +943,16 @@ fn manual_lasso(
             primary: false,
         },
     )?;
+    let operation = if alt {
+        CanvasSelectionOperation::Remove
+    } else if shift {
+        CanvasSelectionOperation::Add
+    } else {
+        CanvasSelectionOperation::Replace
+    };
+    if points.len() > 1 {
+        assert_eq!(editor.overlay().selection_operation, Some(operation));
+    }
     for &point in &points[1..] {
         crate::support::pointer_input(
             editor,
@@ -951,6 +961,7 @@ fn manual_lasso(
                 left_down: true,
             },
         )?;
+        assert_eq!(editor.overlay().selection_operation, Some(operation));
     }
     crate::support::pointer_input(
         editor,

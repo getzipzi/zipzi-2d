@@ -386,6 +386,21 @@ impl Render for ViewportSurface {
             .overflow_hidden()
             .bg(crate::theme::viewport_background(cx))
             .map(|element| self.bind_input(element, capture, cx))
+            .when(capture, |body| {
+                body.when_some(cursor, |body, cursor| {
+                    body.child(
+                        canvas(
+                            |_, _, _| (),
+                            move |_, _, window, _| {
+                                // Captured gestures own the cursor beyond the canvas hitbox.
+                                window.set_window_cursor_style(cursor);
+                            },
+                        )
+                        .absolute()
+                        .size_full(),
+                    )
+                })
+            })
             .when(self.show_transparency_grid, |body| {
                 body.child(background::transparency_grid(cx))
             })

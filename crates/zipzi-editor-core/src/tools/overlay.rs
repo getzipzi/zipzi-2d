@@ -64,6 +64,8 @@ pub struct OverlayGluePoint {
 pub struct OverlaySnapshot {
     /// The operation owned by this viewport's captured gesture, independent of live keys.
     pub active_gesture: Option<CanvasGestureKind>,
+    /// Actual selection semantics; captured operations keep their press-time value.
+    pub selection_operation: Option<CanvasSelectionOperation>,
     pub selection_weights: Option<OverlaySelectionWeights>,
     /// A selection brush in viewport logical pixels; never a geometry edit.
     pub selection_brush: Option<OverlaySelectionBrush>,
@@ -134,6 +136,23 @@ pub enum CanvasGestureKind {
     MeshFixEdge,
     Unavailable,
     Cancelled,
+}
+/// Selection feedback shared by canvas tools, without widget or cursor dependencies.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CanvasSelectionOperation {
+    Replace,
+    Add,
+    Remove,
+    Toggle,
+}
+impl From<super::region::SelectionOperation> for CanvasSelectionOperation {
+    fn from(operation: super::region::SelectionOperation) -> Self {
+        match operation {
+            super::region::SelectionOperation::Replace => Self::Replace,
+            super::region::SelectionOperation::Add => Self::Add,
+            super::region::SelectionOperation::Remove => Self::Remove,
+        }
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OverlaySelectionBrush {
@@ -250,7 +269,7 @@ impl ToolController {
 
     pub fn overlay(&self, document: &Document, frame: &CanvasFrame) -> OverlaySnapshot {
         if let Some(manual) = &self.manual {
-            return manual.overlay(frame);
+            return manual.overlay(frame, self.shift, self.alt);
         }
         #[cfg(test)]
         self.overlay_builds
@@ -273,6 +292,46 @@ impl ToolController {
                 .filter(|g| g.press().version.binding == frame.version.binding)
                 .map(super::gesture::Gesture::kind),
             ..Default::default()
+        };
+        out.selection_operation = if let Some(gesture) = self
+            .gesture
+            .as_ref()
+            .filter(|g| g.press().version.binding == frame.version.binding)
+        {
+            gesture.selection_operation()
+        } else if self.active == super::ToolId::BrushSelect {
+            Some(super::region::SelectionOperation::from_modifiers(self.shift, self.alt).into())
+        } else if let Some(HitTarget::Component(component)) = &hovered_target {
+            let rotation_center = component.id == 0
+                && scene
+                    .control(&component.object.id)
+                    .is_some_and(|control| control.kind == ControlKind::Rotation);
+            if self.alt && !rotation_center {
+                Some(CanvasSelectionOperation::Remove)
+            } else if self.shift && self.components.contains(component) {
+                Some(CanvasSelectionOperation::Toggle)
+            } else {
+                None
+            }
+        } else if self.active == super::ToolId::Lasso {
+            let operation = super::region::SelectionOperation::from_modifiers(self.shift, self.alt);
+            Some(
+                if operation == super::region::SelectionOperation::Add
+                    && matches!(&hovered_target, Some(HitTarget::Object(object)) if selection.contains(object))
+                    && !Self::component_surface(
+                        scene,
+                        selection,
+                        hovered_target.as_ref(),
+                        &document.object_state_index(),
+                    )
+                {
+                    CanvasSelectionOperation::Toggle
+                } else {
+                    operation.into()
+                },
+            )
+        } else {
+            None
         };
         out.hovered_object_label = hovered_target
             .as_ref()

@@ -1,4 +1,4 @@
-pub const ARTWORK: [(&str, &[u8]); 10] = [
+pub const ARTWORK: [(&str, &[u8]); 18] = [
     (
         "mesh-add",
         include_bytes!("../../assets/cursors/mesh-add.svg"),
@@ -35,5 +35,31 @@ pub const ARTWORK: [(&str, &[u8]); 10] = [
     (
         "bone-length-135",
         include_bytes!("../../assets/cursors/bone-length-135.svg"),
+    ),
+    ("move", include_bytes!("../../assets/cursors/move.svg")),
+    ("lasso", include_bytes!("../../assets/cursors/lasso.svg")),
+    (
+        "lasso-add",
+        include_bytes!("../../assets/cursors/lasso-add.svg"),
+    ),
+    (
+        "lasso-remove",
+        include_bytes!("../../assets/cursors/lasso-remove.svg"),
+    ),
+    (
+        "lasso-toggle",
+        include_bytes!("../../assets/cursors/lasso-toggle.svg"),
+    ),
+    (
+        "brush-select",
+        include_bytes!("../../assets/cursors/brush-select.svg"),
+    ),
+    (
+        "brush-add",
+        include_bytes!("../../assets/cursors/brush-add.svg"),
+    ),
+    (
+        "brush-remove",
+        include_bytes!("../../assets/cursors/brush-remove.svg"),
     ),
 ];

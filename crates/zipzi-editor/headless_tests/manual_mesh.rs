@@ -426,6 +426,101 @@ fn manual_mesh_primary_connect_keeps_gesture_after_modifier_release(cx: &mut Tes
 }
 
 #[gpui_kit::test]
+fn manual_lasso_cursor_uses_the_shared_selection_operation(cx: &mut TestAppContext) {
+    use crate::tool_cursors::ToolCursor;
+    use gpui_kit::{
+        InputEvent as _, Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent,
+        MouseMoveEvent,
+    };
+    use zipzi_editor_core::CanvasSelectionOperation as O;
+    let h = enter(cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.click("tool_manual_lasso", cx)
+    })
+    .unwrap();
+    for (modifiers, operation) in [
+        (
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+            O::Add,
+        ),
+        (
+            Modifiers {
+                alt: true,
+                ..Default::default()
+            },
+            O::Remove,
+        ),
+    ] {
+        // Tool changes and cancellation can retire a frame without writing geometry.
+        present(&h, cx);
+        cx.update_window(h.window, |_, window, cx| {
+            let transform = h.view.read(cx).modeling_frame().unwrap().canvas.transform;
+            let point_on_canvas =
+                transform.to_viewport(zipzi_editor_core::ModelPoint { x: 128., y: 128. });
+            let position = window.find("canvas-body").bounds().origin
+                + point(px(point_on_canvas.x), px(point_on_canvas.y));
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.dispatch_event(
+                ModifiersChangedEvent {
+                    modifiers,
+                    capslock: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            assert_eq!(
+                canvas_cursor_kind(&h, cx),
+                Some(ToolCursor::Lasso(operation))
+            );
+            window.dispatch_event(
+                MouseDownEvent {
+                    position,
+                    modifiers,
+                    button: MouseButton::Left,
+                    click_count: 1,
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            assert!(h.view.read(cx).editor.gesture_active());
+            window.dispatch_event(
+                ModifiersChangedEvent {
+                    modifiers: Modifiers::default(),
+                    capslock: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            assert_eq!(
+                canvas_cursor_kind(&h, cx),
+                Some(ToolCursor::Lasso(operation))
+            );
+            window.press("escape", cx);
+            window.render_frame(cx);
+            assert_eq!(canvas_cursor_kind(&h, cx), Some(ToolCursor::MeshAdd));
+            assert_eq!(
+                h.view.read(cx).editor.document().unwrap().history_lengths(),
+                (0, 0)
+            );
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
 fn manual_mesh_delete_cursor_keeps_the_pressed_operation_until_cancel(cx: &mut TestAppContext) {
     use crate::tool_cursors::ToolCursor;
     use gpui_kit::{

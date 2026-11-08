@@ -25,6 +25,19 @@ pub(super) struct Press {
     pub current: ViewportPoint,
     pub dragged: bool,
 }
+impl Press {
+    fn selection_operation(&self, target: Option<&HitTarget>) -> CanvasSelectionOperation {
+        if !self.dragged
+            && (self.deferred_toggle.is_some()
+                || self.operation == region::SelectionOperation::Add
+                    && matches!(target, Some(HitTarget::Object(object)) if self.selection.contains(object)))
+        {
+            CanvasSelectionOperation::Toggle
+        } else {
+            self.operation.into()
+        }
+    }
+}
 
 pub(super) enum Gesture {
     Select(SelectGesture),
@@ -33,6 +46,18 @@ pub(super) enum Gesture {
     Controls(ControlGesture),
 }
 impl Gesture {
+    pub fn selection_operation(&self) -> Option<CanvasSelectionOperation> {
+        match self {
+            Self::Select(g) => Some(g.press.selection_operation(g.target.as_ref())),
+            Self::Lasso(g) => Some(g.press.selection_operation(g.target.as_ref())),
+            Self::BrushSelect(g) if !g.resizing => Some(g.press.operation.into()),
+            Self::Controls(g) if !g.press.dragged && g.press.deferred_toggle.is_some() => {
+                Some(CanvasSelectionOperation::Toggle)
+            }
+            _ => None,
+        }
+    }
+
     pub fn kind(&self) -> CanvasGestureKind {
         use crate::DeformerHandle as H;
         use CanvasGestureKind as K;

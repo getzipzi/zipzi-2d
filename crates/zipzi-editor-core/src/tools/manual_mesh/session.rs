@@ -525,8 +525,8 @@ impl ManualMeshSession {
             }
         }
     }
-    pub fn overlay(&self, frame: &CanvasFrame) -> OverlaySnapshot {
-        let mut out = self.modes[self.active].overlay(frame);
+    pub fn overlay(&self, frame: &CanvasFrame, shift: bool, alt: bool) -> OverlaySnapshot {
+        let mut out = self.modes[self.active].overlay(frame, shift, alt);
         out.hovered_object_label = self
             .hovered
             .filter(|&index| {
@@ -547,7 +547,7 @@ impl ManualMeshSession {
             if index == self.active || !self.shown(index, frame) {
                 continue;
             }
-            let other = mode.overlay(frame);
+            let other = mode.overlay(frame, shift, alt);
             out.vertices.extend(other.vertices);
             out.lines.extend(other.lines);
             out.automatic_lines.extend(other.automatic_lines);
@@ -557,12 +557,14 @@ impl ManualMeshSession {
             if self.hovered == Some(index) {
                 out.manual_mesh_feedback = other.manual_mesh_feedback;
                 out.manual_mesh_delete_unavailable = other.manual_mesh_delete_unavailable;
+                out.selection_operation = other.selection_operation;
             }
         }
         if let Some(shared) = &self.shared
             && shared.press().version.binding == frame.version.binding
         {
             out.active_gesture = Some(shared.press().kind());
+            out.selection_operation = shared.press().selection_operation();
             if let SharedGesture::Region(g) = shared {
                 g.selection_overlay(&mut out);
             }

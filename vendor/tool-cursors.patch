@@ -589,20 +589,45 @@ index c4736477..480c0e2e 100644
          self.platform.hide_cursor_until_mouse_moves();
      }
 diff --git a/vendor/gpui-fast/src/window.rs b/vendor/gpui-fast/src/window.rs
-index b25cb830..d111873c 100644
+index b25cb830..8e7be3ae 100644
 --- a/vendor/gpui-fast/src/window.rs
 +++ b/vendor/gpui-fast/src/window.rs
-@@ -5649,7 +5649,9 @@ impl Window {
-                 .rendered_frame
-                 .cursor_style(self)
-                 .unwrap_or(CursorStyle::Arrow);
--            cx.platform.set_cursor_style(style);
-+            if !self.platform_window.set_cursor_style(style) {
-+                cx.platform.set_cursor_style(style);
-+            }
-         }
+@@ -4207,6 +4207,14 @@ impl Window {
+         })
      }
  
++    /// The cursor selected by the last painted frame, before native resource lookup.
++    #[cfg(any(test, feature = "test-support"))]
++    pub fn requested_cursor_style(&self) -> CursorStyle {
++        self.rendered_frame
++            .cursor_style(self)
++            .unwrap_or(CursorStyle::Arrow)
++    }
++
+     /// Sets a tooltip to be rendered for the upcoming frame. This method should only be called
+     /// during the paint phase of element drawing.
+     pub fn set_tooltip(&mut self, tooltip: AnyTooltip) -> TooltipId {
+@@ -5643,12 +5651,14 @@ impl Window {
+     }
+ 
+     fn reset_cursor_style(&self, cx: &mut App) {
+-        // Set the cursor only if we're the active window.
+-        if self.is_window_hovered() {
+-            let style = self
+-                .rendered_frame
+-                .cursor_style(self)
+-                .unwrap_or(CursorStyle::Arrow);
++        let style = self
++            .rendered_frame
++            .cursor_style(self)
++            .unwrap_or(CursorStyle::Arrow);
++        // Window-local backends check pointer/capture ownership themselves. They
++        // must receive updates even while a captured pointer is outside the window.
++        // Legacy platform-wide setters remain restricted to the hovered window.
++        if !self.platform_window.set_cursor_style(style) && self.is_window_hovered() {
+             cx.platform.set_cursor_style(style);
+         }
+     }
 diff --git a/vendor/gpui-fast-macos/src/cursor.rs b/vendor/gpui-fast-macos/src/cursor.rs
 new file mode 100644
 index 00000000..535555f8

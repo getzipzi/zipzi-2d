@@ -64,6 +64,10 @@ cache and updates the requesting view's cursor rects. Windows owns custom
 sizes per resource, and retains selected handles through cache eviction. Its
 window-local setter updates stationary/captured pointers immediately when that
 window owns display responsibility, preserving native menus and non-client areas.
+Window-local backends receive updates outside hover as well, so native capture
+can keep its cursor after crossing a window boundary. Legacy platform-wide
+setters are still restricted to the hovered window. `test-support` exposes
+`Window::requested_cursor_style` for checking painted hitbox/global precedence.
 `WM_DPICHANGED` selects the new size and hotspot. The hand SVGs are original
 artwork added for this repository; macOS continues to use its system hands.
 

@@ -112,6 +112,15 @@ struct Gesture {
     pose: Option<PoseMapping>,
 }
 impl Gesture {
+    fn selection_operation(&self) -> Option<super::CanvasSelectionOperation> {
+        match &self.kind {
+            GestureKind::Region { operation, .. } => Some((*operation).into()),
+            GestureKind::Drag(starts) if starts.is_empty() => {
+                Some(super::CanvasSelectionOperation::Remove)
+            }
+            _ => None,
+        }
+    }
     fn kind(&self) -> super::CanvasGestureKind {
         use super::CanvasGestureKind as K;
         match &self.kind {
@@ -799,7 +808,7 @@ impl ManualMeshMode {
         }
     }
 
-    pub fn overlay(&self, frame: &CanvasFrame) -> OverlaySnapshot {
+    pub fn overlay(&self, frame: &CanvasFrame, shift: bool, alt: bool) -> OverlaySnapshot {
         let mut out = OverlaySnapshot::default();
         if self
             .edit_viewport
@@ -947,8 +956,16 @@ impl ManualMeshMode {
         });
         out.manual_mesh_delete_unavailable =
             matches!(self.hover, Hit::Vertex(id) if self.target.glue_vertices.contains(&id));
+        out.selection_operation = match self.hover {
+            Hit::Vertex(id) if alt && self.selected.iter().all(|selected| *selected == id) => {
+                Some(super::CanvasSelectionOperation::Remove)
+            }
+            Hit::Vertex(_) => None,
+            _ => Some(SelectionOperation::from_modifiers(shift, alt).into()),
+        };
         if let Some(gesture) = &self.gesture {
             out.active_gesture = Some(gesture.kind());
+            out.selection_operation = gesture.selection_operation();
             if let GestureKind::Delete(Hit::Vertex(id)) = gesture.kind {
                 out.manual_mesh_delete_unavailable = self.target.glue_vertices.contains(&id);
             }

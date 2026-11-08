@@ -36,7 +36,9 @@ fn points(h: &Harness, object: &ObjectRef, cx: &TestAppContext) -> serde_json::V
 }
 
 #[gpui_kit::test]
-fn warp_grid_and_bezier_controls_share_one_surface_without_mode_switches(cx: &mut TestAppContext) {
+fn warp_grid_and_bezier_cursor_controls_share_one_surface_without_mode_switches(
+    cx: &mut TestAppContext,
+) {
     use zipzi_editor_core::OverlayVertexKind as K;
     let (h, object) = setup_warp(cx);
     let before = points(&h, &object, cx);
@@ -73,6 +75,38 @@ fn warp_grid_and_bezier_controls_share_one_surface_without_mode_switches(cx: &mu
         assert!(!overlay.bezier_lines.is_empty());
         assert_eq!(overlay.bezier_tangents.len(), 8);
         assert_eq!(overlay.handles.iter().filter(|h| h.tangent).count(), 8);
+        let origin = window.find("canvas-body").bounds().origin;
+        let grid = overlay
+            .vertices
+            .iter()
+            .find(|v| v.kind == K::WarpGrid)
+            .unwrap()
+            .position;
+        let tangent = overlay
+            .handles
+            .iter()
+            .find(|h| h.tangent && h.editable)
+            .unwrap()
+            .position;
+        for control in [grid, tangent] {
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: origin + point(px(control.x), px(control.y)),
+                    ..Default::default()
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            let view = h.view.read(cx);
+            assert_eq!(
+                view.viewport_surface(view.viewport_slots[0], cx)
+                    .unwrap()
+                    .read(cx)
+                    .tool_cursor_kind,
+                Some(crate::tool_cursors::ToolCursor::Move)
+            );
+        }
         let anchor = overlay
             .vertices
             .iter()

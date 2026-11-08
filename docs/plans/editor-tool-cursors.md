@@ -1,6 +1,6 @@
 # Editor 专用工具光标方案
 
-状态：第 1、2 阶段代码已落地；选择与移动光标、双平台原生交互验收待完成。
+状态：第 1—3 阶段代码已落地；双平台原生交互验收及后续优化评估待完成。
 创建：2026-11-08。
 
 为 Zipzi Editor 的网格编辑、变形器操作和选择工具提供可辨识的专用光标，
@@ -334,5 +334,44 @@ env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test int
 env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --features test-support --test custom_cursors --test native_cursors
 ```
 
-下一阶段为套索、笔刷选择/减选及控制点移动的专用资源和选择操作角标。
-当前这些操作仍用标准十字、箭头和手形；没有新增笔刷范围状态或时间线功能。
+第 2 阶段结束时，套索、笔刷选择/减选及控制点移动仍用标准样式；后续实施见下一节。
+
+## 11 第 3 阶段实施记录（2026-11-08）
+
+第 2 阶段提交为 `7d99a0c5`。本轮接入选择与控制点移动，仍保留双平台实机交互验收。
+
+- Core 导出 `CanvasSelectionOperation` 和覆盖层的 `selection_operation`，区分替换、添加、移除与切换。
+  套索及笔刷捕获后读取按下时的操作，松开修饰键不会改变角标。
+  普通笔刷先替换选择，Shift 增选、Alt 减选；范围预览仍读取原有笔刷状态。
+- 普通画布与 Mesh Edit 共用套索资源；默认点击加点仍显示加点光标，实际套索手势显示套索。
+  对象切换选择及控制点的延迟切换按真实输入路径解析，不把所有 Shift 都显示为添加。
+  延迟切换在越过拖动阈值后转为移动；只减选控制点时保留普通箭头。
+- Mesh 点、Warp 格点、Bezier 控制柄及可编辑的 Glue 端点统一使用四向移动光标。
+  视图平移继续使用系统张手/握手，笔刷移动时隐藏范围预览，选区绘制时保留预览。
+- 新增套索四种、笔刷三种及移动一种资源，总计 18 张 SVG；所有资源继续采用 24 × 24、(7, 7) 热点。
+  资源在初始化时注册，选择角标切换不分配新图像，也不创建另一套范围状态。
+- 捕获期间提交窗口级光标请求，覆盖其他控件和视口的悬停光标；释放或取消后移除。
+  GPUI 向窗口本地后端发送非悬停窗口的更新，由后端判断指针/捕获归属，旧平台级接口仍只作用于悬停窗口。
+  `Window::requested_cursor_style` 的测试接口验证实际绘制请求，而非只检查应用解析结果。
+
+本轮验证环境仍为 macOS 27.0.1 / arm64。窗口内跨画布边界的捕获、释放与 Escape 恢复由无原生窗口的 UI 测试覆盖；
+它不能替代移出操作系统窗口、多窗口、菜单、DPI 跨屏或指针偏好的实机验收。
+Windows 后端及测试完成 `aarch64-pc-windows-msvc` 交叉编译检查，未执行 Windows 原生交互。
+
+验证结果：UI 光标相关回归 22 项、Core 套索/选择集成回归 14 项、笔刷集成回归 15 项通过；
+资源/DPI 测试 7 项和全部 18 个资源的 macOS 原生注册/同 ID 复用检查通过。
+Editor 编译、Rust 格式、vendor 补丁逆向检查和 workspace 包域检查通过。
+
+聚焦验证入口：
+
+```sh
+./tools/test-editor.sh ui cursor
+./tools/test-editor.sh ui canvas::lasso::
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration lasso
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor-core --test integration brush_select
+env -u ZIPZI_DEV_SESSION_DIR cargo test --locked -p zipzi-editor --features test-support --test custom_cursors --test native_cursors
+cargo check --locked -p zipzi-editor
+cargo check --locked -p gpui-fast-windows --tests --target aarch64-pc-windows-msvc
+```
+
+第 4 阶段的任意方向缩放、时间线切线、macOS 私有对角接口与其余 Windows 样式差异仍保留在后续清单。

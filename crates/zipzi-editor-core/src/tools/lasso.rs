@@ -11,7 +11,7 @@ use anyhow::Result;
 pub(super) struct LassoGesture {
     pub press: Press,
     points: Vec<ViewportPoint>,
-    target: Option<HitTarget>,
+    pub(super) target: Option<HitTarget>,
     component_surface: bool,
 }
 impl LassoGesture {

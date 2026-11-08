@@ -367,7 +367,9 @@ fn weighted_brush_native_cmd_drag_moves_by_accumulated_weight_without_repainting
 fn brush_cmd_cursor_updates_without_pointer_motion_and_tracks_the_captured_operation(
     cx: &mut TestAppContext,
 ) {
-    use gpui_kit::{CursorStyle, ModifiersChangedEvent};
+    use crate::tool_cursors::ToolCursor;
+    use gpui_kit::ModifiersChangedEvent;
+    use zipzi_editor_core::CanvasSelectionOperation as O;
     fn modifiers(window: &mut Window, cx: &mut App, platform: bool) {
         window.dispatch_event(
             ModifiersChangedEvent {
@@ -381,13 +383,13 @@ fn brush_cmd_cursor_updates_without_pointer_motion_and_tracks_the_captured_opera
             cx,
         );
     }
-    fn cursor(harness: &Harness, window: &mut Window, cx: &mut App) -> Option<CursorStyle> {
+    fn cursor(harness: &Harness, window: &mut Window, cx: &mut App) -> Option<ToolCursor> {
         window.render_frame(cx);
         let view = harness.view.read(cx);
         view.viewport_surface(view.viewport_slots[0], cx)
             .unwrap()
             .read(cx)
-            .tool_cursor
+            .tool_cursor_kind
     }
     let harness = setup(cx);
     present_canvas(&harness, cx);
@@ -415,41 +417,95 @@ fn brush_cmd_cursor_updates_without_pointer_motion_and_tracks_the_captured_opera
         up(window, cx, start, Modifiers::default());
         start
     });
-    check(&mut visual, CursorStyle::Crosshair);
+    check(&mut visual, ToolCursor::Brush(O::Replace));
+    // Stationary modifier changes update idle feedback, but captured painting
+    // retains both its cursor operation and the existing range preview semantics.
+    for (pressed, operation) in [
+        (
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+            O::Add,
+        ),
+        (
+            Modifiers {
+                alt: true,
+                ..Default::default()
+            },
+            O::Remove,
+        ),
+    ] {
+        visual.update(|window, cx| {
+            window.dispatch_event(
+                ModifiersChangedEvent {
+                    modifiers: pressed,
+                    capslock: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+        });
+        check(&mut visual, ToolCursor::Brush(operation));
+        visual.update(|window, cx| down(window, cx, start, pressed));
+        visual.update(|window, cx| modifiers(window, cx, false));
+        check(&mut visual, ToolCursor::Brush(operation));
+        visual.update(|_, cx| {
+            assert_eq!(
+                harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .overlay()
+                    .selection_brush
+                    .unwrap()
+                    .subtract,
+                operation == O::Remove
+            );
+        });
+        visual.update(|window, cx| up(window, cx, start, Modifiers::default()));
+        check(&mut visual, ToolCursor::Brush(O::Replace));
+    }
     // Each native event finishes before inspecting the resulting rendered cursor.
     // No mouse move is needed when only the keyboard modifiers change.
     visual.update(|window, cx| modifiers(window, cx, true));
-    check(&mut visual, CursorStyle::OpenHand);
+    check(&mut visual, ToolCursor::Move);
     visual.update(|window, cx| modifiers(window, cx, false));
-    check(&mut visual, CursorStyle::Crosshair);
+    check(&mut visual, ToolCursor::Brush(O::Replace));
     visual.update(|window, cx| down(window, cx, start, Modifiers::default()));
     visual.update(|window, cx| modifiers(window, cx, true));
-    check(&mut visual, CursorStyle::Crosshair);
+    check(&mut visual, ToolCursor::Brush(O::Replace));
     let cmd = Modifiers {
         platform: true,
         ..Default::default()
     };
     visual.update(|window, cx| up(window, cx, start, cmd));
-    check(&mut visual, CursorStyle::OpenHand);
+    check(&mut visual, ToolCursor::Move);
     visual.update(|window, cx| down(window, cx, start, cmd));
-    check(&mut visual, CursorStyle::ClosedHand);
+    check(&mut visual, ToolCursor::Move);
     visual.update(|window, cx| modifiers(window, cx, false));
-    check(&mut visual, CursorStyle::ClosedHand);
+    check(&mut visual, ToolCursor::Move);
     visual.update(|window, cx| up(window, cx, start, Modifiers::default()));
-    check(&mut visual, CursorStyle::Crosshair);
+    check(&mut visual, ToolCursor::Brush(O::Replace));
     visual.update(|window, cx| {
         modifiers(window, cx, true);
         down(window, cx, start, cmd);
     });
-    check(&mut visual, CursorStyle::ClosedHand);
+    check(&mut visual, ToolCursor::Move);
     visual.deactivate_window();
     visual.update(|window, cx| {
         assert!(!harness.view.read(cx).editor.gesture_active());
-        assert_eq!(cursor(&harness, window, cx), Some(CursorStyle::Crosshair));
+        assert_eq!(
+            cursor(&harness, window, cx),
+            Some(ToolCursor::Brush(O::Replace))
+        );
         window.activate_window();
         modifiers(window, cx, false);
         up(window, cx, start, Modifiers::default());
-        assert_eq!(cursor(&harness, window, cx), Some(CursorStyle::Crosshair));
+        assert_eq!(
+            cursor(&harness, window, cx),
+            Some(ToolCursor::Brush(O::Replace))
+        );
         assert_eq!(
             harness
                 .view

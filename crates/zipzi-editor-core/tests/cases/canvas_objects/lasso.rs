@@ -62,6 +62,141 @@ fn selected(editor: &Editor) -> Vec<u32> {
 }
 
 #[test]
+fn selection_cursor_operations_stay_latched_for_lasso_and_brush() -> anyhow::Result<()> {
+    for tool in [CommandId::LassoTool, CommandId::BrushSelectTool] {
+        let (mut editor, _dir) = setup()?;
+        editor.dispatch(editor.command(tool))?;
+        for (shift, alt, operation) in [
+            (false, false, CanvasSelectionOperation::Replace),
+            (true, false, CanvasSelectionOperation::Add),
+            (true, true, CanvasSelectionOperation::Remove),
+        ] {
+            let frame = shown(&mut editor)?;
+            let vertex = editor.overlay().vertices[0].position;
+            let point = if tool == CommandId::LassoTool {
+                p(vertex.x - 22., vertex.y - 22.)
+            } else {
+                vertex
+            };
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::Down {
+                    primary: false,
+                    point,
+                    shift,
+                    alt,
+                },
+            )?;
+            assert_eq!(editor.overlay().selection_operation, Some(operation));
+            crate::support::pointer_input(
+                &mut editor,
+                CanvasInput::ModifiersChanged {
+                    shift: !shift,
+                    alt: !alt,
+                },
+            )?;
+            let overlay = editor.overlay();
+            assert_eq!(overlay.selection_operation, Some(operation));
+            if tool == CommandId::BrushSelectTool {
+                assert_eq!(
+                    overlay.selection_brush.unwrap().subtract,
+                    operation == CanvasSelectionOperation::Remove
+                );
+            }
+            crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+            assert_eq!(
+                editor
+                    .overlay_for_viewport(frame.version.binding)
+                    .active_gesture,
+                None
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn selection_cursor_component_toggle_becomes_motion_after_drag_threshold() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let frame = shown(&mut editor)?;
+    let point = editor.overlay().vertices[0].position;
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    crate::support::pointer_input(&mut editor, CanvasInput::Up { point })?;
+    shown(&mut editor)?;
+    editor.hover_canvas(frame.version.binding, Some(point))?;
+    editor.update_canvas_modifiers(frame.version.binding, true, false)?;
+    assert_eq!(
+        editor.overlay().selection_operation,
+        Some(CanvasSelectionOperation::Toggle)
+    );
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: true,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().selection_operation,
+        Some(CanvasSelectionOperation::Toggle)
+    );
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::ModifiersChanged {
+            shift: false,
+            alt: false,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().selection_operation,
+        Some(CanvasSelectionOperation::Toggle)
+    );
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Move {
+            point: p(point.x + 12., point.y + 8.),
+            left_down: true,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::Move)
+    );
+    assert_eq!(editor.overlay().selection_operation, None);
+    crate::support::pointer_input(&mut editor, CanvasInput::Cancel)?;
+    let frame = shown(&mut editor)?;
+    editor.hover_canvas(frame.version.binding, Some(point))?;
+    editor.update_canvas_modifiers(frame.version.binding, false, true)?;
+    assert_eq!(
+        editor.overlay().selection_operation,
+        Some(CanvasSelectionOperation::Remove)
+    );
+    crate::support::pointer_input(
+        &mut editor,
+        CanvasInput::Down {
+            point,
+            shift: false,
+            alt: true,
+            primary: false,
+        },
+    )?;
+    assert!(!editor.gesture_active());
+    assert!(selected(&editor).is_empty());
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
 fn lasso_replace_add_remove_then_select_tool_moves_only_the_remaining_vertex() -> anyhow::Result<()>
 {
     let (mut editor, _dir) = setup()?;

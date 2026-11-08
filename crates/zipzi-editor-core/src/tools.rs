@@ -26,9 +26,9 @@ use gesture::Gesture;
 use std::sync::Arc;
 
 pub use overlay::{
-    CanvasGestureKind, GluePointState, OverlayDeformer, OverlayGlue, OverlayGluePoint,
-    OverlayHandle, OverlayRotationBone, OverlaySelectionBrush, OverlaySelectionWeights,
-    OverlaySnapshot, OverlayVertex, OverlayVertexKind,
+    CanvasGestureKind, CanvasSelectionOperation, GluePointState, OverlayDeformer, OverlayGlue,
+    OverlayGluePoint, OverlayHandle, OverlayRotationBone, OverlaySelectionBrush,
+    OverlaySelectionWeights, OverlaySnapshot, OverlayVertex, OverlayVertexKind,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -80,6 +80,7 @@ pub struct ToolController {
     hovered: Option<HitTarget>,
     hovered_binding: Option<crate::ViewportBinding>,
     alt: bool,
+    shift: bool,
     gesture: Option<Gesture>,
     manual: Option<manual_mesh::ManualMeshSession>,
     access_cache: std::sync::Mutex<Option<access::AccessCache>>,
@@ -119,8 +120,9 @@ impl ToolController {
         }
     }
     pub(crate) fn set_gesture_modifiers(&mut self, shift: bool, alt: bool) -> bool {
-        let changed = self.alt != alt;
+        let changed = self.alt != alt || self.shift != shift;
         self.alt = alt;
+        self.shift = shift;
         self.gesture
             .as_mut()
             .is_some_and(|g| g.set_modifiers(shift, alt))
