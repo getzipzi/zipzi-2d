@@ -144,3 +144,64 @@ fn unsupported_platform_returns_the_standard_fallback(cx: &mut gpui_kit::TestApp
         );
     });
 }
+
+#[test]
+fn precision_cursors_share_a_symmetric_cross_and_lower_right_badges() {
+    let base = CustomCursor::from_svg(
+        include_bytes!("../assets/cursors/box-select.svg"),
+        size(24, 24),
+        point(7, 7),
+        CursorStyle::Crosshair,
+    )
+    .unwrap();
+    for scale in [1., 2.] {
+        let (reference, _) = base.image_for_scale(scale);
+        let width = reference.size().width as usize;
+        let extent = (14. * scale) as usize;
+        let pixel =
+            |x: usize, y: usize| &reference.rgba()[(y * width + x) * 4..(y * width + x + 1) * 4];
+        for y in 0..extent {
+            for x in 0..extent {
+                // Check the central arms; the lower-right quadrant contains
+                // the tool silhouette, even in the unmodified selection state.
+                let arm = (5. * scale) as usize..(9. * scale) as usize;
+                if !arm.contains(&x) && !arm.contains(&y) {
+                    continue;
+                }
+                // Rasterizer coverage rounds opposite half-pixel edges by one
+                // channel value at 1x; geometry must still reflect identically.
+                for reflected in [pixel(extent - 1 - x, y), pixel(x, extent - 1 - y)] {
+                    assert!(
+                        pixel(x, y)
+                            .iter()
+                            .zip(reflected)
+                            .all(|(a, b)| a.abs_diff(*b) <= 1)
+                    );
+                }
+            }
+        }
+        for (name, svg) in cursor_artwork::ARTWORK {
+            if name == "rotate" || name.starts_with("bone-length") {
+                continue;
+            }
+            let cursor =
+                CustomCursor::from_svg(svg, size(24, 24), point(7, 7), CursorStyle::Crosshair)
+                    .unwrap();
+            let (image, _) = cursor.image_for_scale(scale);
+            for y in 0..width {
+                for x in 0..width {
+                    // Decorations cannot alter the cross or occupy the upper/right
+                    // or lower/left arms of the cursor.
+                    if x < (9. * scale) as usize || y < (9. * scale) as usize {
+                        let index = (y * width + x) * 4;
+                        assert_eq!(
+                            &image.rgba()[index..index + 4],
+                            pixel(x, y),
+                            "{name} at {scale}x, {x},{y}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

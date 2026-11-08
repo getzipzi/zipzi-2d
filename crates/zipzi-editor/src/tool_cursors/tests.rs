@@ -38,7 +38,7 @@ fn tool_cursor_manual_idle_matches_click_and_shortcut_routes() {
         (M::Select, F::Empty, Modifiers::default(), T::MeshAdd),
         (M::Lasso, F::AutomaticEdge, Modifiers::default(), T::MeshAdd),
         (M::Select, F::Vertex, Modifiers::default(), T::Move),
-        (M::Select, F::FixedEdge, shift, T::Standard(C::Crosshair)),
+        (M::Select, F::FixedEdge, shift, T::BoxSelect(O::Add)),
         (M::Create, F::FixedEdge, Modifiers::default(), T::MeshAdd),
         (
             M::Create,
@@ -83,6 +83,7 @@ fn tool_cursor_manual_idle_matches_click_and_shortcut_routes() {
     ] {
         let overlay = OverlaySnapshot {
             manual_mesh_feedback: Some(feedback),
+            selection_operation: modifiers.shift.then_some(O::Add),
             ..Default::default()
         };
         let mut input = input(&overlay);
@@ -440,4 +441,24 @@ fn tool_cursor_view_panning_keeps_hands_separate_from_point_motion() {
         resolve(input(&box_selection)).cursor,
         Some(T::Standard(C::Arrow))
     );
+}
+
+#[test]
+fn tool_cursor_mesh_box_badges_follow_idle_and_captured_operations() {
+    for operation in [O::Replace, O::Add, O::Remove, O::Toggle] {
+        for gesture in [None, Some(G::BoxSelect)] {
+            let overlay = OverlaySnapshot {
+                active_gesture: gesture,
+                manual_mesh_feedback: Some(F::Empty),
+                selection_operation: Some(operation),
+                ..Default::default()
+            };
+            let mut request = input(&overlay);
+            request.manual_tool = Some(M::Select);
+            // Idle modifiers enter selection; captured gestures retain the core operation
+            // even after all keys are released.
+            request.modifiers.shift = gesture.is_none();
+            assert_eq!(resolve(request).cursor, Some(T::BoxSelect(operation)));
+        }
+    }
 }

@@ -427,6 +427,15 @@ fn manual_mesh_primary_connect_keeps_gesture_after_modifier_release(cx: &mut Tes
 
 #[gpui_kit::test]
 fn manual_lasso_cursor_uses_the_shared_selection_operation(cx: &mut TestAppContext) {
+    manual_selection_cursor_uses_the_shared_operation(cx, true);
+}
+
+#[gpui_kit::test]
+fn manual_box_cursor_uses_the_shared_selection_operation(cx: &mut TestAppContext) {
+    manual_selection_cursor_uses_the_shared_operation(cx, false);
+}
+
+fn manual_selection_cursor_uses_the_shared_operation(cx: &mut TestAppContext, lasso: bool) {
     use crate::tool_cursors::ToolCursor;
     use gpui_kit::{
         InputEvent as _, Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent,
@@ -435,7 +444,14 @@ fn manual_lasso_cursor_uses_the_shared_selection_operation(cx: &mut TestAppConte
     use zipzi_editor_core::CanvasSelectionOperation as O;
     let h = enter(cx);
     cx.update_window(h.window, |_, window, cx| {
-        window.click("tool_manual_lasso", cx)
+        window.click(
+            if lasso {
+                "tool_manual_lasso"
+            } else {
+                "tool_manual_select"
+            },
+            cx,
+        )
     })
     .unwrap();
     for (modifiers, operation) in [
@@ -481,7 +497,11 @@ fn manual_lasso_cursor_uses_the_shared_selection_operation(cx: &mut TestAppConte
             window.render_frame(cx);
             assert_eq!(
                 canvas_cursor_kind(&h, cx),
-                Some(ToolCursor::Lasso(operation))
+                Some(if lasso {
+                    ToolCursor::Lasso(operation)
+                } else {
+                    ToolCursor::BoxSelect(operation)
+                })
             );
             window.dispatch_event(
                 MouseDownEvent {
@@ -506,7 +526,11 @@ fn manual_lasso_cursor_uses_the_shared_selection_operation(cx: &mut TestAppConte
             window.render_frame(cx);
             assert_eq!(
                 canvas_cursor_kind(&h, cx),
-                Some(ToolCursor::Lasso(operation))
+                Some(if lasso {
+                    ToolCursor::Lasso(operation)
+                } else {
+                    ToolCursor::BoxSelect(operation)
+                })
             );
             window.press("escape", cx);
             window.render_frame(cx);

@@ -3,7 +3,23 @@ pub fn hotspot(name: &str) -> gpui_kit::Point<u32> {
     gpui_kit::point(coordinate, coordinate)
 }
 
-pub const ARTWORK: [(&str, &[u8]); 17] = [
+pub const ARTWORK: [(&str, &[u8]); 21] = [
+    (
+        "box-select",
+        include_bytes!("../../assets/cursors/box-select.svg"),
+    ),
+    (
+        "box-add",
+        include_bytes!("../../assets/cursors/box-add.svg"),
+    ),
+    (
+        "box-remove",
+        include_bytes!("../../assets/cursors/box-remove.svg"),
+    ),
+    (
+        "box-toggle",
+        include_bytes!("../../assets/cursors/box-toggle.svg"),
+    ),
     (
         "mesh-add",
         include_bytes!("../../assets/cursors/mesh-add.svg"),

@@ -21,6 +21,7 @@ pub(crate) enum ToolCursor {
     Rotate(u8),
     BoneLength(u8),
     Move,
+    BoxSelect(CanvasSelectionOperation),
     Lasso(CanvasSelectionOperation),
     Brush(CanvasSelectionOperation),
 }
@@ -107,6 +108,7 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
             G::Unavailable => standard(C::OperationNotAllowed),
             G::Cancelled => standard(C::Arrow),
             G::BoxSelect if input.manual_tool.is_none() => standard(C::Arrow),
+            G::BoxSelect => Some(T::BoxSelect(operation)),
             G::LassoSelect => Some(T::Lasso(operation)),
             G::BrushSelect => Some(T::Brush(operation)),
             _ => standard(C::Crosshair),
@@ -209,7 +211,7 @@ fn manual_cursor(
         _ if feedback == F::Vertex => T::Move,
         _ if !modifiers.shift && !modifiers.alt => T::MeshAdd,
         ManualTool::Lasso => T::Lasso(operation.unwrap_or(CanvasSelectionOperation::Replace)),
-        _ => T::Standard(C::Crosshair),
+        _ => T::BoxSelect(operation.unwrap_or(CanvasSelectionOperation::Replace)),
     }
 }
 
@@ -281,6 +283,7 @@ pub(crate) struct ToolCursors {
     mesh_fix: CursorStyle,
     rotate: [CursorStyle; ROTATION_DIRECTIONS],
     bone_length: [CursorStyle; 4],
+    box_select: [CursorStyle; 4],
     lasso: [CursorStyle; 4],
     brush: [CursorStyle; 3],
 }
@@ -298,6 +301,7 @@ impl ToolCursors {
             ToolCursor::Rotate(direction) => self.rotate[direction as usize % ROTATION_DIRECTIONS],
             ToolCursor::BoneLength(direction) => self.bone_length[direction as usize % 4],
             ToolCursor::Move => CursorStyle::Arrow,
+            ToolCursor::BoxSelect(operation) => self.box_select[selection_index(operation)],
             ToolCursor::Lasso(operation) => self.lasso[selection_index(operation)],
             ToolCursor::Brush(operation) => self
                 .brush
@@ -321,6 +325,12 @@ impl ToolCursors {
             include_bytes!("../assets/cursors/bone-length-45.svg").as_slice(),
             include_bytes!("../assets/cursors/bone-length-90.svg").as_slice(),
             include_bytes!("../assets/cursors/bone-length-135.svg").as_slice(),
+        ];
+        let box_images = [
+            include_bytes!("../assets/cursors/box-select.svg").as_slice(),
+            include_bytes!("../assets/cursors/box-add.svg").as_slice(),
+            include_bytes!("../assets/cursors/box-remove.svg").as_slice(),
+            include_bytes!("../assets/cursors/box-toggle.svg").as_slice(),
         ];
         let lasso_images = [
             include_bytes!("../assets/cursors/lasso.svg").as_slice(),
@@ -362,6 +372,7 @@ impl ToolCursors {
             bone_length: std::array::from_fn(|index| {
                 register(length_images[index], resize_style(index as u8))
             }),
+            box_select: box_images.map(|svg| register(svg, CursorStyle::Crosshair)),
             lasso: lasso_images.map(|svg| register(svg, CursorStyle::Crosshair)),
             brush: brush_images.map(|svg| register(svg, CursorStyle::Crosshair)),
         };
