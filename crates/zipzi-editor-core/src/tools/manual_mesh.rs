@@ -201,6 +201,11 @@ impl ManualMeshMode {
             return;
         }
         self.cancel(document);
+        // A history publication can turn a fixed edge back into an automatic
+        // edge while keeping the same endpoints and triangles. Its old accent
+        // and hover state must not survive the topology change.
+        self.selected_edge = None;
+        self.hover = Hit::Empty;
         if let Err(error) = self.refresh_source(document) {
             let reason = format!("Mesh Edit paused: {error}");
             self.blocked = Some(reason.clone());

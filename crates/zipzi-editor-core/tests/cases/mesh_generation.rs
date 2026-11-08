@@ -1961,6 +1961,38 @@ fn manual_mesh_cmd_click_fixes_only_automatic_edges_with_one_undo() -> anyhow::R
 }
 
 #[test]
+fn manual_mesh_undo_fixed_edge_clears_stale_highlight() -> anyhow::Result<()> {
+    let (mut editor, _dir) = manual_interaction_fixture()?;
+    let original = edited_mesh(&editor);
+    let frame = crate::support::present_canvas(&mut editor)?;
+    let binding = frame.version.binding;
+    let (a, b) = editor.overlay_for_viewport(binding).automatic_lines[0];
+    let point = ViewportPoint {
+        x: (a.x + b.x) * 0.5,
+        y: (a.y + b.y) * 0.5,
+    };
+    let token = editor
+        .begin_canvas_gesture(binding, point, false, false, true)?
+        .capture
+        .unwrap();
+    editor.update_canvas_gesture(token, CanvasInput::Up { point })?;
+    crate::support::present_canvas(&mut editor)?;
+    let fixed = editor.overlay_for_viewport(binding);
+    assert_eq!(fixed.accent_lines.len(), 1);
+    assert_eq!(fixed.hover_lines.len(), 1);
+    assert!(fixed.automatic_lines.is_empty());
+
+    editor.dispatch(editor.command(CommandId::Undo))?;
+    crate::support::present_canvas(&mut editor)?;
+    let undone = editor.overlay_for_viewport(binding);
+    assert_eq!(undone.automatic_lines.len(), 1);
+    assert!(undone.accent_lines.is_empty());
+    assert!(undone.hover_lines.is_empty());
+    assert_eq!(edited_mesh(&editor), original);
+    Ok(())
+}
+
+#[test]
 fn manual_mesh_plain_shift_and_option_selection_still_work() -> anyhow::Result<()> {
     let (mut editor, _dir) = manual_interaction_fixture()?;
     editor.dispatch(editor.command(CommandId::ManualSelect))?;
