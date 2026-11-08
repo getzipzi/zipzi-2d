@@ -245,9 +245,7 @@ impl ViewportSurface {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if (self.interaction.is_some() || self.kind == zipzi_editor_core::ViewportKind::Modeling)
-            && self.navigation.pan.is_none()
-        {
+        if self.interaction.is_some() && self.navigation.pan.is_none() {
             self.input(
                 CanvasInput::ModifiersChanged {
                     shift: event.modifiers.shift,
@@ -256,14 +254,6 @@ impl ViewportSurface {
                 window,
                 cx,
             );
-        }
-        if self.kind == zipzi_editor_core::ViewportKind::Modeling
-            && self.owner.upgrade().is_some_and(|owner| {
-                let editor = &owner.read(cx).editor;
-                editor.manual_active() || editor.active_tool() == ToolId::BrushSelect
-            })
-        {
-            cx.notify();
         }
     }
 }

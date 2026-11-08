@@ -18,6 +18,32 @@ impl EditorView {
     pub fn has_focused_input(&self, window: &mut Window, cx: &mut App) -> bool {
         window.has_focused_input(cx)
     }
+
+    fn canvas_modifiers_changed(
+        &mut self,
+        event: &gpui_kit::ModifiersChangedEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        // Modifier events follow keyboard focus, which may be on a sidebar while
+        // the pointer remains over a canvas. The idle tool state is shared by the
+        // modeling viewports, so any valid binding can synchronize its modifiers.
+        if self.editor.viewport_interaction_active() || self.modal || window.has_active_dialog(cx) {
+            return;
+        }
+        let Some(binding) = self.editor.primary_viewport_binding() else {
+            return;
+        };
+        if self
+            .editor
+            .update_canvas_modifiers(binding, event.modifiers.shift, event.modifiers.alt)
+            .is_ok()
+        {
+            self.sync_viewport_notice(cx);
+            workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
+            self.notify_canvas(cx);
+        }
+    }
 }
 
 impl Render for EditorView {
@@ -156,6 +182,7 @@ impl Render for EditorView {
             .bg(theme.background)
             .text_color(theme.foreground)
             .text_size(compact::rem(compact::BODY))
+            .on_modifiers_changed(cx.listener(Self::canvas_modifiers_changed))
             .capture_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 this.route_key(event, window, cx)
             }))

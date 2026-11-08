@@ -1,4 +1,4 @@
-use super::super::{Harness, setup};
+use super::super::{Harness, setup, setup_with_document};
 use super::common::present_canvas;
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{
@@ -167,6 +167,75 @@ fn lasso_cursor_keeps_press_time_selection_after_modifiers_are_released(cx: &mut
         })
         .unwrap();
     }
+}
+
+#[gpui_kit::test]
+fn idle_lasso_cursor_updates_modifiers_while_canvas_is_not_focused(cx: &mut TestAppContext) {
+    use crate::tool_cursors::ToolCursor;
+    use gpui_kit::ModifiersChangedEvent;
+    use gpui_kit::component::WindowExt;
+    use zipzi_editor_core::CanvasSelectionOperation as O;
+
+    let (document, assets) =
+        super::super::document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let h = setup_with_document(cx, document, assets);
+    present_canvas(&h, cx);
+    cx.update_window(h.window, |_, window, cx| {
+        window.activate_window();
+        window.click("tool_lasso", cx);
+        window.click(format!("parameter-value-{parameter}"), cx);
+        assert!(window.has_focused_input(cx));
+        let vertex = h.view.read(cx).editor.overlay().vertices[0].position;
+        let origin = window.find("canvas-body").bounds().origin;
+        window.dispatch_event(
+            MouseMoveEvent {
+                position: origin + point(px(vertex.x - 22.), px(vertex.y - 22.)),
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        // Keep the pointer on the canvas while keyboard focus stays in Properties.
+        window.render_frame(cx);
+        let cursor = |cx: &App| {
+            let view = h.view.read(cx);
+            view.viewport_surface(view.viewport_slots[0], cx)
+                .unwrap()
+                .read(cx)
+                .tool_cursor_kind
+        };
+        assert_eq!(cursor(cx), Some(ToolCursor::Lasso(O::Replace)));
+        for (modifiers, operation) in [
+            (
+                Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+                O::Add,
+            ),
+            (
+                Modifiers {
+                    alt: true,
+                    ..Default::default()
+                },
+                O::Remove,
+            ),
+            (Modifiers::default(), O::Replace),
+        ] {
+            window.dispatch_event(
+                ModifiersChangedEvent {
+                    modifiers,
+                    capslock: Default::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            assert_eq!(cursor(cx), Some(ToolCursor::Lasso(operation)));
+        }
+    })
+    .unwrap();
 }
 
 #[gpui_kit::test]
