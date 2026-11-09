@@ -56,7 +56,7 @@ pub(crate) fn result_parity(h: &mut Harness) -> anyhow::Result<()> {
                 .map(|e| (e.expression_id.as_str(), e.time, e.transition)),
         )?;
         for input in &request.physics.inputs {
-            sdk.schedule_parameter_input(&input.parameter, input.time, input.value)?;
+            input.schedule(&mut sdk)?;
         }
         sdk.seek(request.identity.time)?;
         // Seek snapshots omit optional inspector observations. The editor

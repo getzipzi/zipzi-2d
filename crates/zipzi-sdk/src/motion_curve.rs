@@ -8,7 +8,8 @@ use zipzi_animation::{
     motion_bezier_parameter, motion_bezier_time_is_monotonic, sample_motion_curve, CompiledCurve,
 };
 use zipzi_core::document::{
-    MotionClip, MotionKey, MotionPoint, MotionSegment, MotionTrack, MotionTrackTarget,
+    supported_model_motion_channel, MotionClip, MotionKey, MotionPoint, MotionSegment, MotionTrack,
+    MotionTrackTarget,
 };
 use zipzi_core::state::DocumentBuilder;
 
@@ -49,7 +50,9 @@ fn validate(document: &DocumentBuilder, clip: &MotionClip) -> Result<(), Status>
 fn editable(track: &MotionTrack) -> Result<(), Status> {
     match &track.target {
         MotionTrackTarget::Parameter { .. } | MotionTrackTarget::PartOpacity { .. } => Ok(()),
-        MotionTrackTarget::Model { runtime_id } if runtime_id == "Opacity" => Ok(()),
+        MotionTrackTarget::Model { runtime_id } if supported_model_motion_channel(runtime_id) => {
+            Ok(())
+        }
         _ => Err(error("READ_ONLY_MOTION_TRACK", &track.id)),
     }
 }

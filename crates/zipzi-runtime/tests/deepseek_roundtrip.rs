@@ -46,6 +46,8 @@ fn deepseek_model3_save_reopens_under_default_shared_budget() {
     let before = rt.read_snapshot(client, session).unwrap().snapshot;
     assert_eq!(before.document().mesh_order().len(), 715);
     assert_eq!(before.document().parameter_order().len(), 509);
+    assert_eq!(before.document().expression_order().len(), 23);
+    assert_eq!(before.document().motion_roots().len(), 8);
     let output = tempfile::tempdir().unwrap();
     let path = output.path().join("deepseek.zipzi");
     let io = rt.project_io().clone();
@@ -76,6 +78,12 @@ fn deepseek_model3_save_reopens_under_default_shared_budget() {
     compare!(binding_order, binding);
     compare!(scene_binding_order, scene_binding);
     compare!(blend_binding_order, blend_binding);
+    compare!(expression_order, expression);
+    compare!(motion_order, motion);
+    assert_eq!(
+        before.document().motion_roots(),
+        after.document().motion_roots()
+    );
     for id in before.document().asset_order() {
         let original = before
             .resources()

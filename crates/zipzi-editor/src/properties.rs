@@ -39,7 +39,7 @@ pub(crate) struct PropertyTarget {
 }
 
 impl PropertyTarget {
-    pub(crate) fn is_cursor_mapping(&self) -> bool {
+    pub(crate) fn is_parameter_mapping(&self) -> bool {
         self.context == EditingContext::Animation
             && self.object.kind == ObjectKind::Document
             && self.timeline.is_none()

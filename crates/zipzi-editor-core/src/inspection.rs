@@ -82,7 +82,7 @@ impl Editor {
                         .motion
                         .as_ref()
                         .map(|motion| motion.clip_id.clone()),
-                    expression: animation.expression.clone(),
+                    expression: animation.preview_expression().map(str::to_owned),
                     channels: timeline
                         .map(|view| view.channels.iter().cloned().collect())
                         .unwrap_or_default(),

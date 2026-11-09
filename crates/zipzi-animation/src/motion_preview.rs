@@ -72,6 +72,10 @@ pub enum MotionOperationKind {
         time: f32,
         value: f32,
     },
+    ReleaseParameterInput {
+        parameter_id: String,
+        time: f32,
+    },
     Advance {
         dt: f32,
     },
@@ -109,6 +113,7 @@ pub struct MotionPreview {
     physics_stabilized_start: bool,
     expressions: ExpressionRuntime,
     motion: MotionRuntime,
+    breath_targets: Arc<[String]>,
     cache: SeekCache,
     operation: MotionOperation,
     // Scratch only, not simulation state. A mutex preserves the shared-reference
@@ -129,6 +134,15 @@ impl MotionPreview {
             .map(|track| (track.id.clone(), CompiledCurve::from(track)))
             .collect();
         Self::from_shared(Arc::new(document.clone()), Arc::new(curves))
+    }
+
+    /// Create an interactive preview with automatic blinking and breathing.
+    /// The seed fixes the blink schedule across seeks and replay checkpoints.
+    pub fn interactive(document: &DocumentState, seed: u32) -> Self {
+        let mut preview = Self::new(document);
+        preview.motion.enable_auto_eye_blink(seed);
+        preview.breath_targets = document.breath_preview_parameters().into();
+        preview
     }
 
     fn from_shared(
@@ -170,6 +184,7 @@ impl MotionPreview {
             physics_enabled: true,
             physics_stabilized_start: false,
             expressions: ExpressionRuntime::default(),
+            breath_targets: Arc::default(),
             base,
             snapshot: MotionSnapshot {
                 physics: Vec::new(),
@@ -530,6 +545,21 @@ impl MotionPreview {
         time: f32,
         value: f32,
     ) -> Result<(), AnimationError> {
+        self.queue_parameter_input(id, time, Some(value))
+    }
+
+    /// Return a parameter to its authored default and let automatic blinking resume.
+    /// Uses the same clock and replay ordering as scheduling an input.
+    pub fn release_parameter_input(&mut self, id: &str, time: f32) -> Result<(), AnimationError> {
+        self.queue_parameter_input(id, time, None)
+    }
+
+    fn queue_parameter_input(
+        &mut self,
+        id: &str,
+        time: f32,
+        value: Option<f32>,
+    ) -> Result<(), AnimationError> {
         self.motion.schedule_parameter_input(
             &self.document,
             self.snapshot.time,
@@ -541,10 +571,16 @@ impl MotionPreview {
         if time == self.snapshot.time {
             self.canonical_step = None;
         }
-        self.commit_operation(MotionOperationKind::ScheduleParameterInput {
-            parameter_id: id.into(),
-            time,
-            value,
+        self.commit_operation(match value {
+            Some(value) => MotionOperationKind::ScheduleParameterInput {
+                parameter_id: id.into(),
+                time,
+                value,
+            },
+            None => MotionOperationKind::ReleaseParameterInput {
+                parameter_id: id.into(),
+                time,
+            },
         });
         Ok(())
     }
@@ -599,6 +635,26 @@ impl MotionPreview {
         self.expressions
             .evaluate(&self.document, time, &mut self.snapshot.parameters);
         self.snapshot.active_expressions = self.expressions.active_ids();
+        if !self.breath_targets.is_empty() {
+            // Cubism Native R5 OpenGL demo's ParamBreath settings. Apply to the
+            // current frame after expressions and before physics, as in the SDK.
+            const CYCLE: f32 = 3.2345;
+            let phase = (time % CYCLE) * std::f32::consts::TAU / CYCLE;
+            let delta = (0.5 + 0.5 * phase.sin()) * 0.5;
+            for id in self.breath_targets.iter() {
+                let parameter = self
+                    .document
+                    .parameter(id)
+                    .expect("validated breath target");
+                let value = self
+                    .snapshot
+                    .parameters
+                    .get_mut(id)
+                    .expect("sampled parameter");
+                *value = crate::parameter_values::repeat_value(parameter, *value + delta)
+                    .clamp(parameter.minimum, parameter.maximum);
+            }
+        }
         if self.physics_enabled {
             self.physics.evaluate(
                 &self.document,
@@ -660,6 +716,7 @@ impl MotionPreview {
     ) -> Result<&MotionSnapshot, AnimationError> {
         let mut steps = crate::replay::ReplaySteps::new(time)?;
         let mut candidate = Self::from_shared(Arc::clone(&self.document), Arc::clone(&self.curves));
+        candidate.breath_targets = Arc::clone(&self.breath_targets);
         candidate.physics_enabled = self.physics_enabled;
         candidate.physics_stabilized_start = self.physics_stabilized_start;
         candidate.source_identity = self.source_identity;

@@ -795,7 +795,7 @@ impl Render for PropertiesPanel {
         if !self
             .target
             .as_ref()
-            .is_some_and(PropertyTarget::is_cursor_mapping)
+            .is_some_and(PropertyTarget::is_parameter_mapping)
         {
             self.cursor_mapping = None;
         }
@@ -818,11 +818,11 @@ impl Render for PropertiesPanel {
         if self
             .target
             .as_ref()
-            .is_some_and(PropertyTarget::is_cursor_mapping)
+            .is_some_and(PropertyTarget::is_parameter_mapping)
         {
             let parameters = doc.parameters();
             let summary = self.summary(cx);
-            let mapping = self.render_cursor_mapping(parameters, window, cx);
+            let mapping = self.render_parameter_mapping(parameters, window, cx);
             return root.child(summary).child(mapping).into_any_element();
         }
         self.sync_rows(&state.editor, document, doc, cx);

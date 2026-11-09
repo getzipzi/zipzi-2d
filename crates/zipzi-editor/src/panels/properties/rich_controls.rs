@@ -90,6 +90,17 @@ impl PropertiesPanel {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let select = self.render_select(id, disabled, window, cx);
+        let effect = zipzi_editor_core::property::document::is_motion_effect_field(id);
+        let kind = if effect {
+            zipzi_editor_core::ObjectKind::Parameter
+        } else {
+            zipzi_editor_core::ObjectKind::Mesh
+        };
+        let remove_label = if effect {
+            "properties.remove_effect_parameter"
+        } else {
+            "properties.remove_mask"
+        };
         let ids = match &self.form.fields[&id].parsed {
             Ok(PropertyValue::References(ids)) => Arc::new(ids.clone()),
             _ => Arc::new(vec![]),
@@ -120,12 +131,19 @@ impl PropertiesPanel {
                         range
                             .map(|slot| {
                                 let reference = ids[slot].clone();
-                                let object =
-                                    ObjectRef::new(zipzi_editor_core::ObjectKind::Mesh, &reference);
-                                let label = index
-                                    .as_ref()
-                                    .map_or(reference.as_str(), |index| index.name(&object))
-                                    .to_owned();
+                                let object = ObjectRef::new(kind, &reference);
+                                let label = if let Some(runtime_id) =
+                                    effect.then(|| reference.strip_prefix("runtime:")).flatten()
+                                {
+                                    format!("{} · {runtime_id}", t!("authoring.unresolved"))
+                                } else if effect && reference.starts_with("unconfigured:") {
+                                    t!("authoring.unconfigured").into_owned()
+                                } else {
+                                    index
+                                        .as_ref()
+                                        .map_or(reference.as_str(), |index| index.name(&object))
+                                        .to_owned()
+                                };
                                 div()
                                     .h(compact::rem(compact::ROW))
                                     .flex()
@@ -142,10 +160,7 @@ impl PropertiesPanel {
                                         .ghost()
                                         .icon(gpui_kit::assets::IconName::X)
                                         .disabled(disabled)
-                                        .accessibility_label(t!(
-                                            "properties.remove_mask",
-                                            name = label
-                                        ))
+                                        .accessibility_label(t!(remove_label, name = label))
                                         .on_click(
                                             cx.listener(move |this, _, window, cx| {
                                                 if this.allowed(epoch, window, cx) {

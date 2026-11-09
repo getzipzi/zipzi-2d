@@ -381,6 +381,32 @@ fn expression_controls_preserve_pause_clear_at_current_time_and_reset(cx: &mut T
 }
 
 #[gpui_kit::test]
+fn expression_row_keeps_interactive_preview_running(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::animation_document().unwrap();
+    let expression = document.expression_resources()[0].id.clone();
+    let harness = setup_with_document(cx, document, assets);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("workspace-animation", cx);
+        window.render_frame(cx);
+        window
+            .within("canvas-zoom-toolbar")
+            .click("physics-cursor-preview", cx);
+        click_expression(window, 0, cx);
+        let editor = &harness.view.read(cx).editor;
+        assert!(editor.cursor_physics_active());
+        let preview = editor.animation().unwrap();
+        assert!(preview.playing);
+        assert_eq!(preview.preview_expression(), Some(expression.as_str()));
+        window.render_frame(cx);
+        window.click("animation-clear-expression", cx);
+        let editor = &harness.view.read(cx).editor;
+        assert!(editor.cursor_physics_active());
+        assert!(editor.animation().unwrap().preview_expression().is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn ruler_press_pauses_immediately_and_scrubbing_preserves_nonloop_triggers(
     cx: &mut TestAppContext,
 ) {

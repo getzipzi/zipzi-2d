@@ -2,6 +2,24 @@
 use super::*;
 
 impl AnimationSession {
+    /// Expression selected for the current preview, including an interactive trial.
+    pub fn preview_expression(&self) -> Option<&str> {
+        match &self.cursor_physics {
+            Some(cursor) => cursor
+                .expressions
+                .last()
+                .map(|trigger| trigger.expression_id.as_str()),
+            None => self.expression.as_deref(),
+        }
+    }
+
+    pub(crate) fn expression_schedule(&self) -> &[ExpressionTrigger] {
+        match &self.cursor_physics {
+            Some(cursor) => &cursor.expressions,
+            None => &self.expressions,
+        }
+    }
+
     pub(crate) fn is_scrubbing(&self) -> bool {
         self.scrubbing
     }
@@ -149,6 +167,20 @@ impl AnimationSession {
             self.physics_preview
                 .inputs
                 .retain(|input| model.parameter(&input.parameter).is_some());
+            if let Some(cursor) = &mut self.cursor_physics {
+                let exists = |trigger: &ExpressionTrigger| {
+                    model.expression(&trigger.expression_id).is_some()
+                };
+                cursor.expressions.retain(exists);
+                self.expressions.retain(exists);
+                if self
+                    .expression
+                    .as_ref()
+                    .is_some_and(|id| model.expression(id).is_none())
+                {
+                    self.expression = None;
+                }
+            }
             return;
         }
         if self.motion.is_none() && self.expression.is_none() && self.expressions.is_empty() {

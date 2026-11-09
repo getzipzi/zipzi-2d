@@ -7,7 +7,9 @@ impl Model<'_> {
         match target {
             MotionTrackTarget::Unspecified => Some(MotionDisabledReason::NeedsConfiguration),
             MotionTrackTarget::Unresolved { .. } => Some(MotionDisabledReason::UnresolvedTarget),
-            MotionTrackTarget::Model { runtime_id } if runtime_id != "Opacity" => {
+            MotionTrackTarget::Model { runtime_id }
+                if !supported_model_motion_channel(runtime_id) =>
+            {
                 Some(MotionDisabledReason::UnsupportedModelChannel)
             }
             _ => None,

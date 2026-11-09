@@ -1,5 +1,14 @@
 use super::*;
+use zipzi_editor_core::property::document::{
+    BREATH_PARAMETERS, EYE_BLINK_PARAMETERS, LIP_SYNC_PARAMETERS,
+};
 use zipzi_editor_core::{CursorPreviewAxis, CursorPreviewBindings, PropertyPatch};
+
+pub(crate) const MOTION_EFFECT_FIELDS: [PropertyKey; 3] = [
+    EYE_BLINK_PARAMETERS.key,
+    LIP_SYNC_PARAMETERS.key,
+    BREATH_PARAMETERS.key,
+];
 
 const AXIS: PropertySpec = PropertySpec::new(
     ObjectKind::Document,
@@ -47,7 +56,29 @@ pub(super) fn definition(doc: &Document) -> FormDefinition {
         influence,
         FieldSpec::new(REVERSED, "physics.reflect", FieldEditor::Toggle),
     ];
-    let mut form = FormDefinition::default();
+    let mut form = FormDefinition {
+        fields: vec![
+            FieldSpec::new(
+                EYE_BLINK_PARAMETERS,
+                "properties.eye_blink_parameters",
+                FieldEditor::References,
+            )
+            .choices(true, parameters),
+            FieldSpec::new(
+                LIP_SYNC_PARAMETERS,
+                "properties.lip_sync_parameters",
+                FieldEditor::References,
+            )
+            .choices(true, parameters),
+            FieldSpec::new(
+                BREATH_PARAMETERS,
+                "properties.breath_parameters",
+                FieldEditor::References,
+            )
+            .choices(true, parameters),
+        ],
+        ..Default::default()
+    };
     for parameter in doc.parameters() {
         if bindings
             .get(&parameter.id)
@@ -66,6 +97,26 @@ pub(super) fn definition(doc: &Document) -> FormDefinition {
         }
     }
     form
+}
+
+fn parameters(document: &Document) -> Vec<Choice> {
+    document
+        .object_index()
+        .objects
+        .iter()
+        .filter(|item| item.reference.kind == ObjectKind::Parameter)
+        .map(|item| Choice {
+            label: format!(
+                "{} · {}",
+                item.name,
+                item.properties["runtime_id"]
+                    .as_str()
+                    .unwrap_or(&item.reference.id)
+            )
+            .into(),
+            value: item.reference.id.clone(),
+        })
+        .collect()
 }
 
 pub(super) fn values(doc: &Document) -> PropertyValues {

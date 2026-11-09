@@ -143,6 +143,22 @@ pub struct Model3Settings {
     pub source_content: Option<String>,
 }
 impl Model3Settings {
+    pub fn parameter_group_named(&self, name: &str) -> Option<&ModelParameterGroup> {
+        self.groups
+            .iter()
+            .flatten()
+            .find(|group| group.name == name)
+    }
+
+    pub fn motion_effect_parameters(&self, name: &str) -> impl Iterator<Item = &str> + '_ {
+        self.parameter_group_named(name)
+            .into_iter()
+            .flat_map(|group| group.parameters.iter())
+            // Cubism Native tracks the first 64 entries in each effect group.
+            .take(64)
+            .filter_map(|entry| entry.target.object_id())
+    }
+
     pub fn references_to(&self, id: &str) -> bool {
         self.groups
             .iter()

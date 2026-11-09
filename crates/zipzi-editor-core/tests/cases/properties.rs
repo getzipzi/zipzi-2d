@@ -24,6 +24,86 @@ fn patch(
 }
 
 #[test]
+fn animation_motion_effect_properties_publish_groups_and_support_undo() -> anyhow::Result<()> {
+    let mut doc = Document::new_blank()?;
+    let eye = doc.create_parameter(NewParameter {
+        name: "Eye".into(),
+        runtime_id: "ParamEye".into(),
+        ..Default::default()
+    })?;
+    let mouth = doc.create_parameter(NewParameter {
+        name: "Mouth".into(),
+        runtime_id: "ParamMouth".into(),
+        ..Default::default()
+    })?;
+    let object = doc.object_index().objects[0].reference.clone();
+    let eye_field = schema::document::EYE_BLINK_PARAMETERS.key;
+    let lip_field = schema::document::LIP_SYNC_PARAMETERS.key;
+    let update = patch(
+        &doc,
+        &object,
+        &[
+            (eye_field, PropertyValue::References(vec![eye.clone()])),
+            (lip_field, PropertyValue::References(vec![mouth.clone()])),
+        ],
+    );
+    let mut export_update = patch(
+        &doc,
+        &object,
+        &[(
+            schema::document::PADDING_PIXELS.key,
+            PropertyValue::Float(100.),
+        )],
+    );
+    export_update.expected.extend(update.expected.clone());
+    export_update.changes.extend(update.changes.clone());
+    let mut editor = support::editor_from_document(doc);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    let context = editor.editing_context_token().unwrap();
+    assert!(
+        editor
+            .commit_properties(context, object.clone(), export_update)
+            .is_err()
+    );
+    editor.commit_properties(context, object.clone(), update.clone())?;
+    let index = editor.document().unwrap().object_index();
+    let groups = index.get(&object).unwrap().properties["model_settings"]["groups"]
+        .as_array()
+        .unwrap();
+    assert_eq!(groups[0]["name"], "EyeBlink");
+    assert_eq!(groups[0]["parameters"][0]["target"]["object_id"], eye);
+    assert_eq!(groups[1]["name"], "LipSync");
+    assert_eq!(groups[1]["parameters"][0]["target"]["object_id"], mouth);
+    assert!(
+        editor
+            .commit_properties(context, object.clone(), update)
+            .is_err()
+    );
+
+    editor.execute(EditorCommand::Undo)?;
+    let doc = editor.document().unwrap();
+    assert_eq!(
+        doc.property_values(&object)?[&eye_field],
+        PropertyValue::References(vec![])
+    );
+    assert_eq!(
+        doc.property_values(&object)?[&lip_field],
+        PropertyValue::References(vec![])
+    );
+    editor.execute(EditorCommand::Redo)?;
+    let doc = editor.document().unwrap();
+    assert_eq!(
+        doc.property_values(&object)?[&eye_field],
+        PropertyValue::References(vec![eye])
+    );
+    assert_eq!(
+        doc.property_values(&object)?[&lip_field],
+        PropertyValue::References(vec![mouth])
+    );
+    Ok(())
+}
+
+#[test]
 fn mesh_properties_validate_preserve_payload_and_roundtrip() -> anyhow::Result<()> {
     let (mut doc, assets) = support::sample_document()?;
     let object = ObjectRef::new(ObjectKind::Mesh, &doc.layers()[0].id);

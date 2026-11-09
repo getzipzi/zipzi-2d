@@ -151,7 +151,9 @@ impl Editor {
     }
     pub fn select_expression(&mut self, document: DocumentId, expression_id: String) -> Result<()> {
         self.ensure_animation_target(document)?;
-        self.set_physics_manual(document, false)?;
+        if !self.cursor_physics_active() {
+            self.set_physics_manual(document, false)?;
+        }
         self.cancel_timeline_edit();
         let session = self.active_session_mut().unwrap();
         let catalog = session.document().animation_catalog();
@@ -162,10 +164,48 @@ impl Editor {
             .ok_or_else(|| anyhow::anyhow!("Expression no longer exists"))?;
         let _ = resource; // Per-entry diagnostics do not prevent activation.
         let animation = &mut session.animation.playback;
+        let playing = animation.playing;
+        let transition = if playing {
+            ExpressionTransition::Fade
+        } else {
+            ExpressionTransition::Immediate
+        };
         animation.inspected = Some(crate::ObjectRef::new(
             crate::ObjectKind::Expression,
             &expression_id,
         ));
+        if let Some(cursor) = &mut animation.cursor_physics {
+            if cursor
+                .expressions
+                .last()
+                .is_none_or(|trigger| {
+                    trigger.expression_id != expression_id
+                        || trigger.time > animation.time
+                        || (!playing && trigger.transition != transition)
+                })
+            {
+                // New expressions can be added without invalidating an ongoing preview.
+                if animation.source.as_ref().is_some_and(|source| {
+                    source
+                        .evaluation_snapshot()
+                        .document()
+                        .expression(&expression_id)
+                        .is_none()
+                }) {
+                    animation.source = None;
+                }
+                cursor.expressions.retain(|trigger| {
+                    trigger.time < animation.time || (playing && trigger.time == animation.time)
+                });
+                cursor.expressions.push(ExpressionTrigger {
+                    expression_id,
+                    time: animation.time,
+                    transition,
+                });
+                animation.rebuild();
+            }
+            return Ok(());
+        }
         if animation.expression.as_ref() == Some(&expression_id)
             && animation
                 .expressions
@@ -180,7 +220,6 @@ impl Editor {
         {
             return Ok(());
         }
-        let playing = animation.playing;
         // A paused click replaces this time's choice. Earlier triggers remain
         // replayable, but the immediate activation cuts their runtime queue.
         animation.expressions.retain(|trigger| {
@@ -189,11 +228,7 @@ impl Editor {
         animation.expressions.push(ExpressionTrigger {
             expression_id: expression_id.clone(),
             time: animation.time,
-            transition: if playing {
-                ExpressionTransition::Fade
-            } else {
-                ExpressionTransition::Immediate
-            },
+            transition,
         });
         animation.expression = Some(expression_id);
         animation.rebuild();
@@ -208,12 +243,16 @@ impl Editor {
         self.cancel_timeline_edit();
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         let playing = animation.playing;
-        animation.expression = None;
         animation.inspected = animation
             .motion
             .as_ref()
             .map(|motion| crate::ObjectRef::new(crate::ObjectKind::Motion, &motion.clip_id));
-        animation.expressions.clear();
+        if let Some(cursor) = &mut animation.cursor_physics {
+            cursor.expressions.clear();
+        } else {
+            animation.expression = None;
+            animation.expressions.clear();
+        }
         animation.rebuild();
         animation.playing = playing;
         Ok(())
@@ -523,10 +562,14 @@ impl Editor {
         animation.frames.record(identity);
         Some(AnimationRequest {
             physics: animation.physics_preview.clone(),
+            eye_blink_seed: animation
+                .cursor_physics
+                .as_ref()
+                .map(|cursor| cursor.eye_blink_seed),
             identity,
             source,
             motion: animation.motion.clone(),
-            expressions: animation.expressions.clone(),
+            expressions: animation.expression_schedule().to_vec(),
         })
     }
 }

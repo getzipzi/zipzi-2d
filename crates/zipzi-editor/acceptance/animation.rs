@@ -264,6 +264,7 @@ fn model(
         } {
             let mut request = zipzi_editor_core::AnimationRequest {
                 physics: Default::default(),
+                eye_blink_seed: None,
                 identity: request.identity,
                 source: request.source.clone(),
                 motion: request.motion.clone(),

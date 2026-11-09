@@ -377,13 +377,23 @@ impl DocumentBuilder {
                     .iter()
                     .any(|id| bindings.contains_key(id) && self.parameter(id).is_none())
             });
-        if retired_cursor_bindings {
+        let retired_breath_targets = self
+            .editor_state()
+            .breath_preview_parameters
+            .as_ref()
+            .is_some_and(|parameters| {
+                parameters
+                    .iter()
+                    .any(|id| self.touched_parameters.contains(id) && self.parameter(id).is_none())
+            });
+        if retired_cursor_bindings || retired_breath_targets {
             let mut editor = self.editor_state().clone();
-            editor
-                .cursor_preview_bindings
-                .as_mut()
-                .unwrap()
-                .retain(|id, _| self.parameter(id).is_some());
+            if let Some(bindings) = &mut editor.cursor_preview_bindings {
+                bindings.retain(|id, _| self.parameter(id).is_some());
+            }
+            if let Some(parameters) = &mut editor.breath_preview_parameters {
+                parameters.retain(|id| self.parameter(id).is_some());
+            }
             self.set_editor_state(editor)?;
         }
         if let Some(ids) = self.touched.get(&RecordDomain::BlendKeyTable) {

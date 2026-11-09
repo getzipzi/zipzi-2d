@@ -3,7 +3,10 @@ use anyhow::{Result, ensure};
 use zipzi_animation::CompiledCurve;
 use zipzi_animation::motion_bezier_time_is_monotonic;
 use zipzi_animation::sample_motion_curve;
-use zipzi_core::document::{MotionClip, MotionEvent, MotionSegment};
+use zipzi_core::document::{
+    MOTION_EFFECT_GROUPS, MotionClip, MotionEvent, MotionSegment, MotionTrackTarget,
+    supported_model_motion_channel,
+};
 use zipzi_sdk::MotionInterpolation;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -192,6 +195,23 @@ impl TimelineProjection {
             1.,
             vec![],
         );
+        for name in MOTION_EFFECT_GROUPS {
+            if model.model3_settings().parameter_group_named(name).is_some()
+                || clip.tracks.iter().any(|track| {
+                    matches!(&track.target, MotionTrackTarget::Model { runtime_id } if runtime_id == name)
+                })
+            {
+                result.add_channel(
+                    clip,
+                    TimelineChannelId::Model(name.into()),
+                    name.into(),
+                    name.into(),
+                    Some((0., 1.)),
+                    if name == "EyeBlink" { 1. } else { 0. },
+                    vec![],
+                );
+            }
+        }
         for id in model.part_order() {
             let part = model.part(id).unwrap();
             result.add_channel(
@@ -366,7 +386,7 @@ impl TimelineProjection {
         }
         let editable = !clip.has_extensions()
             && !matches!(&id, TimelineChannelId::Unresolved { .. })
-            && !matches!(&id, TimelineChannelId::Model(id) if id != "Opacity");
+            && !matches!(&id, TimelineChannelId::Model(id) if !supported_model_motion_channel(id));
         let tracks = clip
             .tracks
             .iter()

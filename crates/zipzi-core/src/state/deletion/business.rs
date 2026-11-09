@@ -676,6 +676,9 @@ impl Model<'_> {
                 if let Some(bindings) = &mut editor_state.cursor_preview_bindings {
                     bindings.remove(&key.id);
                 }
+                if let Some(parameters) = &mut editor_state.breath_preview_parameters {
+                    parameters.retain(|id| id != &key.id);
+                }
             }
         }
         if display_info != *candidate.content.display_info {

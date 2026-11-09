@@ -4978,6 +4978,22 @@
             "kind": "optional"
           },
           "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Interactive breath targets by parameter UUID. None uses ParamBreath if present.",
+          "name": "breath_preview_parameters",
+          "rust_name": "breath_preview_parameters",
+          "shape": {
+            "item": {
+              "item": {
+                "kind": "string"
+              },
+              "kind": "sequence"
+            },
+            "kind": "optional"
+          },
+          "skip": false
         }
       ],
       "kind": "serde_record",

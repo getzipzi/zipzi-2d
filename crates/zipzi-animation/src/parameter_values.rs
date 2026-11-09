@@ -29,6 +29,30 @@ pub(crate) fn set_value(target: &mut BTreeMap<String, f32>, id: &str, value: f32
     }
 }
 
+pub(crate) fn repeat_value(parameter: &zipzi_core::Parameter, value: f32) -> f32 {
+    if !parameter.repeat {
+        return value;
+    }
+    let (min, max) = (parameter.minimum, parameter.maximum);
+    if value > max {
+        let over = (value - max) % (max - min);
+        if over.is_nan() {
+            max
+        } else {
+            min + over
+        }
+    } else if value < min {
+        let over = (min - value) % (max - min);
+        if over.is_nan() {
+            min
+        } else {
+            max - over
+        }
+    } else {
+        value
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

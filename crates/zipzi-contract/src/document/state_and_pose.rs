@@ -77,6 +77,9 @@ pub struct EditorState {
     /// Custom cursor mappings by parameter UUID. None uses standard parameter IDs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cursor_preview_bindings: Option<BTreeMap<String, CursorPreviewBinding>>,
+    /// Interactive breath targets by parameter UUID. None uses ParamBreath if present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub breath_preview_parameters: Option<Vec<String>>,
 }
 impl EditorState {
     pub fn hidden_objects(&self) -> impl Iterator<Item = &str> {
@@ -91,6 +94,7 @@ impl EditorState {
             && self.rotation_bone_reference_scales.is_empty()
             && self.rotation_bone_angle_offsets.is_empty()
             && self.cursor_preview_bindings.is_none()
+            && self.breath_preview_parameters.is_none()
     }
     pub fn get(&self, id: &str) -> ObjectEditorState {
         self.objects.get(id).copied().unwrap_or_default()

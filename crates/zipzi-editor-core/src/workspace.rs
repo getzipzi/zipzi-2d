@@ -345,8 +345,9 @@ impl Editor {
                         | EditorCommand::FinishEdit
                         | EditorCommand::CancelEdit
                 )
-                || matches!(&command, EditorCommand::SetObjectProperties { object, .. }
-                    if matches!(object.kind, crate::ObjectKind::Motion | crate::ObjectKind::MotionGroup | crate::ObjectKind::MotionRegistration | crate::ObjectKind::Expression | crate::ObjectKind::ExpressionEntry | crate::ObjectKind::PhysicsGroup | crate::ObjectKind::Physics | crate::ObjectKind::Pose | crate::ObjectKind::PoseGroup | crate::ObjectKind::PoseEntry | crate::ObjectKind::PoseLink)),
+                || matches!(&command, EditorCommand::SetObjectProperties { object, patch }
+                    if matches!(object.kind, crate::ObjectKind::Motion | crate::ObjectKind::MotionGroup | crate::ObjectKind::MotionRegistration | crate::ObjectKind::Expression | crate::ObjectKind::ExpressionEntry | crate::ObjectKind::PhysicsGroup | crate::ObjectKind::Physics | crate::ObjectKind::Pose | crate::ObjectKind::PoseGroup | crate::ObjectKind::PoseEntry | crate::ObjectKind::PoseLink)
+                        || (object.kind == crate::ObjectKind::Document && patch.is_motion_effect_mapping())),
             "Modeling commands are unavailable in Animation"
         );
         if matches!(

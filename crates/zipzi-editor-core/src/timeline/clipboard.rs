@@ -105,7 +105,7 @@ impl TimelineClipboard {
         for copied in &self.tracks {
             ensure!(
                 !matches!(&copied.channel, TimelineChannelId::Unresolved { .. })
-                    && !matches!(&copied.channel, TimelineChannelId::Model(id) if id != "Opacity"),
+                    && !matches!(&copied.channel, TimelineChannelId::Model(id) if !zipzi_core::document::supported_model_motion_channel(id)),
                 "Copied target type is read-only"
             );
             let channel_id = target.map_or(&copied.channel, |target| &target.channel);

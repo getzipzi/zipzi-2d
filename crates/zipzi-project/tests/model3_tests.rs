@@ -97,6 +97,110 @@ fn identical_expression_registrations_import_once() {
 }
 
 #[test]
+fn model3_import_discovers_unreferenced_animation_sidecars() {
+    use std::{fs, path::Path};
+
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures");
+    let source = fixtures.join("external_v50");
+    let temporary = tempfile::tempdir().unwrap();
+    let root = temporary.path();
+    for file in ["model.moc3", "texture_00.png"] {
+        fs::copy(source.join(file), root.join(file)).unwrap();
+    }
+    fs::create_dir_all(root.join("Animation/nested")).unwrap();
+    let expression = include_str!("../../../fixtures/animation_cpu/default.exp3.json");
+    let motion = include_str!("../../../fixtures/animation_cpu/minimal.motion3.json");
+    let discovered_expression = root.join("Smile.exp3.json");
+    let discovered_motion = root.join("Animation/nested/待机.MOTION3.JSON");
+    fs::write(&discovered_expression, expression).unwrap();
+    fs::write(&discovered_motion, motion).unwrap();
+    fs::write(root.join("registered.exp3.json"), expression).unwrap();
+    fs::write(root.join("Animation/registered.motion3.json"), motion).unwrap();
+    fs::write(root.join("Animation/broken.motion3.json"), "{broken").unwrap();
+    fs::write(root.join("unrelated.json"), "{}").unwrap();
+    let other = root.join("Other");
+    fs::create_dir_all(&other).unwrap();
+    for file in ["model.moc3", "texture_00.png"] {
+        fs::copy(source.join(file), other.join(file)).unwrap();
+    }
+    let foreign_motion = other.join("foreign.motion3.json");
+    let foreign_expression = other.join("foreign.exp3.json");
+    fs::write(&foreign_motion, motion).unwrap();
+    fs::write(&foreign_expression, expression).unwrap();
+    let mut other_model3 = serde_json::json!({
+        "Version": 3,
+        "FileReferences": {
+            "Moc": "model.moc3",
+            "Textures": ["texture_00.png"],
+            "Expressions": [{"Name": "Foreign", "File": "foreign.exp3.json"}],
+            "Motions": {"Idle": [{"File": "foreign.motion3.json"}]}
+        }
+    });
+    fs::write(other.join("other.model3.json"), other_model3.to_string()).unwrap();
+    let model3 = serde_json::json!({
+        "Version": 3,
+        "FileReferences": {
+            "Moc": "model.moc3",
+            "Textures": ["texture_00.png"],
+            "Expressions": [{"Name": "Smile", "File": "./registered.exp3.json"}],
+            "Motions": {
+                "Idle": [{"File": "./Animation/registered.motion3.json", "FadeInTime": 0.25}]
+            }
+        }
+    });
+    fs::write(root.join("model.model3.json"), model3.to_string()).unwrap();
+    let path = zipzi_project::resolve_model3_entry(&root.join("model.moc3")).unwrap();
+    let (result, imported, _) = ProjectImporter::default().import_model3(&path);
+    assert!(result.status.is_ok(), "{result:?}");
+    assert!(result
+        .diagnostics
+        .iter()
+        .any(|diagnostic| { diagnostic.asset_id.ends_with("broken.motion3.json") }));
+
+    let imported = imported.unwrap();
+    let doc = &imported.document;
+    let expressions = doc.expression_order();
+    assert_eq!(expressions.len(), 2);
+    assert_eq!(doc.expression(&expressions[0]).unwrap().name, "Smile");
+    assert!(doc
+        .expression(&expressions[1])
+        .unwrap()
+        .name
+        .starts_with("Smile-"));
+    assert_eq!(doc.motion_order().len(), 2);
+    assert_eq!(doc.motion_groups().len(), 1);
+    let idle = &doc.motion_groups()[0];
+    assert_eq!(idle.name, "Idle");
+    assert_eq!(idle.entries.len(), 1);
+    assert_eq!(idle.entries[0].fade_in, Some(0.25));
+    assert_eq!(doc.motion_roots().len(), 1);
+    assert_eq!(
+        doc.motion(&doc.motion_roots()[0].clip_id).unwrap().name,
+        "待机"
+    );
+    assert!(doc.missing_attachments().is_empty());
+    for path in [discovered_expression, discovered_motion] {
+        assert!(imported
+            .protected_paths
+            .contains(&path.canonicalize().unwrap()));
+    }
+    for path in [foreign_expression, foreign_motion] {
+        assert!(!imported.protected_paths.contains(&path.canonicalize().unwrap()));
+    }
+
+    other_model3["FileReferences"]["Expressions"][0]["File"] = "Other/foreign.exp3.json".into();
+    other_model3["FileReferences"]["Motions"]["Idle"][0]["File"] =
+        "Other/foreign.motion3.json".into();
+    fs::write(root.join("shared.model3.json"), other_model3.to_string()).unwrap();
+    let (result, imported, _) = ProjectImporter::default().import_model3(&path);
+    assert!(result.status.is_ok(), "{result:?}");
+    let doc = imported.unwrap().document;
+    assert_eq!(doc.expression_order().len(), 1);
+    assert_eq!(doc.motion_order().len(), 1);
+    assert!(doc.motion_roots().is_empty());
+}
+
+#[test]
 fn model3_groups_layout_and_hit_areas_survive_project_and_package() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()

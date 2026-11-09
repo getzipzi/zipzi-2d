@@ -8,7 +8,6 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
     use gpui_kit::{
         InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta,
         ScrollWheelEvent, VisualTestContext,
-        component::dock::{DockLayout, DockPlacement, PanelId, panel_handle},
     };
     use zipzi_editor_core::{ObjectKind, ObjectRef, ViewportInteractionKind};
 
@@ -41,7 +40,7 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
         });
         window.render_frame(cx);
         window
-            .within("physics-list-toolbar")
+            .within("canvas-zoom-toolbar")
             .click("physics-cursor-preview", cx);
         window.render_frame(cx);
         let bounds = window.find("canvas-body").bounds();
@@ -99,19 +98,6 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
             view.run_command(CommandId::ModelingWorkspace, window, cx);
             view.run_command(CommandId::AnimationWorkspace, window, cx);
             assert!(view.editor.cursor_physics_active());
-            let dock = view.dock.as_ref().unwrap();
-            let physics = &dock.animation_inspectors[&PanelKind::AnimationPhysics];
-            let layout = DockLayout::h_split()
-                .child(
-                    DockLayout::tabs().panel_view(panel_handle(physics.clone()), cx),
-                    Some(px(100.)),
-                )
-                .child(
-                    DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
-                    None,
-                );
-            dock.area
-                .update(cx, |area, cx| area.set_center(layout, window, cx));
         });
         window.render_frame(cx);
     })
@@ -119,23 +105,17 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
     cx.run_until_parked();
     cx.update_window(harness.window, |_, window, cx| {
         window.render_frame(cx);
-        let header = harness.view.read_with(cx, |view, cx| {
-            let dock = view.dock.as_ref().unwrap();
-            let physics = &dock.animation_inspectors[&PanelKind::AnimationPhysics];
-            let area = dock.area.read(cx);
-            let node = area
-                .layout(DockPlacement::Center)
-                .unwrap()
-                .find_panel_node(PanelId::from(physics.entity_id()))
-                .unwrap();
-            format!("dock-header-{}", node.as_u64())
-        });
-        window.within(header).click("panel-header-tools", cx);
-        window.render_frame(cx);
         window
-            .within("physics-list-toolbar")
-            .click("physics-cursor-mapping", cx);
+            .within("canvas-zoom-toolbar")
+            .click("physics-parameter-mapping", cx);
         window.render_frame(cx);
+        assert!(
+            window
+                .find("object-property-eye_blink_parameters")
+                .visible()
+        );
+        assert!(window.find("object-property-lip_sync_parameters").visible());
+        assert!(window.find("object-property-breath_parameters").visible());
         assert!(window.find("cursor-mapping-actions").visible());
         assert_eq!(
             window.find("cursor-mapping-table").role(),

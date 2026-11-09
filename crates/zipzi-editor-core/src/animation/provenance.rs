@@ -63,6 +63,7 @@ pub struct AnimationIdentity {
 #[derive(Clone)]
 pub struct AnimationRequest {
     pub physics: crate::PhysicsPreviewSettings,
+    pub eye_blink_seed: Option<u32>,
     pub identity: AnimationIdentity,
     pub source: Arc<AnimationSource>,
     pub motion: Option<MotionSelection>,
@@ -83,6 +84,7 @@ impl AnimationRequest {
             && self.motion == other.motion
             && self.expressions == other.expressions
             && self.physics == other.physics
+            && self.eye_blink_seed == other.eye_blink_seed
     }
 }
 

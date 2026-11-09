@@ -330,7 +330,7 @@ impl PropertiesPanel {
                             .as_ref()
                             .is_some_and(|(_, token)| token.owned(&state.editor)))
                     && self.target.as_ref().is_some_and(|target| {
-                        target.is_cursor_mapping()
+                        target.is_parameter_mapping()
                             || state.editor.document().is_some_and(|doc| {
                                 doc.authoring_capabilities(&target.object).is_ok_and(|c| {
                                     c.state(zipzi_editor_core::AuthoringAction::Patch)
@@ -1126,7 +1126,13 @@ impl PropertiesPanel {
                     .accessibility_label(t!(self.field_spec(id).label))
                     .disabled(disabled)
                     .when(references, |select| {
-                        select.placeholder(t!("properties.add_mask"))
+                        let label =
+                            if zipzi_editor_core::property::document::is_motion_effect_field(id) {
+                                "properties.add_effect_parameter"
+                            } else {
+                                "properties.add_mask"
+                            };
+                        select.placeholder(t!(label))
                     })
                     .w_full(),
             )

@@ -254,6 +254,7 @@ pub(super) fn owned() -> OwnedDocument {
         )]
         .into(),
     );
+    input.editor_state.breath_preview_parameters = Some(vec![id(4)]);
     input.hierarchy_order.organization = vec![id(2), id(6), id(7)];
     input.hierarchy_order.deformation = vec![id(3), id(6)];
     input.hierarchy_order.glues = vec![id(13)];

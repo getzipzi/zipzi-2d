@@ -61,6 +61,7 @@ macro_rules! viewport_panel {
 mod brush_bar;
 mod brush_tick;
 mod context_menu;
+mod cursor_preview;
 mod deformer_bar;
 mod input;
 mod isolation;

@@ -1,13 +1,14 @@
 //! Motion stage. The owner supplies one clock and frame for all stages.
+use crate::eye_blink::AutoEyeBlink;
+use crate::motion_tracks::apply_motion_tracks;
 use crate::parameter_values::{copy_values, set_value};
-use crate::pose::real_parameter_for_part;
 use crate::{
     sample_motion_curve, AnimationError, CompiledCurve, MotionEventFired, MotionPlaybackPosition,
     MotionSnapshot,
 };
 use std::collections::BTreeMap;
 use zipzi_core::{
-    document::{MotionClip, MotionSegment, MotionTrack, MotionTrackTarget},
+    document::{MotionClip, MotionSegment, MotionTrack},
     state::DocumentState,
 };
 #[derive(Clone)]
@@ -21,7 +22,7 @@ struct Activation {
 struct ParameterInput {
     time: f32,
     parameter_id: String,
-    value: f32,
+    value: Option<f32>,
 }
 
 #[derive(Clone)]
@@ -43,6 +44,7 @@ pub(crate) struct MotionRuntime {
     next_parameter_input: usize,
     next_activation: usize,
     playing: Vec<Playing>,
+    auto_eye_blink: Option<AutoEyeBlink>,
 }
 impl MotionRuntime {
     pub(crate) fn canonical_motion_output_bytes(&self, document: &DocumentState) -> usize {
@@ -106,6 +108,10 @@ impl MotionRuntime {
                 .sum::<usize>()
             + vec_bytes(&self.playing)
             + self.playing.iter().map(|v| v.id.capacity()).sum::<usize>()
+            + self
+                .auto_eye_blink
+                .as_ref()
+                .map_or(0, AutoEyeBlink::heap_bytes)
     }
     pub(crate) fn new(parameters: BTreeMap<String, f32>) -> Self {
         Self {
@@ -115,17 +121,29 @@ impl MotionRuntime {
             next_parameter_input: 0,
             next_activation: 0,
             playing: Vec::new(),
+            auto_eye_blink: None,
         }
+    }
+    pub(crate) fn enable_auto_eye_blink(&mut self, seed: u32) {
+        self.auto_eye_blink = Some(AutoEyeBlink::new(seed));
     }
     pub(crate) fn copy_schedule_from(&mut self, other: &Self) {
         self.activations.clone_from(&other.activations);
         self.parameter_inputs.clone_from(&other.parameter_inputs);
+        // Fresh replay candidates inherit the setting. Checkpoints already
+        // carry their own blink state for the same preview configuration.
+        if self.auto_eye_blink.is_none() {
+            self.auto_eye_blink.clone_from(&other.auto_eye_blink);
+        }
     }
     pub(crate) fn reset(&mut self, parameters: BTreeMap<String, f32>) {
         self.motion_parameters = parameters;
         self.next_parameter_input = 0;
         self.next_activation = 0;
         self.playing.clear();
+        if let Some(blink) = &mut self.auto_eye_blink {
+            blink.reset();
+        }
     }
     pub(crate) fn schedule_motion(
         &mut self,
@@ -167,9 +185,9 @@ impl MotionRuntime {
         now: f32,
         id: &str,
         time: f32,
-        value: f32,
+        value: Option<f32>,
     ) -> Result<(), AnimationError> {
-        if !time.is_finite() || time < 0.0 || !value.is_finite() {
+        if !time.is_finite() || time < 0.0 || value.is_some_and(|value| !value.is_finite()) {
             return Err(AnimationError::InvalidTime);
         }
         if time < now {
@@ -186,7 +204,7 @@ impl MotionRuntime {
             ParameterInput {
                 time,
                 parameter_id: id.into(),
-                value: value.clamp(parameter.minimum, parameter.maximum),
+                value: value.map(|value| value.clamp(parameter.minimum, parameter.maximum)),
             },
         );
         Ok(())
@@ -217,11 +235,16 @@ impl MotionRuntime {
             && self.parameter_inputs[self.next_parameter_input].time <= time
         {
             let input = &self.parameter_inputs[self.next_parameter_input];
-            set_value(
-                &mut self.motion_parameters,
-                &input.parameter_id,
-                input.value,
-            );
+            let value = input.value.unwrap_or_else(|| {
+                document
+                    .parameter(&input.parameter_id)
+                    .expect("input parameter")
+                    .default_value
+            });
+            set_value(&mut self.motion_parameters, &input.parameter_id, value);
+            if let Some(blink) = &mut self.auto_eye_blink {
+                blink.set_input_override(&input.parameter_id, input.value.is_some());
+            }
             self.next_parameter_input += 1;
         }
         copy_values(&mut snapshot.parameters, &self.motion_parameters);
@@ -252,6 +275,7 @@ impl MotionRuntime {
             });
             self.next_activation += 1;
         }
+        let motion_updated = !self.playing.is_empty();
         for playing in &mut self.playing {
             let clip = document.motion(&playing.id).expect("scheduled motion");
             let (fade_in, fade_out) = playing.fades;
@@ -290,84 +314,26 @@ impl MotionRuntime {
                 _ => 1.0,
             };
             let weight = in_weight * out_weight;
-            for track in &clip.tracks {
-                let value = sample_track(track, &curves[&track.id], offset, clip);
-                match &track.target {
-                    MotionTrackTarget::Parameter { parameter_id } => {
-                        let current = snapshot
-                            .parameters
-                            .get(parameter_id)
-                            .copied()
-                            .expect("resolved parameter");
-                        let in_weight = match track.fade_in {
-                            Some(fade) if fade > 0.0 => ease((time - playing.fade_in_start) / fade),
-                            Some(_) => 1.0,
-                            None => in_weight,
-                        };
-                        let out_weight = match (track.fade_out, playing.end_time) {
-                            (Some(fade), Some(end)) if fade > 0.0 => ease((end - time) / fade),
-                            (Some(_), _) => 1.0,
-                            (None, _) => out_weight,
-                        };
-                        let parameter = document
-                            .parameter(parameter_id)
-                            .expect("resolved parameter");
-                        set_value(
-                            &mut snapshot.parameters,
-                            parameter_id,
-                            lerp(
-                                current,
-                                value,
-                                if track.fade_in.is_none() && track.fade_out.is_none() {
-                                    weight
-                                } else {
-                                    in_weight * out_weight
-                                },
-                            )
-                            .clamp(parameter.minimum, parameter.maximum),
-                        );
-                    }
-                    MotionTrackTarget::PartOpacity { part_id } => {
-                        if let Some(parameter_id) = real_parameter_for_part(document, part_id) {
-                            let parameter = document
-                                .parameter(&parameter_id)
-                                .expect("resolved parameter");
-                            snapshot.parameters.insert(
-                                parameter_id,
-                                value.clamp(parameter.minimum, parameter.maximum),
-                            );
-                        } else {
-                            snapshot
-                                .part_opacity_channels
-                                .insert(part_id.clone(), value);
-                        }
-                        if document.pose().as_deref().is_none() {
-                            snapshot.coverage.push(format!(
-                                "{}: PartOpacity {part_id} has no Pose asset",
-                                clip.id
-                            ));
-                        }
-                    }
-                    MotionTrackTarget::Model { runtime_id } if runtime_id == "Opacity" => {
-                        snapshot.model_opacity = value;
-                    }
-                    MotionTrackTarget::Model { runtime_id } => snapshot.coverage.push(format!(
-                        "{}: Model {runtime_id} mapping requires model3 Groups",
-                        clip.id
-                    )),
-                    MotionTrackTarget::Unspecified => snapshot.coverage.push(format!(
-                        "motion {} track {} needs configuration",
-                        clip.id, track.id
-                    )),
-                    MotionTrackTarget::Unresolved {
-                        category,
-                        runtime_id,
-                    } => snapshot.coverage.push(format!(
-                        "{}: virtual {category} {runtime_id} has no drawable target",
-                        clip.id
-                    )),
-                }
-            }
+            apply_motion_tracks(
+                document,
+                clip,
+                |track| sample_track(track, &curves[&track.id], offset, clip),
+                weight,
+                |track| {
+                    let in_weight = match track.fade_in {
+                        Some(fade) if fade > 0.0 => ease((time - playing.fade_in_start) / fade),
+                        Some(_) => 1.0,
+                        None => in_weight,
+                    };
+                    let out_weight = match (track.fade_out, playing.end_time) {
+                        (Some(fade), Some(end)) if fade > 0.0 => ease((end - time) / fade),
+                        (Some(_), _) => 1.0,
+                        (None, _) => out_weight,
+                    };
+                    in_weight * out_weight
+                },
+                snapshot,
+            );
             let mut before = playing.previous_offset;
             let mut after = elapsed;
             if clip.looping && !clip.events.is_empty() {
@@ -398,6 +364,9 @@ impl MotionRuntime {
                     .is_some_and(|clip| clip.looping || time - item.start_time < clip.duration)
         });
         copy_values(&mut self.motion_parameters, &snapshot.parameters);
+        if let Some(blink) = self.auto_eye_blink.as_mut().filter(|_| !motion_updated) {
+            blink.apply(document, &mut snapshot.parameters, time - snapshot.time);
+        }
         snapshot.active_motions = self.playing.iter().map(|item| item.id.clone()).collect();
         Ok(())
     }

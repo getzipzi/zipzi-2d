@@ -1030,9 +1030,9 @@ impl Editor {
                     && target
                     && !self.is_busy()
                     && !self.exiting()
-                    && self
-                        .animation()
-                        .is_some_and(|a| a.expression.is_some() || !a.expressions.is_empty())
+                    && self.animation().is_some_and(|a| {
+                        a.preview_expression().is_some() || !a.expression_schedule().is_empty()
+                    })
             }
 
             New | Open | ImportModel3 | ImportPsd | ImportCubism => !self.exiting(),

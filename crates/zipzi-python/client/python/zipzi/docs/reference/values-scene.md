@@ -167,6 +167,7 @@ Persistent Editor preferences, independent of runtime deformation.
 | `rotation_bone_reference_scales` | `Mapping[str, float]` | `{}` | Evaluated Rotation scale at the display baseline, including inherited coordinate conversion. |
 | `rotation_bone_angle_offsets` | `Mapping[str, float]` | `{}` | Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0. |
 | `cursor_preview_bindings` | `Mapping[str, CursorPreviewBinding] \| None` | `null` (`None`) | Custom cursor mappings by parameter UUID. None uses standard parameter IDs. |
+| `breath_preview_parameters` | `tuple[str, ...] \| None` | `null` (`None`) | Interactive breath targets by parameter UUID. None uses ParamBreath if present. |
 
 Related: [zipzi.values.CursorPreviewBinding](values-scene.md#zipzi-values-cursorpreviewbinding), [zipzi.values.ObjectEditorState](values-scene.md#zipzi-values-objecteditorstate)
 

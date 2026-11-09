@@ -5,7 +5,9 @@ use std::{
     sync::Arc,
 };
 use zipzi_animation::MotionSnapshot;
-use zipzi_core::document::{ExpressionTarget, MotionTrackTarget};
+use zipzi_core::document::{
+    ExpressionTarget, MOTION_EFFECT_GROUPS, MotionTrackTarget, supported_model_motion_channel,
+};
 use zipzi_core::state::PhysicsTargetProjection;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +43,10 @@ pub enum AnimationDiagnostic {
     UnsupportedChannel {
         motion: String,
         channel: String,
+    },
+    UnconfiguredMotionEffect {
+        motion: String,
+        group: String,
     },
     PartOpacityWithoutPose {
         motion: String,
@@ -134,13 +140,33 @@ impl AnimationCatalog {
                             target: runtime_id.clone(),
                         },
                     ),
-                    MotionTrackTarget::Model { runtime_id } if runtime_id != "Opacity" => (
-                        format!("{id}: Model {runtime_id} mapping requires model3 Groups"),
-                        AnimationDiagnostic::UnsupportedChannel {
-                            motion: motion.name.clone(),
-                            channel: runtime_id.clone(),
-                        },
-                    ),
+                    MotionTrackTarget::Model { runtime_id }
+                        if MOTION_EFFECT_GROUPS.contains(&runtime_id.as_str())
+                            && model
+                                .model3_settings()
+                                .motion_effect_parameters(runtime_id)
+                                .next()
+                                .is_none() =>
+                    {
+                        (
+                            format!("{id}: Model {runtime_id} mapping requires model3 Groups"),
+                            AnimationDiagnostic::UnconfiguredMotionEffect {
+                                motion: motion.name.clone(),
+                                group: runtime_id.clone(),
+                            },
+                        )
+                    }
+                    MotionTrackTarget::Model { runtime_id }
+                        if !supported_model_motion_channel(runtime_id) =>
+                    {
+                        (
+                            format!("{id}: Model {runtime_id} mapping requires model3 Groups"),
+                            AnimationDiagnostic::UnsupportedChannel {
+                                motion: motion.name.clone(),
+                                channel: runtime_id.clone(),
+                            },
+                        )
+                    }
                     MotionTrackTarget::PartOpacity { part_id } if model.pose().is_none() => (
                         format!("{id}: PartOpacity {part_id} has no Pose asset"),
                         AnimationDiagnostic::PartOpacityWithoutPose {

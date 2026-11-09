@@ -1,6 +1,7 @@
 use super::*;
 impl Model<'_> {
     pub(crate) fn editor_state_issues(&self, state: &EditorState) -> Vec<StructureIssue> {
+        let mut breath_targets = std::collections::HashSet::new();
         state
             .objects
             .keys()
@@ -68,6 +69,16 @@ impl Model<'_> {
                         status: Status::error(
                             "INVALID_EDITOR_STATE",
                             "Cursor preview requires an existing parameter and an influence from 0 to 100",
+                        ),
+                    })
+            }))
+            .chain(state.breath_preview_parameters.iter().flatten().filter_map(|id| {
+                (!self.content.parameters.contains_key(id) || !breath_targets.insert(id))
+                    .then(|| StructureIssue {
+                        object_id: id.clone(),
+                        status: Status::error(
+                            "INVALID_EDITOR_STATE",
+                            "Breath preview requires unique targets that reference existing parameters",
                         ),
                     })
             }))

@@ -7,7 +7,7 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 use std::rc::Rc;
-use zipzi_editor_core::{CommandId, ControlKind};
+use zipzi_editor_core::{CommandId, ControlKind, DocumentId, ViewportKind};
 
 const ZOOM_ACTIONS: [(&str, CommandId, IconName); 3] = [
     ("btn_zoom_out", CommandId::ZoomOut, IconName::Minus),
@@ -20,6 +20,7 @@ type ZoomAction = Rc<dyn Fn(CommandId, &mut Window, &mut App)>;
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct HeaderState {
     isolation: Option<super::isolation::IsolationHeaderState>,
+    preview: Option<PreviewControls>,
     percentage: i32,
     zoom_enabled: [bool; 3],
     show_transparency_grid: bool,
@@ -31,6 +32,13 @@ pub(crate) struct HeaderState {
     origin_crosshair_enabled: bool,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+struct PreviewControls {
+    document: DocumentId,
+    active: bool,
+    disabled: bool,
+}
+
 pub(super) fn state(
     owner: &EditorView,
     canvas: &super::ViewportSurface,
@@ -38,6 +46,17 @@ pub(super) fn state(
 ) -> HeaderState {
     HeaderState {
         isolation: super::isolation::state(owner, canvas, modal),
+        preview: owner
+            .editor
+            .active_id()
+            .filter(|_| canvas.kind == ViewportKind::Animation)
+            .map(|document| PreviewControls {
+                document,
+                active: owner.editor.cursor_physics_active(),
+                disabled: modal
+                    || owner.editor.is_busy()
+                    || canvas.binding(&owner.editor).is_none(),
+            }),
         percentage: (canvas
             .binding(&owner.editor)
             .and_then(|binding| owner.editor.viewport_view(binding))
@@ -218,6 +237,14 @@ impl RenderOnce for CanvasZoomBar {
         let isolation = header.isolation.map(|header| {
             super::isolation::controls(self.owner.clone(), self.canvas.clone(), header)
         });
+        let preview = header.preview.map(|preview| {
+            super::cursor_preview::controls(
+                self.owner.downgrade(),
+                preview.document,
+                preview.active,
+                preview.disabled,
+            )
+        });
         let background_canvas = self.canvas.clone();
         let origin_canvas = self.canvas.clone();
         let warp_toggle = deformer_toggle(
@@ -341,6 +368,7 @@ impl RenderOnce for CanvasZoomBar {
                 ],
             )))
             .children(isolation)
+            .children(preview)
             .child(div().flex_1().min_w_0())
             .child(ZoomControl {
                 percentage: header.percentage,

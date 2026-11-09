@@ -190,6 +190,16 @@ impl DocumentState {
     pub fn parameter_by_runtime_id(&self, id: &str) -> Option<&Parameter> {
         self.parameter(self.content.parameter_runtime_ids.get(id)?)
     }
+    /// Effective interactive breath targets. An explicit empty list disables breathing.
+    pub fn breath_preview_parameters(&self) -> &[String] {
+        self.editor_state()
+            .breath_preview_parameters
+            .as_deref()
+            .unwrap_or_else(|| {
+                self.parameter_by_runtime_id("ParamBreath")
+                    .map_or(&[], |parameter| std::slice::from_ref(&parameter.id))
+            })
+    }
     /// Resource requirements only; Core never acquires files, pixels or leases.
     pub fn image_resources(&self) -> impl Iterator<Item = (ResourceKey, u32, u32)> + '_ {
         self.asset_order()
@@ -506,6 +516,22 @@ impl DocumentBuilder {
     fn animation_inputs_changed(&self, writes: &WriteSet) -> bool {
         if writes.root_changed(RootDomain::Physics)
             || writes.root_changed(RootDomain::Pose)
+            || (writes.root_changed(RootDomain::EditorState)
+                && self.content.editor_state.breath_preview_parameters
+                    != self.base.editor_state().breath_preview_parameters)
+            || (writes.root_changed(RootDomain::Model3Settings)
+                && crate::document::MOTION_EFFECT_GROUPS.iter().any(|name| {
+                    self.content
+                        .model3_settings
+                        .parameter_group_named(name)
+                        .map(|group| &group.parameters)
+                        != self
+                            .base
+                            .content
+                            .model3_settings
+                            .parameter_group_named(name)
+                            .map(|group| &group.parameters)
+                }))
             || writes.records.iter().any(|record| {
                 matches!(
                     record.domain,

@@ -1,7 +1,8 @@
 //! Stateless raw-clip inspection on a default model baseline. Pose is resolved
 //! immediately for the sampled controls; motion fades, expressions and physics
 //! are absent. This has no activation queue, replay clock or fired-event state.
-use crate::pose::{real_parameter_for_part, PoseRuntime};
+use crate::motion_tracks::apply_motion_tracks;
+use crate::pose::PoseRuntime;
 use crate::{
     sample_motion_curve, AnimationError, CompiledCurve, MotionPlaybackPosition, MotionSnapshot,
 };
@@ -10,7 +11,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use zipzi_core::{
-    document::{MotionClip, MotionTrack, MotionTrackTarget},
+    document::{MotionClip, MotionTrack},
     state::DocumentState,
     DrawableFrame, FrameEvaluator, PreviewValues,
 };
@@ -136,60 +137,16 @@ impl MotionEditingPreview {
         snapshot.motion_positions.clear();
         if let Some(clip) = clip {
             let id = clip.id.as_str();
-            for track in &clip.tracks {
-                let value =
-                    sample_motion_curve(&self.curves[&track.id].1, time, clip.restricted_beziers);
-                match &track.target {
-                    MotionTrackTarget::Parameter { parameter_id } => {
-                        let parameter = document.parameter(parameter_id).unwrap();
-                        crate::parameter_values::set_value(
-                            &mut snapshot.parameters,
-                            parameter_id,
-                            value.clamp(parameter.minimum, parameter.maximum),
-                        );
-                    }
-                    MotionTrackTarget::PartOpacity { part_id } => {
-                        if let Some(parameter_id) = real_parameter_for_part(document, part_id) {
-                            let parameter = document.parameter(&parameter_id).unwrap();
-                            crate::parameter_values::set_value(
-                                &mut snapshot.parameters,
-                                &parameter_id,
-                                value.clamp(parameter.minimum, parameter.maximum),
-                            );
-                        } else {
-                            crate::parameter_values::set_value(
-                                &mut snapshot.part_opacity_channels,
-                                part_id,
-                                value,
-                            );
-                        }
-                        if document.pose().as_deref().is_none() {
-                            snapshot.coverage.push(format!(
-                                "{}: PartOpacity {part_id} has no Pose asset",
-                                clip.id
-                            ));
-                        }
-                    }
-                    MotionTrackTarget::Model { runtime_id } if runtime_id == "Opacity" => {
-                        snapshot.model_opacity = value
-                    }
-                    MotionTrackTarget::Model { runtime_id } => snapshot.coverage.push(format!(
-                        "{}: Model {runtime_id} mapping requires model3 Groups",
-                        clip.id
-                    )),
-                    MotionTrackTarget::Unspecified => snapshot.coverage.push(format!(
-                        "motion {} track {} needs configuration",
-                        clip.id, track.id
-                    )),
-                    MotionTrackTarget::Unresolved {
-                        category,
-                        runtime_id,
-                    } => snapshot.coverage.push(format!(
-                        "{}: virtual {category} {runtime_id} has no drawable target",
-                        clip.id
-                    )),
-                }
-            }
+            apply_motion_tracks(
+                document,
+                clip,
+                |track| {
+                    sample_motion_curve(&self.curves[&track.id].1, time, clip.restricted_beziers)
+                },
+                1.,
+                |_| 1.,
+                snapshot,
+            );
             snapshot.active_motions.push(id.into());
             snapshot.motion_positions.push(MotionPlaybackPosition {
                 motion_id: id.into(),

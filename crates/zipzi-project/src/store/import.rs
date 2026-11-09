@@ -4,7 +4,7 @@ use crate::filesystem::{self as io};
 
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -151,7 +151,7 @@ impl ProjectImporter {
                     );
                 };
                 let text = match read_model_attachment(base_dir, relative, "Pose") {
-                    Ok(text) => text,
+                    Ok((_, text)) => text,
                     Err(status) => return (ProjectResult::from_status(status), None, None),
                 };
                 let id = stable_pose_id(&res.document);
@@ -203,7 +203,7 @@ impl ProjectImporter {
                 }]
             } else {
                 let text = match read_model_attachment(base_dir, relative, "Physics") {
-                    Ok(text) => text,
+                    Ok((_, text)) => text,
                     Err(status) => return (ProjectResult::from_status(status), None, None),
                 };
                 let id = stable_attachment_id(&res.document, b"physics");
@@ -231,6 +231,7 @@ impl ProjectImporter {
             Vec::new()
         };
 
+        let mut referenced_animations = HashSet::new();
         let mut expression_diagnostics = Vec::new();
         if let Some(references) = file_refs
             .get("Expressions")
@@ -279,32 +280,27 @@ impl ProjectImporter {
                         None,
                     );
                 }
-                let text = match read_model_attachment(base_dir, relative, "Expression") {
-                    Ok(text) => text,
+                let (source, text) = match read_model_attachment(base_dir, relative, "Expression") {
+                    Ok(value) => value,
                     Err(status) => return (ProjectResult::from_status(status), None, None),
                 };
+                referenced_animations.insert(source);
                 let id = stable_expression_id(&res.document, index, name);
-                match crate::import_expression3(&res.document, &id, name, &text) {
-                    Ok(imported) => {
-                        res.document = imported.candidate;
-                        expression_diagnostics.extend(imported.diagnostics.into_iter().map(
-                            |diagnostic| ResourceDiagnostic {
-                                asset_id: name.into(),
-                                code: diagnostic.code,
-                                message: format!("{}: {}", diagnostic.path, diagnostic.message),
-                            },
-                        ));
-                    }
-                    Err(error) => {
-                        return (
-                            ProjectResult::failed(
-                                &error.code,
-                                &format!("Expressions[{index}] {}: {}", error.path, error.message),
-                            ),
-                            None,
-                            None,
-                        );
-                    }
+                if let Err(status) = import_model_expression(
+                    &mut res.document,
+                    &id,
+                    name,
+                    &text,
+                    &mut expression_diagnostics,
+                ) {
+                    return (
+                        ProjectResult::failed(
+                            &status.code,
+                            &format!("Expressions[{index}] {}", status.message),
+                        ),
+                        None,
+                        None,
+                    );
                 }
             }
             res.report
@@ -434,11 +430,14 @@ impl ProjectImporter {
                     let clip_id = if let Some(id) = imported_paths.get(relative) {
                         id.clone()
                     } else {
-                        let text = match read_model_attachment(base_dir, relative, "Motion") {
-                            Ok(text) => text,
-                            Err(status) => return (ProjectResult::from_status(status), None, None),
-                        };
-                        let id = stable_motion_id(&res.document, relative);
+                        let (source, text) =
+                            match read_model_attachment(base_dir, relative, "Motion") {
+                                Ok(value) => value,
+                                Err(status) => {
+                                    return (ProjectResult::from_status(status), None, None)
+                                }
+                            };
+                        referenced_animations.insert(source);
                         let source_file = relative.rsplit('/').next().unwrap_or(relative);
                         let mut name = source_file
                             .strip_suffix(".motion3.json")
@@ -448,48 +447,28 @@ impl ProjectImporter {
                         if name.is_empty() {
                             name = format!("{group_name}_{index}");
                         }
-                        let base_name = name.clone();
-                        let mut suffix = 0;
-                        while res.document.motion_order().iter().any(|existing| {
-                            res.document
-                                .motion(existing)
-                                .is_some_and(|clip| clip.name == name)
-                        }) {
-                            suffix += 1;
-                            name = if suffix == 1 {
-                                format!("{base_name}-{}", &id[..8])
-                            } else {
-                                format!("{base_name}-{}-{suffix}", &id[..8])
-                            };
-                        }
-                        match crate::import_motion3(&res.document, &id, &name, &text) {
-                            Ok(imported) => {
-                                res.document = imported.candidate;
-                                motion_diagnostics.extend(imported.diagnostics.into_iter().map(
-                                    |diagnostic| ResourceDiagnostic {
-                                        asset_id: relative.into(),
-                                        code: diagnostic.code,
-                                        message: format!(
-                                            "{}: {}",
-                                            diagnostic.path, diagnostic.message
-                                        ),
-                                    },
-                                ));
-                            }
-                            Err(error) => {
+                        let id = match import_model_motion(
+                            &mut res.document,
+                            relative,
+                            &name,
+                            &text,
+                            &mut motion_diagnostics,
+                        ) {
+                            Ok(id) => id,
+                            Err(status) => {
                                 return (
                                     ProjectResult::failed(
-                                        &error.code,
+                                        &status.code,
                                         &format!(
-                                            "Motions.{group_name}[{index}] {}: {}",
-                                            error.path, error.message
+                                            "Motions.{group_name}[{index}] {}",
+                                            status.message
                                         ),
                                     ),
                                     None,
                                     None,
                                 )
                             }
-                        }
+                        };
                         imported_paths.insert(relative.to_string(), id.clone());
                         id
                     };
@@ -660,6 +639,13 @@ impl ProjectImporter {
         project_result.diagnostics.extend(expression_diagnostics);
         project_result.diagnostics.extend(motion_diagnostics);
         project_result.diagnostics.extend(managed_diagnostics);
+        let discovered_animations = import_unreferenced_animations(
+            &mut res.document,
+            path,
+            base_dir,
+            &referenced_animations,
+            &mut project_result.diagnostics,
+        );
         let mut incomplete = res.report.unimported_attachments.clone();
         incomplete.extend(
             project_result
@@ -719,6 +705,7 @@ impl ProjectImporter {
             }
         }
         sources(file_refs, base_dir, &mut snapshot.protected_paths);
+        snapshot.protected_paths.extend(discovered_animations);
         (project_result, Some(snapshot), Some(res.report))
     }
 
@@ -813,7 +800,11 @@ pub(super) fn read_psd_bytes(source: &Path) -> Result<Vec<u8>, Status> {
     fs::read(source).map_err(io::io_error)
 }
 
-fn read_model_attachment(base_dir: &Path, relative: &str, kind: &str) -> Result<String, Status> {
+fn read_model_attachment(
+    base_dir: &Path,
+    relative: &str,
+    kind: &str,
+) -> Result<(PathBuf, String), Status> {
     let path = Path::new(relative);
     if relative.is_empty()
         || path.components().any(|component| {
@@ -844,12 +835,13 @@ fn read_model_attachment(base_dir: &Path, relative: &str, kind: &str) -> Result<
             format!("{kind} path resolves outside the model directory"),
         ));
     }
-    fs::read_to_string(&source).map_err(|error| {
+    let text = fs::read_to_string(&source).map_err(|error| {
         Status::error(
             "ATTACHMENT_IO_ERROR",
             format!("{}: {error}", source.display()),
         )
-    })
+    })?;
+    Ok((source, text))
 }
 
 fn read_model_attachment_bytes(
@@ -882,6 +874,183 @@ fn read_model_attachment_bytes(
             format!("{}: {error}", source.display()),
         )
     })
+}
+
+enum AnimationSidecar {
+    Expression,
+    Motion,
+}
+
+fn import_unreferenced_animations(
+    document: &mut DocumentState,
+    model_path: &Path,
+    base_dir: &Path,
+    referenced: &HashSet<PathBuf>,
+    diagnostics: &mut Vec<ResourceDiagnostic>,
+) -> Vec<PathBuf> {
+    let (Ok(base_dir), Ok(model_path)) = (base_dir.canonicalize(), model_path.canonicalize())
+    else {
+        return Vec::new();
+    };
+    let mut directories = vec![base_dir.clone()];
+    let mut files = Vec::new();
+    while let Some(directory) = directories.pop() {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        let entries: Vec<_> = entries.flatten().collect();
+        // A nested model owns its subtree. A shared package root is ambiguous,
+        // so only its explicitly registered animations are imported.
+        if entries.iter().any(|entry| {
+            entry
+                .file_name()
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .ends_with(".model3.json")
+                && entry
+                    .file_type()
+                    .is_ok_and(|kind| kind.is_file() || kind.is_symlink())
+                && entry.path().canonicalize().ok().as_ref() != Some(&model_path)
+        }) {
+            continue;
+        }
+        for entry in entries {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            if file_type.is_dir() {
+                directories.push(entry.path());
+            } else if file_type.is_file() {
+                let file_name = entry.file_name();
+                let file_name = file_name.to_string_lossy();
+                let lower = file_name.to_ascii_lowercase();
+                let (suffix, kind) = if lower.ends_with(".exp3.json") {
+                    (".exp3.json", AnimationSidecar::Expression)
+                } else if lower.ends_with(".motion3.json") {
+                    (".motion3.json", AnimationSidecar::Motion)
+                } else {
+                    continue;
+                };
+                let stem = &file_name[..file_name.len() - suffix.len()];
+                let name = if stem.is_empty() {
+                    file_name.as_ref()
+                } else {
+                    stem
+                };
+                files.push((entry.path(), name.to_string(), kind));
+            }
+        }
+    }
+    files.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+
+    let mut imported = Vec::new();
+    for (path, name, kind) in files {
+        let Ok(source) = path.canonicalize() else {
+            continue;
+        };
+        if !source.starts_with(&base_dir) || referenced.contains(&source) {
+            continue;
+        }
+        let relative = path
+            .strip_prefix(&base_dir)
+            .expect("scanned model directory");
+        let relative = relative.to_string_lossy();
+        let result = fs::read_to_string(&source)
+            .map_err(|error| Status::error("ATTACHMENT_IO_ERROR", error.to_string()))
+            .and_then(|text| match kind {
+                AnimationSidecar::Expression => {
+                    let id =
+                        stable_attachment_id(document, format!("expression:{relative}").as_bytes());
+                    let name = unique_animation_name(&name, &id, |name| {
+                        document.expression_order().iter().any(|id| {
+                            document
+                                .expression(id)
+                                .is_some_and(|asset| asset.name == name)
+                        })
+                    });
+                    import_model_expression(document, &id, &name, &text, diagnostics)
+                }
+                AnimationSidecar::Motion => {
+                    import_model_motion(document, &relative, &name, &text, diagnostics).map(|_| ())
+                }
+            });
+        match result {
+            Ok(()) => imported.push(source),
+            Err(status) => diagnostics.push(ResourceDiagnostic {
+                asset_id: relative.to_string(),
+                code: status.code,
+                message: format!("{relative}: {}", status.message),
+            }),
+        }
+    }
+    imported
+}
+
+fn import_model_expression(
+    document: &mut DocumentState,
+    id: &str,
+    name: &str,
+    text: &str,
+    diagnostics: &mut Vec<ResourceDiagnostic>,
+) -> Result<(), Status> {
+    let imported = crate::import_expression3(document, id, name, text)
+        .map_err(|error| Status::error(error.code, format!("{}: {}", error.path, error.message)))?;
+    *document = imported.candidate;
+    diagnostics.extend(
+        imported
+            .diagnostics
+            .into_iter()
+            .map(|diagnostic| ResourceDiagnostic {
+                asset_id: name.into(),
+                code: diagnostic.code,
+                message: format!("{}: {}", diagnostic.path, diagnostic.message),
+            }),
+    );
+    Ok(())
+}
+
+fn import_model_motion(
+    document: &mut DocumentState,
+    relative: &str,
+    name: &str,
+    text: &str,
+    diagnostics: &mut Vec<ResourceDiagnostic>,
+) -> Result<String, Status> {
+    let id = stable_motion_id(document, relative);
+    let name = unique_animation_name(name, &id, |name| {
+        document
+            .motion_order()
+            .iter()
+            .any(|id| document.motion(id).is_some_and(|clip| clip.name == name))
+    });
+    let imported = crate::import_motion3(document, &id, &name, text)
+        .map_err(|error| Status::error(error.code, format!("{}: {}", error.path, error.message)))?;
+    *document = imported.candidate;
+    diagnostics.extend(
+        imported
+            .diagnostics
+            .into_iter()
+            .map(|diagnostic| ResourceDiagnostic {
+                asset_id: relative.into(),
+                code: diagnostic.code,
+                message: format!("{}: {}", diagnostic.path, diagnostic.message),
+            }),
+    );
+    Ok(id)
+}
+
+fn unique_animation_name(stem: &str, id: &str, is_taken: impl Fn(&str) -> bool) -> String {
+    if !is_taken(stem) {
+        return stem.to_owned();
+    }
+    let base = format!("{stem}-{}", &id[..8]);
+    let mut name = base.clone();
+    let mut suffix = 2;
+    while is_taken(&name) {
+        name = format!("{base}-{suffix}");
+        suffix += 1;
+    }
+    name
 }
 
 fn stable_expression_id(document: &DocumentState, index: usize, name: &str) -> String {

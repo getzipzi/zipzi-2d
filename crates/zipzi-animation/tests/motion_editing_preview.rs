@@ -131,3 +131,48 @@ fn sdk_seek_mapping_returns_requested_local_time_and_does_not_advance_loop_at_du
     assert!(canonical_motion_seek_time(&clip, 0, f32::NAN).is_err());
     assert!(canonical_motion_seek_time(&clip, 0, 2.).is_err());
 }
+
+#[test]
+fn model_effects_mix_keyed_and_unkeyed_parameters_in_cubism_order() {
+    let mut builder = document().builder();
+    let settings = zipzi_project::model3::import_settings(
+        &builder.preview().unwrap(),
+        &serde_json::json!({"Groups":[
+            {"Target":"Parameter","Name":"EyeBlink","Ids":["ParamX","ParamY","Missing"]},
+            {"Target":"Parameter","Name":"LipSync","Ids":["ParamX","ParamY"]}
+        ]}),
+    )
+    .unwrap();
+    builder.set_model3_settings(settings).unwrap();
+    let document = builder.freeze().unwrap().state;
+    let source = serde_json::json!({
+        "Version":3,
+        "Meta":{"Duration":2,"Fps":30,"Loop":false,"AreBeziersRestricted":true,
+            "CurveCount":3,"TotalSegmentCount":3,"TotalPointCount":6,
+            "FadeInTime":1,"FadeOutTime":0,"UserDataCount":0,"TotalUserDataSize":0},
+        "Curves":[
+            {"Target":"Model","Id":"EyeBlink","Segments":[0,0.5,0,2,0.5]},
+            {"Target":"Model","Id":"LipSync","Segments":[0,0.25,0,2,0.25]},
+            {"Target":"Parameter","Id":"ParamX","FadeInTime":0.5,"Segments":[0,0.8,0,2,0.8]}
+        ],
+        "UserData":[]
+    });
+    let document = import_motion3(&document, &id(9), "Model effects", &source.to_string())
+        .unwrap()
+        .candidate;
+    let mut playback = MotionPreview::new(&document);
+    playback.schedule_motion(&id(9), 0.).unwrap();
+    playback.advance(0.).unwrap();
+    let frame = playback.advance(0.5).unwrap();
+    // ParamX uses its track fade and multiplies before adding. Unkeyed ParamY
+    // fades toward 0.5, then fades from that result toward 0.25.
+    assert!((frame.parameters[&id(2)] - 0.65).abs() < 1e-6);
+    assert!((frame.parameters[&id(3)] - 0.3125).abs() < 1e-6);
+    assert!(frame.coverage.is_empty());
+
+    let mut editing = MotionEditingPreview::new(&document);
+    let frame = editing.sample(Some(&id(9)), 0.5).unwrap();
+    assert!((frame.parameters[&id(2)] - 0.65).abs() < 1e-6);
+    assert_eq!(frame.parameters[&id(3)], 0.25);
+    assert!(frame.coverage.is_empty());
+}

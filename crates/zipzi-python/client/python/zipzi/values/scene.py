@@ -91,6 +91,7 @@ class EditorState(Value):
     rotation_bone_reference_scales: Evaluated Rotation scale at the display baseline, including inherited coordinate conversion.
     rotation_bone_angle_offsets: Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0.
     cursor_preview_bindings: Custom cursor mappings by parameter UUID. None uses standard parameter IDs.
+    breath_preview_parameters: Interactive breath targets by parameter UUID. None uses ParamBreath if present.
     """
     _type = 'EditorState'
     objects: Mapping[str, ObjectEditorState] = field(default_factory=lambda: _default(EditorState, 'objects'))
@@ -98,6 +99,7 @@ class EditorState(Value):
     rotation_bone_reference_scales: Mapping[str, float] = field(default_factory=lambda: _default(EditorState, 'rotation_bone_reference_scales'))
     rotation_bone_angle_offsets: Mapping[str, float] = field(default_factory=lambda: _default(EditorState, 'rotation_bone_angle_offsets'))
     cursor_preview_bindings: Mapping[str, CursorPreviewBinding] | None = None
+    breath_preview_parameters: tuple[str, ...] | None = None
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExportSettings(Value):

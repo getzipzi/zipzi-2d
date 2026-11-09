@@ -1,7 +1,7 @@
-//! Mouse mapping table backed by the standard property form.
+//! Parameter mappings for motion effects and mouse input.
 use super::*;
 use crate::properties::Choice;
-use crate::properties::cursor_mapping::field_keys;
+use crate::properties::cursor_mapping::{MOTION_EFFECT_FIELDS, field_keys};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::select::{SearchableVec, Select, SelectEvent, SelectState};
 use gpui_kit::component::tooltip::Tooltip;
@@ -18,17 +18,18 @@ pub(super) struct CursorMappingPicker {
 }
 
 impl PropertiesPanel {
-    pub(crate) fn reveal_cursor_mapping(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn reveal_parameter_mapping(&mut self, cx: &mut Context<Self>) {
         self.locked_target = None;
         cx.notify();
     }
 
-    pub(super) fn render_cursor_mapping(
+    pub(super) fn render_parameter_mapping(
         &mut self,
         parameters: Vec<zipzi_editor_core::ParameterValue>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let effects = MOTION_EFFECT_FIELDS.map(|key| self.render_field(key, window, cx));
         let actions = self.cursor_mapping_actions(window, cx);
         let labels = [
             t!("physics.parameter"),
@@ -75,16 +76,30 @@ impl PropertiesPanel {
                 rows = rows.child(self.cursor_mapping_row(parameter, fields, window, cx));
             }
         }
-        div()
-            .id("object-properties")
-            .test_support()
-            .flex_1()
-            .min_h_0()
-            .w_full()
+        let mappings = div()
+            .size_full()
             .flex()
             .flex_col()
             .p(compact::rem(compact::PADDING))
+            .pr(compact::rem(compact::PADDING + SCROLLBAR_GUTTER))
             .gap(compact::rem(compact::PADDING))
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(compact::rem(compact::GAP))
+                    .child(
+                        div()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .child(t!("physics.motion_effect_mapping")),
+                    )
+                    .children(effects),
+            )
+            .child(
+                div()
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .child(t!("physics.cursor_mapping")),
+            )
             .child(actions)
             .child(
                 div()
@@ -92,33 +107,33 @@ impl PropertiesPanel {
                     .test_support()
                     .role(gpui::Role::Table)
                     .aria_label(t!("physics.cursor_mapping"))
-                    .flex_1()
-                    .min_h_0()
+                    .flex_shrink_0()
+                    .w_full()
                     .min_w_0()
-                    .overflow_hidden()
                     .child(
                         div()
-                            .size_full()
+                            .w_full()
                             .child(
                                 div()
                                     .w_full()
-                                    .h_full()
-                                    .min_w(compact::rem(width + SCROLLBAR_GUTTER))
+                                    .min_w(compact::rem(width))
                                     .flex()
                                     .flex_col()
-                                    .child(header.pr(compact::rem(SCROLLBAR_GUTTER)))
-                                    .child(
-                                        div()
-                                            .flex_1()
-                                            .min_h_0()
-                                            .pr(compact::rem(SCROLLBAR_GUTTER))
-                                            .child(rows)
-                                            .overflow_y_scrollbar(),
-                                    ),
+                                    .pb(compact::rem(compact::PADDING))
+                                    .child(header)
+                                    .child(rows),
                             )
                             .overflow_x_scrollbar(),
                     ),
             )
+            .overflow_y_scrollbar();
+        div()
+            .id("object-properties")
+            .test_support()
+            .flex_1()
+            .min_h_0()
+            .w_full()
+            .child(mappings)
             .into_any_element()
     }
 
@@ -304,7 +319,7 @@ impl PropertiesPanel {
             || !self
                 .target
                 .as_ref()
-                .is_some_and(|target| target.document == document && target.is_cursor_mapping())
+                .is_some_and(|target| target.document == document && target.is_parameter_mapping())
         {
             return;
         }

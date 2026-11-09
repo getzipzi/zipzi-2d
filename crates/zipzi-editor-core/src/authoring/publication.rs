@@ -42,6 +42,7 @@ impl Document {
         }
         let writes = &receipt.writes;
         let editor_only = writes.root_changed(RootDomain::EditorState)
+            && !writes.animation_inputs_changed()
             && writes.records().is_empty()
             && !writes.setup_changed()
             && !ALL_RECORD_DOMAINS.iter().any(|d| writes.order_changed(*d))

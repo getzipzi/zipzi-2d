@@ -19,7 +19,19 @@ pub struct PhysicsPreviewSettings {
 pub struct PhysicsPreviewInput {
     pub parameter: String,
     pub time: f32,
-    pub value: f32,
+    /// None ends the cursor override and restores the parameter default.
+    pub value: Option<f32>,
+    cursor: bool,
+}
+
+impl PhysicsPreviewInput {
+    pub fn schedule(&self, preview: &mut zipzi_animation::MotionPreview) -> Result<()> {
+        match self.value {
+            Some(value) => preview.schedule_parameter_input(&self.parameter, self.time, value)?,
+            None => preview.release_parameter_input(&self.parameter, self.time)?,
+        }
+        Ok(())
+    }
 }
 
 impl Editor {
@@ -99,6 +111,7 @@ impl Editor {
         animation.physics_preview.stabilized = false;
         if let Some(cursor) = &mut animation.cursor_physics {
             cursor.reset();
+            cursor.rebase_expression();
         }
         animation.time = 0.;
         animation.rebuild();
@@ -106,19 +119,26 @@ impl Editor {
     }
     pub fn stabilize_physics_preview(&mut self, document: DocumentId) -> Result<()> {
         self.ensure_animation_target(document)?;
-        let animation = &mut self.active_session_mut().unwrap().animation.playback;
+        let session = self.active_session_mut().unwrap();
+        let animation = &mut session.animation.playback;
         ensure!(
             animation.physics_preview.manual,
             "Manual physics preview is inactive"
         );
+        let baseline = &mut animation.physics_preview.baseline;
         for input in animation.physics_preview.inputs.drain(..) {
-            animation
-                .physics_preview
-                .baseline
-                .insert(input.parameter, input.value);
+            if let Some(value) = input.value {
+                baseline.insert(input.parameter, value);
+            } else {
+                baseline.remove(&input.parameter);
+            }
         }
         animation.physics_preview.stabilized = true;
+        if let Some(cursor) = &mut animation.cursor_physics {
+            cursor.rebase_clock(animation.time);
+        }
         animation.time = 0.;
+        animation.sample_cursor_preview(&session.document);
         animation.rebuild();
         Ok(())
     }
@@ -144,13 +164,17 @@ impl AnimationSession {
 }
 
 impl PhysicsPreviewSettings {
-    fn push_input(&mut self, parameter: &str, time: f32, value: f32, default: f32) -> bool {
-        let current = self
-            .inputs
+    fn last_input(&self, parameter: &str) -> Option<&PhysicsPreviewInput> {
+        self.inputs
             .iter()
             .rev()
             .find(|input| input.parameter == parameter)
-            .map(|input| input.value)
+    }
+
+    fn push_input(&mut self, parameter: &str, time: f32, value: f32, default: f32) -> bool {
+        let current = self
+            .last_input(parameter)
+            .map(|input| input.value.unwrap_or(default))
             .or_else(|| self.baseline.get(parameter).copied())
             .unwrap_or(default);
         if current == value {
@@ -160,7 +184,25 @@ impl PhysicsPreviewSettings {
         self.inputs.push(PhysicsPreviewInput {
             parameter: parameter.into(),
             time,
+            value: Some(value),
+            cursor: false,
+        });
+        true
+    }
+
+    fn push_cursor_input(&mut self, parameter: &str, time: f32, value: Option<f32>) -> bool {
+        let current = self
+            .last_input(parameter)
+            .filter(|input| input.cursor)
+            .and_then(|input| input.value);
+        if current == value {
+            return false;
+        }
+        self.inputs.push(PhysicsPreviewInput {
+            parameter: parameter.into(),
+            time,
             value,
+            cursor: true,
         });
         true
     }

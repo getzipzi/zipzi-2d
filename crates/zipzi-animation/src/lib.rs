@@ -1,6 +1,7 @@
 //! CPU animation state. The authoring document is copied once; advancing a
 //! preview never edits it or the owning SDK session.
 
+mod eye_blink;
 mod motion;
 pub use motion::canonical_motion_seek_time;
 mod replay;
@@ -12,6 +13,7 @@ pub use motion::{
 pub use seek_cache::SeekCacheStats;
 mod motion_preview;
 mod motion_runtime;
+mod motion_tracks;
 mod parameter_values;
 mod physics;
 pub use physics::{PhysicsOutputSnapshot, PhysicsPreview, PhysicsRigSnapshot};

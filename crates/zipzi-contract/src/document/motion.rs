@@ -120,6 +120,12 @@ pub enum MotionTrackTarget {
     },
 }
 
+pub const MOTION_EFFECT_GROUPS: [&str; 2] = ["EyeBlink", "LipSync"];
+
+pub fn supported_model_motion_channel(id: &str) -> bool {
+    id == "Opacity" || MOTION_EFFECT_GROUPS.contains(&id)
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]

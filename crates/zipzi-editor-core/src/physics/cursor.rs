@@ -1,9 +1,11 @@
+use crate::animation::ExpressionTrigger;
 use crate::{
     AnimationSession, Document, DocumentId, Editor, ViewportBinding, ViewportInteractionKind,
     ViewportInteractionToken, ViewportKind, ViewportPoint,
 };
-use anyhow::{Result, ensure};
+use anyhow::{ensure, Result};
 use std::collections::BTreeMap;
+use zipzi_animation::ExpressionTransition;
 pub use zipzi_core::document::{CursorPreviewAxis, CursorPreviewBinding};
 
 pub type CursorPreviewBindings = BTreeMap<String, CursorPreviewBinding>;
@@ -11,18 +13,37 @@ pub type CursorPreviewBindings = BTreeMap<String, CursorPreviewBinding>;
 const RETURN_SECONDS: f32 = 0.18;
 
 pub(crate) struct CursorPhysicsPreview {
+    pub(crate) eye_blink_seed: u32,
+    pub(crate) expressions: Vec<ExpressionTrigger>,
     bindings: CursorPreviewBindings,
     right_button: bool,
+    dragging: bool,
     point: ViewportPoint,
-    sampled: Option<ViewportPoint>,
+    sampled: Option<(ViewportPoint, bool)>,
     released_at: Option<f32>,
 }
 
 impl CursorPhysicsPreview {
+    pub(super) fn rebase_expression(&mut self) {
+        if let Some(mut current) = self.expressions.pop() {
+            self.expressions.clear();
+            current.time = 0.;
+            current.transition = ExpressionTransition::Immediate;
+            self.expressions.push(current);
+        }
+    }
+
     pub(super) fn reset(&mut self) {
+        self.dragging = false;
         self.point = ViewportPoint::default();
         self.sampled = None;
         self.released_at = None;
+    }
+
+    pub(super) fn rebase_clock(&mut self, time: f32) {
+        self.released_at = self.released_at.map(|released| released - time);
+        self.sampled = None;
+        self.rebase_expression();
     }
 }
 
@@ -69,10 +90,27 @@ impl Editor {
                 self.reset_physics_inputs(document)?;
             }
             let session = self.active_session_mut().unwrap();
-            session.animation.playback.playing = true;
-            session.animation.playback.cursor_physics = Some(CursorPhysicsPreview {
+            let animation = &mut session.animation.playback;
+            let timeline_time = animation.physics_return.map_or(0., |(time, _)| time);
+            let expressions = animation
+                .expressions
+                .iter()
+                .rev()
+                .find(|trigger| trigger.time <= timeline_time)
+                .map(|trigger| ExpressionTrigger {
+                    expression_id: trigger.expression_id.clone(),
+                    time: 0.,
+                    transition: ExpressionTransition::Immediate,
+                })
+                .into_iter()
+                .collect();
+            animation.playing = true;
+            animation.cursor_physics = Some(CursorPhysicsPreview {
+                eye_blink_seed: uuid::Uuid::new_v4().as_u128() as u32,
+                expressions,
                 bindings: session.document.cursor_preview_bindings(),
                 right_button: false,
+                dragging: false,
                 point: ViewportPoint::default(),
                 sampled: None,
                 released_at: None,
@@ -163,6 +201,7 @@ impl Editor {
     fn move_cursor_preview(&mut self, point: ViewportPoint) {
         let animation = &mut self.active_session_mut().unwrap().animation.playback;
         let cursor = animation.cursor_physics.as_mut().unwrap();
+        cursor.dragging = true;
         cursor.point = point;
         cursor.released_at = None;
         // A drag can resume a trial paused by an earlier playback error.
@@ -174,6 +213,7 @@ impl Editor {
             && let Some(session) = self.active_session_mut()
             && let Some(cursor) = &mut session.animation.playback.cursor_physics
         {
+            cursor.dragging = false;
             cursor.released_at = Some(session.animation.playback.time);
         }
     }
@@ -208,7 +248,6 @@ impl AnimationSession {
         if cursor.bindings == bindings {
             return;
         }
-        let model = document.model();
         for id in cursor.bindings.iter().filter_map(|(id, binding)| {
             (binding.axis != CursorPreviewAxis::Disabled
                 && bindings
@@ -216,14 +255,7 @@ impl AnimationSession {
                     .is_none_or(|new| new.axis == CursorPreviewAxis::Disabled))
             .then_some(id)
         }) {
-            if let Some(parameter) = model.parameter(id) {
-                self.physics_preview.push_input(
-                    id,
-                    self.time,
-                    parameter.default_value,
-                    parameter.default_value,
-                );
-            }
+            self.physics_preview.push_cursor_input(id, self.time, None);
         }
         cursor.bindings = bindings;
         self.physics_input_changed();
@@ -244,36 +276,38 @@ impl AnimationSession {
                 cursor.released_at = None;
             }
         }
-        if cursor.sampled == Some(point) {
+        let active = cursor.dragging || cursor.released_at.is_some();
+        let sample = (point, active);
+        if cursor.sampled == Some(sample) {
             return;
         }
-        cursor.sampled = Some(point);
+        cursor.sampled = Some(sample);
         let model = document.model();
         let mut changed = false;
         for (id, binding) in &cursor.bindings {
             if binding.axis == CursorPreviewAxis::Disabled {
                 continue;
             }
+            let axis = match binding.axis {
+                CursorPreviewAxis::X if active && !cursor.right_button => Some(point.x),
+                CursorPreviewAxis::Y if active && !cursor.right_button => Some(point.y),
+                CursorPreviewAxis::RightX if active && cursor.right_button => Some(point.x),
+                CursorPreviewAxis::RightY if active && cursor.right_button => Some(point.y),
+                _ => None,
+            };
             if let Some(parameter) = model.parameter(id) {
-                let axis = match binding.axis {
-                    CursorPreviewAxis::X if !cursor.right_button => point.x,
-                    CursorPreviewAxis::Y if !cursor.right_button => point.y,
-                    CursorPreviewAxis::RightX if cursor.right_button => point.x,
-                    CursorPreviewAxis::RightY if cursor.right_button => point.y,
-                    _ => 0.,
-                };
-                let direction = if binding.reversed { -axis } else { axis };
-                let endpoint = if direction >= 0. {
-                    parameter.maximum
-                } else {
-                    parameter.minimum
-                };
-                let weight = f64::from(direction.abs()) * binding.influence_percent / 100.;
-                let value = (f64::from(parameter.default_value) * (1. - weight)
-                    + f64::from(endpoint) * weight) as f32;
-                changed |=
-                    self.physics_preview
-                        .push_input(id, self.time, value, parameter.default_value);
+                let value = axis.map(|axis| {
+                    let direction = if binding.reversed { -axis } else { axis };
+                    let endpoint = if direction >= 0. {
+                        parameter.maximum
+                    } else {
+                        parameter.minimum
+                    };
+                    let weight = f64::from(direction.abs()) * binding.influence_percent / 100.;
+                    (f64::from(parameter.default_value) * (1. - weight)
+                        + f64::from(endpoint) * weight) as f32
+                });
+                changed |= self.physics_preview.push_cursor_input(id, self.time, value);
             }
         }
         if changed {

@@ -658,7 +658,7 @@ impl AnimationPanel {
             }
         } else {
             for (index, resource) in catalog.expressions.iter().enumerate() {
-                let selected = animation.expression.as_ref() == Some(&resource.id);
+                let selected = animation.preview_expression() == Some(resource.id.as_str());
                 let active = state
                     .displayed_animation()
                     .is_some_and(|frame| frame.active_expressions.contains(&resource.id));

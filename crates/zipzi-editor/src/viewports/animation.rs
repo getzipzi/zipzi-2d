@@ -96,4 +96,4 @@ impl AnimationViewport {
             .into_any_element()
     }
 }
-viewport_panel!(AnimationViewport, "dock.animation_viewport", 176.);
+viewport_panel!(AnimationViewport, "dock.animation_viewport", 218.);

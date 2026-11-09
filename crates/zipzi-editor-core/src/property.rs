@@ -492,6 +492,14 @@ pub struct PropertyPatch {
 }
 
 impl PropertyPatch {
+    pub fn is_motion_effect_mapping(&self) -> bool {
+        !self.changes.is_empty()
+            && self
+                .changes
+                .keys()
+                .all(|key| document::is_motion_effect_field(*key))
+    }
+
     /// Grid dimensions form one atomic authoring operation; ordinary controls
     /// retain their single-field candidate ownership.
     pub(crate) fn preview_key(&self) -> Option<PropertyKey> {
@@ -578,7 +586,7 @@ pub(crate) fn object_payload(
     Ok(match object.kind {
         K::Document => {
             ensure!(model.id() == object.id, "Object no longer exists");
-            serde_json::json!({ "export_settings": model.setup().export })
+            document::payload(model)
         }
         K::Part => get!(part),
         K::Mesh => mesh::payload(model, &object.id, &PropertyScope::Object)?,

@@ -122,13 +122,7 @@ impl AnimationPanel {
                     })
             });
         }
-        self.cursor_preview_controls(
-            toolbar,
-            document,
-            state.editor.cursor_physics_active(),
-            state.modal || dialog || state.editor.is_busy(),
-        )
-        .into_any_element()
+        toolbar.into_any_element()
     }
     pub(super) fn render_physics_list(
         &mut self,

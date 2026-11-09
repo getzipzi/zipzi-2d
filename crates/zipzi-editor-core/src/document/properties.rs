@@ -6,6 +6,7 @@ mod deformer_tests;
 #[path = "properties/part_tests.rs"]
 mod part_tests;
 use super::*;
+use crate::property::document as document_properties;
 use crate::{ObjectKind, ObjectRef, PropertyPatch, PropertyScope, PropertyValues};
 use anyhow::bail;
 
@@ -473,6 +474,28 @@ impl Document {
             PropertyPayload::Expression(intent) => return Ok(edit.edit_expression(intent)?),
             payload => payload.json()?,
         };
+        if object.kind == ObjectKind::Document {
+            if patch
+                .changes
+                .keys()
+                .any(|key| document_properties::is_model3_effect_field(*key))
+            {
+                let settings =
+                    document_properties::patch_motion_effects(&edit.read_document()?, patch)?;
+                edit.replace_model3_settings(settings)?;
+            }
+            if let Some(crate::PropertyValue::References(ids)) = patch
+                .changes
+                .get(&document_properties::BREATH_PARAMETERS.key)
+            {
+                let mut state = edit.read_document()?.editor_state().clone();
+                state.breath_preview_parameters = Some(ids.clone());
+                edit.replace_editor_state(state)?;
+            }
+            if patch.is_motion_effect_mapping() {
+                return Ok(());
+            }
+        }
         if object.kind == ObjectKind::Texture {
             let current = edit.read_document()?;
             let original = current
@@ -845,7 +868,13 @@ impl Document {
                 | ObjectKind::PoseGroup
                 | ObjectKind::PoseEntry
                 | ObjectKind::PoseLink
-        ) {
+        ) || receipt
+            .writes
+            .root_changed(zipzi_core::state::RootDomain::Model3Settings)
+            || receipt
+                .writes
+                .root_changed(zipzi_core::state::RootDomain::EditorState)
+        {
             if receipt.kind != zipzi_sdk::PublicationKind::Unchanged {
                 self.pristine_blank = None;
             }

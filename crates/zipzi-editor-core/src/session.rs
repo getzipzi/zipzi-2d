@@ -551,6 +551,7 @@ impl DocumentSession {
                 && before.rotation_bone_reference_scales == after.rotation_bone_reference_scales
                 && before.rotation_bone_angle_offsets == after.rotation_bone_angle_offsets
                 && before.cursor_preview_bindings == after.cursor_preview_bindings
+                && before.breath_preview_parameters == after.breath_preview_parameters
         });
         self.modeling.tools.reconcile(&mut self.document);
         if invalidate

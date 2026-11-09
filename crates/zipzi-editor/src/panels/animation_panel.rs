@@ -1,6 +1,5 @@
 //! Animation resources, physics authoring and presented-frame inspectors.
 pub(crate) use crate::properties::expression_info;
-mod cursor_preview;
 mod physics_list;
 mod pose;
 mod resources;

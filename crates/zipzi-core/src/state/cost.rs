@@ -227,7 +227,7 @@ fields! {
     DeltaOffscreenKeyform => [sample_id];
 
  AssetRecord=>[id,name,content];
- EditorState=>[objects,rotation_bone_lengths,rotation_bone_reference_scales,rotation_bone_angle_offsets,cursor_preview_bindings];
+ EditorState=>[objects,rotation_bone_lengths,rotation_bone_reference_scales,rotation_bone_angle_offsets,cursor_preview_bindings,breath_preview_parameters];
  HierarchyOrder=>[organization,deformation,glues];
  Mesh=>[id,name,texture_asset_id,vertex_ids,base_positions,uvs,triangles,meshing,runtime_id,part_id,deformer_id,masks];
  crate::MeshMeshing=>[boundary,constraints];

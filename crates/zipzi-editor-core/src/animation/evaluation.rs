@@ -19,6 +19,7 @@ pub struct AnimationEvaluator {
     editing: Option<zipzi_animation::MotionEditingPreview>,
     completed: Option<(AnimationRequest, AnimationEvaluated)>,
     physics: crate::PhysicsPreviewSettings,
+    eye_blink_seed: Option<u32>,
 }
 impl AnimationEvaluator {
     /// Detached SDK cache accounting for profiling; preview state is unchanged.
@@ -120,6 +121,7 @@ impl AnimationEvaluator {
                 && previous.model_generation == id.model_generation
                 && self.motion == request.motion
                 && self.physics.manual == request.physics.manual
+                && self.eye_blink_seed == request.eye_blink_seed
                 && self.physics.bypass == request.physics.bypass
                 && self.physics.baseline == request.physics.baseline
                 && self.physics.stabilized == request.physics.stabilized
@@ -147,9 +149,13 @@ impl AnimationEvaluator {
                 )
             })
         };
+        let apply_expressions = !request.physics.manual || request.eye_blink_seed.is_some();
         if !reusable {
             let document = request.source.evaluation_snapshot().document();
-            let mut preview = MotionPreview::new(document);
+            let mut preview = match request.eye_blink_seed {
+                Some(seed) => MotionPreview::interactive(document, seed),
+                None => MotionPreview::new(document),
+            };
             preview.set_physics_enabled(!request.physics.bypass);
             for (id, value) in &request.physics.baseline {
                 preview.set_base_parameter(id, *value)?;
@@ -168,15 +174,15 @@ impl AnimationEvaluator {
                     preview.schedule_motion(&motion.clip_id, 0.)?;
                 }
             }
-            if !request.physics.manual {
+            if apply_expressions {
                 preview.replace_expression_schedule_with_transitions(expressions())?;
             }
             for input in &request.physics.inputs {
-                preview.schedule_parameter_input(&input.parameter, input.time, input.value)?;
+                input.schedule(&mut preview)?;
             }
             self.preview = Some(preview);
             self.motion.clone_from(&request.motion);
-        } else if !request.physics.manual
+        } else if apply_expressions
             && self
                 .identity
                 .is_some_and(|previous| previous.preview_generation != id.preview_generation)
@@ -187,15 +193,13 @@ impl AnimationEvaluator {
                 .replace_expression_schedule_with_transitions(expressions())?;
         }
         if reusable && request.physics.manual {
+            let preview = self.preview.as_mut().unwrap();
             for input in &request.physics.inputs[self.physics.inputs.len()..] {
-                self.preview.as_mut().unwrap().schedule_parameter_input(
-                    &input.parameter,
-                    input.time,
-                    input.value,
-                )?;
+                input.schedule(preview)?;
             }
         }
         self.physics = request.physics.clone();
+        self.eye_blink_seed = request.eye_blink_seed;
         self.identity = Some(id);
         self.source = Some(request.source.clone());
         let preview = self.preview.as_mut().unwrap();

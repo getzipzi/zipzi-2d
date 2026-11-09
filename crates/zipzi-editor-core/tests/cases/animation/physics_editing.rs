@@ -284,6 +284,311 @@ fn cursor_preview_drives_physics_returns_to_default_and_restores_timeline() -> a
 }
 
 #[test]
+fn cursor_preview_blinks_and_breathes_without_mouse_mapping_or_physics() -> anyhow::Result<()> {
+    let mut document = Document::new_blank()?;
+    let eye = document.create_parameter(NewParameter {
+        name: "Eye".into(),
+        runtime_id: "CustomEye".into(),
+        minimum: 0.,
+        default_value: 1.,
+        ..Default::default()
+    })?;
+    let breath = document.create_parameter(NewParameter {
+        name: "Breath".into(),
+        runtime_id: "ParamBreath".into(),
+        minimum: 0.,
+        ..Default::default()
+    })?;
+    let object = document.object_index().objects[0].reference.clone();
+    document.set_object_property(&object, "eye_blink_parameters", serde_json::json!([eye]))?;
+    let history = document.history_lengths();
+    let mut editor = support::editor_from_document(document);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let id = editor.active_id().unwrap();
+    editor.set_physics_cursor(id, true)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let start = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(start.snapshot.parameters[&eye], 1.);
+    assert_eq!(start.snapshot.parameters[&breath], 0.25);
+    let mut closed = None;
+    let mut reopened = false;
+    for step in 1..=60 * 8 {
+        editor.advance_animation_clock(step as f32 / 60.);
+        let request = editor.animation_request().unwrap();
+        let frame = evaluator.evaluate(&request, |_, _| true)?;
+        let value = frame.snapshot.parameters[&eye];
+        if closed.is_none() && value == 0. {
+            closed = Some((request.identity.time, request.identity.model_generation));
+            let phase = std::f32::consts::TAU * request.identity.time / 3.2345;
+            assert!((frame.snapshot.parameters[&breath] - 0.25 * (1. + phase.sin())).abs() < 1e-6);
+            let replayed = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+            assert_eq!(frame.snapshot, replayed.snapshot);
+        } else if closed.is_some() && value == 1. {
+            reopened = true;
+            break;
+        }
+    }
+    let (closed_time, model_generation) = closed.expect("the configured eye closes");
+    assert!(reopened, "the configured eye opens again");
+    assert!(editor
+        .animation()
+        .unwrap()
+        .physics_preview
+        .inputs
+        .is_empty());
+    assert_eq!(editor.document().unwrap().history_lengths(), history);
+
+    let field = property::document::EYE_BLINK_PARAMETERS.key;
+    editor.commit_properties(
+        editor.editing_context_token().unwrap(),
+        object,
+        PropertyPatch {
+            scope: PropertyScope::Object,
+            expected: [(field, PropertyValue::References(vec![eye.clone()]))].into(),
+            changes: [(field, PropertyValue::References(vec![]))].into(),
+        },
+    )?;
+    let mut updated = editor.animation_request().unwrap();
+    assert_ne!(updated.identity.model_generation, model_generation);
+    updated.identity.time = closed_time;
+    assert_eq!(
+        evaluator
+            .evaluate(&updated, |_, _| true)?
+            .snapshot
+            .parameters[&eye],
+        1.
+    );
+    editor.set_physics_cursor(id, false)?;
+    let stopped = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(stopped.snapshot.parameters[&eye], 1.);
+    assert_eq!(stopped.snapshot.parameters[&breath], 0.);
+    Ok(())
+}
+
+#[test]
+fn cursor_preview_drag_overrides_blink_until_release_and_replays() -> anyhow::Result<()> {
+    let mut document = Document::new_blank()?;
+    let eye = document.create_parameter(NewParameter {
+        runtime_id: "Eye".into(),
+        minimum: 0.,
+        default_value: 0.75,
+        ..Default::default()
+    })?;
+    let object = document.object_index().objects[0].reference.clone();
+    document.set_object_property(&object, "eye_blink_parameters", serde_json::json!([eye]))?;
+    let mut editor = support::editor_from_document(document);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let id = editor.active_id().unwrap();
+    let revision = editor.document().unwrap().model_generation();
+    let bindings = [(
+        eye.clone(),
+        CursorPreviewBinding {
+            axis: CursorPreviewAxis::X,
+            influence_percent: 100.,
+            reversed: false,
+        },
+    )]
+    .into();
+    editor.replace_cursor_preview_bindings(id, revision, Some(bindings))?;
+    editor.set_physics_cursor(id, true)?;
+    let mut evaluator = AnimationEvaluator::default();
+    assert_eq!(sample(&mut editor, &mut evaluator)?.snapshot.parameters[&eye], 1.);
+
+    let binding = editor.primary_viewport_binding().unwrap();
+    let drag = editor.begin_cursor_preview_drag(binding, ViewportPoint { x: 0., y: 256. }, false)?;
+    editor.advance_animation_clock(0.05);
+    editor.advance_animation_clock(1.05);
+    let driven = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(driven.snapshot.parameters[&eye], 0.);
+
+    editor.update_cursor_preview_drag(drag, ViewportPoint { x: 256., y: 256. })?;
+    editor.advance_animation_clock(1.1);
+    let centered = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(centered.snapshot.parameters[&eye], 0.75);
+
+    assert!(editor.cancel_viewport_interaction(drag));
+    editor.advance_animation_clock(1.3);
+    let request = editor.animation_request().unwrap();
+    assert_eq!(request.physics.inputs.last().unwrap().value, None);
+    let recovered = evaluator.evaluate(&request, |_, _| true)?;
+    let mut idle = request.clone();
+    idle.physics.inputs.clear();
+    let baseline = AnimationEvaluator::default().evaluate(&idle, |_, _| true)?;
+    assert_eq!(recovered.snapshot, baseline.snapshot);
+
+    let mut rewind = request;
+    rewind.identity.time = driven.identity.time;
+    let replayed = evaluator.evaluate(&rewind, |_, _| true)?;
+    assert_eq!(replayed.snapshot, driven.snapshot);
+    Ok(())
+}
+
+#[test]
+fn cursor_preview_breath_mapping_updates_live_and_empty_disables() -> anyhow::Result<()> {
+    let mut document = Document::new_blank()?;
+    let standard = document.create_parameter(NewParameter {
+        runtime_id: "ParamBreath".into(),
+        ..Default::default()
+    })?;
+    let custom = document.create_parameter(NewParameter {
+        runtime_id: "CustomBreath".into(),
+        maximum: 0.45,
+        default_value: 0.125,
+        ..Default::default()
+    })?;
+    let object = document.object_index().objects[0].reference.clone();
+    let field = property::document::BREATH_PARAMETERS.key;
+    assert_eq!(
+        document.property_values(&object)?[&field],
+        PropertyValue::References(vec![standard.clone()])
+    );
+    let mut editor = support::editor_from_document(document);
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let id = editor.active_id().unwrap();
+    editor.set_physics_cursor(id, true)?;
+    editor.advance_animation_clock(3.2345 / 4.);
+    let mut evaluator = AnimationEvaluator::default();
+    let before = sample(&mut editor, &mut evaluator)?;
+    assert!((before.snapshot.parameters[&standard] - 0.5).abs() < 1e-6);
+    assert_eq!(before.snapshot.parameters[&custom], 0.125);
+
+    for (old, new, expected_custom) in [
+        (vec![standard.clone()], vec![custom.clone()], 0.45),
+        (vec![custom.clone()], vec![], 0.125),
+    ] {
+        editor.commit_properties(
+            editor.editing_context_token().unwrap(),
+            object.clone(),
+            PropertyPatch {
+                scope: PropertyScope::Object,
+                expected: [(field, PropertyValue::References(old))].into(),
+                changes: [(field, PropertyValue::References(new))].into(),
+            },
+        )?;
+        let frame = sample(&mut editor, &mut evaluator)?;
+        assert_eq!(frame.identity.time, before.identity.time);
+        assert_eq!(frame.snapshot.parameters[&standard], 0.);
+        assert_eq!(frame.snapshot.parameters[&custom], expected_custom);
+    }
+    editor.execute(EditorCommand::Undo)?;
+    let restored = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(restored.snapshot.parameters[&custom], 0.45);
+    editor.advance_animation_clock(3.2345 * 0.75);
+    let exhale = sample(&mut editor, &mut evaluator)?;
+    assert!((exhale.snapshot.parameters[&custom] - 0.125).abs() < 1e-6);
+    Ok(())
+}
+
+#[test]
+fn cursor_preview_holds_and_switches_expressions_on_its_own_clock() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    let doc = editor.document().unwrap();
+    let catalog = doc.animation_catalog();
+    let motion = catalog.motions[0].selection.clone();
+    let add = catalog.expressions[0].id.clone();
+    let overwrite = catalog.expressions[2].id.clone();
+    let physics = doc.physics_definition().unwrap();
+    let input = physics.data.settings[0].inputs[0]
+        .source
+        .parameter_id()
+        .unwrap();
+    editor.select_motion(id, motion.clone())?;
+    editor.seek_timeline(id, 0.35)?;
+    editor.select_expression(id, add.clone())?;
+    let timeline = editor.animation().unwrap();
+    let position = (timeline.time, timeline.edit_time);
+    let schedule = timeline.expressions.clone();
+
+    editor.set_physics_cursor(id, true)?;
+    let mut evaluator = AnimationEvaluator::default();
+    let start = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(start.snapshot.active_expressions, [add.clone()]);
+    assert!(start.snapshot.active_motions.is_empty());
+    editor.advance_animation_clock(0.4);
+    editor.set_physics_input(id, input, 0.5)?;
+    editor.select_expression(id, overwrite.clone())?;
+    assert!(editor.cursor_physics_active());
+    let preview = editor.animation().unwrap();
+    assert!(preview.playing);
+    assert_eq!(preview.time, 0.4);
+    assert_eq!(preview.preview_expression(), Some(overwrite.as_str()));
+    assert_eq!(preview.physics_preview.inputs.len(), 1);
+    editor.advance_animation_clock(1.);
+    let request = editor.animation_request().unwrap();
+    assert_eq!(request.expressions[1].time, 0.4);
+    let held = evaluator.evaluate(&request, |_, _| true)?;
+    let replay = AnimationEvaluator::default().evaluate(&request, |_, _| true)?;
+    assert_eq!(held.snapshot, replay.snapshot);
+    assert_eq!(held.snapshot.active_expressions, [overwrite.clone()]);
+    assert!((held.snapshot.parameters[input] - 0.8).abs() < 1e-6);
+
+    editor.rewind_animation()?;
+    let rewound = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(rewound.identity.time, 0.);
+    assert_eq!(rewound.snapshot.active_expressions, [overwrite]);
+    editor.dispatch(editor.command(CommandId::ClearExpression))?;
+    assert!(sample(&mut editor, &mut evaluator)?
+        .snapshot
+        .active_expressions
+        .is_empty());
+    assert!(editor.cursor_physics_active());
+
+    editor.set_physics_cursor(id, false)?;
+    let timeline = editor.animation().unwrap();
+    assert_eq!((timeline.time, timeline.edit_time), position);
+    assert_eq!(timeline.motion.as_ref(), Some(&motion));
+    assert_eq!(timeline.preview_expression(), Some(add.as_str()));
+    assert_eq!(timeline.expressions, schedule);
+    assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    Ok(())
+}
+
+#[test]
+fn cursor_preview_applies_expression_immediately_when_paused() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    let doc = editor.document().unwrap();
+    let catalog = doc.animation_catalog();
+    let overwrite = catalog.expressions[2].id.clone();
+    let multiply = catalog.expressions[1].id.clone();
+    let physics = doc.physics_definition().unwrap();
+    let input = physics.data.settings[0].inputs[0].source.parameter_id().unwrap();
+    let mut evaluator = AnimationEvaluator::default();
+    editor.set_physics_cursor(id, true)?;
+    editor.set_physics_input(id, input, 0.5)?;
+    editor.select_expression(id, overwrite.clone())?;
+    assert_eq!(sample(&mut editor, &mut evaluator)?.snapshot.parameters[input], 0.5);
+
+    editor.pause_animation();
+    editor.select_expression(id, overwrite)?;
+    assert_eq!(sample(&mut editor, &mut evaluator)?.snapshot.parameters[input], 0.8);
+    editor.select_expression(id, multiply.clone())?;
+    let frame = sample(&mut editor, &mut evaluator)?;
+    assert_eq!(frame.snapshot.parameters[input], 0.25);
+    assert_eq!(frame.snapshot.active_expressions, [multiply]);
+    assert_eq!(frame.identity.time, 0.);
+    assert!(editor.cursor_physics_active());
+    assert!(!editor.animation().unwrap().playing);
+    Ok(())
+}
+
+#[test]
 fn manual_physics_and_bypass_replay_without_document_or_timeline_writes() -> anyhow::Result<()> {
     let (mut editor, _assets) = setup()?;
     let id = editor.active_id().unwrap();
@@ -425,7 +730,7 @@ fn manual_inputs_update_at_the_same_clock_without_cancelling_inflight_frames() -
         before.identity.acceptance_floor
     );
     assert!(after.identity.request > before.identity.request);
-    assert_eq!(after.physics.inputs.last().unwrap().value, 0.7);
+    assert_eq!(after.physics.inputs.last().unwrap().value, Some(0.7));
     assert!(editor.present_animation(old_frame.identity, old_frame.snapshot));
     editor.advance_animation_clock(0.1);
     let frame = sample(&mut editor, &mut AnimationEvaluator::default())?;

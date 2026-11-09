@@ -1,5 +1,6 @@
-//! Import provenance and output policy are exposed by import/export, not the inspector.
+//! Document inspector visibility.
 use super::*;
+
 pub(super) const PROVIDER: PropertyProvider = PropertyProvider {
     show_readonly: |field| {
         !matches!(
