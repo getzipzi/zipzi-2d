@@ -1,7 +1,6 @@
 //! Ordered canvas geometry shared by Metal, D3D11 and the GPUI fallback.
 //! Coordinates and stroke widths are logical pixels, colors are straight RGBA.
 use anyhow::{Result, ensure};
-use std::borrow::Cow;
 use zipzi_editor_core::{
     GluePointState, OverlaySnapshot, OverlayVertex, OverlayVertexKind as K, ViewportPoint,
     canvas_style as style,
@@ -146,18 +145,8 @@ impl CanvasOverlayCache {
         palette: CanvasPalette,
         options: CanvasOptions,
     ) -> Result<std::sync::Arc<CanvasDrawList>> {
-        self.prepare_snapshot(Cow::Borrowed(overlay), extent, palette, options)
-    }
-
-    pub fn prepare_snapshot(
-        &mut self,
-        overlay: Cow<'_, OverlaySnapshot>,
-        extent: Point,
-        palette: CanvasPalette,
-        options: CanvasOptions,
-    ) -> Result<std::sync::Arc<CanvasDrawList>> {
         if let Some((old, e, p, o, list)) = &self.cached {
-            if old == overlay.as_ref() && *e == extent && *p == palette && *o == options {
+            if old == overlay && *e == extent && *p == palette && *o == options {
                 return Ok(list.clone());
             }
         }
@@ -166,9 +155,9 @@ impl CanvasOverlayCache {
             .as_ref()
             .map_or(0, |(_, _, _, _, list)| list.primitives.len());
         let list = std::sync::Arc::new(CanvasDrawList::build(
-            &overlay, extent, palette, options, capacity,
+            overlay, extent, palette, options, capacity,
         )?);
-        self.cached = Some((overlay.into_owned(), extent, palette, options, list.clone()));
+        self.cached = Some((overlay.clone(), extent, palette, options, list.clone()));
         Ok(list)
     }
 }

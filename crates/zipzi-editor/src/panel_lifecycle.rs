@@ -130,8 +130,6 @@ impl EditorView {
             self.editor.set_viewport_visible(viewport, displayed);
             changed |= before != self.editor.viewport_binding(viewport);
             if !displayed {
-                #[cfg(target_os = "windows")]
-                self.hide_native_viewport(viewport, cx);
                 self.viewport_frames.remove(&viewport);
                 if let Some(requests) = &self.requests {
                     requests.cancel(viewport);
