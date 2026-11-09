@@ -79,6 +79,7 @@ is reported as a publication warning.
 | Glue pairs, weights and keyed intensity | Editable Glue sources/forms |
 | Offscreen composite appearance | Owner part's offscreen state and forms |
 | X/angle physics, vertices, normalization and integral FPS | Editable physics settings |
+| Cursor preview bindings, including left/right drag, flip and explicit clearing | Model viewer cursor settings. Export reports influence values that require rounding to Cubism's single-precision weight. |
 | Artwork, including unused assets | Embedded PNG atlases and texture-input extensions |
 
 Imported Rotation scale units are undone in both ordinary and morph forms.

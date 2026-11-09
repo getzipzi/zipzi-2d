@@ -48,11 +48,12 @@ impl EditorView {
     ) -> bool {
         // A dialog may already have ended editing before capturing its context
         // token. Releasing leftover UI must not invalidate that new token.
-        let preserve_playback = !self.modal
-            && self
-                .playback_dialog
-                .as_ref()
-                .is_some_and(|guard| guard.valid(&self.editor));
+        let preserve_playback = self.editor.cursor_physics_active()
+            || !self.modal
+                && self
+                    .playback_dialog
+                    .as_ref()
+                    .is_some_and(|guard| guard.valid(&self.editor));
         let active = if preserve_playback {
             self.editor.editing_input_active()
         } else {
@@ -108,6 +109,11 @@ impl EditorView {
                         window,
                         cx,
                     );
+                }
+                if this.editor.cursor_physics_active() {
+                    this.animation_anchor = None;
+                }
+                if !window.is_window_active() || this.editor.cursor_physics_active() {
                     this.redraw(cx);
                 }
             }));

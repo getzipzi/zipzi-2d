@@ -3,6 +3,7 @@
 //! The codec has no filesystem, GUI, JVM or Cubism SDK dependency. A future CLI
 //! can use `Document` as its conversion hub and supply assets from any importer.
 mod caff;
+mod cursor_preview;
 mod import;
 #[cfg(feature = "test-support")]
 pub use import::test_support;

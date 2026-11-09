@@ -1,5 +1,6 @@
 //! One background SDK evaluator with a bounded, replaceable request slot.
 use crate::*;
+use gpui_kit::component::WindowExt;
 use std::sync::{
     Arc, Condvar, Mutex,
     atomic::{AtomicU64, Ordering},
@@ -297,7 +298,22 @@ impl EditorView {
         }
     }
 
-    pub(super) fn schedule_animation_frame(&mut self, window: &Window, cx: &Context<Self>) {
+    fn cursor_preview_clock_blocked(&self, window: &mut Window, cx: &mut App) -> bool {
+        self.editor.cursor_physics_active()
+            && (!window.is_window_active()
+                || !window.is_visible()
+                || self.modal
+                || window.has_active_dialog(cx))
+    }
+
+    pub(super) fn schedule_animation_frame(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.cursor_preview_clock_blocked(window, cx) {
+            self.animation_anchor = None;
+            return;
+        }
+        if self.editor.cursor_physics_active() && self.animation_anchor.is_none() {
+            self.sync_animation_clock(cx);
+        }
         if self.animation_anchor.is_none() || self.animation_clock_running {
             return;
         }
@@ -305,6 +321,11 @@ impl EditorView {
         let view = cx.weak_entity();
         window.on_next_frame(move |window, cx| {
             let _ = view.update(cx, |this, cx| {
+                if this.cursor_preview_clock_blocked(window, cx) {
+                    this.animation_clock_running = false;
+                    this.animation_anchor = None;
+                    return;
+                }
                 this.sync_animation_clock(cx);
                 this.animation_clock_running = false;
                 let Some((anchor, time)) = this.animation_anchor else {
@@ -312,7 +333,11 @@ impl EditorView {
                 };
                 // Display cadence chooses the sample time, never the physics
                 // integration step. The SDK retains its canonical 60 Hz history.
-                let speed = this.editor.animation().unwrap().playback_speed;
+                let speed = if this.editor.cursor_physics_active() {
+                    1.
+                } else {
+                    this.editor.animation().unwrap().playback_speed
+                };
                 this.editor
                     .advance_animation_clock(time + anchor.elapsed().as_secs_f32() * speed);
                 this.request_preview();

@@ -219,6 +219,12 @@ fn publish_plan_with_filesystem(
         return Err(io::io_error(error));
     }
     let mut publication = Publication::finish(files, parent);
+    if let Some(message) = report
+        .pointer("/cursor_preview/message")
+        .and_then(|value| value.as_str())
+    {
+        publication.notices.push(message.into());
+    }
     if let Err(e) = fs::remove_dir_all(&backup.0) {
         let recovery = backup.preserve();
         publication.warnings.push(format!(

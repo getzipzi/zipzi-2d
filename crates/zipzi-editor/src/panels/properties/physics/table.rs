@@ -1,4 +1,5 @@
 //! Compact mapping tables; cells share the inspector's field and edit lifecycle.
+use super::super::table::{cell, header, row};
 use super::*;
 use crate::ui::slide_number_input::format_one_decimal;
 use gpui_kit::component::menu::ContextMenuExt;
@@ -62,23 +63,6 @@ fn columns(output: bool, manual: bool) -> Vec<Column> {
     });
     columns
 }
-fn cell(column: &Column, content: impl IntoElement, cx: &App) -> Div {
-    div()
-        .min_w_0()
-        .px(compact::rem(2.))
-        .flex()
-        .items_center()
-        .when_some(column.width, |cell, width| {
-            cell.w(compact::rem(width)).flex_shrink_0()
-        })
-        .when(column.width.is_none(), |cell| {
-            cell.flex_1().min_w(compact::rem(92.))
-        })
-        .border_r_1()
-        .border_color(cx.theme().border.opacity(0.45))
-        .child(div().w_full().min_w_0().child(content))
-}
-
 impl PropertiesPanel {
     pub(super) fn physics_table(
         &mut self,
@@ -95,19 +79,11 @@ impl PropertiesPanel {
     ) -> AnyElement {
         let rig = &asset.data.settings[rig_index];
         let columns = columns(output, manual.is_some());
-        let mut header = div()
-            .flex()
-            .items_center()
-            .h(compact::rem(compact::HEADER_CONTROL))
-            .text_size(compact::rem(compact::CAPTION))
-            .text_color(cx.theme().muted_foreground)
-            .bg(cx.theme().muted.opacity(0.5))
-            .border_b_1()
-            .border_color(cx.theme().border);
+        let mut header = header(cx);
         for (index, column) in columns.iter().enumerate() {
             let help = column.help.clone();
             header = header.child(cell(
-                column,
+                column.width,
                 div()
                     .id(SharedString::from(format!(
                         "physics-{output}-column-{index}"
@@ -279,16 +255,9 @@ impl PropertiesPanel {
                 },
             );
             let inspect = object.clone();
-            let mut row = div()
-                .id(SharedString::from(format!("physics-{prefix}-row-{i}")))
+            let mut row = row(format!("physics-{prefix}-row-{i}"), cx)
                 .test_support()
-                .role(gpui::Role::Row)
                 .aria_selected(selected)
-                .flex()
-                .items_center()
-                .min_h(compact::rem(compact::HEADER_CONTROL + 2.))
-                .border_b_1()
-                .border_color(cx.theme().border.opacity(0.5))
                 .when(selected, |row| row.bg(cx.theme().primary.opacity(0.10)))
                 .on_mouse_down(
                     MouseButton::Left,
@@ -307,7 +276,7 @@ impl PropertiesPanel {
                     }),
                 );
             for (column, content) in columns.iter().zip(cells) {
-                row = row.child(cell(column, content, cx));
+                row = row.child(cell(column.width, content, cx));
             }
             table = table.child(
                 row.context_menu(crate::authoring::business::menu(self.owner.clone(), object)),

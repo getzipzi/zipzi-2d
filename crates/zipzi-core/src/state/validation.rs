@@ -368,6 +368,24 @@ impl DocumentBuilder {
                 self.set_editor_state(editor)?;
             }
         }
+        let retired_cursor_bindings = self
+            .editor_state()
+            .cursor_preview_bindings
+            .as_ref()
+            .is_some_and(|bindings| {
+                self.touched_parameters
+                    .iter()
+                    .any(|id| bindings.contains_key(id) && self.parameter(id).is_none())
+            });
+        if retired_cursor_bindings {
+            let mut editor = self.editor_state().clone();
+            editor
+                .cursor_preview_bindings
+                .as_mut()
+                .unwrap()
+                .retain(|id, _| self.parameter(id).is_some());
+            self.set_editor_state(editor)?;
+        }
         if let Some(ids) = self.touched.get(&RecordDomain::BlendKeyTable) {
             let mut normalized = Vec::new();
             {

@@ -39,7 +39,7 @@ impl AnimationViewport {
         // The shared image accessor also admits this document's frozen image
         // while saving, when core deliberately has no live viewport binding.
         let frame = owner.animation_frame_for(viewport);
-        SurfaceContent::navigation(
+        let mut content = SurfaceContent::navigation(
             frame.map(|f| (f.image.clone(), f.state.transform.metrics)),
             owner.viewport_error(viewport).cloned().or_else(|| {
                 owner.editor.animation().and_then(|a| {
@@ -48,7 +48,52 @@ impl AnimationViewport {
                         .map(crate::panels::animation_feedback::failure_text)
                 })
             }),
-        )
+        );
+        if owner.editor.cursor_physics_active() {
+            content.hand_tool = false;
+            content.controls = Some(Self::cursor_preview_hint);
+        }
+        content
+    }
+
+    fn cursor_preview_hint(
+        surface: &ViewportSurface,
+        modal: bool,
+        cx: &mut Context<ViewportSurface>,
+    ) -> AnyElement {
+        let has_bindings = surface.owner.upgrade().is_some_and(|owner| {
+            owner
+                .read(cx)
+                .editor
+                .animation()
+                .is_some_and(|a| a.has_cursor_preview_bindings())
+        });
+        div()
+            .id("cursor-preview-hint")
+            .test_support()
+            .absolute()
+            .bottom_2()
+            .left_2()
+            .right_2()
+            .flex()
+            .justify_center()
+            .when(!modal, |hint| {
+                hint.child(
+                    div()
+                        .px_2()
+                        .py_1()
+                        .rounded_sm()
+                        .bg(cx.theme().background)
+                        .text_color(cx.theme().foreground)
+                        .text_xs()
+                        .child(if has_bindings {
+                            t!("physics.cursor_hint")
+                        } else {
+                            t!("physics.cursor_no_mapping")
+                        }),
+                )
+            })
+            .into_any_element()
     }
 }
 viewport_panel!(AnimationViewport, "dock.animation_viewport", 176.);

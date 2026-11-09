@@ -14,6 +14,49 @@ fn is_false(value: &bool) -> bool {
     !value
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Mouse input for an interactive model preview binding.
+pub enum CursorPreviewAxis {
+    /// Horizontal left drag.
+    X,
+    /// Vertical left drag.
+    Y,
+    RightX,
+    RightY,
+    /// An inactive Cubism entry can retain its influence for later editing.
+    Disabled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
+/// Editor-only mapping from one mouse axis to a model parameter.
+pub struct CursorPreviewBinding {
+    pub axis: CursorPreviewAxis,
+    /// Percentage of the parameter's range on either side of its default.
+    pub influence_percent: f64,
+    pub reversed: bool,
+}
+
+impl CursorPreviewBinding {
+    pub fn standard(runtime_id: &str) -> Option<Self> {
+        use CursorPreviewAxis::{X, Y};
+        let axis = match runtime_id {
+            "ParamAngleX" | "ParamEyeBallX" | "ParamBodyAngleX" | "PARAM_ANGLE_X"
+            | "PARAM_EYE_BALL_X" | "PARAM_BODY_ANGLE_X" => X,
+            "ParamAngleY" | "ParamEyeBallY" | "PARAM_ANGLE_Y" | "PARAM_EYE_BALL_Y" => Y,
+            _ => return None,
+        };
+        Some(Self {
+            axis,
+            influence_percent: 100.,
+            reversed: false,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[derive(zipzi_api_derive::ApiShape, zipzi_api_derive::BinaryWire)]
@@ -31,6 +74,9 @@ pub struct EditorState {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     /// Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0.
     pub rotation_bone_angle_offsets: BTreeMap<String, f32>,
+    /// Custom cursor mappings by parameter UUID. None uses standard parameter IDs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_preview_bindings: Option<BTreeMap<String, CursorPreviewBinding>>,
 }
 impl EditorState {
     pub fn hidden_objects(&self) -> impl Iterator<Item = &str> {
@@ -44,6 +90,7 @@ impl EditorState {
             && self.rotation_bone_lengths.is_empty()
             && self.rotation_bone_reference_scales.is_empty()
             && self.rotation_bone_angle_offsets.is_empty()
+            && self.cursor_preview_bindings.is_none()
     }
     pub fn get(&self, id: &str) -> ObjectEditorState {
         self.objects.get(id).copied().unwrap_or_default()

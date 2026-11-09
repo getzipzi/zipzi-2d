@@ -3077,6 +3077,85 @@
       "transparent": false,
       "tuple": false
     },
+    "CursorPreviewAxis": {
+      "content": null,
+      "doc": "Mouse input for an interactive model preview binding.",
+      "kind": "serde_enum",
+      "name": "zipzi_contract::document::CursorPreviewAxis",
+      "tag": null,
+      "variants": [
+        {
+          "doc": "Horizontal left drag.",
+          "fields": [],
+          "form": "unit",
+          "name": "x",
+          "rust_name": "X"
+        },
+        {
+          "doc": "Vertical left drag.",
+          "fields": [],
+          "form": "unit",
+          "name": "y",
+          "rust_name": "Y"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "right_x",
+          "rust_name": "RightX"
+        },
+        {
+          "fields": [],
+          "form": "unit",
+          "name": "right_y",
+          "rust_name": "RightY"
+        },
+        {
+          "doc": "An inactive Cubism entry can retain its influence for later editing.",
+          "fields": [],
+          "form": "unit",
+          "name": "disabled",
+          "rust_name": "Disabled"
+        }
+      ]
+    },
+    "CursorPreviewBinding": {
+      "doc": "Editor-only mapping from one mouse axis to a model parameter.",
+      "fields": [
+        {
+          "doc": "",
+          "name": "axis",
+          "rust_name": "axis",
+          "shape": {
+            "kind": "ref",
+            "name": "CursorPreviewAxis"
+          },
+          "skip": false
+        },
+        {
+          "doc": "Percentage of the parameter's range on either side of its default.",
+          "name": "influence_percent",
+          "rust_name": "influence_percent",
+          "shape": {
+            "kind": "f64"
+          },
+          "skip": false
+        },
+        {
+          "doc": "",
+          "name": "reversed",
+          "rust_name": "reversed",
+          "shape": {
+            "kind": "bool"
+          },
+          "skip": false
+        }
+      ],
+      "kind": "serde_record",
+      "name": "zipzi_contract::document::CursorPreviewBinding",
+      "transparent": false,
+      "tuple": false
+    },
     "DeformerOriginalAction": {
       "content": null,
       "doc": "Capture, restore or configure the original deformer shape.",
@@ -4880,6 +4959,23 @@
             "value": {
               "kind": "f32"
             }
+          },
+          "skip": false
+        },
+        {
+          "default": null,
+          "doc": "Custom cursor mappings by parameter UUID. None uses standard parameter IDs.",
+          "name": "cursor_preview_bindings",
+          "rust_name": "cursor_preview_bindings",
+          "shape": {
+            "item": {
+              "kind": "string_map",
+              "value": {
+                "kind": "ref",
+                "name": "CursorPreviewBinding"
+              }
+            },
+            "kind": "optional"
           },
           "skip": false
         }

@@ -673,6 +673,9 @@ impl Model<'_> {
                 editor_state.rotation_bone_lengths.remove(&key.id);
                 editor_state.rotation_bone_reference_scales.remove(&key.id);
                 editor_state.rotation_bone_angle_offsets.remove(&key.id);
+                if let Some(bindings) = &mut editor_state.cursor_preview_bindings {
+                    bindings.remove(&key.id);
+                }
             }
         }
         if display_info != *candidate.content.display_info {

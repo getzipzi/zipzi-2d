@@ -12,6 +12,7 @@ impl AnimationSession {
     pub(crate) fn new(document: &Document) -> Self {
         Self {
             physics_preview: Default::default(),
+            cursor_physics: None,
             physics_return: None,
             inspected: None,
             motion: None,
@@ -116,6 +117,7 @@ impl AnimationSession {
             return;
         }
         self.document_revision = revision;
+        self.reconcile_cursor_bindings(document);
         if self
             .inspected
             .as_ref()
@@ -139,19 +141,20 @@ impl AnimationSession {
         self.model_generation = generation;
         self.source = None;
         self.rebuild();
+        if self.physics_preview.manual {
+            let model = document.model();
+            self.physics_preview
+                .baseline
+                .retain(|id, _| model.parameter(id).is_some());
+            self.physics_preview
+                .inputs
+                .retain(|input| model.parameter(&input.parameter).is_some());
+            return;
+        }
         if self.motion.is_none() && self.expression.is_none() && self.expressions.is_empty() {
             return;
         }
         let catalog = document.animation_catalog();
-        if self.physics_preview.manual {
-            self.physics_preview
-                .baseline
-                .retain(|id, _| catalog.parameters.iter().any(|p| &p.id == id));
-            self.physics_preview
-                .inputs
-                .retain(|input| catalog.parameters.iter().any(|p| p.id == input.parameter));
-            return;
-        }
         if let Some(selection) = &self.motion {
             if let Some(resource) = catalog.motions.iter().find(|r| &r.selection == selection) {
                 self.time = if !resource.playable() {

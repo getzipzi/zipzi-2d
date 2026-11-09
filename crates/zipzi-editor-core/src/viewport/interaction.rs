@@ -6,6 +6,7 @@ use anyhow::{Result, ensure};
 pub enum ViewportInteractionKind {
     Navigation,
     Modeling,
+    CursorPreview,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ViewportInteractionToken {
@@ -25,7 +26,7 @@ impl Editor {
         self.active_session()
             .map_or(&[], |s| s.modeling.tools.idle_hints())
     }
-    fn acquire_viewport_interaction(
+    pub(crate) fn acquire_viewport_interaction(
         &mut self,
         binding: ViewportBinding,
         kind: ViewportInteractionKind,
@@ -49,14 +50,20 @@ impl Editor {
     pub fn viewport_interaction_valid(&self, token: ViewportInteractionToken) -> bool {
         self.viewport_interaction == Some(token)
             && self.viewport_binding_valid(token.binding)
-            && (token.kind == ViewportInteractionKind::Navigation
-                || self.gesture_active_for(token.binding))
+            && match token.kind {
+                ViewportInteractionKind::Navigation => true,
+                ViewportInteractionKind::Modeling => self.gesture_active_for(token.binding),
+                ViewportInteractionKind::CursorPreview => self.cursor_physics_active(),
+            }
     }
     pub fn cancel_viewport_interaction(&mut self, token: ViewportInteractionToken) -> bool {
         if self.viewport_interaction != Some(token) {
             return false;
         }
         self.viewport_interaction = None;
+        if token.kind == ViewportInteractionKind::CursorPreview {
+            self.release_cursor_preview(token.binding.document);
+        }
         if token.kind == ViewportInteractionKind::Modeling
             && self.active_id() == Some(token.binding.document)
             && self.gesture_active()
@@ -78,6 +85,7 @@ impl Editor {
         }
         match token.kind {
             ViewportInteractionKind::Navigation => crate::tools::navigation_hints(),
+            ViewportInteractionKind::CursorPreview => &[],
             ViewportInteractionKind::Modeling => self
                 .active_session()
                 .map_or(&[], |s| s.modeling.tools.interaction_hints()),

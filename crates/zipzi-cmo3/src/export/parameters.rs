@@ -1,6 +1,36 @@
 use super::*;
 
 impl Exporter<'_> {
+    pub(super) fn model_viewer_settings(&self) -> N {
+        use zipzi_core::document::CursorPreviewAxis as Axis;
+        let mut entries = Vec::new();
+        if let Some(bindings) = &self.doc.editor_state().cursor_preview_bindings {
+            // Cubism fills missing parameter entries from its standard mappings.
+            // Write NONE explicitly for parameters omitted from a custom mapping.
+            for id in self.doc.parameter_order() {
+                let (axis, weight) = bindings.get(id).map_or(("NONE", 1.), |binding| {
+                    let axis = match binding.axis {
+                        Axis::X => "X",
+                        Axis::Y => "Y",
+                        Axis::RightX => "X_R",
+                        Axis::RightY => "Y_R",
+                        Axis::Disabled => "NONE",
+                    };
+                    let weight =
+                        crate::cursor_preview::weight(binding.influence_percent, binding.reversed);
+                    (axis, weight)
+                });
+                entries.push(
+                    N::new("TrackCursorSetting")
+                        .field("guid", guid("CParameterGuid", id))
+                        .field("value", N::enumeration("TrackCursorSettingItemType", axis))
+                        .field("weight", f(weight)),
+                );
+            }
+        }
+        N::new("ModelViewerSetting").field("trackCursorSettings", N::list("array_list", entries))
+    }
+
     pub(super) fn parameters(&mut self) -> (N, N, N) {
         let display = self.doc.display_info();
         let groups = display.parameter_groups.as_deref().unwrap_or(&[]);

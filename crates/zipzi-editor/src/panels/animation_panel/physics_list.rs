@@ -122,7 +122,13 @@ impl AnimationPanel {
                     })
             });
         }
-        toolbar.into_any_element()
+        self.cursor_preview_controls(
+            toolbar,
+            document,
+            state.editor.cursor_physics_active(),
+            state.modal || dialog || state.editor.is_busy(),
+        )
+        .into_any_element()
     }
     pub(super) fn render_physics_list(
         &mut self,
@@ -241,7 +247,7 @@ impl AnimationPanel {
                 .context_menu(business::menu(self.owner.clone(), reference(&rig.id))),
             );
         }
-        crate::ui::compact::scroll_frame(
+        compact::scroll_frame(
             sorting::panel_actions(root, &self.sorting).on_key_down(cx.listener(
                 move |this, event: &KeyDownEvent, window, cx| {
                     if disabled || !this.focus.is_focused(window) || choices.is_empty() {

@@ -2,6 +2,7 @@
 //! consume this interface without knowing parameter, scene or animation rules.
 pub(crate) mod animation;
 mod business;
+pub(crate) mod cursor_mapping;
 pub(crate) mod deformer;
 mod details;
 mod document;
@@ -38,6 +39,12 @@ pub(crate) struct PropertyTarget {
 }
 
 impl PropertyTarget {
+    pub(crate) fn is_cursor_mapping(&self) -> bool {
+        self.context == EditingContext::Animation
+            && self.object.kind == ObjectKind::Document
+            && self.timeline.is_none()
+    }
+
     /// Resource revisions validate edits; they do not identify the widgets.
     pub(crate) fn same_resource(&self, other: &Self) -> bool {
         matches!(

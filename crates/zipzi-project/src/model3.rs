@@ -146,10 +146,11 @@ fn import_with_namespace(
             .into_iter()
             .flat_map(|object| object.iter())
             .filter(|(key, _)| {
-                !matches!(
-                    key.as_str(),
-                    "Version" | "FileReferences" | "Groups" | "Layout" | "HitAreas"
-                )
+                key.as_str() != zipzi_moc3::CURSOR_PREVIEW_MODEL3_FIELD
+                    && !matches!(
+                        key.as_str(),
+                        "Version" | "FileReferences" | "Groups" | "Layout" | "HitAreas"
+                    )
             })
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect(),

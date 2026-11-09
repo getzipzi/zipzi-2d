@@ -43,6 +43,7 @@ impl AnimationSource {
 
 pub struct AnimationSession {
     pub physics_preview: crate::PhysicsPreviewSettings,
+    pub(crate) cursor_physics: Option<crate::CursorPhysicsPreview>,
     pub(crate) physics_return: Option<(f32, f32)>,
     pub(crate) inspected: Option<crate::ObjectRef>,
     pub motion: Option<MotionSelection>,

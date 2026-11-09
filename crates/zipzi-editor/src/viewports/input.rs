@@ -1,5 +1,6 @@
 //! Pointer ownership, tool dispatch and canvas input bindings.
 use super::*;
+use zipzi_editor_core::ViewportInteractionKind;
 
 impl ViewportSurface {
     pub(super) fn input_target(
@@ -59,6 +60,26 @@ impl ViewportSurface {
         }
         if window.has_active_dialog(cx) {
             self.cancel(cx);
+            return;
+        }
+        if let Some(token) = self
+            .interaction
+            .filter(|token| token.kind == ViewportInteractionKind::CursorPreview)
+        {
+            if event.pressed_button == self.cursor_preview_button {
+                let point = self.local(event.position);
+                let _ = self.owner.update(cx, |owner, cx| {
+                    if owner
+                        .editor
+                        .update_cursor_preview_drag(token, point)
+                        .is_ok()
+                    {
+                        owner.sync_animation_clock(cx);
+                    }
+                });
+            } else {
+                self.cancel(cx);
+            }
             return;
         }
         if let Some(PanGesture {
@@ -132,6 +153,12 @@ impl ViewportSurface {
             }
             self.sync_status_bar(cx);
             cx.notify();
+        } else if Some(event.button) == self.cursor_preview_button
+            && self
+                .interaction
+                .is_some_and(|token| token.kind == ViewportInteractionKind::CursorPreview)
+        {
+            self.cancel(cx);
         } else if self.navigation.pan.is_none() && event.button == MouseButton::Left {
             self.input(
                 CanvasInput::Up {
@@ -158,7 +185,40 @@ impl ViewportSurface {
         if !self.interaction_allowed(window, cx) {
             return;
         }
+        let cursor_preview = matches!(event.button, MouseButton::Left | MouseButton::Right)
+            && self.kind == zipzi_editor_core::ViewportKind::Animation
+            && self
+                .owner
+                .upgrade()
+                .is_some_and(|owner| owner.read(cx).editor.cursor_physics_active());
+        if event.button == MouseButton::Right && !cursor_preview {
+            return;
+        }
         window.focus(&self.focus, cx);
+        if cursor_preview {
+            self.cancel(cx);
+            let point = self.local(event.position);
+            self.interaction = self
+                .owner
+                .update(cx, |owner, cx| {
+                    let binding = self.binding(&owner.editor)?;
+                    let token = owner
+                        .editor
+                        .begin_cursor_preview_drag(
+                            binding,
+                            point,
+                            event.button == MouseButton::Right,
+                        )
+                        .ok()?;
+                    owner.sync_animation_clock(cx);
+                    Some(token)
+                })
+                .ok()
+                .flatten();
+            self.cursor_preview_button = self.interaction.map(|_| event.button);
+            cx.notify();
+            return;
+        }
         if event.button == MouseButton::Middle || self.hand_tool(cx) {
             self.cancel(cx);
             let token = self
@@ -209,6 +269,13 @@ impl ViewportSurface {
         capture: bool,
         cx: &mut Context<Self>,
     ) -> E {
+        let element = if self.kind == zipzi_editor_core::ViewportKind::Animation {
+            element
+                .on_mouse_down(MouseButton::Right, cx.listener(Self::pointer_down))
+                .on_mouse_up(MouseButton::Right, cx.listener(Self::pointer_up))
+        } else {
+            element
+        };
         element
             .on_mouse_down(MouseButton::Left, cx.listener(Self::pointer_down))
             .on_mouse_down(MouseButton::Middle, cx.listener(Self::pointer_down))

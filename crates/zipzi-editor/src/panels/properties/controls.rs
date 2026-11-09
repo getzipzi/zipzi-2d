@@ -330,12 +330,13 @@ impl PropertiesPanel {
                             .as_ref()
                             .is_some_and(|(_, token)| token.owned(&state.editor)))
                     && self.target.as_ref().is_some_and(|target| {
-                        state.editor.document().is_some_and(|doc| {
-                            doc.authoring_capabilities(&target.object).is_ok_and(|c| {
-                                c.state(zipzi_editor_core::AuthoringAction::Patch)
-                                    == zipzi_contract::authoring::CapabilityState::Available
+                        target.is_cursor_mapping()
+                            || state.editor.document().is_some_and(|doc| {
+                                doc.authoring_capabilities(&target.object).is_ok_and(|c| {
+                                    c.state(zipzi_editor_core::AuthoringAction::Patch)
+                                        == zipzi_contract::authoring::CapabilityState::Available
+                                })
                             })
-                        })
                     })
             })
     }
@@ -796,6 +797,7 @@ impl PropertiesPanel {
         self.visible = visible;
         if !visible {
             self.physics.visible = false;
+            self.cursor_mapping = None;
         }
         if visible {
             return None;
@@ -1222,6 +1224,7 @@ impl PropertiesPanel {
                 id.identity()
             )))
             .xsmall()
+            .accessibility_label(t!(spec.label))
             .checked(checked)
             .disabled(disabled)
             .on_click(cx.listener(move |this, checked, window, cx| {

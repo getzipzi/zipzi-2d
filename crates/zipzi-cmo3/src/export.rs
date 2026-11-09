@@ -534,11 +534,7 @@ impl<'a> Exporter<'a> {
                     .field("gameMotions", N::empty_list())
                     .field("gameMotionGroups", N::empty_list()),
             )
-            .field(
-                "modelViewerSetting",
-                N::new("ModelViewerSetting")
-                    .field("trackCursorSettings", N::list("array_list", [])),
-            )
+            .field("modelViewerSetting", self.model_viewer_settings())
             .field(
                 "guides",
                 N::new("CGuidesSetting").field("guidesModeling", N::empty_list()),
@@ -740,7 +736,11 @@ pub(crate) fn encode_with_animation(
         exporter.sources.insert(id.clone(), r);
     }
     let xml = exporter.model(assets, options)?;
-    if !doc.editor_state().is_empty()
+    let editor = doc.editor_state();
+    if !editor.objects.is_empty()
+        || !editor.rotation_bone_lengths.is_empty()
+        || !editor.rotation_bone_reference_scales.is_empty()
+        || !editor.rotation_bone_angle_offsets.is_empty()
         || !doc.hierarchy_order().is_empty()
         || doc.transform_order().iter().any(|id| {
             let transform = doc.transform(id).unwrap();

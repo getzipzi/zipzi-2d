@@ -4,6 +4,52 @@ use zipzi_core::state::*;
 use zipzi_project::*;
 
 #[test]
+fn runtime_package_roundtrips_cursor_preview_companion_and_reports_sdk_limit() {
+    use zipzi_core::document::{CursorPreviewAxis, CursorPreviewBinding};
+    let tmp = TestDirectory::new();
+    let (doc, resources) = tmp.fixture();
+    let standard_moc = zipzi_moc3::encode_moc3(&doc).unwrap().bytes;
+    let binding = CursorPreviewBinding {
+        axis: CursorPreviewAxis::RightX,
+        influence_percent: 57.12500001,
+        reversed: true,
+    };
+    let mut state = doc.editor_state().clone();
+    state.cursor_preview_bindings = Some([(id(6), binding)].into());
+    let doc = prepare(&doc, |builder| builder.replace_editor_state(state));
+    let output = tmp.0.join("runtime");
+    let publication = TransferSnapshot::new(doc, resources, vec![])
+        .unwrap()
+        .publish(TransferFormat::Runtime, &output)
+        .unwrap();
+    assert!(publication.durable());
+    assert_eq!(publication.notices.len(), 1);
+    assert_eq!(fs::read(output.join("model.moc3")).unwrap(), standard_moc);
+    let report: serde_json::Value =
+        serde_json::from_slice(&fs::read(output.join("export-report.json")).unwrap()).unwrap();
+    assert_eq!(
+        report["cursor_preview"]["code"],
+        "CURSOR_PREVIEW_RUNTIME_UNSUPPORTED"
+    );
+    let importer = ProjectImporter::default();
+    let (result, imported, _) = importer.import_model3(&output.join("model.model3.json"));
+    let imported = imported.unwrap_or_else(|| panic!("{result:?}"));
+    let document = &imported.document;
+    let parameter = document.parameter_by_runtime_id("ParamAngle").unwrap();
+    assert_eq!(
+        document.editor_state().cursor_preview_bindings,
+        Some([(parameter.id.clone(), binding)].into())
+    );
+    assert!(
+        !document
+            .model3_settings()
+            .extensions
+            .contains_key("ZipziCursorPreview")
+    );
+    assert!(build_export_plan(document, &imported.resources).is_ok());
+}
+
+#[test]
 fn captured_transfers_protect_source_ancestors_and_external_images() {
     let tmp = TestDirectory::new();
     let (doc, resources) = tmp.fixture();

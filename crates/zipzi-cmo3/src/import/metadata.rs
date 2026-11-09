@@ -166,8 +166,65 @@ pub fn read(g: &Graph<'_>, root: Node<'_>, document: &mut DocumentBuilder) -> Re
         });
     }
     edit(document.set_draw_order_groups(Some(draw_groups)))?;
+    cursor_preview(g, root, document)?;
     physics(g, root, document)
 }
+
+fn cursor_preview(g: &Graph<'_>, root: Node<'_>, document: &mut DocumentBuilder) -> Result<()> {
+    use zipzi_core::document::{CursorPreviewAxis as Axis, CursorPreviewBinding};
+    let Some(viewer) = g.field(root, "modelViewerSetting")? else {
+        return Ok(());
+    };
+    let entries = g.list(viewer, "trackCursorSettings")?;
+    if entries.is_empty() {
+        return Ok(());
+    }
+    let mut bindings = BTreeMap::new();
+    let mut seen = HashSet::new();
+    for entry in entries {
+        let id = g.guid(entry, "guid")?;
+        // Cubism reconciles the list against existing parameters, keeping the first match.
+        if document.parameter(&id).is_none() || !seen.insert(id.clone()) {
+            continue;
+        }
+        let axis = match g.req(entry, "value")?.attribute("v") {
+            Some("X") => Axis::X,
+            Some("Y") => Axis::Y,
+            Some("X_R") => Axis::RightX,
+            Some("Y_R") => Axis::RightY,
+            Some("NONE") => Axis::Disabled,
+            other => return Err(invalid(format!("Unknown cursor tracking input {other:?}"))),
+        };
+        let weight: f32 = g.optional(entry, "weight", 1.)?;
+        if !(-1. ..=1.).contains(&weight) {
+            return Err(invalid("Cursor tracking weight must be between -1 and 1"));
+        }
+        if axis != Axis::Disabled || weight != 1. {
+            bindings.insert(
+                id,
+                CursorPreviewBinding {
+                    axis,
+                    influence_percent: crate::cursor_preview::percent(weight),
+                    reversed: weight.is_sign_negative(),
+                },
+            );
+        }
+    }
+    for id in document
+        .parameter_order()
+        .iter()
+        .filter(|id| !seen.contains(*id))
+    {
+        let parameter = document.parameter(id).unwrap();
+        if let Some(binding) = CursorPreviewBinding::standard(&parameter.runtime_id) {
+            bindings.insert(id.clone(), binding);
+        }
+    }
+    let mut state = document.editor_state().clone();
+    state.cursor_preview_bindings = Some(bindings);
+    edit(document.replace_editor_state(state))
+}
+
 fn physics(g: &Graph<'_>, root: Node<'_>, document: &mut DocumentBuilder) -> Result<()> {
     let set = g.req(root, "physicsSettingsSourceSet")?;
     let settings = g.list(set, "_sourceCubismPhysics")?;

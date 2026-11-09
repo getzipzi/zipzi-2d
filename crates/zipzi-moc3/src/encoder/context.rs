@@ -4,7 +4,7 @@ use zipzi_core::evaluation::Drawable;
 use zipzi_core::state::DocumentState;
 use zipzi_core::types::Status;
 
-use crate::layout::{checked, Layout};
+use crate::layout::{Layout, checked};
 use crate::schema::section;
 use crate::types::{Moc3Artifact, TextureSlot};
 
@@ -235,7 +235,20 @@ impl<'a> Moc3EncoderContext<'a> {
             });
         }
 
-        result.model3_json.push_str("\n    ]\n  }\n}\n");
+        result.model3_json.push_str("\n    ]\n  }");
+        if let Some(bindings) = &self.doc.editor_state().cursor_preview_bindings {
+            let by_runtime_id: std::collections::BTreeMap<_, _> = bindings
+                .iter()
+                .map(|(id, binding)| (&self.doc.parameter(id).unwrap().runtime_id, binding))
+                .collect();
+            let value = serde_json::to_string(&by_runtime_id)
+                .map_err(|error| Status::error("INVALID_CURSOR_PREVIEW", error.to_string()))?;
+            result.model3_json.push_str(&format!(
+                ",\n  \"{}\": {value}",
+                crate::CURSOR_PREVIEW_MODEL3_FIELD,
+            ));
+        }
+        result.model3_json.push_str("\n}\n");
         Ok(result)
     }
 }

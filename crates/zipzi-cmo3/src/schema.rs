@@ -99,6 +99,8 @@ pub(crate) fn class_name(tag: &str) -> Option<&'static str> {
     "MeshGenerateSetting" => "com.live2d.cubism.doc.model.extension.meshGenerator.MeshGenerateSetting",
     "MinFilter" => "com.live2d.graphics3d.texture.MinFilter",
     "ModelViewerSetting" => "com.live2d.cubism.doc.modeling.ui.viewer.ModelViewerSetting",
+    "TrackCursorSetting" => "com.live2d.cubism.doc.modeling.ui.viewer.TrackCursorSetting",
+    "TrackCursorSettingItemType" => "com.live2d.cubism.doc.modeling.ui.viewer.TrackCursorSettingItemType",
     "MorphTargetBlendWeightConstraintSet" => "com.live2d.cubism.doc.model.morphTarget.MorphTargetBlendWeightConstraintSet",
     "TextureImageGroup" => "com.live2d.cubism.doc.model.texture.TextureImageGroup",
     "TextureState" => "com.live2d.cubism.doc.model.drawable.TextureState",

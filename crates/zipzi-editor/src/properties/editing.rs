@@ -59,7 +59,7 @@ impl PropertyTarget {
         .then(|| editor.animation().map_or(0., |a| a.edit_time).to_bits())
     }
     pub(crate) fn has_object_details(&self) -> bool {
-        self.timeline.is_none()
+        self.timeline.is_none() && !self.is_cursor_mapping()
     }
     pub(crate) fn title(&self, editor: &Editor) -> Option<(String, SharedString, bool)> {
         let document = editor.document()?;
@@ -74,13 +74,23 @@ impl PropertyTarget {
             ));
         }
         Some((
-            document.object_index().name(&self.object).to_owned(),
+            if self.is_cursor_mapping() {
+                t!("physics.cursor_mapping").into_owned()
+            } else {
+                document.object_index().name(&self.object).to_owned()
+            },
             (provider(self.object.kind).type_name)(document, &self.object),
             locked,
         ))
     }
 
     pub(crate) fn definition(&self, editor: &Editor) -> FormDefinition {
+        if self.is_cursor_mapping() {
+            return editor
+                .document()
+                .map(cursor_mapping::definition)
+                .unwrap_or_default();
+        }
         if self.object.kind == ObjectKind::Part && self.timeline.is_none() {
             return scene::part_definition(self, editor);
         }
@@ -113,6 +123,10 @@ impl PropertyTarget {
         );
         match &self.timeline {
             Some(target) => target.values(editor),
+            None if self.is_cursor_mapping() => editor
+                .document()
+                .map(cursor_mapping::values)
+                .ok_or_else(|| anyhow::anyhow!("Document closed")),
             None if matches!(
                 self.object.kind,
                 ObjectKind::Motion | ObjectKind::Expression
@@ -127,7 +141,9 @@ impl PropertyTarget {
         }
     }
     pub(crate) fn commit(&self, editor: &mut Editor, patch: PropertyPatch) -> anyhow::Result<()> {
-        if let Some(target) = &self.timeline {
+        if self.is_cursor_mapping() {
+            cursor_mapping::commit(editor, self.document, patch)
+        } else if let Some(target) = &self.timeline {
             anyhow::ensure!(
                 super::target(editor).as_ref() == Some(self),
                 "Selection changed"
@@ -143,6 +159,10 @@ impl PropertyTarget {
         }
     }
     pub(crate) fn editable(&self, editor: &Editor) -> bool {
+        if self.is_cursor_mapping() {
+            return editor.active_id() == Some(self.document)
+                && editor.editing_context() == Some(self.context);
+        }
         if self.object.kind == ObjectKind::Deformer
             && editor
                 .document()

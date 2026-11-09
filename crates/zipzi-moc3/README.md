@@ -6,6 +6,12 @@ Raw decoders/importers return frozen DocumentState values and preserve runtime
 texture slots and UVs. ProjectImporter captures image resources and additionally unpack those pages into independent Mesh images; see
 [project import artwork](../zipzi-project/README.md#import-artwork).
 
+The MOC3 binary has no cursor tracking settings. Model packages preserve custom
+Zipzi mappings in the `ZipziCursorPreview` field of the companion `model3.json`,
+keyed by parameter runtime ID. An empty object preserves an explicitly cleared
+mapping. Zipzi restores the field on model3 import. Standard Cubism runtimes
+need application-side cursor handling.
+
 Import converts model-space lengths by pixels-per-unit (PPU), retains
 Rotation-local lengths, and leaves Warp-local UVs dimensionless. The runtime
 unit bake is undone in the first Rotation scale on each branch, including below Warps;

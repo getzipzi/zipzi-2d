@@ -243,6 +243,17 @@ pub(super) fn owned() -> OwnedDocument {
         },
     );
     input.editor_state.rotation_bone_lengths.insert(id(3), 128.);
+    input.editor_state.cursor_preview_bindings = Some(
+        [(
+            id(4),
+            CursorPreviewBinding {
+                axis: CursorPreviewAxis::Y,
+                influence_percent: 75.,
+                reversed: true,
+            },
+        )]
+        .into(),
+    );
     input.hierarchy_order.organization = vec![id(2), id(6), id(7)];
     input.hierarchy_order.deformation = vec![id(3), id(6)];
     input.hierarchy_order.glues = vec![id(13)];

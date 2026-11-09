@@ -2,6 +2,7 @@ mod animation;
 mod binding;
 mod business;
 mod controls;
+mod cursor_mapping;
 mod deformer;
 mod deformer_original;
 mod observe;
@@ -9,6 +10,7 @@ pub(crate) mod physics;
 mod rich_controls;
 mod rows;
 mod selection;
+mod table;
 mod texture;
 use crate::properties;
 use crate::ui::property_details as details;
@@ -29,6 +31,7 @@ use zipzi_editor_core::{DocumentId, ObjectRef, PropertyKey};
 
 pub struct PropertiesPanel {
     physics: physics::PhysicsState,
+    cursor_mapping: Option<cursor_mapping::CursorMappingPicker>,
     pub(crate) timeline_id: zipzi_editor_core::TimelineId,
     target: Option<PropertyTarget>,
     locked_target: Option<(zipzi_editor_core::InspectionContextToken, PropertyTarget)>,
@@ -110,6 +113,7 @@ impl PropertiesPanel {
             .detach();
             Self {
                 physics: physics::PhysicsState::new(),
+                cursor_mapping: None,
                 timeline_id: zipzi_editor_core::TimelineId::new(),
                 target: None,
                 locked_target: None,
@@ -357,7 +361,7 @@ impl PropertiesPanel {
             }
             Row::Detail(row) => row.id(),
             Row::Field(id) => {
-                Some(SharedString::from(format!("object-property-{}", id.name())).into())
+                Some(SharedString::from(format!("object-property-{}", id.identity())).into())
             }
             Row::Group { key, .. } => {
                 Some(SharedString::from(format!("property-group-{key}")).into())
@@ -788,6 +792,13 @@ impl Render for PropertiesPanel {
         let Some(document) = state.editor.active_id() else {
             return root.into_any_element();
         };
+        if !self
+            .target
+            .as_ref()
+            .is_some_and(PropertyTarget::is_cursor_mapping)
+        {
+            self.cursor_mapping = None;
+        }
         if self.target.is_none() {
             self.rows = Arc::from([]);
             self.rows_key = None;
@@ -803,6 +814,16 @@ impl Render for PropertiesPanel {
             let summary = self.summary(cx);
             let physics = self.render_physics(window, cx);
             return root.child(summary).child(physics).into_any_element();
+        }
+        if self
+            .target
+            .as_ref()
+            .is_some_and(PropertyTarget::is_cursor_mapping)
+        {
+            let parameters = doc.parameters();
+            let summary = self.summary(cx);
+            let mapping = self.render_cursor_mapping(parameters, window, cx);
+            return root.child(summary).child(mapping).into_any_element();
         }
         self.sync_rows(&state.editor, document, doc, cx);
         let rows = self.rows.clone();

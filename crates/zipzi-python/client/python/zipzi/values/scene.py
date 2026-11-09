@@ -29,6 +29,27 @@ class Canvas(Value):
     pixels_per_unit: float
     flag: int = field(default_factory=lambda: _default(Canvas, 'flag'))
 
+class CursorPreviewAxis(StrEnum):
+    """Mouse input for an interactive model preview binding.
+    """
+    X = 'x'
+    Y = 'y'
+    RIGHT_X = 'right_x'
+    RIGHT_Y = 'right_y'
+    DISABLED = 'disabled'
+
+@dataclass(frozen=True, kw_only=True, repr=False)
+class CursorPreviewBinding(Value):
+    """Editor-only mapping from one mouse axis to a model parameter.
+
+    Fields:
+    influence_percent: Percentage of the parameter's range on either side of its default.
+    """
+    _type = 'CursorPreviewBinding'
+    axis: CursorPreviewAxis
+    influence_percent: float
+    reversed: bool
+
 class DeformerOriginalAction(Value):
     """Capture, restore or configure the original deformer shape.
     """
@@ -69,12 +90,14 @@ class EditorState(Value):
     rotation_bone_lengths: Rotation control lengths in model pixels at their display reference scale, keyed by transform ID.
     rotation_bone_reference_scales: Evaluated Rotation scale at the display baseline, including inherited coordinate conversion.
     rotation_bone_angle_offsets: Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0.
+    cursor_preview_bindings: Custom cursor mappings by parameter UUID. None uses standard parameter IDs.
     """
     _type = 'EditorState'
     objects: Mapping[str, ObjectEditorState] = field(default_factory=lambda: _default(EditorState, 'objects'))
     rotation_bone_lengths: Mapping[str, float] = field(default_factory=lambda: _default(EditorState, 'rotation_bone_lengths'))
     rotation_bone_reference_scales: Mapping[str, float] = field(default_factory=lambda: _default(EditorState, 'rotation_bone_reference_scales'))
     rotation_bone_angle_offsets: Mapping[str, float] = field(default_factory=lambda: _default(EditorState, 'rotation_bone_angle_offsets'))
+    cursor_preview_bindings: Mapping[str, CursorPreviewBinding] | None = None
 
 @dataclass(frozen=True, kw_only=True, repr=False)
 class ExportSettings(Value):
@@ -337,11 +360,12 @@ class WarpTransform(Value):
     points: tuple[common.Vec2, ...]
 
 __all__ = [
-    'Canvas', 'DeformerOriginalAction', 'DeformerOriginalActionUpdate', 'DeformerOriginalActionRestore',
-    'DeformerOriginalActionAutoUpdate', 'EditorState', 'ExportSettings', 'ModelSetup',
-    'ObjectEditorState', 'Part', 'PartId', 'RotationPose',
-    'RotationTransform', 'SceneReference', 'SceneReferenceUnspecified', 'SceneReferenceResolved',
-    'SceneReferenceUnresolved', 'TransformId', 'WarpAuthoringSettings', 'WarpBezier',
-    'WarpBezierControlPatch', 'WarpBezierEditMode', 'WarpBezierGrid', 'WarpBezierNode',
-    'WarpPointPatch', 'WarpShapeAction', 'WarpTransform',
+    'Canvas', 'CursorPreviewAxis', 'CursorPreviewBinding', 'DeformerOriginalAction',
+    'DeformerOriginalActionUpdate', 'DeformerOriginalActionRestore', 'DeformerOriginalActionAutoUpdate', 'EditorState',
+    'ExportSettings', 'ModelSetup', 'ObjectEditorState', 'Part',
+    'PartId', 'RotationPose', 'RotationTransform', 'SceneReference',
+    'SceneReferenceUnspecified', 'SceneReferenceResolved', 'SceneReferenceUnresolved', 'TransformId',
+    'WarpAuthoringSettings', 'WarpBezier', 'WarpBezierControlPatch', 'WarpBezierEditMode',
+    'WarpBezierGrid', 'WarpBezierNode', 'WarpPointPatch', 'WarpShapeAction',
+    'WarpTransform',
 ]

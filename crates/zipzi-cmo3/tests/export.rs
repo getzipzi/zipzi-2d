@@ -22,6 +22,105 @@ fn field<'a, 'input>(node: roxmltree::Node<'a, 'input>, name: &str) -> roxmltree
 }
 
 #[test]
+fn cursor_preview_roundtrips_native_entries_and_explicit_clear() {
+    use zipzi_core::document::{CursorPreviewAxis as Axis, CursorPreviewBinding};
+    let (doc, png) = fixture();
+    let default_parameter = "00000000-0000-4000-8000-000000000006";
+    let doc = prepare(&doc, |builder| {
+        builder.create_parameter(Parameter {
+            id: default_parameter.into(),
+            runtime_id: "ParamAngleX".into(),
+            name: "Head X".into(),
+            ..Default::default()
+        })
+    });
+    assert!(
+        import_model(&encode(&doc, &png, 0).bytes)
+            .unwrap()
+            .document
+            .editor_state()
+            .cursor_preview_bindings
+            .is_none()
+    );
+    let mappings: [std::collections::BTreeMap<String, CursorPreviewBinding>; 2] = [
+        Default::default(),
+        [
+            (
+                PARAM.into(),
+                CursorPreviewBinding {
+                    axis: Axis::RightY,
+                    influence_percent: 57.125,
+                    reversed: true,
+                },
+            ),
+            (
+                default_parameter.into(),
+                CursorPreviewBinding {
+                    axis: Axis::Disabled,
+                    influence_percent: 65.,
+                    reversed: true,
+                },
+            ),
+        ]
+        .into(),
+    ];
+    for bindings in mappings {
+        let mut state = doc.editor_state().clone();
+        state.cursor_preview_bindings = Some(bindings.clone());
+        let customized = prepare(&doc, |builder| builder.replace_editor_state(state));
+        let artifact = encode(&customized, &png, 0);
+        assert!(!artifact.report.has_loss());
+        let imported = import_model(&artifact.bytes).unwrap();
+        assert_eq!(
+            imported.document.editor_state().cursor_preview_bindings,
+            Some(bindings)
+        );
+    }
+    let mut state = doc.editor_state().clone();
+    state.cursor_preview_bindings = Some(
+        [(
+            PARAM.into(),
+            CursorPreviewBinding {
+                axis: Axis::RightX,
+                influence_percent: 57.12500001,
+                reversed: false,
+            },
+        )]
+        .into(),
+    );
+    let precise = prepare(&doc, |builder| builder.replace_editor_state(state));
+    let report = inspect_export(&precise).unwrap();
+    assert!(
+        report
+            .diagnostics
+            .iter()
+            .any(|item| item.code == "CURSOR_PREVIEW_PRECISION")
+    );
+    assert!(matches!(
+        encode_cmo3(
+            &precise,
+            &|_: &AssetRecord| panic!("loss must be reported before texture reads"),
+            &Cmo3Options::default(),
+        ),
+        Err(Cmo3Error::Unsupported(_))
+    ));
+    let rounded = encode_cmo3(
+        &precise,
+        &|_: &AssetRecord| Ok(png.clone()),
+        &Cmo3Options {
+            loss_policy: LossPolicy::Allow,
+            ..Default::default()
+        },
+    ).unwrap();
+    let imported = import_model(&rounded.bytes).unwrap();
+    assert_eq!(
+        imported.document.editor_state().cursor_preview_bindings.as_ref().unwrap()[PARAM]
+            .influence_percent,
+        57.125
+    );
+}
+
+#[test]
 fn runtime_model_name_maps_to_native_label_but_unknown_metadata_stays_strict() {
     let (mut doc, png) = fixture();
     let mut settings = doc.model3_settings().clone();

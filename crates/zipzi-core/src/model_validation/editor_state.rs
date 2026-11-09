@@ -60,6 +60,17 @@ impl Model<'_> {
                         })
                     }),
             )
+            .chain(state.cursor_preview_bindings.iter().flatten().filter_map(|(id, binding)| {
+                (!self.content.parameters.contains_key(id)
+                    || !(0. ..=100.).contains(&binding.influence_percent))
+                    .then(|| StructureIssue {
+                        object_id: id.clone(),
+                        status: Status::error(
+                            "INVALID_EDITOR_STATE",
+                            "Cursor preview requires an existing parameter and an influence from 0 to 100",
+                        ),
+                    })
+            }))
             .collect()
     }
 }

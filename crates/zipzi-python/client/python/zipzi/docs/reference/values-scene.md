@@ -9,6 +9,8 @@ Import from `zipzi.values.scene` or `zipzi.values`; both expose the same classes
 [Shared value methods](value-codec.md)
 
 - [zipzi.values.Canvas](values-scene.md#zipzi-values-canvas)
+- [zipzi.values.CursorPreviewAxis](values-scene.md#zipzi-values-cursorpreviewaxis)
+- [zipzi.values.CursorPreviewBinding](values-scene.md#zipzi-values-cursorpreviewbinding)
 - [zipzi.values.DeformerOriginalAction](values-scene.md#zipzi-values-deformeroriginalaction)
 - [zipzi.values.DeformerOriginalActionUpdate](values-scene.md#zipzi-values-deformeroriginalactionupdate)
 - [zipzi.values.DeformerOriginalActionRestore](values-scene.md#zipzi-values-deformeroriginalactionrestore)
@@ -55,6 +57,42 @@ A finite rectangle carried by an import/export format, not the model space.
 | `flag` | `int` | `1` | Preserved imported source-canvas flag; no implicit interpretation is applied by this DTO. |
 
 Related: [zipzi.values.Vec2](values-common.md#zipzi-values-vec2)
+
+<a id="zipzi-values-cursorpreviewaxis"></a>
+
+## zipzi.values.CursorPreviewAxis
+
+```python
+class CursorPreviewAxis(StrEnum)
+```
+
+Mouse input for an interactive model preview binding.
+
+| Member | Value | Description |
+| --- | --- | --- |
+| `X` | `'x'` | Horizontal left drag. |
+| `Y` | `'y'` | Vertical left drag. |
+| `RIGHT_X` | `'right_x'` |  |
+| `RIGHT_Y` | `'right_y'` |  |
+| `DISABLED` | `'disabled'` | An inactive Cubism entry can retain its influence for later editing. |
+
+<a id="zipzi-values-cursorpreviewbinding"></a>
+
+## zipzi.values.CursorPreviewBinding
+
+```python
+class CursorPreviewBinding(Value)
+```
+
+Editor-only mapping from one mouse axis to a model parameter.
+
+| Field | Type | Constructor default (wire JSON) | Description |
+| --- | --- | --- | --- |
+| `axis` | `CursorPreviewAxis` | Required |  |
+| `influence_percent` | `float` | Required | Percentage of the parameter's range on either side of its default. |
+| `reversed` | `bool` | Required |  |
+
+Related: [zipzi.values.CursorPreviewAxis](values-scene.md#zipzi-values-cursorpreviewaxis)
 
 <a id="zipzi-values-deformeroriginalaction"></a>
 
@@ -128,8 +166,9 @@ Persistent Editor preferences, independent of runtime deformation.
 | `rotation_bone_lengths` | `Mapping[str, float]` | `{}` | Rotation control lengths in model pixels at their display reference scale, keyed by transform ID. |
 | `rotation_bone_reference_scales` | `Mapping[str, float]` | `{}` | Evaluated Rotation scale at the display baseline, including inherited coordinate conversion. |
 | `rotation_bone_angle_offsets` | `Mapping[str, float]` | `{}` | Editor-only counterclockwise bone direction offsets in degrees; Cubism uses 90, native bones use 0. |
+| `cursor_preview_bindings` | `Mapping[str, CursorPreviewBinding] \| None` | `null` (`None`) | Custom cursor mappings by parameter UUID. None uses standard parameter IDs. |
 
-Related: [zipzi.values.ObjectEditorState](values-scene.md#zipzi-values-objecteditorstate)
+Related: [zipzi.values.CursorPreviewBinding](values-scene.md#zipzi-values-cursorpreviewbinding), [zipzi.values.ObjectEditorState](values-scene.md#zipzi-values-objecteditorstate)
 
 <a id="zipzi-values-exportsettings"></a>
 

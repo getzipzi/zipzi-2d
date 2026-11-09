@@ -550,6 +550,7 @@ impl DocumentSession {
                 && before.rotation_bone_lengths == after.rotation_bone_lengths
                 && before.rotation_bone_reference_scales == after.rotation_bone_reference_scales
                 && before.rotation_bone_angle_offsets == after.rotation_bone_angle_offsets
+                && before.cursor_preview_bindings == after.cursor_preview_bindings
         });
         self.modeling.tools.reconcile(&mut self.document);
         if invalidate

@@ -430,6 +430,7 @@ impl Editor {
             }
             if animation.physics_preview.manual {
                 animation.time = target.max(animation.time);
+                animation.sample_cursor_preview(&session.document);
                 return;
             }
             if let Some(motion) = motion {

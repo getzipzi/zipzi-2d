@@ -211,9 +211,34 @@ pub fn import_from_model3_json(
     }
 
     let DecodedMoc3 {
-        document,
+        mut document,
         mut report,
     } = decode_moc3(&moc_bytes, &inspection, &textures)?;
+
+    if let Some(value) = root.get(crate::CURSOR_PREVIEW_MODEL3_FIELD) {
+        use std::collections::BTreeMap;
+        use zipzi_core::document::CursorPreviewBinding;
+        let by_runtime_id: BTreeMap<String, CursorPreviewBinding> =
+            serde_json::from_value(value.clone())
+                .map_err(|error| Status::error("INVALID_CURSOR_PREVIEW", error.to_string()))?;
+        let mut bindings = BTreeMap::new();
+        for (runtime_id, binding) in by_runtime_id {
+            let parameter = document
+                .parameter_by_runtime_id(&runtime_id)
+                .ok_or_else(|| {
+                    Status::error(
+                        "INVALID_CURSOR_PREVIEW",
+                        format!("Unknown parameter {runtime_id}"),
+                    )
+                })?;
+            bindings.insert(parameter.id.clone(), binding);
+        }
+        let mut state = document.editor_state().clone();
+        state.cursor_preview_bindings = Some(bindings);
+        let mut builder = document.builder();
+        builder.replace_editor_state(state)?;
+        document = builder.freeze()?.state;
+    }
 
     report.unimported_attachments = unimported;
 

@@ -122,6 +122,7 @@ pub struct ViewportSurface {
     pub(crate) tool_cursor_kind: Option<crate::tool_cursors::ToolCursor>,
     navigation: navigation::ViewportNavigation,
     interaction: Option<zipzi_editor_core::ViewportInteractionToken>,
+    cursor_preview_button: Option<MouseButton>,
     brush_tick: Option<(
         zipzi_editor_core::ViewportInteractionToken,
         std::time::Instant,
@@ -157,10 +158,9 @@ impl ViewportSurface {
                 cx.observe(&upgraded, |this, owner, cx| {
                     let state = owner.read(cx);
                     if state.modal
-                        || this.interaction.is_some_and(|token| {
-                            !state.editor.viewport_interaction_valid(token)
-                                || !state.editor.gesture_active()
-                        })
+                        || this
+                            .interaction
+                            .is_some_and(|token| !state.editor.viewport_interaction_valid(token))
                         || this
                             .navigation
                             .pan
@@ -251,6 +251,7 @@ impl ViewportSurface {
                 tool_cursor_kind: None,
                 navigation: Default::default(),
                 interaction: None,
+                cursor_preview_button: None,
                 brush_tick: None,
                 brush_frame_pending: false,
                 brush_bar,
@@ -311,6 +312,7 @@ impl ViewportSurface {
     pub fn cancel_pointer(&mut self) -> Option<zipzi_editor_core::ViewportInteractionToken> {
         let token = self.pointer_token();
         self.interaction = None;
+        self.cursor_preview_button = None;
         self.brush_tick = None;
         self.navigation.wheel_zoom = None;
         self.navigation.pan = None;
@@ -350,7 +352,7 @@ impl Render for ViewportSurface {
             .cloned();
         let active = state.editor.active_id();
         let modal = state.modal || dialog;
-        let cursor_feedback = crate::tool_cursors::resolve(crate::tool_cursors::CursorInput {
+        let mut cursor_feedback = crate::tool_cursors::resolve(crate::tool_cursors::CursorInput {
             overlay: &overlay,
             tool: state.editor.active_tool(),
             manual_tool: state
@@ -364,6 +366,16 @@ impl Render for ViewportSurface {
             panning: self.navigation.pan.is_some(),
             hand_tool,
         });
+        if self.kind == zipzi_editor_core::ViewportKind::Animation
+            && state.editor.cursor_physics_active()
+            && !modal
+            && !state.editor.is_busy()
+            && self.navigation.pan.is_none()
+        {
+            cursor_feedback.cursor = Some(crate::tool_cursors::ToolCursor::Standard(
+                CursorStyle::Crosshair,
+            ));
+        }
         if cursor_feedback.hide_selection_brush {
             overlay.selection_brush = None;
         }

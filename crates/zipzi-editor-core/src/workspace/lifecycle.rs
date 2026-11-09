@@ -48,6 +48,12 @@ impl Editor {
         self.editing_context_token() == Some(token)
     }
     pub fn end_editing(&mut self, document: DocumentId, reason: EditingLifecycle) -> Result<()> {
+        if let Some(token) = self.viewport_interaction.filter(|token| {
+            token.binding.document == document
+                && token.kind == crate::ViewportInteractionKind::CursorPreview
+        }) {
+            self.cancel_viewport_interaction(token);
+        }
         if self
             .timeline_scrub_owner
             .is_some_and(|token| token.binding.document == document)
@@ -56,7 +62,11 @@ impl Editor {
         }
         let session = self.entry_mut(document)?.session_mut();
         if let Some(session) = session {
-            session.animation.playback.pause();
+            if session.animation.playback.cursor_physics.is_some() {
+                session.animation.playback.barrier();
+            } else {
+                session.animation.playback.pause();
+            }
             if reason != EditingLifecycle::Save && session.document.has_inspector_edit() {
                 session.document.cancel_edit();
                 session.animation.playback.property_preview_changed();

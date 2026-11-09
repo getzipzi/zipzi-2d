@@ -19,5 +19,8 @@ pub use inspector::{
 };
 pub use types::{Moc3Artifact, TextureSlot};
 
+/// Zipzi's model3 companion field, keyed by exported parameter runtime ID.
+pub const CURSOR_PREVIEW_MODEL3_FIELD: &str = "ZipziCursorPreview";
+
 /// Whether optional native consistency checks were compiled into this build.
 pub const HAS_CORE_VALIDATION: bool = cfg!(has_purism_core);

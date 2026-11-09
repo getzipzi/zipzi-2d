@@ -3,6 +3,323 @@ use gpui_kit::{AppContext as _, TestAppContext, point, px, size, test::TestWindo
 use zipzi_editor_core::{CommandId, PanelKind};
 
 #[gpui_kit::test]
+fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::{
+        InputEvent as _, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ScrollDelta,
+        ScrollWheelEvent, VisualTestContext,
+        component::dock::{DockLayout, DockPlacement, PanelId, panel_handle},
+    };
+    use zipzi_editor_core::{ObjectKind, ObjectRef, ViewportInteractionKind};
+
+    let (mut document, assets) = document_fixture::combined_animation_document().unwrap();
+    let asset = document.physics_definition().unwrap();
+    let input = asset.data.settings[0].inputs[0]
+        .source
+        .parameter_id()
+        .unwrap();
+    document
+        .set_object_property(
+            &ObjectRef::new(ObjectKind::Parameter, input),
+            "runtime_id",
+            serde_json::json!("ParamAngleX"),
+        )
+        .unwrap();
+    let history = document.history_lengths();
+    let default = document.parameter_draft(input).unwrap().default_value;
+    let harness = setup_with_document(cx, document, assets);
+    cx.simulate_window_resize(harness.window, size(px(1200.), px(1000.)));
+    cx.update_window(harness.window, |_, window, cx| {
+        window.activate_window();
+        harness.view.update(cx, |view, cx| {
+            view.run_command(CommandId::AnimationWorkspace, window, cx);
+            view.run_command(CommandId::ResetLayout, window, cx);
+            view.dock
+                .as_ref()
+                .unwrap()
+                .show(PanelKind::AnimationPhysics, None, window, cx);
+        });
+        window.render_frame(cx);
+        window
+            .within("physics-list-toolbar")
+            .click("physics-cursor-preview", cx);
+        window.render_frame(cx);
+        let bounds = window.find("canvas-body").bounds();
+        let center = bounds.center();
+        press(window, center, cx);
+        window.render_frame(cx);
+        let end = center + point(bounds.size.width * 0.4, px(0.));
+        slide(window, end, false, cx);
+        let sample_time = harness.view.update(cx, |view, _| {
+            assert!(view.editor.cursor_physics_active());
+            assert_eq!(
+                view.editor.current_viewport_interaction().unwrap().kind,
+                ViewportInteractionKind::CursorPreview
+            );
+            let time = view.editor.animation().unwrap().time + 0.04;
+            view.editor.advance_animation_clock(time);
+            let sample = view
+                .editor
+                .animation()
+                .unwrap()
+                .physics_preview
+                .inputs
+                .last()
+                .unwrap();
+            assert_eq!(sample.parameter, input);
+            assert!(sample.value > default);
+            time
+        });
+        release(window, end, cx);
+        harness.view.update(cx, |view, _| {
+            assert!(view.editor.current_viewport_interaction().is_none());
+            view.editor.advance_animation_clock(sample_time + 0.3);
+            assert_eq!(
+                view.editor
+                    .animation()
+                    .unwrap()
+                    .physics_preview
+                    .inputs
+                    .last()
+                    .unwrap()
+                    .value,
+                default
+            );
+            assert_eq!(view.editor.document().unwrap().history_lengths(), history);
+        });
+        press(window, center, cx);
+    })
+    .unwrap();
+    VisualTestContext::from_window(harness.window, cx).deactivate_window();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.activate_window();
+        harness.view.update(cx, |view, cx| {
+            assert!(view.editor.cursor_physics_active());
+            assert!(view.editor.current_viewport_interaction().is_none());
+            view.run_command(CommandId::ModelingWorkspace, window, cx);
+            view.run_command(CommandId::AnimationWorkspace, window, cx);
+            assert!(view.editor.cursor_physics_active());
+            let dock = view.dock.as_ref().unwrap();
+            let physics = &dock.animation_inspectors[&PanelKind::AnimationPhysics];
+            let layout = DockLayout::h_split()
+                .child(
+                    DockLayout::tabs().panel_view(panel_handle(physics.clone()), cx),
+                    Some(px(100.)),
+                )
+                .child(
+                    DockLayout::tabs().panel_view(dock.viewport_panel(), cx),
+                    None,
+                );
+            dock.area
+                .update(cx, |area, cx| area.set_center(layout, window, cx));
+        });
+        window.render_frame(cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let header = harness.view.read_with(cx, |view, cx| {
+            let dock = view.dock.as_ref().unwrap();
+            let physics = &dock.animation_inspectors[&PanelKind::AnimationPhysics];
+            let area = dock.area.read(cx);
+            let node = area
+                .layout(DockPlacement::Center)
+                .unwrap()
+                .find_panel_node(PanelId::from(physics.entity_id()))
+                .unwrap();
+            format!("dock-header-{}", node.as_u64())
+        });
+        window.within(header).click("panel-header-tools", cx);
+        window.render_frame(cx);
+        window
+            .within("physics-list-toolbar")
+            .click("physics-cursor-mapping", cx);
+        window.render_frame(cx);
+        assert!(window.find("cursor-mapping-actions").visible());
+        assert_eq!(
+            window.find("cursor-mapping-table").role(),
+            Some(gpui::Role::Table)
+        );
+        let row = window.find(format!("cursor-mapping-row-{input}")).bounds();
+        for (column, field) in ["cursor_axis", "cursor_influence", "cursor_reversed"]
+            .into_iter()
+            .enumerate()
+        {
+            let header = window
+                .find(format!("cursor-mapping-column-{}", column + 1))
+                .bounds();
+            let field = window
+                .find(format!("object-property-{field}-{input}"))
+                .bounds();
+            assert_eq!(header.left(), field.left());
+            assert!(row.top() <= field.top() && field.bottom() <= row.bottom());
+        }
+        window.click(format!("property-select-cursor_axis-{input}"), cx);
+        window.press("down", cx);
+        window.press("down", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let table = window.find("cursor-mapping-table").bounds();
+        window.dispatch_event(
+            ScrollWheelEvent {
+                position: point(table.center().x, table.top() + px(6.)),
+                delta: ScrollDelta::Pixels(point(px(-160.), px(0.))),
+                ..Default::default()
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        assert_eq!(
+            window.find("cursor-mapping-column-3").bounds().left(),
+            window
+                .find(format!("object-property-cursor_reversed-{input}"))
+                .bounds()
+                .left(),
+        );
+        window.click(format!("property-toggle-cursor_reversed-{input}"), cx);
+        window.render_frame(cx);
+        let influence = window
+            .within(format!("property-input-cursor_influence-{input}"))
+            .find_by_label(crate::t!("physics.cursor_influence").as_ref())
+            .bounds()
+            .center();
+        press(window, influence, cx);
+        release(window, influence, cx);
+        window.press("cmd-a", cx);
+        window.input("65.25", cx);
+        window.press("enter", cx);
+        window.render_frame(cx);
+        harness.view.read_with(cx, |view, _| {
+            let bindings = view.editor.document().unwrap().cursor_preview_bindings();
+            assert_eq!(
+                bindings[input].axis,
+                zipzi_editor_core::CursorPreviewAxis::RightX
+            );
+            assert_eq!(bindings[input].influence_percent, 65.25);
+            assert!(bindings[input].reversed);
+        });
+        let position = window.find("canvas-body").bounds().center();
+        window.dispatch_event(
+            MouseMoveEvent {
+                position,
+                pressed_button: None,
+                modifiers: Default::default(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Right,
+                position,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.current_viewport_interaction().unwrap().kind,
+                ViewportInteractionKind::CursorPreview
+            );
+        });
+        window.render_frame(cx);
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Right,
+                position,
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        window.click("cursor-mapping-clear", cx);
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert!(doc.cursor_preview_bindings().is_empty());
+            assert!(doc.has_custom_cursor_preview_bindings());
+            assert_eq!(doc.history_lengths(), (history.0 + 4, 0));
+        });
+        window.render_frame(cx);
+        window.within("cursor-mapping-add").click("input", cx);
+        window.input("Physics output", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.executor()
+        .advance_clock(std::time::Duration::from_millis(160));
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        window.press("down", cx);
+        window.press("enter", cx);
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let output = harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            let output = doc
+                .parameters()
+                .into_iter()
+                .find(|p| p.name == "Physics output")
+                .unwrap();
+            assert!(doc.cursor_preview_bindings().contains_key(&output.id));
+            output.id
+        });
+        assert!(
+            window
+                .find(format!("cursor-mapping-row-{output}"))
+                .visible()
+        );
+        let remove = format!("cursor-remove-{output}");
+        let table = window.find("cursor-mapping-table").bounds();
+        let button = window.find(remove.clone()).bounds();
+        assert!(
+            button.center().x < table.right(),
+            "remove button is clipped: {button:?} outside {table:?}"
+        );
+        window.click(remove, cx);
+        harness.view.read_with(cx, |view, _| {
+            assert!(
+                !view
+                    .editor
+                    .document()
+                    .unwrap()
+                    .cursor_preview_bindings()
+                    .contains_key(&output),
+                "remove did not commit: {:?}, button {button:?} in {table:?}",
+                view.edit_error,
+            );
+        });
+        window.render_frame(cx);
+        assert!(
+            window
+                .try_find(format!("cursor-mapping-row-{output}"))
+                .is_none()
+        );
+        window.click("cursor-mapping-defaults", cx);
+        harness.view.read_with(cx, |view, _| {
+            let doc = view.editor.document().unwrap();
+            assert!(!doc.has_custom_cursor_preview_bindings());
+            assert!(doc.cursor_preview_bindings().contains_key(input));
+        });
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn adding_physics_channels_preserves_bindings_after_runtime_id_reuse(cx: &mut TestAppContext) {
     use zipzi_editor_core::{ObjectKind, ObjectRef};
     let (mut document, assets) = document_fixture::combined_animation_document().unwrap();

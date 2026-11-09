@@ -32,6 +32,16 @@ pub(crate) fn inspect_with_animation(
             message: message.into(),
         })
     };
+    for (id, binding) in doc.editor_state().cursor_preview_bindings.iter().flatten() {
+        let weight = crate::cursor_preview::weight(binding.influence_percent, binding.reversed);
+        if crate::cursor_preview::percent(weight) != binding.influence_percent {
+            loss(
+                id,
+                "CURSOR_PREVIEW_PRECISION",
+                "Cubism stores cursor influence as a single-precision fraction; the influence will be rounded",
+            );
+        }
+    }
     for omitted in doc.scene_export_omissions() {
         loss(
             &omitted.id,

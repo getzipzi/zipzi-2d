@@ -203,6 +203,87 @@ fn rejected_physics_write_preserves_candidate_and_context_switch_cancels_it() ->
 }
 
 #[test]
+fn cursor_preview_drives_physics_returns_to_default_and_restores_timeline() -> anyhow::Result<()> {
+    let (mut editor, _assets) = setup()?;
+    let id = editor.active_id().unwrap();
+    let doc = editor.document().unwrap();
+    let asset = doc.physics_definition().unwrap();
+    let rig = &asset.data.settings[0];
+    let input = rig.inputs[0].source.parameter_id().unwrap();
+    let output = rig.outputs[0].destination.parameter_id().unwrap();
+    let parameter = doc.parameter_draft(input)?;
+    let motion = doc.animation_catalog().motions[0].selection.clone();
+    let revision = doc.model_generation();
+    let bindings = [(
+        input.into(),
+        CursorPreviewBinding {
+            axis: CursorPreviewAxis::RightY,
+            influence_percent: 50.,
+            reversed: true,
+        },
+    )]
+    .into();
+    editor.replace_cursor_preview_bindings(id, revision, Some(bindings))?;
+    editor.select_motion(id, motion.clone())?;
+    editor.seek_timeline(id, 0.35)?;
+    let position = (
+        editor.animation().unwrap().time,
+        editor.animation().unwrap().edit_time,
+    );
+    let binding = editor.primary_viewport_binding().unwrap();
+    editor.set_physics_cursor(id, true)?;
+    let drag =
+        editor.begin_cursor_preview_drag(binding, ViewportPoint { x: 256., y: 522. }, true)?;
+    let mut evaluator = AnimationEvaluator::default();
+    editor.advance_animation_clock(0.04);
+    let input_value = (parameter.maximum + parameter.default_value) / 2.;
+    assert_eq!(
+        sample(&mut editor, &mut evaluator)?.snapshot.parameters[input],
+        input_value
+    );
+    editor.advance_animation_clock(0.18);
+    let driven = sample(&mut editor, &mut evaluator)?;
+    assert_ne!(driven.snapshot.parameters[output], 0.);
+    assert!(driven.snapshot.active_motions.is_empty());
+    editor.end_editing(id, EditingLifecycle::WindowDeactivated)?;
+    assert!(editor.cursor_physics_active());
+    assert!(editor.current_viewport_interaction().is_none());
+    assert!(
+        editor
+            .update_cursor_preview_drag(drag, ViewportPoint::default())
+            .is_err()
+    );
+    editor.advance_animation_clock(0.27);
+    let returning = sample(&mut editor, &mut evaluator)?.snapshot.parameters[input];
+    assert!(returning < input_value && returning > parameter.default_value);
+    editor.advance_animation_clock(0.4);
+    assert_eq!(
+        sample(&mut editor, &mut evaluator)?.snapshot.parameters[input],
+        parameter.default_value
+    );
+    editor.set_workspace(WorkspaceKind::Modeling)?;
+    assert!(editor.cursor_physics_active());
+    editor.set_workspace(WorkspaceKind::Animation)?;
+    assert!(editor.cursor_physics_active());
+    assert!(editor.animation().unwrap().playing);
+    let binding = editor.primary_viewport_binding().unwrap();
+    let drag =
+        editor.begin_cursor_preview_drag(binding, ViewportPoint { x: 256., y: 522. }, false)?;
+    editor.advance_animation_clock(0.45);
+    assert_eq!(
+        sample(&mut editor, &mut evaluator)?.snapshot.parameters[input],
+        parameter.default_value
+    );
+    assert!(editor.cancel_viewport_interaction(drag));
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.set_physics_cursor(id, false)?;
+    let animation = editor.animation().unwrap();
+    assert_eq!((animation.time, animation.edit_time), position);
+    assert_eq!(animation.motion.as_ref(), Some(&motion));
+    Ok(())
+}
+
+#[test]
 fn manual_physics_and_bypass_replay_without_document_or_timeline_writes() -> anyhow::Result<()> {
     let (mut editor, _assets) = setup()?;
     let id = editor.active_id().unwrap();

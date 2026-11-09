@@ -285,9 +285,11 @@ impl PropertiesPanel {
         let name = self.render_inline_field(crate::properties::physics::NAME.key, window, cx);
         body = body.child(name);
         let animation = owner.read(cx).editor.animation().unwrap();
-        let manual = animation.physics_preview.manual;
+        let manual =
+            animation.physics_preview.manual && !owner.read(cx).editor.cursor_physics_active();
         let bypass = animation.physics_preview.bypass;
-        let editing = animation.preview_mode == AnimationPreviewMode::Editing && !manual;
+        let editing = animation.preview_mode == AnimationPreviewMode::Editing
+            && !animation.physics_preview.manual;
         let settings = animation.physics_preview.clone();
         // Parameter ranges and defaults are only used by manual input controls.
         let parameters = if manual {

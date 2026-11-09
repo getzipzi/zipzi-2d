@@ -132,7 +132,7 @@ impl Editor {
         }
         entry.metrics = metrics;
         if let Some(token) = self.viewport_interaction.filter(|token| {
-            token.binding.viewport == viewport && token.kind == ViewportInteractionKind::Modeling
+            token.binding.viewport == viewport && token.kind != ViewportInteractionKind::Navigation
         }) {
             self.cancel_viewport_interaction(token);
         }
@@ -236,12 +236,16 @@ impl Editor {
             .active_id()
             .filter(|_| !self.is_busy() && !self.exiting());
         self.viewports.refresh(document);
-        if self
+        if let Some(token) = self
             .viewport_interaction
-            .is_some_and(|token| !self.viewport_binding_valid(token.binding))
+            .filter(|token| !self.viewport_binding_valid(token.binding))
         {
             // Context transitions cancel the domain operation before rebinding.
-            self.viewport_interaction = None;
+            if token.kind == ViewportInteractionKind::CursorPreview {
+                self.cancel_viewport_interaction(token);
+            } else {
+                self.viewport_interaction = None;
+            }
         }
     }
 }

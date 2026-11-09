@@ -407,7 +407,7 @@ pub fn build_export_plan_with(
     let moc_version = artifact.bytes[4];
     let mut managed_paths = referenced.iter().copied().collect::<Vec<_>>();
     managed_paths.sort();
-    let report = serde_json::json!({
+    let mut report = serde_json::json!({
         "status": "published",
         "encoding": "passed",
         "structural_validation": "passed",
@@ -431,6 +431,12 @@ pub fn build_export_plan_with(
             "path": slot.package_path, "width": slot.width, "height": slot.height,
         })).collect::<Vec<_>>(),
     });
+    if doc.editor_state().cursor_preview_bindings.is_some() {
+        report["cursor_preview"] = serde_json::json!({
+            "code": "CURSOR_PREVIEW_RUNTIME_UNSUPPORTED",
+            "message": "Mouse mappings are preserved in ZipziCursorPreview in model3.json. Standard Cubism runtimes require application-side input handling.",
+        });
+    }
     let mut files = BTreeMap::new();
     let mut add = |path: String, kind, bytes: Vec<u8>| -> Result<(), Status> {
         let sha256 = crate::content_sha256(&bytes);
