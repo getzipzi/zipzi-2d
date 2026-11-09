@@ -405,6 +405,8 @@ impl ParametersPanel {
                 self.document_id,
                 create_disabled,
             ))
+            .control(self.expansion_button(window, cx))
+            .control(self.related_filter_button(window, cx))
             .control(add_keyforms)
             .control(delete_keyforms)
             .control(link_button)
@@ -423,8 +425,6 @@ impl ParametersPanel {
                         }
                     })),
             )
-            .control(self.expansion_button(window, cx))
-            .control(self.related_filter_button(window, cx))
     }
 
     fn keyform_toolbar_state(&self, cx: &App) -> KeyformToolbarState {
