@@ -172,7 +172,7 @@ impl RenderOnce for CanvasToolbar {
                     .map(|button| attached_button(button, PRIMARY, cx))
                     .icon(item.icon.render())
                     .accessibility_label(t!(command.spec().label).into_owned())
-                    .tooltip(t!(match command {
+                    .tooltip(crate::i18n::shortcut_hint(match command {
                         CommandId::SelectTool => "editor.tool_select_hint",
                         CommandId::LassoTool => "editor.tool_lasso_hint",
                         CommandId::BrushSelectTool => "editor.tool_brush_select_hint",

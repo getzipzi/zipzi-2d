@@ -214,6 +214,21 @@ pub fn keyboard_policy() -> zipzi_editor_core::KeyboardPolicy {
     })
 }
 
+pub(crate) fn primary_modifier(modifiers: gpui_kit::Modifiers) -> bool {
+    primary_modifier_for(keyboard_policy().platform, modifiers)
+}
+
+fn primary_modifier_for(
+    platform: zipzi_editor_core::ShortcutPlatform,
+    modifiers: gpui_kit::Modifiers,
+) -> bool {
+    match platform {
+        zipzi_editor_core::ShortcutPlatform::Macos => modifiers.platform,
+        zipzi_editor_core::ShortcutPlatform::Windows
+        | zipzi_editor_core::ShortcutPlatform::Linux => modifiers.control,
+    }
+}
+
 pub fn normalize_key(key: &str, mapper: &dyn PlatformKeyboardMapper) -> anyhow::Result<String> {
     let key = Keystroke::parse(key)?;
     let named = [
@@ -249,9 +264,26 @@ pub fn normalize_key(key: &str, mapper: &dyn PlatformKeyboardMapper) -> anyhow::
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_key, Settings};
-    use gpui_kit::DummyKeyboardMapper;
-    use zipzi_editor_core::{CommandId, ConfigStore, ShortcutOverride, ShortcutOverrides};
+    use super::{Settings, normalize_key, primary_modifier_for};
+    use gpui_kit::{DummyKeyboardMapper, Modifiers};
+    use zipzi_editor_core::{
+        CommandId, ConfigStore, ShortcutOverride, ShortcutOverrides, ShortcutPlatform,
+    };
+    #[test]
+    fn pointer_primary_modifier_matches_shortcut_policy() {
+        let command = Modifiers {
+            platform: true,
+            ..Default::default()
+        };
+        let control = Modifiers {
+            control: true,
+            ..Default::default()
+        };
+        assert!(primary_modifier_for(ShortcutPlatform::Macos, command));
+        assert!(!primary_modifier_for(ShortcutPlatform::Macos, control));
+        assert!(primary_modifier_for(ShortcutPlatform::Windows, control));
+        assert!(!primary_modifier_for(ShortcutPlatform::Windows, command));
+    }
     #[test]
     fn recent_files_load_deduplicates_and_persists_project_directories() -> anyhow::Result<()> {
         use zipzi_editor_core::RecentFiles;

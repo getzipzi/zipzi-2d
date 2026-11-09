@@ -19,16 +19,26 @@ fn input(overlay: &OverlaySnapshot) -> CursorInput<'_> {
     }
 }
 
+fn primary_modifiers() -> Modifiers {
+    if cfg!(target_os = "macos") {
+        Modifiers {
+            platform: true,
+            ..Default::default()
+        }
+    } else {
+        Modifiers {
+            control: true,
+            ..Default::default()
+        }
+    }
+}
+
 #[test]
 fn tool_cursor_manual_idle_matches_click_and_shortcut_routes() {
-    let primary = Modifiers {
-        platform: true,
-        ..Default::default()
-    };
+    let primary = primary_modifiers();
     let delete = Modifiers {
-        platform: true,
         shift: true,
-        ..Default::default()
+        ..primary
     };
     let shift = Modifiers {
         shift: true,
@@ -191,7 +201,7 @@ fn tool_cursor_glue_references_block_deletion_without_blocking_move_or_connect()
     assert_eq!(resolve(moving).cursor, Some(T::Move));
     let mut connecting = input(&overlay);
     connecting.manual_tool = Some(M::Select);
-    connecting.modifiers.platform = true;
+    connecting.modifiers = primary_modifiers();
     assert_eq!(
         resolve(connecting).cursor,
         Some(T::MeshConnect { new_vertex: false })
@@ -199,9 +209,8 @@ fn tool_cursor_glue_references_block_deletion_without_blocking_move_or_connect()
     let mut deleting = input(&overlay);
     deleting.manual_tool = Some(M::Select);
     deleting.modifiers = Modifiers {
-        platform: true,
         shift: true,
-        ..Default::default()
+        ..primary_modifiers()
     };
     assert_eq!(
         resolve(deleting).cursor,
@@ -231,7 +240,7 @@ fn tool_cursor_brush_capture_uses_actual_operation_and_controls_preview() {
         };
         let mut input = input(&overlay);
         input.tool = ToolId::BrushSelect;
-        input.modifiers.platform = true;
+        input.modifiers = primary_modifiers();
         assert_eq!(
             resolve(input),
             CursorFeedback {

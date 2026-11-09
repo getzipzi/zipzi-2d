@@ -1,6 +1,49 @@
 //! Editor locale selection. The catalogs live in `crates/zipzi-editor/assets/locales/`.
 //! `activate` sets rust-i18n's process-wide locale, also used by GPUI Kit.
 
+use crate::t;
+use zipzi_editor_core::ShortcutPlatform;
+
+fn shortcut_modifiers(platform: ShortcutPlatform) -> (&'static str, &'static str) {
+    match platform {
+        ShortcutPlatform::Macos => ("Option", "Command"),
+        ShortcutPlatform::Windows | ShortcutPlatform::Linux => ("Alt", "Ctrl"),
+    }
+}
+
+fn delete_key_label(platform: ShortcutPlatform) -> &'static str {
+    match platform {
+        ShortcutPlatform::Macos => "Delete",
+        ShortcutPlatform::Windows | ShortcutPlatform::Linux => "Delete / Backspace",
+    }
+}
+
+fn current_shortcut_platform() -> ShortcutPlatform {
+    if cfg!(target_os = "macos") {
+        ShortcutPlatform::Macos
+    } else if cfg!(target_os = "windows") {
+        ShortcutPlatform::Windows
+    } else {
+        ShortcutPlatform::Linux
+    }
+}
+
+pub(crate) fn alt_modifier() -> &'static str {
+    shortcut_modifiers(current_shortcut_platform()).0
+}
+
+pub(crate) fn shortcut_hint(key: &'static str) -> String {
+    let platform = current_shortcut_platform();
+    let (alt, primary) = shortcut_modifiers(platform);
+    t!(
+        key,
+        alt = alt,
+        primary = primary,
+        delete_keys = delete_key_label(platform)
+    )
+    .into_owned()
+}
+
 /// Select a shipped catalog for a BCP-47 locale or a POSIX-style locale.
 /// Traditional Chinese has no catalog yet and therefore uses English.
 fn match_supported(code: &str) -> Option<&'static str> {
@@ -76,6 +119,31 @@ mod tests {
         assert_eq!(match_supported("zh-Hant-CN"), None);
         assert_eq!(match_supported("zh-HK"), None);
         assert_eq!(match_supported("fr-FR"), None);
+    }
+
+    #[test]
+    fn shortcut_modifier_names_follow_platform() {
+        assert_eq!(
+            shortcut_modifiers(ShortcutPlatform::Macos),
+            ("Option", "Command")
+        );
+        assert_eq!(
+            shortcut_modifiers(ShortcutPlatform::Windows),
+            ("Alt", "Ctrl")
+        );
+        assert_eq!(shortcut_modifiers(ShortcutPlatform::Linux), ("Alt", "Ctrl"));
+        assert_eq!(delete_key_label(ShortcutPlatform::Macos), "Delete");
+        assert_eq!(
+            delete_key_label(ShortcutPlatform::Windows),
+            "Delete / Backspace"
+        );
+        let hint = shortcut_hint("editor.tool_select_hint");
+        assert!(hint.contains(alt_modifier()));
+        assert!(!hint.contains(if cfg!(target_os = "macos") {
+            "Alt"
+        } else {
+            "Option"
+        }));
     }
 
     #[test]

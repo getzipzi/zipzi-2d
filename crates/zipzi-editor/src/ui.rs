@@ -187,9 +187,8 @@ impl Render for EditorView {
                 this.route_key(event, window, cx)
             }))
             .capture_key_up(cx.listener(|this, event: &KeyUpEvent, _, _| {
-                if event.keystroke.key == "b" {
-                    this.input_router.brush_size_key.set(None);
-                }
+                this.input_router
+                    .release_brush_size_key(&event.keystroke.key);
             }))
             .child(workspace::render_title_bar(self, modal, window, cx))
             .children(workspace)

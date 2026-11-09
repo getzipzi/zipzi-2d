@@ -8,7 +8,10 @@ mod target;
 use crate::*;
 use policy::{KeyDecision, decide};
 pub(crate) use region::{CaptureCancelKey, CapturedInput, CoreCleanup, InputRegion};
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 pub(crate) use target::command_at;
 pub(crate) use target::{InputTarget, LocalTarget};
 
@@ -17,12 +20,21 @@ pub(crate) struct InputRouter {
     inside: Rc<Cell<bool>>,
     pub menu_target: Rc<Cell<Option<LocalTarget>>>,
     pub brush_size_key: Cell<Option<zipzi_editor_core::ViewportBinding>>,
+    brush_size_trigger: RefCell<Option<String>>,
 }
 impl InputRouter {
     pub fn deactivate(&self) {
         self.inside.set(false);
         self.menu_target.set(None);
         self.brush_size_key.set(None);
+        self.brush_size_trigger.replace(None);
+    }
+
+    pub fn release_brush_size_key(&self, key: &str) {
+        if self.brush_size_trigger.borrow().as_deref() == Some(key) {
+            self.brush_size_key.set(None);
+            self.brush_size_trigger.replace(None);
+        }
     }
 }
 
@@ -34,21 +46,6 @@ impl EditorView {
         cx: &mut Context<Self>,
     ) {
         let snapshot = self.collect_key_facts(event, window, cx);
-        if event.keystroke.key == "b"
-            && !event.keystroke.modifiers.modified()
-            && !snapshot.facts.focus.blocked
-            && !snapshot.facts.focus.text_focused
-            && snapshot.facts.focus.editor_focused
-            && snapshot.capture.is_none()
-            && !event.prefer_character_input
-        {
-            let target = snapshot.facts.hovered.or(snapshot.facts.focused);
-            if let Some(LocalTarget::Viewport(binding)) = target.map(|t| t.local)
-                && binding.kind == zipzi_editor_core::ViewportKind::Modeling
-            {
-                self.input_router.brush_size_key.set(Some(binding));
-            }
-        }
         // Canvas nudges must not consume text caret movement, tree navigation,
         // timeline stepping, modal input or an active pointer capture.
         if !snapshot.facts.focus.blocked
@@ -107,10 +104,21 @@ impl EditorView {
                     ))
             },
         );
-        // Holding B over the active brush arms sizing without reselecting the
-        // tool. Other user-configured B bindings retain their ordinary dispatch.
+        // Holding the configured unmodified brush shortcut arms brush sizing.
+        if !event.keystroke.modifiers.modified()
+            && let KeyDecision::Invoke {
+                id: zipzi_editor_core::CommandId::BrushSelectTool,
+                target: Some(LocalTarget::Viewport(binding)),
+            } = &decision
+            && binding.kind == zipzi_editor_core::ViewportKind::Modeling
+        {
+            self.input_router.brush_size_key.set(Some(*binding));
+            self.input_router
+                .brush_size_trigger
+                .replace(Some(event.keystroke.key.to_string()));
+        }
         if matches!(
-            decision,
+            &decision,
             KeyDecision::Invoke {
                 id: zipzi_editor_core::CommandId::BrushSelectTool,
                 ..

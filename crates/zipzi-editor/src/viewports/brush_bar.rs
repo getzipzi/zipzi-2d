@@ -326,7 +326,7 @@ impl BrushSelectionBar {
             .h(compact::rem(24.))
             .disabled(disabled)
             .accessibility_label(t!(label).into_owned())
-            .tooltip(t!(hint))
+            .tooltip(crate::i18n::shortcut_hint(hint))
             .on_click(cx.listener(move |this, _, _, cx| {
                 let Some(owner) = this.owner.upgrade() else {
                     return;

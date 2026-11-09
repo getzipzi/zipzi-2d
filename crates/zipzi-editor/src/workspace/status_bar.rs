@@ -283,7 +283,7 @@ fn build_hints(state: &StatusBarState) -> Vec<ShortcutHint> {
             InteractionHint::Drag(action) => (t!("status.hint_drag").into_owned(), action),
             InteractionHint::Primary(action) => (t!("status.hint_lmb").into_owned(), action),
             InteractionHint::Shift(action) => ("Shift".into(), action),
-            InteractionHint::Alt(action) => ("Option".into(), action),
+            InteractionHint::Alt(action) => (crate::i18n::alt_modifier().into(), action),
             InteractionHint::Command(command) => {
                 push_cmd_hint(&mut hints, bindings, command);
                 continue;

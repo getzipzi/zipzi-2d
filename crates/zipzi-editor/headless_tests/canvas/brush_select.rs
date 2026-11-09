@@ -6,7 +6,7 @@ use gpui_kit::{
     Keystroke, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     TestAppContext, Window, point, px,
 };
-use zipzi_editor_core::{EditorCommand, ToolId, ViewportPoint};
+use zipzi_editor_core::{CommandId, EditorCommand, ToolId, ViewportPoint};
 
 fn selected(harness: &Harness, cx: &App) -> Vec<u32> {
     harness
@@ -19,6 +19,20 @@ fn selected(harness: &Harness, cx: &App) -> Vec<u32> {
         .filter(|v| v.selected)
         .map(|v| v.id)
         .collect()
+}
+
+fn primary_modifiers() -> Modifiers {
+    if cfg!(target_os = "macos") {
+        Modifiers {
+            platform: true,
+            ..Default::default()
+        }
+    } else {
+        Modifiers {
+            control: true,
+            ..Default::default()
+        }
+    }
 }
 
 #[gpui_kit::test]
@@ -281,7 +295,90 @@ fn brush_select_native_b_drag_changes_size_without_paint_and_escape_restores_it(
 }
 
 #[gpui_kit::test]
-fn weighted_brush_native_cmd_drag_moves_by_accumulated_weight_without_repainting(
+fn brush_size_hold_follows_remapped_brush_shortcut(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        window.click("tool_brush_select", cx);
+        for binding in &mut cx.global_mut::<crate::settings::Settings>().bindings {
+            if binding.command == CommandId::BrushSelectTool {
+                binding.key = "g".into();
+            }
+        }
+        window.dispatch_event(
+            KeyDownEvent {
+                keystroke: Keystroke::parse("b").unwrap(),
+                is_held: false,
+                prefer_character_input: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .input_router
+                .brush_size_key
+                .get()
+                .is_none()
+        );
+        window.dispatch_event(
+            KeyDownEvent {
+                keystroke: Keystroke::parse("g").unwrap(),
+                is_held: false,
+                prefer_character_input: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .input_router
+                .brush_size_key
+                .get()
+                .is_some()
+        );
+        window.dispatch_event(
+            KeyUpEvent {
+                keystroke: Keystroke::parse("b").unwrap(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .input_router
+                .brush_size_key
+                .get()
+                .is_some()
+        );
+        window.dispatch_event(
+            KeyUpEvent {
+                keystroke: Keystroke::parse("g").unwrap(),
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert!(
+            harness
+                .view
+                .read(cx)
+                .input_router
+                .brush_size_key
+                .get()
+                .is_none()
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn weighted_brush_native_primary_drag_moves_by_accumulated_weight_without_repainting(
     cx: &mut TestAppContext,
 ) {
     let harness = setup(cx);
@@ -338,10 +435,7 @@ fn weighted_brush_native_cmd_drag_moves_by_accumulated_weight_without_repainting
                 ))
                 .unwrap();
         });
-        let modifiers = Modifiers {
-            platform: true,
-            ..Default::default()
-        };
+        let modifiers = primary_modifiers();
         down(window, cx, start, modifiers);
         window.dispatch_event(
             MouseMoveEvent {
@@ -364,7 +458,7 @@ fn weighted_brush_native_cmd_drag_moves_by_accumulated_weight_without_repainting
 }
 
 #[gpui_kit::test]
-fn brush_deform_mode_native_drag_and_cmd_miss_preserve_old_weights(cx: &mut TestAppContext) {
+fn brush_deform_mode_native_drag_and_primary_miss_preserve_old_weights(cx: &mut TestAppContext) {
     for cancel in [false, true] {
         let harness = setup(cx);
         present_canvas(&harness, cx);
@@ -397,10 +491,7 @@ fn brush_deform_mode_native_drag_and_cmd_miss_preserve_old_weights(cx: &mut Test
                 .selected_vertex_positions();
             let start =
                 origin + point(px(vertices[0].position.x + 10.), px(vertices[0].position.y));
-            let cmd = Modifiers {
-                platform: true,
-                ..Default::default()
-            };
+            let cmd = primary_modifiers();
             down(window, cx, start, cmd);
             assert!(!harness.view.read(cx).editor.gesture_active());
             up(window, cx, start, cmd);
@@ -473,18 +564,19 @@ fn brush_deform_mode_native_drag_and_cmd_miss_preserve_old_weights(cx: &mut Test
 }
 
 #[gpui_kit::test]
-fn brush_cmd_cursor_updates_without_pointer_motion_and_tracks_the_captured_operation(
+fn brush_primary_cursor_updates_without_pointer_motion_and_tracks_the_captured_operation(
     cx: &mut TestAppContext,
 ) {
     use crate::tool_cursors::ToolCursor;
     use gpui_kit::ModifiersChangedEvent;
     use zipzi_editor_core::CanvasSelectionOperation as O;
-    fn modifiers(window: &mut Window, cx: &mut App, platform: bool) {
+    fn modifiers(window: &mut Window, cx: &mut App, primary: bool) {
         window.dispatch_event(
             ModifiersChangedEvent {
-                modifiers: Modifiers {
-                    platform,
-                    ..Default::default()
+                modifiers: if primary {
+                    primary_modifiers()
+                } else {
+                    Modifiers::default()
                 },
                 capslock: Default::default(),
             }
@@ -584,10 +676,7 @@ fn brush_cmd_cursor_updates_without_pointer_motion_and_tracks_the_captured_opera
     visual.update(|window, cx| down(window, cx, start, Modifiers::default()));
     visual.update(|window, cx| modifiers(window, cx, true));
     check(&mut visual, ToolCursor::Brush(O::Replace));
-    let cmd = Modifiers {
-        platform: true,
-        ..Default::default()
-    };
+    let cmd = primary_modifiers();
     visual.update(|window, cx| up(window, cx, start, cmd));
     check(&mut visual, ToolCursor::Move);
     visual.update(|window, cx| down(window, cx, start, cmd));

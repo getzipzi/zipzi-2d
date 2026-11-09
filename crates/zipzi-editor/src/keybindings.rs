@@ -4,6 +4,7 @@ use crate::actions::RunCommand;
 #[cfg(target_os = "macos")]
 use crate::actions::{Hide, HideOthers, Minimize};
 use gpui_kit::component::WindowExt;
+use gpui_kit::component::kbd::Kbd;
 use zipzi_editor_core::{COMMANDS, CommandScope};
 
 struct KitBindings(Vec<KeyBinding>);
@@ -73,6 +74,17 @@ pub(super) fn reload(cx: &mut App) {
     install(cx);
 }
 
+fn display_binding(key: &str) -> String {
+    let keystroke = gpui_kit::Keystroke::parse(key).expect("validated binding");
+    let mut label = Kbd::format(&keystroke);
+    // GPUI Kit currently paints both keys as ⌫ on macOS.
+    if cfg!(target_os = "macos") && keystroke.key == "delete" && label.ends_with('⌫') {
+        label.pop();
+        label.push('⌦');
+    }
+    label
+}
+
 pub(super) fn show(window: &mut Window, cx: &mut App) {
     let settings = cx.global::<settings::Settings>();
     let list = COMMANDS
@@ -85,9 +97,7 @@ pub(super) fn show(window: &mut Window, cx: &mut App) {
                     .bindings
                     .iter()
                     .filter(|b| b.command == spec.id)
-                    .map(|b| gpui_kit::Keystroke::parse(&b.key)
-                        .expect("validated binding")
-                        .to_string())
+                    .map(|b| display_binding(&b.key))
                     .collect::<Vec<_>>()
                     .join(", ")
             )
@@ -106,10 +116,21 @@ pub(super) fn show(window: &mut Window, cx: &mut App) {
 
 #[cfg(test)]
 mod tests {
-    use super::{RunCommand, scope};
+    use super::{RunCommand, display_binding, scope};
     use gpui_kit::component::input;
     use gpui_kit::{DummyKeyboardMapper, KeyBinding, KeyContext, Keymap, Keystroke};
     use zipzi_editor_core::{CommandId, ShortcutOverride, ShortcutOverrides};
+    #[test]
+    fn shortcut_list_distinguishes_backward_and_forward_delete() {
+        assert_ne!(display_binding("backspace"), display_binding("delete"));
+        if cfg!(target_os = "macos") {
+            assert_eq!(display_binding("backspace"), "⌫");
+            assert_eq!(display_binding("delete"), "⌦");
+        } else {
+            assert_eq!(display_binding("backspace"), "Backspace");
+            assert_eq!(display_binding("delete"), "Delete");
+        }
+    }
     #[test]
     fn effective_keymap_has_no_old_binding_and_contexts_protect_text() -> anyhow::Result<()> {
         let overrides = ShortcutOverrides {

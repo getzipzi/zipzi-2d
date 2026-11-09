@@ -180,7 +180,7 @@ impl ViewportSurface {
             let resize_brush = self.owner.upgrade().is_some_and(|owner| {
                 let state = owner.read(cx);
                 state.editor.active_tool() == ToolId::BrushSelect
-                    && !event.modifiers.platform
+                    && !crate::settings::primary_modifier(event.modifiers)
                     && self.binding(&state.editor).is_some_and(|binding| {
                         state.input_router.brush_size_key.get() == Some(binding)
                     })
@@ -192,7 +192,7 @@ impl ViewportSurface {
                     }
                 } else {
                     CanvasInput::Down {
-                        primary: event.modifiers.platform,
+                        primary: crate::settings::primary_modifier(event.modifiers),
                         point: self.local(event.position),
                         shift: event.modifiers.shift,
                         alt: event.modifiers.alt,

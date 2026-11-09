@@ -126,7 +126,7 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
     }
     // Painting a selection is available even when the hovered point cannot be edited.
     if input.tool == ToolId::BrushSelect && input.manual_tool.is_none() {
-        return if input.window_active && input.modifiers.platform {
+        return if input.window_active && crate::settings::primary_modifier(input.modifiers) {
             if overlay.point_unavailable.is_some() {
                 standard(C::OperationNotAllowed)
             } else {
@@ -202,14 +202,14 @@ fn manual_cursor(
     let Some(feedback) = feedback else {
         return T::Standard(C::Arrow);
     };
-    if modifiers.platform && !modifiers.shift {
+    if crate::settings::primary_modifier(modifiers) && !modifiers.shift {
         return match feedback {
             F::Vertex => T::MeshConnect { new_vertex: false },
             F::AutomaticEdge => T::MeshFixEdge,
             _ => T::Standard(C::OperationNotAllowed),
         };
     }
-    let tool = if modifiers.platform && modifiers.shift {
+    let tool = if crate::settings::primary_modifier(modifiers) && modifiers.shift {
         ManualTool::Delete
     } else {
         tool

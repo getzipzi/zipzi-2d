@@ -82,8 +82,8 @@ pub fn render_deformer_bar(
     buttons.push(
         compact::button(Button::new("deformer-help"))
             .icon(IconName::Info)
-            .accessibility_label(t!("editor.deformer_gesture_hint").into_owned())
-            .tooltip(t!("editor.deformer_gesture_hint")),
+            .accessibility_label(crate::i18n::shortcut_hint("editor.deformer_gesture_hint"))
+            .tooltip(crate::i18n::shortcut_hint("editor.deformer_gesture_hint")),
     );
     let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("deformer-tools")
         .label(t!("editor.deformer_grid"))
@@ -191,17 +191,20 @@ fn render_mesh_edit_bar(
             )
             .icon(icon)
             .accessibility_label(t!(label).into_owned())
-            .tooltip(t!(match command {
+            .tooltip(crate::i18n::shortcut_hint(match command {
                 CommandId::ManualSelect => "editor.manual_box_select_hint",
                 CommandId::ManualLasso => "editor.manual_lasso_hint",
-                CommandId::ManualPadSource if targets.len() > 1 =>
-                    "editor.manual_multi_pad_source_hint",
+                CommandId::ManualPadSource if targets.len() > 1 => {
+                    "editor.manual_multi_pad_source_hint"
+                }
                 CommandId::ManualPadSource => "editor.manual_pad_source_hint",
                 CommandId::GenerateMesh if targets.len() > 1 => "editor.manual_multi_generate_hint",
-                CommandId::ManualReconnect if targets.len() > 1 =>
-                    "editor.manual_multi_reconnect_hint",
-                CommandId::ManualSourceView if targets.len() > 1 =>
-                    "editor.manual_multi_source_hint",
+                CommandId::ManualReconnect if targets.len() > 1 => {
+                    "editor.manual_multi_reconnect_hint"
+                }
+                CommandId::ManualSourceView if targets.len() > 1 => {
+                    "editor.manual_multi_source_hint"
+                }
                 _ => label,
             }))
             .disabled(modal || (!status.enabled && !generating))
