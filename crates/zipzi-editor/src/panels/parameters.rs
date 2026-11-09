@@ -275,15 +275,21 @@ impl ParametersPanel {
             return None;
         }
         self.benchmark_track(cx)
+            .map(|(_, bounds, thumb)| (bounds, thumb))
     }
 
-    fn benchmark_track(&self, cx: &App) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
+    fn benchmark_track(&self, cx: &App) -> Option<(&ParameterRow, Bounds<Pixels>, Point<Pixels>)> {
         let viewport = self.scroll.0.borrow().base_handle.bounds();
         self.visible_rows.iter().find_map(|entry| {
             let ListRow::Parameter { index, .. } = entry else {
                 return None;
             };
             let row = &self.rows[*index];
+            if crate::benchmark::parameter_overlay::track_parameter()
+                .is_some_and(|id| id != row.parameter.id)
+            {
+                return None;
+            }
             let bounds = row.slider.read(cx).bounds();
             // Virtualized rows may retain nonzero bounds from measurement or
             // earlier paints, even when their track is outside the viewport.
@@ -295,6 +301,7 @@ impl ParametersPanel {
                     / (row.parameter.maximum - row.parameter.minimum))
                     .clamp(0., 1.);
                 (
+                    row,
                     bounds,
                     point(
                         bounds.left() + bounds.size.width * fraction,
@@ -309,11 +316,8 @@ impl ParametersPanel {
         &self,
         cx: &App,
     ) -> Option<zipzi_editor_core::ParameterValue> {
-        let (_, thumb) = self.benchmark_track(cx)?;
-        self.rows
-            .iter()
-            .find(|row| row.slider.read(cx).bounds().contains(&thumb))
-            .map(|row| row.parameter.clone())
+        self.benchmark_track(cx)
+            .map(|(row, _, _)| row.parameter.clone())
     }
 
     #[cfg(test)]

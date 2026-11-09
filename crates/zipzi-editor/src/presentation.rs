@@ -258,6 +258,11 @@ impl EditorView {
         self.sync_viewport_notice(cx);
         workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);
         frame_trace::emit(frame.trace_id, "preview_frame_refresh", &[]);
+        #[cfg(target_os = "windows")]
+        if self.refresh_native_viewport(binding.viewport, cx) {
+            frame_trace::emit(frame.trace_id, "native_viewport_refresh", &[]);
+            return;
+        }
         self.notify_viewport(binding.viewport, cx);
     }
     pub(crate) fn notify_viewport(&self, viewport: ViewportId, cx: &mut Context<Self>) {

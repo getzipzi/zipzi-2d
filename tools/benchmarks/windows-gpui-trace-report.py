@@ -19,6 +19,7 @@ PAIRS = {
     'paint_ms': ('ui_paint_begin', 'ui_paint_end'),
     'roots_ms': ('ui_roots_begin', 'ui_roots_end'),
     'platform_draw_cpu_ms': ('platform_draw_begin', 'platform_draw_end'),
+    'native_viewport_submit_cpu_ms': ('native_viewport_submit_begin', 'native_viewport_submit_end'),
 }
 
 
@@ -147,10 +148,35 @@ def diagnose(records):
         durations['timer_late_ms'] = [e['fields']['timer_late_ns'] / 1e6 for e in phase_ticks]
         durations['input_interval_ms'] = [(b['at_ns'] - a['at_ns']) / 1e6
                                           for a, b in zip(phase_ticks, phase_ticks[1:])]
+        # Independent DXGI Present returns are deliberately separate from GPUI
+        # window submissions. Neither boundary proves DWM display or scanout.
+        native_per_tick = {}
+        native_previews = set()
+        for event in selected:
+            if event['stage'] != 'native_viewport_present_return':
+                continue
+            tick = preview_tick.get(event['id'], 0)
+            if tick not in measured or measured[tick]['fields']['mode'] != mode:
+                continue
+            native_per_tick.setdefault(tick, event['at_ns'])
+            if event['id'] not in native_previews and event['id'] in published:
+                durations['worker_publish_to_native_present_return_ms'].append(
+                    (event['at_ns'] - published[event['id']]) / 1e6)
+            native_previews.add(event['id'])
+        native_times = sorted(native_per_tick.values())
+        durations['input_to_first_native_present_return_ms'] = [
+            (time - measured[tick]['at_ns']) / 1e6 for tick, time in native_per_tick.items()]
+        durations['new_native_image_interval_ms'] = [
+            (b - a) / 1e6 for a, b in zip(native_times, native_times[1:])]
         missed = [e for e in selected if e['stage'] == 'image_atlas' and e['fields']['miss']]
         reports[str(mode)] = {
             'inputs': len(phase_ticks), 'inputs_with_image_platform_return': len(per_tick),
             'inputs_without_image_platform_return': len(phase_ticks) - len(per_tick),
+            'inputs_with_native_present_return': len(native_per_tick),
+            'inputs_without_any_present_return': len(phase_ticks) - len(set(per_tick) | set(native_per_tick)),
+            'native_viewport_refreshes_without_gpui_notify': sum(
+                e['stage'] == 'native_viewport_refresh' and preview_tick.get(e['id']) in measured
+                for e in selected),
             'new_image_platform_returns_per_second': (
                 (len(first_submissions) - 1) * 1e9 / (first_submissions[-1] - first_submissions[0])
                 if len(first_submissions) > 1 and first_submissions[-1] > first_submissions[0] else None),

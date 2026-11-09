@@ -36,6 +36,29 @@ def fixture():
 
 
 class WindowsGpuiReport(unittest.TestCase):
+    def test_native_present_does_not_require_or_invent_a_gpui_window_draw(self):
+        records = [e for e in fixture() if e.get('stage') not in (
+            'compose_image', 'ui_draw_begin', 'ui_draw_end', 'platform_draw_begin',
+            'platform_draw_end', 'image_atlas')]
+        for time, id, stage, fields in [
+            (25, 4, 'native_viewport_submit_begin', {}),
+            (26, 4, 'native_viewport_submit_end', {'submitted': 0}),
+            (26, 4, 'native_viewport_refresh', {}),
+            (28, 4, 'native_viewport_present_return', {}),
+            (40, 4, 'native_viewport_present_return', {}),  # repaint, not new input
+            (41, 999, 'native_viewport_present_return', {}),  # unrelated preview
+        ]:
+            records.insert(-2, dict(type='event', at_ns=time * 1_000_000,
+                                   id=id, stage=stage, fields=fields))
+        result = report.diagnose(records)['workloads']['1']
+        self.assertEqual(result['inputs_with_image_platform_return'], 0)
+        self.assertEqual(result['inputs_with_native_present_return'], 1)
+        self.assertEqual(result['inputs_without_any_present_return'], 0)
+        self.assertEqual(result['native_viewport_refreshes_without_gpui_notify'], 1)
+        self.assertEqual(result['metrics']['native_viewport_submit_cpu_ms'], report.distribution([1]))
+        self.assertEqual(result['metrics']['input_to_first_native_present_return_ms'], report.distribution([8]))
+        self.assertEqual(result['metrics']['worker_publish_to_native_present_return_ms'], report.distribution([4]))
+
     def test_input_sync_uses_the_outer_tick_and_includes_effect_flush(self):
         records = fixture()
         for time, id, stage in [(22, 3, 'input_end'), (24, 2, 'input_end')]:

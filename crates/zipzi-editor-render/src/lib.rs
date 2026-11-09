@@ -62,3 +62,7 @@ mod overlay_data;
 mod overlay_windows;
 #[cfg(target_os = "windows")]
 pub use overlay_windows::WindowsOverlayRenderer;
+#[cfg(target_os = "windows")]
+mod viewport_windows;
+#[cfg(target_os = "windows")]
+pub use viewport_windows::WindowsViewportPresenter;

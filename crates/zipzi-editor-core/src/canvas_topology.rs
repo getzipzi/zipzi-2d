@@ -158,8 +158,13 @@ pub(crate) struct CanvasTopology {
     pub meshes: Arc<HashMap<String, Arc<MeshTopology>>>,
     pub controls: Arc<HashMap<String, ControlTopology>>,
     pub glues: Arc<[GlueTopology]>,
+    glue_slots: Arc<HashMap<String, usize>>,
 }
 impl CanvasTopology {
+    pub fn glue(&self, id: &str) -> Option<&GlueTopology> {
+        self.glue_slots.get(id).map(|&slot| &self.glues[slot])
+    }
+
     pub fn same_geometry(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.meshes, &other.meshes)
             && Arc::ptr_eq(&self.controls, &other.controls)
@@ -289,15 +294,23 @@ impl CanvasTopology {
             .filter(|old| *old.controls == controls)
             .map(|old| old.controls.clone())
             .unwrap_or_else(|| Arc::new(controls));
-        let glues = previous
-            .filter(|old| old.glues.as_ref() == glues)
-            .map(|old| old.glues.clone())
-            .unwrap_or_else(|| glues.into());
+        let (glues, glue_slots) =
+            if let Some(old) = previous.filter(|old| old.glues.as_ref() == glues) {
+                (old.glues.clone(), old.glue_slots.clone())
+            } else {
+                let slots = glues
+                    .iter()
+                    .enumerate()
+                    .map(|(slot, glue)| (glue.object.id.clone(), slot))
+                    .collect();
+                (glues.into(), Arc::new(slots))
+            };
         Self {
             index,
             meshes,
             controls,
             glues,
+            glue_slots,
         }
     }
 }

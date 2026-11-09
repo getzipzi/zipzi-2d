@@ -94,6 +94,7 @@ pub struct CanvasScene {
     visible_meshes: HashSet<String>,
     pub(crate) isolation_scope: Option<Arc<HashSet<ObjectRef>>>,
     pub(crate) topology: Arc<crate::canvas_topology::CanvasTopology>,
+    glue_operations: Arc<[zipzi_core::evaluation::GlueOperation]>,
     pub(crate) glue_map: Arc<crate::mesh_edit::GlueMap>,
 }
 impl CanvasScene {

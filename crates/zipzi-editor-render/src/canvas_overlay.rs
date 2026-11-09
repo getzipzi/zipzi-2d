@@ -1,6 +1,7 @@
 //! Ordered canvas geometry shared by Metal, D3D11 and the GPUI fallback.
 //! Coordinates and stroke widths are logical pixels, colors are straight RGBA.
 use anyhow::{Result, ensure};
+use std::borrow::Cow;
 use zipzi_editor_core::{
     GluePointState, OverlaySnapshot, OverlayVertex, OverlayVertexKind as K, ViewportPoint,
     canvas_style as style,
@@ -145,13 +146,29 @@ impl CanvasOverlayCache {
         palette: CanvasPalette,
         options: CanvasOptions,
     ) -> Result<std::sync::Arc<CanvasDrawList>> {
+        self.prepare_snapshot(Cow::Borrowed(overlay), extent, palette, options)
+    }
+
+    pub fn prepare_snapshot(
+        &mut self,
+        overlay: Cow<'_, OverlaySnapshot>,
+        extent: Point,
+        palette: CanvasPalette,
+        options: CanvasOptions,
+    ) -> Result<std::sync::Arc<CanvasDrawList>> {
         if let Some((old, e, p, o, list)) = &self.cached {
-            if old == overlay && *e == extent && *p == palette && *o == options {
+            if old == overlay.as_ref() && *e == extent && *p == palette && *o == options {
                 return Ok(list.clone());
             }
         }
-        let list = std::sync::Arc::new(CanvasDrawList::new(overlay, extent, palette, options)?);
-        self.cached = Some((overlay.clone(), extent, palette, options, list.clone()));
+        let capacity = self
+            .cached
+            .as_ref()
+            .map_or(0, |(_, _, _, _, list)| list.primitives.len());
+        let list = std::sync::Arc::new(CanvasDrawList::build(
+            &overlay, extent, palette, options, capacity,
+        )?);
+        self.cached = Some((overlay.into_owned(), extent, palette, options, list.clone()));
         Ok(list)
     }
 }
@@ -162,12 +179,24 @@ impl CanvasDrawList {
         p: CanvasPalette,
         options: CanvasOptions,
     ) -> Result<Self> {
+        Self::build(overlay, extent, p, options, 0)
+    }
+
+    fn build(
+        overlay: &OverlaySnapshot,
+        extent: Point,
+        p: CanvasPalette,
+        options: CanvasOptions,
+        capacity: usize,
+    ) -> Result<Self> {
         ensure!(
             extent.iter().all(|v| v.is_finite() && *v > 0.),
             "Invalid canvas extent"
         );
         let mut b = Builder {
-            list: Self::default(),
+            list: Self {
+                primitives: Vec::with_capacity(capacity),
+            },
             extent,
             overflow: false,
         };
@@ -284,12 +313,53 @@ impl CanvasDrawList {
             }
         }
         if options.markers {
+            let mesh_markers = std::array::from_fn::<_, 8, _>(|flags| {
+                let (color, border) = control_colors(
+                    flags & 1 != 0,
+                    flags & 2 != 0,
+                    flags & 4 != 0,
+                    p.mesh_selected,
+                    p,
+                );
+                let r = style::POINT_RADIUS;
+                color
+                    .iter()
+                    .chain(&border)
+                    .all(|v| v.is_finite())
+                    .then_some(CanvasPrimitive {
+                        geometry: [0., 0., r, r],
+                        parameters: [1., r, 1., 0.],
+                        color,
+                        border,
+                    })
+            });
             for grid in [true, false] {
                 for emphasized in [false, true] {
                     for v in overlay.vertices.iter().filter(|v| {
                         (v.kind == K::WarpGrid) == grid && (v.selected || v.hovered) == emphasized
                     }) {
-                        b.vertex(v, p);
+                        if v.kind == K::Mesh {
+                            let flags = usize::from(v.selected)
+                                | (usize::from(v.hovered) << 1)
+                                | (usize::from(v.editable) << 2);
+                            if let Some(mut marker) = mesh_markers[flags] {
+                                let [x, y] = pt(v.position);
+                                let r = style::POINT_RADIUS;
+                                if x.is_finite()
+                                    && y.is_finite()
+                                    && x + r + 1. >= 0.
+                                    && y + r + 1. >= 0.
+                                    && x - r - 1. <= extent[0]
+                                    && y - r - 1. <= extent[1]
+                                {
+                                    marker.geometry[0] = x;
+                                    marker.geometry[1] = y;
+                                    b.push_visible(marker);
+                                }
+                            }
+                        } else {
+                            b.vertex(v, p);
+                        }
                     }
                 }
             }
@@ -328,10 +398,15 @@ impl CanvasDrawList {
                 );
             }
             // Highest-priority coincident endpoint wins. Spatial buckets keep seams linear.
-            let mut endpoints: Vec<_> = overlay.glues.iter().flat_map(|g| &g.points).collect();
-            endpoints.sort_by_key(|v| (v.state, v.selected, v.hovered));
-            let mut cells: std::collections::HashMap<(i64, i64), Vec<Point>> = Default::default();
-            for v in endpoints.into_iter().rev() {
+            let mut buckets: [Vec<_>; 12] = std::array::from_fn(|_| Vec::new());
+            for v in overlay.glues.iter().flat_map(|g| &g.points) {
+                let priority =
+                    v.state as usize * 4 + usize::from(v.selected) * 2 + usize::from(v.hovered);
+                buckets[priority].push(v);
+            }
+            let mut cells = std::collections::HashMap::<(i64, i64), usize>::new();
+            let mut kept = Vec::<(Point, Option<usize>)>::new();
+            for v in buckets.into_iter().flatten().rev() {
                 let pos = [v.position.x, v.position.y];
                 if !pos.iter().all(|v| v.is_finite()) {
                     continue;
@@ -341,15 +416,20 @@ impl CanvasDrawList {
                     (-1..=1).any(|dy: i64| {
                         cells
                             .get(&(cell.0.saturating_add(dx), cell.1.saturating_add(dy)))
-                            .is_some_and(|ps| {
-                                ps.iter()
-                                    .any(|p| (p[0] - pos[0]).hypot(p[1] - pos[1]) < 0.5)
+                            .is_some_and(|&first| {
+                                std::iter::successors(Some(first), |&slot| kept[slot].1).any(
+                                    |slot| {
+                                        let (p, _) = kept[slot];
+                                        (p[0] - pos[0]).hypot(p[1] - pos[1]) < 0.5
+                                    },
+                                )
                             })
                     })
                 }) {
                     continue;
                 }
-                cells.entry(cell).or_default().push(pos);
+                let previous = cells.insert(cell, kept.len());
+                kept.push((pos, previous));
                 match v.state {
                     GluePointState::Editable => b.marker(
                         pos,
@@ -472,6 +552,32 @@ fn alpha(mut c: Color, a: f32) -> Color {
 fn pt(p: ViewportPoint) -> Point {
     [p.x, p.y]
 }
+
+fn control_colors(
+    selected: bool,
+    hovered: bool,
+    editable: bool,
+    color: Color,
+    p: CanvasPalette,
+) -> (Color, Color) {
+    let fill = if !editable {
+        p.restricted
+    } else if selected {
+        color
+    } else {
+        p.hollow
+    };
+    let border = if hovered {
+        p.deformer
+    } else if !editable {
+        p.restricted_border
+    } else if selected {
+        color
+    } else {
+        [0., 0., 0., 1.]
+    };
+    (fill, border)
+}
 struct Builder {
     list: CanvasDrawList,
     extent: Point,
@@ -497,6 +603,9 @@ impl Builder {
         {
             return;
         }
+        self.push_visible(p);
+    }
+    fn push_visible(&mut self, p: CanvasPrimitive) {
         if self.list.primitives.len() >= MAX_PRIMITIVES {
             self.overflow = true;
             return;
@@ -528,8 +637,27 @@ impl Builder {
         });
     }
     fn lines(&mut self, edges: &[(ViewportPoint, ViewportPoint)], width: f32, color: Color) {
+        if !width.is_finite() || width <= 0. || !color.iter().all(|v| v.is_finite()) {
+            return;
+        }
+        let [width_limit, height_limit] = self.extent;
+        let inside =
+            |p: ViewportPoint| p.x >= 0. && p.x <= width_limit && p.y >= 0. && p.y <= height_limit;
         for &(a, b) in edges {
-            self.line(pt(a), pt(b), width, color);
+            if a == b {
+                continue;
+            }
+            if inside(a) && inside(b) {
+                // In-bounds comparisons also reject non-finite endpoints.
+                self.push_visible(CanvasPrimitive {
+                    geometry: [a.x, a.y, b.x, b.y],
+                    parameters: [0., width, 0., 0.],
+                    color,
+                    border: [0.; 4],
+                });
+            } else {
+                self.line(pt(a), pt(b), width, color);
+            }
         }
     }
     fn dashes(&mut self, edges: &[(ViewportPoint, ViewportPoint)], width: f32, color: Color) {
@@ -569,22 +697,7 @@ impl Builder {
         color: Color,
         p: CanvasPalette,
     ) {
-        let fill = if !editable {
-            p.restricted
-        } else if selected {
-            color
-        } else {
-            p.hollow
-        };
-        let border = if hovered {
-            p.deformer
-        } else if !editable {
-            p.restricted_border
-        } else if selected {
-            color
-        } else {
-            [0., 0., 0., 1.]
-        };
+        let (fill, border) = control_colors(selected, hovered, editable, color, p);
         self.marker(center, [r; 2], if round { r } else { 0. }, 1., fill, border);
     }
     fn vertex(&mut self, v: &OverlayVertex, p: CanvasPalette) {
@@ -680,38 +793,37 @@ impl Builder {
 }
 
 /// Clip before subdivision so offscreen captures cannot generate unbounded dashes.
-fn dashed_segments(a: Point, b: Point, extent: Point) -> Vec<(Point, Point)> {
+fn dashed_segments(a: Point, b: Point, extent: Point) -> impl Iterator<Item = (Point, Point)> {
     let (dx, dy) = (
         f64::from(b[0]) - f64::from(a[0]),
         f64::from(b[1]) - f64::from(a[1]),
     );
     let length = dx.hypot(dy);
-    if !length.is_finite() || length < 2. {
-        return vec![];
-    }
-    let Some((lo, hi)) = clip_interval(a, b, extent, 4.) else {
-        return vec![];
-    };
-    let at = |d: f64| {
+    let at = move |d: f64| {
         [
             (f64::from(a[0]) + dx * d / length) as f32,
             (f64::from(a[1]) + dy * d / length) as f32,
         ]
     };
-    let start = lo * length;
-    let end = hi * length;
-    let phase = start.rem_euclid(6.);
-    // Visible dash generation is bounded even for a captured pointer far offscreen.
-    let count = (((end - start) / 6.).ceil() as usize)
-        .saturating_add(1)
-        .min(8192);
-    (0..count)
-        .filter_map(|i| {
+    let clip = if length.is_finite() && length >= 2. {
+        clip_interval(a, b, extent, 4.)
+    } else {
+        None
+    };
+    clip.into_iter().flat_map(move |(lo, hi)| {
+        let start = lo * length;
+        let end = hi * length;
+        let phase = start.rem_euclid(6.);
+        // Visible dash generation is bounded even for a captured pointer far offscreen.
+        let count = (((end - start) / 6.).ceil() as usize)
+            .saturating_add(1)
+            .min(8192);
+        (0..count).filter_map(move |i| {
             let s = (i as f64 * 6. - phase).max(0.);
             let e = (i as f64 * 6. - phase + 3.).min(end - start);
             (e > s).then(|| (at(start + s), at(start + e)))
         })
-        .collect()
+    })
 }
 
 fn clip_interval(a: Point, b: Point, extent: Point, padding: f32) -> Option<(f64, f64)> {

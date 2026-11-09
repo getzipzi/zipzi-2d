@@ -473,21 +473,21 @@ impl ToolController {
                 };
             }
         }
+        let mut projected_vertices = Vec::new();
         for r in selection {
             #[cfg(feature = "bench-instrumentation")]
             let _span = zipzi_core::benchmark::span("overlay.selected_geometry");
             if r.kind == ObjectKind::Mesh {
                 if let Some(m) = scene.mesh(&r.id).filter(|_| scene.mesh_visible(&r.id)) {
+                    projected_vertices.clear();
+                    projected_vertices.extend(m.vertices.iter().map(|(_, p)| t.to_viewport(*p)));
                     out.accent_lines.extend(
                         m.boundary
                             .iter()
                             .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
                     );
                     out.lines.extend(m.edges.iter().filter_map(|&(a, b)| {
-                        Some((
-                            t.to_viewport(m.vertices.get(a)?.1),
-                            t.to_viewport(m.vertices.get(b)?.1),
-                        ))
+                        Some((*projected_vertices.get(a)?, *projected_vertices.get(b)?))
                     }));
                     let uniform = access.uniform_editable(r);
                     let object = access.object(r).unwrap();
@@ -495,21 +495,14 @@ impl ToolController {
                         HitTarget::Component(c) if &c.object == r => Some(c.id),
                         _ => None,
                     });
-                    for (id, p) in &m.vertices {
-                        let editable = uniform.unwrap_or_else(|| {
-                            matches!(
-                                access.probe(&ComponentRef {
-                                    object: r.clone(),
-                                    id: *id
-                                }),
-                                Some(Ok(()))
-                            )
-                        });
+                    for (&(id, _), &position) in m.vertices.iter().zip(&projected_vertices) {
+                        let editable =
+                            uniform.unwrap_or_else(|| access.probe_vertex(object, id).is_ok());
                         out.vertices.push(OverlayVertex {
-                            id: *id,
-                            position: t.to_viewport(*p),
-                            selected: object.selected_ids.contains(id),
-                            hovered: hovered_id == Some(*id),
+                            id,
+                            position,
+                            selected: object.selected_ids.contains(&id),
+                            hovered: hovered_id == Some(id),
                             kind: OverlayVertexKind::Mesh,
                             editable,
                         });
@@ -572,26 +565,28 @@ impl ToolController {
                     .is_some_and(|h| h.object() == &control.object);
             if control.kind == ControlKind::Glue {
                 let mut glue_points = Vec::new();
-                if let Some(g) = scene
-                    .topology
-                    .glues
-                    .iter()
-                    .find(|g| g.object == control.object)
-                {
+                let glue = scene.topology.glue(&control.object.id);
+                if let Some(g) = glue {
+                    let endpoints = [&g.mesh_a, &g.mesh_b].map(|mesh| {
+                        let object = ObjectRef::new(ObjectKind::Mesh, mesh);
+                        let hovered_id = out
+                            .active_component
+                            .as_ref()
+                            .filter(|component| component.object == object)
+                            .map(|component| component.id);
+                        (scene.mesh(mesh), access.object(&object), hovered_id)
+                    });
+                    glue_points.reserve(g.pairs.len().saturating_mul(2));
                     for &(a, b) in &g.pairs {
-                        for (mesh, slot) in [(&g.mesh_a, a), (&g.mesh_b, b)] {
-                            let Some((id, position)) =
-                                scene.mesh(mesh).and_then(|m| m.vertices.get(slot))
+                        for ((mesh, object, hovered_id), slot) in endpoints.into_iter().zip([a, b])
+                        {
+                            let Some(&(id, position)) = mesh.and_then(|m| m.vertices.get(slot))
                             else {
                                 continue;
                             };
-                            let component = ComponentRef {
-                                object: ObjectRef::new(ObjectKind::Mesh, mesh),
-                                id: *id,
-                            };
-                            let selected = access.component_selected(&component);
-                            let hovered = out.active_component.as_ref() == Some(&component);
-                            let restriction = access.probe(&component);
+                            let selected = object.is_some_and(|o| o.selected_ids.contains(&id));
+                            let hovered = hovered_id == Some(id);
+                            let restriction = object.map(|o| access.probe_vertex(o, id));
                             let state = match restriction {
                                 None => GluePointState::Reference,
                                 Some(Ok(())) => GluePointState::Editable,
@@ -603,7 +598,7 @@ impl ToolController {
                                 }
                             };
                             glue_points.push(OverlayGluePoint {
-                                position: t.to_viewport(*position),
+                                position: t.to_viewport(position),
                                 state,
                                 selected,
                                 hovered,
@@ -621,23 +616,18 @@ impl ToolController {
                     selected,
                     hovered,
                 });
-                if selected || hovered {
-                    if let Some(glue) = scene
-                        .topology
-                        .glues
-                        .iter()
-                        .find(|g| g.object == control.object)
-                    {
-                        for id in [&glue.mesh_a, &glue.mesh_b] {
-                            // An explicitly selected mesh already has its own outline.
-                            if outlined_meshes.insert(id.as_str()) {
-                                if let Some(mesh) = scene.mesh(id) {
-                                    out.reference_lines.extend(
-                                        mesh.boundary
-                                            .iter()
-                                            .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
-                                    );
-                                }
+                if (selected || hovered)
+                    && let Some(glue) = glue
+                {
+                    for id in [&glue.mesh_a, &glue.mesh_b] {
+                        // An explicitly selected mesh already has its own outline.
+                        if outlined_meshes.insert(id.as_str()) {
+                            if let Some(mesh) = scene.mesh(id) {
+                                out.reference_lines.extend(
+                                    mesh.boundary
+                                        .iter()
+                                        .map(|(a, b)| (t.to_viewport(*a), t.to_viewport(*b))),
+                                );
                             }
                         }
                     }

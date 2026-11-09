@@ -64,6 +64,8 @@ mod context_menu;
 mod deformer_bar;
 mod input;
 mod isolation;
+#[cfg(target_os = "windows")]
+mod native_windows;
 mod painting;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use painting::CanvasOverlay;
@@ -90,6 +92,8 @@ use zipzi_editor_core::{
 };
 
 pub struct ViewportSurface {
+    #[cfg(target_os = "windows")]
+    native: Option<native_windows::Shared>,
     pub(crate) input_region: crate::input_routing::InputRegion,
     pub(crate) owner: WeakEntity<EditorView>,
     pub(crate) focus: FocusHandle,
@@ -153,7 +157,8 @@ impl ViewportSurface {
             let brush_bar = brush_bar::BrushSelectionBar::new(owner.clone(), viewport, window, cx);
             let upgraded = owner.upgrade().unwrap();
             let focus = cx.focus_handle();
-            let subscriptions = vec![
+            #[allow(unused_mut)]
+            let mut subscriptions = vec![
                 cx.observe(&upgraded, |this, owner, cx| {
                     let state = owner.read(cx);
                     if state.modal
@@ -196,6 +201,28 @@ impl ViewportSurface {
                     this.cancel(cx);
                 }),
             ];
+            #[cfg(target_os = "windows")]
+            let native = if !cx.is_test()
+                && std::env::var("ZIPZI_NATIVE_VIEWPORT").as_deref() == Ok("1")
+                && benchmark::native_canvas_overlay()
+            {
+                match native_windows::NativeCanvas::new(window, cx.weak_entity(), cx) {
+                    Ok(native) => {
+                        subscriptions.push(cx.on_release_in(window, |this, window, _| {
+                            if let Some(native) = &this.native {
+                                native.borrow_mut().remove(window);
+                            }
+                        }));
+                        Some(native)
+                    }
+                    Err(error) => {
+                        eprintln!("Native viewport unavailable; using GPUI: {error}");
+                        None
+                    }
+                }
+            } else {
+                None
+            };
             let surface = cx.weak_entity();
             let input_region =
                 crate::input_routing::InputRegion::new(focus.clone(), move |editor, _| {
@@ -228,6 +255,8 @@ impl ViewportSurface {
                     ))
                 });
             Self {
+                #[cfg(target_os = "windows")]
+                native,
                 input_region,
                 owner,
                 viewport,
@@ -384,6 +413,20 @@ impl Render for ViewportSurface {
         let menu_owner = owner.downgrade();
         let menu_canvas = cx.weak_entity();
         let hover_name = overlay.hovered_object_label.clone();
+        #[cfg(target_os = "windows")]
+        if let Some(native) = &self.native {
+            native.borrow_mut().chrome = Some(native_windows::Chrome {
+                cursor: cursor_feedback,
+                label: hover_name.clone(),
+                hand: hand_tool,
+                error: error.is_some(),
+            });
+        }
+        #[cfg(target_os = "windows")]
+        let native_active = self.native.as_ref().is_some_and(|n| n.borrow().active());
+        #[cfg(not(target_os = "windows"))]
+        let native_active = false;
+        let native_image = native_active.then(|| image.clone()).flatten();
         let body = div()
             .id("canvas-body")
             .test_support()
@@ -413,7 +456,7 @@ impl Render for ViewportSurface {
             .when(self.show_transparency_grid, |body| {
                 body.child(background::transparency_grid(cx))
             })
-            .children(image.map(|(image, metrics)| {
+            .children(image.filter(|_| !native_active).map(|(image, metrics)| {
                 div()
                     .absolute()
                     .left_0()
@@ -421,7 +464,10 @@ impl Render for ViewportSurface {
                     .w(px(metrics.width))
                     .h(px(metrics.height))
                     .child(preview::element(image))
-            }))
+            }));
+        let chrome = div()
+            .absolute()
+            .size_full()
             .when(active.is_none(), |e| {
                 e.child(
                     div()
@@ -438,7 +484,7 @@ impl Render for ViewportSurface {
                 )
             })
             .children(error.map(|e| div().absolute().p_4().child(e)))
-            .child(self.overlay_element(overlay, palette, capture, cx))
+            .child(self.overlay_element(overlay, palette, capture, native_image, cx))
             .children(hover_name.map(|name| {
                 div()
                     .id("hovered-object-name")
@@ -482,17 +528,27 @@ impl Render for ViewportSurface {
             }))
             // Include our own occluding toolbar/controls in the viewport region.
             // Later popup layers can still occlude the entire region.
-            .child(self.input_region.marker())
-            .map(|e| {
-                if let Some(handler) = self.object_menu {
-                    e.context_menu(move |menu, window, cx| {
-                        handler(&menu_owner, &menu_canvas, menu, window, cx)
-                    })
-                    .into_any_element()
-                } else {
-                    e.into_any_element()
-                }
-            });
+            .child(self.input_region.marker());
+        #[cfg(target_os = "windows")]
+        let chrome = if let Some(native) = &self.native {
+            native_windows::Plane {
+                child: chrome.into_any_element(),
+                plane: native.borrow().overlay_plane,
+            }
+            .into_any_element()
+        } else {
+            chrome.into_any_element()
+        };
+        let body = body.child(chrome).map(|e| {
+            if let Some(handler) = self.object_menu {
+                e.context_menu(move |menu, window, cx| {
+                    handler(&menu_owner, &menu_canvas, menu, window, cx)
+                })
+                .into_any_element()
+            } else {
+                e.into_any_element()
+            }
+        });
         div()
             .size_full()
             .flex()

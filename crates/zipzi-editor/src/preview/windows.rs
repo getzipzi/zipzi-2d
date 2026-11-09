@@ -23,6 +23,12 @@ pub struct ImageData {
     trace_id: u64,
 }
 pub type Image = Arc<ImageData>;
+pub(crate) fn native_surface(image: &Image) -> Option<&Arc<gpui_kit::DirectXSurface>> {
+    image.surface.as_ref()
+}
+pub(crate) fn image_trace_id(image: &Image) -> u64 {
+    image.trace_id
+}
 pub fn target(width: u32, height: u32) -> WgpuTargetConfig {
     WgpuTargetConfig {
         width,

@@ -278,6 +278,7 @@ pub fn init() -> anyhow::Result<()> {
                 "type": "metadata", "schema": 1,
                 "clock": if cfg!(target_os = "macos") { "mach_host_nanoseconds" } else { "monotonic_process_nanoseconds" },
                 "platform": std::env::consts::OS,
+                "native_viewport_requested": std::env::var("ZIPZI_NATIVE_VIEWPORT").as_deref() == Ok("1"),
                 "clock_alignment": clock_alignment,
                 "debug_assertions": cfg!(debug_assertions), "automatic": automatic,
                 "gpui_backend": "gpui-fast",
@@ -386,7 +387,7 @@ pub fn hide_mesh_edges() -> bool {
 // Scripted pointer events own the editor during an automatic benchmark.
 // Manual tracing and ordinary editor sessions keep all native mouse behavior.
 pub fn ignore_native_pointer_event() -> bool {
-    CONFIG.get().is_some() && !INJECTING_POINTER.get()
+    CONFIG.get().is_some() && !STOPPED.load(Ordering::SeqCst) && !INJECTING_POINTER.get()
 }
 
 fn dispatch_pointer(
@@ -883,6 +884,15 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
             frame_trace::emit(frame_trace::next_id(), "benchmark_failed", &[]);
         }
         finish();
+        // Optional inspection time after the trace closes; excluded from all
+        // measurements, so the final released pose can be inspected manually.
+        if let Ok(seconds) = std::env::var("ZIPZI_BENCH_HOLD_SECONDS") {
+            if let Ok(seconds) = seconds.parse::<u64>() {
+                cx.background_executor()
+                    .timer(Duration::from_secs(seconds.min(600)))
+                    .await;
+            }
+        }
         let _ = cx.update(|_, cx| cx.quit());
     })
     .detach();

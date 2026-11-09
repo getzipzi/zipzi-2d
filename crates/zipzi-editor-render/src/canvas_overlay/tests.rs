@@ -177,17 +177,54 @@ fn unchanged_repaints_reuse_instances_and_hover_view_theme_invalidate() {
     ));
 }
 #[test]
+fn packed_mesh_markers_match_generic_control_styles_and_clipping() {
+    let palette = CanvasPalette::new(false);
+    let mut snapshot = OverlaySnapshot::default();
+    let extent = [100.; 2];
+    for flags in 0..8 {
+        for position in [p(10., 20.), p(-1., 0.), p(110., 1.), p(f32::NAN, 2.)] {
+            snapshot.vertices.push(OverlayVertex {
+                id: flags,
+                position,
+                selected: flags & 1 != 0,
+                hovered: flags & 2 != 0,
+                editable: flags & 4 != 0,
+                kind: K::Mesh,
+            });
+        }
+    }
+    let mut reference = Builder {
+        list: CanvasDrawList::default(),
+        extent,
+        overflow: false,
+    };
+    for emphasized in [false, true] {
+        for vertex in &snapshot.vertices {
+            if (vertex.selected || vertex.hovered) == emphasized {
+                reference.vertex(vertex, palette);
+            }
+        }
+    }
+    let list = CanvasDrawList::new(&snapshot, extent, palette, CanvasOptions::default()).unwrap();
+    assert_eq!(list, reference.list);
+}
+
+#[test]
 fn dashes_retain_six_pixel_phase_and_bound_offscreen_captures() {
     assert_eq!(
-        dashed_segments([0., 10.], [18., 10.], [100.; 2]),
+        dashed_segments([0., 10.], [18., 10.], [100.; 2]).collect::<Vec<_>>(),
         vec![
             ([0., 10.], [3., 10.]),
             ([6., 10.], [9., 10.]),
             ([12., 10.], [15., 10.])
         ]
     );
-    assert!(dashed_segments([-1e8, 20.], [1e8, 20.], [512.; 2]).len() < 100);
-    assert!(dashed_segments([f32::NAN, 0.], [10., 0.], [100.; 2]).is_empty());
+    assert!(dashed_segments([-1e8, 20.], [1e8, 20.], [512.; 2]).count() < 100);
+    assert!(
+        dashed_segments([f32::NAN, 0.], [10., 0.], [100.; 2])
+            .next()
+            .is_none()
+    );
     assert_eq!(size_of::<CanvasPrimitive>(), 64);
 }
 

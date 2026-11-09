@@ -5,7 +5,7 @@ use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
-use zipzi_core::evaluation::RenderCommand;
+use zipzi_core::evaluation::{GlueOperation, RenderCommand};
 
 impl CanvasScene {
     fn capture_parameter_values(
@@ -281,9 +281,37 @@ impl CanvasScene {
                 )
             });
         let parameter_values = Self::capture_parameter_values(&source, previous);
-        let glue_map = Arc::new(crate::mesh_edit::GlueMap::new(
-            &zipzi_core::evaluation::evaluated_glue_operations(&*model, &parameter_values),
-        ));
+        let glue_operations =
+            zipzi_core::evaluation::evaluated_glue_operations(&*model, &parameter_values);
+        // The inverse depends on ordered Glue weights and pairs, not posed positions.
+        let (glue_operations, glue_map) = if let Some(previous) = previous.filter(|old| {
+            old.glue_operations.len() == glue_operations.len()
+                && old
+                    .glue_operations
+                    .iter()
+                    .zip(&glue_operations)
+                    .all(|(a, b)| {
+                        let GlueOperation {
+                            mesh_a,
+                            vertex_a,
+                            mesh_b,
+                            vertex_b,
+                            amount_a,
+                            amount_b,
+                        } = a;
+                        *mesh_a == b.mesh_a
+                            && *vertex_a == b.vertex_a
+                            && *mesh_b == b.mesh_b
+                            && *vertex_b == b.vertex_b
+                            && *amount_a == b.amount_a
+                            && *amount_b == b.amount_b
+                    })
+        }) {
+            (previous.glue_operations.clone(), previous.glue_map.clone())
+        } else {
+            let map = Arc::new(crate::mesh_edit::GlueMap::new(&glue_operations));
+            (glue_operations.into(), map)
+        };
         let mut scene = Self {
             parameter_values,
             beziers: HashMap::new(),
@@ -297,6 +325,7 @@ impl CanvasScene {
             visible_meshes,
             isolation_scope: None,
             topology,
+            glue_operations,
             glue_map,
         };
         let parameters = scene
@@ -353,6 +382,7 @@ impl CanvasScene {
         Self {
             parameter_values,
             beziers: self.beziers.clone(),
+            glue_operations: self.glue_operations.clone(),
             glue_map: self.glue_map.clone(),
             meshes: self.meshes.clone(),
             controls,

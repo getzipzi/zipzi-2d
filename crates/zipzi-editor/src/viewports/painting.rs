@@ -187,6 +187,7 @@ impl ViewportSurface {
         overlay: zipzi_editor_core::OverlaySnapshot,
         palette: crate::canvas_overlay::Palette,
         capture: bool,
+        native_image: Option<(preview::Image, ViewportMetrics)>,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let view = cx.entity();
@@ -195,6 +196,10 @@ impl ViewportSurface {
         #[cfg(any(target_os = "macos", target_os = "windows"))]
         let overlay_renderer = self.overlay_renderer.clone();
         let overlay_cache = self.overlay_cache.clone();
+        #[cfg(target_os = "windows")]
+        let native = self.native.clone();
+        #[cfg(target_os = "windows")]
+        let native_view = cx.weak_entity();
         canvas(
             move |bounds, window, cx| {
                 let metrics = ViewportMetrics {
@@ -248,8 +253,56 @@ impl ViewportSurface {
                 });
             },
             move |bounds, _, window, _cx| {
+                #[allow(unused_mut)]
+                let mut native_painted = false;
+                #[cfg(target_os = "windows")]
+                if let (Some(native), Some((image, metrics))) = (&native, &native_image) {
+                    // During resize retain the old image at its original size on
+                    // GPUI until a canvas matching the measured viewport arrives.
+                    if metrics.width == bounds.size.width.as_f32()
+                        && metrics.height == bounds.size.height.as_f32()
+                        && !window.content_mask().bounds.intersect(&bounds).is_empty()
+                    {
+                        native_painted = native_windows::submit(
+                            native,
+                            image.clone(),
+                            std::borrow::Cow::Borrowed(&overlay),
+                            bounds,
+                            window.content_mask().bounds,
+                            palette,
+                            native_view.clone(),
+                            window,
+                            _cx,
+                        );
+                    }
+                    if !native_painted {
+                        frame_trace::emit(
+                            preview::image_trace_id(image),
+                            "native_viewport_gpui_fallback",
+                            &[
+                                ("image_width", metrics.width.to_bits() as u64),
+                                ("image_height", metrics.height.to_bits() as u64),
+                                ("width", bounds.size.width.as_f32().to_bits() as u64),
+                                ("height", bounds.size.height.as_f32().to_bits() as u64),
+                                ("fully_clipped", u64::from(window.content_mask().bounds.intersect(&bounds).is_empty())),
+                            ],
+                        );
+                        native.borrow_mut().hide();
+                        let content =
+                            Bounds::new(bounds.origin, size(px(metrics.width), px(metrics.height)));
+                        let _ = preview::paint_in_bounds(image, bounds, content, window);
+                    }
+                }
+                #[cfg(target_os = "windows")]
+                if native_image.is_none() {
+                    if let Some(native) = &native {
+                        native.borrow_mut().hide();
+                    }
+                }
+                #[cfg(not(target_os = "windows"))]
+                let _ = native_image;
                 benchmark::parameter_overlay::capture(4, || {
-                    if benchmark::parameter_overlay::paint_any() {
+                    if !native_painted && benchmark::parameter_overlay::paint_any() {
                         if bounds.is_empty() {
                             return;
                         }

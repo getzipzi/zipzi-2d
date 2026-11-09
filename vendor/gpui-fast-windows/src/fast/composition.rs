@@ -36,8 +36,8 @@ use windows::{
         Graphics::{
             Direct3D11::{ID3D11RenderTargetView, ID3D11Texture2D},
             DirectComposition::{
-                IDCompositionDevice, IDCompositionRectangleClip, IDCompositionVisual,
-                IDCompositionVisual3,
+                IDCompositionDevice, IDCompositionEffectGroup, IDCompositionRectangleClip,
+                IDCompositionVisual,
             },
             Dxgi::{DXGI_PRESENT, DXGI_SWAP_CHAIN_FLAG, IDXGISwapChain1},
         },
@@ -88,6 +88,7 @@ struct PortalState {
     comp_device: IDCompositionDevice,
     visual: IDCompositionVisual,
     clip: IDCompositionRectangleClip,
+    opacity: IDCompositionEffectGroup,
     bounds: Cell<Bounds<DevicePixels>>,
     parent_origin: Cell<Point<DevicePixels>>,
     visible: Cell<bool>,
@@ -483,13 +484,19 @@ impl PortalState {
     fn new(comp_device: &IDCompositionDevice) -> Result<Self> {
         let visual = unsafe { comp_device.CreateVisual() }?;
         let clip = unsafe { comp_device.CreateRectangleClip() }?;
+        // DCompositionCreateDevice creates v1 visuals, which need not expose
+        // IDCompositionVisual3. Opacity effects work on that same v1 device.
+        let opacity = unsafe { comp_device.CreateEffectGroup() }?;
         unsafe {
             visual.SetClip(&clip)?;
+            opacity.SetOpacity2(1.0)?;
+            visual.SetEffect(&opacity)?;
         }
         Ok(Self {
             comp_device: comp_device.clone(),
             visual,
             clip,
+            opacity,
             bounds: Cell::new(Bounds::default()),
             parent_origin: Cell::new(Point::default()),
             visible: Cell::new(true),
@@ -517,8 +524,7 @@ impl PortalState {
             replacement.clip.SetRight2(width)?;
             replacement.clip.SetBottom2(height)?;
             replacement
-                .visual
-                .cast::<IDCompositionVisual3>()?
+                .opacity
                 .SetOpacity2(if visible { 1.0 } else { 0.0 })?;
         }
         replacement.bounds.set(bounds);
@@ -569,8 +575,7 @@ impl PlatformSurfaceAttachment for Portal {
         if state.visible.get() != visible {
             unsafe {
                 state
-                    .visual
-                    .cast::<IDCompositionVisual3>()?
+                    .opacity
                     .SetOpacity2(if visible { 1.0 } else { 0.0 })?;
                 state.comp_device.Commit()?;
             }
@@ -642,6 +647,46 @@ impl OverlayResources {
             create_render_target_and_its_view(&self.swap_chain, &devices.device)?;
         self.render_target = Some(render_target);
         self.render_target_view = render_target_view;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use windows::Win32::{
+        Foundation::HMODULE,
+        Graphics::{
+            Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL_11_0},
+            Direct3D11::{D3D11CreateDevice, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_SDK_VERSION},
+            DirectComposition::DCompositionCreateDevice,
+            Dxgi::IDXGIDevice,
+        },
+    };
+
+    #[test]
+    fn v1_portal_visibility_survives_compositor_rebind() -> Result<()> {
+        let mut device = None;
+        unsafe {
+            D3D11CreateDevice(None, D3D_DRIVER_TYPE_HARDWARE, HMODULE::default(),
+                D3D11_CREATE_DEVICE_BGRA_SUPPORT, Some(&[D3D_FEATURE_LEVEL_11_0]),
+                D3D11_SDK_VERSION, Some(&mut device), None, None)?;
+        }
+        let dxgi: IDXGIDevice = device.context("hardware device")?.cast()?;
+        let first: IDCompositionDevice = unsafe { DCompositionCreateDevice(&dxgi)? };
+        let replacement: IDCompositionDevice = unsafe { DCompositionCreateDevice(&dxgi)? };
+        let portal = Portal { state: Rc::new(RefCell::new(PortalState::new(&first)?)) };
+        let bounds = Bounds::new(gpui::point(DevicePixels(12), DevicePixels(34)),
+            gpui::size(DevicePixels(180), DevicePixels(90)));
+        portal.set_bounds(bounds)?;
+        portal.set_visible(false)?;
+        let old_visual = portal.state.borrow().visual.clone();
+        PortalState::rebind(&mut portal.state.borrow_mut(), &replacement)?;
+        assert_ne!(portal.state.borrow().visual, old_visual);
+        assert_eq!(portal.bounds(), bounds);
+        assert!(!portal.state.borrow().visible.get());
+        portal.set_visible(true)?;
+        assert!(portal.state.borrow().visible.get());
         Ok(())
     }
 }
