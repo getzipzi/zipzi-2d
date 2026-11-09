@@ -1,4 +1,4 @@
-//! Application-menu actions retain the input focus through nested menus.
+//! Inline application-menu actions retain the original input action context.
 use gpui_kit::component::input::{self, Input, InputState};
 use gpui_kit::{
     AppContext as _, ClipboardItem, Context, Entity, Focusable, IntoElement, Menu, MenuItem,
@@ -74,11 +74,10 @@ fn application_menu_dispatches_text_actions_to_the_original_input(cx: &mut TestA
                     "opening the application menu must preserve the text selection"
                 );
             }
-            window.within("popup-menu").hover(0usize, cx);
-            window
-                .within("submenu")
-                .within("popup-menu")
-                .click(action, cx);
+            assert!(window.try_find("popup-menu").is_none());
+            window.hover(("application-menu-entry", 0usize), cx);
+            window.render_frame(cx);
+            window.within("popup-menu").click(action, cx);
         })
         .unwrap();
         cx.run_until_parked();
@@ -144,11 +143,9 @@ fn application_menu_preserves_text_undo_when_editor_rebuilds_menus(cx: &mut Test
         };
         assert!(action.as_any().is::<crate::actions::RunCommand>());
 
-        window.within("popup-menu").hover(edit, cx);
-        window
-            .within("submenu")
-            .within("popup-menu")
-            .click(0usize, cx);
+        window.hover(("application-menu-entry", edit), cx);
+        window.render_frame(cx);
+        window.within("popup-menu").click(0usize, cx);
     })
     .unwrap();
     cx.run_until_parked();
