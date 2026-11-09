@@ -6,6 +6,7 @@ use zipzi_editor_core::{ObjectKind, ObjectRef};
 struct Options {
     selection: String,
     input: String,
+    track_runtime_id: Option<String>,
     viewport_style: String,
     paint: String,
     detail: bool,
@@ -19,6 +20,7 @@ struct Options {
 static OPTIONS: OnceLock<Options> = OnceLock::new();
 static INITIAL_HISTORY: OnceLock<(usize, usize)> = OnceLock::new();
 static INITIAL: OnceLock<std::sync::Arc<zipzi_core::DrawableFrame>> = OnceLock::new();
+static TRACK_PARAMETER: OnceLock<String> = OnceLock::new();
 
 pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
     let selection = std::env::var("ZIPZI_BENCH_SELECTION").unwrap_or("first".into());
@@ -28,9 +30,14 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
         "invalid benchmark viewport style"
     );
     let input = std::env::var("ZIPZI_BENCH_PARAMETER_INPUT").unwrap_or("track".into());
+    let track_runtime_id = std::env::var("ZIPZI_BENCH_PARAMETER_RUNTIME_ID").ok();
     ensure!(
         ["track", "number", "pad"].contains(&input.as_str()),
         "invalid parameter input"
+    );
+    ensure!(
+        track_runtime_id.is_none() || input == "track",
+        "named parameter requires track input"
     );
     let paint = std::env::var("ZIPZI_BENCH_OVERLAY_PAINT").unwrap_or("all".into());
     let detail = std::env::var("ZIPZI_BENCH_OVERLAY_DETAIL").is_ok_and(|v| v == "1");
@@ -57,6 +64,7 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
     );
     ensure!(
         input == "track"
+            && track_runtime_id.is_none()
             && viewport_style == "modeling"
             && selection == "first"
             && paint == "all"
@@ -73,6 +81,7 @@ pub(super) fn init(automatic: bool) -> anyhow::Result<()> {
     let _ = OPTIONS.set(Options {
         selection,
         input,
+        track_runtime_id,
         viewport_style,
         paint,
         detail,
@@ -91,6 +100,7 @@ pub(super) fn metadata() -> serde_json::Value {
     OPTIONS.get().map_or(serde_json::Value::Null, |o| {
         serde_json::json!({
             "selection": o.selection, "input": o.input, "viewport_style": o.viewport_style, "paint": o.paint, "detail": o.detail,
+            "track_runtime_id": o.track_runtime_id,
             "eager_canvas": o.eager_canvas, "uncached_creation_menus": o.uncached_creation_menus,
             "unlayered_markers": o.unlayered_markers,
             "tessellated_edges": o.tessellated_edges,
@@ -109,6 +119,10 @@ pub(crate) fn animation_viewport_style() -> bool {
 
 pub(crate) fn parameter_input() -> &'static str {
     OPTIONS.get().map_or("track", |o| o.input.as_str())
+}
+
+pub(crate) fn track_parameter() -> Option<&'static str> {
+    TRACK_PARAMETER.get().map(String::as_str)
 }
 
 pub(crate) fn eager_canvas() -> bool {
@@ -164,6 +178,24 @@ pub(super) fn prepare(
         view.refresh_document(window, cx);
     }
     let document = view.editor.document().unwrap();
+    if let Some(runtime_id) = &o.track_runtime_id {
+        let id = document
+            .parameters()
+            .into_iter()
+            .find(|p| {
+                document
+                    .parameter_draft(&p.id)
+                    .is_ok_and(|draft| &draft.runtime_id == runtime_id)
+            })
+            .with_context(|| format!("parameter {runtime_id} not found"))?
+            .id;
+        view.dock
+            .as_ref()
+            .unwrap()
+            .parameters
+            .update(cx, |panel, cx| panel.benchmark_reveal_track(&id, cx));
+        let _ = TRACK_PARAMETER.set(id);
+    }
     let _ = INITIAL_HISTORY.set(document.history_lengths());
     let overlay = view.editor.overlay();
     let source = &view
@@ -237,13 +269,22 @@ pub(super) fn finish_workload(view: &EditorView, cx: &App) -> anyhow::Result<()>
         "parameter controls did not change their evaluated pose values"
     );
     let history = view.editor.document().unwrap().history_lengths();
+    let evaluated_value = source
+        .parameters
+        .iter()
+        .find(|p| p.id == parameter.id)
+        .map(|p| p.value);
+    ensure!(
+        evaluated_value == Some(parameter.value),
+        "final viewport pose differs from the released slider value"
+    );
     ensure!(
         Some(&history) == INITIAL_HISTORY.get(),
         "parameter drag changed authored history"
     );
     let audit = serde_json::json!({"changed_meshes": changed_meshes, "changed_parameters": changed_parameters, "history": history,
         "parameter_id": parameter.id, "parameter_name": parameter.name,
-        "parameter_value": parameter.value, "minimum": parameter.minimum, "maximum": parameter.maximum,
+        "parameter_value": parameter.value, "evaluated_value": evaluated_value, "minimum": parameter.minimum, "maximum": parameter.maximum,
         "evaluations": view.editor.evaluation_count(),
         "selection_count": view.editor.document().unwrap().context().selections.len(),
     });

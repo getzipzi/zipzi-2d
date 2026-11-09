@@ -12,14 +12,13 @@ pub(super) struct ObjectAccess {
     pub restriction: Option<Restriction>,
     pub on_edit_only: bool,
     pub selected_ids: HashSet<u32>,
-    restricted_points: bool,
+    point_restrictions: HashMap<u32, Restriction>,
 }
 
 pub(super) struct EditAccess {
     objects: HashMap<ObjectRef, ObjectAccess>,
     components: HashSet<ComponentRef>,
     selected_restriction: Option<Restriction>,
-    point_restrictions: HashMap<ComponentRef, Restriction>,
 }
 
 pub(super) struct AccessCache {
@@ -105,14 +104,14 @@ impl EditAccess {
             let mut state = match ControlEdit::describe(document, scene, object) {
                 Ok(ControlDescription::Writable(writable)) => {
                     if let Some(weight) = writable.mesh_weight {
-                        weights.insert(object.id.clone(), weight);
+                        weights.insert(object.id.as_str(), (object, weight));
                     }
                     ObjectAccess {
                         label: Some(writable.label),
                         restriction: None,
                         on_edit_only: true,
                         selected_ids: HashSet::new(),
-                        restricted_points: false,
+                        point_restrictions: HashMap::new(),
                     }
                 }
                 Ok(ControlDescription::ReadOnly(reason)) => ObjectAccess {
@@ -120,18 +119,18 @@ impl EditAccess {
                     restriction: Some(Arc::from(reason)),
                     on_edit_only: true,
                     selected_ids: HashSet::new(),
-                    restricted_points: false,
+                    point_restrictions: HashMap::new(),
                 },
                 Err(error) => ObjectAccess {
                     label: None,
                     restriction: Some(Arc::from(error.to_string())),
                     on_edit_only: false,
                     selected_ids: HashSet::new(),
-                    restricted_points: false,
+                    point_restrictions: HashMap::new(),
                 },
             };
             if let Some(reason) = &selection_restriction {
-                weights.remove(&object.id);
+                weights.remove(object.id.as_str());
                 state.restriction = Some(reason.clone());
                 state.on_edit_only = false;
             }
@@ -181,37 +180,27 @@ impl EditAccess {
                 .iter()
                 .filter_map(|c| {
                     weights
-                        .get(&c.object.id)
-                        .map(|w| ((c.object.id.clone(), c.id), *w))
+                        .get(c.object.id.as_str())
+                        .map(|(_, weight)| ((c.object.id.clone(), c.id), *weight))
                 })
                 .collect();
             scene.glue_map.check_drag(&vertices, original_points)
         })()
         .err()
         .map(|e| Arc::from(e.to_string()));
-        let mut point_restrictions = HashMap::new();
         if !original_points {
             #[cfg(feature = "bench-instrumentation")]
             let _span = zipzi_core::benchmark::span("overlay.glue_probes");
-            for vertex in scene.glue_map.affected_vertices() {
-                let Some(&weight) = weights.get(&vertex.0) else {
+            for (vertex, row) in scene.glue_map.point_rows() {
+                let Some(&(object, weight)) = weights.get(vertex.0.as_str()) else {
                     continue;
                 };
-                if let Err(error) = scene
-                    .glue_map
-                    .check_drag(&[(vertex.clone(), weight)], false)
-                {
+                if let Some(reason) = row.point_restriction(weight) {
                     objects
-                        .get_mut(&ObjectRef::new(ObjectKind::Mesh, &vertex.0))
+                        .get_mut(object)
                         .unwrap()
-                        .restricted_points = true;
-                    point_restrictions.insert(
-                        ComponentRef {
-                            object: ObjectRef::new(ObjectKind::Mesh, &vertex.0),
-                            id: vertex.1,
-                        },
-                        Arc::from(error.to_string()),
-                    );
+                        .point_restrictions
+                        .insert(vertex.1, reason);
                 }
             }
         }
@@ -219,7 +208,6 @@ impl EditAccess {
             objects,
             components,
             selected_restriction,
-            point_restrictions,
         }
     }
 
@@ -230,7 +218,7 @@ impl EditAccess {
         let state = self.objects.get(object)?;
         if state.restriction.is_some() {
             Some(false)
-        } else if !state.restricted_points && self.selected_restriction.is_none() {
+        } else if state.point_restrictions.is_empty() && self.selected_restriction.is_none() {
             Some(true)
         } else {
             None
@@ -246,18 +234,20 @@ impl EditAccess {
         self.objects.get(object)?.restriction.as_deref()
     }
     pub fn probe(&self, component: &ComponentRef) -> Option<Result<(), &str>> {
-        let object = self.objects.get(&component.object)?;
+        Some(self.probe_vertex(self.object(&component.object)?, component.id))
+    }
+    pub fn probe_vertex<'a>(&'a self, object: &'a ObjectAccess, id: u32) -> Result<(), &'a str> {
         let restriction = object.restriction.as_deref().or_else(|| {
-            if self.components.contains(component) {
+            if object.selected_ids.contains(&id) {
                 self.selected_restriction.as_deref()
             } else {
-                self.point_restrictions.get(component).map(|r| r.as_ref())
+                object.point_restrictions.get(&id).map(|r| r.as_ref())
             }
         });
-        Some(match restriction {
+        match restriction {
             Some(reason) => Err(reason),
             None => Ok(()),
-        })
+        }
     }
 }
 

@@ -1223,6 +1223,44 @@ fn parameter_slider_refreshes_the_active_keyform_coordinate(cx: &mut TestAppCont
 }
 
 #[gpui_kit::test]
+fn parameter_slider_updates_keyform_coordinate_when_panel_reopens(cx: &mut TestAppContext) {
+    use zipzi_editor_core::PanelKind;
+
+    let (mut document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+    let parameter = document.parameters()[0].id.clone();
+    let binding = document.object_index().bindings[0].reference.clone();
+    document.open_binding(binding).unwrap();
+    let harness = setup_with_document(cx, document, assets);
+    let coordinate = |cx: &mut TestAppContext| {
+        cx.update_window(harness.window, |_, window, _| {
+            let pad = window.find("binding-keyform-pad").bounds();
+            let marker = window.find("keyform-preview-coordinate").bounds();
+            (marker.center().x - pad.left()) / pad.size.width
+        })
+        .unwrap()
+    };
+    show_keyforms(&harness, cx);
+    let before = coordinate(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.dock.as_ref().unwrap().toggle(PanelKind::Keyforms, window, cx);
+        });
+        window.render_frame(cx);
+        assert!(window.try_find("keyform-preview-coordinate").is_none());
+        let mut row = window.within(format!("parameter-row-{parameter}"));
+        let track = row.find("slider-bar-container").bounds();
+        row.click_at(
+            "slider-bar-container",
+            point(track.size.width * 0.7, track.size.height / 2.),
+            cx,
+        );
+    })
+    .unwrap();
+    show_keyforms(&harness, cx);
+    assert!(coordinate(cx) > before);
+}
+
+#[gpui_kit::test]
 fn parameter_toolbar_links_and_unlinks_adjacent_next_row_and_persists(cx: &mut TestAppContext) {
     use zipzi_editor_core::NewParameter;
 

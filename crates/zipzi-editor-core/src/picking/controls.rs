@@ -18,9 +18,7 @@ impl CanvasScene {
                     ControlKind::Rotation => !visibility.hide_unselected_rotations,
                     ControlKind::Glue => {
                         self.topology
-                            .glues
-                            .iter()
-                            .find(|g| g.object == c.object)
+                            .glue(&c.object.id)
                             .is_some_and(|g| {
                                 selection
                                     .iter()

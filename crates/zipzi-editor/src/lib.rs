@@ -292,7 +292,11 @@ impl EditorView {
                 zipzi_editor_core::PanelKind::Keyforms,
                 zipzi_editor_core::PanelKind::DrawOrder,
             ] {
-                App::notify(cx, dock.document_panels[&kind].entity_id());
+                // Hidden tabs read the current pose when activated. Notifying
+                // them also invalidates any retained dock header dependencies.
+                if dock.displayed(kind, cx) {
+                    App::notify(cx, dock.document_panels[&kind].entity_id());
+                }
             }
         }
     }

@@ -58,7 +58,7 @@ pub(crate) fn members(scene: &CanvasScene, selection: &[ObjectRef]) -> Vec<Objec
 }
 
 fn roots(scene: &CanvasScene, mut targets: Vec<ObjectRef>) -> Vec<ObjectRef> {
-    let all = targets.clone();
+    let all: std::collections::HashSet<_> = targets.iter().cloned().collect();
     let mut seen = std::collections::HashSet::new();
     targets
         .retain(|o| !scene.ancestors(o).iter().any(|a| all.contains(a)) && seen.insert(o.clone()));

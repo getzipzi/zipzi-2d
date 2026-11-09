@@ -2,6 +2,7 @@
 use crate::{ModelPoint, ModelVector};
 use anyhow::{Result, ensure};
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, LazyLock};
 
 #[derive(Debug)]
 pub(crate) struct PreviewConstraint(pub String);
@@ -26,7 +27,34 @@ pub(crate) struct MeshEdit {
 
 #[derive(Default, Debug)]
 pub(crate) struct GlueMap {
-    rows: HashMap<Vertex, HashMap<Vertex, f64>>,
+    rows: HashMap<Vertex, GlueRow>,
+}
+
+#[derive(Debug)]
+pub(crate) struct GlueRow {
+    coefficients: HashMap<Vertex, f64>,
+    displacement: f32,
+    restriction: Option<Arc<str>>,
+}
+
+impl GlueRow {
+    /// With other displacements fixed at zero, a unit probe only uses the
+    /// diagonal. Keep the Glue-only result with the immutable inverse map.
+    pub(crate) fn point_restriction(&self, weight: f32) -> Option<Arc<str>> {
+        static WEAK_BLEND: LazyLock<Arc<str>> = LazyLock::new(|| {
+            "BlendShape influence is too weak; adjust its constraints before editing".into()
+        });
+        static WEAK_COMBINED: LazyLock<Arc<str>> = LazyLock::new(|| {
+            "Glue and BlendShape influence is too weak; adjust its constraints or use Edit original points".into()
+        });
+        if !weight.is_finite() || weight < MIN_GAIN as f32 {
+            return Some(WEAK_BLEND.clone());
+        }
+        self.restriction.clone().or_else(|| {
+            (!(self.displacement / weight <= 1. / MIN_GAIN as f32 + 0.001))
+                .then(|| WEAK_COMBINED.clone())
+        })
+    }
 }
 impl GlueMap {
     pub fn new(operations: &[zipzi_core::evaluation::GlueOperation]) -> Self {
@@ -59,11 +87,42 @@ impl GlueMap {
             rows.insert(a, mix(f64::from(op.amount_a)));
             rows.insert(b, mix(1. - f64::from(op.amount_b)));
         }
+        let rows = rows.into_iter().map(|(vertex, coefficients)| {
+            let gain = coefficients.get(&vertex).copied().unwrap_or(0.).abs();
+            let displacement = gain.recip();
+            let restriction = if !(gain >= 1e-8) {
+                Some(Arc::from(format!(
+                    "Glue fixes vertex {}: select the controlling endpoint or use Edit original points",
+                    vertex.1
+                )))
+            } else if displacement > 1. / MIN_GAIN + 0.001 {
+                Some(Arc::from("Glue influence is too weak: use Edit original points"))
+            } else {
+                None
+            };
+            (vertex, GlueRow { coefficients, displacement: displacement as f32, restriction })
+        }).collect();
         Self { rows }
     }
 
-    pub(crate) fn affected_vertices(&self) -> impl Iterator<Item = &Vertex> {
-        self.rows.keys()
+    pub(crate) fn point_rows(&self) -> impl Iterator<Item = (&Vertex, &GlueRow)> {
+        self.rows.iter()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn check_point_drag(&self, vertex: &Vertex, weight: f32) -> Result<()> {
+        ensure!(
+            weight.is_finite() && weight >= MIN_GAIN as f32,
+            "BlendShape influence is too weak; adjust its constraints before editing"
+        );
+        match self
+            .rows
+            .get(vertex)
+            .and_then(|row| row.point_restriction(weight))
+        {
+            Some(reason) => Err(anyhow::anyhow!("{reason}")),
+            None => Ok(()),
+        }
     }
 
     /// Probe the same translation and amplification limits as the actual drag.
@@ -113,7 +172,7 @@ impl GlueMap {
         let mut adjacency = vec![Vec::new(); desired.len()];
         for (i, (v, _)) in desired.iter().enumerate() {
             if let Some(row) = self.rows.get(v) {
-                for key in row.keys() {
+                for key in row.coefficients.keys() {
                     if let Some(&j) = slots.get(key) {
                         adjacency[i].push(j);
                         adjacency[j].push(i);
@@ -146,7 +205,7 @@ impl GlueMap {
                         self.rows
                             .get(vertex)
                             .map_or(if i == j { 1. } else { 0. }, |r| {
-                                r.get(&desired[j].0).copied().unwrap_or(0.)
+                                r.coefficients.get(&desired[j].0).copied().unwrap_or(0.)
                             })
                     })
                     .collect();
@@ -348,6 +407,23 @@ mod tests {
         );
         assert!(map.check_drag(&[((id(1), 0), 1.)], true).is_ok());
         Ok(())
+    }
+
+    #[test]
+    fn point_probe_matches_the_drag_solver_across_glue_and_blend_limits() {
+        let vertex = (id(1), 0);
+        for amount in [0., 0.3, 0.5, 0.94, 0.95, 0.96, 1.] {
+            let map = GlueMap::new(&[op(0, 1, amount, 0.)]);
+            for weight in [0., 0.04, 0.05, 0.1, 0.5, 1., f32::NAN] {
+                let exact = map.check_drag(&[(vertex.clone(), weight)], false);
+                let fast = map.check_point_drag(&vertex, weight);
+                assert_eq!(
+                    fast.err().map(|e| e.to_string()),
+                    exact.err().map(|e| e.to_string()),
+                    "amount={amount}, weight={weight}"
+                );
+            }
+        }
     }
 
     #[test]
