@@ -77,8 +77,7 @@ impl CanvasScene {
         if tool == ToolId::Hand {
             return None;
         }
-        // Rank actual geometry, rather than giving a particular object type a
-        // larger or earlier hitbox: points, then lines, then visible surfaces.
+        // Within each selection tier, rank points, lines, then visible surfaces.
         let mut hits = Vec::new();
         let mut add = |class: u8, target: HitTarget, distance: f32| {
             let limit = match class {
@@ -87,13 +86,7 @@ impl CanvasScene {
                 _ => 0.,
             };
             if distance <= limit {
-                hits.push((
-                    class,
-                    distance,
-                    selection.contains(target.object())
-                        && (class != 2 || matches!(target, HitTarget::RotationHandle(_))),
-                    target,
-                ));
+                hits.push((selection.contains(target.object()), class, distance, target));
             }
         };
         for object in selection
@@ -276,21 +269,36 @@ impl CanvasScene {
             HitTarget::Component(c) => (0, u32::MAX - c.id),
             _ => (1, 0),
         };
-        hits.sort_by(|a, b| {
-            a.0.cmp(&b.0)
-                .then(a.1.total_cmp(&b.1))
-                .then(b.2.cmp(&a.2))
+        let control_hit = hits.into_iter().min_by(|a, b| {
+            b.0.cmp(&a.0)
+                .then(a.1.cmp(&b.1))
+                .then(a.2.total_cmp(&b.2))
                 .then_with(|| component_rank(&a.3).cmp(&component_rank(&b.3)))
         });
-        hits.into_iter()
-            .next()
-            .map(|(_, _, _, target)| target)
-            .or_else(|| {
-                self.mesh_hits(t.to_model(point))
-                    .into_iter()
-                    .find(|id| !locks.is_locked(&ObjectRef::new(K::Mesh, id)))
-                    .map(|id| HitTarget::Object(ObjectRef::new(K::Mesh, id)))
-            })
+        let control_hit = match control_hit {
+            Some((selected, _, _, target))
+                if selected
+                    || !selection.iter().any(|object| {
+                        object.kind == K::Mesh
+                            && self.mesh_visible(&object.id)
+                            && !locks.is_locked(object)
+                    }) =>
+            {
+                return Some(target);
+            }
+            hit => hit.map(|(_, _, _, target)| target),
+        };
+        // The first Mesh in each selection tier keeps its compositing order.
+        let mesh_hit = self
+            .mesh_hits(t.to_model(point))
+            .into_iter()
+            .map(|id| ObjectRef::new(K::Mesh, id))
+            .filter(|object| !locks.is_locked(object))
+            .min_by_key(|object| !selection.contains(object));
+        match mesh_hit {
+            Some(object) if selection.contains(&object) => Some(HitTarget::Object(object)),
+            mesh_hit => control_hit.or_else(|| mesh_hit.map(HitTarget::Object)),
+        }
     }
     pub fn candidates(
         &self,

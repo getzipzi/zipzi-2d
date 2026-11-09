@@ -313,6 +313,7 @@ fn selection_tools_share_object_click_and_option_subtraction() -> anyhow::Result
 #[test]
 fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
+    editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
     let before = editor.evaluation_count();
     let top = editor
         .layers()
@@ -321,7 +322,6 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
         .unwrap()
         .id;
     assert_eq!(editor.active_tool(), ToolId::Select);
-    assert_eq!(editor.overlay().vertices.len(), 4);
     let point = ViewportPoint { x: 256., y: 256. };
     let selection = editor.document().unwrap().context().selections.clone();
     crate::support::pointer_input(
@@ -343,6 +343,7 @@ fn object_click_selects_top_surface_without_editing_and_clears_on_empty() -> any
         },
     )?;
     assert_eq!(editor.document().unwrap().selected_id(), Some(top.as_str()));
+    assert_eq!(editor.overlay().vertices.len(), 4);
     assert_eq!(
         editor
             .document()
@@ -663,10 +664,11 @@ fn offscreen_plan_overrides_flat_rank_and_applies_group_alpha() -> anyhow::Resul
 #[test]
 fn shift_selection_and_marquee_share_document_selection_without_history() -> anyhow::Result<()> {
     let (mut editor, _) = setup()?;
+    editor.execute(EditorCommand::SelectObjects(Vec::new()))?;
     click(&mut editor, ViewportPoint { x: 256., y: 256. }, true)?;
-    assert_eq!(editor.document().unwrap().context().selections.len(), 2);
+    assert_eq!(editor.document().unwrap().context().selections.len(), 1);
     click(&mut editor, ViewportPoint { x: 256., y: 256. }, true)?;
-    assert_eq!(editor.document().unwrap().context().selections.len(), 2);
+    assert_eq!(editor.document().unwrap().context().selections.len(), 1);
     click(&mut editor, ViewportPoint { x: 2., y: 2. }, false)?;
     let a = ViewportPoint { x: 5., y: 5. };
     let b = ViewportPoint { x: 505., y: 505. };

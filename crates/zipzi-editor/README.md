@@ -182,9 +182,10 @@ Object and Warp transform frames share a 6 logical-pixel margin.
 Primary editing points and handles render at 6 logical pixels; secondary Warp
 lattice points render at 5 pixels. Both use a circular 6-pixel hit radius. Editable lines use a 3-pixel hit tolerance. Rotation surfaces
 use the exact bone polygon; unselected bones render at 20% opacity.
-Picking ranks points, lines, then surfaces. Within a point/line class the nearest
-hit wins, with selected objects resolving equal distances; Mesh surfaces retain
-compositing order. Hover changes color without growing markers or their hitboxes.
+Picking gives selected objects priority when their geometry is hit. With equal
+selection priority, points rank before lines and surfaces, and the nearest point
+or line wins within its class. Mesh surfaces retain their compositing order
+within each selection tier. Hover changes color without growing hitboxes.
 Reference lines use 0.5-pixel strokes and active lines use 1-pixel strokes.
 
 ## Deformer creation

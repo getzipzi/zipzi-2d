@@ -564,14 +564,14 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
     let harness = setup(cx);
     present_canvas(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
-        let (top, point) = harness.view.read_with(cx, |view, _| {
+        let (selected, point) = harness.view.read_with(cx, |view, _| {
             (
                 view.editor
-                    .layers()
-                    .into_iter()
-                    .find(|l| l.name == "Second")
+                    .document()
                     .unwrap()
-                    .id,
+                    .selected_id()
+                    .unwrap()
+                    .to_owned(),
                 view.modeling_frame()
                     .as_ref()
                     .unwrap()
@@ -584,7 +584,7 @@ fn surface_click_and_tool_shortcuts_use_document_selection(cx: &mut TestAppConte
         harness.view.read_with(cx, |view, _| {
             assert_eq!(
                 view.editor.document().unwrap().selected_id(),
-                Some(top.as_str())
+                Some(selected.as_str())
             );
             assert_eq!(view.editor.active_tool(), zipzi_editor_core::ToolId::Select);
             assert_eq!(view.editor.overlay().vertices.len(), 4);
@@ -687,7 +687,7 @@ fn overlap_menu_selects_a_candidate_and_keeps_history(cx: &mut TestAppContext) {
                 .clone()),
             original
         );
-        window.click_at("popup-menu", point(px(20.), px(18.)), cx);
+        window.within("popup-menu").click(1usize, cx);
     })
     .unwrap();
     cx.run_until_parked();

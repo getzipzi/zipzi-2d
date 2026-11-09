@@ -489,13 +489,7 @@ fn lasso_degenerate_paths_preserve_selection_and_surface_click_matches_select() 
     shown(&mut editor)?;
     click(&mut editor, p(256., 256.), false)?;
     assert!(selected(&editor).is_empty());
-    let top = editor
-        .layers()
-        .into_iter()
-        .find(|l| l.name == "Second")
-        .unwrap()
-        .id;
-    assert_eq!(editor.document().unwrap().selected_id(), Some(top.as_str()));
+    assert_eq!(editor.document().unwrap().context().selections, objects);
     Ok(())
 }
 
