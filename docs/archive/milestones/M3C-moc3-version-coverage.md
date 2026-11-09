@@ -29,7 +29,7 @@
 | [codec.rs](../../modules/zipzi-project/src/codec.rs) | 当前写工程 v3，读取 v1–v3；新增语义必须升级格式，防止旧版本读入后丢字段 |
 | [moc3.h](../../modules/purism-core/src/moc3.h) | 定义 V33/V42/V50/V53 分段；2–5 为 160 offsets，6 为 480；2–4 为 32 个 count，5–6 为 64 |
 | [param.c](../../modules/purism-core/src/param.c)、[blendshape.c](../../modules/purism-core/src/blendshape.c)、[offscreen.c](../../modules/purism-core/src/offscreen.c) | 提供循环、Glue 增量、Offscreen 求值的本地实现依据；数值兼容仍需官方 Core 独立验证 |
-| [官方 Framework OpenGL renderer](../../third_party/CubismSdkForNative-5-r.5/Framework/src/Rendering/OpenGL/CubismRenderer_OpenGLES2.cpp) | 有 Offscreen 父层关系、混合绘制顺序和合成路径；不能由仅输出 drawable 的探针替代 |
+| [官方 Framework OpenGL renderer](../../../third_party/CubismSdkForNative-5-r.5/Framework/src/Rendering/OpenGL/CubismRenderer_OpenGLES2.cpp) | 有 Offscreen 父层关系、混合绘制顺序和合成路径；不能由仅输出 drawable 的探针替代 |
 
 关联任务已定位 Hiyori 的 4 个 ArtMesh 有顶点但三角索引数为零，触发 `Triangle indices must be a non-empty multiple of three.`。本轮核实了拒绝路径，实施阶段 S0/S1 须重新输出具体对象、数组长度和失败回归。关联任务中的 Rice 双 Core 通过记录不外推到整个 version 3。
 
@@ -178,7 +178,7 @@ GPU 使用统一阈值，并增加嵌套离屏、半透明、每种受支持混�
 
 ## 当前 S6 验收证据（2026-09-21）
 
-S6 的 9 项门禁已通过，完整记录见 [S6 实现与验收](S6-offscreen-composition-fix.md) 和 [统一报告](../target/zipzi/m3c/s6_report.json)。验证环境为 macOS / Godot 4.7.2 Compatibility / Apple M4，正式源码 Editor 使用本次 debug GDExtension。
+S6 的 9 项门禁已通过，完整记录见 [S6 实现与验收](../rendering/S6-offscreen-composition-fix.md) 和 [统一报告](../target/zipzi/m3c/s6_report.json)。验证环境为 macOS / Godot 4.7.2 Compatibility / Apple M4，正式源码 Editor 使用本次 debug GDExtension。
 
 | 能力 | 已实现 | 构造 / 专项证据 | 真实模型证据 |
 |---|---|---|---|

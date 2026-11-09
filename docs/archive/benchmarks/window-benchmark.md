@@ -100,4 +100,4 @@ ZIPZI_FRAME_TRACE="$PWD/target/manual-frame-trace.jsonl" \
 
 自动采样时，画布忽略非注入的鼠标移动，避免原生悬浮事件取消模拟中键拖动。手动追踪与普通编辑器不受影响；两次因此未产生平移请求的旧采样保留为不完整记录，未用于性能对比。
 
-当前 editor 默认使用完整 Metal 网格覆盖层。追踪时显式设置 `ZIPZI_TRACE_BATCH_MESH_EDGES=1` 使用 GPUI 合批基线，`=0` 使用 GPUI 逐边基线；不设置则使用 Metal，元数据记录 `metal_mesh_overlay`。以上历史结果保持原始含义，详见 [覆盖层重构](mesh-overlay-rendering.md)。
+当前 editor 默认使用完整 Metal 网格覆盖层。追踪时显式设置 `ZIPZI_TRACE_BATCH_MESH_EDGES=1` 使用 GPUI 合批基线，`=0` 使用 GPUI 逐边基线；不设置则使用 Metal，元数据记录 `metal_mesh_overlay`。以上历史结果保持原始含义，详见 [覆盖层重构](../mesh/mesh-overlay-rendering.md)。

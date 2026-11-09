@@ -1,6 +1,6 @@
 # Zipzi SDK API
 
-当前 Rust SDK、Python wheel 与 GPU 观察入口已实现；完整门禁和运行范围见 [验证说明](VALIDATION.md)。下文保留各阶段的实施记录，最新接口以本文件的可运行 API 和测试为准。
+当前 Rust SDK、Python wheel 与 GPU 观察入口已实现；完整门禁和运行范围见 [验证说明](../project/VALIDATION.md)。下文保留各阶段的实施记录，最新接口以本文件的可运行 API 和测试为准。
 
 ## 当前可运行的 Rust API
 

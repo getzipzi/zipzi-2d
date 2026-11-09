@@ -1,6 +1,6 @@
 # M4：Rust 原生公共 Godot renderer
 
-状态：已实施并通过本机验收，见 [M4 验收记录](M4-ACCEPTANCE.md)。渲染核心由 `zipzi-godot`（Rust GDExtension）维护；C++ `gd-cubism` 保留为独立 GPU 对照基准。返回 [总路线图](../ROADMAP.md)。
+状态：已实施并通过本机验收，见 [M4 验收记录](M4-ACCEPTANCE.md)。渲染核心由 `zipzi-godot`（Rust GDExtension）维护；C++ `gd-cubism` 保留为独立 GPU 对照基准。返回 [总路线图](../project/ROADMAP.md)。
 
 ## 1. 交付结果
 
@@ -57,7 +57,7 @@ renderer 记录最后成功提交的输入版本和错误；截图与视觉比�
 
 ## 5. 验收标准
 
-遵守 [统一验收规则](../VALIDATION.md)。
+遵守 [统一验收规则](../project/VALIDATION.md)。
 
 | 用例 | 必须验证 |
 |---|---|

@@ -1,6 +1,6 @@
 # M3：MOC3 导入、编辑与再导出
 
-状态：已实施，已验收。依赖：M1、M2。返回 [总路线图](../ROADMAP.md)。
+状态：已实施，已验收。依赖：M1、M2。返回 [总路线图](../project/ROADMAP.md)。
 
 本页验收状态仅覆盖下述基础语义集合。原始 Mao 所需的 BlendShape、约束与 Glue 扩展见 [M3B 实施设计](M3B-mao-editable-import.md)，该阶段尚未实现、未验收。
 
@@ -47,7 +47,7 @@
 
 ## 5. 验收
 
-遵守 [统一验收规则](../VALIDATION.md)。
+遵守 [统一验收规则](../project/VALIDATION.md)。
 
 | 用例 | 必须验证 |
 |---|---|

@@ -32,7 +32,7 @@
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 
 `plans/` holds active design proposals and implementation plans.
-`references/` holds current topic guides. `archive/` retains completed plans and
+`references/` holds current topic guides. [archive/](archive/README.md) retains completed plans and
 historical commands, measurements and paths.
 Historical records may describe pre-merge layouts; do not run old commands verbatim.
 Current tool paths are listed by function in [tools/README.md](../tools/README.md#directory-ownership).

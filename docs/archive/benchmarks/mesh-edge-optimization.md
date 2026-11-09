@@ -1,6 +1,6 @@
 # 网格边线批量绘制
 
-日期：2026-09-28。本页记录根据 [帧延迟排查](frame-latency-diagnosis.md) 完成的 GPUI 边线合批优化及当时的结果。正式 editor 后续已迁移到 [完整 Metal 覆盖层](mesh-overlay-rendering.md)；此处的 Path 实现保留为回退与诊断基线。
+日期：2026-09-28。本页记录根据 [帧延迟排查](frame-latency-diagnosis.md) 完成的 GPUI 边线合批优化及当时的结果。正式 editor 后续已迁移到 [完整 Metal 覆盖层](../mesh/mesh-overlay-rendering.md)；此处的 Path 实现保留为回退与诊断基线。
 
 ## 实现
 

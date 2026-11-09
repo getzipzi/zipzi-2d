@@ -70,7 +70,7 @@ remaining regression migrations and the gates actually run.
 resources through `zipzi-project`. Render backends share scene planning and CPU
 geometry through `zipzi-render`: native Metal on macOS and WGPU on other
 platforms. See [format conversion boundaries](crates/zipzi-cmo3/README.md) and
-[coordinate contracts](docs/archive/coordinates.md) for format-specific details.
+
 
 ## Supporting directories
 

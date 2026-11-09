@@ -1,7 +1,7 @@
 # SDK 渐进使用实验
 
 本工具测量陌生 agent 使用已安装 SDK 完成任务的能力。它与
-[SDK 正确性验证](VALIDATION.md)分开：正确性测试通过是实验前提，受试实验观察
+[SDK 正确性验证](../project/VALIDATION.md)分开：正确性测试通过是实验前提，受试实验观察
 可发现性、误用、恢复与交付。首版不绑定模型供应商，不调用付费模型，不把主持人
 控制脚本的运行算作 agent 成绩。
 
@@ -201,10 +201,10 @@ uv run --locked python tools/sdk_experiments.py summarize \
 本仓库已有 S0–S3 和窄范围 S4 的历史受试记录。当前续轮使用三位 Luna subagent：
 S3-A 各做一次 fresh，后续依次进入 S3-B、S4-A、S4-B、S5-A、S5-B，均记为
 learning；同关作品和重放稳定后才推进。设计见
-[续轮计划](experiments/NEXT-ROUND.md)，实际证据、修正与限制见
-[2026-09-24 续轮记录](experiments/ROUND-2026-09-24.md)。后续真实素材任务设计见
-[Shirousagi 实验计划](experiments/SHIROUSAGI-PLAN.md)及
-[S6–S8 结果](experiments/SHIROUSAGI-ROUND.md)。
+[续轮计划](../experiments/NEXT-ROUND.md)，实际证据、修正与限制见
+[2026-09-24 续轮记录](../experiments/ROUND-2026-09-24.md)。后续真实素材任务设计见
+[Shirousagi 实验计划](../experiments/SHIROUSAGI-PLAN.md)及
+[S6–S8 结果](../experiments/SHIROUSAGI-ROUND.md)。
 
 小批量运行用于发现摩擦，不能估算一般用户成功率。按 SDK 实现、接口设计、文档、agent 环境、任务/判分器
 分别归因；从成功轨迹中也寻找反复误用和绕路。

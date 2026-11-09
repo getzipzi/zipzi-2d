@@ -77,7 +77,7 @@ queue.submit([encoder.finish()]);                   // 宿主决定提交和观�
 4. **宿主与生命周期**：外部 view 输出、设备/尺寸/模型替换、错误后恢复、提交完成与读回。提供 crate 内可运行示例；统计 buffer/attachment 创建、resize、上传字节、mask redraw、pass 数、CPU prepare/encode 时间和显存估算。
 5. **应用迁移**：确认正式展示路径后，将编辑器预览、选区覆盖层与截图观察接到 WGPU 输出；用同一 fixture 比对 Godot 旧路径，再移除应用对 Godot 渲染资源的依赖。此步需要独立的端到端性能和生命周期验收。
 
-每阶段的 GPU 图像与现有 Godot 图像及可用的官方 Framework 参考比较，遵循 [统一验收规则](VALIDATION.md#4-gpu-图像对照) 的确定区域 `2/255`、全图 MAE `0.005` 与大误差像素 `1%` 门槛；对颜色空间造成的系统差异先定位根因，不能放宽阈值掩盖。设备不可用的机器可运行纯 CPU 契约测试，但报告 GPU 项为 `not_run`，不宣称 WGPU 已可用。
+每阶段的 GPU 图像与现有 Godot 图像及可用的官方 Framework 参考比较，遵循 [统一验收规则](../project/VALIDATION.md#4-gpu-图像对照) 的确定区域 `2/255`、全图 MAE `0.005` 与大误差像素 `1%` 门槛；对颜色空间造成的系统差异先定位根因，不能放宽阈值掩盖。设备不可用的机器可运行纯 CPU 契约测试，但报告 GPU 项为 `not_run`，不宣称 WGPU 已可用。
 
 `render-wgpu` 可用的完成标准：平面、mask、嵌套 offscreen、目标颜色读取及混合矩阵实际 GPU 渲染通过；增量刷新与资源生命周期有统计和测试；外部宿主可仅通过公开 API 创建、提交、展示和销毁 renderer。应用完成迁移的标准另含第 5 步的预览、覆盖层、截图和端到端验收。
 

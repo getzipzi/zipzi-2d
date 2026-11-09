@@ -1,6 +1,6 @@
 # M6：独立 Godot MOC3 viewer
 
-状态：应用壳已建立，功能待实施、未验收（见 [应用说明](../../apps/viewer/)）。依赖：现有运行时、M4；安排在 M5 后。返回 [总路线图](../ROADMAP.md)。
+状态：应用壳已建立，功能待实施、未验收（见 [应用说明](../../apps/viewer/)）。依赖：现有运行时、M4；安排在 M5 后。返回 [总路线图](../project/ROADMAP.md)。
 
 ## 1. 交付结果
 
@@ -26,7 +26,7 @@ viewer 不加载 Document、工程编解码、UndoRedo 或编辑脚本宿主，�
 
 ## 4. 验收
 
-遵守 [统一验收规则](../VALIDATION.md)。
+遵守 [统一验收规则](../project/VALIDATION.md)。
 
 | 用例 | 必须验证 |
 |---|---|

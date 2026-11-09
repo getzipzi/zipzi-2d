@@ -1,6 +1,6 @@
 # 当前验证入口
 
-面向陌生 agent 的渐进使用实验见 [SDK 实验底座](SDK-EXPERIMENTS.md)。
+面向陌生 agent 的渐进使用实验见 [SDK 实验底座](../sdk/SDK-EXPERIMENTS.md)。
 它使用独立任务与受试轨迹衡量可用性，不替代下面的 SDK 正确性回归。
 
 ## 自动化回归

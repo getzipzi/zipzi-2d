@@ -4,7 +4,7 @@
 
 2026-09-21 更新：Stage A–F 审查后的剩余契约已补齐，3,505 组双 Core 数值、打包 Editor、纹理脱离与 GPU 验收全部通过，见 [最终实施与验收记录](M3B-COMPLETION.md)。工程实际升级为 v3，以保存专用 Glue binding 和双精度旋转编辑原点；本页保留原设计要求。历史问题见 [M3B 审查记录](M3B-REVIEW.md)。
 
-第一验收模型由用户确定为仓库本地的原始 `mao_pro.moc3`。本阶段扩展 M3 的语义覆盖，依赖既有 M1–M5；不以 M6 Viewer 为前置条件。返回 [路线图](../ROADMAP.md)。
+第一验收模型由用户确定为仓库本地的原始 `mao_pro.moc3`。本阶段扩展 M3 的语义覆盖，依赖既有 M1–M5；不以 M6 Viewer 为前置条件。返回 [路线图](../project/ROADMAP.md)。
 
 ## 1. 交付目标与边界
 
@@ -198,7 +198,7 @@ Mao 附带 Physics、Pose、DisplayInfo、8 个 Expression 和 7 个 Motion；mo
 
 ## 6. 验收计划
 
-沿用 [统一验收规则](../VALIDATION.md)，新增 `tools/validate_m3b.py` 作为计划中的入口，报告目录拟为 `target/zipzi/m3b/`。**该入口当前不存在**，实现时再公布可执行命令。
+沿用 [统一验收规则](../project/VALIDATION.md)，新增 `tools/validate_m3b.py` 作为计划中的入口，报告目录拟为 `target/zipzi/m3b/`。**该入口当前不存在**，实现时再公布可执行命令。
 
 ### 6.1 结构与数值
 

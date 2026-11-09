@@ -287,7 +287,7 @@ cargo test --workspace --locked
 uv run --locked maturin build --manifest-path modules/zipzi-python/Cargo.toml --release --features observe --out target/python-wheels
 ```
 
-wheel validator 需增加可选 inspection suite，并在新功能发布 profile 中强制执行且安装 extra；旧 `--full` 的检查不能被替换掉。实际 wheel 路径与 probe 参数遵循 [VALIDATION](VALIDATION.md)，不在计划中假定一次构建后的文件名。
+wheel validator 需增加可选 inspection suite，并在新功能发布 profile 中强制执行且安装 extra；旧 `--full` 的检查不能被替换掉。实际 wheel 路径与 probe 参数遵循 [VALIDATION](../project/VALIDATION.md)，不在计划中假定一次构建后的文件名。
 
 O7 性能报告分别记录 capture、decode/upload、每通道 render/readback、presentation、保存、峰值内存；对比同 resolution 的旧 observe 与 clean-only inspect。O0 确定设备/fixture/重复次数后再设耗时阈值，不在没有测量时承诺毫秒数。资源上限、无泄漏与不重复读纹理是确定门槛。
 

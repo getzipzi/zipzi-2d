@@ -96,8 +96,8 @@ CACHE ... parameter-row ... recognized=false rebuild=false layout=true parent=No
 
 - [参数虚拟行和数字输入](../../crates/editor/src/panels/parameters.rs)
 - [数字输入的 render](../../crates/editor/src/ui/slide_number_input.rs)
-- [Fast 缓存判定与失效传播](../../vendor/gpui-fast/src/fast/retained.rs)
-- [Fast rebuild_here](../../vendor/gpui-fast/src/fast/splice.rs)
+- [Fast 缓存判定与失效传播](../../../vendor/gpui-fast/src/fast/retained.rs)
+- [Fast rebuild_here](../../../vendor/gpui-fast/src/fast/splice.rs)
 
 现有普通容器中的嵌套缓存测试没有覆盖“虚拟列表行缺少父布局 key”的条件，所以之前通过缓存回归测试与这里发现问题不矛盾。
 
@@ -146,7 +146,7 @@ Mao 开启 retention 时从 1.682 降到 0.764 ms（下降 54.6%）；相对原�
 - 三模型每种 on/off、原始/原型组合的末帧 quad 与 sprite 几何、文本/图像描述、颜色和 clip 一致（分别 268 /259 /281 条；规范化掉 quad draw-order 编号）。这是图元对照，不冒充逐像素截图或所有帧 oracle。
 - 第一个数字输入缓存试验遗漏高度，第二个用了不匹配的高度；分别被交互测试和图元对照发现。那些日志保留作排查记录，**不采用它们的加速数作为结论**。上表只采用修正到 `h_6()` 且对照通过的 `exact-*` 数据。
 - 此轮修复原型的收益测的是 CPU 输入分发与 UI draw，尚未重新测原型的真实窗口“输入→呈现”延迟。画布仍持续生成和合成 Metal 纹理，scroll-layer 合成计数为 0，不能期待把侧栏滚动的百分比直接搬到模型画布或端到端延迟。
-- **本次调查结束时，实验性 UI 改动、引擎探针与临时引擎修改均已撤回。** 后续已用不带实验开关和日志的 [正式 patch](../../vendor/cache-boundary.patch) 落地引擎修复；原实验 patch 仅归档于本机 `target/gpui-fast-upgrade/diagnostics/engine-probe/`，没有混入 `vendor/native-metal.patch`。
+- **本次调查结束时，实验性 UI 改动、引擎探针与临时引擎修改均已撤回。** 后续已用不带实验开关和日志的 [正式 patch](../../../vendor/cache-boundary.patch) 落地引擎修复；原实验 patch 仅归档于本机 `target/gpui-fast-upgrade/diagnostics/engine-probe/`，没有混入 `vendor/native-metal.patch`。
 - `gpui-kit` main 保持拉取后的干净状态。没有提交、推送、发布或向上游发送消息。
 
 ## 复跑与原始数据

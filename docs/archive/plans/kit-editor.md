@@ -27,4 +27,4 @@ cargo fmt --all -- --check
 
 使用 GPUI 原生 Metal 与 zipzi-render-metal，共享 device/queue。后台生成不可变 RGBA 纹理，通过 GPUI Surface 按场景顺序合成，没有 CPU 像素回读。无需 feature 参数。
 
-用户已确认原生 Metal 版本运行正常。自动验证保留真实 GPU 离屏合成测试，UI/输入法与窗口行为交由用户手动验证。详细实现和限制见 [native-metal.md](native-metal.md)。
+用户已确认原生 Metal 版本运行正常。自动验证保留真实 GPU 离屏合成测试，UI/输入法与窗口行为交由用户手动验证。详细实现和限制见 [native-metal.md](../rendering/native-metal.md)。

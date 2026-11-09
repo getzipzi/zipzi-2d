@@ -3,7 +3,7 @@
   "audited_on": "2026-09-24",
   "repository_revision": "b9f46bbee2bb86c38147be8b00125505c89f5a0f",
   "method": "Read archived narrative and eight local original/replay grade files; did not rerun old scripts or validate old wheel binaries.",
-  "narrative": "docs/archive/SDK-USABILITY-PROGRESSIVE-RESULTS.md",
+  "narrative": "docs/archive/sdk/SDK-USABILITY-PROGRESSIVE-RESULTS.md",
   "records": [
     {
       "path": "target/sdk-usability/progressive/host/s3-luna-a-grade.json",

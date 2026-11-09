@@ -1,6 +1,6 @@
 # M5：Godot Agent-first editor
 
-状态：已完成 macOS arm64 打包应用验收，见 [M5 验收记录](M5-ACCEPTANCE.md)和 [应用说明](../../apps/editor/README.md)。依赖：M1–M4。返回 [总路线图](../ROADMAP.md)。
+状态：已完成 macOS arm64 打包应用验收，见 [M5 验收记录](M5-ACCEPTANCE.md)和 [应用说明](../../apps/editor/README.md)。依赖：M1–M4。返回 [总路线图](../project/ROADMAP.md)。
 
 ## 1. 交付结果
 
@@ -73,7 +73,7 @@ UI 修改调用同一数据接口。选择、相机、预览值和 UndoRedo 属�
 
 ## 7. 验收
 
-遵守 [统一验收规则](../VALIDATION.md)，必须在正式应用中完成：
+遵守 [统一验收规则](../project/VALIDATION.md)，必须在正式应用中完成：
 
 | 流程 | 必须执行的步骤 |
 |---|---|

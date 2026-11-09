@@ -2,7 +2,7 @@
 
 状态：历史实施记录。调研日期：2026-09-23。代码基线：`8b283f8eeca785b506e6dbae0552cc2358f49053`。
 
-本文记录 SDK 从 Godot Document Bridge 迁移时的设计与阶段验收，涉及的旧目录和脚本可能已移除。当前架构、可运行命令和 API 分别见 [MONOREPO.md](../../MONOREPO.md#sdk-and-language-boundaries)、[工具指南](../../tools/README.md#test-coverage) 和 [Python API](../../crates/zipzi-python/API.md)。
+本文记录 SDK 从 Godot Document Bridge 迁移时的设计与阶段验收，涉及的旧目录和脚本可能已移除。当前架构、可运行命令和 API 分别见 [MONOREPO.md](../../../MONOREPO.md#sdk-and-language-boundaries)、[工具指南](../../../tools/README.md#test-coverage) 和 [Python API](../../crates/zipzi-python/API.md)。
 
 本文把当时已验证的仓库事实、建议设计和未来验收分开记录。其余新 crate、目录和命令描述是实施时的记录，不代表当前状态。
 
@@ -425,13 +425,13 @@ artifacts/<run-id>/
 | 分发 | 外部 venv、无仓库 PYTHONPATH、无 Godot、CPU 无 GPU 初始化 | wheel hash + 命令/日志 |
 | agent 创作 | 新建、导入编辑、第二脚本局部修正 | 脚本、报告、前后图和项目 |
 
-数值与图像门槛沿用 [统一验收规则](VALIDATION.md)：离散字段精确一致；浮点 `1e-5 + 1e-5 * max(abs(a), abs(b))`，位置换算后最大 0.05 原画像素；确定区域 RGBA 各通道误差不超过 `2/255`，全图 MAE 不超过 0.005，大于 0.05 的像素占比不超过 1%。对象 crop 也需对照，不能用大片背景稀释差异。
+数值与图像门槛沿用 [统一验收规则](../project/VALIDATION.md)：离散字段精确一致；浮点 `1e-5 + 1e-5 * max(abs(a), abs(b))`，位置换算后最大 0.05 原画像素；确定区域 RGBA 各通道误差不超过 `2/255`，全图 MAE 不超过 0.005，大于 0.05 的像素占比不超过 1%。对象 crop 也需对照，不能用大片背景稀释差异。
 
 该文档中的历史 Godot-only 宿主要求不用于新 SDK 运行环境；本文要求在固定 wgpu backend/profile/view 上验收，旧 Godot 结果仅作为现有对照来源。原文关于直接脚本保留已完成写入的要求在这里细化为：已提交批次保留，当前显式 edit 全部撤回。MOC3 官方/Purism 对照和缺失依赖不得当作通过的要求继续适用。
 
 ### 11.2 当前可运行的基线命令
 
-仅第 2.1 节两条命令在本次实际运行。已有 renderer 回归入口可在实施触及观察边界时按 [RENDER-WGPU-DESIGN](RENDER-WGPU-DESIGN.md) 运行，不需要为纯文档提交重复验收所有后端。
+仅第 2.1 节两条命令在本次实际运行。已有 renderer 回归入口可在实施触及观察边界时按 [RENDER-WGPU-DESIGN](../rendering/RENDER-WGPU-DESIGN.md) 运行，不需要为纯文档提交重复验收所有后端。
 
 ### 11.3 SDK 验收入口
 

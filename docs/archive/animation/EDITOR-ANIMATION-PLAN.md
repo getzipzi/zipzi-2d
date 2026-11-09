@@ -271,7 +271,7 @@ CPU 数值、打包路径和附件独立性，以及选定动画帧的 GPU 图�
 
 ## 12. 源码索引
 
-- [现有架构](../../MONOREPO.md#crate-responsibilities)
+- [现有架构](../../../MONOREPO.md#crate-responsibilities)
 - [当前导入](../modules/zipzi-moc3/src/importer.rs)、[MOC3 artifact](../modules/zipzi-moc3/src/types.rs)、[包发布](../modules/zipzi-project/src/package.rs)
 - [文档](../modules/zipzi-core/src/document.rs)、[Part 求值](../modules/zipzi-core/src/evaluation/parts.rs)、[preview](../modules/zipzi-core/src/preview.rs)
 - [Framework motion](../third_party/CubismSdkForNative-5-r.5/Framework/src/Motion/CubismMotion.cpp)、[expression manager](../third_party/CubismSdkForNative-5-r.5/Framework/src/Motion/CubismExpressionMotionManager.cpp)

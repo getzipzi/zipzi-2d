@@ -51,7 +51,7 @@ Agent 通过 Python SDK 独立完成全过程 modeling / animation，包括观�
 | [Python 公共包](../../crates/zipzi-python/python/zipzi/__init__.py)、[Session](../../crates/zipzi-python/python/zipzi/_session.py) | 公共 API 直接依赖 `_native`；Plan、Handle 等为 PyO3 对象 | 分离公共值类型、后端引用和可选原生扩展 |
 | [Observer](../../../crates/zipzi-observe/src/lib.rs) | 不可变观察输入、内容摘要和离屏渲染 | 接受明确的正式/候选快照来源，按需执行 |
 
-旧[第一阶段架构](../editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](unified-object-authoring-core.md)。
+旧[第一阶段架构](../editor/editor-foundation.md)把 Python 连接排除在当时范围之外。本设计更新该范围，保留其中的单一历史、文档身份、SDK 领域所有权和后台结果版本检查原则。对象身份与编辑规则继续遵循[对象创作核心方案](unified-object-authoring-core.md)。
 
 ## 3. 分层、依赖和 Runtime 厚度
 

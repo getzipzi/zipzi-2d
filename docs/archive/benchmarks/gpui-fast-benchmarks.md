@@ -2,7 +2,7 @@
 
 > 后续调查已复现上游收益，并定位到 Fast 0.1.7 的虚拟列表缓存边界判定缺陷；见 [复现与原因报告](gpui-fast-reproduction.md)。本报告保留原始升级测量。正式修复与新的窗口对照见 [修复验证](../gpui-fast-cache-boundary-fix.md)。
 
-日期：2026-10-13。GPUI Kit 与 gpui-fps 固定到上游 main 的 [507e82b](https://github.com/longbridge/gpui-kit/commit/507e82b8115ac73af92b7d3856501f9d7b73b2c9)，均启用 `gpui-fast`。原生 Metal / frame trace 的三个本地补丁已迁移到 Fast 0.1.7，原 GPUI 0.3.6 vendor 已替换。补丁边界见 [vendor/README.md](../../vendor/README.md)。
+日期：2026-10-13。GPUI Kit 与 gpui-fps 固定到上游 main 的 [507e82b](https://github.com/longbridge/gpui-kit/commit/507e82b8115ac73af92b7d3856501f9d7b73b2c9)，均启用 `gpui-fast`。原生 Metal / frame trace 的三个本地补丁已迁移到 Fast 0.1.7，原 GPUI 0.3.6 vendor 已替换。补丁边界见 [vendor/README.md](../../../vendor/README.md)。
 
 本轮结论：功能与原生渲染回归通过，Mao 动画窗口实测约 120 Hz；视图保留在所测画布负载中没有带来加速，3 轮 UI CPU P95 中位数约为关闭时的 1.78–1.84 倍。两个模型的部分变形负载受可编辑控制点条件限制，未完成的记录单独保留。
 

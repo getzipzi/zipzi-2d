@@ -71,7 +71,7 @@ The preview resolution follows the canvas area and display scale. The adapter
 retains immutable scene snapshots, skipping model sync on view-only changes.
 Zipzi caches mesh buffers and versioned raw masks, batches draws within a pass,
 and renders Replace directly into the output. Output/offscreen textures are not pooled.
-See [the 120 Hz interaction measurements](interaction-performance.md) for the
+See [the 120 Hz interaction measurements](../benchmarks/interaction-performance.md) for the
 measured budget, workloads, commands and remaining display validation. The
 local Zipzi checkout must include the new native backend and accompanying changes;
 the earlier pinned revision alone is insufficient.
