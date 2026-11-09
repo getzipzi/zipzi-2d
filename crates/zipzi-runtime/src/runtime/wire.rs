@@ -14,8 +14,11 @@ impl Runtime {
     pub fn instance_id(&self) -> RuntimeInstanceId {
         self.instance
     }
-    pub fn limits(&self) -> &RuntimeLimits {
-        &self.limits
+    pub fn limits(&self) -> RuntimeLimits {
+        RuntimeLimits {
+            task_bytes: self.budget.usage().limit_bytes,
+            ..self.limits.clone()
+        }
     }
     pub fn project_io(&self) -> &ProjectIo {
         &self.project_io

@@ -21,6 +21,26 @@ fn setup() -> (Runtime, ClientId, SessionKey) {
 }
 
 #[test]
+fn system_memory_runtime_admits_work_above_the_fixed_default() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let headroom = Arc::new(AtomicUsize::new(3 << 30));
+    let runtime = Runtime::with_system_headroom({
+        let headroom = headroom.clone();
+        move || headroom.load(Ordering::Relaxed)
+    });
+    let requested = 5 << 29;
+    let task = runtime.reserve_transfer(requested).unwrap();
+    assert_eq!(runtime.limits().task_bytes, 3 << 30);
+
+    headroom.store(requested, Ordering::Relaxed);
+    assert!(runtime.resources().budget().reserve(1).is_err());
+    assert_eq!(runtime.limits().task_bytes, requested);
+    drop(task);
+    assert!(runtime.resources().budget().reserve(1).is_ok());
+}
+
+#[test]
 fn glue_axes_and_samples_support_address_reads_and_pagination() {
     use zipzi_contract::{
         authoring::ObjectKind, kernel_commands::ObjectAddress, kernel_wire::Query,

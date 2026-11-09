@@ -2,8 +2,10 @@
 
 use crate::filesystem as io;
 use crate::resources::{content_sha256, decode_png, AssetData, TextureData};
+use crate::{ImageMemoryBudget, ImageMemoryReservation};
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
@@ -77,32 +79,48 @@ impl MemoryAsset {
         if let Some(png) = cache.as_ref() {
             return Ok(png.clone());
         }
-        // Conservative bound for an uncompressed zlib stream, row filters and
-        // PNG chunk framing. The capped writer checks before every Vec growth.
+        // Cap the output for zlib, row filters and PNG chunk framing. Admit
+        // the streaming encoder's workspace and the output buffer separately.
         let raw = self
             .texture
             .rgba
             .len()
             .saturating_add(self.texture.height as usize);
         let bound = raw.saturating_add(raw / 100).saturating_add(1024);
-        let reservation = self.budget.reserve(bound.saturating_mul(2))?;
         let mut output = BoundedPng {
             bytes: Vec::new(),
             limit: bound,
+            budget: &self.budget,
+            storage: self.budget.reserve(0)?,
+            error: None,
         };
-        {
-            let mut encoder =
-                png::Encoder::new(&mut output, self.texture.width, self.texture.height);
-            encoder.set_color(png::ColorType::Rgba);
-            encoder.set_depth(png::BitDepth::Eight);
-            let mut writer = encoder
-                .write_header()
-                .map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?;
-            writer
-                .write_image_data(&self.texture.rgba)
-                .map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?;
+        let encoded = {
+            // The compressor and its chunk buffers have fixed workspace.
+            // PNG filtering also needs the current, previous and filtered rows.
+            let _workspace = self
+                .budget
+                .reserve((512 << 10) + self.texture.width as usize * 12)?;
+            (|| -> Result<(), png::EncodingError> {
+                let mut encoder =
+                    png::Encoder::new(&mut output, self.texture.width, self.texture.height);
+                encoder.set_color(png::ColorType::Rgba);
+                encoder.set_depth(png::BitDepth::Eight);
+                encoder.set_filter(png::FilterType::Paeth);
+                let mut writer = encoder.write_header()?;
+                let mut stream = writer.stream_writer()?;
+                stream.write_all(&self.texture.rgba)?;
+                stream.finish()?;
+                writer.finish()
+            })()
+        };
+        // png 0.17 can discard errors from the final IDAT write during drop.
+        if let Some(error) = output.error {
+            return Err(error);
         }
+        encoded.map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?;
+        let reservation = self.budget.reserve(output.bytes.len())?;
         let bytes: Arc<[u8]> = output.bytes.into();
+        drop(output.storage);
         reservation.commit(&bytes, crate::ImageBufferKind::Png)?;
         let result = Arc::new(VerifiedAsset {
             sha256: content_sha256(&bytes),
@@ -395,27 +413,43 @@ impl PreparedImageContent {
         })
     }
 }
-struct BoundedPng {
+struct BoundedPng<'a> {
     bytes: Vec<u8>,
     limit: usize,
+    budget: &'a ImageMemoryBudget,
+    storage: ImageMemoryReservation,
+    error: Option<Status>,
 }
-impl std::io::Write for BoundedPng {
-    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-        if self
+impl BoundedPng<'_> {
+    fn append(&mut self, bytes: &[u8]) -> Result<(), Status> {
+        let required = self
             .bytes
             .len()
             .checked_add(bytes.len())
-            .is_none_or(|n| n > self.limit)
-        {
-            return Err(std::io::Error::other(
-                "PNG exceeds reserved encoding capacity",
-            ));
+            .filter(|&len| len <= self.limit)
+            .ok_or_else(|| Status::error("PNG_ENCODE", "PNG exceeds encoding capacity"))?;
+        if required > self.bytes.capacity() {
+            let capacity = required.max(self.bytes.capacity() * 2).min(self.limit);
+            // Both allocations can coexist while Vec grows.
+            let storage = self.budget.reserve(capacity)?;
+            self.bytes
+                .try_reserve_exact(capacity - self.bytes.len())
+                .map_err(|e| Status::error("PNG_ENCODE", e.to_string()))?;
+            self.storage = storage;
         }
-        self.bytes
-            .try_reserve_exact(bytes.len())
-            .map_err(std::io::Error::other)?;
         self.bytes.extend_from_slice(bytes);
-        Ok(bytes.len())
+        Ok(())
+    }
+}
+impl Write for BoundedPng<'_> {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        if self.error.is_none() {
+            match self.append(bytes) {
+                Ok(()) => return Ok(bytes.len()),
+                Err(error) => self.error = Some(error),
+            }
+        }
+        Err(std::io::Error::other("PNG output failed"))
     }
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())

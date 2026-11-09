@@ -60,6 +60,30 @@ fn views_retain_versions_after_store_and_source_handles_drop() {
 }
 
 #[test]
+fn compressible_generated_image_saves_with_limited_encoding_headroom() {
+    let root = tempfile::tempdir().unwrap();
+    let pixels: Arc<[u8]> = vec![123; 1024 * 1024 * 4].into();
+    let budget = ImageMemoryBudget::new(pixels.len() + (1 << 20));
+    let store = ResourceStore::new(budget.clone());
+    let image = store.prepare_rgba(1024, 1024, pixels.clone()).unwrap();
+    let state = model(&image);
+    let resources = ResourceView::default().with_images([image]);
+    let path = root.path().join("generated.zipzi");
+    let saved = crate::archive::ProjectIo::new(root.path(), store)
+        .save(&state, &resources, &path, None, || true)
+        .unwrap();
+    assert_eq!(budget.usage().preparing_bytes, 0);
+    assert_eq!(budget.usage().png_bytes as u64, saved.asset_bytes);
+
+    let loaded = crate::archive::ProjectIo::new(root.path(), ResourceStore::default())
+        .load(&path, || true)
+        .unwrap();
+    assert!(loaded.diagnostics.is_empty());
+    let asset = loaded.document.asset(&state.asset_order()[0]).unwrap();
+    assert_eq!(loaded.resources.read_texture(asset).unwrap().rgba, pixels);
+}
+
+#[test]
 fn external_file_is_captured_before_becoming_a_resource() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("source.png");

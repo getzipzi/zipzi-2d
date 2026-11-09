@@ -71,6 +71,18 @@ impl Runtime {
     pub fn new(limits: RuntimeLimits) -> Self {
         let budget = ImageMemoryBudget::new(limits.task_bytes);
         budget.bind_host_budget(0, limits.task_bytes);
+        Self::with_budget(limits, budget)
+    }
+
+    /// Use the host's current system headroom for image and task admission.
+    pub fn with_system_headroom(headroom: impl FnMut() -> usize + Send + 'static) -> Self {
+        Self::with_budget(
+            RuntimeLimits::default(),
+            ImageMemoryBudget::with_system_headroom(headroom),
+        )
+    }
+
+    fn with_budget(limits: RuntimeLimits, budget: ImageMemoryBudget) -> Self {
         let resources = zipzi_project::ResourceStore::new(budget.clone());
         let project_io = ProjectIo::new(
             std::env::temp_dir().join("zipzi-projects"),

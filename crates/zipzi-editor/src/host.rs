@@ -32,7 +32,20 @@ impl DesktopHost {
         project_queue: std::sync::Arc<std::sync::Mutex<zipzi_runtime::protocol::ProjectOpenQueue>>,
         _cx: &mut App,
     ) -> Self {
-        let runtime = RuntimeHost::new();
+        let mut system = sysinfo::System::new();
+        let runtime =
+            RuntimeHost::from_runtime(zipzi_runtime::Runtime::with_system_headroom(move || {
+                system.refresh_memory_specifics(sysinfo::MemoryRefreshKind::nothing().with_ram());
+                let total = system.total_memory();
+                // On macOS the available counter also includes active pages.
+                // Bound it by physical RAM outside the system's used estimate.
+                let available = system
+                    .available_memory()
+                    .min(total.saturating_sub(system.used_memory()));
+                // Leave some physical RAM for allocations outside this budget.
+                let headroom = available.saturating_sub(total / 16);
+                usize::try_from(headroom).unwrap_or(usize::MAX)
+            }));
         match zipzi_editor_core::platform_paths::cache_directory()
             .and_then(|root| runtime.configure_project_cache(root.join("projects")))
         {

@@ -30,6 +30,7 @@ zipzi-core.workspace = true
 zipzi-editor-render.workspace = true
 rust-i18n.workspace = true
 sys-locale.workspace = true
+sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
 anyhow.workspace = true
 async-channel.workspace = true
 image = { version = "0.25.10", default-features = false }

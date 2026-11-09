@@ -50,11 +50,13 @@ Work through execution; result leases follow ReadResult clones after job release
 Cancellation alone releases neither entered task slots nor allocations. These
 bounds do not estimate document/history size or claim to measure process RSS.
 
-The default shared admission budget is 2 GiB. Native document decoding must fit
-alongside resident resources; a saved DeepSeek model alone admits about 1.2 GiB
-of JSON workspace. Hosts can set `RuntimeLimits::task_bytes` explicitly for a
-smaller or larger workload. Exceeding that limit still rejects the job before
-replacing resident content.
+Desktop Editor samples available physical memory at allocation admission and
+keeps one sixteenth of installed RAM as headroom for the OS and untracked
+allocations. The sample already reflects resident buffers. Pending image and
+transfer reservations compete for the remaining headroom under one lock.
+`Runtime::new` supports explicit fixed limits for embedded hosts. Native
+document decoding needs both its workspace and captured images. An admission
+failure leaves resident content intact.
 
 `subscribe` captures a snapshot, history state and publication cursor together.
 `publications_since` reads bounded receipts without draining other consumers.

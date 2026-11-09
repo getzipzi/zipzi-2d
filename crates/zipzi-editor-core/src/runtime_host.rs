@@ -67,7 +67,9 @@ impl RuntimeHost {
         self.write().take_work(job)
     }
     pub fn new() -> Self {
-        let mut runtime = Runtime::default();
+        Self::from_runtime(Runtime::default())
+    }
+    pub fn from_runtime(mut runtime: Runtime) -> Self {
         let client = runtime.register_client().expect("initial Editor client");
         Self {
             runtime: Arc::new(RwLock::new(runtime)),

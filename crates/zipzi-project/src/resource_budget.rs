@@ -27,10 +27,14 @@ pub struct ImageMemoryUsage {
     pub limit_bytes: usize,
 }
 impl ImageMemoryUsage {
-    pub fn total_bytes(self) -> usize {
+    fn resident_bytes(self) -> usize {
         self.rgba_bytes
             .saturating_add(self.png_bytes)
             .saturating_add(self.blob_bytes)
+    }
+
+    pub fn total_bytes(self) -> usize {
+        self.resident_bytes()
             .saturating_add(self.preparing_bytes)
             .saturating_add(self.transfer_bytes)
     }
@@ -40,6 +44,27 @@ struct Buffer {
     kind: ImageBufferKind,
     bytes: usize,
 }
+struct SystemMemoryLimit {
+    headroom: Box<dyn FnMut() -> usize + Send>,
+    last_sample: Option<(usize, usize)>,
+}
+
+impl SystemMemoryLimit {
+    fn limit(&mut self, resident_bytes: usize) -> usize {
+        let headroom = (self.headroom)();
+        let mut limit = resident_bytes.saturating_add(headroom);
+        if let Some((previous_headroom, previous_limit)) = self.last_sample {
+            // OS queries can return a cached sample. Keep charging newly
+            // committed buffers until the reported headroom changes.
+            if headroom == previous_headroom {
+                limit = limit.min(previous_limit);
+            }
+        }
+        self.last_sample = Some((headroom, limit));
+        limit
+    }
+}
+
 struct State {
     buffers: HashMap<usize, Buffer>,
     preparing: usize,
@@ -47,6 +72,7 @@ struct State {
     transfer: usize,
     host_bytes: usize,
     host_limit: usize,
+    system_memory: Option<SystemMemoryLimit>,
 }
 #[derive(Clone)]
 pub struct ImageMemoryBudget(Arc<Mutex<State>>);
@@ -61,6 +87,38 @@ impl Default for ImageMemoryBudget {
     }
 }
 impl State {
+    fn system_limit(&mut self, usage: ImageMemoryUsage) -> usize {
+        match &mut self.system_memory {
+            // The system sample already reflects allocated image buffers.
+            // Outstanding reservations must still compete for the headroom.
+            Some(memory) => memory.limit(usage.resident_bytes()),
+            None => usize::MAX,
+        }
+    }
+
+    fn admits_host_growth(
+        &mut self,
+        usage: ImageMemoryUsage,
+        host_bytes: usize,
+        limit: usize,
+        growth: usize,
+    ) -> bool {
+        let limit = if growth == 0 && host_bytes <= self.host_bytes {
+            limit
+        } else {
+            limit.min(self.system_limit(usage))
+        };
+        usage
+            .total_bytes()
+            .checked_add(host_bytes)
+            .and_then(|n| n.checked_add(growth))
+            .is_some_and(|n| n <= limit)
+    }
+
+    fn admits_growth(&mut self, usage: ImageMemoryUsage, growth: usize) -> bool {
+        self.admits_host_growth(usage, self.host_bytes, self.host_limit, growth)
+    }
+
     fn collect_unused(&mut self) -> usize {
         let before = self.buffers.len();
         self.buffers.retain(|_, b| b.data.strong_count() > 0);
@@ -87,6 +145,22 @@ impl State {
 }
 impl ImageMemoryBudget {
     pub fn new(limit_bytes: usize) -> Self {
+        Self::with_limits(limit_bytes, None)
+    }
+
+    /// The callback supplies additional system memory available for allocation.
+    /// It runs under the admission lock and must not call back into the budget.
+    pub fn with_system_headroom(headroom: impl FnMut() -> usize + Send + 'static) -> Self {
+        Self::with_limits(
+            usize::MAX,
+            Some(SystemMemoryLimit {
+                headroom: Box::new(headroom),
+                last_sample: None,
+            }),
+        )
+    }
+
+    fn with_limits(limit_bytes: usize, system_memory: Option<SystemMemoryLimit>) -> Self {
         Self(Arc::new(Mutex::new(State {
             buffers: HashMap::new(),
             preparing: 0,
@@ -94,6 +168,7 @@ impl ImageMemoryBudget {
             transfer: 0,
             host_bytes: 0,
             host_limit: usize::MAX,
+            system_memory,
         })))
     }
     pub fn same_pool(&self, other: &Self) -> bool {
@@ -102,18 +177,25 @@ impl ImageMemoryBudget {
     pub fn available_bytes(&self) -> usize {
         let mut state = self.0.lock().unwrap_or_else(|p| p.into_inner());
         let usage = state.usage();
+        let host_limit = state.host_limit.min(state.system_limit(usage));
         state
             .limit
             .saturating_sub(usage.total_bytes().saturating_sub(usage.transfer_bytes))
             .min(
-                state
-                    .host_limit
+                host_limit
                     .saturating_sub(state.host_bytes)
                     .saturating_sub(usage.total_bytes()),
             )
     }
     pub fn usage(&self) -> ImageMemoryUsage {
-        self.0.lock().unwrap_or_else(|p| p.into_inner()).usage()
+        let mut state = self.0.lock().unwrap_or_else(|p| p.into_inner());
+        let mut usage = state.usage();
+        if state.system_memory.is_some() {
+            usage.limit_bytes = usage
+                .limit_bytes
+                .min(state.host_limit.min(state.system_limit(usage)));
+        }
+        usage
     }
     /// Release registrations without a remaining pixel owner. Weak slice Arcs
     /// still retain the inline allocation after the final strong owner drops;
@@ -134,12 +216,8 @@ impl ImageMemoryBudget {
     }
     pub fn admit_host_budget(&self, bytes: usize, limit: usize) -> Result<(), Status> {
         let mut state = self.0.lock().unwrap_or_else(|p| p.into_inner());
-        if state
-            .usage()
-            .total_bytes()
-            .checked_add(bytes)
-            .is_none_or(|n| n > limit)
-        {
+        let usage = state.usage();
+        if !state.admits_host_growth(usage, bytes, limit, 0) {
             return Err(Status::error(
                 "BUDGET_EXCEEDED",
                 "Host metadata/temporary budget exceeded",
@@ -151,13 +229,8 @@ impl ImageMemoryBudget {
     }
     pub fn reserve_transfer(&self, bytes: usize) -> Result<TransferReservation, Status> {
         let mut state = self.0.lock().unwrap_or_else(|p| p.into_inner());
-        if state
-            .usage()
-            .total_bytes()
-            .checked_add(state.host_bytes)
-            .and_then(|v| v.checked_add(bytes))
-            .is_none_or(|v| v > state.host_limit)
-        {
+        let usage = state.usage();
+        if !state.admits_growth(usage, bytes) {
             return Err(Status::error(
                 "BUDGET_EXCEEDED",
                 "Host transfer/temporary budget exceeded",
@@ -179,13 +252,8 @@ impl ImageMemoryBudget {
         host_limit: usize,
     ) -> Result<TransferReservation, Status> {
         let mut state = self.0.lock().unwrap_or_else(|p| p.into_inner());
-        if state
-            .usage()
-            .total_bytes()
-            .checked_add(host_bytes)
-            .and_then(|n| n.checked_add(bytes))
-            .is_none_or(|n| n > host_limit)
-        {
+        let usage = state.usage();
+        if !state.admits_host_growth(usage, host_bytes, host_limit, bytes) {
             return Err(Status::error(
                 "BUDGET_EXCEEDED",
                 "Retained result exceeds host memory budget",
@@ -209,11 +277,7 @@ impl ImageMemoryBudget {
             .saturating_sub(usage.transfer_bytes)
             .checked_add(bytes)
             .is_none_or(|n| n > state.limit)
-            || usage
-                .total_bytes()
-                .checked_add(state.host_bytes)
-                .and_then(|n| n.checked_add(bytes))
-                .is_none_or(|n| n > state.host_limit)
+            || !state.admits_growth(usage, bytes)
         {
             return Err(Status::error(
                 "RESOURCE_BUDGET_EXCEEDED",
@@ -243,23 +307,14 @@ impl ImageMemoryBudget {
         let growth = additional
             .values()
             .try_fold(0usize, |sum, n| sum.checked_add(*n));
-        if growth
-            .and_then(|n| {
-                usage
-                    .total_bytes()
-                    .saturating_sub(usage.transfer_bytes)
-                    .checked_add(n)
-            })
-            .is_none_or(|n| n > state.limit)
-            || growth
-                .and_then(|n| {
-                    usage
-                        .total_bytes()
-                        .checked_add(state.host_bytes)?
-                        .checked_add(n)
-                })
-                .is_none_or(|n| n > state.host_limit)
-        {
+        if growth.is_none_or(|growth| {
+            usage
+                .total_bytes()
+                .saturating_sub(usage.transfer_bytes)
+                .checked_add(growth)
+                .is_none_or(|n| n > state.limit)
+                || !state.admits_growth(usage, growth)
+        }) {
             return Err(Status::error(
                 "RESOURCE_BUDGET_EXCEEDED",
                 "Image buffers exceed the shared memory budget",
@@ -309,13 +364,8 @@ impl TransferReservation {
             return Ok(());
         }
         let growth = bytes - previous;
-        if state
-            .usage()
-            .total_bytes()
-            .checked_add(state.host_bytes)
-            .and_then(|n| n.checked_add(growth))
-            .is_none_or(|n| n > state.host_limit)
-        {
+        let usage = state.usage();
+        if !state.admits_growth(usage, growth) {
             return Err(Status::error(
                 "BUDGET_EXCEEDED",
                 "Project decode workspace exceeds host memory budget",
@@ -482,6 +532,57 @@ mod tests {
         drop(second);
         assert_eq!(budget.usage().total_bytes(), 0);
     }
+
+    #[test]
+    fn system_headroom_follows_pressure_and_counts_pending_work_once() {
+        let headroom = Arc::new(AtomicUsize::new(96));
+        let budget = ImageMemoryBudget::with_system_headroom({
+            let headroom = headroom.clone();
+            move || headroom.load(Ordering::Relaxed)
+        });
+        let pixels: Arc<[u8]> = vec![0; 32].into();
+        budget.track(&pixels, ImageBufferKind::Rgba).unwrap();
+        headroom.store(64, Ordering::Relaxed);
+        let image = budget.reserve(24).unwrap();
+        let transfer = budget.reserve_transfer(16).unwrap();
+        assert_eq!(budget.available_bytes(), 24);
+        assert_eq!(budget.usage().limit_bytes, 96);
+
+        headroom.store(40, Ordering::Relaxed);
+        assert_eq!(budget.available_bytes(), 0);
+        assert_eq!(
+            budget.reserve(1).err().unwrap().code,
+            "RESOURCE_BUDGET_EXCEEDED"
+        );
+        assert_eq!(
+            transfer.ensure_at_least(17).unwrap_err().code,
+            "BUDGET_EXCEEDED"
+        );
+        assert_eq!(transfer.reserved_bytes(), 16);
+
+        headroom.store(0, Ordering::Relaxed);
+        budget.track(&pixels, ImageBufferKind::Rgba).unwrap();
+        budget.reserve_transfer(0).unwrap();
+        let prepared: Arc<[u8]> = vec![0; 24].into();
+        image.commit(&prepared, ImageBufferKind::Png).unwrap();
+
+        headroom.store(48, Ordering::Relaxed);
+        transfer.ensure_at_least(48).unwrap();
+        assert_eq!(budget.available_bytes(), 0);
+        drop(transfer);
+        assert_eq!(budget.available_bytes(), 48);
+    }
+
+    #[test]
+    fn repeated_system_sample_cannot_admit_the_same_bytes_twice() {
+        let budget = ImageMemoryBudget::with_system_headroom(|| 64);
+        let reservation = budget.reserve(40).unwrap();
+        let pixels: Arc<[u8]> = vec![0; 40].into();
+        reservation.commit(&pixels, ImageBufferKind::Rgba).unwrap();
+        assert_eq!(budget.available_bytes(), 24);
+        assert!(budget.reserve(25).is_err());
+    }
+
     #[test]
     fn atomic_shared_allocation_registration_does_not_double_charge_or_leak() {
         let budget = ImageMemoryBudget::new(8);
