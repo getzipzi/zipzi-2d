@@ -50,7 +50,7 @@ objc2.workspace = true
 libc = "0.2"
 
 [dev-dependencies]
-zipzi-observe = { version = "=0.1.0-alpha.10", path = "../zipzi-observe" }
+zipzi-observe = { version = "=0.2.0-alpha.1", path = "../zipzi-observe" }
 gpui-kit = { workspace = true, features = ["test-support"] }
 zipzi-core.workspace = true
 tempfile.workspace = true
