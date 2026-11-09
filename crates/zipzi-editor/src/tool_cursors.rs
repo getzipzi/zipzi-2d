@@ -81,7 +81,7 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
     if let Some(gesture) = overlay.active_gesture {
         let selecting = matches!(
             gesture,
-            G::BoxSelect | G::LassoSelect | G::BrushSelect | G::BrushResize
+            G::BoxSelect | G::LassoSelect | G::BrushSelect | G::BrushResize | G::BrushInflate
         );
         if !selecting
             && !(gesture == G::Move && selection_only)
@@ -111,6 +111,13 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
             G::BoxSelect => Some(T::BoxSelect(operation)),
             G::LassoSelect => Some(T::Lasso(operation)),
             G::BrushSelect => Some(T::Brush(operation)),
+            G::BrushInflate => Some(T::Brush(
+                if overlay.selection_brush.as_ref().is_some_and(|b| b.subtract) {
+                    CanvasSelectionOperation::Remove
+                } else {
+                    CanvasSelectionOperation::Replace
+                },
+            )),
             _ => standard(C::Crosshair),
         };
     }
@@ -126,7 +133,19 @@ fn resolve_cursor(input: &CursorInput<'_>) -> Option<ToolCursor> {
                 Some(T::Move)
             }
         } else {
-            Some(T::Brush(operation))
+            Some(T::Brush(
+                if overlay.brush_mode == zipzi_editor_core::BrushMode::Inflate {
+                    if input.modifiers.shift {
+                        CanvasSelectionOperation::Remove
+                    } else {
+                        CanvasSelectionOperation::Replace
+                    }
+                } else if overlay.brush_mode == zipzi_editor_core::BrushMode::Deform {
+                    CanvasSelectionOperation::Replace
+                } else {
+                    operation
+                },
+            ))
         };
     }
     if overlay.point_unavailable.is_some()

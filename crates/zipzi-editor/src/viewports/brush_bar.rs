@@ -1,4 +1,4 @@
-//! Single-row brush controls; detailed settings use a bounded popover.
+//! Brush controls with full-width numeric fields and a bounded settings popover.
 use crate::{
     EditorView, t,
     ui::{
@@ -19,8 +19,8 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::{
-    BrushSelectionSettings as Settings, BrushShape, EditorCommand, ToolId, ViewportBinding,
-    ViewportId,
+    BrushMode, BrushSelectionSettings as Settings, BrushShape, EditorCommand, ToolId,
+    ViewportBinding, ViewportId,
 };
 
 const LABELS: [&str; 4] = [
@@ -298,6 +298,63 @@ impl BrushSelectionBar {
         });
         cx.notify();
     }
+    fn mode_button(&self, target: BrushMode, disabled: bool, cx: &Context<Self>) -> Button {
+        let (id, icon, label, hint) = match target {
+            BrushMode::Deform => (
+                "brush-mode-deform",
+                IconName::Move,
+                "editor.brush_mode_deform",
+                "editor.brush_mode_deform_hint",
+            ),
+            BrushMode::Inflate => (
+                "brush-mode-inflate",
+                IconName::Maximize,
+                "editor.brush_mode_inflate",
+                "editor.brush_mode_inflate_hint",
+            ),
+            BrushMode::Select => unreachable!("painting is the default brush mode"),
+        };
+        let active = self
+            .owner
+            .upgrade()
+            .is_some_and(|owner| owner.read(cx).editor.brush_mode() == target);
+        compact::toggle(Button::new(id), active)
+            .icon(icon)
+            .map(|button| super::toolbar::attached_button(button, super::toolbar::SECONDARY, cx))
+            .xsmall()
+            .w(compact::rem(24.))
+            .h(compact::rem(24.))
+            .disabled(disabled)
+            .accessibility_label(t!(label).into_owned())
+            .tooltip(t!(hint))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                let Some(owner) = this.owner.upgrade() else {
+                    return;
+                };
+                owner.update(cx, |owner, cx| {
+                    if owner.modal
+                        || owner.editor.is_busy()
+                        || owner.editor.gesture_active()
+                        || owner.editor.active_tool() != ToolId::BrushSelect
+                        || owner.editor.viewport_binding(this.viewport) != this.binding
+                    {
+                        return;
+                    }
+                    let mode = if owner.editor.brush_mode() == target {
+                        BrushMode::Select
+                    } else {
+                        target
+                    };
+                    if let Err(e) = owner.editor.execute(EditorCommand::SetBrushMode(mode)) {
+                        owner.set_edit_error(e.to_string(), cx);
+                    }
+                    owner.notify_canvas(cx);
+                    crate::workspace::status_bar::StatusBar::sync(&owner.status_bar, owner, cx);
+                    cx.notify();
+                });
+                cx.notify();
+            }))
+    }
     fn sync(&mut self, window: &mut Window, cx: &mut Context<Self>, force: bool) {
         let Some(owner) = self.owner.upgrade() else {
             return;
@@ -371,12 +428,6 @@ impl Render for BrushSelectionBar {
             let v = owner.read(cx);
             v.modal || v.editor.is_busy() || v.editor.gesture_active()
         });
-        let available = self
-            .owner
-            .upgrade()
-            .and_then(|owner| owner.read(cx).editor.viewport_metrics(self.viewport))
-            .map_or(320., |m| m.width / compact::scale(cx) - 72.);
-        let narrow = available < 290.;
         let row = |label: &str, control: AnyElement| {
             div()
                 .flex()
@@ -438,23 +489,48 @@ impl Render for BrushSelectionBar {
                     .tooltip(t!("editor.brush_selection_settings")),
             )
             .child(details);
-        let label = |key: &str| div().flex_shrink_0().child(t!(key).into_owned());
+        let labelled_field = |index, id: &'static str, key: &str, width| {
+            div()
+                .flex()
+                .flex_shrink_0()
+                .items_center()
+                .gap(compact::rem(4.))
+                .h(compact::rem(24.))
+                .child(div().id(id).test_support().child(t!(key).into_owned()))
+                .child(self.field(index, width))
+        };
         let content = div()
             .id("brush-selection-controls")
             .test_support()
             .flex()
+            .flex_wrap()
             .items_center()
+            .justify_center()
             .gap(compact::rem(4.))
-            .h(compact::rem(24.))
-            .max_h(compact::rem(24.))
             .px(compact::rem(2.))
             .max_w_full()
             .text_size(compact::rem(11.))
             .text_color(cx.theme().foreground)
-            .when(!narrow, |row| row.child(label("editor.brush_weight_short")))
-            .child(self.field(1, if narrow { 52. } else { 62. }))
-            .when(!narrow, |row| row.child(label("editor.brush_size_short")))
-            .child(self.field(0, if narrow { 60. } else { 70. }))
+            .child(
+                self.mode_button(BrushMode::Deform, disabled, cx)
+                    .flex_shrink_0(),
+            )
+            .child(
+                self.mode_button(BrushMode::Inflate, disabled, cx)
+                    .flex_shrink_0(),
+            )
+            .child(labelled_field(
+                1,
+                "brush-selection-weight-label",
+                "editor.brush_weight_short",
+                80.,
+            ))
+            .child(labelled_field(
+                0,
+                "brush-selection-size-label",
+                "editor.brush_size_short",
+                88.,
+            ))
             .child(
                 compact::button(Button::new("brush-selection-cycle-shape"))
                     .icon(match s.shape {
@@ -466,6 +542,7 @@ impl Render for BrushSelectionBar {
                         super::toolbar::attached_button(button, super::toolbar::SECONDARY, cx)
                     })
                     .xsmall()
+                    .flex_shrink_0()
                     .w(compact::rem(24.))
                     .h(compact::rem(24.))
                     .disabled(disabled)
@@ -482,7 +559,17 @@ impl Render for BrushSelectionBar {
                         }
                     })),
             )
-            .child(popover);
-        super::toolbar::secondary_bar("brush-selection-settings", content, cx)
+            .child(div().flex_shrink_0().child(popover));
+        let primary = super::toolbar::PRIMARY;
+        div()
+            .absolute()
+            .top_0()
+            .left(compact::rem(primary.button_size + 2. * primary.inset + 2.))
+            .right_0()
+            .child(super::toolbar::secondary_bar(
+                "brush-selection-settings",
+                content,
+                cx,
+            ))
     }
 }

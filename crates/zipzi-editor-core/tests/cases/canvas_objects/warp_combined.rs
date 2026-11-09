@@ -210,8 +210,14 @@ fn single_grid_anchor_or_tangent_keeps_whole_frame_and_remains_directly_draggabl
         );
         editor.execute(EditorCommand::Undo)?;
         assert_eq!(control_points(&mut editor, &object)?, before);
-        // Undo clears component selection; select the first control again.
-        click(&mut editor, point, false)?;
+        assert_eq!(
+            editor
+                .warp_transform_target(&object)
+                .unwrap()
+                .components
+                .len(),
+            1
+        );
         let overlay = editor.overlay();
         let second = match kind {
             0 => {

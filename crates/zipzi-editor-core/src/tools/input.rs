@@ -33,6 +33,10 @@ impl ToolController {
             return manual.input(document, frame, event);
         }
         match event {
+            CanvasInput::BrushTick { elapsed } => match &mut self.gesture {
+                Some(super::gesture::Gesture::Inflate(g)) => g.tick(document, elapsed),
+                _ => Ok(false),
+            },
             CanvasInput::Cancel => Ok(self.cancel(document)),
             CanvasInput::ModifiersChanged { shift, alt } => {
                 if !self.set_gesture_modifiers(shift, alt) {
@@ -137,7 +141,7 @@ impl ToolController {
                     super::gesture::Gesture::Select(_) | super::gesture::Gesture::Lasso(_)
                 ) && gesture.press().operation
                     == super::region::SelectionOperation::Replace;
-                gesture.finish(document, &mut self.components)?;
+                gesture.finish(document, &mut self.components, &mut self.component_weights)?;
                 if replace_selection {
                     self.component_weights.clear();
                 }

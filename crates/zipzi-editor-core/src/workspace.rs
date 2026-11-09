@@ -431,6 +431,16 @@ impl Editor {
         self.active_session()
             .map_or_else(Default::default, |s| s.modeling.tools.brush_selection)
     }
+    pub fn brush_mode(&self) -> crate::BrushMode {
+        self.active_session()
+            .map_or_else(Default::default, |s| s.modeling.tools.brush_mode)
+    }
+    pub fn brush_inflating_for(&self, binding: crate::ViewportBinding) -> bool {
+        self.gesture_active_for(binding)
+            && self
+                .active_session()
+                .is_some_and(|s| s.modeling.tools.brush_inflating())
+    }
     pub fn manual_for_viewport(&self, viewport: crate::ViewportId) -> bool {
         self.active_session()
             .is_some_and(|s| s.modeling.tools.manual_viewport() == Some(viewport))

@@ -8,6 +8,97 @@ use zipzi_core::{
 use zipzi_editor_core::*;
 
 #[test]
+fn select_and_lasso_keep_the_selected_vertex_through_move_history() -> anyhow::Result<()> {
+    for tool in [ToolId::Select, ToolId::Lasso] {
+        let (mut editor, _dir) = setup()?;
+        editor.execute(EditorCommand::SetTool(tool))?;
+        let vertex = editor.overlay().vertices[0].clone();
+        let start = vertex.position;
+        if tool == ToolId::Lasso {
+            select_area(
+                &mut editor,
+                ViewportPoint {
+                    x: start.x - 12.,
+                    y: start.y - 12.,
+                },
+                ViewportPoint {
+                    x: start.x + 12.,
+                    y: start.y + 12.,
+                },
+                false,
+                false,
+            )?;
+        } else {
+            click(&mut editor, start, false)?;
+        }
+        let selected = |editor: &Editor| {
+            editor
+                .overlay()
+                .vertices
+                .into_iter()
+                .filter(|v| v.selected)
+                .map(|v| v.id)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(selected(&editor), vec![vertex.id]);
+        let before = editor.document().unwrap().selected_vertex_positions();
+        drag(
+            &mut editor,
+            start,
+            ViewportPoint {
+                x: start.x + 20.,
+                y: start.y,
+            },
+            false,
+        )?;
+        let after = editor.document().unwrap().selected_vertex_positions();
+        assert_ne!(before, after);
+        for (command, expected) in [(EditorCommand::Undo, before), (EditorCommand::Redo, after)] {
+            editor.execute(command)?;
+            shown(&mut editor)?;
+            assert_eq!(
+                editor.document().unwrap().selected_vertex_positions(),
+                expected
+            );
+            assert_eq!(selected(&editor), vec![vertex.id], "{tool:?}");
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn mesh_regeneration_history_discards_selection_of_reused_vertex_ids() -> anyhow::Result<()> {
+    let (document, _dir) = support::rectangle_document(false)?;
+    let mut editor = support::editor_from_document(document);
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 1.,
+    });
+    let object = ObjectRef::new(ObjectKind::Mesh, &editor.layers()[0].id);
+    editor.execute(EditorCommand::SelectObject(object.clone()))?;
+    editor.execute(EditorCommand::GenerateMeshGrid {
+        object,
+        options: MeshGridOptions {
+            columns: 2,
+            rows: 2,
+        },
+        expected_revision: editor.document().unwrap().mesh_generation_revision(),
+    })?;
+    for (command, vertex_count) in [(EditorCommand::Undo, 4), (EditorCommand::Redo, 9)] {
+        shown(&mut editor)?;
+        editor.dispatch(editor.command(CommandId::SelectAll))?;
+        assert!(editor.overlay().vertices.iter().any(|v| v.selected));
+        editor.execute(command)?;
+        shown(&mut editor)?;
+        let vertices = editor.overlay().vertices;
+        assert_eq!(vertices.len(), vertex_count);
+        assert!(vertices.iter().all(|v| !v.selected));
+    }
+    Ok(())
+}
+
+#[test]
 fn select_all_selects_editable_components_without_history_or_evaluation() -> anyhow::Result<()> {
     for tool in [ToolId::Select, ToolId::Lasso] {
         let (document, _dir) = support::sample_document_with_binding(true)?;

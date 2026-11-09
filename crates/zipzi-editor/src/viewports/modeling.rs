@@ -148,6 +148,7 @@ impl ViewportSurface {
             let moving = matches!(
                 input,
                 CanvasInput::Move { .. }
+                    | CanvasInput::BrushTick { .. }
                     | CanvasInput::Leave
                     | CanvasInput::ModifiersChanged { .. }
             );

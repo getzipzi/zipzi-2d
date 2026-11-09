@@ -954,9 +954,6 @@ fn warp_numeric_selection_spans_independent_objects_and_whole_mode_keeps_selecti
     editor.execute(EditorCommand::Undo)?;
     assert_eq!(control_points(&mut editor, &first)?, before_a);
     assert_eq!(control_points(&mut editor, &second)?, before_b);
-    let frame = shown(&mut editor)?;
-    click(&mut editor, frame.transform.to_viewport(before_a[0]), false)?;
-    click(&mut editor, frame.transform.to_viewport(before_b[0]), true)?;
     assert_eq!(
         editor.warp_transform_target(&first).unwrap().components,
         target.components

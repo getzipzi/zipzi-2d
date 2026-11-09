@@ -844,6 +844,16 @@ fn vertex_drag_commits_once_and_shortcut_undo_redo_restores_geometry(cx: &mut Te
                 original
             );
             assert_eq!(view.editor.document().unwrap().history_lengths(), (0, 1));
+            assert_eq!(
+                view.editor
+                    .overlay()
+                    .vertices
+                    .iter()
+                    .filter(|v| v.selected)
+                    .map(|v| v.id)
+                    .collect::<Vec<_>>(),
+                vec![original[1].0]
+            );
         });
         window.press("secondary-shift-z", cx);
         harness.view.read_with(cx, |view, _| {
@@ -852,6 +862,16 @@ fn vertex_drag_commits_once_and_shortcut_undo_redo_restores_geometry(cx: &mut Te
                 original
             );
             assert_eq!(view.editor.document().unwrap().history_lengths(), (1, 0));
+            assert_eq!(
+                view.editor
+                    .overlay()
+                    .vertices
+                    .iter()
+                    .filter(|v| v.selected)
+                    .map(|v| v.id)
+                    .collect::<Vec<_>>(),
+                vec![original[1].0]
+            );
         });
     })
     .unwrap();

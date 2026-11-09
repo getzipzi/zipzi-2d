@@ -435,6 +435,489 @@ fn weight_at(editor: &Editor, point: ViewportPoint) -> f32 {
 }
 
 #[test]
+fn brush_cmd_miss_never_starts_area_deformation_in_any_mode() -> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let vertices = editor.overlay().vertices;
+    editor.execute(EditorCommand::SetTool(ToolId::BrushSelect))?;
+    editor.execute(EditorCommand::SetBrushSelectionSettings(
+        BrushSelectionSettings {
+            diameter: 8.,
+            weight: 0.6,
+            ..Default::default()
+        },
+    ))?;
+    stroke(&mut editor, &[vertices[2].position], false, false)?;
+    editor.execute(EditorCommand::SetBrushSelectionSettings(
+        BrushSelectionSettings {
+            diameter: 80.,
+            weight: 1.,
+            hardness: 1.,
+            ..Default::default()
+        },
+    ))?;
+    let before = editor.document().unwrap().selected_vertex_positions();
+    let weights = editor.overlay().selection_weights;
+    for mode in [BrushMode::Select, BrushMode::Deform, BrushMode::Inflate] {
+        editor.execute(EditorCommand::SetBrushMode(mode))?;
+        for point in [
+            vertices[0].position,
+            p(vertices[0].position.x + 8., vertices[0].position.y),
+            p(-100., -100.),
+        ] {
+            input(
+                &mut editor,
+                CanvasInput::Down {
+                    point,
+                    shift: false,
+                    alt: false,
+                    primary: true,
+                },
+            )?;
+            assert!(
+                !editor.gesture_active(),
+                "{mode:?}: Cmd miss must not capture"
+            );
+            input(
+                &mut editor,
+                CanvasInput::Move {
+                    point: vertices[2].position,
+                    left_down: true,
+                },
+            )?;
+            input(
+                &mut editor,
+                CanvasInput::Up {
+                    point: vertices[2].position,
+                },
+            )?;
+            assert_eq!(
+                editor.document().unwrap().selected_vertex_positions(),
+                before
+            );
+            assert_eq!(editor.overlay().selection_weights, weights);
+            assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+            assert!(!editor.document().unwrap().has_pending_edit());
+        }
+        input(
+            &mut editor,
+            CanvasInput::Down {
+                point: vertices[2].position,
+                shift: false,
+                alt: false,
+                primary: true,
+            },
+        )?;
+        assert_eq!(
+            editor.overlay().active_gesture,
+            Some(CanvasGestureKind::Move)
+        );
+        input(
+            &mut editor,
+            CanvasInput::Move {
+                point: p(vertices[2].position.x + 20., vertices[2].position.y),
+                left_down: true,
+            },
+        )?;
+        let after = editor.document().unwrap().selected_vertex_positions();
+        assert!((after[2].1.x - before[2].1.x - 12.).abs() < 0.001);
+        input(&mut editor, CanvasInput::Cancel)?;
+        assert_eq!(
+            editor.document().unwrap().selected_vertex_positions(),
+            before
+        );
+        shown(&mut editor)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn deform_mode_on_a_painted_vertex_uses_local_brush_weights_instead_of_the_old_selection()
+-> anyhow::Result<()> {
+    let (mut editor, _dir) = setup()?;
+    let vertices = editor.overlay().vertices;
+    editor.execute(EditorCommand::SetTool(ToolId::BrushSelect))?;
+    editor.execute(EditorCommand::SetBrushSelectionSettings(
+        BrushSelectionSettings {
+            diameter: 8.,
+            weight: 0.6,
+            ..Default::default()
+        },
+    ))?;
+    stroke(&mut editor, &[vertices[0].position], false, false)?;
+    stroke(&mut editor, &[vertices[2].position], true, false)?;
+    editor.execute(EditorCommand::SetBrushSelectionSettings(
+        BrushSelectionSettings {
+            diameter: 40.,
+            weight: 0.25,
+            hardness: 1.,
+            ..Default::default()
+        },
+    ))?;
+    editor.execute(EditorCommand::SetBrushMode(BrushMode::Deform))?;
+    let before = editor.document().unwrap().selected_vertex_positions();
+    let start = vertices[0].position;
+    input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    assert_eq!(selected(&editor), vec![vertices[0].id]);
+    assert_eq!(weight_at(&editor, start), 0.25);
+    input(
+        &mut editor,
+        CanvasInput::Up {
+            point: p(start.x + 40., start.y),
+        },
+    )?;
+    let after = editor.document().unwrap().selected_vertex_positions();
+    assert!((after[0].1.x - before[0].1.x - 10.).abs() < 0.001);
+    assert_eq!(after[2], before[2]);
+    assert_eq!(selected(&editor), vec![vertices[0].id, vertices[2].id]);
+    assert!(
+        editor
+            .overlay()
+            .selection_weights
+            .unwrap()
+            .points
+            .iter()
+            .all(|p| p.1 == 0.6)
+    );
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    Ok(())
+}
+
+#[test]
+fn deform_mode_drag_samples_local_weights_once_and_restores_painted_selection() -> anyhow::Result<()>
+{
+    let (mut editor, _dir) = setup()?;
+    let vertices = editor.overlay().vertices;
+    editor.execute(EditorCommand::SetTool(ToolId::BrushSelect))?;
+    editor.execute(EditorCommand::SetBrushSelectionSettings(
+        BrushSelectionSettings {
+            diameter: 8.,
+            weight: 0.6,
+            hardness: 1.,
+            ..Default::default()
+        },
+    ))?;
+    stroke(&mut editor, &[vertices[2].position], false, false)?;
+    let settings = BrushSelectionSettings {
+        diameter: 80.,
+        weight: 0.4,
+        hardness: 0.,
+        ..Default::default()
+    };
+    editor.execute(EditorCommand::SetBrushSelectionSettings(settings))?;
+    editor.execute(EditorCommand::SetBrushMode(BrushMode::Deform))?;
+    let before = editor.document().unwrap().selected_vertex_positions();
+    let start = p(vertices[0].position.x + 10., vertices[0].position.y);
+    let end = vertices[1].position;
+    let expected = settings.influence(vertices[0].position, start, start);
+    assert!((expected - 0.3375).abs() < 1e-6);
+    input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::Move)
+    );
+    assert!(editor.overlay().selection_brush.is_none());
+    assert_eq!(selected(&editor), vec![vertices[0].id]);
+    assert!((weight_at(&editor, vertices[0].position) - expected).abs() < 1e-6);
+    assert!(!editor.document().unwrap().has_pending_edit());
+    // Going out, back to the origin, then out again must use the same base pose
+    // and weights. Crossing another vertex does not add it to this gesture.
+    for point in [end, start, end] {
+        input(
+            &mut editor,
+            CanvasInput::Move {
+                point,
+                left_down: true,
+            },
+        )?;
+        let after = editor.document().unwrap().selected_vertex_positions();
+        for i in 0..before.len() {
+            let w = if i == 0 { expected } else { 0. };
+            assert!((after[i].1.x - before[i].1.x - (point.x - start.x) * w).abs() < 0.001);
+            assert!((after[i].1.y - before[i].1.y + (point.y - start.y) * w).abs() < 0.001);
+        }
+        assert_eq!(editor.overlay().selection_weights.unwrap().points.len(), 1);
+    }
+    input(&mut editor, CanvasInput::Up { point: end })?;
+    let after = editor.document().unwrap().selected_vertex_positions();
+    assert_eq!(selected(&editor), vec![vertices[2].id]);
+    assert!((weight_at(&editor, vertices[2].position) - 0.6).abs() < 1e-6);
+    assert_eq!(editor.brush_selection_settings(), settings);
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(
+        editor.document().unwrap().selected_vertex_positions(),
+        before
+    );
+    editor.execute(EditorCommand::Redo)?;
+    assert_eq!(
+        editor.document().unwrap().selected_vertex_positions(),
+        after
+    );
+    assert_eq!(selected(&editor), vec![vertices[2].id]);
+    assert!((weight_at(&editor, vertices[2].position) - 0.6).abs() < 1e-6);
+    Ok(())
+}
+
+#[test]
+fn unified_brush_direct_drag_cancellation_restores_geometry_and_previous_weights()
+-> anyhow::Result<()> {
+    for cancellation in 0..6 {
+        let (mut editor, _dir) = setup()?;
+        let vertices = editor.overlay().vertices;
+        editor.execute(EditorCommand::SetTool(ToolId::BrushSelect))?;
+        editor.execute(EditorCommand::SetBrushSelectionSize(8.))?;
+        stroke(&mut editor, &[vertices[2].position], false, false)?;
+        editor.execute(EditorCommand::SetBrushSelectionSettings(
+            BrushSelectionSettings {
+                diameter: 40.,
+                weight: 0.5,
+                hardness: 1.,
+                ..Default::default()
+            },
+        ))?;
+        editor.execute(EditorCommand::SetBrushMode(BrushMode::Deform))?;
+        let before = editor.document().unwrap().selected_vertex_positions();
+        let start = p(vertices[0].position.x + 10., vertices[0].position.y);
+        input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+                primary: false,
+            },
+        )?;
+        input(
+            &mut editor,
+            CanvasInput::Move {
+                point: p(start.x + 40., start.y),
+                left_down: true,
+            },
+        )?;
+        assert_ne!(
+            editor.document().unwrap().selected_vertex_positions(),
+            before
+        );
+        match cancellation {
+            0 => {
+                input(&mut editor, CanvasInput::Cancel)?;
+            }
+            1 => {
+                input(
+                    &mut editor,
+                    CanvasInput::Move {
+                        point: start,
+                        left_down: false,
+                    },
+                )?;
+            }
+            2 => editor.execute(EditorCommand::SetTool(ToolId::Select))?,
+            3 => editor.set_canvas_metrics(ViewportMetrics {
+                width: 600.,
+                height: 600.,
+                scale_factor: 2.,
+            }),
+            4 => {
+                assert!(
+                    input(
+                        &mut editor,
+                        CanvasInput::Move {
+                            point: p(f32::NAN, 0.),
+                            left_down: true
+                        }
+                    )
+                    .is_err()
+                );
+            }
+            _ => editor.execute(EditorCommand::SetBrushMode(BrushMode::Inflate))?,
+        }
+        assert_eq!(
+            editor.document().unwrap().selected_vertex_positions(),
+            before,
+            "cancel {cancellation}"
+        );
+        assert_eq!(selected(&editor), vec![vertices[2].id]);
+        let weights = editor.overlay().selection_weights.unwrap();
+        assert_eq!(weights.points.len(), 1);
+        assert!((weights.points[0].1 - 0.2).abs() < 1e-6);
+        assert!(!editor.gesture_active());
+        assert!(!editor.document().unwrap().has_pending_edit());
+        assert_eq!(editor.document().unwrap().history_lengths(), (0, 0));
+    }
+    Ok(())
+}
+
+#[test]
+fn unified_brush_direct_click_and_ineligible_areas_do_not_leave_temporary_selection_or_history()
+-> anyhow::Result<()> {
+    for excluded in 0..6 {
+        let (mut editor, _dir) = setup()?;
+        let vertices = editor.overlay().vertices;
+        let object = editor
+            .document()
+            .unwrap()
+            .context()
+            .selection
+            .clone()
+            .unwrap();
+        editor.execute(EditorCommand::SetTool(ToolId::BrushSelect))?;
+        editor.execute(EditorCommand::SetBrushSelectionSize(8.))?;
+        stroke(&mut editor, &[vertices[2].position], false, false)?;
+        editor.execute(EditorCommand::SetBrushSelectionSettings(
+            BrushSelectionSettings {
+                diameter: 40.,
+                weight: if excluded == 1 { 0. } else { 0.5 },
+                hardness: 1.,
+                ..Default::default()
+            },
+        ))?;
+        editor.execute(EditorCommand::SetBrushMode(BrushMode::Deform))?;
+        match excluded {
+            3 => editor.execute(EditorCommand::SetObjectsLocked {
+                objects: vec![object.clone()],
+                locked: true,
+            })?,
+            4 => editor.execute(EditorCommand::SetObjectVisible {
+                object,
+                visible: false,
+            })?,
+            5 => editor.execute(EditorCommand::SelectObjects(Vec::new()))?,
+            _ => {}
+        }
+        shown(&mut editor)?;
+        let selection = selected(&editor);
+        let weights = editor.overlay().selection_weights;
+        let history = editor.document().unwrap().history_lengths();
+        let start = p(
+            vertices[0].position.x + if excluded == 2 { 40. } else { 10. },
+            vertices[0].position.y,
+        );
+        input(
+            &mut editor,
+            CanvasInput::Down {
+                point: start,
+                shift: false,
+                alt: false,
+                primary: false,
+            },
+        )?;
+        assert_eq!(editor.gesture_active(), excluded == 0);
+        input(&mut editor, CanvasInput::Up { point: start })?;
+        assert_eq!(selected(&editor), selection);
+        assert_eq!(editor.overlay().selection_weights, weights);
+        assert_eq!(editor.document().unwrap().history_lengths(), history);
+        assert!(!editor.document().unwrap().has_pending_edit());
+    }
+    Ok(())
+}
+
+#[test]
+fn unified_brush_direct_warp_drag_moves_lattice_and_discards_temporary_weights()
+-> anyhow::Result<()> {
+    let (doc, _dir, warp, _, _) = rich_document()?;
+    let mut editor = crate::support::editor_from_document(doc);
+    editor.reset_view();
+    editor.set_canvas_metrics(ViewportMetrics {
+        width: 512.,
+        height: 512.,
+        scale_factor: 2.,
+    });
+    let object = ObjectRef::new(ObjectKind::Deformer, warp);
+    editor.execute(EditorCommand::SelectObject(object.clone()))?;
+    shown(&mut editor)?;
+    editor.execute(EditorCommand::SetTool(ToolId::BrushSelect))?;
+    editor.execute(EditorCommand::SetBrushSelectionSettings(
+        BrushSelectionSettings {
+            diameter: 40.,
+            weight: 0.25,
+            hardness: 1.,
+            ..Default::default()
+        },
+    ))?;
+    editor.execute(EditorCommand::SetBrushMode(BrushMode::Deform))?;
+    let v = editor
+        .overlay()
+        .vertices
+        .into_iter()
+        .find(|v| v.kind == OverlayVertexKind::WarpGrid)
+        .unwrap();
+    let start = p(v.position.x + 10., v.position.y);
+    let before = editor
+        .document()
+        .unwrap()
+        .object_index()
+        .get(&object)
+        .unwrap()
+        .properties["warp"]
+        .clone();
+    input(
+        &mut editor,
+        CanvasInput::Down {
+            point: start,
+            shift: false,
+            alt: false,
+            primary: false,
+        },
+    )?;
+    assert_eq!(
+        editor.overlay().active_gesture,
+        Some(CanvasGestureKind::Move)
+    );
+    let end = p(start.x + 40., start.y);
+    input(
+        &mut editor,
+        CanvasInput::Move {
+            point: end,
+            left_down: true,
+        },
+    )?;
+    input(&mut editor, CanvasInput::Up { point: end })?;
+    let after = editor
+        .document()
+        .unwrap()
+        .object_index()
+        .get(&object)
+        .unwrap()
+        .properties["warp"]
+        .clone();
+    assert_eq!(after["bezier"], before["bezier"]);
+    let a = &after["points"][v.id as usize];
+    let b = &before["points"][v.id as usize];
+    assert!((a["x"].as_f64().unwrap() - b["x"].as_f64().unwrap() - 10.).abs() < 0.001);
+    assert!(selected(&editor).is_empty());
+    assert!(editor.overlay().selection_weights.is_none());
+    assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
+    editor.execute(EditorCommand::Undo)?;
+    assert_eq!(
+        editor
+            .document()
+            .unwrap()
+            .object_index()
+            .get(&object)
+            .unwrap()
+            .properties["warp"],
+        before
+    );
+    Ok(())
+}
+
+#[test]
 fn weighted_brush_cmd_drag_respects_each_weight_and_undo_cancel_keep_the_selection()
 -> anyhow::Result<()> {
     let (mut editor, _dir) = setup()?;
@@ -510,16 +993,21 @@ fn weighted_brush_cmd_drag_respects_each_weight_and_undo_cancel_keep_the_selecti
         } else {
             input(&mut editor, CanvasInput::Up { point: end })?;
             assert_eq!(editor.document().unwrap().history_lengths(), (1, 0));
-            editor.execute(EditorCommand::Undo)?;
-            assert_eq!(
-                editor.document().unwrap().selected_vertex_positions(),
-                before
-            );
-            editor.execute(EditorCommand::Redo)?;
-            assert_eq!(
-                editor.document().unwrap().selected_vertex_positions(),
-                after
-            );
+            for (command, expected) in [
+                (EditorCommand::Undo, &before),
+                (EditorCommand::Redo, &after),
+            ] {
+                editor.execute(command)?;
+                shown(&mut editor)?;
+                assert_eq!(
+                    &editor.document().unwrap().selected_vertex_positions(),
+                    expected
+                );
+                assert_eq!(selected(&editor), vec![vertices[0].id, vertices[1].id]);
+                let overlay = editor.overlay();
+                assert_eq!(weight_at(&editor, overlay.vertices[0].position), 0.4375);
+                assert_eq!(weight_at(&editor, overlay.vertices[1].position), 0.9375);
+            }
         }
     }
     Ok(())

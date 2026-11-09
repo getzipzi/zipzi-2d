@@ -1282,6 +1282,52 @@ impl ControlSpace {
 }
 
 impl ControlEdit {
+    /// A lattice brush leaves the Bezier controller and all authoring metadata intact.
+    pub(crate) fn preview_lattice_displacements(
+        &self,
+        edit: &mut zipzi_sdk::Commands<'_>,
+        displacement: &std::collections::HashMap<crate::ComponentRef, crate::ModelVector>,
+    ) -> Result<()> {
+        let original = self
+            .warp
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Not a Warp lattice"))?;
+        let mut positions = self.positions.clone();
+        for (id, point) in self.ids.iter().zip(&mut positions) {
+            let Some(delta) = displacement.get(&crate::ComponentRef {
+                object: self.object.clone(),
+                id: *id,
+            }) else {
+                continue;
+            };
+            if delta.x == 0. && delta.y == 0. {
+                continue;
+            }
+            let before = self.to_model(*point);
+            *point = self.from_model(
+                ModelPoint {
+                    x: before.x + delta.x,
+                    y: before.y + delta.y,
+                },
+                *point,
+            )?;
+        }
+        let mut transform = original.transform.clone();
+        let mut binding = original.binding.clone();
+        if let Some((b, slot)) = binding.as_mut().zip(self.slot) {
+            let SceneTrack::Warp { keyforms, .. } = &mut b.track else {
+                unreachable!()
+            };
+            keyforms[slot].positions = positions;
+        } else {
+            let zipzi_core::TransformData::Warp(w) = &mut transform.data else {
+                unreachable!()
+            };
+            w.points = positions;
+        }
+        self.write_warp(edit, transform, binding)
+    }
+
     fn changed_point(&self, p: Vec2, change: ControlChange) -> Result<Vec2> {
         let before = self.to_model(p);
         let desired = change.apply_to(before);

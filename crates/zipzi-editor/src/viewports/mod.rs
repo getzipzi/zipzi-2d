@@ -59,6 +59,7 @@ macro_rules! viewport_panel {
 }
 
 mod brush_bar;
+mod brush_tick;
 mod context_menu;
 mod deformer_bar;
 mod input;
@@ -121,6 +122,11 @@ pub struct ViewportSurface {
     pub(crate) tool_cursor_kind: Option<crate::tool_cursors::ToolCursor>,
     navigation: navigation::ViewportNavigation,
     interaction: Option<zipzi_editor_core::ViewportInteractionToken>,
+    brush_tick: Option<(
+        zipzi_editor_core::ViewportInteractionToken,
+        std::time::Instant,
+    )>,
+    brush_frame_pending: bool,
     brush_bar: Entity<brush_bar::BrushSelectionBar>,
     _subscriptions: Vec<Subscription>,
 }
@@ -245,6 +251,8 @@ impl ViewportSurface {
                 tool_cursor_kind: None,
                 navigation: Default::default(),
                 interaction: None,
+                brush_tick: None,
+                brush_frame_pending: false,
                 brush_bar,
                 _subscriptions: subscriptions,
             }
@@ -303,6 +311,7 @@ impl ViewportSurface {
     pub fn cancel_pointer(&mut self) -> Option<zipzi_editor_core::ViewportInteractionToken> {
         let token = self.pointer_token();
         self.interaction = None;
+        self.brush_tick = None;
         self.navigation.wheel_zoom = None;
         self.navigation.pan = None;
         token

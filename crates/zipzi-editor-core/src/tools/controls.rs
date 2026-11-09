@@ -16,6 +16,10 @@ pub(super) struct ControlGesture {
     modifiers: TransformConstraints,
     edit: Option<ActiveEdit>,
     bone_length: Option<BoneLengthDrag>,
+    restore_selection: Option<(
+        Vec<ComponentRef>,
+        std::collections::HashMap<ComponentRef, f32>,
+    )>,
 }
 struct BoneLengthDrag {
     base: f32,
@@ -73,6 +77,25 @@ impl ControlGesture {
             modifiers,
             edit: None,
             bone_length,
+            restore_selection: None,
+        }
+    }
+    pub fn with_temporary_selection(
+        mut self,
+        components: Vec<ComponentRef>,
+        weights: std::collections::HashMap<ComponentRef, f32>,
+    ) -> Self {
+        self.restore_selection = Some((components, weights));
+        self
+    }
+    fn restore_selection(
+        &self,
+        components: &mut Vec<ComponentRef>,
+        weights: &mut std::collections::HashMap<ComponentRef, f32>,
+    ) {
+        if let Some((original_components, original_weights)) = &self.restore_selection {
+            components.clone_from(original_components);
+            weights.clone_from(original_weights);
         }
     }
     pub fn set_modifiers(&mut self, shift: bool, alt: bool) -> bool {
@@ -460,6 +483,7 @@ impl ControlGesture {
         &mut self,
         document: &mut Document,
         components: &mut Vec<ComponentRef>,
+        weights: &mut std::collections::HashMap<ComponentRef, f32>,
     ) -> Result<()> {
         if self.editing() {
             document.finish_edit()?;
@@ -468,10 +492,17 @@ impl ControlGesture {
         {
             components.retain(|c| c != component);
         }
+        self.restore_selection(components, weights);
         self.edit = None;
         Ok(())
     }
-    pub fn cancel(&self, document: &mut Document) -> bool {
+    pub fn cancel(
+        &self,
+        document: &mut Document,
+        components: &mut Vec<ComponentRef>,
+        weights: &mut std::collections::HashMap<ComponentRef, f32>,
+    ) -> bool {
+        self.restore_selection(components, weights);
         if !self.editing() {
             return false;
         }

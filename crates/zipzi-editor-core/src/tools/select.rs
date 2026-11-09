@@ -94,10 +94,12 @@ impl ToolController {
         } else {
             self.canvas_hit(document, frame, point)
         };
+        // Cmd is an exact painted-point grab in every brush mode. Missing a point
+        // must never turn a precise drag into a new area deformation.
         if brush_drag && hit.is_none() {
             return;
         }
-        // Brush dragging edits painted points independently of the hidden Warp frame.
+        // Brush dragging edits points independently of the hidden Warp frame.
         if !brush_drag
             && matches!(&hit,Some(HitTarget::Component(c)) if self.warp_frame_info(document,frame,&c.object).is_some_and(|i|i.adjusting))
         {
@@ -171,7 +173,21 @@ impl ToolController {
             current: point,
             dragged: false,
         };
-        self.gesture = if self.active == super::ToolId::BrushSelect && !brush_drag {
+        self.gesture = if self.active == super::ToolId::BrushSelect
+            && !brush_drag
+            && !resize_brush
+            && self.brush_mode == super::BrushMode::Deform
+        {
+            self.begin_brush_deform(document, press)
+                .map(super::gesture::Gesture::Controls)
+        } else if self.active == super::ToolId::BrushSelect
+            && !brush_drag
+            && !resize_brush
+            && self.brush_mode == super::BrushMode::Inflate
+        {
+            super::inflate::InflateGesture::new(document, press, self.brush_selection)
+                .map(super::gesture::Gesture::Inflate)
+        } else if self.active == super::ToolId::BrushSelect && !brush_drag {
             super::brush_select::BrushSelectionGesture::new(
                 document,
                 press,

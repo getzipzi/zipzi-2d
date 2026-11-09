@@ -409,6 +409,7 @@ impl ManualMeshMode {
             return Ok(false);
         }
         match event {
+            CanvasInput::BrushTick { .. } => Ok(false),
             CanvasInput::Cancel => Ok(self.cancel(document)),
             CanvasInput::ModifiersChanged { .. } | CanvasInput::BrushResizeDown { .. } => Ok(false),
             CanvasInput::Leave => {

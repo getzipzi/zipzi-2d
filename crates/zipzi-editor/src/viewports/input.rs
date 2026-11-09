@@ -41,7 +41,12 @@ impl ViewportSurface {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !matches!(input, CanvasInput::BrushTick { .. } | CanvasInput::Cancel) {
+            // Account for the old center/direction before applying a pointer or key change.
+            self.advance_brush(window, cx);
+        }
         (self.on_input)(self, input, window, cx);
+        self.schedule_brush_frame(window, cx);
     }
     pub(super) fn moved(
         &mut self,

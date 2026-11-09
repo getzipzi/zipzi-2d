@@ -10,6 +10,8 @@ pub enum HintAction {
     LassoSelect,
     BrushSelect,
     BrushSize,
+    Inflate,
+    Contract,
     AddSelection,
     RemoveSelection,
     GlueBind,

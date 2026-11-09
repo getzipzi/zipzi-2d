@@ -43,6 +43,7 @@ pub(super) enum Gesture {
     Select(SelectGesture),
     Lasso(LassoGesture),
     BrushSelect(BrushSelectionGesture),
+    Inflate(inflate::InflateGesture),
     Controls(ControlGesture),
 }
 impl Gesture {
@@ -66,6 +67,7 @@ impl Gesture {
             Self::Lasso(_) => K::LassoSelect,
             Self::BrushSelect(g) if g.resizing => K::BrushResize,
             Self::BrushSelect(_) => K::BrushSelect,
+            Self::Inflate(_) => K::BrushInflate,
             Self::Controls(g) if g.adjusting_bone_length() => K::BoneLength,
             Self::Controls(g) => match g.target {
                 HitTarget::RotationHandle(_) | HitTarget::DeformerHandle(_, H::Rotate) => K::Rotate,
@@ -78,6 +80,7 @@ impl Gesture {
     pub fn set_modifiers(&mut self, shift: bool, alt: bool) -> bool {
         match self {
             Self::Controls(g) => g.set_modifiers(shift, alt),
+            Self::Inflate(g) => g.set_modifiers(shift),
             _ => false,
         }
     }
@@ -86,6 +89,7 @@ impl Gesture {
             Self::Select(g) => &g.press,
             Self::Lasso(g) => &g.press,
             Self::BrushSelect(g) => &g.press,
+            Self::Inflate(g) => &g.press,
             Self::Controls(g) => &g.press,
         }
     }
@@ -94,18 +98,23 @@ impl Gesture {
             Self::Select(g) => &mut g.press,
             Self::Lasso(g) => &mut g.press,
             Self::BrushSelect(g) => &mut g.press,
+            Self::Inflate(g) => &mut g.press,
             Self::Controls(g) => &mut g.press,
         }
     }
     pub fn target(&self) -> Option<&HitTarget> {
         match self {
             Self::Select(g) => g.target.as_ref(),
-            Self::Lasso(_) | Self::BrushSelect(_) => None,
+            Self::Lasso(_) | Self::BrushSelect(_) | Self::Inflate(_) => None,
             Self::Controls(g) => Some(&g.target),
         }
     }
     pub fn accepts_frame(&self, version: FrameVersion) -> bool {
-        matches!(self, Self::Controls(g) if g.accepts_frame(version))
+        match self {
+            Self::Controls(g) => g.accepts_frame(version),
+            Self::Inflate(g) => g.accepts_frame(version),
+            _ => false,
+        }
     }
     pub fn update(
         &mut self,
@@ -124,6 +133,7 @@ impl Gesture {
         press.dragged |= crate::picking::distance2(press.point, point) >= 9.;
         match self {
             Self::Select(_) => Ok(false),
+            Self::Inflate(_) => Ok(false),
             Self::Lasso(g) => {
                 g.update();
                 Ok(false)
@@ -139,12 +149,14 @@ impl Gesture {
         &mut self,
         document: &mut Document,
         components: &mut Vec<ComponentRef>,
+        weights: &mut std::collections::HashMap<ComponentRef, f32>,
     ) -> Result<()> {
         match self {
             Self::Select(g) => g.finish(document, components),
             Self::Lasso(g) => g.finish(document, components),
-            Self::Controls(g) => g.finish(document, components),
+            Self::Controls(g) => g.finish(document, components, weights),
             Self::BrushSelect(_) => Ok(()),
+            Self::Inflate(g) => g.finish(document),
         }
     }
     pub fn cancel(
@@ -155,7 +167,8 @@ impl Gesture {
         weights: &mut std::collections::HashMap<ComponentRef, f32>,
     ) -> bool {
         match self {
-            Self::Controls(g) => g.cancel(document),
+            Self::Controls(g) => g.cancel(document, components, weights),
+            Self::Inflate(g) => g.cancel(document),
             Self::BrushSelect(g) => {
                 g.cancel(components, brush_settings, weights);
                 false
@@ -168,7 +181,7 @@ impl Gesture {
             Self::Select(g) => g.overlay(out),
             Self::Lasso(g) => g.overlay(out),
             Self::Controls(g) => g.overlay(out),
-            Self::BrushSelect(_) => {}
+            Self::BrushSelect(_) | Self::Inflate(_) => {}
         }
     }
     pub fn hints(&self) -> &'static [InteractionHint] {
@@ -178,6 +191,7 @@ impl Gesture {
             Self::Controls(g) => g.hints(),
             Self::BrushSelect(g) if g.resizing => brush_select::RESIZE_HINTS,
             Self::BrushSelect(_) => brush_select::CAPTURE_HINTS,
+            Self::Inflate(_) => inflate::HINTS,
         }
     }
 }

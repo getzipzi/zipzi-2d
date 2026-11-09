@@ -1,4 +1,5 @@
 mod brush_select;
+mod inflation;
 mod common;
 mod lasso;
 mod object_frames;

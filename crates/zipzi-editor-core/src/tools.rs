@@ -7,6 +7,7 @@ mod gesture;
 mod glue;
 mod hand;
 mod hints;
+mod inflate;
 mod input;
 mod lasso;
 mod manual_mesh;
@@ -16,6 +17,7 @@ mod select;
 mod transform_constraints;
 pub use brush_select::{BrushSelectionSettings, BrushShape};
 pub use hints::{HintAction, InteractionHint};
+pub use inflate::BrushMode;
 pub use manual_mesh::{ManualMeshEdge, ManualMeshFeedback, ManualTool};
 
 use crate::{
@@ -24,6 +26,7 @@ use crate::{
 };
 use gesture::Gesture;
 use std::sync::Arc;
+use zipzi_core::state::DocumentState;
 
 pub use overlay::{
     CanvasGestureKind, CanvasSelectionOperation, GluePointState, OverlayDeformer, OverlayGlue,
@@ -70,6 +73,7 @@ pub struct ToolController {
     pub warp_whole: bool,
     pub original_points: bool,
     pub(crate) brush_selection: BrushSelectionSettings,
+    pub(crate) brush_mode: BrushMode,
     pub(crate) component_weights: std::collections::HashMap<ComponentRef, f32>,
     pub(crate) pointer: Option<(crate::ViewportBinding, ViewportPoint)>,
     pub(crate) components: Vec<ComponentRef>,
@@ -260,6 +264,18 @@ impl ToolController {
             .map_or(controls::HINTS, Gesture::hints)
     }
     pub(crate) fn idle_hints(&self) -> &'static [InteractionHint] {
+        if self.active == ToolId::BrushSelect
+            && self.brush_mode == BrushMode::Deform
+            && !self.manual_active()
+        {
+            return brush_select::DEFORM_HINTS;
+        }
+        if self.active == ToolId::BrushSelect
+            && self.brush_mode == BrushMode::Inflate
+            && !self.manual_active()
+        {
+            return inflate::HINTS;
+        }
         if matches!(
             self.hovered,
             Some(HitTarget::DeformerHandle(
@@ -298,6 +314,31 @@ impl ToolController {
         self.hovered = None;
         self.hovered_binding = None;
         self.pointer = None;
+    }
+    pub(crate) fn retain_history_selection(
+        &mut self,
+        document: &Document,
+        before: &DocumentState,
+        after: &DocumentState,
+    ) {
+        if before.content_id() == after.content_id() {
+            return;
+        }
+        self.clear_hover();
+        self.warp_frames.clear();
+        let objects = document.object_state_index();
+        let mut compatible = std::collections::HashMap::new();
+        // Geometry history keeps the current editor selection. A topology edit
+        // can reuse a vertex ID or lattice slot for an entirely different point.
+        self.components.retain(|component| {
+            if let Some(&keep) = compatible.get(&component.object) {
+                return keep;
+            }
+            let keep = objects.state(&component.object).visible()
+                && same_component_layout(before, after, &component.object);
+            compatible.insert(component.object.clone(), keep);
+            keep
+        });
     }
     pub fn reconcile(&mut self, document: &mut Document) {
         if let Some(mode) = &mut self.manual {
@@ -490,8 +531,70 @@ impl ToolController {
             .map_or(Ok(false), |mode| mode.delete_selection(document))
     }
 }
+fn same_component_layout(
+    before: &DocumentState,
+    after: &DocumentState,
+    object: &ObjectRef,
+) -> bool {
+    let id = &object.id;
+    match object.kind {
+        ObjectKind::Mesh => before
+            .mesh(id)
+            .zip(after.mesh(id))
+            .is_some_and(|(old, new)| {
+                old.vertex_ids == new.vertex_ids
+                    && old.uvs == new.uvs
+                    && old.triangles == new.triangles
+            }),
+        ObjectKind::Deformer => {
+            let Some((old, new)) = before.transform(id).zip(after.transform(id)) else {
+                return false;
+            };
+            let Some((old_warp, new_warp)) = old.warp().zip(new.warp()) else {
+                return old.rotation().is_some() && new.rotation().is_some();
+            };
+            if (old_warp.rows, old_warp.columns) != (new_warp.rows, new_warp.columns) {
+                return false;
+            }
+            let default_grid = |transform: &zipzi_core::Transform| {
+                transform
+                    .warp_authoring
+                    .as_ref()
+                    .and_then(|s| s.bezier_grid)
+                    .map_or((1, 1), |grid| (grid.rows, grid.columns))
+            };
+            let grid = |bezier: &Option<zipzi_core::WarpBezier>, fallback| {
+                bezier
+                    .as_ref()
+                    .map_or(fallback, |grid| (grid.rows, grid.columns))
+            };
+            let old_default = default_grid(old);
+            let new_default = default_grid(new);
+            // A point edit can materialize an implicit controller. Compare
+            // its dimensions, including the implicit default, rather than its presence.
+            let keyform_grids = |model: &DocumentState, fallback| match model
+                .binding_for_scene(id)
+                .map(|binding| &binding.track)
+            {
+                Some(zipzi_core::SceneTrack::Warp { keyforms, .. }) => keyforms
+                    .iter()
+                    .map(|form| grid(&form.bezier, fallback))
+                    .collect::<Vec<_>>(),
+                _ => Vec::new(),
+            };
+            grid(&old_warp.bezier, old_default) == grid(&new_warp.bezier, new_default)
+                && keyform_grids(before, old_default) == keyform_grids(after, new_default)
+        }
+        _ => false,
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum CanvasInput {
+    /// Elapsed time for a captured continuous brush. Pointer events alone never add time.
+    BrushTick {
+        elapsed: std::time::Duration,
+    },
     /// Start a size-only gesture. The same capture/rollback rules apply as painting.
     BrushResizeDown {
         point: ViewportPoint,

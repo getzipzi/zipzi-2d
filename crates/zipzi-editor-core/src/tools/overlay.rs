@@ -67,8 +67,9 @@ pub struct OverlaySnapshot {
     /// Actual selection semantics; captured operations keep their press-time value.
     pub selection_operation: Option<CanvasSelectionOperation>,
     pub selection_weights: Option<OverlaySelectionWeights>,
-    /// A selection brush in viewport logical pixels; never a geometry edit.
+    /// Brush footprint in viewport logical pixels, shared by painting and inflation.
     pub selection_brush: Option<OverlaySelectionBrush>,
+    pub brush_mode: super::BrushMode,
     /// Name of the object beneath the pointer in this presented viewport.
     pub hovered_object_label: Option<String>,
     pub manual_mesh_feedback: Option<super::ManualMeshFeedback>,
@@ -129,6 +130,7 @@ pub enum CanvasGestureKind {
     LassoSelect,
     BrushSelect,
     BrushResize,
+    BrushInflate,
     Move,
     Rotate,
     Scale,
@@ -303,7 +305,9 @@ impl ToolController {
         {
             gesture.selection_operation()
         } else if self.active == super::ToolId::BrushSelect {
-            Some(super::region::SelectionOperation::from_modifiers(self.shift, self.alt).into())
+            (self.brush_mode == super::BrushMode::Select).then(|| {
+                super::region::SelectionOperation::from_modifiers(self.shift, self.alt).into()
+            })
         } else if let Some(HitTarget::Component(component)) = &hovered_target {
             let rotation_center = component.id == 0
                 && scene
@@ -870,6 +874,7 @@ impl ToolController {
             out.unavailable_on_edit_only = false;
         }
         if self.active == super::ToolId::BrushSelect {
+            out.brush_mode = self.brush_mode;
             out.handles.clear();
             out.warp_frame_lines.clear();
             out.warp_frame_adjusting = false;
@@ -895,9 +900,19 @@ impl ToolController {
                     radius: self.brush_selection.diameter / 2.,
                     shape: self.brush_selection.shape,
                     angle: self.brush_selection.angle,
-                    subtract: self.gesture.as_ref().map_or(self.alt, |g| {
-                        g.press().operation == super::region::SelectionOperation::Remove
-                    }),
+                    subtract: self.gesture.as_ref().map_or_else(
+                        || match self.brush_mode {
+                            super::BrushMode::Inflate => self.shift,
+                            super::BrushMode::Select => self.alt,
+                            super::BrushMode::Deform => false,
+                        },
+                        |g| {
+                            if let super::gesture::Gesture::Inflate(g) = g {
+                                return g.shrinking;
+                            }
+                            g.press().operation == super::region::SelectionOperation::Remove
+                        },
+                    ),
                 });
         }
         if !self.component_weights.is_empty() {

@@ -364,6 +364,115 @@ fn weighted_brush_native_cmd_drag_moves_by_accumulated_weight_without_repainting
 }
 
 #[gpui_kit::test]
+fn brush_deform_mode_native_drag_and_cmd_miss_preserve_old_weights(cx: &mut TestAppContext) {
+    for cancel in [false, true] {
+        let harness = setup(cx);
+        present_canvas(&harness, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            window.click("tool_brush_select", cx);
+            harness.view.update(cx, |view, _| {
+                view.editor
+                    .execute(EditorCommand::SetBrushSelectionSettings(
+                        zipzi_editor_core::BrushSelectionSettings {
+                            diameter: 40.,
+                            weight: 0.25,
+                            hardness: 1.,
+                            ..Default::default()
+                        },
+                    ))
+                    .unwrap();
+            });
+            let vertices = harness.view.read(cx).editor.overlay().vertices;
+            let origin = window.find("canvas-body").bounds().origin;
+            let old = origin + point(px(vertices[2].position.x), px(vertices[2].position.y));
+            down(window, cx, old, Modifiers::default());
+            up(window, cx, old, Modifiers::default());
+            let zoom = harness.view.read(cx).editor.view().zoom;
+            let before = harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions();
+            let start =
+                origin + point(px(vertices[0].position.x + 10.), px(vertices[0].position.y));
+            let cmd = Modifiers {
+                platform: true,
+                ..Default::default()
+            };
+            down(window, cx, start, cmd);
+            assert!(!harness.view.read(cx).editor.gesture_active());
+            up(window, cx, start, cmd);
+            assert_eq!(
+                harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .document()
+                    .unwrap()
+                    .selected_vertex_positions(),
+                before
+            );
+            for (button, expected) in [
+                ("brush-mode-deform", zipzi_editor_core::BrushMode::Deform),
+                ("brush-mode-inflate", zipzi_editor_core::BrushMode::Inflate),
+                ("brush-mode-deform", zipzi_editor_core::BrushMode::Deform),
+                ("brush-mode-deform", zipzi_editor_core::BrushMode::Select),
+                ("brush-mode-deform", zipzi_editor_core::BrushMode::Deform),
+            ] {
+                window.click(button, cx);
+                assert_eq!(harness.view.read(cx).editor.brush_mode(), expected);
+            }
+            down(window, cx, start, Modifiers::default());
+            assert_eq!(
+                harness.view.read(cx).editor.overlay().active_gesture,
+                Some(zipzi_editor_core::CanvasGestureKind::Move)
+            );
+            assert_eq!(selected(&harness, cx), vec![vertices[0].id]);
+            let end = start + point(px(40.), px(0.));
+            window.dispatch_event(
+                MouseMoveEvent {
+                    position: end,
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Modifiers::default(),
+                }
+                .to_platform_input(),
+                cx,
+            );
+            let after = harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions();
+            assert!((after[0].1.x - before[0].1.x - 10. / zoom).abs() < 0.001);
+            if cancel {
+                window.press("escape", cx);
+            }
+            up(window, cx, end, Modifiers::default());
+            let view = harness.view.read(cx);
+            assert_eq!(
+                view.editor.document().unwrap().selected_vertex_positions(),
+                if cancel { before } else { after }
+            );
+            assert_eq!(selected(&harness, cx), vec![vertices[2].id]);
+            let weights = view.editor.overlay().selection_weights.unwrap();
+            assert_eq!(weights.points.len(), 1);
+            assert_eq!(weights.points[0].1, 0.25);
+            assert_eq!(
+                view.editor.document().unwrap().history_lengths(),
+                (usize::from(!cancel), 0)
+            );
+            assert!(!view.editor.gesture_active());
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
 fn brush_cmd_cursor_updates_without_pointer_motion_and_tracks_the_captured_operation(
     cx: &mut TestAppContext,
 ) {
@@ -520,14 +629,24 @@ fn brush_cmd_cursor_updates_without_pointer_motion_and_tracks_the_captured_opera
 }
 
 #[gpui_kit::test]
-fn weighted_brush_secondary_toolbar_remains_single_row_and_settings_fit_all_scales(
-    cx: &mut TestAppContext,
-) {
+fn brush_select_toolbar_fits_labels_and_maximum_values_at_all_scales(cx: &mut TestAppContext) {
     use crate::settings::{Settings, UiScale};
     let harness = setup(cx);
     present_canvas(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
-        window.click("tool_brush_select", cx)
+        window.click("tool_brush_select", cx);
+        harness.view.update(cx, |view, cx| {
+            view.editor
+                .execute(EditorCommand::SetBrushSelectionSettings(
+                    zipzi_editor_core::BrushSelectionSettings {
+                        weight: 1.,
+                        diameter: zipzi_editor_core::BrushSelectionSettings::MAX_DIAMETER,
+                        ..Default::default()
+                    },
+                ))
+                .unwrap();
+            cx.notify();
+        });
     })
     .unwrap();
     for scale in UiScale::ALL {
@@ -543,23 +662,42 @@ fn weighted_brush_secondary_toolbar_remains_single_row_and_settings_fit_all_scal
             window.render_frame(cx);
             let canvas = window.find("canvas-body").bounds();
             let bar = window.find("brush-selection-settings").bounds();
-            assert!(
-                (bar.size.height.as_f32() - 28. * scale.factor()).abs() < 1.,
-                "{scale:?}: {bar:?}"
-            );
-            assert!(
-                bar.size.width.as_f32() <= 320. * scale.factor(),
-                "{scale:?}: {bar:?}"
-            );
+            let primary = window.find("canvas-toolbar").bounds();
             assert!(bar.left() >= canvas.left() && bar.right() <= canvas.right());
+            assert!(
+                bar.left() >= primary.right(),
+                "{scale:?}: brush bar overlaps the main toolbar"
+            );
             let fields = [
+                "brush-mode-deform",
+                "brush-mode-inflate",
+                "brush-selection-weight-label",
                 "brush-selection-weight",
+                "brush-selection-size-label",
                 "brush-selection-size",
+                "brush-selection-cycle-shape",
                 "brush-selection-more-button",
             ]
             .map(|id| window.find(id).bounds());
-            assert!((fields[0].center().y - fields[1].center().y).abs().as_f32() < 0.5);
-            assert!(fields.windows(2).all(|p| p[0].right() <= p[1].left()));
+            for (index, field) in fields.iter().enumerate() {
+                assert!(
+                    field.left() >= bar.left() && field.right() <= bar.right(),
+                    "{scale:?}: {field:?} outside {bar:?}"
+                );
+                assert!(field.top() >= bar.top() && field.bottom() <= bar.bottom());
+                assert!(fields[index + 1..].iter().all(|other| {
+                    field.right() <= other.left()
+                        || other.right() <= field.left()
+                        || field.bottom() <= other.top()
+                        || other.bottom() <= field.top()
+                }));
+            }
+            for (label, input, min_width) in
+                [(fields[2], fields[3], 72.), (fields[4], fields[5], 80.)]
+            {
+                assert!((label.center().y - input.center().y).abs().as_f32() < 0.5);
+                assert!(input.size.width.as_f32() >= min_width * scale.factor());
+            }
             window.click("brush-selection-more-button", cx);
             window.render_frame(cx);
             let details = window.find("brush-selection-details").bounds();

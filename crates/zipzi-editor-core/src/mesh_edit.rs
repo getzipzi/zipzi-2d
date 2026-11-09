@@ -218,6 +218,37 @@ pub(crate) fn positions(
     selected: &[crate::ComponentRef],
     change: crate::control_edit::ControlChange,
 ) -> Result<HashMap<usize, Vec<zipzi_core::Vec2>>> {
+    positions_with(targets, |target, id, before| {
+        if !change.moves_all()
+            && !selected
+                .iter()
+                .any(|c| c.object == target.object && c.id == id)
+        {
+            return None;
+        }
+        let after = change.apply_to(before);
+        let weight = if change.moves_all() {
+            1.
+        } else {
+            *target.point_weights.get(&id).unwrap_or(&1.)
+        };
+        Some(ModelVector {
+            x: (after.x - before.x) * weight,
+            y: (after.y - before.y) * weight,
+        })
+    })
+}
+
+/// Resolve arbitrary evaluated point displacements through the same Glue and
+/// BlendShape inverse used by component transforms.
+pub(crate) fn positions_with(
+    targets: &[crate::control_edit::ControlEdit],
+    mut displacement: impl FnMut(
+        &crate::control_edit::ControlEdit,
+        u32,
+        ModelPoint,
+    ) -> Option<ModelVector>,
+) -> Result<HashMap<usize, Vec<zipzi_core::Vec2>>> {
     let mut requested = Vec::new();
     let mut destinations = Vec::new();
     for (target_index, target) in targets.iter().enumerate() {
@@ -225,31 +256,15 @@ pub(crate) fn positions(
             continue;
         };
         for (slot, &id) in target.ids.iter().enumerate() {
-            if !change.moves_all()
-                && !selected
-                    .iter()
-                    .any(|c| c.object == target.object && c.id == id)
-            {
-                continue;
-            }
             let before = if mesh.original_points {
                 target.to_model(mesh.local[slot])
             } else {
                 mesh.displayed[slot]
             };
-            let after = change.apply_to(before);
-            let weight = if change.moves_all() {
-                1.
-            } else {
-                *target.point_weights.get(&id).unwrap_or(&1.)
+            let Some(delta) = displacement(target, id, before) else {
+                continue;
             };
-            requested.push((
-                (target.object.id.clone(), id),
-                crate::ModelVector {
-                    x: (after.x - before.x) * weight,
-                    y: (after.y - before.y) * weight,
-                },
-            ));
+            requested.push(((target.object.id.clone(), id), delta));
             destinations.push((target_index, slot));
         }
     }

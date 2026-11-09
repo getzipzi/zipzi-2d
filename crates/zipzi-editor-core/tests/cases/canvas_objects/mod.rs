@@ -1,5 +1,6 @@
 //! Canvas object interactions, selection, deformation, and picking suites.
 mod brush_select;
+mod inflation;
 mod common;
 mod deformer_original;
 mod deformers;

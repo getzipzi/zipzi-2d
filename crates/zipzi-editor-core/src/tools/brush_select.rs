@@ -1,4 +1,4 @@
-//! Paint a component selection without acquiring a model edit.
+//! Paint a weighted selection, or grab a temporary brush selection for direct deformation.
 use super::{gesture::Press, hints::*, region::brush_points};
 use crate::{CommandId, ComponentRef, Document, ViewportPoint};
 use std::collections::{HashMap, HashSet};
@@ -63,9 +63,22 @@ impl BrushSelectionSettings {
         let [rx, ry] = self.half_extents();
         rx.min(ry) as f64 / 8.
     }
+    pub(super) fn normalized_distance(self, p: ViewportPoint, center: ViewportPoint) -> f32 {
+        let [rx, ry] = self.half_extents();
+        let (x, y) = (p.x - center.x, p.y - center.y);
+        if self.shape == BrushShape::Circle {
+            return x.hypot(y) / rx;
+        }
+        let (sin, cos) = self.angle.to_radians().sin_cos();
+        ((x * cos + y * sin) / rx)
+            .abs()
+            .max(((-x * sin + y * cos) / ry).abs())
+    }
     /// Minimum normalized distance over the continuous stroke, including a stationary dab.
     pub fn influence(self, p: ViewportPoint, start: ViewportPoint, end: ViewportPoint) -> f32 {
-        let distance = if self.shape == BrushShape::Circle {
+        let distance = if start == end {
+            self.normalized_distance(p, start)
+        } else if self.shape == BrushShape::Circle {
             crate::picking::segment_distance2(p, start, end).sqrt() / (self.diameter / 2.)
         } else {
             let [rx, ry] = self.half_extents();
@@ -324,9 +337,56 @@ pub(super) const RESIZE_HINTS: &[InteractionHint] = &[
     InteractionHint::Drag(HintAction::BrushSize),
     InteractionHint::Command(CommandId::CancelGesture),
 ];
+pub(super) const DEFORM_HINTS: &[InteractionHint] = &[
+    InteractionHint::Drag(HintAction::Transform),
+    InteractionHint::Primary(HintAction::Transform),
+    InteractionHint::Command(CommandId::SelectTool),
+];
 
 impl super::ToolController {
-    /// Cmd dragging can only acquire a painted point, never a frame or a child-preservation edit.
+    /// Capture the falloff once at the pointer's actual press position. The control
+    /// gesture uses the same model transaction as dragging a painted selection.
+    pub(super) fn begin_brush_deform(
+        &mut self,
+        document: &Document,
+        mut press: Press,
+    ) -> Option<super::controls::ControlGesture> {
+        // Alt/Shift constrain the move; they do not filter or erase its targets.
+        press.operation = super::region::SelectionOperation::Replace;
+        let points: Vec<_> = brush_points(document, &press)
+            .into_iter()
+            .filter_map(|(component, position)| {
+                let weight = self
+                    .brush_selection
+                    .influence(position, press.point, press.point);
+                (weight > 0.).then_some((component, position, weight))
+            })
+            .collect();
+        let target = crate::HitTarget::Component(
+            points
+                .iter()
+                .min_by(|a, b| {
+                    crate::picking::distance2(a.1, press.point)
+                        .total_cmp(&crate::picking::distance2(b.1, press.point))
+                })?
+                .0
+                .clone(),
+        );
+        let original_components = std::mem::take(&mut press.components);
+        let original_weights = std::mem::take(&mut press.weights);
+        for (component, _, weight) in points {
+            press.components.push(component.clone());
+            press.weights.insert(component, weight);
+        }
+        self.components.clone_from(&press.components);
+        self.component_weights.clone_from(&press.weights);
+        Some(
+            super::controls::ControlGesture::new(press, target)
+                .with_temporary_selection(original_components, original_weights),
+        )
+    }
+
+    /// Prefer an existing painted point, never a frame or a child-preservation edit.
     pub(super) fn brush_drag_hit(
         &self,
         document: &Document,

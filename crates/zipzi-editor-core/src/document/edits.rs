@@ -143,15 +143,48 @@ impl Document {
         selected: &[crate::ComponentRef],
         change: crate::control_edit::ControlChange,
     ) -> Result<()> {
+        let mesh_positions = crate::mesh_edit::positions(targets, selected, change)
+            .map_err(|e| crate::mesh_edit::PreviewConstraint(e.to_string()))?;
+        self.preview_controls_with(targets, mesh_positions, |target, sdk| {
+            let ids = selected
+                .iter()
+                .filter(|c| c.object == target.object)
+                .map(|c| c.id)
+                .collect::<Vec<_>>();
+            target.preview(sdk, &ids, change)
+        })
+    }
+
+    pub(crate) fn preview_brush_edit(
+        &mut self,
+        targets: &[crate::control_edit::ControlEdit],
+        displacement: &std::collections::HashMap<crate::ComponentRef, crate::ModelVector>,
+    ) -> Result<()> {
+        let mesh_positions = crate::mesh_edit::positions_with(targets, |target, id, _| {
+            displacement
+                .get(&crate::ComponentRef {
+                    object: target.object.clone(),
+                    id,
+                })
+                .copied()
+        })
+        .map_err(|e| crate::mesh_edit::PreviewConstraint(e.to_string()))?;
+        self.preview_controls_with(targets, mesh_positions, |target, sdk| {
+            target.preview_lattice_displacements(sdk, displacement)
+        })
+    }
+
+    fn preview_controls_with(
+        &mut self,
+        targets: &[crate::control_edit::ControlEdit],
+        mut mesh_positions: std::collections::HashMap<usize, Vec<zipzi_core::Vec2>>,
+        preview: impl Fn(&crate::control_edit::ControlEdit, &mut zipzi_sdk::Commands<'_>) -> Result<()>,
+    ) -> Result<()> {
         let pending = self
             .pending
             .as_ref()
             .ok_or_else(|| anyhow!("No canvas edit"))?;
         ensure!(pending.kind == Gesture::Controls, "Another edit is active");
-        // Resolve all requested preview displacements before touching the candidate.
-        // Glue may couple selected vertices across multiple mesh write targets.
-        let mut mesh_positions = crate::mesh_edit::positions(targets, selected, change)
-            .map_err(|e| crate::mesh_edit::PreviewConstraint(e.to_string()))?;
         let previous_revision = self.projection_revision;
         self.invalidate_projection(targets.iter().any(|target| target.kept_children.is_some()));
         let pending = self.pending.as_mut().unwrap();
@@ -163,11 +196,6 @@ impl Document {
                     .apply(|sdk| target.write_mesh(sdk, positions))?;
                 continue;
             }
-            let ids = selected
-                .iter()
-                .filter(|c| c.object == target.object)
-                .map(|c| c.id)
-                .collect::<Vec<_>>();
             let shape = || {
                 pending
                     .edit
@@ -177,9 +205,7 @@ impl Document {
                     .map(|w| (w.rows, w.columns))
             };
             let before = shape();
-            pending
-                .edit
-                .apply(|sdk| target.preview(sdk, &ids, change))?;
+            pending.edit.apply(|sdk| preview(target, sdk))?;
             let after = pending
                 .edit
                 .candidate_document()

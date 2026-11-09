@@ -44,6 +44,7 @@ pub enum EditorCommand {
     SetTool(crate::ToolId),
     SetBrushSelectionSize(f32),
     SetBrushSelectionSettings(crate::BrushSelectionSettings),
+    SetBrushMode(crate::BrushMode),
     GenerateMeshGrid {
         object: crate::ObjectRef,
         options: crate::MeshGridOptions,

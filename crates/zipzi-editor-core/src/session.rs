@@ -257,13 +257,9 @@ impl DocumentSession {
         let had_pending = self.document.has_pending_edit();
         let had_property = self.document.has_inspector_edit();
         let evaluation_before = self.document.evaluation_revision();
-        let history_state = matches!(&command, EditorCommand::Undo | EditorCommand::Redo)
-            .then(|| self.document.model().editor_state().clone());
+        let history_model = matches!(&command, EditorCommand::Undo | EditorCommand::Redo)
+            .then(|| self.document.model());
         let is_lock = matches!(&command, EditorCommand::SetObjectsLocked { .. });
-        let lock_or_history = matches!(
-            &command,
-            EditorCommand::SetObjectsLocked { .. } | EditorCommand::Undo | EditorCommand::Redo
-        );
         let preview_before = self.document.preview_revision();
         let parameter_preview = matches!(
             &command,
@@ -334,6 +330,15 @@ impl DocumentSession {
             }
             EditorCommand::SetBrushSelectionSettings(settings) => {
                 self.modeling.tools.brush_selection = settings.validate()?;
+                return Ok(());
+            }
+            EditorCommand::SetBrushMode(mode) => {
+                if self.modeling.tools.brush_mode != mode {
+                    if self.modeling.tools.cancel(&mut self.document) {
+                        self.invalidate_scene();
+                    }
+                    self.modeling.tools.brush_mode = mode;
+                }
                 return Ok(());
             }
             EditorCommand::SetBrushSelectionSize(diameter) => {
@@ -528,21 +533,25 @@ impl DocumentSession {
         if selection && self.modeling.tools.original_points {
             self.invalidate_scene();
         }
-        if selection || lock_or_history {
+        if selection || is_lock {
             self.modeling.tools.clear_selection();
         }
-        self.modeling.tools.reconcile(&mut self.document);
         // Editor lock edits are standalone transactions. Other metadata history
         // (for example names) must refresh labels captured in canvas topology.
-        let lock_history = history_state.is_some_and(|before| {
-            let model_read_guard_56 = self.document.model();
-            let after = model_read_guard_56.editor_state();
-            before != *after
+        let lock_history = history_model.is_some_and(|before| {
+            let after = self.document.model();
+            self.modeling
+                .tools
+                .retain_history_selection(&self.document, &before, &after);
+            let before = before.editor_state();
+            let after = after.editor_state();
+            before != after
                 && before.hidden_objects().eq(after.hidden_objects())
                 && before.rotation_bone_lengths == after.rotation_bone_lengths
                 && before.rotation_bone_reference_scales == after.rotation_bone_reference_scales
                 && before.rotation_bone_angle_offsets == after.rotation_bone_angle_offsets
         });
+        self.modeling.tools.reconcile(&mut self.document);
         if invalidate
             && (!(is_lock || lock_history)
                 || had_pending
