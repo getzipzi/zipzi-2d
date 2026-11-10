@@ -621,6 +621,13 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 } else {
                     None
                 };
+                let undo_count = if drag.is_some() {
+                    Some(view.update_in(cx, |view, _, _| {
+                        view.editor.document().unwrap().history_lengths().0
+                    })?)
+                } else {
+                    None
+                };
                 let slider = if mode == 4 {
                     Some(
                         view.update_in(cx, |view, _, cx| {
@@ -732,11 +739,6 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         .as_nanos() as u64;
                     // Slider subscriptions run when App::update flushes effects, after
                     // dispatch_event returns. Keep attribution alive through that flush.
-                    let evaluations = if drag.is_some() {
-                        view.update_in(cx, |view, _, _| view.editor.evaluation_count())?
-                    } else {
-                        0
-                    };
                     let input = frame_trace::InputScope::begin(100 + mode);
                     #[cfg(feature = "bench-instrumentation")]
                     let detail = std::env::var_os("ZIPZI_BENCH_INPUT_DETAIL")
@@ -878,18 +880,15 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         );
                     }
                     if drag.is_some() {
-                        view.update_in(cx, |view, _, cx| -> anyhow::Result<()> {
+                        view.update_in(cx, |view, _, _| -> anyhow::Result<()> {
                             ensure!(
                                 view.edit_error.is_none(),
                                 "canvas edit failed: {:?}",
                                 view.edit_error
                             );
-                            let queued = view.dock.as_ref().unwrap().active_viewport().read(cx).mesh_input_pending();
                             ensure!(
-                                view.editor.gesture_active()
-                                    && view.editor.document().is_some_and(|d| d.has_pending_edit())
-                                    && (queued || view.editor.evaluation_count() > evaluations),
-                                "mode {mode} sample {sample}: drag produced no model evaluation: {:?}", view.editor.canvas_notice()
+                                view.editor.gesture_active(),
+                                "mode {mode} sample {sample}: canvas drag was interrupted"
                             );
                             Ok(())
                         })??;
@@ -951,9 +950,14 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         parameter_overlay::finish_workload(view, cx)
                     })??;
                 }
-                if drag.is_some() {
+                if let Some(undo_count) = undo_count {
                     view.update_in(cx, |view, _, cx| -> anyhow::Result<()> {
                         ensure!(view.edit_error.is_none(), "could not commit canvas gesture");
+                        ensure!(
+                            !view.editor.gesture_active()
+                                && view.editor.document().unwrap().history_lengths().0 == undo_count + 1,
+                            "mode {mode}: canvas drag did not commit exactly one edit"
+                        );
                         view.editor.execute(EditorCommand::Undo)?;
                         view.redraw(cx);
                         Ok(())

@@ -1,8 +1,13 @@
 use super::*;
 
 impl ParametersPanel {
-    pub(crate) fn benchmark_reveal_track(&mut self, id: &str, cx: &mut Context<Self>) {
-        self.locate_parameter(id, cx);
+    pub(crate) fn benchmark_reveal_track(
+        &mut self,
+        id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.locate_parameter(id, window, cx);
     }
 
     pub(crate) fn locate_moved_object(

@@ -211,9 +211,9 @@ correlated Metal presentation, excluding OS input delivery and input-to-photon.
 For ordinary Mesh control-point dragging, use `ZIPZI_BENCH_DEFORMATIONS=1`.
 Workloads 5 and 6 drag one and eight selected vertices respectively; workloads
 7 and 8 exercise Warp and Rotation controls. This is separate from manual
-topology editing. The harness checks the edit stays active and each move either
-requests a scene or leaves a pending scene demand. It then checks catch-up,
-commit and Undo. Compare
+topology editing. The harness checks the gesture stays active during movement,
+the preview catches up after release and the gesture commits one edit that can
+be undone. Compare
 identical fixture IDs, component IDs and raster extents between binaries.
 
 For rapid, wide Mesh dragging, also set `ZIPZI_BENCH_MESH_ONLY=1` and

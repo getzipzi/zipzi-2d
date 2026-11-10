@@ -118,7 +118,7 @@ impl PreviewDemand {
 }
 
 impl ViewportSurface {
-    #[cfg(any(test, feature = "test-support"))]
+    #[cfg(test)]
     pub(crate) fn mesh_input_pending(&self) -> bool {
         self.mesh_input.preview.has_pending()
     }
