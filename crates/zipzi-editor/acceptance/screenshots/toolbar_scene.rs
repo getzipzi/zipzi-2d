@@ -1,4 +1,4 @@
-//! Focused visual review of both attached toolbars, including fractional UI scale.
+//! Focused visual review of the main toolbar with a selected Warp at each UI scale.
 use super::super::harness::Harness;
 use super::common::save;
 use crate::{
@@ -77,14 +77,8 @@ pub(crate) fn run(directory: &std::path::Path) -> anyhow::Result<()> {
                     window.render_frame(cx);
                     let viewport = window.find("canvas-body").bounds();
                     let main = window.find("canvas-toolbar").bounds();
-                    let secondary = window.find("deformer-actions").bounds();
                     assert!((main.left() - viewport.left()).abs().as_f32() < 0.5);
-                    assert!((secondary.top() - viewport.top()).abs().as_f32() < 0.5);
-                    assert!((secondary.center().x - viewport.center().x).abs().as_f32() < 0.5);
-                    assert!(
-                        window.find("tool_select").bounds().size.height
-                            > window.find("deformer-ancestors").bounds().size.height
-                    );
+                    assert!(window.try_find("deformer-actions").is_none());
                     (viewport, window.scale_factor())
                 })?;
             let crop = image::imageops::crop_imm(

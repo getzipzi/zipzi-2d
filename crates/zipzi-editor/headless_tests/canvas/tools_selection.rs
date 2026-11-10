@@ -1007,9 +1007,9 @@ fn escape_tool_switch_and_focus_loss_cancel_a_live_vertex_drag(cx: &mut TestAppC
 }
 
 #[gpui_kit::test]
-fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &mut TestAppContext) {
+fn selecting_deformer_shows_handles_without_secondary_toolbar(cx: &mut TestAppContext) {
     use zipzi_core::{Canvas, Transform, TransformData, Vec2, WarpTransform};
-    use zipzi_editor_core::{Document, EditorCommand, ObjectKind, ObjectRef, ToolId};
+    use zipzi_editor_core::{Document, ModelPoint, ToolId};
     let assets = tempfile::tempdir().unwrap();
     let id = uuid::Uuid::new_v4().to_string();
     let mut session = crate::test_fixture::fixture_session(
@@ -1044,17 +1044,23 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
         crate::test_fixture::save_fixture(&mut session, &assets.path().join("model")).unwrap();
     let harness =
         super::super::setup_with_document(cx, Document::open(&saved.path).unwrap(), assets);
-    harness.view.update(cx, |view, cx| {
-        view.editor
-            .execute(EditorCommand::SelectObject(ObjectRef::new(
-                ObjectKind::Deformer,
-                &id,
-            )))
-            .unwrap();
-        cx.notify();
-    });
     present_canvas(&harness, cx);
     cx.update_window(harness.window, |_, window, cx| {
+        let outline = harness
+            .view
+            .read(cx)
+            .modeling_frame()
+            .as_ref()
+            .unwrap()
+            .canvas
+            .transform
+            .to_viewport(ModelPoint { x: 128., y: 32. });
+        window.click_at("canvas-body", point(px(outline.x), px(outline.y)), cx);
+    })
+    .unwrap();
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        assert!(window.try_find("deformer-actions").is_none());
         assert!(window.try_find("tool_deformer").is_none());
         assert!(window.try_find("deformer-adjust").is_none());
         assert!(
@@ -1063,6 +1069,10 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                 .is_none()
         );
         harness.view.read_with(cx, |view, _| {
+            assert_eq!(
+                view.editor.document().unwrap().selected_id(),
+                Some(id.as_str())
+            );
             assert_eq!(view.editor.active_tool(), ToolId::Select);
             assert_eq!(view.editor.overlay().vertices.len(), 8);
             assert_eq!(
@@ -1084,25 +1094,9 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                 9
             );
         });
-        let bar = window.find("deformer-actions").bounds();
-        let viewport = window.find("canvas-body").bounds();
-        assert!((bar.center().x - viewport.center().x).abs() <= px(0.5));
-        let scale = crate::ui::compact::scale(cx);
-        assert!((bar.top() - viewport.top()).abs() <= px(0.5));
-        for id in ["deformer-ancestors", "deformer-grid", "deformer-help"] {
-            let button = window.find(id).bounds();
-            assert!((button.size.height.as_f32() - 24. * scale).abs() <= 0.5);
-            assert!(button.left() >= viewport.left() && button.right() <= viewport.right());
-        }
         assert!(window.try_find("deformer-keep-children").is_none());
         assert!(window.try_find("deformer-warp-bezier").is_none());
         assert!(window.try_find("deformer-warp-fine").is_none());
-        window.click("deformer-grid", cx);
-        assert!(
-            harness
-                .view
-                .read_with(cx, |view, _| view.editor.deformer_grid())
-        );
         let start = harness.view.read_with(cx, |view, _| {
             view.editor
                 .overlay()
@@ -1151,15 +1145,6 @@ fn selecting_deformer_shows_handles_without_edit_mode_or_transform_dialog(cx: &m
                 original
             );
         });
-        window.click("tool_select", cx);
-        harness.view.update(cx, |view, cx| {
-            view.editor
-                .execute(EditorCommand::SelectObjects(Vec::new()))
-                .unwrap();
-            cx.notify();
-        });
-        window.render_frame(cx);
-        assert!(window.try_find("deformer-actions").is_none());
     })
     .unwrap();
 }

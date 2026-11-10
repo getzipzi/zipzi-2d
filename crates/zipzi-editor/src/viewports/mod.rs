@@ -62,7 +62,6 @@ mod brush_bar;
 mod brush_tick;
 mod context_menu;
 mod cursor_preview;
-mod deformer_bar;
 mod input;
 mod isolation;
 mod painting;
@@ -75,6 +74,7 @@ mod test_scene;
 #[cfg(any(test, feature = "test-support"))]
 pub(crate) use test_scene::ViewportScene;
 mod modeling;
+mod modeling_toolbar;
 mod navigation;
 pub(crate) mod toolbar;
 pub(crate) mod zoom_bar;

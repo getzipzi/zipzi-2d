@@ -1,11 +1,11 @@
 use super::toolbar::SECONDARY;
 use crate::{t, ui::compact, viewports::ViewportSurface};
 use gpui_kit::assets::IconName;
-use gpui_kit::component::{ActiveTheme, Disableable, Icon, Sizable, WindowExt, button::Button};
+use gpui_kit::component::{ActiveTheme, Disableable, Icon, Sizable, button::Button};
 use gpui_kit::{prelude::*, *};
-use zipzi_editor_core::{CommandId, CommandSource, EditorCommand, ObjectKind};
+use zipzi_editor_core::{CommandId, CommandSource, ToolId};
 
-pub fn render_deformer_bar(
+pub(super) fn render_secondary(
     canvas: &ViewportSurface,
     modal: bool,
     cx: &mut Context<ViewportSurface>,
@@ -22,95 +22,20 @@ pub fn render_deformer_bar(
         return div().into_any_element();
     }
     if state.editor.manual_for_viewport(canvas.viewport) {
-        return render_mesh_edit_bar(canvas, modal, cx);
+        return render_mesh_edit_bar(canvas, &owner, modal, cx);
     }
-    if state.editor.active_tool() == zipzi_editor_core::ToolId::BrushSelect {
+    if state.editor.active_tool() == ToolId::BrushSelect {
         return canvas.brush_bar.clone().into_any_element();
     }
-    if !state.editor.document().is_some_and(|d| {
-        d.context()
-            .selections
-            .iter()
-            .any(|r| r.kind == ObjectKind::Deformer)
-    }) {
-        return div().into_any_element();
-    }
-    let Some(binding) = canvas.binding(&state.editor) else {
-        return div().into_any_element();
-    };
-    let ancestors = state.editor.command_for_viewport(
-        CommandId::ToggleAncestorDeformers,
-        binding,
-        CommandSource::Toolbar,
-    );
-    let visibility = state.editor.deformer_visibility();
-    let grid = state.editor.deformer_grid();
-    let mut buttons = Vec::new();
-    buttons.push(
-        compact::toggle(Button::new("deformer-ancestors"), visibility.ancestors)
-            .icon(IconName::Layers)
-            .accessibility_label(t!("editor.show_ancestor_deformers").into_owned())
-            .tooltip(t!("editor.show_ancestor_deformers"))
-            .disabled(modal)
-            .on_click(cx.listener(move |this, _, window, cx| {
-                if let Some(owner) = this.owner.upgrade() {
-                    owner.update(cx, |owner, cx| owner.run_invocation(ancestors, window, cx));
-                }
-            })),
-    );
-    buttons.push(
-        compact::toggle(Button::new("deformer-grid"), grid)
-            .icon(IconName::Grid2x2)
-            .accessibility_label(t!("editor.deformer_grid").into_owned())
-            .tooltip(t!("editor.deformer_grid"))
-            .disabled(modal)
-            .on_click(cx.listener(move |this, _, window, cx| {
-                if window.has_active_dialog(cx) {
-                    return;
-                }
-                if let Some(owner) = this.owner.upgrade() {
-                    owner.update(cx, |owner, cx| {
-                        if owner.modal || !owner.editor.viewport_binding_valid(binding) {
-                            return;
-                        }
-                        let result = owner.editor.execute(EditorCommand::ToggleDeformerGrid);
-                        owner.complete_edit(result, cx);
-                    });
-                }
-            })),
-    );
-    buttons.push(
-        compact::button(Button::new("deformer-help"))
-            .icon(IconName::Info)
-            .accessibility_label(crate::i18n::shortcut_hint("editor.deformer_gesture_hint"))
-            .tooltip(crate::i18n::shortcut_hint("editor.deformer_gesture_hint")),
-    );
-    let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("deformer-tools")
-        .label(t!("editor.deformer_grid"))
-        .min_w_0()
-        .max_w_full()
-        .flex_wrap()
-        .justify_center()
-        .gap(compact::rem(1.));
-    for button in buttons {
-        tools = tools.content(
-            super::toolbar::attached_button(button, SECONDARY, cx)
-                .xsmall()
-                .flex_shrink_0()
-                .h(compact::rem(SECONDARY.button_size))
-                .min_w(compact::rem(SECONDARY.button_size))
-                .px(compact::rem(3.)),
-        );
-    }
-    super::toolbar::secondary_bar("deformer-actions", tools, cx)
+    div().into_any_element()
 }
 
 fn render_mesh_edit_bar(
     canvas: &ViewportSurface,
+    owner: &Entity<crate::EditorView>,
     modal: bool,
     cx: &mut Context<ViewportSurface>,
 ) -> AnyElement {
-    let owner = canvas.owner.upgrade().unwrap();
     let state = owner.read(cx);
     let mut tools = gpui_kit::component::toolbar::ToolbarGroup::new("mesh-edit-tools")
         .label(t!("editor.tool_manual_mesh"))

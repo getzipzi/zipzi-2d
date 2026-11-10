@@ -36,66 +36,67 @@ fn long_editor_tooltips_wrap_inside_narrow_windows(cx: &mut TestAppContext) {
         ("zh-CN", include_str!("../assets/locales/zh-CN.toml")),
     ] {
         let strings: toml::Value = toml::from_str(source).unwrap();
-        for key in ["manual_mesh_edit_hint", "deformer_gesture_hint"] {
-            for scale in [1., 1.5] {
-                let mut wide_height = None;
-                for width in [420., 240.] {
-                    let text = strings["editor"][key].as_str().unwrap().to_owned();
-                    let (handle, _) = cx.update(|cx| {
-                        gpui_kit::component::Theme::update(cx, |theme| {
-                            theme.font_size = px(16. * scale);
-                        });
-                        gpui_kit::open_window(
-                            WindowOptions {
-                                window_bounds: Some(WindowBounds::Windowed(Bounds::new(
-                                    point(px(0.), px(0.)),
-                                    size(px(width), px(1400.)),
-                                ))),
-                                ..Default::default()
-                            },
-                            cx,
-                            |window, cx| {
-                                window.set_rem_size(px(16. * scale));
-                                cx.new(|_| LongTooltipHarness(text.into()))
-                            },
-                        )
-                        .unwrap()
+        let text = strings["editor"]["manual_mesh_edit_hint"].as_str().unwrap();
+        for scale in [1., 1.5] {
+            let mut wide_height = None;
+            for width in [420., 240.] {
+                let (handle, _) = cx.update(|cx| {
+                    gpui_kit::component::Theme::update(cx, |theme| {
+                        theme.font_size = px(16. * scale);
                     });
-                    cx.update_window(handle, |_, window, cx| {
-                        window.activate_window();
-                        window.render_frame(cx);
-                    })
+                    gpui_kit::open_window(
+                        WindowOptions {
+                            window_bounds: Some(WindowBounds::Windowed(Bounds::new(
+                                point(px(0.), px(0.)),
+                                size(px(width), px(1400.)),
+                            ))),
+                            ..Default::default()
+                        },
+                        cx,
+                        |window, cx| {
+                            window.set_rem_size(px(16. * scale));
+                            cx.new(|_| LongTooltipHarness(text.to_owned().into()))
+                        },
+                    )
+                    .unwrap()
+                });
+                cx.update_window(handle, |_, window, cx| {
+                    window.activate_window();
+                    window.render_frame(cx);
+                })
+                .unwrap();
+                cx.run_until_parked();
+                cx.update_window(handle, |_, window, cx| window.hover("long-tooltip", cx))
                     .unwrap();
-                    cx.run_until_parked();
-                    cx.update_window(handle, |_, window, cx| window.hover("long-tooltip", cx))
-                        .unwrap();
-                    advance(cx, 250);
-                    cx.update_window(handle, |_, window, cx| {
+                advance(cx, 250);
+                cx.update_window(handle, |_, window, cx| {
                     window.render_frame(cx);
                     let bounds = window.find("tooltip").bounds();
-                    if key == "manual_mesh_edit_hint" {
-                        assert!(bounds.size.height > px(70. * scale),
-                            "{locale} {key} at {scale}: {bounds:?}");
-                    }
+                    assert!(
+                        bounds.size.height > px(70. * scale),
+                        "{locale} at {scale}: {bounds:?}"
+                    );
                     if let Some(height) = wide_height {
-                        assert!(if locale == "en" { bounds.size.height > height } else { bounds.size.height >= height },
-                            "{locale} {key} must preserve all lines in a narrower window at {scale}: {bounds:?}, wide height {height:?}");
+                        assert!(
+                            bounds.size.height > height
+                                || (locale != "en" && bounds.size.height == height),
+                            "{locale} must preserve all lines at {scale}: {bounds:?}, wide height {height:?}"
+                        );
                     } else {
                         wide_height = Some(bounds.size.height);
                     }
                     assert!(
                         bounds.origin.x >= px(0.) && bounds.right() <= window.viewport_size().width,
-                        "{key}: {bounds:?}"
+                        "{locale} at {scale}: {bounds:?}"
                     );
                     assert!(
                         bounds.origin.y >= px(0.)
                             && bounds.bottom() <= window.viewport_size().height,
-                        "{key}: {bounds:?}"
+                        "{locale} at {scale}: {bounds:?}"
                     );
                     window.remove_window();
                 })
                 .unwrap();
-                }
             }
         }
     }

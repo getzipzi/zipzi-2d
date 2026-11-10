@@ -68,7 +68,7 @@ impl ModelingViewport {
             overlay,
             error: owner.viewport_error(viewport).cloned(),
             hand_tool: owner.editor.active_tool() == ToolId::Hand,
-            controls: Some(deformer_bar::render_deformer_bar),
+            controls: Some(modeling_toolbar::render_secondary),
         }
     }
 }

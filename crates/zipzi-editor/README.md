@@ -346,8 +346,8 @@ switch. Thin gray lattice lines and small gray points sit below muted green
 Bezier curves, larger green-bordered anchors and solid green tangent handles.
 Coincident points pick the Bezier control first. Region selection can include
 both types; mixed transforms move explicitly selected grid points once while
-applying controller influence to the remaining grid. The toolbar provides ancestor
-visibility, the dense reference grid and gesture help. Numeric transform dialogs and frame-configuration
+applying controller influence to the remaining grid. The canvas context menu
+controls ancestor Warp grid visibility. Numeric transform dialogs and frame-configuration
 menus have been removed. Frames follow their current targets automatically.
 
 Fine-point edits retain the controller. By default, later Bezier edits add the
