@@ -7,10 +7,25 @@ pub(super) struct Drag {
     pub selected: Vec<(u32, Point<Pixels>)>,
     pub rotation_center: Option<Point<Pixels>>,
     manual_destination: Option<Point<Pixels>>,
+    bounds: Bounds<Pixels>,
 }
 
 impl Drag {
-    pub fn position(&self, sample: usize) -> Point<Pixels> {
+    pub fn position(&self, sample: usize, elapsed: Duration) -> Point<Pixels> {
+        if CONFIG.get().unwrap().drag_wide {
+            // Wall-clock motion keeps the requested speed independent of UI stalls.
+            // Blend into a large in-canvas figure eight without an initial teleport.
+            let t = elapsed.as_secs_f32();
+            let phase = t * std::f32::consts::TAU * 2.;
+            let radius_x = (self.bounds.size.width.as_f32() * 0.5 - 48.).clamp(0., 300.);
+            let radius_y = (self.bounds.size.height.as_f32() * 0.5 - 88.).clamp(0., 220.);
+            let target = self.bounds.center()
+                + point(
+                    px(phase.sin() * radius_x),
+                    px((phase * 0.5).sin() * radius_y - 20.),
+                );
+            return self.start + (target - self.start) * (t / 0.15).min(1.);
+        }
         let phase = sample as f32 * 0.13;
         if let Some(destination) = self.manual_destination {
             return self.start + (destination - self.start) * (0.3 + phase.sin() * 0.1);
@@ -263,10 +278,14 @@ pub(super) fn prepare(
             selected,
             rotation_center,
             manual_destination,
+            bounds,
         };
-        if (0..config.samples + config.warmup)
-            .any(|sample| !bounds.contains(&drag.position(sample)))
-        {
+        if (0..config.samples + config.warmup).any(|sample| {
+            !bounds.contains(&drag.position(
+                sample,
+                Duration::from_secs_f64(sample as f64 / config.hz as f64),
+            ))
+        }) {
             continue;
         }
         eprintln!(

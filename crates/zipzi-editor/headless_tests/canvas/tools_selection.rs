@@ -7,6 +7,174 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+#[ignore = "run with ZIPZI_MESH_MOVE_COALESCE=2"]
+fn leading_mesh_drag_runs_first_move_and_flushes_latest_only(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    assert_eq!(std::env::var("ZIPZI_MESH_MOVE_COALESCE").unwrap(), "2");
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let start = harness.view.read(cx).editor.overlay().vertices[1].position;
+        let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        let before = harness.view.read(cx).editor.evaluation_count();
+        let pointer_move = |dx, dy| {
+            MouseMoveEvent {
+                position: from + point(px(dx), px(dy)),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input()
+        };
+        window.dispatch_event(pointer_move(-1., 0.), cx);
+        assert_eq!(harness.view.read(cx).editor.evaluation_count(), before);
+        for index in 1..=3 {
+            window.dispatch_event(pointer_move(-12. * index as f32, 6.), cx);
+            assert_eq!(
+                harness.view.read(cx).editor.evaluation_count(),
+                before + 1,
+                "first effective move must run immediately; later moves must wait"
+            );
+        }
+        window.simulate_next_frame(cx);
+        assert_eq!(
+            harness.view.read(cx).editor.evaluation_count(),
+            before + 2,
+            "one trailing evaluation for both queued moves"
+        );
+        let shown = harness
+            .view
+            .read(cx)
+            .editor
+            .document()
+            .unwrap()
+            .selected_vertex_positions();
+        window.dispatch_event(pointer_move(-24., 6.), cx);
+        window.dispatch_event(pointer_move(-12., 6.), cx);
+        assert_eq!(harness.view.read(cx).editor.evaluation_count(), before + 3);
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: from + point(px(-36.), px(6.)),
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions(),
+            shown
+        );
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (1, 0)
+        );
+        window.simulate_next_frame(cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions(),
+            shown,
+            "scheduled callback must not replay input after release"
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn mesh_drag_release_evaluates_final_position_without_intermediate_moves(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{CanvasInput, EditorCommand, ViewportPoint};
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    harness.view.update(cx, |view, _| {
+        let binding = view.editor.primary_viewport_binding().unwrap();
+        let start = view.editor.overlay().vertices[1].position;
+        let token = view
+            .editor
+            .begin_canvas_gesture(binding, start, false, false, false)
+            .unwrap()
+            .capture
+            .unwrap();
+        assert!(view.editor.mesh_vertex_drag_for(binding));
+        let original = view.editor.document().unwrap().selected_vertex_positions();
+        assert!(!original.is_empty());
+        let history = view.editor.document().unwrap().history_lengths();
+        let end = ViewportPoint {
+            x: start.x - 24.,
+            y: start.y + 12.,
+        };
+        view.editor
+            .update_canvas_gesture(
+                token,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )
+            .unwrap();
+        let expected = view.editor.document().unwrap().selected_vertex_positions();
+        assert_ne!(original, expected);
+        view.editor.cancel_viewport_interaction(token);
+        assert_eq!(
+            view.editor.document().unwrap().selected_vertex_positions(),
+            original
+        );
+        let preview = view.editor.preview().unwrap();
+        assert!(view.editor.present_frame(preview.canvas.unwrap()));
+        let token = view
+            .editor
+            .begin_canvas_gesture(binding, start, false, false, false)
+            .unwrap()
+            .capture
+            .unwrap();
+        view.editor
+            .update_canvas_gesture(token, CanvasInput::Up { point: end })
+            .unwrap();
+        assert!(!view.editor.mesh_vertex_drag_for(binding));
+        assert_eq!(
+            view.editor.document().unwrap().selected_vertex_positions(),
+            expected
+        );
+        assert_eq!(
+            view.editor.document().unwrap().history_lengths(),
+            (history.0 + 1, 0)
+        );
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        assert_eq!(
+            view.editor.document().unwrap().selected_vertex_positions(),
+            original
+        );
+    });
+}
+
+#[gpui_kit::test]
 fn bound_parameter_slider_stays_quiet_until_a_canvas_edit_is_attempted(cx: &mut TestAppContext) {
     let (document, assets) =
         super::super::document_fixture::sample_document_with_binding(true).unwrap();

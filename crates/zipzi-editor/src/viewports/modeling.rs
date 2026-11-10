@@ -74,10 +74,112 @@ impl ModelingViewport {
 }
 viewport_panel!(ModelingViewport, "dock.modeling_viewport", 260.);
 
+pub(super) struct PendingMeshMove {
+    input: CanvasInput,
+    token: zipzi_editor_core::ViewportInteractionToken,
+    trace: u64,
+    modifiers: Modifiers,
+}
+
 impl ViewportSurface {
+    #[cfg(any(test, feature = "test-support"))]
+    pub(crate) fn queued_mesh_move(&self) -> bool {
+        self.pending_mesh_move.is_some()
+    }
     pub(super) fn modeling_input(
         &mut self,
         input: CanvasInput,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let trace = frame_trace::current_input();
+        let modifiers = window.modifiers();
+        if matches!(
+                input,
+                CanvasInput::Move {
+                    left_down: true,
+                    ..
+                }
+            )
+            // Shift can latch the axis from an early sample. Preserve that order.
+            && !modifiers.shift
+            && let Some(token) = self.interaction
+            && std::env::var_os("ZIPZI_MESH_MOVE_COALESCE").as_deref() == Some("2".as_ref())
+            && !window.has_active_dialog(cx)
+            && let Some(edit_started) = self.owner.upgrade().and_then(|owner| {
+                let owner = owner.read(cx);
+                (!owner.modal
+                    && !owner.editor.is_busy()
+                    && owner.mesh_generation.is_none()
+                    && owner.editor.viewport_interaction_valid(token)
+                    && owner.editor.mesh_vertex_drag_for(token.binding))
+                    .then(|| owner.editor.document().is_some_and(|doc| doc.has_pending_edit()))
+            })
+        {
+            if self.mesh_move_frame == Some(token) && edit_started {
+                frame_trace::emit(trace, "mesh_move_queued", &[]);
+                self.pending_mesh_move = Some(PendingMeshMove {
+                    input,
+                    token,
+                    trace,
+                    modifiers,
+                });
+                return;
+            }
+            if self.mesh_move_frame != Some(token) {
+                self.mesh_move_frame = Some(token);
+                let surface = cx.weak_entity();
+                window.on_next_frame(move |window, cx| {
+                    let _ = surface.update(cx, |surface, cx| {
+                        if surface.mesh_move_frame == Some(token) {
+                            surface.mesh_move_frame = None;
+                            surface.flush_mesh_move(window, cx);
+                        }
+                    });
+                });
+            }
+            // Keep processing the first moves until the drag threshold starts an edit.
+            frame_trace::emit(trace, "mesh_move_immediate", &[]);
+            self.apply_modeling_input(input, trace, modifiers, window, cx);
+            return;
+        }
+        if matches!(
+            input,
+            CanvasInput::Up { .. }
+                | CanvasInput::Cancel
+                | CanvasInput::Down { .. }
+                | CanvasInput::BrushResizeDown { .. }
+                | CanvasInput::Move {
+                    left_down: false,
+                    ..
+                }
+        ) {
+            // Up evaluates its own final position before committing in core.
+            self.discard_mesh_move();
+        } else {
+            self.flush_mesh_move(window, cx);
+        }
+        self.apply_modeling_input(input, trace, modifiers, window, cx);
+    }
+
+    pub(super) fn discard_mesh_move(&mut self) {
+        self.pending_mesh_move = None;
+        self.mesh_move_frame = None;
+    }
+
+    fn flush_mesh_move(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(sample) = self.pending_mesh_move.take()
+            && self.interaction == Some(sample.token)
+        {
+            self.apply_modeling_input(sample.input, sample.trace, sample.modifiers, window, cx);
+        }
+    }
+
+    fn apply_modeling_input(
+        &mut self,
+        input: CanvasInput,
+        trace: u64,
+        modifiers: Modifiers,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -167,7 +269,6 @@ impl ViewportSurface {
                 input @ (CanvasInput::Move { .. } | CanvasInput::Up { .. })
                     if self.interaction.is_some() =>
                 {
-                    let modifiers = window.modifiers();
                     owner.editor.update_canvas_gesture_with_modifiers(
                         self.interaction.unwrap(),
                         input,
@@ -214,7 +315,7 @@ impl ViewportSurface {
                     }
                     if update.model_changed {
                         if moving {
-                            owner.redraw_canvas(cx);
+                            owner.redraw_canvas_for_input(cx, trace);
                         } else {
                             owner.redraw(cx);
                         }

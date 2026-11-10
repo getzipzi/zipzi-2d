@@ -52,6 +52,9 @@ struct Config {
     navigation_only: bool,
     regular_deformers: Option<bool>,
     deformations: bool,
+    mesh_only: bool,
+    drag_wide: bool,
+    input_burst: usize,
     manual_mesh: bool,
     animation: bool,
     properties: bool,
@@ -150,6 +153,17 @@ pub fn init() -> anyhow::Result<()> {
             })
             .transpose()?;
         let deformations = std::env::var("ZIPZI_BENCH_DEFORMATIONS").is_ok_and(|s| s == "1");
+        let mesh_only = std::env::var("ZIPZI_BENCH_MESH_ONLY").is_ok_and(|s| s == "1");
+        let drag_wide = std::env::var("ZIPZI_BENCH_DRAG_WIDE").is_ok_and(|s| s == "1");
+        let input_burst = number("ZIPZI_BENCH_INPUT_BURST", 1)?;
+        ensure!(
+            !mesh_only || deformations,
+            "mesh-only requires deformations"
+        );
+        ensure!(
+            (1..=16).contains(&input_burst) && (!(drag_wide || input_burst > 1) || mesh_only),
+            "wide/burst input requires mesh-only; burst must be 1..16"
+        );
         let manual_mesh = std::env::var("ZIPZI_BENCH_MANUAL_MESH").is_ok_and(|s| s == "1");
         let animation = std::env::var("ZIPZI_BENCH_ANIMATION").is_ok_and(|s| s == "1");
         let properties = std::env::var("ZIPZI_BENCH_PROPERTIES").is_ok_and(|s| s == "1");
@@ -225,6 +239,9 @@ pub fn init() -> anyhow::Result<()> {
                 navigation_only,
                 regular_deformers,
                 deformations,
+                mesh_only,
+                drag_wide,
+                input_burst,
                 manual_mesh,
                 animation,
                 properties,
@@ -271,6 +288,11 @@ pub fn init() -> anyhow::Result<()> {
             .collect();
         #[cfg(not(feature = "test-support"))]
         let property_workloads: Vec<u64> = vec![];
+        let mesh_drag = config.map(|c| {
+            serde_json::json!({
+                "mesh_only": c.mesh_only, "wide": c.drag_wide, "input_burst": c.input_burst,
+            })
+        });
         writeln!(
             out,
             "{}",
@@ -291,13 +313,14 @@ pub fn init() -> anyhow::Result<()> {
                 "first_frame": first_frame::enabled(),
                 "parameter_overlay": parameter_overlay::metadata(),
                 "manual_mesh": config.is_some_and(|c| c.manual_mesh),
+                "mesh_drag": mesh_drag,
                 "animation_drag": std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").ok(),
                 "properties": config.map(|c| c.properties),
                 "deformer_selection": config.map(|c| c.deformer_selection),
                 "selection_objects": std::env::var("ZIPZI_BENCH_SELECTION_OBJECTS").ok(),
                 "property_cases": property_cases,
                 "property_case": std::env::var("ZIPZI_BENCH_PROPERTY_CASE").ok(),
-                "workloads": config.map(|c| if first_frame::enabled() { vec![10] } else if c.deformer_selection { vec![310] } else if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.deformations { vec![5, 6, 7, 8] }
+                "workloads": config.map(|c| if first_frame::enabled() { vec![10] } else if c.deformer_selection { vec![310] } else if c.ui_only { vec![0] } else if c.properties { property_workloads.clone() } else if c.animation { vec![9] } else if c.manual_mesh { vec![5] } else if c.mesh_only { vec![5, 6] } else if c.deformations { vec![5, 6, 7, 8] }
                     else if c.parameters_only { vec![4] } else if c.navigation_only { vec![1, 2] } else { vec![1, 2, 3] }),
                 "multi_vertices": config.map(|c| c.vertices),
                 "input_hz": config.map(|c| c.hz), "pid": std::process::id(),
@@ -555,6 +578,8 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                 1..=0u64
             } else if config.manual_mesh {
                 5..=5u64
+            } else if config.mesh_only {
+                5..=6u64
             } else if config.deformations {
                 5..=8u64
             } else if config.parameters_only {
@@ -690,10 +715,13 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                     }
                 }
                 let mut last_position = center;
+                let motion_started = Instant::now();
                 for sample in 0..config.samples + config.warmup {
-                    executor
-                        .timer(deadline.saturating_duration_since(Instant::now()))
-                        .await;
+                    if sample % config.input_burst == 0 {
+                        executor
+                            .timer(deadline.saturating_duration_since(Instant::now()))
+                            .await;
+                    }
                     let late_ns = Instant::now()
                         .saturating_duration_since(deadline)
                         .as_nanos() as u64;
@@ -705,6 +733,10 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         0
                     };
                     let input = frame_trace::InputScope::begin(100 + mode);
+                    #[cfg(feature = "bench-instrumentation")]
+                    let detail = std::env::var_os("ZIPZI_BENCH_INPUT_DETAIL")
+                        .filter(|_| drag.is_some())
+                        .map(|_| zipzi_core::benchmark::Capture::start());
                     cx.update(|window, cx| -> anyhow::Result<()> {
                         frame_trace::emit(
                             input.id(),
@@ -780,7 +812,11 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                 );
                             }
                             5..=8 => {
-                                last_position = drag.as_ref().unwrap().position(sample);
+                                last_position = drag.as_ref().unwrap().position(sample, motion_started.elapsed());
+                                frame_trace::emit(input.id(), "benchmark_pointer", &[
+                                    ("x_millipx", (last_position.x.as_f32() * 1000.) as u64),
+                                    ("y_millipx", (last_position.y.as_f32() * 1000.) as u64),
+                                ]);
                                 dispatch_pointer(
                                     window,
                                     MouseMoveEvent {
@@ -805,6 +841,16 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         }
                         Ok(())
                     })??;
+                    #[cfg(feature = "bench-instrumentation")]
+                    if let Some(detail) = detail {
+                        for (stage, value) in detail.finish() {
+                            frame_trace::emit(input.id(), stage, &[
+                                ("calls", value.calls),
+                                ("inclusive_ns", value.inclusive_ns),
+                                ("self_ns", value.self_ns),
+                            ]);
+                        }
+                    }
                     drop(input);
                     if mode == 4 {
                         ensure!(
@@ -819,28 +865,37 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         );
                     }
                     if drag.is_some() {
-                        view.update_in(cx, |view, _, _| -> anyhow::Result<()> {
+                        view.update_in(cx, |view, _, cx| -> anyhow::Result<()> {
                             ensure!(
                                 view.edit_error.is_none(),
                                 "canvas edit failed: {:?}",
                                 view.edit_error
                             );
+                            let queued = view.dock.as_ref().unwrap().active_viewport().read(cx).queued_mesh_move();
                             ensure!(
                                 view.editor.gesture_active()
-                                    && view.editor.document().is_some_and(|d| d.has_pending_edit())
-                                    && view.editor.evaluation_count() > evaluations,
+                                    && (queued || (view.editor.document().is_some_and(|d| d.has_pending_edit())
+                                    && view.editor.evaluation_count() > evaluations)),
                                 "mode {mode} sample {sample}: drag produced no model evaluation: {:?}", view.editor.canvas_notice()
                             );
                             Ok(())
                         })??;
                     }
-                    // Never inject a burst of catch-up events after a late wake-up.
-                    deadline += interval;
-                    if deadline < Instant::now() {
-                        deadline = Instant::now() + interval;
+                    // Explicit bursts model dense delivery without an unbounded
+                    // catch-up queue. Ordinary benchmarks still yield every input.
+                    if (sample + 1) % config.input_burst == 0 {
+                        deadline += interval;
+                        if deadline < Instant::now() {
+                            deadline = Instant::now() + interval;
+                        }
                     }
                 }
                 if mode == 1 || mode == 4 || mode >= 5 {
+                    let release = frame_trace::InputScope::begin(200 + mode);
+                    frame_trace::emit(release.id(), "benchmark_release", &[("mode", mode)]);
+                    #[cfg(feature = "bench-instrumentation")]
+                    let detail = std::env::var_os("ZIPZI_BENCH_INPUT_DETAIL")
+                        .map(|_| zipzi_core::benchmark::Capture::start());
                     cx.update(|window, cx| {
                         dispatch_pointer(
                             window,
@@ -857,6 +912,25 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                             cx,
                         )
                     })?;
+                    #[cfg(feature = "bench-instrumentation")]
+                    if let Some(detail) = detail {
+                        for (stage, value) in detail.finish() {
+                            frame_trace::emit(release.id(), stage, &[
+                                ("calls", value.calls),
+                                ("inclusive_ns", value.inclusive_ns),
+                                ("self_ns", value.self_ns),
+                            ]);
+                        }
+                    }
+                    drop(release);
+                    if drag.is_some() {
+                        let settle_deadline = Instant::now() + Duration::from_secs(2);
+                        while !view.update_in(cx, |view, _, _| deformation::frame_ready(view))? {
+                            ensure!(Instant::now() < settle_deadline, "preview did not catch up after release");
+                            executor.timer(Duration::from_millis(5)).await;
+                        }
+                        frame_trace::emit(frame_trace::next_id(), "benchmark_settled", &[("mode", mode)]);
+                    }
                 }
                 executor.timer(Duration::from_millis(500)).await;
                 if mode == 4 {

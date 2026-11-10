@@ -55,6 +55,13 @@ impl Editor {
                 session.modeling.tools.interaction_viewport() == Some(binding.viewport)
             })
     }
+    /// Whether the active Modeling capture is an ordinary mesh vertex drag.
+    pub fn mesh_vertex_drag_for(&self, binding: ViewportBinding) -> bool {
+        self.gesture_active_for(binding)
+            && self
+                .active_session()
+                .is_some_and(|s| s.modeling.tools.mesh_vertex_drag())
+    }
     pub fn cancel_gesture_for(&mut self, binding: ViewportBinding) -> bool {
         if !self.gesture_active_for(binding) {
             return false;

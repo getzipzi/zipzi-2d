@@ -6,6 +6,7 @@ D3D11 rendering/Present on Windows; they are neither GPU timestamps nor DWM scan
 """
 from __future__ import annotations
 import argparse
+from bisect import bisect_right
 from collections import defaultdict
 import json
 import math
@@ -46,6 +47,8 @@ def diagnose(records):
         raise ValueError('benchmark/render error')
     ticks = {e['id']: e for e in events if e['stage'] == 'benchmark_tick'}
     measured = {key: e for key, e in ticks.items() if not e['fields']['warmup']}
+    pointers = {e['id']: e['fields'] for e in events if e['stage'] == 'benchmark_pointer'}
+    pointer_times = {e['id']: e['at_ns'] for e in events if e['stage'] == 'benchmark_pointer'}
     if not measured:
         raise ValueError('no measured inputs')
     parents = {e['id']: e['fields'].get('parent', 0) for e in events if e['stage'] == 'input_begin'}
@@ -132,6 +135,11 @@ def diagnose(records):
                 returns[event['id']].append(event['at_ns'])
         per_tick = defaultdict(list)
         submit_times = defaultdict(list)
+        observed_returns = set()
+        tick_times = [e['at_ns'] for e in phase_ticks]
+        tick_indices = {e['id']: i for i, e in enumerate(phase_ticks)}
+        motion = sorted((pointer_times[e['id']], pointers[e['id']]) for e in phase_ticks if e['id'] in pointers)
+        motion_times = [t for t, _ in motion]
         for frame, begin in draws.items():
             if start <= begin <= end and returns[frame]:
                 durations['ui_begin_to_platform_return_ms'].append((returns[frame][0] - begin) / 1e6)
@@ -140,7 +148,38 @@ def diagnose(records):
             if submission is not None:
                 per_tick[tick].append((submission - measured[tick]['at_ns']) / 1e6)
                 submit_times[tick].append(submission)
+                observation = (tick, frame, submission)
+                if start <= submission <= last and observation not in observed_returns:
+                    observed_returns.add(observation)
+                    latest = phase_ticks[bisect_right(tick_times, submission) - 1]
+                    durations['preview_age_at_platform_return_ms'].append(
+                        (submission - measured[tick]['at_ns']) / 1e6)
+                    durations['preview_input_lag_events'].append(
+                        tick_indices[latest['id']] - tick_indices[tick])
+                    if tick in pointers and latest['id'] in pointers:
+                        source, current = pointers[tick], pointers[latest['id']]
+                        durations['preview_input_position_gap_px'].append(math.hypot(
+                            source['x_millipx'] - current['x_millipx'],
+                            source['y_millipx'] - current['y_millipx']) / 1000)
+                        # Only the explicit wall-clock trajectory supports this
+                        # interpolation. Zero delivered-input gap is not zero
+                        # cursor lag: the intended motion continues between ticks.
+                        next_index = bisect_right(motion_times, submission)
+                        if metadata.get('mesh_drag', {}).get('wide') and 0 < next_index < len(motion):
+                            before_t, before_p = motion[next_index - 1]
+                            after_t, after_p = motion[next_index]
+                            fraction = (submission - before_t) / (after_t - before_t)
+                            gap = [source[axis] - (before_p[axis] + fraction * (after_p[axis] - before_p[axis]))
+                                   for axis in ['x_millipx', 'y_millipx']]
+                            durations['preview_interpolated_motion_gap_px'].append(math.hypot(*gap) / 1000)
+        releases = [e for e in events if e['stage'] == 'benchmark_release' and e['fields']['mode'] == mode]
+        settled = [e for e in events if e['stage'] == 'benchmark_settled' and e['fields']['mode'] == mode]
+        if releases and settled:
+            durations['release_to_current_canvas_ms'] = [(settled[0]['at_ns'] - releases[0]['at_ns']) / 1e6]
         first_submissions = sorted(min(values) for values in submit_times.values())
+        active_submissions = [t for t in first_submissions if start <= t <= last]
+        durations['active_new_preview_interval_ms'] = [
+            (b - a) / 1e6 for a, b in zip(active_submissions, active_submissions[1:])]
         durations['new_image_platform_interval_ms'] = [
             (b - a) / 1e6 for a, b in zip(first_submissions, first_submissions[1:])]
         durations['input_to_first_image_platform_return_ms'] = [min(v) for v in per_tick.values()]
@@ -151,13 +190,16 @@ def diagnose(records):
         reports[str(mode)] = {
             'inputs': len(phase_ticks), 'inputs_with_image_platform_return': len(per_tick),
             'inputs_without_image_platform_return': len(phase_ticks) - len(per_tick),
+            'observed_active_preview_returns': len(observed_returns),
             'new_image_platform_returns_per_second': (
                 (len(first_submissions) - 1) * 1e9 / (first_submissions[-1] - first_submissions[0])
                 if len(first_submissions) > 1 and first_submissions[-1] > first_submissions[0] else None),
             'requests': sum(e['stage'] in ('request', 'animation_enqueued') and preview_tick.get(e['id']) in measured for e in selected),
             'atlas_uploaded_bytes': sum(e['fields']['bytes'] for e in missed),
             'image_sizes_bytes': sorted({e['fields']['bytes'] for e in missed}),
-            'metrics': {label: distribution(values) for label, values in durations.items()},
+            'metrics': {label: {k: v for k, v in distribution(values).items()
+                               if label.endswith('_ms') or not k.startswith('over_')}
+                        for label, values in durations.items()},
         }
     if set(map(str, metadata.get('workloads') or [])) - reports.keys():
         raise ValueError('missing workload')

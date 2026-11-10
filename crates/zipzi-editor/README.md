@@ -28,6 +28,14 @@ animation; existing binding/version checks reject obsolete frames. Set
 `ZIPZI_PREVIEW_LATCH=0` to compare the previous callback-only delivery path.
 Rendering stays on the preview worker; GPUI itself is unchanged.
 
+`ZIPZI_MESH_MOVE_COALESCE=2` opts into the dense-input sample for ordinary Mesh
+vertex drags. The first move runs immediately. Once the edit starts, the latest
+subsequent move is kept for the next frame callback. Shift-constrained moves
+preserve their input order. The callback belongs to the active capture, release
+evaluates its final position, and cancellation discards queued input. See the
+[dense-input plan](../../docs/plans/dense-input-scheduling.md) and
+[benchmark record](../../docs/archive/benchmarks/2026-11-10-mesh-dense-input.md).
+
 Start the editor with Cargo on either platform:
 
 ```sh

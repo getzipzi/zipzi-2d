@@ -123,6 +123,8 @@ pub struct ViewportSurface {
     pub(crate) tool_cursor_kind: Option<crate::tool_cursors::ToolCursor>,
     navigation: navigation::ViewportNavigation,
     interaction: Option<zipzi_editor_core::ViewportInteractionToken>,
+    pending_mesh_move: Option<modeling::PendingMeshMove>,
+    mesh_move_frame: Option<zipzi_editor_core::ViewportInteractionToken>,
     cursor_preview_button: Option<MouseButton>,
     brush_tick: Option<(
         zipzi_editor_core::ViewportInteractionToken,
@@ -252,6 +254,8 @@ impl ViewportSurface {
                 tool_cursor_kind: None,
                 navigation: Default::default(),
                 interaction: None,
+                pending_mesh_move: None,
+                mesh_move_frame: None,
                 cursor_preview_button: None,
                 brush_tick: None,
                 brush_frame_pending: false,
@@ -311,6 +315,7 @@ impl ViewportSurface {
             .or_else(|| self.navigation.pan.map(|pan| pan.token))
     }
     pub fn cancel_pointer(&mut self) -> Option<zipzi_editor_core::ViewportInteractionToken> {
+        self.discard_mesh_move();
         let token = self.pointer_token();
         self.interaction = None;
         self.cursor_preview_button = None;
