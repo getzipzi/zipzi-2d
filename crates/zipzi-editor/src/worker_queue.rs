@@ -46,6 +46,18 @@ pub(crate) struct MailboxReceiver<K, V> {
     values: Arc<Mutex<Coalesced<K, V>>>,
     wake: async_channel::Receiver<()>,
 }
+/// A non-waiting view of completed results. It does not keep the receiver's
+/// wake channel alive, and consumes from the same queue as async delivery.
+#[cfg(any(test, target_os = "windows"))]
+pub(crate) struct MailboxDrain<K, V> {
+    values: Arc<Mutex<Coalesced<K, V>>>,
+}
+#[cfg(any(test, target_os = "windows"))]
+impl<K: Copy + Eq + Hash, V> MailboxDrain<K, V> {
+    pub fn try_take(&self, key: K) -> Option<V> {
+        self.values.try_lock().ok()?.remove(key)
+    }
+}
 pub(crate) fn mailbox<K: Copy + Eq + Hash, V>() -> (MailboxSender<K, V>, MailboxReceiver<K, V>) {
     let values = Arc::new(Mutex::new(Coalesced::default()));
     let (send, recv) = async_channel::bounded(1);
@@ -76,6 +88,12 @@ impl<K: Copy + Eq + Hash, V> MailboxSender<K, V> {
     }
 }
 impl<K: Copy + Eq + Hash, V> MailboxReceiver<K, V> {
+    #[cfg(any(test, target_os = "windows"))]
+    pub fn drain_handle(&self) -> MailboxDrain<K, V> {
+        MailboxDrain {
+            values: self.values.clone(),
+        }
+    }
     pub async fn recv(&self) -> Result<V, ()> {
         loop {
             if let Some(value) = self.values.lock().map_err(|_| ())?.pop() {
@@ -89,6 +107,45 @@ impl<K: Copy + Eq + Hash, V> MailboxReceiver<K, V> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn render_drain_and_async_delivery_share_latest_results_without_losing_wakes() {
+        use std::{
+            future::Future,
+            task::{Context, Poll, Waker},
+        };
+        let (sender, receiver) = mailbox();
+        let drain = receiver.drain_handle();
+        sender.send(1, 10).unwrap();
+        sender.send(2, 20).unwrap();
+        sender.send(1, 30).unwrap();
+        {
+            let _held = receiver.values.lock().unwrap();
+            assert!(
+                drain.try_take(1).is_none(),
+                "render must never wait for a producer lock"
+            );
+        }
+        assert_eq!(drain.try_take(1), Some(30));
+        let mut cx = Context::from_waker(Waker::noop());
+        assert_eq!(
+            std::pin::pin!(receiver.recv()).as_mut().poll(&mut cx),
+            Poll::Ready(Ok(20))
+        );
+        let mut waiting = std::pin::pin!(receiver.recv());
+        assert!(waiting.as_mut().poll(&mut cx).is_pending()); // consumes stale wake
+        sender.send(1, 40).unwrap();
+        assert_eq!(waiting.as_mut().poll(&mut cx), Poll::Ready(Ok(40)));
+        assert!(drain.try_take(1).is_none());
+    }
+
+    #[test]
+    fn render_drain_does_not_keep_a_closed_consumer_alive() {
+        let (sender, receiver) = mailbox();
+        let drain = receiver.drain_handle();
+        drop(receiver);
+        assert!(sender.send(1, 10).is_err());
+        assert!(drain.try_take(1).is_none());
+    }
     #[test]
     fn replacements_do_not_displace_or_starve_other_owners() {
         let mut queue = Coalesced::default();

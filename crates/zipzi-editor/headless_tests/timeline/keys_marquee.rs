@@ -109,11 +109,11 @@ fn keyboard_copy_paste_delete_is_scoped_and_number_text_has_priority(cx: &mut Te
             release(window, origin, cx);
             window.render_frame(cx);
             crate::keybindings::reset(cx).unwrap();
-            window.press("cmd-c", cx);
+            window.press("secondary-c", cx);
             for _ in 0..30 {
                 window.press("right", cx);
             }
-            window.press("cmd-v", cx);
+            window.press("secondary-v", cx);
             window.render_frame(cx);
             let projection = harness.view.read(cx).editor.timeline_projection().unwrap();
             let track = &projection.tracks[&key.track_id];
@@ -126,7 +126,7 @@ fn keyboard_copy_paste_delete_is_scoped_and_number_text_has_priority(cx: &mut Te
     cx.update_window(harness.window, |_, window, cx| {
         let field = "property-input-selection_value";
         window.click(field, cx);
-        window.press("cmd-a", cx);
+        window.press("secondary-a", cx);
         window.input("0.25", cx);
         window.render_frame(cx);
     })

@@ -13,6 +13,9 @@ impl Timeline {
         if !self.allowed(window, cx) {
             return;
         }
+        if self.seek_token().is_some() {
+            self.cancel(window, cx);
+        }
         self.finish_number(cx);
         self.edge_scroll = None;
         window.focus(&self.focus, cx);
@@ -97,12 +100,17 @@ impl Timeline {
             Some(Gesture::Event { origin, .. }) => *origin -= horizontal,
             _ => {}
         }
+        let seeking = self.seek_token().is_some();
         let _ = self.owner.update(cx, |owner, cx| {
             let result =
                 owner
                     .editor
                     .navigate_timeline_view(target.document, (left, left + span), scroll);
-            owner.complete_edit(result, cx);
+            // Moving the ruler changes the Timeline's view. During Seek,
+            // resampling the pointer requests the preview at its new time.
+            if !seeking || result.is_err() {
+                owner.complete_edit(result, cx);
+            }
         });
         cx.notify();
         true
@@ -131,11 +139,15 @@ impl Timeline {
     }
 
     fn edge_tick(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        self.discard_stale_interactions(window, cx);
         if self.gesture.is_none() {
             return false;
         }
         if !self.allowed(window, cx) {
             self.cancel(window, cx);
+            return false;
+        }
+        if self.seek_token().is_some() && self.validate_seek(window, cx).is_none() {
             return false;
         }
         let point = self.local(self.pointer);
@@ -182,17 +194,30 @@ impl Timeline {
             .and_then(|owner| owner.read(cx).editor.timeline_view().map(|view| view.mode))
             == Some(TimelineDisplayMode::Curves);
         if self.pan_by(dx, dy, curves, cx) {
+            self.resample_after_pan(Modifiers::default(), window, cx);
+        }
+        self.gesture.is_some()
+    }
+
+    pub(super) fn resample_after_pan(
+        &mut self,
+        modifiers: Modifiers,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.seek_token().is_some() {
+            self.seek_to_pointer(window, cx);
+        } else if let Some(gesture) = &self.gesture {
             self.move_pointer(
                 &MouseMoveEvent {
                     position: self.pointer,
-                    pressed_button: Some(MouseButton::Left),
-                    modifiers: Modifiers::default(),
+                    pressed_button: Some(gesture.button()),
+                    modifiers,
                 },
                 window,
                 cx,
             );
         }
-        true
     }
 }
 

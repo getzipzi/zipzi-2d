@@ -15,8 +15,35 @@ newer, uv 0.10.7 or newer, and CPython 3.14. See the
 - **macOS:** Xcode Command Line Tools and a Metal-capable GPU are required.
   Model previews use Metal by default; wgpu is available as an optional backend.
 - **Windows:** The development editor requires MSVC C++ Build Tools, the Windows
-  SDK and a usable GPU. It uses wgpu and shared GPU textures for previews.
+  SDK and a usable GPU. Model previews use native D3D11 on GPUI's device.
+  Build with `--features wgpu-backend` to compare with the wgpu/DX12 preview.
   Desktop validation is still in progress.
+
+Windows modeling viewports also check the completed preview mailbox immediately
+before building their content. A ready frame supplies both the model image and
+its matching editing overlay, without waiting for the worker or GPU. This avoids
+delaying a result until the next UI frame when its normal callback is waiting
+behind the current draw. Async delivery remains active for later results and
+animation; existing binding/version checks reject obsolete frames. Set
+`ZIPZI_PREVIEW_LATCH=0` to compare the previous callback-only delivery path.
+Rendering stays on the preview worker; GPUI itself is unchanged.
+
+Ordinary Mesh vertex drags apply every move to the Core candidate. The first
+changed candidate requests a preview immediately. Subsequent changes share one
+pending scene request for the latest candidate. Release settles that request
+synchronously, and cancellation rolls back the edit.
+
+Parameter tracks and linked two-axis Pads use LeadingLatest. The thumb and
+number show the current target while the last applied pose can still be visible
+on the canvas. A Pad applies both axes with one setter. Release applies the
+final pointer position synchronously. SlideNumber and text input apply
+immediately.
+
+Playhead scrubbing applies mouse moves and edge scrolling immediately through
+the same ruler mapping. Press pauses and locates the playhead, and release
+locates it synchronously using its own position. See the
+[dense-input plan](../../docs/plans/dense-input-scheduling.md) for the experiments
+behind these choices.
 
 Start the editor with Cargo on either platform:
 
@@ -125,6 +152,11 @@ Otherwise, closing the last window exits after any unsaved
 documents are resolved. Use Quit to explicitly exit. See the
 [Python SDK guide](../zipzi-python/client/python/zipzi/docs/guide.md) for
 connection and session usage.
+
+The status bar shows why closing the window will leave the host running. On
+Windows, the notification-area icon appears while the host has no window. Its
+menu can reopen the Editor or use the normal Quit flow. Force Quit requires
+confirmation, discards unsaved work and interrupts Runtime jobs and SDK connections.
 
 While SDK clients are connected or jobs are outstanding, the host holds a
 platform activity to prevent macOS App Nap throttling background requests. It

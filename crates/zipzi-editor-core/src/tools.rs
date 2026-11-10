@@ -110,6 +110,12 @@ impl ToolController {
         self.hovered_binding = None;
         self.pointer = None;
     }
+    pub(crate) fn mesh_vertex_drag(&self) -> bool {
+        self.manual.is_none()
+            && matches!(&self.gesture,
+            Some(Gesture::Controls(g)) if matches!(&g.target,
+                HitTarget::Component(c) if c.object.kind == crate::ObjectKind::Mesh))
+    }
     fn rotation_length_target(&self) -> Option<&crate::ObjectRef> {
         match &self.gesture {
             Some(Gesture::Controls(g)) if g.adjusting_bone_length() => Some(g.target.object()),

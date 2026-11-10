@@ -9520,6 +9520,7 @@ dependencies = [
  "zipzi-core",
  "zipzi-editor-core",
  "zipzi-render",
+ "zipzi-render-d3d11",
  "zipzi-render-metal",
  "zipzi-render-wgpu",
 ]
@@ -9580,6 +9581,7 @@ dependencies = [
 name = "zipzi-observe-backend"
 version = "0.2.0-alpha.1"
 dependencies = [
+ "zipzi-render-d3d11",
  "zipzi-render-metal",
  "zipzi-render-wgpu",
 ]
@@ -9650,6 +9652,17 @@ version = "0.2.0-alpha.1"
 dependencies = [
  "bytemuck",
  "zipzi-core",
+]
+
+[[package]]
+name = "zipzi-render-d3d11"
+version = "0.2.0-alpha.1"
+dependencies = [
+ "anyhow",
+ "windows 0.62.2",
+ "zipzi-core",
+ "zipzi-render",
+ "zipzi-render-wgpu",
 ]
 
 [[package]]

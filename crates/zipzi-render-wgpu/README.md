@@ -64,11 +64,13 @@ cargo run --locked -p zipzi-editor-render --features wgpu-backend --example wgpu
 ```
 
 `wgpu-backend` selects wgpu observation on macOS and is forwarded by Runtime,
-Editor and the Python native adapter. Non-macOS observation uses wgpu by default.
+Editor and the Python native adapter. Windows can also opt in to wgpu for
+comparison with native D3D11. Other non-macOS observation uses wgpu by default.
 The Editor feature selects wgpu for model previews. Its current macOS/GPUI bridge
 retains the native output texture after wgpu completion on the rendering worker;
 there is no image readback or UI-thread wait. GPUI window rendering and interaction
-overlays still use native Metal. Windows/Linux window and overlay integration is not supported.
+overlays still use native Metal. The optional Windows Editor build uses a
+DX12-to-D3D11 texture bridge for previews.
 
 ## Backend benchmark on macOS
 

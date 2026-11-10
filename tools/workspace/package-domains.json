@@ -13,6 +13,7 @@
     "zipzi-psd",
     "zipzi-python",
     "zipzi-render",
+    "zipzi-render-d3d11",
     "zipzi-render-metal",
     "zipzi-render-wgpu",
     "zipzi-sdk",

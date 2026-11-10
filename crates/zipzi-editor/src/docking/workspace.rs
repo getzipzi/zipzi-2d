@@ -111,6 +111,12 @@ impl EditorView {
                     this.redraw(cx);
                 }
                 this.sync_timeline_visibility(window, cx);
+                if let Some(dock) = &this.dock
+                    && !dock.displayed(PanelKind::Parameters, cx)
+                {
+                    dock.parameters
+                        .update(cx, |panel, cx| panel.cancel_parameter_drag(window, cx));
+                }
                 let has_empty_dock = [
                     DockPlacement::Left,
                     DockPlacement::Right,

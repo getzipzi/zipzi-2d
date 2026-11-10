@@ -22,6 +22,7 @@ after adding or removing a member. All owned crates live directly under `crates/
 | `zipzi-render` | Backend-independent render planning |
 | `zipzi-render-wgpu` | WGPU rendering |
 | `zipzi-render-metal` | Native Metal rendering |
+| `zipzi-render-d3d11` | Native Direct3D 11 rendering |
 | `zipzi-sdk` | Snapshot/Draft authoring, sole publication, soft history and project context |
 | [`zipzi-runtime`](crates/zipzi-runtime/README.md) | UI-independent hosted sessions, operations, jobs and events |
 | `zipzi-observe` | Immutable inspection and GPU capture |
@@ -29,12 +30,12 @@ after adding or removing a member. All owned crates live directly under `crates/
 | [`zipzi-python`](crates/zipzi-python/README.md) | Independent typed Python client and optional Runtime-native adapter |
 | `cubism-matrix-zipzi` | SDK comparison benchmark runner |
 | [`zipzi-editor-core`](crates/zipzi-editor-core/README.md) | UI-independent Editor state and SDK coordination |
-| [`zipzi-editor-render`](crates/zipzi-editor-render/README.md) | Editor scene/overlay adapter to Metal |
+| [`zipzi-editor-render`](crates/zipzi-editor-render/README.md) | Editor scene and overlay adapters |
 | [`zipzi-editor`](crates/zipzi-editor/README.md) | GPUI application, panels and native integration |
 
 The Editor consumes the SDK through workspace dependencies. `zipzi-editor-core` has no
-GPUI dependency; `zipzi-editor-render` consumes its scene snapshots and the SDK's Metal
-renderer; `zipzi-editor` connects both to the UI. SDK crates must not depend on
+GPUI dependency. `zipzi-editor-render` consumes its scene snapshots and the SDK's GPU
+renderers. `zipzi-editor` connects both to the UI. SDK crates must not depend on
 Editor crates. The three Editor crates and their assets are GPL-3.0-only; SDK
 crates are MIT. Shared directories do not imply a shared license:
 [component licensing](LICENSING.md) remains authoritative.
@@ -68,8 +69,8 @@ remaining regression migrations and the gates actually run.
 
 `zipzi-observe` captures immutable session snapshots and validates image
 resources through `zipzi-project`. Render backends share scene planning and CPU
-geometry through `zipzi-render`: native Metal on macOS and WGPU on other
-platforms. See [format conversion boundaries](crates/zipzi-cmo3/README.md) and
+geometry through `zipzi-render`. Observation uses native Metal on macOS, native D3D11
+on Windows, and wgpu elsewhere. See [format conversion boundaries](crates/zipzi-cmo3/README.md) and
 
 
 ## Supporting directories

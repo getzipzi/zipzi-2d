@@ -74,10 +74,11 @@ pub(super) fn init(cx: &mut App) {
     cx.on_action(|action: &RunCommand, cx| {
         if cx.windows().is_empty() {
             if action.id == CommandId::Quit {
-                if let Some(host) = cx.try_global::<host::DesktopHost>() {
-                    host.pending_quit.set(true);
+                if let Some((handle, view)) = host::open_window(cx, true) {
+                    let _ = handle.update(cx, |_, window, cx| {
+                        view.update(cx, |view, cx| view.close(window, cx));
+                    });
                 }
-                host::open_window(cx, true);
             } else if action.id == CommandId::New {
                 if let Some(host) = cx.try_global::<host::DesktopHost>() {
                     host.new_document();

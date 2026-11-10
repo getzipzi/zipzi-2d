@@ -219,8 +219,8 @@ impl DocumentState {
 }
 
 /// Proof for the current candidate, always relative to the builder's base.
-/// Ordinary writes discard it; a validated, identity-preserving Physics patch
-/// can retain it because Physics does not participate in scene evaluation layout.
+/// Ordinary writes discard it. Validated Physics patches and mesh keyform
+/// payload updates can retain it while preserving identities and evaluation layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CandidateValidation {
     NeedsValidation,

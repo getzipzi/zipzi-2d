@@ -18,7 +18,7 @@ mod presentation;
 mod transfer;
 use entry::{DeferredClose, Entry};
 pub use io::{LoadCompletion, LoadProgress, LoadStage, LoadTask, SaveCompletion, SaveTask};
-pub use lifecycle::{EditingContextToken, EditingLifecycle};
+pub use lifecycle::{EditingContextToken, EditingLifecycle, ParameterPreviewInput};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DocumentId(Uuid);

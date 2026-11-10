@@ -15,6 +15,13 @@ and how to interpret their output. Historical results are kept in
 | [Whole-model parameter overlays](#whole-model-parameter-overlays) | Parameter dragging with every visible Mesh selected, rendering ablations and CPU/GPU attribution |
 
 Choose checks using the [UI performance reference](../../docs/references/ui-performance.md).
+
+For the dense-input architecture study, run `uv run --locked python tools/benchmarks/dense-input-scheduling-study.py --output target/python/scratch/dense-input-study/results.json`.
+It runs deterministic scheduling cases without launching the Editor. Optional
+`--trace-dir` and repeated `--trace` arguments analyze existing complete traces.
+Synthetic readiness/latch timings are assumptions, not native CPU/GPU results;
+see the [research findings and reproduction command](../../docs/plans/dense-input-two-directions.md).
+
 See the [tool index](../README.md#benchmarks-and-research-tools) for Timeline,
 window and offscreen benchmark commands. Native window harnesses require macOS,
 Metal and the documented local model; CPU chain measurements do not measure
@@ -201,6 +208,52 @@ correlated Metal presentation, excluding OS input delivery and input-to-photon.
 
 ## Windows GPUI CPU and image-upload diagnosis
 
+For ordinary Mesh control-point dragging, use `ZIPZI_BENCH_DEFORMATIONS=1`.
+Workloads 5 and 6 drag one and eight selected vertices respectively; workloads
+7 and 8 exercise Warp and Rotation controls. This is separate from manual
+topology editing. The harness checks the gesture stays active during movement,
+the preview catches up after release and the gesture commits one edit that can
+be undone. Compare
+identical fixture IDs, component IDs and raster extents between binaries.
+
+For rapid, wide Mesh dragging, also set `ZIPZI_BENCH_MESH_ONLY=1` and
+`ZIPZI_BENCH_DRAG_WIDE=1`. The pointer follows a wall-clock figure eight at two
+horizontal cycles per second, up to 600 by 440 logical pixels, fitted inside the
+canvas. `ZIPZI_BENCH_INPUT_BURST=4` dispatches four moves per timer wake-up
+without yielding. Its default is 1. This is a bounded synthetic
+input-pressure experiment, not an OS mouse polling-rate simulation. Compare
+small/single, wide/single and wide/burst on the same binary; report actual input
+delivery and new-preview rates rather than treating `ZIPZI_BENCH_HZ` as achieved.
+Burst delivery also works for the full deformation workload (5–8). The wide
+trajectory is specific to Mesh. Measure Warp and Rotation with the same
+fixtures and sample-indexed trajectories before and after a candidate change.
+Count preview requests and report update intervals alongside the latency of
+inputs correlated to a new preview. For historical cadence or immediate-mode
+comparisons, use the saved binaries and run configurations from the
+[dense-input plan](../../docs/plans/dense-input-scheduling.md#8-验证与观测).
+`mesh_candidate_begin/end` bracket Core input processing,
+`scene_begin/end` bracket per-viewport preview preparation, and
+`mesh_frame_begin/end` include the deferred work in the frame callback.
+The scene-demand batch records the first and latest input trace IDs and its
+update count at leading, frame, modifier, or release flush.
+The trace records pointer positions and release/catch-up markers. The Windows
+reporter additionally measures preview source age, how many newer inputs exist,
+and the distance between that source input and the newest delivered position at
+correlated CPU platform returns during the gesture. These position gaps are not
+screen measurements; retained frames without a paint correlation are omitted.
+The wall-sampled metrics hold the last correlated submitted pose at 1 ms
+intervals through the active gesture, including intervals without a fresh
+image. For the wide trajectory, the report also samples the interpolated
+pointer-to-pose gap over those intervals.
+Release-to-current-canvas uses a 5 ms polling check of the displayed canvas's
+evaluated-frame identity and excludes GPU/display completion.
+
+With `--features bench-instrumentation`, `ZIPZI_BENCH_INPUT_DETAIL=1` also records
+the synchronous core/Editor spans during deformation input dispatch. Sum only `self_ns`;
+`inclusive_ns` contains nested spans. Keep detailed diagnosis separate from the
+normal timing runs. Windows latency ends at CPU platform draw return and excludes
+OS mouse delivery and screen scanout.
+
 Use the production Editor's automatic window workload after building; do not
 compile during measurement. It dispatches GPUI events inside a native window,
 not OS mouse input. The default workloads are pan (1), zoom (2), and opacity (3).
@@ -267,6 +320,12 @@ The additional `timeline_scroll`, `timeline_zoom`, `timeline_seek` and
 `timeline_key` probes verify navigation/candidate changes and preserve authoring
 history. These visible probes do not cover the macOS headless Timeline pixel
 restoration and persistence suite.
+
+Set `ZIPZI_BENCH_ANIMATION_DRAG=timeline_seek` for the Seek probe. The driver
+supports `ZIPZI_BENCH_INPUT_BURST=1` and `=4` and records workload-9 ticks
+after warmup. `timeline_seek_apply_begin/end` bracket the immediate scrub
+update and preview request. The driver checks the Core playhead on release,
+then waits for the matching canvas frame.
 
 Add `bench-instrumentation` and `ZIPZI_BENCH_ANIMATION_DETAIL=1` to capture
 synchronous core/SDK spans for each canvas/number input. These spans report
@@ -378,6 +437,12 @@ its gesture changes both axes. Audits require a changed displayed mesh and,
 for `number`/`pad`, an active drag and unchanged history; pad also requires two
 changed displayed parameters. This switch requires the automatic parameter-only
 workload. Keep the full Modeling presentation for comparisons against Timeline.
+Use `ZIPZI_BENCH_INPUT_BURST=1` and `=4` to exercise single and burst delivery
+for track and Pad. `parameter_target` records the input
+sequence and axis count. `parameter_setter_begin/end` count and time the
+guarded setter, and `parameter_frame_begin/end` include deferred setter and
+preview preparation. Use the input trace ID to correlate applications with
+their previews. Treat the callback as inclusive when totaling CPU time.
 The Windows report includes outer input dispatch/effect-flush time, interval P99
 and counts above 25 ms. Use these alongside interval P95 and input-to-associated
 CPU platform return; the latter is not screen latency. See the
@@ -806,6 +871,18 @@ the gesture even in R1. Preserve a rejected trace separately; never report it as
 low-latency pass. Choose an audited editable target when using a different model.
 
 ### Windows shared texture presentation
+
+Windows modeling viewports consume already-recorded worker results before
+building their image and overlay. `ZIPZI_PREVIEW_LATCH=0` disables this for a
+same-binary callback-only comparison; the default is enabled. `preview_latched`
+marks results adopted during viewport rendering. This does not move rendering
+onto the UI thread or wait for a result. Compare continuous-drag preview age,
+new-preview intervals and UI time together, including coalesced input counts.
+For the wall-clock wide-drag workload, `preview_interpolated_motion_gap_px`
+estimates position lag by interpolating the intended pointer trajectory at each
+observed CPU platform return. It uses logical pixels, excludes OS input delivery
+and display scanout, and is not a physical cursor-to-screen measurement. The
+delivered-input gap alone may be zero while motion continues between inputs.
 
 Windows canvas overlays use the same ordered instance stream as Metal with
 D3D11-native immutable surfaces. For a same-binary GPUI comparison set

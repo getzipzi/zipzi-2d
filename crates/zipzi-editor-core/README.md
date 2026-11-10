@@ -26,6 +26,13 @@ Keep native widgets, GPU resources and window lifecycle in the consuming crates.
 Reusable model semantics belong in the SDK; this crate supplies Editor policy
 and coordination around them.
 
+Control previews keep the panel object index current as poses change. Successful
+non-topological control commits retain that exact candidate index, advancing its
+projection revision instead of rebuilding the entire relation graph on mouse-up.
+An absent/stale cache, topology changes, cancellation or failed publication still
+uses the normal invalidation path. The `mesh_edit::` tests compare retained Mesh
+and Warp indexes with fresh builds through commit, cancel, Undo and Redo.
+
 See the [viewport interaction contract](../../docs/archive/references/viewport-interactions.md)
 for gesture ownership, capture lifecycle and cancellation rules.
 

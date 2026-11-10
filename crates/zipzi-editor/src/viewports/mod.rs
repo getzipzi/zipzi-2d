@@ -123,6 +123,7 @@ pub struct ViewportSurface {
     pub(crate) tool_cursor_kind: Option<crate::tool_cursors::ToolCursor>,
     navigation: navigation::ViewportNavigation,
     interaction: Option<zipzi_editor_core::ViewportInteractionToken>,
+    mesh_input: modeling::MeshInputScheduling,
     cursor_preview_button: Option<MouseButton>,
     brush_tick: Option<(
         zipzi_editor_core::ViewportInteractionToken,
@@ -252,6 +253,7 @@ impl ViewportSurface {
                 tool_cursor_kind: None,
                 navigation: Default::default(),
                 interaction: None,
+                mesh_input: Default::default(),
                 cursor_preview_button: None,
                 brush_tick: None,
                 brush_frame_pending: false,
@@ -311,6 +313,7 @@ impl ViewportSurface {
             .or_else(|| self.navigation.pan.map(|pan| pan.token))
     }
     pub fn cancel_pointer(&mut self) -> Option<zipzi_editor_core::ViewportInteractionToken> {
+        self.discard_mesh_input();
         let token = self.pointer_token();
         self.interaction = None;
         self.cursor_preview_button = None;
@@ -331,6 +334,10 @@ impl Render for ViewportSurface {
         let Some(owner) = self.owner.upgrade() else {
             return div().into_any_element();
         };
+        // A worker result can arrive after this UI frame has started. Adopt it
+        // before deriving both the image and its overlay from the displayed pose.
+        #[cfg(target_os = "windows")]
+        owner.update(cx, |owner, cx| owner.latch_ready_preview(self.viewport, cx));
         let dialog = window.has_active_dialog(cx);
         let state = owner.read(cx);
         let SurfaceContent {

@@ -2,7 +2,7 @@
 use super::slide_number_input::{press, release, slide};
 use super::{Harness, document_fixture, setup_with_document};
 use gpui_kit::test::TestWindowExt;
-use gpui_kit::{AppContext as _, Focusable, TestAppContext, point, px};
+use gpui_kit::{AppContext as _, Focusable, TestAppContext, VisualTestContext, point, px};
 use zipzi_editor_core::{CommandId, TimelineChannelId, TimelineCommand};
 
 fn animation(cx: &mut TestAppContext) -> Harness {
@@ -19,11 +19,12 @@ fn animation(cx: &mut TestAppContext) -> Harness {
 }
 
 #[gpui_kit::test]
-fn escape_ends_playhead_scrubbing(cx: &mut TestAppContext) {
+fn seek_cancel_releases_capture_on_escape_or_window_deactivation(cx: &mut TestAppContext) {
     let harness = animation(cx);
-    cx.update_window(harness.window, |_, window, cx| {
+    let mut visual = VisualTestContext::from_window(harness.window, cx);
+    let (timeline, applied) = visual.update(|window, cx| {
+        window.activate_window();
         let position = window.find("timeline-ruler").bounds().center();
-        press(window, position, cx);
         let timeline = harness
             .view
             .read(cx)
@@ -32,6 +33,12 @@ fn escape_ends_playhead_scrubbing(cx: &mut TestAppContext) {
             .unwrap()
             .timeline
             .clone();
+        press(window, position, cx);
+        slide(window, position - point(px(60.), px(0.)), false, cx);
+        let first = harness.view.read(cx).editor.animation().unwrap().edit_time;
+        slide(window, position + point(px(60.), px(0.)), false, cx);
+        let applied = harness.view.read(cx).editor.animation().unwrap().edit_time;
+        assert_ne!(applied, first);
         let binding = harness
             .view
             .read(cx)
@@ -56,8 +63,24 @@ fn escape_ends_playhead_scrubbing(cx: &mut TestAppContext) {
                 .active_timeline_scrub(binding)
                 .is_some()
         );
-    })
-    .unwrap();
+        window.simulate_next_frame(cx);
+        assert_eq!(
+            harness.view.read(cx).editor.animation().unwrap().edit_time,
+            applied
+        );
+
+        press(window, position, cx);
+        slide(window, position + point(px(30.), px(0.)), false, cx);
+        slide(window, position - point(px(30.), px(0.)), false, cx);
+        let applied = harness.view.read(cx).editor.animation().unwrap().edit_time;
+        (timeline, applied)
+    });
+    visual.deactivate_window();
+    harness.view.read_with(cx, |view, cx| {
+        assert!(!timeline.read(cx).pointer_active());
+        assert!(!view.editor.editing_input_active());
+        assert_eq!(view.editor.animation().unwrap().edit_time, applied);
+    });
 }
 
 #[gpui_kit::test]
@@ -355,7 +378,7 @@ fn multi_track_shortcut_paste_ignores_single_channel_target(cx: &mut TestAppCont
         window.focus(&focus, cx);
         crate::keybindings::reset(cx).unwrap();
         window.hover("timeline-graph", cx);
-        window.press("cmd-c", cx);
+        window.press("secondary-c", cx);
         assert!(
             !harness
                 .view
@@ -384,7 +407,7 @@ fn multi_track_shortcut_paste_ignores_single_channel_target(cx: &mut TestAppCont
             view.redraw(cx);
         });
         window.render_frame(cx);
-        window.press("cmd-v", cx);
+        window.press("secondary-v", cx);
         let view = harness.view.read(cx);
         assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
         let p = view.editor.timeline_projection().unwrap();
@@ -622,7 +645,7 @@ fn keyboard_navigation_reveals_hidden_keys_and_preserves_zoom(cx: &mut TestAppCo
         window.focus(&focus, cx);
         crate::keybindings::reset(cx).unwrap();
         window.hover("timeline-graph", cx);
-        window.press("cmd-right", cx);
+        window.press("secondary-right", cx);
         let view = harness.view.read(cx);
         assert_eq!(view.editor.animation().unwrap().edit_time, 2.);
         let s = view.editor.timeline_view().unwrap();

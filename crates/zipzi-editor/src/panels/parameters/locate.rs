@@ -1,8 +1,13 @@
 use super::*;
 
 impl ParametersPanel {
-    pub(crate) fn benchmark_reveal_track(&mut self, id: &str, cx: &mut Context<Self>) {
-        self.locate_parameter(id, cx);
+    pub(crate) fn benchmark_reveal_track(
+        &mut self,
+        id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.locate_parameter(id, window, cx);
     }
 
     pub(crate) fn locate_moved_object(
@@ -20,14 +25,14 @@ impl ParametersPanel {
             self.locate_parameter_group(&object.id, window, cx);
         } else {
             self.sync_with_editor(window, cx);
-            self.locate_parameter(&object.id, cx);
+            self.locate_parameter(&object.id, window, cx);
         }
     }
 
-    fn locate_parameter(&mut self, id: &str, cx: &mut Context<Self>) {
+    fn locate_parameter(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(index) = self.rows.iter().position(|row| row.parameter.id == id) {
             self.layout.reveal(index, &mut self.collapsed_groups);
-            self.refresh_visible_rows(cx);
+            self.refresh_visible_rows(window, cx);
             if let Some(visible_index) = self.visible_rows.iter().position(|row| {
                 matches!(row, ListRow::Parameter { index: row_index, .. } if *row_index == index)
             }) {

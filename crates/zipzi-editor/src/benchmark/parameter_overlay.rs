@@ -193,7 +193,7 @@ pub(super) fn prepare(
             .as_ref()
             .unwrap()
             .parameters
-            .update(cx, |panel, cx| panel.benchmark_reveal_track(&id, cx));
+            .update(cx, |panel, cx| panel.benchmark_reveal_track(&id, window, cx));
         let _ = TRACK_PARAMETER.set(id);
     }
     let _ = INITIAL_HISTORY.set(document.history_lengths());

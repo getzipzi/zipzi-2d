@@ -175,6 +175,25 @@ impl DocumentSession {
         }
     }
     pub fn execute(&mut self, command: EditorCommand) -> Result<()> {
+        self.execute_with_parameter_revision(command, None)
+    }
+
+    pub(crate) fn execute_parameter_preview_at(
+        &mut self,
+        values: Vec<(String, f32)>,
+        model_revision: u64,
+    ) -> Result<()> {
+        self.execute_with_parameter_revision(
+            EditorCommand::SetPreviewParameters { values },
+            Some(model_revision),
+        )
+    }
+
+    fn execute_with_parameter_revision(
+        &mut self,
+        command: EditorCommand,
+        parameter_revision: Option<u64>,
+    ) -> Result<()> {
         // Reject invalid property writes before releasing any current owner.
         // Keep the checked candidate through owner cancellation and publication.
         let mut prepared_properties = None;
@@ -502,9 +521,9 @@ impl DocumentSession {
                 parameter_id,
                 value,
             } => self.document.set_preview_parameter(&parameter_id, value),
-            EditorCommand::SetPreviewParameters { values } => {
-                self.document.set_preview_parameters(&values)
-            }
+            EditorCommand::SetPreviewParameters { values } => self
+                .document
+                .set_preview_parameters_at(&values, parameter_revision),
             EditorCommand::EditSelectedParameterKeyforms {
                 parameter_id,
                 action,

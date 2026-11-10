@@ -143,6 +143,8 @@ impl Document {
         selected: &[crate::ComponentRef],
         change: crate::control_edit::ControlChange,
     ) -> Result<()> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("editor.preview_control_edit");
         let mesh_positions = crate::mesh_edit::positions(targets, selected, change)
             .map_err(|e| crate::mesh_edit::PreviewConstraint(e.to_string()))?;
         self.preview_controls_with(targets, mesh_positions, |target, sdk| {
@@ -275,6 +277,8 @@ impl Document {
     }
 
     pub(super) fn pending_changed(&self) -> bool {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("editor.pending_changed");
         if self
             .manual_pending
             .as_ref()
@@ -295,6 +299,8 @@ impl Document {
     }
 
     pub fn finish_edit(&mut self) -> Result<()> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("editor.finish_edit");
         self.clear_mesh_generation_preview();
         if self.manual_pending.is_some() {
             self.finish_manual_mesh_gesture()?;
@@ -375,6 +381,21 @@ impl Document {
                     }
                 };
                 self.animation_input_revision = receipt.version.revision;
+                // Successful control publication installs the exact candidate
+                // whose inspector index was refreshed during preview. Advance
+                // only a current cache; failed, cancelled and structural edits
+                // must still rebuild against their resulting document.
+                if receipt.kind == zipzi_sdk::PublicationKind::Commit
+                    && !pending.topology_changed
+                    && matches!(
+                        &pending.original,
+                        PendingOriginal::Controls(crate::control_edit::EditOriginal::Batch(_))
+                    )
+                    && let Some((revision, _)) = self.object_index.get_mut().unwrap()
+                    && *revision == previous_revision
+                {
+                    *revision = self.projection_revision;
+                }
                 if parameter {
                     self.reconcile_parameter_preview()?;
                 }

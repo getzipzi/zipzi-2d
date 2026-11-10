@@ -95,28 +95,24 @@ pub struct WindowsPresenter {
     _wgpu_queue: wgpu::Queue,
 }
 impl WindowsPresenter {
-    pub const MAX_SLOTS: usize = 8;
-    pub const MAX_BYTES: u64 = 256 * 1024 * 1024;
+    pub const MAX_SLOTS: usize = crate::windows_preview::MAX_SLOTS;
+    pub const MAX_BYTES: u64 = crate::windows_preview::MAX_BYTES;
     /// Leave room for all retained/in-flight slots, including a replacement frame.
-    pub const MAX_FRAME_BYTES: u64 = Self::MAX_BYTES / Self::MAX_SLOTS as u64;
+    pub const MAX_FRAME_BYTES: u64 = crate::windows_preview::MAX_FRAME_BYTES;
 
     /// Bound raster resolution without changing the logical viewport coordinates.
     /// The resulting texture is stretched back to the original bounds by GPUI.
     pub fn fit_preview(
         mut target: crate::WgpuTargetConfig,
-        mut transform: zipzi_editor_core::ViewportTransform,
+        transform: zipzi_editor_core::ViewportTransform,
     ) -> Result<(
         crate::WgpuTargetConfig,
         zipzi_editor_core::ViewportTransform,
     )> {
-        Self::validate_extent([target.width, target.height])?;
-        let bytes = u64::from(target.width) * u64::from(target.height) * 4;
-        if bytes > Self::MAX_FRAME_BYTES {
-            let scale = (Self::MAX_FRAME_BYTES as f64 / bytes as f64).sqrt();
-            target.width = (f64::from(target.width) * scale).floor().max(1.) as u32;
-            target.height = (f64::from(target.height) * scale).floor().max(1.) as u32;
-            transform.metrics.scale_factor *= scale as f32;
-        }
+        let ([width, height], transform) =
+            crate::fit_windows_preview([target.width, target.height], transform)?;
+        target.width = width;
+        target.height = height;
         Ok((target, transform))
     }
 

@@ -430,8 +430,20 @@ impl HostedSession {
         self.preview.values()
     }
     pub(crate) fn set_preview_values(&mut self, values: PreviewValues) -> anyhow::Result<bool> {
+        self.set_preview_values_at(values, None)
+    }
+
+    pub(crate) fn set_preview_values_at(
+        &mut self,
+        values: PreviewValues,
+        expected_revision: Option<u64>,
+    ) -> anyhow::Result<bool> {
         let runtime = self.host.read();
         let sdk = runtime.session_read(self.client, self.id)?;
+        anyhow::ensure!(
+            expected_revision.is_none_or(|revision| revision == sdk.version().revision),
+            "Parameter preview source changed"
+        );
         self.preview
             .replace(sdk.snapshot().document(), sdk.version().generation, values)
             .map_err(|s| anyhow::anyhow!("{}: {}", s.code, s.message))
@@ -712,6 +724,8 @@ impl HostedDraft {
         &mut self,
         session: &mut HostedSession,
     ) -> zipzi_runtime::Result<Publication> {
+        #[cfg(feature = "bench-instrumentation")]
+        let _span = zipzi_core::benchmark::span("editor.commit_to");
         if session.id != self.source.base.session || !session.host.same_host(&self.host) {
             return Err(Status::error(
                 "NOT_OWNER",

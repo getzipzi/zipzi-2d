@@ -1312,20 +1312,12 @@ impl ControlEdit {
                 *point,
             )?;
         }
-        let mut transform = original.transform.clone();
-        let mut binding = original.binding.clone();
-        if let Some((b, slot)) = binding.as_mut().zip(self.slot) {
-            let SceneTrack::Warp { keyforms, .. } = &mut b.track else {
-                unreachable!()
-            };
-            keyforms[slot].positions = positions;
-        } else {
-            let zipzi_core::TransformData::Warp(w) = &mut transform.data else {
-                unreachable!()
-            };
-            w.points = positions;
-        }
-        self.write_warp(edit, transform, binding)
+        self.write_warp(
+            edit,
+            original,
+            positions,
+            original.stored_controller.clone(),
+        )
     }
 
     fn changed_point(&self, p: Vec2, change: ControlChange) -> Result<Vec2> {
@@ -1366,8 +1358,6 @@ impl ControlEdit {
         let lattice = selected
             .iter()
             .any(|id| crate::warp_bezier::component(*id).is_none());
-        let mut transform = original.transform.clone();
-        let mut binding = original.binding.clone();
         let old = original.transform.warp().unwrap();
         for (i, n) in controller.nodes.iter_mut().enumerate() {
             let anchor = all || selected.contains(&crate::warp_bezier::component_id(i, 0));
@@ -1451,41 +1441,51 @@ impl ControlEdit {
         // A return to the press shape restores absent metadata as well. In a
         // mixed selection the controller can stay still while grid points move.
         if positions == self.positions && !controller_changed {
-            return self.write_warp(edit, transform, binding);
+            return self.write_warp(
+                edit,
+                original,
+                self.positions.clone(),
+                original.stored_controller.clone(),
+            );
         }
         let stored = if bezier || all {
             Some(controller)
         } else {
             original.stored_controller.clone()
         };
-        let zipzi_core::TransformData::Warp(w) = &mut transform.data else {
-            unreachable!()
-        };
-        if let Some((b, slot)) = binding.as_mut().zip(self.slot) {
-            let SceneTrack::Warp { keyforms, .. } = &mut b.track else {
-                unreachable!()
-            };
-            let f = &mut keyforms[slot];
-            f.positions = positions;
-            f.bezier = stored;
-        } else {
-            w.points = positions;
-            w.bezier = stored;
-        }
-        self.write_warp(edit, transform, binding)
+        self.write_warp(edit, original, positions, stored)
     }
     fn write_warp(
         &self,
         edit: &mut zipzi_sdk::Commands<'_>,
-        transform: Transform,
-        binding: Option<SceneBinding>,
+        original: &WarpEdit,
+        positions: Vec<Vec2>,
+        controller: Option<zipzi_core::WarpBezier>,
     ) -> Result<()> {
+        if self.kept_children.is_none()
+            && let Some((binding, slot)) = original.binding.as_ref().zip(self.slot)
+        {
+            let SceneTrack::Warp { keyforms, .. } = &binding.track else {
+                unreachable!("a Warp edit has Warp keyforms")
+            };
+            let mut form = keyforms[slot].clone();
+            form.positions = positions;
+            form.bezier = controller;
+            edit.set_scene_keyform(&binding.id, zipzi_core::SceneKeyform::Warp(form))?;
+            return Ok(());
+        }
+        let mut transform = original.transform.clone();
+        if self.slot.is_none() {
+            let warp = transform.warp_mut().unwrap();
+            warp.points = positions;
+            warp.bezier = controller;
+        }
         if self.kept_children.is_some() {
             self.write_kept_children(edit, &transform.data)?;
         } else {
             edit.replace_transform(transform)?;
-            if let Some(binding) = binding {
-                edit.replace_scene_binding(binding)?;
+            if let Some(binding) = &original.binding {
+                edit.replace_scene_binding(binding.clone())?;
             }
         }
         Ok(())

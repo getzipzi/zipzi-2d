@@ -7,6 +7,377 @@ use gpui_kit::{
 };
 
 #[gpui_kit::test]
+fn mesh_scene_demand_flushes_latest_and_uses_release_position(cx: &mut TestAppContext) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let start = harness.view.read(cx).editor.overlay().vertices[1].position;
+        let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        let before = harness.view.read(cx).editor.evaluation_count();
+        let pointer_move = |dx, dy| {
+            MouseMoveEvent {
+                position: from + point(px(dx), px(dy)),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Default::default(),
+            }
+            .to_platform_input()
+        };
+        window.dispatch_event(pointer_move(-1., 0.), cx);
+        assert_eq!(harness.view.read(cx).editor.evaluation_count(), before);
+        for index in 1..=3 {
+            window.dispatch_event(pointer_move(-12. * index as f32, 6.), cx);
+            assert_eq!(
+                harness.view.read(cx).editor.evaluation_count(),
+                before + 1,
+                "the first changed candidate requests a scene immediately"
+            );
+        }
+        window.simulate_next_frame(cx);
+        assert_eq!(
+            harness.view.read(cx).editor.evaluation_count(),
+            before + 2,
+            "one trailing evaluation for both queued moves"
+        );
+        let shown = harness
+            .view
+            .read(cx)
+            .editor
+            .document()
+            .unwrap()
+            .selected_vertex_positions();
+        window.dispatch_event(pointer_move(-24., 6.), cx);
+        window.dispatch_event(pointer_move(-12., 6.), cx);
+        assert_eq!(harness.view.read(cx).editor.evaluation_count(), before + 3);
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: from + point(px(-36.), px(6.)),
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions(),
+            shown
+        );
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (1, 0)
+        );
+        window.simulate_next_frame(cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions(),
+            shown,
+            "scheduled callback must not replay input after release"
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn mesh_scene_demand_keeps_the_last_legal_candidate_and_settles_at_the_boundary(
+    cx: &mut TestAppContext,
+) {
+    use gpui_kit::{MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+
+    for (flush_before_release, cancel) in [(true, false), (false, false), (false, true)] {
+        let harness = setup(cx);
+        harness.view.update(cx, |view, _| {
+            // A finite pointer can still map to a non-finite source position.
+            view.editor.set_zoom_at(0.5, None);
+        });
+        present_canvas(&harness, cx);
+        cx.update_window(harness.window, |_, window, cx| {
+            let surface = harness
+                .view
+                .read(cx)
+                .dock
+                .as_ref()
+                .unwrap()
+                .active_viewport()
+                .clone();
+            let positions = |cx: &gpui_kit::App| {
+                harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .document()
+                    .unwrap()
+                    .selected_vertex_positions()
+            };
+            let evaluations = |cx: &gpui_kit::App| harness.view.read(cx).editor.evaluation_count();
+            let original = positions(cx);
+            let start = harness.view.read(cx).editor.overlay().vertices[1].position;
+            let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+            window.dispatch_event(
+                MouseDownEvent {
+                    button: MouseButton::Left,
+                    position: from,
+                    modifiers: Default::default(),
+                    click_count: 1,
+                    first_mouse: false,
+                }
+                .to_platform_input(),
+                cx,
+            );
+            window.render_frame(cx);
+            let before = evaluations(cx);
+            let move_to = |position| {
+                MouseMoveEvent {
+                    position,
+                    pressed_button: Some(MouseButton::Left),
+                    modifiers: Default::default(),
+                }
+                .to_platform_input()
+            };
+            window.dispatch_event(move_to(from + point(px(-1.), px(0.))), cx);
+            assert_eq!(evaluations(cx), before);
+            window.dispatch_event(move_to(from + point(px(-12.), px(6.))), cx);
+            let first = positions(cx);
+            assert_ne!(first, original);
+            assert_eq!(evaluations(cx), before + 1);
+
+            window.dispatch_event(move_to(from + point(px(-24.), px(6.))), cx);
+            let last_legal = positions(cx);
+            assert_ne!(
+                first, last_legal,
+                "the second candidate must apply before the frame"
+            );
+            assert_eq!(evaluations(cx), before + 1);
+            let valid_feedback = harness.view.read(cx).editor.overlay().interaction_label;
+            let invalid = point(px(f32::MAX), from.y);
+            window.dispatch_event(move_to(invalid), cx);
+            assert_eq!(positions(cx), last_legal);
+            let rejected_feedback = harness.view.read(cx).editor.overlay().interaction_label;
+            assert!(
+                rejected_feedback.is_some() && rejected_feedback != valid_feedback,
+                "the rejected candidate must report its constraint: {rejected_feedback:?}"
+            );
+            assert!(surface.read(cx).mesh_input_pending());
+
+            if flush_before_release {
+                window.simulate_next_frame(cx);
+                assert_eq!(evaluations(cx), before + 2);
+                assert!(!surface.read(cx).mesh_input_pending());
+            }
+            if cancel {
+                window.press("escape", cx);
+            } else {
+                window.dispatch_event(
+                    MouseUpEvent {
+                        button: MouseButton::Left,
+                        position: invalid,
+                        modifiers: Default::default(),
+                        click_count: 1,
+                    }
+                    .to_platform_input(),
+                    cx,
+                );
+            }
+            let view = harness.view.read(cx);
+            assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+            assert!(!view.editor.gesture_active());
+            assert_eq!(
+                view.editor.document().unwrap().history_lengths(),
+                (usize::from(!cancel), 0)
+            );
+            assert_eq!(&positions(cx), if cancel { &original } else { &last_legal });
+            assert_eq!(evaluations(cx), before + 2);
+            assert!(!surface.read(cx).mesh_input_pending());
+            window.simulate_next_frame(cx);
+            assert_eq!(evaluations(cx), before + 2, "the old frame must be inert");
+            if !cancel {
+                window.press("secondary-z", cx);
+                assert_eq!(positions(cx), original);
+            }
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
+fn mesh_scene_demand_preserves_shift_lock_through_modifier_changes(cx: &mut TestAppContext) {
+    use gpui_kit::{Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent};
+
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let vertex = |cx: &gpui_kit::App| {
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .selected_vertex_positions()[1]
+                .1
+        };
+        let start = harness.view.read(cx).editor.overlay().vertices[1].position;
+        let from = window.find("canvas-body").bounds().origin + point(px(start.x), px(start.y));
+        let original = vertex(cx);
+        window.dispatch_event(
+            MouseDownEvent {
+                button: MouseButton::Left,
+                position: from,
+                modifiers: Default::default(),
+                click_count: 1,
+                first_mouse: false,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.render_frame(cx);
+        let move_by = |dx, dy, shift| {
+            MouseMoveEvent {
+                position: from + point(px(dx), px(dy)),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Modifiers {
+                    shift,
+                    ..Default::default()
+                },
+            }
+            .to_platform_input()
+        };
+        window.dispatch_event(move_by(-12., 4., false), cx);
+        window.dispatch_event(move_by(-18., 6., false), cx);
+        assert_ne!(vertex(cx).y, original.y);
+
+        // The first shifted sample locks X, even though the next sample has
+        // a greater vertical displacement and arrives before the next frame.
+        window.dispatch_event(move_by(-24., 10., true), cx);
+        window.dispatch_event(move_by(-28., 40., true), cx);
+        let locked = vertex(cx);
+        assert_eq!(locked.y, original.y);
+        assert_ne!(locked.x, original.x);
+        window.dispatch_event(move_by(-28., 40., false), cx);
+        let unlocked = vertex(cx);
+        assert_eq!(unlocked.x, locked.x);
+        assert_ne!(unlocked.y, locked.y);
+        window.dispatch_event(
+            MouseUpEvent {
+                button: MouseButton::Left,
+                position: from + point(px(-28.), px(40.)),
+                modifiers: Default::default(),
+                click_count: 1,
+            }
+            .to_platform_input(),
+            cx,
+        );
+        window.simulate_next_frame(cx);
+        assert_eq!(vertex(cx), unlocked);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            (1, 0)
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn mesh_drag_release_evaluates_final_position_without_intermediate_moves(cx: &mut TestAppContext) {
+    use zipzi_editor_core::{CanvasInput, EditorCommand, ViewportPoint};
+    let harness = setup(cx);
+    present_canvas(&harness, cx);
+    harness.view.update(cx, |view, _| {
+        let binding = view.editor.primary_viewport_binding().unwrap();
+        let start = view.editor.overlay().vertices[1].position;
+        let token = view
+            .editor
+            .begin_canvas_gesture(binding, start, false, false, false)
+            .unwrap()
+            .capture
+            .unwrap();
+        assert!(view.editor.mesh_vertex_drag_for(binding));
+        let original = view.editor.document().unwrap().selected_vertex_positions();
+        assert!(!original.is_empty());
+        let history = view.editor.document().unwrap().history_lengths();
+        let end = ViewportPoint {
+            x: start.x - 24.,
+            y: start.y + 12.,
+        };
+        view.editor
+            .update_canvas_gesture(
+                token,
+                CanvasInput::Move {
+                    point: end,
+                    left_down: true,
+                },
+            )
+            .unwrap();
+        let expected = view.editor.document().unwrap().selected_vertex_positions();
+        assert_ne!(original, expected);
+        view.editor.cancel_viewport_interaction(token);
+        assert_eq!(
+            view.editor.document().unwrap().selected_vertex_positions(),
+            original
+        );
+        let preview = view.editor.preview().unwrap();
+        assert!(view.editor.present_frame(preview.canvas.unwrap()));
+        let token = view
+            .editor
+            .begin_canvas_gesture(binding, start, false, false, false)
+            .unwrap()
+            .capture
+            .unwrap();
+        view.editor
+            .update_canvas_gesture(token, CanvasInput::Up { point: end })
+            .unwrap();
+        assert!(!view.editor.mesh_vertex_drag_for(binding));
+        assert_eq!(
+            view.editor.document().unwrap().selected_vertex_positions(),
+            expected
+        );
+        assert_eq!(
+            view.editor.document().unwrap().history_lengths(),
+            (history.0 + 1, 0)
+        );
+        view.editor.execute(EditorCommand::Undo).unwrap();
+        assert_eq!(
+            view.editor.document().unwrap().selected_vertex_positions(),
+            original
+        );
+    });
+}
+
+#[gpui_kit::test]
 fn bound_parameter_slider_stays_quiet_until_a_canvas_edit_is_attempted(cx: &mut TestAppContext) {
     let (document, assets) =
         super::super::document_fixture::sample_document_with_binding(true).unwrap();

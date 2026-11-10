@@ -1,14 +1,13 @@
 # zipzi-observe-backend
 
-Selects the optional observation renderer dependencies: native Metal on macOS,
-WGPU on other platforms, and WGPU on macOS with `wgpu-backend`. The crate only
-re-exports renderer APIs; importing it does not initialize a GPU.
+Selects observation renderer dependencies. Defaults are native Metal on macOS,
+native D3D11 on Windows, and wgpu elsewhere. The `wgpu-backend` feature selects
+wgpu for comparison. The crate re-exports renderer APIs. GPU initialization
+happens when an observation context is created.
 
 `zipzi-observe` enables this crate through its `gpu` feature. Keeping platform
-selection behind that optional dependency allows CPU planning to exclude both
-backends without enabling WGPU in default macOS builds. Cargo features are
-additive, so platform selection and the optional GPU boundary live in separate
-packages.
+selection behind that optional dependency keeps CPU planning independent of the
+GPU backends.
 
 Check the dependency matrix with:
 

@@ -36,6 +36,36 @@ def fixture():
 
 
 class WindowsGpuiReport(unittest.TestCase):
+    def test_dense_drag_reports_stale_preview_even_when_intermediate_inputs_are_coalesced(self):
+        records = fixture()
+        records[0]['samples'] = 3
+        records[0]['mesh_drag'] = {'wide': True}
+        for time, id, stage, fields in [
+            (20, 2, 'benchmark_pointer', {'x_millipx': 1000, 'y_millipx': 2000}),
+            (27, 8, 'benchmark_tick', {'mode': 1, 'warmup': 0, 'timer_late_ns': 0}),
+            (27, 8, 'benchmark_pointer', {'x_millipx': 4000, 'y_millipx': 6000}),
+            (40, 9, 'benchmark_tick', {'mode': 1, 'warmup': 0, 'timer_late_ns': 0}),
+            (40, 9, 'benchmark_pointer', {'x_millipx': 100000, 'y_millipx': 100000}),
+            (42, 11, 'benchmark_release', {'mode': 1}),
+            (65, 12, 'benchmark_settled', {'mode': 1}),
+        ]:
+            records.insert(-2, dict(type='event', at_ns=time * 1_000_000,
+                                    id=id, stage=stage, fields=fields))
+        result = report.diagnose(records)['workloads']['1']
+        self.assertEqual(result['inputs_without_image_platform_return'], 2)
+        self.assertEqual(result['observed_active_preview_returns'], 1)
+        metrics = result['metrics']
+        self.assertEqual(metrics['preview_input_position_gap_px']['p95'], 5)
+        self.assertAlmostEqual(metrics['preview_interpolated_motion_gap_px']['p95'],
+                               ((3 + 96 * 3 / 13) ** 2 + (4 + 94 * 3 / 13) ** 2) ** 0.5)
+        self.assertEqual(metrics['preview_input_lag_events']['p95'], 1)
+        self.assertEqual(metrics['preview_age_at_platform_return_ms']['p95'], 10)
+        self.assertEqual(metrics['wall_sampled_preview_age_ms'], report.distribution(range(10, 20)))
+        self.assertAlmostEqual(metrics['wall_sampled_interpolated_motion_gap_px']['p95'],
+                               ((3 + 96 * 12 / 13) ** 2 + (4 + 94 * 12 / 13) ** 2) ** 0.5)
+        self.assertEqual(metrics['release_to_current_canvas_ms']['p95'], 23)
+        self.assertNotIn('over_25_ms', metrics['preview_input_position_gap_px'])
+
     def test_input_sync_uses_the_outer_tick_and_includes_effect_flush(self):
         records = fixture()
         for time, id, stage in [(22, 3, 'input_end'), (24, 2, 'input_end')]:

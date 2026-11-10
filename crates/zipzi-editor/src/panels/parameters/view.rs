@@ -51,18 +51,18 @@ impl Render for ParameterRowView {
         let slider = &self.slider;
         let disabled = self.disabled;
         let document_id = self.document_id;
-        self.number_input.update(cx, |input, cx| {
-            input.configure(
-                parameter.name.clone(),
-                slide_number_options(parameter, disabled),
-                cx,
-            );
-        });
-        let theme = cx.theme();
         let value = match slider.read(cx).value() {
             SliderValue::Single(value) => value,
             _ => parameter.value,
         };
+        self.number_input.update(cx, |input, cx| {
+            input.configure(
+                parameter.name.clone(),
+                slide_number_options(parameter, value, disabled),
+                cx,
+            );
+        });
+        let theme = cx.theme();
         let parameter_id = parameter.id.clone();
         let focus_parameter_id = parameter_id.clone();
         let focus_panel = self.panel.clone();
