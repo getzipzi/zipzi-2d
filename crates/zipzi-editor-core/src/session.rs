@@ -224,6 +224,11 @@ impl DocumentSession {
         }
         // Only mesh commands and view/history controls belong to the mode.
         // All other intents leave through the same lifecycle before execution.
+        if !command.preserves_manual_mesh() && self.modeling.tools.stitch_viewport().is_some() {
+            self.modeling
+                .tools
+                .set_tool(crate::ToolId::Select, &mut self.document);
+        }
         if !command.preserves_manual_mesh() {
             self.exit_manual_mesh();
         }
@@ -351,6 +356,14 @@ impl DocumentSession {
             }
             EditorCommand::SetBrushSelectionSettings(settings) => {
                 self.modeling.tools.brush_selection = settings.validate()?;
+                return Ok(());
+            }
+            EditorCommand::SetGlueBrushSettings(settings) => {
+                self.modeling.tools.glue_brush = settings.validate()?;
+                return Ok(());
+            }
+            EditorCommand::SetGlueBrushMode(mode) => {
+                self.modeling.tools.glue_brush_mode = mode;
                 return Ok(());
             }
             EditorCommand::SetBrushMode(mode) => {
@@ -509,10 +522,28 @@ impl DocumentSession {
                 expected_revision,
             } => self.document.replace_physics(asset, expected_revision),
             EditorCommand::Select(id) => self.document.select(&id),
-            EditorCommand::SelectObject(r) => self.document.select_object(r),
+            EditorCommand::SelectObject(r) => {
+                let glue = r.kind == crate::ObjectKind::Glue;
+                self.document.select_object(r)?;
+                if glue {
+                    self.modeling
+                        .tools
+                        .set_tool(crate::ToolId::Glue, &mut self.document);
+                }
+                Ok(())
+            }
             EditorCommand::FocusParameter(id) => self.document.focus_parameter(&id),
             EditorCommand::OpenBinding(r) => self.document.open_binding(r),
-            EditorCommand::Navigate(r) => self.document.navigate(r),
+            EditorCommand::Navigate(r) => {
+                let glue = r.kind == crate::ObjectKind::Glue;
+                self.document.navigate(r)?;
+                if glue {
+                    self.modeling
+                        .tools
+                        .set_tool(crate::ToolId::Glue, &mut self.document);
+                }
+                Ok(())
+            }
             EditorCommand::NavigateBack => self.document.navigate_back(),
             EditorCommand::PreviewKeyform { binding, point } => {
                 self.document.preview_keyform(&binding, point)

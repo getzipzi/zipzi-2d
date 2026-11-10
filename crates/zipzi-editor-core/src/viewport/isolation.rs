@@ -125,7 +125,7 @@ impl Editor {
                     }
                 }
             }
-            let mut scope: HashSet<_> =
+            let scope: HashSet<_> =
                 geometry
                     .index
                     .objects
@@ -157,13 +157,6 @@ impl Editor {
                     })
                     .map(|info| info.reference.clone())
                     .collect();
-            for glue in geometry.topology.glues.iter() {
-                if scope.contains(&ObjectRef::new(ObjectKind::Mesh, &glue.mesh_a))
-                    && scope.contains(&ObjectRef::new(ObjectKind::Mesh, &glue.mesh_b))
-                {
-                    scope.insert(glue.object.clone());
-                }
-            }
             ensure!(!scope.is_empty(), "Select canvas objects to isolate");
             Some(Arc::new(scope))
         };

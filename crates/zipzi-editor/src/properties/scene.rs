@@ -17,6 +17,16 @@ fn fields(kind: ObjectKind) -> FormDefinition {
     }
     use FieldEditor::*;
     use zipzi_editor_core::property::{glue, offscreen, texture};
+    if kind == ObjectKind::Glue {
+        return FormDefinition {
+            fields: vec![
+                FieldSpec::new(glue::NAME, "properties.name", Text),
+                FieldSpec::new(glue::RUNTIME_ID, "properties.runtime_id", Text),
+                FieldSpec::new(glue::INTENSITY, "properties.glue_attachment", Number).percent(),
+            ],
+            ..Default::default()
+        };
+    }
     let fields: &[_] = match kind {
         ObjectKind::Offscreen => &[
             (offscreen::NAME, "properties.name", Text),
@@ -24,14 +34,64 @@ fn fields(kind: ObjectKind) -> FormDefinition {
             (offscreen::ENABLED, "properties.enabled", Toggle),
         ],
         ObjectKind::Texture => &[(texture::NAME, "properties.name", Text)],
-        ObjectKind::Glue => &[
-            (glue::NAME, "properties.name", Text),
-            (glue::RUNTIME_ID, "properties.runtime_id", Text),
-            (glue::INTENSITY, "properties.intensity", Number),
-        ],
         _ => &[],
     };
     FormDefinition::new(fields)
+}
+
+pub(super) fn glue_details(
+    editor: &Editor,
+    target: Option<&PropertyTarget>,
+) -> Vec<super::details::DetailRow> {
+    use super::details::DetailRow;
+    use zipzi_editor_core::RelationKind;
+    let Some((document, target)) = editor.document().zip(target) else {
+        return Vec::new();
+    };
+    let index = document.object_index();
+    let Some(glue) = index.get(&target.object) else {
+        return Vec::new();
+    };
+    let side = |kind| {
+        index
+            .outgoing(&target.object)
+            .find(|edge| edge.kind == kind)
+            .map_or("—", |edge| index.name(&edge.target))
+    };
+    let count = glue.properties["pairs"]
+        .as_array()
+        .map_or(0, |pairs| pairs.len());
+    let scope = match &target.scope {
+        zipzi_editor_core::PropertyScope::GlueKeyform { .. } => "properties.glue_strength_keyform",
+        zipzi_editor_core::PropertyScope::GlueBlendShape { .. } => "properties.glue_strength_blend",
+        zipzi_editor_core::PropertyScope::InterpolatedGlue
+        | zipzi_editor_core::PropertyScope::UnavailableGlueBlendShape { .. } => {
+            "properties.glue_strength_preview"
+        }
+        _ => "properties.glue_strength_base",
+    };
+    vec![
+        DetailRow::Hint(t!(scope).into()),
+        DetailRow::property(
+            "glue-side-a",
+            t!("properties.glue_mesh_a"),
+            side(RelationKind::GlueA).to_owned(),
+        ),
+        DetailRow::property(
+            "glue-side-b",
+            t!("properties.glue_mesh_b"),
+            side(RelationKind::GlueB).to_owned(),
+        ),
+        DetailRow::property(
+            "glue-pair-count",
+            t!("properties.glue_pair_count"),
+            if count == 0 {
+                t!("properties.glue_empty").into_owned()
+            } else {
+                count.to_string()
+            },
+        ),
+    ]
 }
 
 fn part_fields() -> FormDefinition {

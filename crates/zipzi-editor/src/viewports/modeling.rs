@@ -302,9 +302,19 @@ impl ViewportSurface {
             if trace_candidate {
                 frame_trace::emit(trace, "mesh_candidate_begin", &[]);
             }
+            let before_selection = matches!(input, CanvasInput::Down { .. }).then(|| {
+                owner
+                    .editor
+                    .document()
+                    .and_then(|doc| doc.context().selection.clone())
+            });
             let result = match input {
                 CanvasInput::BrushResizeDown { point } => {
-                    owner.editor.begin_brush_size_gesture(binding, point)
+                    let modifiers = window.modifiers();
+                    owner
+                        .editor
+                        .update_canvas_modifiers(binding, modifiers.shift, modifiers.alt)
+                        .and_then(|_| owner.editor.begin_brush_size_gesture(binding, point))
                 }
                 CanvasInput::Down {
                     point,
@@ -375,7 +385,19 @@ impl ViewportSurface {
                     if let Some(demand) = &release_demand {
                         demand.trace(trace, "mesh_scene_release");
                     }
-                    if update.model_changed || release_demand.is_some() {
+                    let selected_glue = before_selection.is_some_and(|previous| {
+                        owner
+                            .editor
+                            .document()
+                            .and_then(|doc| doc.context().selection.as_ref())
+                            .is_some_and(|selected| {
+                                selected.kind == zipzi_editor_core::ObjectKind::Glue
+                                    && Some(selected) != previous.as_ref()
+                            })
+                    });
+                    if selected_glue {
+                        owner.redraw(cx);
+                    } else if update.model_changed || release_demand.is_some() {
                         if moving {
                             let immediate = if preview_move && let Some(token) = self.interaction {
                                 self.mesh_input.preview_modifiers =

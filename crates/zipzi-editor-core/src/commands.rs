@@ -149,6 +149,16 @@ pub enum CommandId {
     HandTool,
     #[serde(rename = "tool.glue")]
     GlueTool,
+    #[serde(rename = "tool.glue-stitch")]
+    GlueStitch,
+    #[serde(rename = "tool.glue-finish")]
+    GlueFinish,
+    #[serde(rename = "tool.glue-sync-insert")]
+    GlueSyncInsert,
+    #[serde(rename = "tool.glue-bind")]
+    GlueBind,
+    #[serde(rename = "tool.glue-unbind")]
+    GlueUnbind,
     #[serde(rename = "tool.generate-mesh")]
     GenerateMesh,
     #[serde(rename = "tool.manual-mesh")]
@@ -597,7 +607,18 @@ specs![
         false,
         []
     ),
-    (GlueTool, "editor.tool_glue", Viewport, false, []),
+    (GlueTool, "editor.tool_glue", Viewport, false, ["g"]),
+    (GlueStitch, "editor.glue_stitch", Viewport, false, []),
+    (GlueFinish, "editor.glue_done", Viewport, false, []),
+    (
+        GlueSyncInsert,
+        "editor.glue_sync_insert",
+        Viewport,
+        false,
+        []
+    ),
+    (GlueBind, "editor.glue_bind", Viewport, false, []),
+    (GlueUnbind, "editor.glue_unbind", Viewport, false, []),
     (HandTool, "editor.tool_hand", Viewport, false, ["h"]),
     (
         ToggleDeformers,
@@ -928,6 +949,10 @@ impl Editor {
                     && !self.manual_active()
                     && self.active_tool() == crate::ToolId::Glue
             }
+            GlueStitch => matches!(command.target, CommandTarget::Viewport(binding)
+                if self.stitch_for_viewport(binding.viewport)),
+            GlueSyncInsert => matches!(command.target, CommandTarget::Viewport(binding)
+                if self.manual_glue_controls(binding).is_some_and(|controls| controls.sync_insert)),
             HandTool => animation_navigation || self.active_tool() == crate::ToolId::Hand,
             ManualMesh => self.manual_active(),
             ManualSelect => self.manual_tool() == Some(crate::ManualTool::Select),
@@ -1085,6 +1110,33 @@ impl Editor {
                     && matches!(command.target,CommandTarget::Viewport(b) if self.manual_for_viewport(b.viewport))
                     && (command.id != ManualPadSource || !self.gesture_active())
                     && (command.id != ManualSourceView || self.manual_targets().len() == 1)
+            }
+            GlueFinish => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.gesture_active()
+                    && matches!(command.target, CommandTarget::Viewport(b) if self.stitch_for_viewport(b.viewport))
+            }
+            GlueStitch => {
+                modeling && target && !self.is_busy() && !self.exiting() && !self.gesture_active()
+            }
+            GlueUnbind if matches!(command.target, CommandTarget::Viewport(b) if self.stitch_for_viewport(b.viewport)) => {
+                !self.gesture_active() && !self.is_busy()
+            }
+            GlueSyncInsert | GlueBind | GlueUnbind => {
+                modeling
+                    && target
+                    && !self.is_busy()
+                    && !self.exiting()
+                    && !self.gesture_active()
+                    && self.manual_editable()
+                    && matches!(command.target, CommandTarget::Viewport(binding)
+                    if self.manual_glue_controls(binding).is_some_and(|controls| match command.id {
+                        GlueBind => controls.bind_count > 0,
+                        GlueUnbind => controls.unbind_count > 0 && self.validate_modeling_press(binding).is_ok(),
+                        _ => true,
+                    }))
             }
             DeleteObject => {
                 (modeling || matches!(command.target, CommandTarget::Document(_)))
@@ -1250,6 +1302,55 @@ impl Editor {
             }
             ManualMesh if self.manual_active() => self.exit_manual_mesh(),
             ManualMesh => return Ok(CommandEffect::Host(command)),
+            GlueFinish => {
+                let target = self
+                    .stitch_controls(viewport.unwrap())
+                    .and_then(|c| c.target);
+                self.execute(EditorCommand::SetTool(crate::ToolId::Select))?;
+                if let Some(id) = target {
+                    self.execute(EditorCommand::SelectObject(crate::ObjectRef::new(
+                        crate::ObjectKind::Glue,
+                        id,
+                    )))?;
+                    self.execute(EditorCommand::SetTool(crate::ToolId::Select))?;
+                }
+            }
+            GlueStitch => {
+                self.exit_manual_mesh();
+                let session = self.active_session_mut().unwrap();
+                session
+                    .modeling
+                    .tools
+                    .begin_stitch(&mut session.document, viewport.unwrap().viewport)?;
+                session.invalidate_scene();
+            }
+            GlueUnbind if self.stitch_for_viewport(viewport.unwrap().viewport) => {
+                self.active_session_mut()
+                    .unwrap()
+                    .modeling
+                    .tools
+                    .toggle_stitch_remove();
+            }
+            GlueSyncInsert => {
+                self.active_session_mut()
+                    .unwrap()
+                    .modeling
+                    .tools
+                    .toggle_manual_sync_insert();
+            }
+            GlueBind | GlueUnbind => {
+                let binding = viewport.unwrap();
+                self.validate_modeling_press(binding)?;
+                let frame = self.displayed_modeling_frame(binding).unwrap().clone();
+                let session = self.active_session_mut().unwrap();
+                if session.modeling.tools.edit_manual_glue(
+                    &mut session.document,
+                    &frame,
+                    command.id == GlueBind,
+                )? {
+                    session.invalidate_scene();
+                }
+            }
             ManualSelect | ManualLasso | ManualCreate | ManualDelete => {
                 let tool = match command.id {
                     ManualLasso => crate::ManualTool::Lasso,
@@ -1318,6 +1419,8 @@ impl Editor {
                 EditorCommand::ToggleAncestorDeformers,
             )?,
             CancelGesture => {
+                let exit_stitch =
+                    self.stitch_for_viewport(viewport.unwrap().viewport) && !self.gesture_active();
                 let exit_manual = self.manual_active() && !self.gesture_active();
                 let binding = viewport.unwrap();
                 if let Some(token) = self
@@ -1327,6 +1430,9 @@ impl Editor {
                     self.cancel_viewport_interaction(token);
                 }
                 self.cancel_gesture_for(binding);
+                if exit_stitch {
+                    self.execute(EditorCommand::SetTool(crate::ToolId::Select))?;
+                }
                 if exit_manual {
                     self.exit_manual_mesh();
                 }

@@ -19,7 +19,7 @@ pub use types::DrawableFrameBounds;
 pub use evaluator::{
     evaluate_frame, evaluate_frame_including_hidden, EvaluationTimings, FrameEvaluator,
 };
-pub use glue_controls::{evaluated_glue_operations, GlueOperation};
+pub use glue_controls::{evaluated_glue_operations, ordinary_glue_intensity, GlueOperation};
 pub use prepared::PreparedEvaluation;
 pub use selection::evaluate_blend_binding;
 pub use types::{

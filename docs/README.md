@@ -18,6 +18,7 @@
 - [zipzi-python P3A refactor](archive/plans/python-sdk-rewrite/p3a-api-agent-contract.md): final API, generation boundaries, agent documentation and acceptance gates
 - [Runtime R5 / Python P5 animation authoring](archive/plans/sdk-runtime/python2-r5-authoring.md): typed edits, records, SDK plans and addresses; Preview, spatial/GPU observation, fair scheduling and Editor playback isolation are delivered; [R7 acceptance](archive/plans/sdk-runtime/python2-r7-closeout.md) records final workflows, distribution and performance
 - [Editor application](../crates/zipzi-editor/README.md), [editing core](../crates/zipzi-editor-core/README.md) and [render adapter](../crates/zipzi-editor-render/README.md)
+- [Editor Glue 工具实施方案](plans/editor-glue-tool.md): 独立缝合工具、原子加点绑定、接缝属性及高级权重笔刷；核心回归已通过，原生 UI 验收待完成
 - [动画曲线配置与帧步进方案](plans/animation-curve-authoring.md): 时间线配置入口、五种插值、Bezier 缓动预设、区间级 Frame Step、持久化与导出验收；设计方案，尚未实施
 - [`.zipzi` 原生工程格式设计](plans/native-project-format.md): 单文件容器、原子保存、资源工作集、SDK 生命周期与跨平台文件打开；设计提案，尚未实现
 - [Authoring 新内核重写方案](archive/plans/authoring-architecture.md)涵盖所有权、任务协议、API 与旧实现删除清单。[各阶段实施记录](archive/plans/authoring-architecture.md#实施记录)包含验证范围和提交，[阶段 6 对照实验](archive/plans/authoring-architecture/phase-6.md)记录优化基线。

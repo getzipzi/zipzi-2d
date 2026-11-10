@@ -124,8 +124,12 @@ impl Editor {
         point: crate::ViewportPoint,
     ) -> Result<ViewportInputUpdate> {
         ensure!(
-            self.active_tool() == crate::ToolId::BrushSelect && !self.manual_active(),
-            "Brush selection is not active"
+            matches!(
+                self.active_tool(),
+                crate::ToolId::BrushSelect | crate::ToolId::Glue
+            ) && !self.manual_active()
+                && !self.stitch_for_viewport(binding.viewport),
+            "Brush tool is not active"
         );
         self.begin_canvas_input(binding, CanvasInput::BrushResizeDown { point })
     }

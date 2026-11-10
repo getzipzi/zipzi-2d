@@ -3,6 +3,10 @@ use super::*;
 use crate::ModelVector;
 use std::ops::{Deref, DerefMut};
 
+#[path = "glue.rs"]
+mod glue;
+pub use glue::ManualGlueControls;
+
 enum SharedGesture {
     Region(Gesture),
     Drag {
@@ -23,6 +27,11 @@ pub(in crate::tools) struct ManualMeshSession {
     active: usize,
     hovered: Option<usize>,
     shared: Option<SharedGesture>,
+    sync_insert: bool,
+    stitch: bool,
+    sync_click: bool,
+    glue_target: Option<String>,
+    retired_glue_target: Option<String>,
 }
 impl Deref for ManualMeshSession {
     type Target = ManualMeshMode;
@@ -46,6 +55,11 @@ impl ManualMeshSession {
             active: 0,
             hovered: None,
             shared: None,
+            sync_insert: false,
+            stitch: false,
+            sync_click: false,
+            glue_target: None,
+            retired_glue_target: None,
         }
     }
     pub fn targets(&self) -> Vec<ManualMeshTarget> {
@@ -88,6 +102,22 @@ impl ManualMeshSession {
     }
     pub fn reconcile(&mut self, document: &mut Document) {
         self.retain_context(document);
+        if self
+            .glue_target
+            .as_deref()
+            .is_some_and(|id| document.model().glue(id).is_none())
+        {
+            self.retired_glue_target = self.glue_target.take();
+        }
+        if self.stitch
+            && self.glue_target.is_none()
+            && self
+                .retired_glue_target
+                .as_deref()
+                .is_some_and(|id| document.model().glue(id).is_some())
+        {
+            self.glue_target = self.retired_glue_target.take();
+        }
         if self.shared.is_some()
             && self
                 .modes
@@ -115,6 +145,7 @@ impl ManualMeshSession {
         Ok(())
     }
     pub fn cancel(&mut self, document: &mut Document) -> bool {
+        self.sync_click = false;
         let mut changed = self.shared.take().is_some();
         for mode in &mut self.modes {
             changed |= mode.cancel(document);
@@ -291,6 +322,12 @@ impl ManualMeshSession {
                 primary,
             } => {
                 self.cancel(document);
+                self.sync_click = self.sync_insert
+                    && !self.source_view
+                    && !primary
+                    && !shift
+                    && !alt
+                    && self.tool != ManualTool::Delete;
                 self.active = self.pick(frame, point).unwrap_or(self.active);
                 self.hovered = Some(self.active);
                 let hit = self.modes[self.active].hit(frame, point);
@@ -353,6 +390,37 @@ impl ManualMeshSession {
                     return Ok(self.cancel(document));
                 }
                 self.update_shared(document, point)
+            }
+            CanvasInput::Up { point }
+                if self.sync_click
+                    && self
+                        .shared
+                        .as_ref()
+                        .map(SharedGesture::press)
+                        .or(self.gesture.as_ref())
+                        .is_some_and(|g| {
+                            !g.moved && crate::picking::distance2(g.start, point) < 9.
+                        }) =>
+            {
+                let start = self
+                    .shared
+                    .as_ref()
+                    .map(SharedGesture::press)
+                    .or(self.gesture.as_ref())
+                    .unwrap()
+                    .start;
+                self.cancel(document);
+                match self.insert_overlap(document, frame, start) {
+                    Ok(changed) => {
+                        self.diagnostic = None;
+                        Ok(changed)
+                    }
+                    Err(error) => {
+                        document.cancel_manual_mesh_gesture();
+                        self.diagnostic = Some(error.to_string());
+                        Ok(false)
+                    }
+                }
             }
             CanvasInput::Up { point } if self.shared.is_some() => {
                 let mut changed = self.update_shared(document, point)?;

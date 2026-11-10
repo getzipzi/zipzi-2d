@@ -131,6 +131,7 @@ fn view_menu(item: impl Fn(CommandId) -> MenuItem, selected_theme: theme::ColorT
             item(CommandId::SelectTool),
             item(CommandId::LassoTool),
             item(CommandId::BrushSelectTool),
+            item(CommandId::GlueStitch),
             item(CommandId::GlueTool),
             item(CommandId::HandTool),
             MenuItem::separator(),

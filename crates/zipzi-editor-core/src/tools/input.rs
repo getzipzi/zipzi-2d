@@ -1,5 +1,5 @@
 //! Pointer normalization and gesture dispatch. Operation rules live with each gesture.
-use super::{CanvasFrame, CanvasInput, ToolController};
+use super::{CanvasFrame, CanvasInput, ToolController, ToolId, gesture::Gesture};
 use crate::Document;
 use anyhow::{Result, ensure};
 
@@ -23,6 +23,9 @@ impl ToolController {
         frame: &CanvasFrame,
         event: CanvasInput,
     ) -> Result<bool> {
+        if let Some(stitch) = &mut self.stitch {
+            return stitch.input(document, frame, event);
+        }
         if let Some(manual) = &mut self.manual {
             if let CanvasInput::Down { shift, alt, .. }
             | CanvasInput::ModifiersChanged { shift, alt } = event
@@ -44,11 +47,16 @@ impl ToolController {
                 }
                 if let Some(gesture) = self.gesture.as_mut() {
                     let point = gesture.press().current;
+                    let settings = if self.active == ToolId::Glue {
+                        &mut self.glue_brush
+                    } else {
+                        &mut self.brush_selection
+                    };
                     gesture.update(
                         document,
                         &mut self.components,
                         point,
-                        &mut self.brush_selection,
+                        settings,
                         &mut self.component_weights,
                     )
                 } else {
@@ -77,13 +85,25 @@ impl ToolController {
                 self.alt = alt;
                 self.shift = shift;
                 self.pointer = Some((frame.version.binding, point));
+                if self.active != ToolId::Hand
+                    && let Some(object) = self.pick_glue_label(document, frame, point)
+                {
+                    document.select_object(object)?;
+                    self.set_tool(ToolId::Glue, document);
+                    return Ok(false);
+                }
                 self.begin_selection(document, frame, point, shift, alt, primary, false);
-                Ok(false)
+                if let Some(Gesture::Glue(gesture)) = self.gesture.as_mut() {
+                    gesture.update(document)
+                } else {
+                    Ok(false)
+                }
             }
             CanvasInput::BrushResizeDown { point } => {
                 ensure!(
-                    self.active == super::ToolId::BrushSelect && !self.manual_active(),
-                    "Select the brush selection tool before resizing"
+                    matches!(self.active, ToolId::BrushSelect | ToolId::Glue)
+                        && !self.manual_active(),
+                    "Select a brush tool before resizing"
                 );
                 ensure!(
                     point.x.is_finite() && point.y.is_finite(),
@@ -104,16 +124,24 @@ impl ToolController {
                     if !left_down {
                         return Ok(self.cancel(document));
                     }
+                    let settings = if self.active == ToolId::Glue {
+                        &mut self.glue_brush
+                    } else {
+                        &mut self.brush_selection
+                    };
                     self.gesture.as_mut().unwrap().update(
                         document,
                         &mut self.components,
                         point,
-                        &mut self.brush_selection,
+                        settings,
                         &mut self.component_weights,
                     )
                 } else {
                     self.hovered_binding = Some(frame.version.binding);
-                    self.hovered = self.canvas_hit(document, frame, point);
+                    self.hovered = self
+                        .pick_glue_label(document, frame, point)
+                        .map(crate::HitTarget::Object)
+                        .or_else(|| self.canvas_hit(document, frame, point));
                     Ok(false)
                 }
             }
@@ -123,13 +151,20 @@ impl ToolController {
                 }
                 let gesture = self.gesture.as_mut().unwrap();
                 self.pointer = Some((frame.version.binding, point));
-                let model_changed = gesture.update(
+                let settings = if self.active == ToolId::Glue {
+                    &mut self.glue_brush
+                } else {
+                    &mut self.brush_selection
+                };
+                let mut model_changed = gesture.update(
                     document,
                     &mut self.components,
                     point,
-                    &mut self.brush_selection,
+                    settings,
                     &mut self.component_weights,
                 )?;
+                model_changed |=
+                    matches!(gesture, Gesture::Glue(_)) && document.has_glue_weight_edit();
                 let frame_change = if let super::gesture::Gesture::Controls(g) = gesture {
                     g.frame_preview().map(|(o, i)| (o.clone(), i))
                 } else {

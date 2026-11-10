@@ -437,6 +437,84 @@ impl Editor {
         self.active_session()
             .map_or_else(Default::default, |s| s.modeling.tools.brush_mode)
     }
+    pub fn glue_brush_settings(&self) -> crate::BrushSelectionSettings {
+        self.active_session()
+            .map_or_else(Default::default, |s| s.modeling.tools.glue_brush)
+    }
+    pub fn glue_brush_mode(&self) -> crate::GlueBrushMode {
+        self.active_session()
+            .map_or_else(Default::default, |s| s.modeling.tools.glue_brush_mode)
+    }
+    pub fn glue_paint_controls(
+        &self,
+        binding: crate::ViewportBinding,
+    ) -> Option<crate::GluePaintControls> {
+        let session = self.active_session()?;
+        if !self.viewport_binding_valid(binding) {
+            return None;
+        }
+        let frame = self.displayed_modeling_frame(binding);
+        session
+            .modeling
+            .tools
+            .glue_paint_controls(&session.document, frame)
+    }
+    /// Apply a whole-seam preset using the same visibility and lock checks as painting.
+    pub fn set_glue_follow(
+        &mut self,
+        binding: crate::ViewportBinding,
+        side: Option<usize>,
+    ) -> Result<()> {
+        ensure!(
+            !self.gesture_active() && !self.is_busy(),
+            "Finish the current edit first"
+        );
+        ensure!(side.is_none_or(|s| s < 2), "Unknown seam side");
+        self.validate_modeling_press(binding)?;
+        let controls = self
+            .glue_paint_controls(binding)
+            .ok_or_else(|| anyhow!("Select a seam"))?;
+        if let Some(status) = controls.diagnostic {
+            anyhow::bail!(status.message);
+        }
+        let session = self.active_session_mut().unwrap();
+        let id = session
+            .document
+            .context()
+            .selection
+            .as_ref()
+            .unwrap()
+            .id
+            .clone();
+        let model = session.document.model();
+        let pairs = model
+            .glue(&id)
+            .unwrap()
+            .pairs
+            .iter()
+            .map(|p| p.id.clone())
+            .collect::<Vec<_>>();
+        drop(model);
+        // A's movement coefficient must be zero when the seam follows A.
+        let weights = match side {
+            Some(0) => [0., 1.],
+            Some(1) => [1., 0.],
+            _ => [0.5, 0.5],
+        };
+        let version = session.document.session.version();
+        session.document.preview_glue_weights(
+            version,
+            &id,
+            &pairs
+                .iter()
+                .map(|p| (p.as_str(), weights))
+                .collect::<Vec<_>>(),
+        )?;
+        session.document.finish_edit()?;
+        session.invalidate_scene();
+        Ok(())
+    }
+
     pub fn brush_inflating_for(&self, binding: crate::ViewportBinding) -> bool {
         self.gesture_active_for(binding)
             && self
@@ -462,6 +540,73 @@ impl Editor {
     pub fn manual_targets(&self) -> Vec<crate::ManualMeshTarget> {
         self.active_session()
             .map_or_else(Vec::new, |s| s.modeling.tools.manual_targets())
+    }
+    pub fn stitch_for_viewport(&self, viewport: crate::ViewportId) -> bool {
+        self.active_session()
+            .is_some_and(|s| s.modeling.tools.stitch_viewport() == Some(viewport))
+    }
+    pub fn stitch_parts(&self) -> usize {
+        self.active_session()
+            .map_or(0, |s| s.modeling.tools.stitch_parts())
+    }
+    pub fn stitch_removing(&self) -> bool {
+        self.active_session()
+            .is_some_and(|s| s.modeling.tools.stitch_removing())
+    }
+    pub fn stitch_controls(
+        &self,
+        binding: crate::ViewportBinding,
+    ) -> Option<crate::ManualGlueControls> {
+        if !self.viewport_binding_valid(binding) || !self.stitch_for_viewport(binding.viewport) {
+            return None;
+        }
+        let session = self.active_session()?;
+        session
+            .modeling
+            .tools
+            .stitch_controls(&session.document, self.displayed_modeling_frame(binding))
+    }
+    pub fn manual_glue_controls(
+        &self,
+        binding: crate::ViewportBinding,
+    ) -> Option<crate::ManualGlueControls> {
+        if !self.viewport_binding_valid(binding) || !self.manual_for_viewport(binding.viewport) {
+            return None;
+        }
+        let session = self.active_session()?;
+        let frame = self
+            .validate_modeling_press(binding)
+            .ok()
+            .and_then(|_| self.displayed_modeling_frame(binding));
+        session
+            .modeling
+            .tools
+            .manual_glue_controls(&session.document, frame)
+    }
+    pub fn set_manual_glue_target(
+        &mut self,
+        binding: crate::ViewportBinding,
+        target: Option<String>,
+    ) -> Result<()> {
+        let controls = self
+            .manual_glue_controls(binding)
+            .ok_or_else(|| anyhow::anyhow!("Mesh Edit target changed"))?;
+        anyhow::ensure!(
+            !self.gesture_active() && !self.is_busy(),
+            "Finish the current mesh edit first"
+        );
+        anyhow::ensure!(
+            target
+                .as_ref()
+                .is_none_or(|id| controls.targets.iter().any(|(key, _)| key == id)),
+            "Glue connects a different pair of meshes"
+        );
+        self.active_session_mut()
+            .unwrap()
+            .modeling
+            .tools
+            .set_manual_glue_target(target);
+        Ok(())
     }
     pub fn manual_target_at(
         &self,

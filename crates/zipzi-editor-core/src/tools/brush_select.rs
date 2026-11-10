@@ -59,7 +59,7 @@ impl BrushSelectionSettings {
                 },
         ]
     }
-    fn sample_spacing(self) -> f64 {
+    pub(super) fn sample_spacing(self) -> f64 {
         let [rx, ry] = self.half_extents();
         rx.min(ry) as f64 / 8.
     }
@@ -131,7 +131,7 @@ impl Default for BrushSelectionSettings {
 /// Distance-spaced dabs share their phase across pointer events. A motion dab
 /// contributes spacing / diameter of a full dab, so event frequency and brush
 /// spacing do not multiply paint strength. The press itself is one full dab.
-struct StrokeSamples {
+pub(super) struct StrokeSamples {
     start: ViewportPoint,
     direction: [f64; 2],
     length: f64,
@@ -139,7 +139,39 @@ struct StrokeSamples {
     spacing: f64,
 }
 impl StrokeSamples {
+    pub(super) fn between(
+        start: ViewportPoint,
+        end: ViewportPoint,
+        first: f64,
+        spacing: f64,
+    ) -> Option<Self> {
+        let dx = end.x as f64 - start.x as f64;
+        let dy = end.y as f64 - start.y as f64;
+        let length = dx.hypot(dy);
+        (length > 0.).then(|| Self {
+            start,
+            direction: [dx / length, dy / length],
+            length,
+            first,
+            spacing,
+        })
+    }
+
+    pub(super) fn next_distance(&self) -> f64 {
+        let next = (self.first - self.length).rem_euclid(self.spacing);
+        if next == 0. { self.spacing } else { next }
+    }
+
     fn influence(&self, settings: BrushSelectionSettings, point: ViewportPoint) -> f32 {
+        self.influence_at(settings, point, None)
+    }
+
+    pub(super) fn influence_at(
+        &self,
+        settings: BrushSelectionSettings,
+        point: ViewportPoint,
+        other: Option<ViewportPoint>,
+    ) -> f32 {
         let [rx, ry] = settings.half_extents();
         let radius = if settings.shape == BrushShape::Circle {
             rx as f64
@@ -174,7 +206,10 @@ impl StrokeSamples {
                 x: (point.x as f64 - perpendicular[0] + self.direction[0] * offset) as f32,
                 y: (point.y as f64 - perpendicular[1] + self.direction[1] * offset) as f32,
             };
-            let influence = settings.influence(point, center, center) as f64;
+            let mut influence = settings.influence(point, center, center) as f64;
+            if let Some(other) = other {
+                influence = influence.min(settings.influence(other, center, center) as f64);
+            }
             if influence == 1. {
                 return 1.;
             }
@@ -191,9 +226,18 @@ pub(super) struct BrushSelectionGesture {
     candidates: Vec<(ComponentRef, ViewportPoint)>,
     started: bool,
     distance_to_next: f64,
-    original_diameter: f32,
     pub resizing: bool,
+    adjustment: BrushAdjustment,
 }
+
+#[derive(Clone, Copy, Default)]
+pub(super) enum BrushAdjustment {
+    #[default]
+    Diameter,
+    Angle,
+    Hardness,
+}
+
 impl BrushSelectionGesture {
     pub fn new(
         document: &Document,
@@ -216,9 +260,14 @@ impl BrushSelectionGesture {
             candidates,
             started: false,
             distance_to_next: settings.sample_spacing(),
-            original_diameter: settings.diameter,
             resizing,
+            adjustment: BrushAdjustment::default(),
         })
+    }
+
+    pub fn with_adjustment(mut self, adjustment: BrushAdjustment) -> Self {
+        self.adjustment = adjustment;
+        self
     }
 
     pub fn update(
@@ -228,11 +277,22 @@ impl BrushSelectionGesture {
         weights: &mut HashMap<ComponentRef, f32>,
     ) {
         if self.resizing {
-            settings.diameter =
-                (self.original_diameter + (self.press.current.x - self.press.point.x) * 2.).clamp(
-                    BrushSelectionSettings::MIN_DIAMETER,
-                    BrushSelectionSettings::MAX_DIAMETER,
-                );
+            let dx = self.press.current.x - self.press.point.x;
+            match self.adjustment {
+                BrushAdjustment::Diameter => {
+                    settings.diameter = (self.settings.diameter + dx * 2.).clamp(
+                        BrushSelectionSettings::MIN_DIAMETER,
+                        BrushSelectionSettings::MAX_DIAMETER,
+                    );
+                }
+                BrushAdjustment::Angle if settings.shape != BrushShape::Circle => {
+                    settings.angle = (self.settings.angle + dx).clamp(-180., 180.);
+                }
+                BrushAdjustment::Hardness => {
+                    settings.hardness = (self.settings.hardness + dx * 0.01).clamp(0., 1.);
+                }
+                _ => {}
+            }
             return;
         }
         if !self.started && self.press.operation == super::region::SelectionOperation::Replace {
@@ -240,19 +300,15 @@ impl BrushSelectionGesture {
             components.clear();
             weights.clear();
         }
-        let dx = self.press.current.x as f64 - self.previous.x as f64;
-        let dy = self.press.current.y as f64 - self.previous.y as f64;
-        let length = dx.hypot(dy);
-        if self.started && length == 0. {
+        let samples = StrokeSamples::between(
+            self.previous,
+            self.press.current,
+            self.distance_to_next,
+            self.settings.sample_spacing(),
+        );
+        if self.started && samples.is_none() {
             return;
         }
-        let samples = self.started.then(|| StrokeSamples {
-            start: self.previous,
-            direction: [dx / length, dy / length],
-            length,
-            first: self.distance_to_next,
-            spacing: self.settings.sample_spacing(),
-        });
         let mut selected: HashSet<_> = components.iter().cloned().collect();
         for (component, position) in &self.candidates {
             let influence = samples.as_ref().map_or_else(
@@ -297,10 +353,7 @@ impl BrushSelectionGesture {
             }
         }
         if let Some(samples) = samples {
-            self.distance_to_next = (samples.first - length).rem_euclid(samples.spacing);
-            if self.distance_to_next == 0. {
-                self.distance_to_next = samples.spacing;
-            }
+            self.distance_to_next = samples.next_distance();
         }
         self.started = true;
         self.previous = self.press.current;
@@ -315,7 +368,11 @@ impl BrushSelectionGesture {
         components.clone_from(&self.press.components);
         weights.clone_from(&self.press.weights);
         if self.resizing {
-            settings.diameter = self.original_diameter;
+            match self.adjustment {
+                BrushAdjustment::Diameter => settings.diameter = self.settings.diameter,
+                BrushAdjustment::Angle => settings.angle = self.settings.angle,
+                BrushAdjustment::Hardness => settings.hardness = self.settings.hardness,
+            }
         }
     }
 }

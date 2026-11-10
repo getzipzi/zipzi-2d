@@ -21,10 +21,16 @@ pub(super) fn render_secondary(
     {
         return div().into_any_element();
     }
+    if state.editor.stitch_for_viewport(canvas.viewport) {
+        return render_stitch_bar(canvas, &owner, modal, cx);
+    }
     if state.editor.manual_for_viewport(canvas.viewport) {
         return render_mesh_edit_bar(canvas, &owner, modal, cx);
     }
-    if state.editor.active_tool() == ToolId::BrushSelect {
+    if matches!(
+        state.editor.active_tool(),
+        ToolId::BrushSelect | ToolId::Glue
+    ) {
         return canvas.brush_bar.clone().into_any_element();
     }
     div().into_any_element()
@@ -153,4 +159,95 @@ fn render_mesh_edit_bar(
         );
     }
     super::toolbar::secondary_bar("mesh-edit-actions", tools, cx)
+}
+
+fn render_stitch_bar(
+    canvas: &ViewportSurface,
+    owner: &Entity<crate::EditorView>,
+    modal: bool,
+    cx: &Context<ViewportSurface>,
+) -> AnyElement {
+    let state = owner.read(cx);
+    let controls = canvas
+        .binding(&state.editor)
+        .and_then(|b| state.editor.stitch_controls(b));
+    let hint = if let Some(c) = &controls {
+        if state.editor.stitch_removing() {
+            t!("editor.glue_remove_hint").into_owned()
+        } else {
+            t!("editor.glue_stitch_progress", count = c.pair_count).into_owned()
+        }
+    } else if state.editor.stitch_parts() == 0 {
+        t!("editor.glue_pick_first").into_owned()
+    } else {
+        t!("editor.glue_pick_second").into_owned()
+    };
+    let title = controls.as_ref().map_or_else(
+        || t!("editor.glue_stitch").into_owned(),
+        |c| format!("{}  ↔  {}", c.meshes[0], c.meshes[1]),
+    );
+    let mut actions = div().flex().items_center().gap(compact::rem(6.));
+    for (id, command, label, selected) in [
+        (
+            "glue-remove-points",
+            CommandId::GlueUnbind,
+            "editor.glue_remove_points",
+            state.editor.stitch_removing(),
+        ),
+        (
+            "glue-stitch-action",
+            CommandId::GlueFinish,
+            "editor.glue_done",
+            true,
+        ),
+    ] {
+        if command == CommandId::GlueUnbind && controls.is_none() {
+            continue;
+        }
+        let invocation = canvas.command(&state.editor, command, CommandSource::Toolbar);
+        let enabled = state.editor.command_state(invocation).enabled;
+        let owner = owner.clone();
+        let focus = canvas.focus.clone();
+        actions = actions.child(
+            compact::toggle(Button::new(id), selected)
+                .label(t!(label).into_owned())
+                .disabled(modal || !enabled)
+                .on_click(move |_, window, cx| {
+                    window.focus(&focus, cx);
+                    owner.update(cx, |owner, cx| owner.run_invocation(invocation, window, cx));
+                }),
+        );
+    }
+    super::toolbar::secondary_bar(
+        "glue-stitch-bar",
+        div()
+            .flex()
+            .flex_col()
+            .gap(compact::rem(6.))
+            .p(compact::rem(6.))
+            .max_w(compact::rem(440.))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(compact::rem(8.))
+                    .child(Icon::new(IconName::Link).size(compact::rem(14.)))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .truncate()
+                            .text_size(compact::rem(12.))
+                            .child(title),
+                    )
+                    .child(actions),
+            )
+            .child(
+                div()
+                    .text_size(compact::rem(11.))
+                    .text_color(cx.theme().muted_foreground)
+                    .child(hint),
+            ),
+        cx,
+    )
 }
