@@ -1,0 +1,626 @@
+diff --git a/vendor/gpui-fast-macos/src/window.rs b/vendor/gpui-fast-macos/src/window.rs
+index 4d50f8e4..7061e5de 100644
+--- a/vendor/gpui-fast-macos/src/window.rs
++++ b/vendor/gpui-fast-macos/src/window.rs
+@@ -30,9 +30,10 @@ use gpui::{
+     ExternalPaths, FileDropEvent, ForegroundExecutor, FrameRequestSource, KeyDownEvent, Keystroke,
+     Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+     Pixels, PlatformAtlas, PlatformDisplay, PlatformFrameSignal, PlatformInput,
+-    PlatformInputHandler, PlatformWindow, Point, PromptButton, PromptLevel, RequestFrameOptions,
+-    SharedString, Size, SystemWindowTab, WindowAppearance, WindowBackgroundAppearance,
+-    WindowBounds, WindowControlArea, WindowKind, WindowParams, WindowVisibility, point, px, size,
++    PlatformInputHandler, PlatformWindow, Point, PromptButton, PromptLevel, RelativeMouseMoveEvent,
++    RequestFrameOptions, SharedString, Size, Subscription, SystemWindowTab, WindowAppearance,
++    WindowBackgroundAppearance, WindowBounds, WindowControlArea, WindowKind, WindowParams,
++    WindowVisibility, point, px, size,
+ };
+ #[cfg(any(test, feature = "test-support"))]
+ use image::RgbaImage;
+@@ -40,7 +41,7 @@ use image::RgbaImage;
+ use core_foundation::base::{CFRelease, CFTypeRef};
+ use core_foundation_sys::base::CFEqual;
+ use core_foundation_sys::number::{CFBooleanGetValue, CFBooleanRef};
+-use core_graphics::display::{CGDirectDisplayID, CGRect};
++use core_graphics::display::{CGDirectDisplayID, CGDisplay, CGRect};
+ use ctor::ctor;
+ use futures::channel::oneshot;
+ use gpui_util::ResultExt;
+@@ -669,6 +670,7 @@ pub(crate) struct MacWindowState {
+     cursor_style: CursorStyle,
+     custom_cursors: crate::cursor::CustomCursors,
+     cursor_visible: Arc<AtomicBool>,
++    relative_pointer: Option<Arc<RelativePointer>>,
+     frame_source: Option<WindowFrameSource>,
+     pub(crate) renderer: renderer::Renderer,
+     request_frame_callback: Option<Box<dyn FnMut(RequestFrameOptions)>>,
+@@ -718,6 +720,15 @@ pub(crate) struct MacWindowState {
+     sheet_parent: Option<id>,
+ }
+ 
++struct RelativePointer(CGDisplay);
++
++impl Drop for RelativePointer {
++    fn drop(&mut self) {
++        let _ = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
++        let _ = self.0.show_cursor();
++    }
++}
++
+ impl MacWindowState {
+     fn move_traffic_light(&mut self) {
+         if let Some(traffic_light_position) = self.traffic_light_position {
+@@ -1106,6 +1117,7 @@ impl MacWindow {
+                 blurred_view: None,
+                 background_appearance: WindowBackgroundAppearance::Opaque,
+                 cursor_style: CursorStyle::Arrow,
++                relative_pointer: None,
+                 custom_cursors,
+                 cursor_visible,
+                 frame_source: None,
+@@ -1387,6 +1399,7 @@ impl MacWindow {
+ impl Drop for MacWindow {
+     fn drop(&mut self) {
+         let mut this = self.0.lock();
++        this.relative_pointer.take();
+         // `accesskit_macos::SubclassingAdapter::for_window` strong-retains the
+         // window's content view, and that content view keeps the `GPUIView` it
+         // hosts alive. Together with the `Arc<Mutex<MacWindowState>>` parked in
+@@ -1433,6 +1446,44 @@ fn if_window_not_closed(closed: Arc<AtomicBool>, f: impl FnOnce()) {
+ }
+ 
+ impl PlatformWindow for MacWindow {
++    fn has_relative_pointer_capture(&self) -> bool {
++        self.0.lock().relative_pointer.is_some()
++    }
++
++    fn capture_relative_pointer(&self) -> Option<Subscription> {
++        let mut state = self.0.lock();
++        let pressed: NSUInteger = unsafe { msg_send![class!(NSEvent), pressedMouseButtons] };
++        if state.relative_pointer.is_some()
++            || !synthetic_drag_button_is_pressed(Some(MouseButton::Left), pressed)
++            || unsafe { state.native_window.isKeyWindow() != YES }
++        {
++            return None;
++        }
++        let display = CGDisplay::main();
++        display.hide_cursor().ok()?;
++        if CGDisplay::associate_mouse_and_mouse_cursor_position(false).is_err() {
++            let _ = display.show_cursor();
++            return None;
++        }
++        let capture = Arc::new(RelativePointer(display));
++        let token = Arc::downgrade(&capture);
++        state.relative_pointer = Some(capture);
++        state.synthetic_drag_counter += 1;
++        let window = Arc::downgrade(&self.0);
++        Some(Subscription::new(move || {
++            if let Some(window) = window.upgrade() {
++                let mut state = window.lock();
++                if state
++                    .relative_pointer
++                    .as_ref()
++                    .is_some_and(|capture| Arc::as_ptr(capture) == token.as_ptr())
++                {
++                    state.relative_pointer.take();
++                }
++            }
++        }))
++    }
++
+     fn set_cursor_style(&self, style: CursorStyle) -> bool {
+         let (native_window, native_view) = {
+             let mut state = self.0.lock();
+@@ -2926,7 +2977,7 @@ pub(crate) extern "C" fn handle_view_event(this: &Object, _: Sel, native_event:
+                     modifiers: Modifiers { control: true, .. },
+                     ..
+                 },
+-            ) => {
++            ) if lock.relative_pointer.is_none() => {
+                 *event = MouseUpEvent {
+                     button: MouseButton::Right,
+                     modifiers: Modifiers {
+@@ -2951,7 +3002,7 @@ pub(crate) extern "C" fn handle_view_event(this: &Object, _: Sel, native_event:
+                 lock = window_state.as_ref().lock();
+             }
+             PlatformInput::MouseMove(
+-                event @ MouseMoveEvent {
++                movement @ MouseMoveEvent {
+                     pressed_button: Some(_),
+                     ..
+                 },
+@@ -2959,22 +3010,40 @@ pub(crate) extern "C" fn handle_view_event(this: &Object, _: Sel, native_event:
+                 // Synthetic drag is used for selecting long buffer contents while buffer is being scrolled.
+                 // External file drag and drop is able to emit its own synthetic mouse events which will conflict
+                 // with these ones.
+-                if !lock.external_files_dragged {
++                if lock.relative_pointer.is_some() {
++                    event = PlatformInput::RelativeMouseMove(RelativeMouseMoveEvent {
++                        delta: unsafe {
++                            point(
++                                px(native_event.deltaX() as f32),
++                                px(native_event.deltaY() as f32),
++                            )
++                        },
++                        pressed_button: movement.pressed_button,
++                        modifiers: movement.modifiers,
++                    });
++                } else if !lock.external_files_dragged {
+                     lock.synthetic_drag_counter += 1;
+                     let executor = lock.foreground_executor.clone();
+                     executor
+                         .spawn(synthetic_drag(
+                             weak_window_state,
+                             lock.synthetic_drag_counter,
+-                            event.clone(),
++                            movement.clone(),
+                             lock.background_executor.clone(),
+                         ))
+                         .detach();
+                 }
+             }
+ 
+-            PlatformInput::MouseUp(MouseUpEvent { .. }) => {
++            PlatformInput::MouseUp(MouseUpEvent { button, .. }) => {
+                 lock.synthetic_drag_counter += 1;
++                if *button == MouseButton::Left {
++                    lock.relative_pointer.take();
++                }
++            }
++
++            PlatformInput::MouseMove(_) => {
++                lock.relative_pointer.take();
+             }
+ 
+             PlatformInput::ModifiersChanged(ModifiersChangedEvent {
+@@ -3211,8 +3280,11 @@ fn report_display_change(window_state: &Arc<Mutex<MacWindowState>>) {
+ extern "C" fn window_did_change_key_status(this: &Object, selector: Sel, _: id) {
+     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
+     let window_state = unsafe { get_window_state(this) };
+-    let lock = window_state.lock();
++    let mut lock = window_state.lock();
+     let is_active = unsafe { lock.native_window.isKeyWindow() == YES };
++    if !is_active {
++        lock.relative_pointer.take();
++    }
+ 
+     // AppKit also unhides the cursor on activation changes, so mirror that here.
+     lock.cursor_visible.store(true, Ordering::Relaxed);
+diff --git a/vendor/gpui-fast-windows/src/events.rs b/vendor/gpui-fast-windows/src/events.rs
+index a3f75288..b8315cfb 100644
+--- a/vendor/gpui-fast-windows/src/events.rs
++++ b/vendor/gpui-fast-windows/src/events.rs
+@@ -110,6 +110,7 @@ impl WindowsWindowInner {
+             WM_CLOSE => self.handle_close_msg(),
+             WM_DESTROY => self.handle_destroy_msg(handle),
+             WM_MOUSEMOVE => self.handle_mouse_move_msg(handle, lparam, wparam),
++            WM_CAPTURECHANGED => self.handle_mouse_capture_changed(),
+             WM_MOUSELEAVE | WM_NCMOUSELEAVE => self.handle_mouse_leave_msg(),
+             WM_NCMOUSEMOVE => self.handle_nc_mouse_move_msg(handle, lparam),
+             // Treat double click as a second single click, since we track the double clicks ourselves.
+@@ -352,9 +353,6 @@ impl WindowsWindowInner {
+         self.start_tracking_mouse(handle, TME_LEAVE);
+         self.restore_cursor_after_hide();
+ 
+-        let Some(mut func) = self.state.callbacks.input.take() else {
+-            return Some(1);
+-        };
+         let scale_factor = self.state.scale_factor.get();
+ 
+         let pressed_button = match MODIFIERKEYS_FLAGS(wparam.loword() as u32) {
+@@ -369,19 +367,68 @@ impl WindowsWindowInner {
+             }
+             _ => None,
+         };
+-        let x = lparam.signed_loword() as f32;
+-        let y = lparam.signed_hiword() as f32;
+-        let input = PlatformInput::MouseMove(MouseMoveEvent {
+-            position: logical_point(x, y, scale_factor),
+-            pressed_button,
+-            modifiers: current_modifiers(),
+-        });
++        let capture = self.state.relative_pointer.borrow().clone();
++        let input = if let Some(pointer) = capture {
++            let mut position = POINT::default();
++            if pressed_button != Some(MouseButton::Left)
++                || unsafe { GetCursorPos(&mut position) }.is_err()
++            {
++                self.finish_relative_pointer(true);
++                return self.dispatch_relative_mouse_cancel();
++            }
++            let dx = position.x - pointer.center.x;
++            let dy = position.y - pointer.center.y;
++            // The move posted by SetCursorPos itself contributes no displacement.
++            if dx == 0 && dy == 0 {
++                return Some(0);
++            }
++            if unsafe { SetCursorPos(pointer.center.x, pointer.center.y) }.is_err() {
++                self.finish_relative_pointer(false);
++                return self.dispatch_relative_mouse_cancel();
++            }
++            PlatformInput::RelativeMouseMove(RelativeMouseMoveEvent {
++                delta: logical_point(dx as f32, dy as f32, scale_factor),
++                pressed_button,
++                modifiers: current_modifiers(),
++            })
++        } else {
++            PlatformInput::MouseMove(MouseMoveEvent {
++                position: logical_point(
++                    lparam.signed_loword() as f32,
++                    lparam.signed_hiword() as f32,
++                    scale_factor,
++                ),
++                pressed_button,
++                modifiers: current_modifiers(),
++            })
++        };
++        let Some(mut func) = self.state.callbacks.input.take() else {
++            return Some(1);
++        };
+         let handled = !func(input).propagate;
+         self.state.callbacks.input.set(Some(func));
+ 
+         if handled { Some(0) } else { Some(1) }
+     }
+ 
++    fn handle_mouse_capture_changed(&self) -> Option<isize> {
++        if self.finish_relative_pointer(false) {
++            self.dispatch_relative_mouse_cancel();
++        }
++        None
++    }
++
++    fn dispatch_relative_mouse_cancel(&self) -> Option<isize> {
++        let mut callback = self.state.callbacks.input.take()?;
++        callback(PlatformInput::RelativeMouseMove(RelativeMouseMoveEvent {
++            delta: Point::default(),
++            pressed_button: None,
++            modifiers: current_modifiers(),
++        }));
++        self.state.callbacks.input.set(Some(callback));
++        Some(0)
++    }
++
+     fn handle_mouse_leave_msg(&self) -> Option<isize> {
+         self.state.hovered.set(false);
+         // The next window's `WM_SETCURSOR` picks its own cursor, so we just clear
+@@ -502,6 +549,9 @@ impl WindowsWindowInner {
+         button: MouseButton,
+         lparam: LPARAM,
+     ) -> Option<isize> {
++        if button == MouseButton::Left {
++            self.finish_relative_pointer(true);
++        }
+         unsafe { ReleaseCapture().log_err() };
+ 
+         let Some(mut func) = self.state.callbacks.input.take() else {
+@@ -799,6 +849,7 @@ impl WindowsWindowInner {
+         let this = self.clone();
+ 
+         if !activated {
++            this.finish_relative_pointer(false);
+             this.state.cursor_visible.store(true, Ordering::Relaxed);
+         }
+ 
+@@ -1164,13 +1215,8 @@ impl WindowsWindowInner {
+         {
+             return None;
+         }
+-        let cursor = if self.state.cursor_visible.load(Ordering::Relaxed) {
+-            self.state.current_cursor.borrow().handle
+-        } else {
+-            None
+-        };
+         unsafe {
+-            SetCursor(cursor);
++            SetCursor(self.effective_cursor());
+         };
+         Some(1)
+     }
+diff --git a/vendor/gpui-fast-windows/src/window.rs b/vendor/gpui-fast-windows/src/window.rs
+index f0138f3f..903313a3 100644
+--- a/vendor/gpui-fast-windows/src/window.rs
++++ b/vendor/gpui-fast-windows/src/window.rs
+@@ -82,6 +82,7 @@ pub struct WindowsWindowState {
+     pub cursors: Rc<RefCell<crate::cursor::CursorCache>>,
+     /// Shared with [`WindowsPlatformState::cursor_visible`].
+     pub cursor_visible: Arc<AtomicBool>,
++    pub(crate) relative_pointer: RefCell<Option<Rc<RelativePointer>>>,
+     pub nc_button_pressed: Cell<Option<u32>>,
+ 
+     pub display: Cell<WindowsDisplay>,
+@@ -96,6 +97,11 @@ pub struct WindowsWindowState {
+     pub(crate) a11y: RefCell<Option<A11yState>>,
+ }
+ 
++pub(crate) struct RelativePointer {
++    start: POINT,
++    pub(crate) center: POINT,
++}
++
+ pub(crate) struct WindowsWindowInner {
+     hwnd: HWND,
+     pub(crate) dialog_owner: Rc<crate::dialog::DialogOwner>,
+@@ -193,6 +199,7 @@ impl WindowsWindowState {
+             cursor_scale: Cell::new(scale_factor),
+             cursors: cursors.clone(),
+             cursor_visible,
++            relative_pointer: RefCell::new(None),
+             nc_button_pressed: Cell::new(nc_button_pressed),
+             display: Cell::new(display),
+             fullscreen: Cell::new(fullscreen),
+@@ -296,21 +303,38 @@ impl WindowsWindowInner {
+ 
+     pub(crate) fn apply_cursor_if_owned(&self) {
+         if self.owns_cursor() {
+-            let handle = if self
++            unsafe {
++                SetCursor(self.effective_cursor());
++            }
++        }
++    }
++
++    pub(crate) fn effective_cursor(&self) -> Option<HCURSOR> {
++        if self.state.relative_pointer.borrow().is_none()
++            && self
+                 .state
+                 .cursor_visible
+                 .load(std::sync::atomic::Ordering::Relaxed)
+-            {
+-                self.state.current_cursor.borrow().handle
+-            } else {
+-                None
+-            };
+-            unsafe {
+-                SetCursor(handle);
+-            }
++        {
++            self.state.current_cursor.borrow().handle
++        } else {
++            None
+         }
+     }
+ 
++    pub(crate) fn finish_relative_pointer(&self, restore_position: bool) -> bool {
++        let Some(pointer) = self.state.relative_pointer.take() else {
++            return false;
++        };
++        if restore_position
++            && unsafe { GetCapture() == self.hwnd && GetActiveWindow() == self.hwnd }
++        {
++            unsafe { SetCursorPos(pointer.start.x, pointer.start.y).log_err() };
++        }
++        self.apply_cursor_if_owned();
++        true
++    }
++
+     pub(crate) fn update_cursor(&self, style: CursorStyle) {
+         let scale = self.state.scale_factor.get();
+         if self.state.cursor_style.get() == style && self.state.cursor_scale.get() == scale {
+@@ -681,6 +705,7 @@ impl rwh::HasDisplayHandle for WindowsWindow {
+ 
+ impl Drop for WindowsWindow {
+     fn drop(&mut self) {
++        self.finish_relative_pointer(false);
+         self.0.dialog_owner.close();
+         unsafe { ShowWindowAsync(self.0.hwnd, SW_HIDE).ok().log_err() };
+         // `DestroyWindow` below sends `WM_SHOWWINDOW`; without a callback the
+@@ -703,6 +728,66 @@ impl Drop for WindowsWindow {
+ }
+ 
+ impl PlatformWindow for WindowsWindow {
++    fn has_relative_pointer_capture(&self) -> bool {
++        self.state.relative_pointer.borrow().is_some()
++    }
++
++    fn capture_relative_pointer(&self) -> Option<Subscription> {
++        if !self.is_active()
++            || unsafe { GetCapture() } != self.hwnd
++            || self.state.relative_pointer.borrow().is_some()
++        {
++            return None;
++        }
++
++        // Keep the hidden pointer away from screen edges and inside the client area.
++        let mut start = POINT::default();
++        let mut client = RECT::default();
++        let mut origin = POINT::default();
++        let mut monitor = MONITORINFO {
++            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
++            ..Default::default()
++        };
++        let mut visible = RECT::default();
++        unsafe {
++            GetCursorPos(&mut start).ok()?;
++            GetClientRect(self.hwnd, &mut client).ok()?;
++            ClientToScreen(self.hwnd, &mut origin).ok().ok()?;
++            OffsetRect(&mut client, origin.x, origin.y).ok().ok()?;
++            let display = MonitorFromWindow(self.hwnd, MONITOR_DEFAULTTONEAREST);
++            GetMonitorInfoW(display, &mut monitor).ok().ok()?;
++            IntersectRect(&mut visible, &client, &monitor.rcMonitor)
++                .ok()
++                .ok()?;
++        }
++        let center = POINT {
++            x: visible.left + (visible.right - visible.left) / 2,
++            y: visible.top + (visible.bottom - visible.top) / 2,
++        };
++        let pointer = Rc::new(RelativePointer { start, center });
++        let token = Rc::downgrade(&pointer);
++        self.state.relative_pointer.replace(Some(pointer));
++        self.apply_cursor_if_owned();
++        if unsafe { SetCursorPos(center.x, center.y) }.is_err() {
++            self.finish_relative_pointer(false);
++            return None;
++        }
++        let window = Rc::downgrade(&self.0);
++        Some(Subscription::new(move || {
++            if let Some(window) = window.upgrade() {
++                let owns_capture = window
++                    .state
++                    .relative_pointer
++                    .borrow()
++                    .as_ref()
++                    .is_some_and(|pointer| Rc::as_ptr(pointer) == token.as_ptr());
++                if owns_capture {
++                    window.finish_relative_pointer(true);
++                }
++            }
++        }))
++    }
++
+     fn set_cursor_style(&self, style: CursorStyle) -> bool {
+         self.update_cursor(style);
+         true
+diff --git a/vendor/gpui-fast/src/interactive.rs b/vendor/gpui-fast/src/interactive.rs
+index 913cf1ba..75216875 100644
+--- a/vendor/gpui-fast/src/interactive.rs
++++ b/vendor/gpui-fast/src/interactive.rs
+@@ -517,6 +517,25 @@ impl MouseMoveEvent {
+     }
+ }
+ 
++/// Mouse motion while the native pointer is captured for relative dragging.
++#[derive(Clone, Debug)]
++pub struct RelativeMouseMoveEvent {
++    /// The displacement in logical pixels, independent of the cursor position.
++    pub delta: Point<Pixels>,
++    /// The mouse button that is held, if any.
++    pub pressed_button: Option<MouseButton>,
++    /// The modifiers held during this movement.
++    pub modifiers: Modifiers,
++}
++
++impl Sealed for RelativeMouseMoveEvent {}
++impl InputEvent for RelativeMouseMoveEvent {
++    fn to_platform_input(self) -> PlatformInput {
++        PlatformInput::RelativeMouseMove(self)
++    }
++}
++impl MouseEvent for RelativeMouseMoveEvent {}
++
+ /// A mouse wheel event from the platform.
+ #[derive(Clone, Debug, Default)]
+ pub struct ScrollWheelEvent {
+@@ -783,6 +802,8 @@ pub enum PlatformInput {
+     MousePressure(MousePressureEvent),
+     /// The mouse was moved.
+     MouseMove(MouseMoveEvent),
++    /// The mouse was moved during relative pointer capture.
++    RelativeMouseMove(RelativeMouseMoveEvent),
+     /// The mouse exited the window.
+     MouseExited(MouseExitEvent),
+     /// The scroll wheel was used.
+@@ -808,6 +829,7 @@ impl PlatformInput {
+             PlatformInput::MouseDown(event) => Some(event),
+             PlatformInput::MouseUp(event) => Some(event),
+             PlatformInput::MouseMove(event) => Some(event),
++            PlatformInput::RelativeMouseMove(event) => Some(event),
+             PlatformInput::MousePressure(event) => Some(event),
+             PlatformInput::MouseExited(event) => Some(event),
+             PlatformInput::ScrollWheel(event) => Some(event),
+@@ -827,6 +849,7 @@ impl PlatformInput {
+             PlatformInput::MouseDown(_) => None,
+             PlatformInput::MouseUp(_) => None,
+             PlatformInput::MouseMove(_) => None,
++            PlatformInput::RelativeMouseMove(_) => None,
+             PlatformInput::MousePressure(_) => None,
+             PlatformInput::MouseExited(_) => None,
+             PlatformInput::ScrollWheel(_) => None,
+@@ -848,7 +871,7 @@ impl PlatformInput {
+             PlatformInput::MouseDown(_) => "mouse_down",
+             PlatformInput::MouseUp(_) => "mouse_up",
+             PlatformInput::MousePressure(_) => "mouse_pressure",
+-            PlatformInput::MouseMove(_) => "mouse_move",
++            PlatformInput::MouseMove(_) | PlatformInput::RelativeMouseMove(_) => "mouse_move",
+             PlatformInput::MouseExited(_) => "mouse_exited",
+             PlatformInput::ScrollWheel(_) => "scroll_wheel",
+             PlatformInput::Pinch(_) => "pinch",
+diff --git a/vendor/gpui-fast/src/platform.rs b/vendor/gpui-fast/src/platform.rs
+index 3339e8a5..fcfff311 100644
+--- a/vendor/gpui-fast/src/platform.rs
++++ b/vendor/gpui-fast/src/platform.rs
+@@ -1225,6 +1225,14 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
+     fn set_cursor_style(&self, _style: CursorStyle) -> bool {
+         false
+     }
++    /// Hides the pointer and enables relative movement until the returned handle is dropped.
++    fn capture_relative_pointer(&self) -> Option<crate::Subscription> {
++        None
++    }
++    /// Whether this window currently owns relative pointer capture.
++    fn has_relative_pointer_capture(&self) -> bool {
++        false
++    }
+     /// D3D11 device used by the window. The immediate context stays on the UI thread.
+     #[cfg(target_os = "windows")]
+     fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {
+diff --git a/vendor/gpui-fast/src/window.rs b/vendor/gpui-fast/src/window.rs
+index 8e7be3ae..c2263376 100644
+--- a/vendor/gpui-fast/src/window.rs
++++ b/vendor/gpui-fast/src/window.rs
+@@ -2883,6 +2883,13 @@ impl Window {
+         self.platform_window.bounds()
+     }
+ 
++    /// Hides the cursor and delivers relative mouse moves during a left-button drag.
++    /// Dropping the handle, releasing the button, or losing window activation ends capture.
++    /// Returns `None` if the window cannot capture the native pointer.
++    pub fn capture_relative_pointer(&self) -> Option<Subscription> {
++        self.platform_window.capture_relative_pointer()
++    }
++
+     /// Renders the current frame's scene to a texture and returns the pixel data as an RGBA image.
+     /// This does not present the frame to screen - useful for visual testing where we want
+     /// to capture what would be rendered without displaying it or requiring the window to be visible.
+@@ -5723,7 +5730,7 @@ impl Window {
+             _ => {}
+         }
+         let _trace_input = crate::frame_trace::InputScope::begin(match &event {
+-            PlatformInput::MouseMove(_) => 1,
++            PlatformInput::MouseMove(_) | PlatformInput::RelativeMouseMove(_) => 1,
+             PlatformInput::MouseDown(_) => 2,
+             PlatformInput::MouseUp(_) => 3,
+             PlatformInput::ScrollWheel(_) => 4,
+@@ -5739,7 +5746,9 @@ impl Window {
+         let old_modality = self.last_input_modality;
+         self.last_input_modality = match &event {
+             PlatformInput::KeyDown(_) => InputModality::Keyboard,
+-            PlatformInput::MouseMove(_) | PlatformInput::MouseDown(_) => InputModality::Mouse,
++            PlatformInput::MouseMove(_)
++            | PlatformInput::RelativeMouseMove(_)
++            | PlatformInput::MouseDown(_) => InputModality::Mouse,
+             PlatformInput::Touch(_) => InputModality::Touch,
+             _ => self.last_input_modality,
+         };
+@@ -5761,6 +5770,10 @@ impl Window {
+                 self.modifiers = mouse_move.modifiers;
+                 PlatformInput::MouseMove(mouse_move)
+             }
++            PlatformInput::RelativeMouseMove(relative_move) => {
++                self.modifiers = relative_move.modifiers;
++                PlatformInput::RelativeMouseMove(relative_move)
++            }
+             PlatformInput::MouseDown(mouse_down) => {
+                 self.mouse_position = mouse_down.position;
+                 self.modifiers = mouse_down.modifiers;
+@@ -6198,6 +6211,7 @@ impl Window {
+                     cx.cursor_hide_mode,
+                     CursorHideMode::OnTyping | CursorHideMode::OnTypingAndAction
+                 )
++                && !self.platform_window.has_relative_pointer_capture()
+             {
+                 cx.platform.hide_cursor_until_mouse_moves();
+             }
+@@ -6620,9 +6634,12 @@ impl Window {
+         action: &dyn Action,
+         cx: &mut App,
+     ) {
++        // A keyboard action may end relative capture and restore the cursor.
++        let was_captured = self.platform_window.has_relative_pointer_capture();
+         self.dispatch_action_on_node_inner(node_id, action, cx);
+ 
+         if !cx.propagate_event
++            && !was_captured
+             && cx.cursor_hide_mode == CursorHideMode::OnTypingAndAction
+             && self.last_input_was_keyboard()
+         {

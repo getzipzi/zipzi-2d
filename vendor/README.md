@@ -35,6 +35,7 @@ upstream README and files needed by relative test paths are also retained.
 | [native-metal.patch](native-metal.patch) | Exposes the window's Metal device and queue, composites native textures, and adds optional frame tracing and headless support. |
 | [drag-ownership.patch](drag-ownership.patch) | Adds drag identity and targeted cancellation so a stale token cannot stop a later drag. |
 | [tool-cursors.patch](tool-cursors.patch) | Registers custom native cursors, targets cursor requests to their window, and adds Windows hand cursors, bounded DPI variants and immediate updates. |
+| [relative-pointer-capture.patch](relative-pointer-capture.patch) | Adds hidden cursor capture and relative movement for number dragging on macOS and Windows. Apply after `tool-cursors.patch`. |
 | [cache-boundary.patch](cache-boundary.patch) | Preserves explicit virtual-list cache boundaries across frame reuse and splicing. |
 | [list-height-estimates.patch](list-height-estimates.patch) | Retains list height estimates across width changes until rows are remeasured. |
 | [list-layout-reparent.patch](list-layout-reparent.patch) | Compares actual Taffy children without a duplicate child-list cache. |

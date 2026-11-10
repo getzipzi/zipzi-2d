@@ -82,6 +82,7 @@ pub struct WindowsWindowState {
     pub cursors: Rc<RefCell<crate::cursor::CursorCache>>,
     /// Shared with [`WindowsPlatformState::cursor_visible`].
     pub cursor_visible: Arc<AtomicBool>,
+    pub(crate) relative_pointer: RefCell<Option<Rc<RelativePointer>>>,
     pub nc_button_pressed: Cell<Option<u32>>,
 
     pub display: Cell<WindowsDisplay>,
@@ -94,6 +95,11 @@ pub struct WindowsWindowState {
     initial_placement: Cell<Option<WindowOpenStatus>>,
     hwnd: HWND,
     pub(crate) a11y: RefCell<Option<A11yState>>,
+}
+
+pub(crate) struct RelativePointer {
+    start: POINT,
+    pub(crate) center: POINT,
 }
 
 pub(crate) struct WindowsWindowInner {
@@ -193,6 +199,7 @@ impl WindowsWindowState {
             cursor_scale: Cell::new(scale_factor),
             cursors: cursors.clone(),
             cursor_visible,
+            relative_pointer: RefCell::new(None),
             nc_button_pressed: Cell::new(nc_button_pressed),
             display: Cell::new(display),
             fullscreen: Cell::new(fullscreen),
@@ -296,19 +303,36 @@ impl WindowsWindowInner {
 
     pub(crate) fn apply_cursor_if_owned(&self) {
         if self.owns_cursor() {
-            let handle = if self
+            unsafe {
+                SetCursor(self.effective_cursor());
+            }
+        }
+    }
+
+    pub(crate) fn effective_cursor(&self) -> Option<HCURSOR> {
+        if self.state.relative_pointer.borrow().is_none()
+            && self
                 .state
                 .cursor_visible
                 .load(std::sync::atomic::Ordering::Relaxed)
-            {
-                self.state.current_cursor.borrow().handle
-            } else {
-                None
-            };
-            unsafe {
-                SetCursor(handle);
-            }
+        {
+            self.state.current_cursor.borrow().handle
+        } else {
+            None
         }
+    }
+
+    pub(crate) fn finish_relative_pointer(&self, restore_position: bool) -> bool {
+        let Some(pointer) = self.state.relative_pointer.take() else {
+            return false;
+        };
+        if restore_position
+            && unsafe { GetCapture() == self.hwnd && GetActiveWindow() == self.hwnd }
+        {
+            unsafe { SetCursorPos(pointer.start.x, pointer.start.y).log_err() };
+        }
+        self.apply_cursor_if_owned();
+        true
     }
 
     pub(crate) fn update_cursor(&self, style: CursorStyle) {
@@ -681,6 +705,7 @@ impl rwh::HasDisplayHandle for WindowsWindow {
 
 impl Drop for WindowsWindow {
     fn drop(&mut self) {
+        self.finish_relative_pointer(false);
         self.0.dialog_owner.close();
         unsafe { ShowWindowAsync(self.0.hwnd, SW_HIDE).ok().log_err() };
         // `DestroyWindow` below sends `WM_SHOWWINDOW`; without a callback the
@@ -703,6 +728,66 @@ impl Drop for WindowsWindow {
 }
 
 impl PlatformWindow for WindowsWindow {
+    fn has_relative_pointer_capture(&self) -> bool {
+        self.state.relative_pointer.borrow().is_some()
+    }
+
+    fn capture_relative_pointer(&self) -> Option<Subscription> {
+        if !self.is_active()
+            || unsafe { GetCapture() } != self.hwnd
+            || self.state.relative_pointer.borrow().is_some()
+        {
+            return None;
+        }
+
+        // Keep the hidden pointer away from screen edges and inside the client area.
+        let mut start = POINT::default();
+        let mut client = RECT::default();
+        let mut origin = POINT::default();
+        let mut monitor = MONITORINFO {
+            cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        let mut visible = RECT::default();
+        unsafe {
+            GetCursorPos(&mut start).ok()?;
+            GetClientRect(self.hwnd, &mut client).ok()?;
+            ClientToScreen(self.hwnd, &mut origin).ok().ok()?;
+            OffsetRect(&mut client, origin.x, origin.y).ok().ok()?;
+            let display = MonitorFromWindow(self.hwnd, MONITOR_DEFAULTTONEAREST);
+            GetMonitorInfoW(display, &mut monitor).ok().ok()?;
+            IntersectRect(&mut visible, &client, &monitor.rcMonitor)
+                .ok()
+                .ok()?;
+        }
+        let center = POINT {
+            x: visible.left + (visible.right - visible.left) / 2,
+            y: visible.top + (visible.bottom - visible.top) / 2,
+        };
+        let pointer = Rc::new(RelativePointer { start, center });
+        let token = Rc::downgrade(&pointer);
+        self.state.relative_pointer.replace(Some(pointer));
+        self.apply_cursor_if_owned();
+        if unsafe { SetCursorPos(center.x, center.y) }.is_err() {
+            self.finish_relative_pointer(false);
+            return None;
+        }
+        let window = Rc::downgrade(&self.0);
+        Some(Subscription::new(move || {
+            if let Some(window) = window.upgrade() {
+                let owns_capture = window
+                    .state
+                    .relative_pointer
+                    .borrow()
+                    .as_ref()
+                    .is_some_and(|pointer| Rc::as_ptr(pointer) == token.as_ptr());
+                if owns_capture {
+                    window.finish_relative_pointer(true);
+                }
+            }
+        }))
+    }
+
     fn set_cursor_style(&self, style: CursorStyle) -> bool {
         self.update_cursor(style);
         true
