@@ -27,14 +27,14 @@ impl ParametersPanel {
             let (Some(document), Some(owner)) = (this.document_id, this.owner.upgrade()) else {
                 return;
             };
+            this.cancel_parameter_drag(window, cx);
             if !owner.update(cx, |owner, cx| {
                 owner.prepare_property_inputs(document, window, cx)
             }) {
                 return;
             }
-            this.finish_slider_drag(cx);
             this.only_related = !this.only_related;
-            this.refresh_visible_rows(cx);
+            this.refresh_visible_rows(window, cx);
             cx.notify();
         }))
     }
@@ -73,7 +73,7 @@ impl ParametersPanel {
                 if this.document_id != document || !this.slider_interaction_allowed(window, cx) {
                     return;
                 }
-                this.finish_slider_drag(cx);
+                this.cancel_parameter_drag(window, cx);
                 let expand = this.has_collapsed_groups();
                 this.collapsed_groups.clear();
                 if !expand {
@@ -85,7 +85,7 @@ impl ParametersPanel {
                 }
                 window.focus(&this.focus, cx);
                 this.navigation_focused = true;
-                this.refresh_visible_rows(cx);
+                this.refresh_visible_rows(window, cx);
                 cx.notify();
             }))
     }
@@ -158,11 +158,11 @@ impl RenderOnce for ParameterGroupHeader {
         let toggle_panel = panel.clone();
         let select_panel = panel.clone();
         let expand_panel = panel.clone();
-        let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, _, cx| {
+        let expand: sorting::ExpandTarget = std::rc::Rc::new(move |item, window, cx| {
             if let SortItem::Group(group) = item {
                 _ = expand_panel.update(cx, |panel, cx| {
                     if panel.collapsed_groups.remove(group) {
-                        panel.refresh_visible_rows(cx);
+                        panel.refresh_visible_rows(window, cx);
                         cx.notify();
                     }
                 });

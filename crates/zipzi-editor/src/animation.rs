@@ -120,7 +120,11 @@ impl AnimationWorker {
             .expect("start animation worker");
         (worker, receiver)
     }
-    pub fn send(&mut self, request: AnimationRequest) {
+    #[cfg(test)]
+    pub(crate) fn send(&mut self, request: AnimationRequest) {
+        self.send_for_input(request, frame_trace::current_input());
+    }
+    pub fn send_for_input(&mut self, request: AnimationRequest, input: u64) {
         let id = request.identity;
         let key = (
             id.document,
@@ -153,7 +157,7 @@ impl AnimationWorker {
             "animation_enqueued",
             &[
                 ("request", id.request),
-                ("input", frame_trace::current_input()),
+                ("input", input),
                 ("time_us", (id.time as f64 * 1e6) as u64),
             ],
         );

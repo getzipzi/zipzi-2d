@@ -15,7 +15,76 @@ pub struct EditingContextToken {
     pub document: DocumentId,
     generation: u64,
 }
+
+/// Source of a captured parameter preview. A successful write advances only
+/// the preview revision owned by this capture.
+pub struct ParameterPreviewInput {
+    context: EditingContextToken,
+    model_revision: u64,
+    preview_revision: u64,
+    tool: crate::ToolId,
+    selection: Vec<crate::ObjectRef>,
+    focus: Option<crate::ObjectRef>,
+    binding: Option<crate::ObjectRef>,
+}
+
+impl ParameterPreviewInput {
+    pub fn valid(&self, editor: &Editor) -> bool {
+        editor.editing_context_token_valid(self.context)
+            && editor.editing_context() == Some(crate::EditingContext::Modeling)
+            && !editor.editing_input_active()
+            && !editor.manual_active()
+            && editor.active_tool() == self.tool
+            && editor.document().is_some_and(|doc| {
+                let context = doc.context();
+                doc.model_generation() == self.model_revision
+                    && doc.preview_revision() == self.preview_revision
+                    && context.selections == self.selection
+                    && context.parameter_focus == self.focus
+                    && context.active_binding == self.binding
+            })
+    }
+}
+
 impl Editor {
+    pub fn parameter_preview_input(&self) -> Option<ParameterPreviewInput> {
+        if self.editing_context() != Some(crate::EditingContext::Modeling)
+            || self.editing_input_active()
+            || self.manual_active()
+        {
+            return None;
+        }
+        let document = self.document()?;
+        let context = document.context();
+        Some(ParameterPreviewInput {
+            context: self.editing_context_token()?,
+            model_revision: document.model_generation(),
+            preview_revision: document.preview_revision(),
+            tool: self.active_tool(),
+            selection: context.selections.clone(),
+            focus: context.parameter_focus.clone(),
+            binding: context.active_binding.clone(),
+        })
+    }
+
+    pub fn apply_parameter_preview_input(
+        &mut self,
+        input: &mut ParameterPreviewInput,
+        values: Vec<(String, f32)>,
+    ) -> Result<bool> {
+        self.sync_runtime()?;
+        if !input.valid(self) {
+            return Ok(false);
+        }
+        let session = self
+            .entry_mut(input.context.document)?
+            .session_mut()
+            .unwrap();
+        session.execute_parameter_preview_at(values, input.model_revision)?;
+        input.preview_revision = session.document().preview_revision();
+        Ok(true)
+    }
+
     /// Whether ending editing would stop live playback, a pointer operation or
     /// an uncommitted candidate. Local UI may outlive these domain operations.
     pub fn editing_active(&self) -> bool {

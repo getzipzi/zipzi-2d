@@ -14,6 +14,13 @@ from pathlib import Path
 import statistics
 
 PAIRS = {
+    'mesh_candidate_ms': ('mesh_candidate_begin', 'mesh_candidate_end'),
+    'scene_ms': ('scene_begin', 'scene_end'),
+    'mesh_frame_ms': ('mesh_frame_begin', 'mesh_frame_end'),
+    'parameter_setter_ms': ('parameter_setter_begin', 'parameter_setter_end'),
+    'parameter_frame_ms': ('parameter_frame_begin', 'parameter_frame_end'),
+    'timeline_seek_apply_ms': ('timeline_seek_apply_begin', 'timeline_seek_apply_end'),
+    'timeline_seek_frame_ms': ('timeline_seek_frame_begin', 'timeline_seek_frame_end'),
     'ui_draw_ms': ('ui_draw_begin', 'ui_draw_end'),
     'build_ms': ('ui_build_begin', 'ui_build_end'),
     'prepaint_ms': ('ui_prepaint_begin', 'ui_prepaint_end'),
@@ -140,6 +147,20 @@ def diagnose(records):
         tick_indices = {e['id']: i for i, e in enumerate(phase_ticks)}
         motion = sorted((pointer_times[e['id']], pointers[e['id']]) for e in phase_ticks if e['id'] in pointers)
         motion_times = [t for t, _ in motion]
+        wide_motion = metadata.get('mesh_drag', {}).get('wide')
+
+        def interpolated_gap(source, at):
+            index = bisect_right(motion_times, at)
+            if not wide_motion or not (0 < index < len(motion)):
+                return None
+            before_t, before = motion[index - 1]
+            after_t, after = motion[index]
+            fraction = (at - before_t) / (after_t - before_t)
+            return math.hypot(*(
+                source[axis] - (before[axis] + fraction * (after[axis] - before[axis]))
+                for axis in ('x_millipx', 'y_millipx')
+            )) / 1000
+
         for frame, begin in draws.items():
             if start <= begin <= end and returns[frame]:
                 durations['ui_begin_to_platform_return_ms'].append((returns[frame][0] - begin) / 1e6)
@@ -164,14 +185,20 @@ def diagnose(records):
                         # Only the explicit wall-clock trajectory supports this
                         # interpolation. Zero delivered-input gap is not zero
                         # cursor lag: the intended motion continues between ticks.
-                        next_index = bisect_right(motion_times, submission)
-                        if metadata.get('mesh_drag', {}).get('wide') and 0 < next_index < len(motion):
-                            before_t, before_p = motion[next_index - 1]
-                            after_t, after_p = motion[next_index]
-                            fraction = (submission - before_t) / (after_t - before_t)
-                            gap = [source[axis] - (before_p[axis] + fraction * (after_p[axis] - before_p[axis]))
-                                   for axis in ['x_millipx', 'y_millipx']]
-                            durations['preview_interpolated_motion_gap_px'].append(math.hypot(*gap) / 1000)
+                        if (gap := interpolated_gap(source, submission)) is not None:
+                            durations['preview_interpolated_motion_gap_px'].append(gap)
+        # Weight the last known submitted pose by how long it was held, even if
+        # a retained frame produced no paint event. Start after the first join.
+        poses = sorted({(submission, tick) for tick, _, submission in observed_returns})
+        pose_times = [at for at, _ in poses]
+        for at in range(start, last, 1_000_000):
+            index = bisect_right(pose_times, at) - 1
+            if index < 0:
+                continue
+            _, tick = poses[index]
+            durations['wall_sampled_preview_age_ms'].append((at - measured[tick]['at_ns']) / 1e6)
+            if tick in pointers and (gap := interpolated_gap(pointers[tick], at)) is not None:
+                durations['wall_sampled_interpolated_motion_gap_px'].append(gap)
         releases = [e for e in events if e['stage'] == 'benchmark_release' and e['fields']['mode'] == mode]
         settled = [e for e in events if e['stage'] == 'benchmark_settled' and e['fields']['mode'] == mode]
         if releases and settled:

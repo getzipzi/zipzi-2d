@@ -27,6 +27,46 @@ pub(crate) fn validate_mesh_keyform_payload(
     Status::ok()
 }
 
+pub(crate) fn validate_warp_keyform_payload(
+    id: &str,
+    target: &Transform,
+    form: &crate::WarpKeyform,
+) -> Status {
+    if form.positions.len() != target.warp().unwrap().points.len() {
+        return Status::error("INVALID_LENGTH", id);
+    }
+    if let Some(controller) = &form.bezier {
+        if target
+            .warp_authoring
+            .as_ref()
+            .and_then(|settings| settings.bezier_grid)
+            .is_some_and(|grid| (grid.rows, grid.columns) != (controller.rows, controller.columns))
+        {
+            return Status::error(
+                "INVALID_WARP_BEZIER",
+                "Keyform controller density differs from the Warp editing configuration",
+            );
+        }
+        let status = controller.validate();
+        if !status.is_ok() {
+            return status;
+        }
+    }
+    let status = validate_positions(&form.positions);
+    if !status.is_ok() {
+        return status;
+    }
+    validate_appearance(&form.appearance, id)
+}
+
+pub(crate) fn validate_rotation_keyform_payload(id: &str, form: &crate::RotationKeyform) -> Status {
+    let status = pose_valid(&form.rotation, id);
+    if !status.is_ok() {
+        return status;
+    }
+    validate_appearance(&form.appearance, id)
+}
+
 #[cfg(test)]
 thread_local! {
     static VALIDATION_COUNTS: std::cell::Cell<(usize, usize)> = const { std::cell::Cell::new((0, 0)) };
@@ -309,33 +349,9 @@ impl Model<'_> {
         }
         match &b.track {
             crate::SceneTrack::Warp { keyforms, .. } => {
-                let point_count = t.unwrap().warp().unwrap().points.len();
+                let target = t.unwrap();
                 for f in keyforms {
-                    if f.positions.len() != point_count {
-                        return Status::error("INVALID_LENGTH", &b.id);
-                    }
-                    if let Some(b) = &f.bezier {
-                        if t.unwrap()
-                            .warp_authoring
-                            .as_ref()
-                            .and_then(|s| s.bezier_grid)
-                            .is_some_and(|g| (g.rows, g.columns) != (b.rows, b.columns))
-                        {
-                            return Status::error(
-                                "INVALID_WARP_BEZIER",
-                                "Keyform controller density differs from the Warp editing configuration",
-                            );
-                        }
-                        let status = b.validate();
-                        if !status.is_ok() {
-                            return status;
-                        }
-                    }
-                    let status = validate_positions(&f.positions);
-                    if !status.is_ok() {
-                        return status;
-                    }
-                    let status = validate_appearance(&f.appearance, &b.id);
+                    let status = validate_warp_keyform_payload(&b.id, target, f);
                     if !status.is_ok() {
                         return status;
                     }
@@ -343,11 +359,7 @@ impl Model<'_> {
             }
             crate::SceneTrack::Rotation { keyforms, .. } => {
                 for f in keyforms {
-                    let status = pose_valid(&f.rotation, &b.id);
-                    if !status.is_ok() {
-                        return status;
-                    }
-                    let status = validate_appearance(&f.appearance, &b.id);
+                    let status = validate_rotation_keyform_payload(&b.id, f);
                     if !status.is_ok() {
                         return status;
                     }

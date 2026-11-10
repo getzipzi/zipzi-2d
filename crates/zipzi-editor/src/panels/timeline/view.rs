@@ -256,8 +256,8 @@ impl Render for Timeline {
                         if phase == DispatchPhase::Capture
                             && matches!(event.button, MouseButton::Left | MouseButton::Middle)
                         {
-                            let _ =
-                                releasing.update(cx, |this, cx| this.release_pointer(window, cx));
+                            let _ = releasing
+                                .update(cx, |this, cx| this.release_pointer(event, window, cx));
                         }
                     });
                 },

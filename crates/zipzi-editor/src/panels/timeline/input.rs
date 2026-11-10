@@ -62,66 +62,6 @@ impl Timeline {
         let local = position - self.graph.get().origin;
         point(local.x.as_f32(), local.y.as_f32())
     }
-    pub(super) fn start_seek(
-        &mut self,
-        event: &MouseDownEvent,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if !self.allowed(window, cx) {
-            return;
-        }
-        self.finish_number(cx);
-        let Some(target) = self.target(cx) else {
-            return;
-        };
-        let Some(time) = self.seek_time(event.position, cx) else {
-            return;
-        };
-        let token = self
-            .owner
-            .update(cx, |owner, cx| {
-                let result = owner.editor.begin_timeline_scrub(target.binding, time);
-                let token = result.as_ref().ok().copied();
-                owner.animation_anchor = None;
-                owner.complete_edit(result.map(|_| ()), cx);
-                token
-            })
-            .ok()
-            .flatten();
-        if let Some(token) = token {
-            window.focus(&self.focus, cx);
-            self.gesture = Some(Gesture::Seek(token));
-            self.sync_status_bar(cx);
-            cx.notify();
-        }
-        cx.stop_propagation();
-    }
-    fn seek_time(&self, position: Point<Pixels>, cx: &App) -> Option<f32> {
-        let target = self.target(cx)?;
-        let owner = self.owner.upgrade()?;
-        let editor = &owner.read(cx).editor;
-        let state = editor.timeline_view()?;
-        let projection = editor.timeline_projection()?;
-        let max = if target.mode == AnimationPreviewMode::Result {
-            editor
-                .animation()
-                .and_then(|a| a.result_playback_position())
-                .map_or(projection.display_end, |p| {
-                    f64::from(p.period).max(projection.display_end)
-                })
-        } else {
-            projection.display_end
-        };
-        let bounds = self.ruler.get();
-        let time = x_time(
-            (position.x - bounds.left()).as_f32(),
-            state.time_range,
-            bounds.size.width.as_f32(),
-        )
-        .clamp(0., max);
-        timeline_time(time, projection.fps, state.snap).ok()
-    }
     fn begin(&mut self, cx: &mut Context<Self>) -> Option<TimelineCandidateIdentity> {
         let target = self.target(cx)?;
         let result = self
@@ -183,6 +123,9 @@ impl Timeline {
         if self.pan_tool {
             self.start_pan(event, window, cx);
             return;
+        }
+        if self.seek_token().is_some() {
+            self.cancel(window, cx);
         }
         self.finish_number(cx);
         window.focus(&self.focus, cx);
@@ -385,6 +328,9 @@ impl Timeline {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.seek_token().is_some() && crate::benchmark::ignore_native_pointer_event() {
+            return;
+        }
         self.discard_stale_interactions(window, cx);
         if self.gesture.is_none() {
             return;
@@ -395,8 +341,13 @@ impl Timeline {
             self.cancel(window, cx);
             return;
         }
-        let local = self.local(event.position);
         self.pointer = event.position;
+        if self.seek_token().is_some() {
+            self.seek.pointer_trace = frame_trace::current_input();
+            self.seek_to_pointer(window, cx);
+            return;
+        }
+        let local = self.local(event.position);
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
@@ -436,17 +387,7 @@ impl Timeline {
                 }
         };
         let command = match self.gesture.as_mut().unwrap() {
-            Gesture::Pan { .. } => unreachable!(),
-            Gesture::Seek(token) => {
-                let token = *token;
-                if let Some(time) = self.seek_time(event.position, cx) {
-                    let _ = self.owner.update(cx, |owner, cx| {
-                        let result = owner.editor.update_timeline_scrub(token, time);
-                        owner.complete_edit(result, cx);
-                    });
-                }
-                return;
-            }
+            Gesture::Pan { .. } | Gesture::Seek(_) => unreachable!(),
             Gesture::Marquee {
                 origin,
                 current,
@@ -552,7 +493,19 @@ impl Timeline {
         }
         cx.stop_propagation();
     }
-    pub(super) fn release_pointer(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn release_pointer(
+        &mut self,
+        event: &MouseUpEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.seek_token().is_some() {
+            if event.button == MouseButton::Left && !crate::benchmark::ignore_native_pointer_event()
+            {
+                self.release_seek(event.position, window, cx);
+            }
+            return;
+        }
         self.discard_stale_interactions(window, cx);
         self.edge_scroll = None;
         if !self.allowed(window, cx) {
@@ -562,14 +515,6 @@ impl Timeline {
             return;
         }
         if let Some(gesture) = self.gesture.take() {
-            if let Gesture::Seek(token) = gesture {
-                if let Some(time) = self.seek_time(window.mouse_position(), cx) {
-                    let _ = self.owner.update(cx, |owner, cx| {
-                        let result = owner.editor.finish_timeline_scrub(token, time);
-                        owner.complete_edit(result, cx);
-                    });
-                }
-            }
             if let Some(token) = gesture.token() {
                 self.finish_token(token, cx);
             }
@@ -603,6 +548,9 @@ impl Timeline {
         cx: &mut Context<Self>,
     ) {
         if !self.allowed(window, cx) || self.number_edit.is_some() {
+            return;
+        }
+        if self.seek_token().is_some() && self.validate_seek(window, cx).is_none() {
             return;
         }
         let delta = match event.delta {
@@ -644,16 +592,8 @@ impl Timeline {
                 && self.graph.get().contains(&event.position);
             moved = self.pan_by(0., -delta.y, curve_pan, cx);
         }
-        if moved && self.gesture.is_some() {
-            self.move_pointer(
-                &MouseMoveEvent {
-                    position: self.pointer,
-                    pressed_button: self.gesture.as_ref().map(Gesture::button),
-                    modifiers: event.modifiers,
-                },
-                window,
-                cx,
-            );
+        if moved {
+            self.resample_after_pan(event.modifiers, window, cx);
         }
         cx.stop_propagation();
     }

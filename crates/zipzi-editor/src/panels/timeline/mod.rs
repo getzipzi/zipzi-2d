@@ -13,6 +13,7 @@ mod values;
 use lifecycle::Target;
 pub(crate) use lifecycle::TimelineOperation;
 mod navigation;
+mod seek;
 mod transport;
 mod view;
 
@@ -59,6 +60,7 @@ pub struct Timeline {
     ruler: Rc<Cell<Bounds<Pixels>>>,
     body_height: f32,
     gesture: Option<input::Gesture>,
+    seek: seek::SeekInput,
     edge_scroll: Option<Task<()>>,
     pointer: Point<Pixels>,
     pan_tool: bool,
@@ -73,6 +75,8 @@ pub struct Timeline {
     header_tiny: bool,
     error: Option<String>,
     _search_events: Subscription,
+    _seek_blur: Subscription,
+    _seek_activation: Subscription,
     _observe: Subscription,
 }
 
@@ -187,6 +191,16 @@ impl Timeline {
                     this.sync(window, cx);
                     cx.notify();
                 }),
+                _seek_blur: cx.on_blur(&focus, window, |this, window, cx| {
+                    if this.seek_token().is_some() {
+                        this.deactivate(window, cx);
+                    }
+                }),
+                _seek_activation: cx.observe_window_activation(window, |this, window, cx| {
+                    if !window.is_window_active() && this.seek_token().is_some() {
+                        this.deactivate(window, cx);
+                    }
+                }),
                 owner,
                 focus,
                 search,
@@ -197,6 +211,7 @@ impl Timeline {
                 ruler: Rc::new(Cell::new(Bounds::default())),
                 body_height: 180.,
                 gesture: None,
+                seek: Default::default(),
                 edge_scroll: None,
                 pointer: Point::default(),
                 pan_tool: false,

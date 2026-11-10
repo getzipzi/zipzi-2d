@@ -60,6 +60,9 @@ class WindowsGpuiReport(unittest.TestCase):
                                ((3 + 96 * 3 / 13) ** 2 + (4 + 94 * 3 / 13) ** 2) ** 0.5)
         self.assertEqual(metrics['preview_input_lag_events']['p95'], 1)
         self.assertEqual(metrics['preview_age_at_platform_return_ms']['p95'], 10)
+        self.assertEqual(metrics['wall_sampled_preview_age_ms'], report.distribution(range(10, 20)))
+        self.assertAlmostEqual(metrics['wall_sampled_interpolated_motion_gap_px']['p95'],
+                               ((3 + 96 * 12 / 13) ** 2 + (4 + 94 * 12 / 13) ** 2) ** 0.5)
         self.assertEqual(metrics['release_to_current_canvas_ms']['p95'], 23)
         self.assertNotIn('over_25_ms', metrics['preview_input_position_gap_px'])
 

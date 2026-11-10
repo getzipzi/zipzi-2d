@@ -136,6 +136,7 @@ async fn run_timeline_navigation(
 ) -> anyhow::Result<()> {
     use gpui_kit::test::TestWindowExt;
     use zipzi_editor_core::{TimelineDisplayMode, TimelineRowId};
+    let seeking = kind == "timeline_seek";
     let key = view.update_in(cx, |v, _, cx| -> anyhow::Result<_> {
         let doc = v.editor.active_id().unwrap();
         let projection = v
@@ -176,6 +177,9 @@ async fn run_timeline_navigation(
                 ]
                 .into();
                 state.time_range = ((chosen.3.time - 0.1).max(0.), chosen.3.time + 0.1);
+                state.snap = false;
+            } else if seeking {
+                state.time_range = (0., projection.display_end);
                 state.snap = false;
             }
         })?;
@@ -265,16 +269,36 @@ async fn run_timeline_navigation(
     let mut changed = 0u64;
     let interval = Duration::from_secs_f64(1. / config.hz as f64);
     let mut deadline = Instant::now() + interval;
-    for sample in 0..config.samples {
-        executor
-            .timer(deadline.saturating_duration_since(Instant::now()))
-            .await;
+    let warmup = if seeking { config.warmup } else { 0 };
+    for sample in 0..warmup + config.samples {
+        if sample % config.input_burst == 0 {
+            executor
+                .timer(deadline.saturating_duration_since(Instant::now()))
+                .await;
+        }
         let input = frame_trace::InputScope::begin(120 + mode);
         frame_trace::emit(
             input.id(),
             "timeline_tick",
             &[("sample", sample as u64), ("kind", mode)],
         );
+        if seeking {
+            frame_trace::emit(
+                input.id(),
+                "benchmark_tick",
+                &[
+                    ("mode", 9),
+                    ("sample", sample.saturating_sub(warmup) as u64),
+                    ("warmup", u64::from(sample < warmup)),
+                    (
+                        "timer_late_ns",
+                        Instant::now()
+                            .saturating_duration_since(deadline)
+                            .as_nanos() as u64,
+                    ),
+                ],
+            );
+        }
         let before = view.update_in(cx, |v, _, _| {
             (
                 v.editor.timeline_view().cloned(),
@@ -297,6 +321,16 @@ async fn run_timeline_navigation(
                         origin.y,
                     )
                 };
+                if seeking {
+                    frame_trace::emit(
+                        input.id(),
+                        "benchmark_pointer",
+                        &[
+                            ("x_millipx", (position.x.as_f32() * 1000.) as u64),
+                            ("y_millipx", (position.y.as_f32() * 1000.) as u64),
+                        ],
+                    );
+                }
                 dispatch_pointer(
                     window,
                     MouseMoveEvent {
@@ -343,7 +377,9 @@ async fn run_timeline_navigation(
             Ok(u64::from(before != after))
         })??;
         drop(input);
-        deadline = navigation_deadline(deadline, interval, Instant::now());
+        if (sample + 1) % config.input_burst == 0 {
+            deadline = navigation_deadline(deadline, interval, Instant::now());
+        }
     }
     frame_trace::emit(
         frame_trace::next_id(),
@@ -364,6 +400,10 @@ async fn run_timeline_navigation(
         })?;
     }
     if dragging {
+        let release = seeking.then(|| frame_trace::InputScope::begin(209));
+        if let Some(release) = &release {
+            frame_trace::emit(release.id(), "benchmark_release", &[("mode", 9)]);
+        }
         cx.update(|window, cx| {
             dispatch_pointer(
                 window,
@@ -376,6 +416,33 @@ async fn run_timeline_navigation(
                 cx,
             )
         })?;
+    }
+    if seeking {
+        let time = view.update_in(cx, |v, _, _| -> anyhow::Result<_> {
+            let state = v.editor.timeline_view().unwrap();
+            let expected =
+                (state.time_range.0 + (state.time_range.1 - state.time_range.0) * 0.5) as f32;
+            let animation = v.editor.animation().unwrap();
+            ensure!(
+                !v.editor.editing_input_active() && (animation.edit_time - expected).abs() < 1e-5,
+                "Seek did not settle the release position synchronously"
+            );
+            Ok(animation.time)
+        })??;
+        let settle_deadline = Instant::now() + Duration::from_secs(2);
+        while !view.update_in(cx, |v, _, _| {
+            v.animation_frame().is_some_and(|frame| {
+                frame.state.identity.time == time
+                    && v.editor.animation_content_valid(frame.state.identity)
+            })
+        })? {
+            ensure!(
+                Instant::now() < settle_deadline,
+                "Seek preview did not catch up after release"
+            );
+            executor.timer(Duration::from_millis(5)).await;
+        }
+        frame_trace::emit(frame_trace::next_id(), "benchmark_settled", &[("mode", 9)]);
     }
     view.update_in(cx, |v, _, _| -> anyhow::Result<()> {
         ensure!(changed > 0, "{kind} was a no-op");

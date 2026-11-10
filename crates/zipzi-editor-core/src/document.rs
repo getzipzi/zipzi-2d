@@ -600,6 +600,14 @@ impl Document {
     }
 
     pub fn set_preview_parameters(&mut self, values: &[(String, f32)]) -> Result<()> {
+        self.set_preview_parameters_at(values, None)
+    }
+
+    pub(crate) fn set_preview_parameters_at(
+        &mut self,
+        values: &[(String, f32)],
+        model_revision: Option<u64>,
+    ) -> Result<()> {
         let mut next = self.session.preview_values().clone();
         let mut changed = false;
         for (id, value) in values {
@@ -620,9 +628,11 @@ impl Document {
                 != *value;
             next.insert(id.clone(), *value);
         }
-        self.finish_edit()?;
+        if model_revision.is_none() {
+            self.finish_edit()?;
+        }
         if changed {
-            self.session.set_preview_values(next)?;
+            self.session.set_preview_values_at(next, model_revision)?;
             self.preview_revision += 1;
         }
         Ok(())

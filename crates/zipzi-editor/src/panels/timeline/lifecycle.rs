@@ -124,7 +124,11 @@ impl Timeline {
     fn reconcile_target(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let target = self.target(cx);
         if target != self.context {
-            self.cancel_local(window, cx);
+            if self.seek_token().is_some() {
+                self.deactivate(window, cx);
+            } else {
+                self.cancel_local(window, cx);
+            }
             // A commit changes the model revision, but surviving field entities
             // must retain focus (including a field just focused by a blur).
             // The full target comparison above still invalidates scene geometry.
@@ -181,10 +185,10 @@ impl Timeline {
         }
     }
     pub(super) fn operation(&self) -> Option<TimelineOperation> {
-        let binding = self.context.as_ref()?.binding;
         if let Some(input::Gesture::Seek(token)) = self.gesture.as_ref() {
             return Some(TimelineOperation::Scrub(*token));
         }
+        let binding = self.context.as_ref()?.binding;
         if let Some(token) = self
             .gesture
             .as_ref()

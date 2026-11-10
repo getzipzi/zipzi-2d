@@ -127,6 +127,7 @@ impl ParametersPanel {
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
+        self.cancel_parameter_drag(window, cx);
         let success = owner.update(cx, |owner, cx| {
             if !owner.prepare_property_inputs(document, window, cx) {
                 return false;
@@ -169,14 +170,14 @@ impl ParametersPanel {
         if self.cursor_index(&cursor).is_none() {
             return;
         }
-        self.finish_slider_drag(cx);
+        self.cancel_parameter_drag(window, cx);
         self.navigation.cursor = Some(cursor);
         if !self.collapsed_groups.remove(&group) {
             self.collapsed_groups.insert(group);
         }
         window.focus(&self.focus, cx);
         self.navigation_focused = true;
-        self.refresh_visible_rows(cx);
+        self.refresh_visible_rows(window, cx);
         cx.notify();
     }
 

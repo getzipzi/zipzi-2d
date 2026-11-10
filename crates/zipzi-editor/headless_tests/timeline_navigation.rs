@@ -24,6 +24,150 @@ fn animation(cx: &mut TestAppContext) -> Harness {
 }
 
 #[gpui_kit::test]
+fn seek_applies_press_move_and_release_against_the_current_ruler(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        let view = harness.view.read(cx);
+        let timeline = view.dock.as_ref().unwrap().timeline.clone();
+        let history = view.editor.document().unwrap().history_lengths();
+        harness.view.update(cx, |view, _| {
+            let document = view.editor.active_id().unwrap();
+            view.editor
+                .update_timeline_view(document, |state| {
+                    state.time_range = (0., 2.);
+                    state.snap = true;
+                })
+                .unwrap();
+            view.editor.toggle_animation().unwrap();
+        });
+        window.render_frame(cx);
+        let bounds = window.find("timeline-ruler").bounds();
+        let at = |fraction| {
+            point(
+                bounds.left() + bounds.size.width * fraction,
+                bounds.center().y,
+            )
+        };
+        let time = |cx: &gpui_kit::App| harness.view.read(cx).editor.animation().unwrap().edit_time;
+        press(window, at(0.25), cx);
+        assert_eq!(time(cx), 0.5);
+        assert!(!harness.view.read(cx).editor.animation().unwrap().playing);
+        slide(window, at(0.375), false, cx);
+        assert_eq!(time(cx), 0.75);
+        slide(window, at(0.625), false, cx);
+        assert_eq!(time(cx), 1.25);
+
+        harness.view.update(cx, |view, _| {
+            let document = view.editor.active_id().unwrap();
+            view.editor
+                .navigate_timeline_view(document, (0.25, 1.25), 0.)
+                .unwrap();
+        });
+        let view = harness.view.read(cx);
+        let fps = view.editor.timeline_projection().unwrap().fps;
+        let range = view.editor.timeline_view().unwrap().time_range;
+        let mapped = |fraction: f64| {
+            zipzi_editor_core::timeline_time(range.0 + (range.1 - range.0) * fraction, fps, true)
+                .unwrap()
+        };
+        slide(window, at(0.75), false, cx);
+        assert_eq!(time(cx), mapped(0.75));
+        release(window, at(0.313), cx);
+        assert_eq!(time(cx), mapped(0.313));
+        assert!(!timeline.read(cx).pointer_active());
+        assert!(!harness.view.read(cx).editor.editing_input_active());
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .history_lengths(),
+            history
+        );
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
+fn seek_edge_scroll_updates_the_playhead_without_mouse_events(cx: &mut TestAppContext) {
+    let harness = animation(cx);
+    let (ruler, edge) = cx
+        .update_window(harness.window, |_, window, cx| {
+            harness.view.update(cx, |view, _| {
+                let document = view.editor.active_id().unwrap();
+                view.editor
+                    .update_timeline_view(document, |state| {
+                        state.time_range = (0.25, 1.25);
+                        state.snap = false;
+                    })
+                    .unwrap();
+            });
+            window.render_frame(cx);
+            let ruler = window.find("timeline-ruler").bounds();
+            let edge = point(ruler.right() - px(4.), ruler.center().y);
+            press(window, ruler.center(), cx);
+            slide(window, ruler.center() + point(px(20.), px(0.)), false, cx);
+            slide(window, edge, false, cx);
+            (ruler, edge)
+        })
+        .unwrap();
+    let at_edge = |range: (f64, f64)| {
+        range.0
+            + f64::from((edge.x - ruler.left()).as_f32()) / f64::from(ruler.size.width.as_f32())
+                * (range.1 - range.0)
+    };
+    cx.run_until_parked();
+    cx.background_executor
+        .advance_clock(Duration::from_millis(16));
+    cx.run_until_parked();
+    let first_range = cx
+        .update_window(harness.window, |_, _, cx| {
+            let view = harness.view.read(cx);
+            let range = view.editor.timeline_view().unwrap().time_range;
+            assert!(range.0 > 0.25);
+            assert_eq!(
+                harness.view.read(cx).editor.animation().unwrap().edit_time,
+                at_edge(range) as f32
+            );
+            range
+        })
+        .unwrap();
+    cx.background_executor
+        .advance_clock(Duration::from_millis(16));
+    cx.run_until_parked();
+    let final_range = cx
+        .update_window(harness.window, |_, window, cx| {
+            let view = harness.view.read(cx);
+            let range = view.editor.timeline_view().unwrap().time_range;
+            assert!(
+                range.0 > first_range.0,
+                "stationary pointer keeps scrolling"
+            );
+            assert_eq!(
+                view.editor.animation().unwrap().edit_time,
+                at_edge(range) as f32
+            );
+            release(window, ruler.center(), cx);
+            let expected = ((range.0 + range.1) * 0.5) as f32;
+            assert!(
+                (harness.view.read(cx).editor.animation().unwrap().edit_time - expected).abs()
+                    < 1e-6
+            );
+            range
+        })
+        .unwrap();
+    cx.background_executor
+        .advance_clock(Duration::from_millis(64));
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.timeline_view().unwrap().time_range, final_range);
+        assert!(!view.editor.editing_input_active());
+    });
+}
+
+#[gpui_kit::test]
 fn shift_wheel_and_hand_and_middle_drag_pan_without_asset_edits(cx: &mut TestAppContext) {
     let harness = animation(cx);
     cx.update_window(harness.window, |_, window, cx| {
@@ -185,12 +329,12 @@ fn transport_buttons_and_shortcuts_share_endpoints_and_key_navigation(cx: &mut T
             harness.view.read(cx).editor.animation().unwrap().edit_time,
             0.
         );
-        window.press("cmd-right", cx);
+        window.press("secondary-right", cx);
         assert_eq!(
             harness.view.read(cx).editor.animation().unwrap().edit_time,
             2.
         );
-        window.press("cmd-left", cx);
+        window.press("secondary-left", cx);
         assert_eq!(
             harness.view.read(cx).editor.animation().unwrap().edit_time,
             0.

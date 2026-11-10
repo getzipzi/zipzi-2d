@@ -1,8 +1,11 @@
 //! Domain operations on an isolated candidate. Record writes own all tracking;
 //! model rules borrow the candidate without constructing a legacy Document.
 use super::*;
-use crate::model_validation::binding_coordinates::coordinates;
 use crate::SceneTrackEvaluation;
+use crate::model_validation::binding_coordinates::coordinates;
+use crate::model_validation::bindings::{
+    validate_rotation_keyform_payload, validate_warp_keyform_payload,
+};
 
 fn checked(status: Status) -> Result<(), Status> {
     if status.is_ok() {
@@ -72,6 +75,8 @@ impl DocumentBuilder {
     }
 
     pub fn set_scene_keyform(&mut self, id: &str, mut form: SceneKeyform) -> Result<(), Status> {
+        let validation = self.validation;
+        let mut preserve_validation = false;
         self.write(|this| {
             this.authoring_unlocked(id)?;
             let mut binding = this
@@ -84,10 +89,35 @@ impl DocumentBuilder {
                 SceneKeyform::Part(f) => (&mut f.keys, &mut f.samples),
             };
             coordinates(&binding.axes, keys, samples)?;
+
+            // Coordinates resolve to an existing slot in the admitted grid.
+            // Warp/Rotation payload edits leave that grid and its layout intact.
+            if validation != CandidateValidation::NeedsValidation {
+                let payload = match (&binding.track, &form) {
+                    (SceneTrack::Warp { target_id, .. }, SceneKeyform::Warp(form)) => {
+                        let target = this.transform(target_id.as_str()).unwrap();
+                        Some(validate_warp_keyform_payload(id, target, form))
+                    }
+                    (SceneTrack::Rotation { .. }, SceneKeyform::Rotation(form)) => {
+                        Some(validate_rotation_keyform_payload(id, form))
+                    }
+                    _ => None,
+                };
+                if let Some(status) = payload {
+                    checked(status)?;
+                    preserve_validation = true;
+                }
+            }
             checked(binding.track.replace(form))?;
-            this.canonicalize_scene_binding(&mut binding)?;
+            if !preserve_validation {
+                this.canonicalize_scene_binding(&mut binding)?;
+            }
             this.replace_scene_binding(binding)
-        })
+        })?;
+        if preserve_validation {
+            self.validation = validation;
+        }
+        Ok(())
     }
 }
 

@@ -225,7 +225,8 @@ fn command_rotation_drag_keeps_child_artwork_fixed_through_native_events(cx: &mu
                 px(gizmo.center.y + x * sin + y * cos),
             );
         let modifiers = Modifiers {
-            platform: true,
+            platform: cfg!(target_os = "macos"),
+            control: cfg!(not(target_os = "macos")),
             ..Default::default()
         };
         window.dispatch_event(

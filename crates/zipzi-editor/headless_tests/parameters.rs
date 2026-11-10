@@ -431,6 +431,335 @@ fn parameter_drag_is_cancelled_when_the_window_loses_focus(cx: &mut TestAppConte
 }
 
 #[gpui_kit::test]
+fn parameter_track_and_pad_schedule_complete_targets_and_settle_release(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::px;
+
+    for pad in [false, true] {
+        let (mut document, assets) = document_fixture::sample_document_with_parameters(2).unwrap();
+        let ids: Vec<_> = document.parameters().into_iter().map(|p| p.id).collect();
+        if pad {
+            document.toggle_parameter_link(&ids[0]).unwrap();
+        }
+        let history = document.history_lengths();
+        let harness = setup_with_document(cx, document, assets);
+        let panel = harness
+            .view
+            .read_with(cx, |view, _| view.dock.as_ref().unwrap().parameters.clone());
+        let read = |cx: &gpui_kit::App| {
+            let document = harness.view.read(cx).editor.document().unwrap();
+            let values: Vec<_> = document.parameters().into_iter().map(|p| p.value).collect();
+            (values, document.preview_revision())
+        };
+        let (right_top, left_bottom, release_position, before) = cx
+            .update_window(harness.window, |_, window, cx| {
+                window.render_frame(cx);
+                let bounds = if pad {
+                    window
+                        .find(format!("parameter-pad-top-{}-{}", ids[0], ids[1]))
+                        .bounds()
+                } else {
+                    window
+                        .within(format!("parameter-row-{}", ids[0]))
+                        .find("slider-bar-container")
+                        .bounds()
+                };
+                let right_top = point(bounds.right() + px(10.), bounds.top() - px(10.));
+                let left_bottom = point(bounds.left() - px(10.), bounds.bottom() + px(100.));
+                let release_position = if pad {
+                    point(left_bottom.x, right_top.y)
+                } else {
+                    left_bottom
+                };
+                let start = point(
+                    bounds.left() + px(2.),
+                    if pad {
+                        bounds.bottom() + bounds.size.height - px(2.)
+                    } else {
+                        bounds.center().y
+                    },
+                );
+                press(window, start, cx);
+                assert!(panel.read(cx).benchmark_slider_dragging());
+                let before = read(cx).1;
+                slide(window, right_top, false, cx);
+                assert_eq!(read(cx), (vec![1., if pad { 1. } else { 0. }], before + 1));
+                slide(window, point(left_bottom.x, right_top.y), false, cx);
+                slide(window, left_bottom, false, cx);
+                assert_eq!(read(cx), (vec![1., if pad { 1. } else { 0. }], before + 1));
+                // Exercise an owner notification while a newer target awaits its frame.
+                harness.view.update(cx, |_, cx| cx.notify());
+                (right_top, left_bottom, release_position, before)
+            })
+            .unwrap();
+        cx.update_window(harness.window, |_, window, cx| {
+            for id in &ids {
+                assert_eq!(
+                    panel.read(cx).parameter_display_in_test(id, cx),
+                    (0., "0.0".into())
+                );
+            }
+            window.simulate_next_frame(cx);
+            assert_eq!(read(cx).0, vec![0., 0.]);
+            assert_eq!(
+                read(cx).1,
+                before + 2,
+                "one setter for the tail; Pad axes apply together"
+            );
+            slide(window, right_top, false, cx);
+            let before_release = read(cx).1;
+            slide(window, left_bottom, false, cx);
+            release(window, release_position, cx);
+            let final_state = read(cx);
+            assert_eq!(final_state.0, vec![0., if pad { 1. } else { 0. }]);
+            assert_eq!(final_state.1, before_release + 1);
+            assert!(!panel.read(cx).benchmark_slider_dragging());
+            window.simulate_next_frame(cx);
+            assert_eq!(read(cx), final_state);
+            assert_eq!(
+                harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .document()
+                    .unwrap()
+                    .history_lengths(),
+                history
+            );
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
+fn pending_parameter_target_cannot_write_after_cancel_or_another_edit(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::px;
+    use zipzi_editor_core::EditorCommand;
+
+    for boundary in ["escape", "blur", "undo", "modal", "draft", "publication"] {
+        let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
+        let id = document.parameters()[0].id.clone();
+        let harness = setup_with_document(cx, document, assets);
+        let panel = harness
+            .view
+            .read_with(cx, |view, _| view.dock.as_ref().unwrap().parameters.clone());
+        cx.update_window(harness.window, |_, window, cx| {
+            window.render_frame(cx);
+            let track = window
+                .within(format!("parameter-row-{id}"))
+                .find("slider-bar-container")
+                .bounds();
+            let latest = point(track.left() - px(20.), track.center().y);
+            press(window, point(track.left() + px(2.), track.center().y), cx);
+            slide(
+                window,
+                point(track.right() + px(20.), track.center().y),
+                false,
+                cx,
+            );
+            slide(window, latest, false, cx);
+            assert_eq!(
+                harness
+                    .view
+                    .read(cx)
+                    .editor
+                    .document()
+                    .unwrap()
+                    .parameters()[0]
+                    .value,
+                1.
+            );
+            assert_eq!(panel.read(cx).parameter_display_in_test(&id, cx).0, 0.);
+            match boundary {
+                "escape" => window.press("escape", cx),
+                "blur" => window.blur(cx),
+                "undo" => window.press("secondary-z", cx),
+                "modal" => harness.view.update(cx, |view, cx| {
+                    view.modal = true;
+                    cx.notify();
+                }),
+                "draft" => harness.view.update(cx, |view, _| {
+                    view.editor
+                        .execute(EditorCommand::PreviewOpacity(0.5))
+                        .unwrap();
+                    assert!(view.editor.document().unwrap().has_pending_edit());
+                }),
+                "publication" => {
+                    let document = harness.view.read(cx).editor.document().unwrap();
+                    let runtime = document.runtime_host();
+                    let session = document.runtime_session_id();
+                    let mesh = document.layers()[0].id.clone();
+                    let peer = runtime.write().register_client().unwrap();
+                    document_fixture::publish_host(
+                        &runtime,
+                        peer,
+                        session,
+                        "Peer rename",
+                        |edit| edit.rename(zipzi_sdk::NameTarget::Mesh(&mesh), "Published".into()),
+                    )
+                    .unwrap();
+                }
+                _ => unreachable!(),
+            }
+            window.simulate_next_frame(cx);
+            release(window, latest, cx);
+            let document = harness.view.read(cx).editor.document().unwrap();
+            assert_eq!(document.parameters()[0].value, 1., "{boundary}");
+            assert_eq!(document.has_pending_edit(), boundary == "draft");
+            assert_eq!(
+                panel.read(cx).parameter_display_in_test(&id, cx).0,
+                1.,
+                "{boundary}"
+            );
+            assert!(!panel.read(cx).benchmark_slider_dragging());
+        })
+        .unwrap();
+    }
+}
+
+#[gpui_kit::test]
+fn scheduled_parameter_evaluation_recovers_from_a_rejected_target(cx: &mut TestAppContext) {
+    use super::slide_number_input::{press, release, slide};
+    use gpui_kit::px;
+    use uuid::Uuid;
+    use zipzi_core::{
+        BindingAxis, BindingAxisEditing, RotationPose, RotationTransform, SceneBinding, SceneTrack,
+        Transform, TransformData, Vec2, WarpKeyform, WarpTransform,
+    };
+
+    let (mut document, assets) = document_fixture::sample_document_with_parameters(0).unwrap();
+    let id = document
+        .create_parameter(zipzi_editor_core::NewParameter {
+            runtime_id: "PreviewConstraint".into(),
+            decimal_places: 2,
+            minimum: 0.,
+            maximum: 1.,
+            default_value: 0.,
+            ..Default::default()
+        })
+        .unwrap();
+    let path = assets.path().join("preview-constraint.zipzi");
+    let saved = document.save(&path).unwrap();
+    let mut fixture = document_fixture::open_fixture(&saved.path).unwrap();
+    let parent = Uuid::new_v4().to_string();
+    let warp = Uuid::new_v4().to_string();
+    let points = vec![
+        Vec2::new(0., 0.),
+        Vec2::new(1., 0.),
+        Vec2::new(0., 1.),
+        Vec2::new(1., 1.),
+    ];
+    let mut overflow = points.clone();
+    // The authored coordinate is finite, but its parent transform doubles it.
+    overflow[0].x = f32::MAX;
+    document_fixture::publish_fixture(&mut fixture, "Preview constraint", |edit| {
+        document_fixture::insert_transform(
+            edit,
+            Transform {
+                id: parent.clone(),
+                data: TransformData::Rotation(RotationTransform {
+                    pose: RotationPose {
+                        scale: 2.,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        )?;
+        document_fixture::insert_transform(
+            edit,
+            Transform {
+                id: warp.clone(),
+                parent_id: Some(parent.clone().into()),
+                data: TransformData::Warp(WarpTransform {
+                    rows: 1,
+                    columns: 1,
+                    quad: true,
+                    points: points.clone(),
+                    bezier: None,
+                }),
+                ..Default::default()
+            },
+        )?;
+        edit.create_scene_binding(SceneBinding {
+            id: Uuid::new_v4().to_string(),
+            axes: vec![BindingAxis::new(id.clone(), vec![0., 1.])],
+            track: SceneTrack::Warp {
+                target_id: warp.clone().into(),
+                keyforms: [(0., points), (1., overflow)]
+                    .into_iter()
+                    .map(|(value, positions)| WarpKeyform {
+                        keys: vec![value],
+                        positions,
+                        ..Default::default()
+                    })
+                    .collect(),
+            },
+        })
+    })
+    .unwrap();
+    let saved = document_fixture::save_fixture(&mut fixture, &path).unwrap();
+    let harness = setup_with_document(
+        cx,
+        zipzi_editor_core::Document::open(&saved.path).unwrap(),
+        assets,
+    );
+    let panel = harness
+        .view
+        .read_with(cx, |view, _| view.dock.as_ref().unwrap().parameters.clone());
+    cx.update_window(harness.window, |_, window, cx| {
+        let track = window
+            .within(format!("parameter-row-{id}"))
+            .find("slider-bar-container")
+            .bounds();
+        let good = point(track.left() - px(10.), track.center().y);
+        let good_changed = point(track.left() + track.size.width * 0.25, track.center().y);
+        let bad = point(track.right() + px(10.), track.center().y);
+        press(window, point(track.left(), track.center().y), cx);
+        slide(window, good, false, cx);
+        slide(window, good_changed, false, cx);
+        assert_eq!(
+            harness
+                .view
+                .read(cx)
+                .editor
+                .document()
+                .unwrap()
+                .parameters()[0]
+                .value,
+            0.25,
+            "an unchanged move must leave the first setter immediate"
+        );
+        slide(window, bad, false, cx);
+        slide(window, good, false, cx);
+        window.simulate_next_frame(cx);
+        assert!(
+            harness.view.read(cx).edit_error.is_none(),
+            "superseded targets are skipped"
+        );
+
+        slide(window, good_changed, false, cx);
+        slide(window, bad, false, cx);
+        assert_eq!(panel.read(cx).parameter_display_in_test(&id, cx).0, 1.);
+        window.simulate_next_frame(cx);
+        let view = harness.view.read(cx);
+        assert!(
+            view.edit_error
+                .as_ref()
+                .is_some_and(|error| error.contains("NON_FINITE"))
+        );
+        assert_eq!(view.editor.document().unwrap().parameters()[0].value, 0.25);
+        assert_eq!(panel.read(cx).parameter_display_in_test(&id, cx).0, 0.25);
+        slide(window, good_changed, false, cx);
+        release(window, good_changed, cx);
+        assert!(harness.view.read(cx).edit_error.is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn parameter_slider_and_input_update_the_live_preview(cx: &mut TestAppContext) {
     let (document, assets) = document_fixture::sample_document_with_binding(true).unwrap();
     let parameter = document.parameters().remove(0);
@@ -838,7 +1167,7 @@ fn parameter_enter_applies_drafts_and_preserves_unedited_precision(cx: &mut Test
         assert!(window.try_find(format!("parameter-reset-{id}")).is_none());
         assert!(window.try_find(format!("parameter-apply-{id}")).is_none());
         window.click(format!("parameter-value-{id}"), cx);
-        window.press("cmd-a", cx);
+        window.press("secondary-a", cx);
         window.input("0.625", cx);
     })
     .unwrap();
@@ -856,7 +1185,7 @@ fn parameter_enter_applies_drafts_and_preserves_unedited_precision(cx: &mut Test
     });
     // Explicitly typing the same text as the truncated display still applies it.
     cx.update_window(harness.window, |_, window, cx| {
-        window.press("cmd-a", cx);
+        window.press("secondary-a", cx);
         window.input("0.6", cx);
     })
     .unwrap();

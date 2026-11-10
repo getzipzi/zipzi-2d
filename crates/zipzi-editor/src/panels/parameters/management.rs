@@ -152,6 +152,7 @@ impl ParametersPanel {
         if window.has_active_dialog(cx) {
             return;
         }
+        self.cancel_parameter_drag(window, cx);
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
@@ -265,7 +266,7 @@ impl ParametersPanel {
                 }
             }
         }
-        self.refresh_visible_rows(cx);
+        self.refresh_visible_rows(window, cx);
         if let Some(i) = self
             .visible_rows
             .iter()

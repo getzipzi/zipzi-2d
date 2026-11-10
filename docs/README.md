@@ -32,7 +32,8 @@
 - [Windows 原生 D3D11 验证记录](archive/benchmarks/2026-11-10-windows-d3d11.md): 与 wgpu/DX12 的窗口对照、显存、像素一致性和 SDK 捕获
 - [Mesh 拖动求值和提交开销](archive/benchmarks/2026-11-10-control-drag-costs.md): keyform 候选校验与松手索引复用的独立对照
 - [Windows 视口预览交付实验](archive/benchmarks/2026-11-10-windows-preview-delivery.md): 绘制前取用后台结果与 UI 线程记录方案的对照
-- [Editor 密集输入调度方案](plans/dense-input-scheduling.md)及[网格样板实验](archive/benchmarks/2026-11-10-mesh-dense-input.md): 手势内合并、收尾规则、参数和时间轴的推广与验收
+- [Editor 密集输入调度架构](plans/dense-input-scheduling.md)及[网格样板实验](archive/benchmarks/2026-11-10-mesh-dense-input.md): 语义归约、帧调度与同步边界，参数/时间轴接入、约束失败契约及改进策略对照
+- [密集输入两个方向的深入研究](plans/dense-input-two-directions.md): 候选与 scene 的实际成本边界、9 份历史 trace、严格帧限流的持续等待反例与原生验证顺序
 - [Current topic references](references/README.md) and [benchmark guides](../tools/benchmarks/README.md)
 - [Tooling tests](../tools/tests/README.md) and [shared fixtures](../fixtures/README.md)
 

@@ -41,6 +41,7 @@ static HIDE_MESH_EDGES: AtomicBool = AtomicBool::new(false);
 static CONFIG: OnceLock<Config> = OnceLock::new();
 static LAST_PRESENTED: AtomicU64 = AtomicU64::new(0);
 thread_local! { static INJECTING_POINTER: Cell<bool> = const { Cell::new(false) }; }
+
 struct Config {
     #[cfg(feature = "test-support")]
     timeline_fixture: Option<Mutex<Option<tempfile::TempDir>>>,
@@ -156,16 +157,20 @@ pub fn init() -> anyhow::Result<()> {
         let mesh_only = std::env::var("ZIPZI_BENCH_MESH_ONLY").is_ok_and(|s| s == "1");
         let drag_wide = std::env::var("ZIPZI_BENCH_DRAG_WIDE").is_ok_and(|s| s == "1");
         let input_burst = number("ZIPZI_BENCH_INPUT_BURST", 1)?;
+        let animation = std::env::var("ZIPZI_BENCH_ANIMATION").is_ok_and(|s| s == "1");
+        let timeline_seek = animation
+            && std::env::var("ZIPZI_BENCH_ANIMATION_DRAG").as_deref() == Ok("timeline_seek");
         ensure!(
             !mesh_only || deformations,
             "mesh-only requires deformations"
         );
         ensure!(
-            (1..=16).contains(&input_burst) && (!(drag_wide || input_burst > 1) || mesh_only),
-            "wide/burst input requires mesh-only; burst must be 1..16"
+            (1..=16).contains(&input_burst)
+                && (!drag_wide || mesh_only)
+                && (input_burst == 1 || deformations || parameters_only || timeline_seek),
+            "wide input requires mesh-only; burst requires deformations, parameters-only or Timeline Seek and must be 1..16"
         );
         let manual_mesh = std::env::var("ZIPZI_BENCH_MANUAL_MESH").is_ok_and(|s| s == "1");
-        let animation = std::env::var("ZIPZI_BENCH_ANIMATION").is_ok_and(|s| s == "1");
         let properties = std::env::var("ZIPZI_BENCH_PROPERTIES").is_ok_and(|s| s == "1");
         let deformer_selection =
             std::env::var("ZIPZI_BENCH_DEFORMER_SELECTION").is_ok_and(|s| s == "1");
@@ -791,19 +796,27 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                             }
                             4 => {
                                 let (bounds, _) = slider.unwrap();
+                                let input_kind = parameter_overlay::parameter_input();
+                                last_position = if input_kind == "number" {
+                                    center + point(px((sample as f32 * 0.13).sin() * 140. + 8.), px(0.))
+                                } else {
+                                    point(
+                                        bounds.left() + bounds.size.width * (0.5 + (sample as f32 * 0.13).sin() * 0.35),
+                                        if input_kind == "pad" {
+                                            bounds.center().y + bounds.size.height * (sample as f32 * 0.17).sin() * 0.3
+                                        } else {
+                                            center.y
+                                        },
+                                    )
+                                };
+                                frame_trace::emit(input.id(), "benchmark_pointer", &[
+                                    ("x_millipx", (last_position.x.as_f32() * 1000.) as u64),
+                                    ("y_millipx", (last_position.y.as_f32() * 1000.) as u64),
+                                ]);
                                 dispatch_pointer(
                                     window,
                                     MouseMoveEvent {
-                                        position: if parameter_overlay::parameter_input() == "number" {
-                                            center + point(px((sample as f32*0.13).sin()*140.+8.), px(0.))
-                                        } else { point(
-                                            bounds.left()
-                                                + bounds.size.width
-                                                    * (0.5 + (sample as f32 * 0.13).sin() * 0.35),
-                                            if parameter_overlay::parameter_input() == "pad" {
-                                                bounds.center().y + bounds.size.height*(sample as f32*0.17).sin()*0.3
-                                            } else { center.y },
-                                        ) },
+                                        position: last_position,
                                         pressed_button: Some(MouseButton::Left),
                                         modifiers: Default::default(),
                                     }
@@ -871,11 +884,11 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                                 "canvas edit failed: {:?}",
                                 view.edit_error
                             );
-                            let queued = view.dock.as_ref().unwrap().active_viewport().read(cx).queued_mesh_move();
+                            let queued = view.dock.as_ref().unwrap().active_viewport().read(cx).mesh_input_pending();
                             ensure!(
                                 view.editor.gesture_active()
-                                    && (queued || (view.editor.document().is_some_and(|d| d.has_pending_edit())
-                                    && view.editor.evaluation_count() > evaluations)),
+                                    && view.editor.document().is_some_and(|d| d.has_pending_edit())
+                                    && (queued || view.editor.evaluation_count() > evaluations),
                                 "mode {mode} sample {sample}: drag produced no model evaluation: {:?}", view.editor.canvas_notice()
                             );
                             Ok(())
@@ -923,7 +936,7 @@ pub fn start(view: &mut EditorView, window: &mut Window, cx: &mut Context<Editor
                         }
                     }
                     drop(release);
-                    if drag.is_some() {
+                    if drag.is_some() || mode == 4 {
                         let settle_deadline = Instant::now() + Duration::from_secs(2);
                         while !view.update_in(cx, |view, _, _| deformation::frame_ready(view))? {
                             ensure!(Instant::now() < settle_deadline, "preview did not catch up after release");

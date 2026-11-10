@@ -367,7 +367,7 @@ impl EditorView {
         if animation_visible {
             if let Some(request) = self.editor.animation_request() {
                 if let Some(worker) = &mut self.animation_worker {
-                    worker.send(request);
+                    worker.send_for_input(request, input);
                 }
             }
             if let Some(content) = self

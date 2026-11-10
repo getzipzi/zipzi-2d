@@ -120,13 +120,17 @@ impl DockWorkspace {
             .map(|kind| {
                 (
                     kind,
-                    if kind == PanelKind::Properties {
-                        crate::panels::PropertiesPanel::input_region(&properties, cx)
-                    } else {
-                        crate::input_routing::InputRegion::panel(
+                    match kind {
+                        PanelKind::Properties => {
+                            crate::panels::PropertiesPanel::input_region(&properties, cx)
+                        }
+                        PanelKind::Parameters => {
+                            crate::panels::ParametersPanel::input_region(&parameters, cx)
+                        }
+                        _ => crate::input_routing::InputRegion::panel(
                             panels[&kind].focus_handle(cx),
                             kind,
-                        )
+                        ),
                     },
                 )
             })

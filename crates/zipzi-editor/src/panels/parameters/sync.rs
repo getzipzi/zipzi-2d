@@ -8,6 +8,9 @@ impl ParametersPanel {
         let Some(owner) = self.owner.upgrade() else {
             return;
         };
+        if self.drag.active() && !self.parameter_drag_valid(window, cx) {
+            self.cancel_parameter_drag(window, cx);
+        }
         let (document_id, parameters, revision, selection) = {
             let owner = owner.read(cx);
             self.owner_disabled = owner.modal || owner.editor.is_busy();
@@ -56,6 +59,7 @@ impl ParametersPanel {
                 .zip(&parameters)
                 .any(|(row, parameter)| row.parameter.group_id != parameter.group_id);
         if layout_changed {
+            self.cancel_parameter_drag(window, cx);
             if self.document_id != document_id {
                 self.collapsed_groups.clear();
             }
@@ -97,7 +101,7 @@ impl ParametersPanel {
             self.refresh_binding_hints(&owner, cx);
         }
         if layout_changed || (self.only_related && visuals_changed) {
-            self.refresh_visible_rows(cx);
+            self.refresh_visible_rows(window, cx);
         } else if visuals_changed {
             self.refresh_linked_rows(cx);
         }
@@ -112,7 +116,7 @@ impl ParametersPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.finish_slider_drag(cx);
+        self.cancel_parameter_drag(window, cx);
         self.document_id = document_id;
         self.scroll = UniformListScrollHandle::new();
         self.subscriptions.clear();
@@ -151,7 +155,7 @@ impl ParametersPanel {
                     SlideNumberInput::new(
                         input.clone(),
                         parameter.name.clone(),
-                        slide_number_options(&parameter, false),
+                        slide_number_options(&parameter, parameter.value, false),
                         window,
                         cx,
                     )
@@ -186,6 +190,7 @@ impl ParametersPanel {
                     input,
                     number_input,
                     input_dirty: false,
+                    desired: None,
                 }
             })
             .collect();
@@ -212,38 +217,6 @@ impl ParametersPanel {
                     }
                 },
             ));
-            let parameter_id = row.parameter.id.clone();
-            let slider = row.slider.clone();
-            let subscription = cx.subscribe_in(
-                &slider,
-                window,
-                move |this: &mut Self, source, event: &SliderEvent, window, cx| {
-                    let Some(document_id) = document_id else {
-                        return;
-                    };
-                    if this.document_id != Some(document_id)
-                        || !this
-                            .rows
-                            .iter()
-                            .any(|row| row.parameter.id == parameter_id && &row.slider == source)
-                    {
-                        return;
-                    }
-                    let SliderValue::Single(value) = (match event {
-                        SliderEvent::Change(value) | SliderEvent::Release(value) => value,
-                    }) else {
-                        return;
-                    };
-                    let Some(row) = this.rows.iter().find(|r| r.parameter.id == parameter_id)
-                    else {
-                        return;
-                    };
-                    // Kit rounds around zero and can overshoot a non-aligned range endpoint.
-                    let value = value.clamp(row.parameter.minimum, row.parameter.maximum);
-                    this.apply_values(document_id, &[(parameter_id.clone(), value)], window, cx);
-                },
-            );
-            self.subscriptions.push(subscription);
             let input = row.input.clone();
             let parameter_id = row.parameter.id.clone();
             let input_subscription = cx.subscribe_in(
@@ -294,25 +267,6 @@ impl ParametersPanel {
                 .sort_by_key(|row| ranks[row.parameter.id.as_str()]);
         }
         for (row, parameter) in self.rows.iter_mut().zip(parameters) {
-            {
-                let current = match row.slider.read(cx).value() {
-                    SliderValue::Single(value) => value,
-                    _ => parameter.default_value,
-                };
-                if current != parameter.value {
-                    row.slider.update(cx, |slider, cx| {
-                        slider.set_value(parameter.value, window, cx);
-                    });
-                }
-            }
-            if !row.input_dirty && !row.input.read(cx).focus_handle(cx).is_focused(window) {
-                let desired = format_value(parameter.value);
-                if row.input.read(cx).value().as_ref() != desired {
-                    row.input.update(cx, |input, cx| {
-                        input.set_value(desired, window, cx);
-                    });
-                }
-            }
             if let Some(visual) = visuals.and_then(|v| v.get(&parameter.id)) {
                 if row.visual != *visual {
                     row.visual = visual.clone();
@@ -329,6 +283,7 @@ impl ParametersPanel {
                 }
             });
             row.parameter = parameter;
+            row.sync_value_display(true, window, cx);
         }
     }
 

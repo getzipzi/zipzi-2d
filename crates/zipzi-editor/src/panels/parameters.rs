@@ -1,3 +1,4 @@
+mod drag;
 mod headers;
 mod interactions;
 mod keyform_glyph;
@@ -31,7 +32,7 @@ use gpui_kit::component::{
     button::{Button, ButtonVariants},
     dock::{BasePanel, Panel, PanelEvent},
     input::{InputEvent, InputState},
-    slider::{SliderEvent, SliderState, SliderValue},
+    slider::{SliderState, SliderValue},
     tooltip::Tooltip,
 };
 use gpui_kit::{prelude::*, *};
@@ -52,6 +53,7 @@ struct ParameterRow {
     input: Entity<InputState>,
     number_input: Entity<SlideNumberInput>,
     input_dirty: bool,
+    desired: Option<(u64, f32)>,
     view: Entity<ParameterRowView>,
 }
 
@@ -97,11 +99,15 @@ fn format_value(value: f32) -> String {
     format_one_decimal(value as f64)
 }
 
-fn slide_number_options(parameter: &ParameterValue, disabled: bool) -> SlideNumberOptions {
+fn slide_number_options(
+    parameter: &ParameterValue,
+    value: f32,
+    disabled: bool,
+) -> SlideNumberOptions {
     // Compute range proportions from the shortest authored decimal values.
     let decimal = |value: f32| value.to_string().parse::<f64>().unwrap_or(value as f64);
     SlideNumberOptions {
-        value: decimal(parameter.value),
+        value: decimal(value),
         min: decimal(parameter.minimum),
         max: decimal(parameter.maximum),
         step: 0.1,
@@ -159,8 +165,7 @@ pub struct ParametersPanel {
     owner_disabled: bool,
     scroll: UniformListScrollHandle,
     subscriptions: Vec<Subscription>,
-    slider_drag: Option<Entity<SliderState>>,
-    pad_drag: Option<interactions::PadDragState>,
+    drag: drag::ParameterDragState,
     sorting: Entity<SortState>,
     _sorting_observe: Subscription,
     _observe: Subscription,
@@ -180,7 +185,8 @@ impl ParametersPanel {
                         this.refresh_navigation_styles(cx);
                         cx.notify();
                     }),
-                    cx.on_blur(&focus, window, |this: &mut Self, _, cx| {
+                    cx.on_blur(&focus, window, |this: &mut Self, window, cx| {
+                        this.cancel_parameter_drag(window, cx);
                         this.navigation_focused = false;
                         this.refresh_navigation_styles(cx);
                         cx.notify();
@@ -197,7 +203,7 @@ impl ParametersPanel {
                 ),
                 _activation: cx.observe_window_activation(window, |this: &mut Self, window, cx| {
                     if !window.is_window_active() {
-                        this.finish_slider_drag(cx);
+                        this.cancel_parameter_drag(window, cx);
                     }
                 }),
                 owner,
@@ -217,8 +223,7 @@ impl ParametersPanel {
                 owner_disabled: false,
                 scroll: UniformListScrollHandle::new(),
                 subscriptions: Vec::new(),
-                slider_drag: None,
-                pad_drag: None,
+                drag: Default::default(),
                 sorting,
                 _sorting_observe: sorting_observe,
             }
@@ -226,7 +231,7 @@ impl ParametersPanel {
     }
 
     pub(crate) fn benchmark_slider_dragging(&self) -> bool {
-        self.slider_drag.is_some() || self.pad_drag.is_some()
+        self.drag.active()
     }
     pub(crate) fn benchmark_input_dragging(&self, cx: &App) -> bool {
         if crate::benchmark::parameter_overlay::parameter_input() == "number" {
@@ -492,10 +497,7 @@ impl ParametersPanel {
             unavailable.context = context;
             return unavailable;
         }
-        let value = match row.slider.read(cx).value() {
-            SliderValue::Single(value) => value,
-            _ => row.parameter.value,
-        };
+        let value = row.parameter.value;
         let target_axis = |target: &zipzi_editor_core::ObjectRef| {
             document.ordinary_binding(target).and_then(|binding| {
                 binding
@@ -625,7 +627,8 @@ impl ParametersPanel {
         }
     }
 
-    fn refresh_visible_rows(&mut self, cx: &mut Context<Self>) {
+    fn refresh_visible_rows(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.cancel_parameter_drag(window, cx);
         let related = self.only_related.then(|| {
             self.rows
                 .iter()
@@ -778,7 +781,7 @@ impl Render for ParametersPanel {
         // change it and must not subscribe this panel to the entire editor.
         let disabled = self.owner_disabled || window.has_active_dialog(cx);
         if disabled {
-            self.finish_slider_drag(cx);
+            self.cancel_parameter_drag(window, cx);
         }
         // Do not subscribe the whole panel to each row's changing thumb value.
         if self.rows_disabled != disabled {
@@ -847,7 +850,7 @@ impl Render for ParametersPanel {
                             }
                         });
                         let releasing = panel.clone();
-                        window.on_mouse_event(move |event: &MouseUpEvent, phase, _, cx| {
+                        window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
                             if phase == DispatchPhase::Capture
                                 && crate::benchmark::ignore_native_pointer_event()
                             {
@@ -857,7 +860,9 @@ impl Render for ParametersPanel {
                             if phase == DispatchPhase::Capture
                                 && event.button == MouseButton::Left
                                 && releasing
-                                    .update(cx, |panel, cx| panel.finish_slider_drag(cx))
+                                    .update(cx, |panel, cx| {
+                                        panel.release_parameter_drag(event.position, window, cx)
+                                    })
                                     .unwrap_or(false)
                             {
                                 cx.stop_propagation();

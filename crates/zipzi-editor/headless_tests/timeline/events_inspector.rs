@@ -451,12 +451,12 @@ fn invalid_inspector_text_does_not_commit_the_last_valid_intermediate_value(
     for invalid in ["-", "999999"] {
         cx.update_window(harness.window, |_, window, cx| {
             window.click("property-input-selection_value", cx);
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             window.input("0.25", cx);
         })
         .unwrap();
         cx.update_window(harness.window, |_, window, cx| {
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             window.input(invalid, cx);
         })
         .unwrap();
@@ -544,13 +544,13 @@ fn returning_live_text_to_baseline_discards_the_candidate(cx: &mut TestAppContex
     for how in ["enter", "blur", "save"] {
         cx.update_window(harness.window, |_, window, cx| {
             window.click("property-input-selection_value", cx);
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             window.input("0.25", cx);
             window.render_frame(cx);
         })
         .unwrap();
         cx.update_window(harness.window, |_, window, cx| {
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             window.input(&original.to_string(), cx);
             settle_input(&harness, how, window, cx);
         })
@@ -590,13 +590,13 @@ fn colliding_key_time_discards_the_last_valid_candidate(cx: &mut TestAppContext)
         });
         cx.update_window(harness.window, |_, window, cx| {
             window.click("property-input-selection_time", cx);
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             window.input("0.5", cx);
             window.render_frame(cx);
         })
         .unwrap();
         cx.update_window(harness.window, |_, window, cx| {
-            window.press("cmd-a", cx);
+            window.press("secondary-a", cx);
             window.input(&collision.to_string(), cx);
             settle_input(&harness, how, window, cx);
         })

@@ -14,6 +14,7 @@ mod dev_control;
 mod dev_session;
 mod docking;
 mod editing;
+mod frame_input;
 #[cfg(test)]
 #[path = "../headless_tests/mod.rs"]
 mod headless_tests;
@@ -278,15 +279,33 @@ impl EditorView {
     }
 
     fn complete_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
+        self.complete_edit_for_input(result, frame_trace::current_input(), cx);
+    }
+
+    fn complete_edit_for_input(
+        &mut self,
+        result: anyhow::Result<()>,
+        input: u64,
+        cx: &mut Context<Self>,
+    ) {
         match result {
             Ok(()) => self.clear_edit_error(cx),
             Err(error) => self.set_edit_error(error.to_string(), cx),
         }
-        self.redraw(cx);
+        self.redraw_for_input(input, cx);
     }
 
     fn complete_preview_edit(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
-        self.refresh_modeling_preview(result, cx);
+        self.complete_preview_edit_for_input(result, frame_trace::current_input(), cx);
+    }
+
+    fn complete_preview_edit_for_input(
+        &mut self,
+        result: anyhow::Result<()>,
+        input: u64,
+        cx: &mut Context<Self>,
+    ) {
+        self.refresh_modeling_preview_for_input(result, input, cx);
         if let Some(dock) = &self.dock {
             for kind in [
                 zipzi_editor_core::PanelKind::Keyforms,
@@ -302,16 +321,24 @@ impl EditorView {
     }
 
     fn refresh_modeling_preview(&mut self, result: anyhow::Result<()>, cx: &mut Context<Self>) {
-        frame_trace::emit(frame_trace::current_input(), "preview_input_refresh", &[]);
+        self.refresh_modeling_preview_for_input(result, frame_trace::current_input(), cx);
+    }
+
+    fn refresh_modeling_preview_for_input(
+        &mut self,
+        result: anyhow::Result<()>,
+        input: u64,
+        cx: &mut Context<Self>,
+    ) {
+        frame_trace::emit(input, "preview_input_refresh", &[]);
         match result {
             Ok(()) => self.clear_edit_error(cx),
             Err(error) => self.set_edit_error(error.to_string(), cx),
         }
         // Retain the displayed pose while its parameter preview is in flight.
         // Focus-only changes and render errors still invalidate immediately.
-        let pending = benchmark::parameter_overlay::capture(6, || {
-            self.request_preview_for_input(frame_trace::current_input())
-        });
+        let pending =
+            benchmark::parameter_overlay::capture(6, || self.request_preview_for_input(input));
         self.sync_viewport_notice(cx);
         if !pending || benchmark::parameter_overlay::eager_canvas() {
             self.notify_canvas(cx);
@@ -320,6 +347,10 @@ impl EditorView {
     }
 
     fn redraw(&mut self, cx: &mut Context<Self>) {
+        self.redraw_for_input(frame_trace::current_input(), cx);
+    }
+
+    fn redraw_for_input(&mut self, input: u64, cx: &mut Context<Self>) {
         if let Some(document) = self.editor.document() {
             use zipzi_runtime::editor_context::EditorContextProvider;
             let session = document.runtime_session_id();
@@ -331,7 +362,7 @@ impl EditorView {
                 .set_editor_context(session, context);
         }
         self.sync_viewports();
-        self.request_preview();
+        self.request_preview_for_input(input);
         self.sync_animation_clock(cx);
         self.sync_viewport_notice(cx);
         workspace::status_bar::StatusBar::sync(&self.status_bar, self, cx);

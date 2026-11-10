@@ -322,6 +322,101 @@ fn admitted_keyform_drags_match_full_validation_and_retain_old_snapshots() {
 }
 
 #[test]
+fn admitted_deformer_keyform_drags_match_full_validation() {
+    let base = fixture(true);
+    let original = frame(&mut FrameEvaluator::default(), &base, 0.5);
+    let mut builder = base.builder();
+    builder.validate_candidate().unwrap();
+    for step in 0..6 {
+        let SceneTrack::Rotation { keyforms, .. } = &builder.scene_binding(&id(8)).unwrap().track
+        else {
+            unreachable!()
+        };
+        let mut rotation = keyforms[step % 2].clone();
+        rotation.rotation.angle += step as f32 * 10.;
+        rotation.keys.clear();
+        let SceneTrack::Warp { keyforms, .. } = &builder.scene_binding(&id(9)).unwrap().track
+        else {
+            unreachable!()
+        };
+        let mut warp = keyforms[step % 2].clone();
+        warp.positions[1].x += step as f32;
+        warp.samples.clear();
+
+        let mut oracle = builder.clone();
+        for (binding, form) in [
+            (id(8), SceneKeyform::Rotation(rotation)),
+            (id(9), SceneKeyform::Warp(warp)),
+        ] {
+            oracle.validation = CandidateValidation::NeedsValidation;
+            oracle.set_scene_keyform(&binding, form.clone()).unwrap();
+            builder.set_scene_keyform(&binding, form).unwrap();
+            assert_eq!(
+                builder.validation,
+                CandidateValidation::ValidatedWithSharedLayout
+            );
+        }
+        let actual = builder.preview().unwrap();
+        let expected = freeze_full(oracle).unwrap();
+        for binding in [id(8), id(9)] {
+            assert_eq!(
+                actual.scene_binding(&binding),
+                expected.scene_binding(&binding)
+            );
+        }
+        for value in [0., 0.35, 1.] {
+            assert_eq!(
+                frame(&mut FrameEvaluator::default(), &actual, value),
+                frame(&mut FrameEvaluator::default(), &expected, value)
+            );
+        }
+        assert_eq!(frame(&mut FrameEvaluator::default(), &base, 0.5), original);
+    }
+}
+
+#[test]
+fn admitted_deformer_keyform_edits_preserve_errors_and_recheck_dependencies() {
+    let base = fixture(true);
+    let SceneTrack::Rotation { keyforms, .. } = &base.scene_binding(&id(8)).unwrap().track else {
+        unreachable!()
+    };
+    let mut rotation = keyforms[0].clone();
+    rotation.rotation.scale = f32::NAN;
+    let SceneTrack::Warp { keyforms, .. } = &base.scene_binding(&id(9)).unwrap().track else {
+        unreachable!()
+    };
+    let mut warp = keyforms[0].clone();
+    warp.positions.pop();
+    for (binding, form, code) in [
+        (id(8), SceneKeyform::Rotation(rotation), "INVALID_ROTATION"),
+        (id(9), SceneKeyform::Warp(warp), "INVALID_LENGTH"),
+    ] {
+        let mut builder = base.builder();
+        builder.validate_candidate().unwrap();
+        let mut oracle = builder.clone();
+        oracle.validation = CandidateValidation::NeedsValidation;
+        let expected = oracle
+            .set_scene_keyform(&binding, form.clone())
+            .unwrap_err();
+        let actual = builder.set_scene_keyform(&binding, form).unwrap_err();
+        assert_eq!(actual.code, code);
+        assert_eq!(actual, expected);
+        assert_eq!(builder.freeze().unwrap_err(), expected);
+    }
+
+    let mut builder = base.builder();
+    builder.validate_candidate().unwrap();
+    let mut parameter = builder.parameter(&id(3)).unwrap().clone();
+    parameter.maximum = 0.5;
+    builder.replace_parameter(parameter).unwrap();
+    let form = SceneKeyform::Warp(keyforms[0].clone());
+    assert_eq!(
+        builder.set_scene_keyform(&id(9), form).unwrap_err().code,
+        "INVALID_KEYS"
+    );
+}
+
+#[test]
 fn admitted_keyform_drag_rejects_bad_payload_and_poisoned_candidates() {
     for (edit, code) in [
         (
