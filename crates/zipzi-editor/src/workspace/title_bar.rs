@@ -3,7 +3,7 @@ use crate::{EditorView, t, ui::compact};
 use gpui_kit::component::{
     ActiveTheme, Disableable, IconName, Side, TitleBar,
     button::{Button, ButtonVariants},
-    menu::{DropdownMenu, PopupMenu, PopupMenuItem},
+    menu::{DropdownMenu, PopupMenuItem},
 };
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::CommandId;
@@ -26,12 +26,15 @@ pub fn render_title_bar(
     cx: &mut Context<EditorView>,
 ) -> impl IntoElement {
     let owner = cx.entity();
-    // Kit reserves 80px for traffic lights, or a 12px inset in fullscreen.
+    let application_menu = super::application_menu::state(window, cx);
+    application_menu.update(cx, |menu, _| menu.modal = modal);
+    let menu_expanded = !cfg!(target_os = "macos") && application_menu.read(cx).expanded();
+    // Kit reserves 80px for macOS traffic lights, otherwise a 12px inset.
     // Compensate for that inset so the segment stays at the window's center.
-    let native_inset = px(if cfg!(target_os = "macos") {
-        if window.is_fullscreen() { 12. } else { 80. }
+    let native_inset = px(if cfg!(target_os = "macos") && !window.is_fullscreen() {
+        80.
     } else {
-        0.
+        12.
     });
     let left_width = (window.viewport_size().width - compact::scaled(WORKSPACE_SWITCHER_WIDTH, cx))
         / 2.
@@ -55,15 +58,19 @@ pub fn render_title_bar(
                 .when(!cfg!(target_os = "macos"), |left| {
                     left.child(
                         control_region("application-menu-control")
-                            .child(application_menu_button(modal, window, cx)),
+                            .min_w_0()
+                            .flex_shrink_1()
+                            .child(application_menu),
                     )
                 })
-                .child(
-                    control_region("project-select-control")
-                        .w(project_width)
-                        .min_w_0()
-                        .child(render_project_select(view, modal, project_width, cx)),
-                )
+                .when(!menu_expanded, |left| {
+                    left.child(
+                        control_region("project-select-control")
+                            .w(project_width)
+                            .min_w_0()
+                            .child(render_project_select(view, modal, project_width, cx)),
+                    )
+                })
                 .child(
                     div()
                         .id("window-titlebar-drag-region")
@@ -111,90 +118,14 @@ pub fn render_title_bar(
         )
 }
 
-#[derive(Clone)]
-struct ApplicationMenuSnapshot {
-    focus: Option<FocusHandle>,
-    menus: Vec<OwnedMenu>,
-}
-
-impl ApplicationMenuSnapshot {
-    fn capture(window: &Window, cx: &App) -> Self {
-        Self {
-            focus: window.focused(cx),
-            menus: cx.get_menus().unwrap_or_default(),
-        }
-    }
-}
-
+#[cfg(test)]
 pub(crate) fn application_menu_button(
     modal: bool,
     window: &mut Window,
     cx: &mut App,
 ) -> impl IntoElement {
-    let context = window.use_keyed_state("application-menu-action-context", cx, |_, _| {
-        None::<ApplicationMenuSnapshot>
-    });
-    let pointer_context = context.clone();
-    let keyboard_context = context.clone();
-    compact::button(Button::new("application-menu"))
-        .ghost()
-        .icon(gpui_kit::assets::IconName::Menu)
-        .accessibility_label(t!("menu.application_menu"))
-        .tooltip(t!("menu.application_menu"))
-        .disabled(modal)
-        // The enclosing popover takes focus before it builds the menu.
-        // Capture both focus and actions before EditorView rebuilds the menus
-        // for the popover's focus instead of the original input.
-        .on_mouse_down(MouseButton::Left, move |_, window, cx| {
-            let snapshot = ApplicationMenuSnapshot::capture(window, cx);
-            pointer_context.update(cx, |context, _| *context = Some(snapshot));
-        })
-        .capture_key_down(move |_, window, cx| {
-            let snapshot = ApplicationMenuSnapshot::capture(window, cx);
-            keyboard_context.update(cx, |context, _| *context = Some(snapshot));
-        })
-        .dropdown_menu(move |menu, window, cx| {
-            let snapshot = context
-                .read(cx)
-                .clone()
-                .unwrap_or_else(|| ApplicationMenuSnapshot::capture(window, cx));
-            let mut menu = compact::menu(menu);
-            if let Some(focus) = snapshot.focus {
-                menu = menu.action_context(focus);
-            }
-            let items = snapshot
-                .menus
-                .into_iter()
-                .map(OwnedMenuItem::Submenu)
-                .collect();
-            application_menu(menu, items, window, cx)
-        })
-}
-
-fn application_menu(
-    mut menu: PopupMenu,
-    items: Vec<OwnedMenuItem>,
-    window: &mut Window,
-    cx: &mut Context<PopupMenu>,
-) -> PopupMenu {
-    for item in items {
-        menu = match item {
-            OwnedMenuItem::Action {
-                name,
-                action,
-                checked,
-                disabled,
-                ..
-            } => menu.menu_with_check_and_disabled(name, checked, action, disabled),
-            OwnedMenuItem::Separator => menu.separator(),
-            OwnedMenuItem::Submenu(submenu) => {
-                menu.submenu(submenu.name, window, cx, move |menu, window, cx| {
-                    application_menu(compact::menu(menu), submenu.items.clone(), window, cx)
-                })
-            }
-            OwnedMenuItem::SystemMenu(_) => menu,
-        };
-    }
+    let menu = super::application_menu::state(window, cx);
+    menu.update(cx, |menu, _| menu.modal = modal);
     menu
 }
 

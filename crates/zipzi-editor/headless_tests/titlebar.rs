@@ -14,10 +14,14 @@ fn titlebar_combines_projects_centered_workspace_and_more(cx: &mut TestAppContex
         let more = window.find("workspace-layout-menu").bounds();
         let drag = window.find("window-titlebar-drag-region").bounds();
         assert_eq!(title.top(), px(0.));
-        assert!(
-            project.left() >= px(80.),
-            "project must clear traffic lights"
-        );
+        if cfg!(target_os = "macos") {
+            assert!(
+                project.left() >= px(80.),
+                "project must clear traffic lights"
+            );
+        } else {
+            assert!(project.left() >= window.find("application-menu").bounds().right());
+        }
         assert!(title.contains(&project.origin));
         assert!(project.right() <= drag.left());
         assert!(drag.size.width >= px(12.));
@@ -32,7 +36,9 @@ fn titlebar_combines_projects_centered_workspace_and_more(cx: &mut TestAppContex
 
         window.toggle_fullscreen();
         window.render_frame(cx);
-        assert!(window.find("project-select").bounds().left() < project.left());
+        if cfg!(target_os = "macos") {
+            assert!(window.find("project-select").bounds().left() < project.left());
+        }
         assert!(
             (window.find("workspace-switcher").bounds().center().x - title.center().x).abs()
                 <= px(0.5)
@@ -43,6 +49,137 @@ fn titlebar_combines_projects_centered_workspace_and_more(cx: &mut TestAppContex
             window.find("project-select").bounds().left(),
             project.left()
         );
+    })
+    .unwrap();
+}
+
+#[cfg(not(target_os = "macos"))]
+#[gpui_kit::test]
+fn inline_application_menu_replaces_project_bar_until_dismissed(cx: &mut TestAppContext) {
+    use crate::settings::{Settings, UiScale};
+    use gpui_kit::component::ThemeMode;
+
+    let harness = setup(cx);
+    for width in [800., 1100.] {
+        cx.simulate_window_resize(harness.window, size(px(width), px(740.)));
+        for scale in UiScale::ALL {
+            let original_focus = cx
+                .update_window(harness.window, |_, window, cx| {
+                    cx.update_global::<Settings, _>(|settings, _| {
+                        settings.set_ui_scale(scale).unwrap()
+                    });
+                    crate::theme::change(ThemeMode::Dark, cx);
+                    window.refresh();
+                    window.render_frame(cx);
+                    let project = window.find("project-select").bounds();
+                    let switcher = window.find("workspace-switcher").bounds();
+                    window.click("application-menu", cx);
+                    assert!(window.try_find("application-menu").is_none());
+                    assert!(window.try_find("project-select").is_none());
+                    assert!(window.try_find("popup-menu").is_none());
+                    let bar = window.find("application-menu-bar").bounds();
+                    assert!(
+                        bar.right() <= switcher.left(),
+                        "scale={scale:?}, width={width}"
+                    );
+                    assert_eq!(window.find("workspace-switcher").bounds(), switcher);
+                    let count = cx.get_menus().unwrap().len();
+                    let mut previous_right = bar.left();
+                    for index in 0..count {
+                        let entry = window.find(("application-menu-entry", index)).bounds();
+                        assert!(entry.left() >= previous_right);
+                        assert_eq!(entry.center().y, bar.center().y);
+                        previous_right = entry.right();
+                    }
+                    window.press("escape", cx);
+                    assert!(window.try_find("application-menu-items").is_none());
+                    assert_eq!(window.find("project-select").bounds(), project);
+
+                    window.click("application-menu", cx);
+                    window.click("workspace-modeling", cx);
+                    assert!(window.try_find("application-menu-items").is_none());
+                    assert!(window.find("project-select").visible());
+
+                    let original_focus = window.focused(cx);
+                    window.click("application-menu", cx);
+                    for index in [1usize, 2] {
+                        window.hover(("application-menu-entry", index), cx);
+                        window.render_frame(cx);
+                        assert!(
+                            window
+                                .within(("application-menu-item", index))
+                                .find("popup-menu")
+                                .visible()
+                        );
+                    }
+                    assert!(window.try_find("project-select").is_none());
+                    window.press("escape", cx);
+                    original_focus
+                })
+                .unwrap();
+            cx.run_until_parked();
+            cx.update_window(harness.window, |_, window, cx| {
+                window.render_frame(cx);
+                assert!(window.try_find("popup-menu").is_none());
+                assert!(window.find("project-select").visible());
+                assert_eq!(window.focused(cx), original_focus);
+
+                window.click("application-menu", cx);
+                window.hover(("application-menu-entry", 1usize), cx);
+                window.click("workspace-modeling", cx);
+            })
+            .unwrap();
+            cx.run_until_parked();
+            cx.update_window(harness.window, |_, window, cx| {
+                window.render_frame(cx);
+                assert!(window.try_find("popup-menu").is_none());
+                assert!(window.try_find("application-menu-items").is_none());
+                assert!(window.find("application-menu").visible());
+                assert!(window.find("project-select").visible());
+            })
+            .unwrap();
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+#[gpui_kit::test]
+fn application_menu_view_shows_shortcuts_without_scrolling(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let height = px(420.);
+    cx.simulate_window_resize(harness.window, size(px(800.), height));
+    cx.update_window(harness.window, |_, window, cx| {
+        let menus = cx.get_menus().unwrap();
+        let view = menus.iter().position(|menu| menu.name == "View").unwrap();
+        let color_theme = menus[view]
+            .items
+            .iter()
+            .position(|item| {
+                matches!(item, gpui_kit::OwnedMenuItem::Submenu(menu) if menu.name == "Color Theme")
+            })
+            .unwrap();
+        let shortcuts = ["Keyboard Shortcuts", "Reset Shortcuts"].map(|label| {
+            menus[view]
+                .items
+                .iter()
+                .position(|item| {
+                    matches!(item, gpui_kit::OwnedMenuItem::Action { name, .. } if name == label)
+                })
+                .unwrap()
+        });
+
+        window.click("application-menu", cx);
+        window.hover(("application-menu-entry", view), cx);
+        window.render_frame(cx);
+        let popup = window.find("popup-menu").bounds();
+        assert!(popup.top() >= px(0.) && popup.bottom() <= height);
+        let menu = window.within("popup-menu");
+        assert!(menu.find(color_theme).visible());
+        for index in shortcuts {
+            let item = menu.find(index);
+            assert!(item.visible());
+            assert!(item.bounds().bottom() <= popup.bottom());
+        }
     })
     .unwrap();
 }
