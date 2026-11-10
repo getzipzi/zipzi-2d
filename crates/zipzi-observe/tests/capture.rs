@@ -287,7 +287,12 @@ fn renders_unsaved_snapshot_and_reuses_gpu_across_changes() {
         .unwrap();
     #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
     assert_eq!(first.adapter_backend, "Metal");
-    #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+    #[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+    assert_eq!(first.adapter_backend, "D3D11");
+    #[cfg(any(
+        not(any(target_os = "macos", target_os = "windows")),
+        feature = "wgpu-backend"
+    ))]
     assert!(first.adapter_backend.starts_with("wgpu ("));
     assert_eq!(first.rgba.len(), 64 * 64 * 4);
     assert!(first.rgba.as_chunks::<4>().0.iter().any(|p| p[3] > 0));

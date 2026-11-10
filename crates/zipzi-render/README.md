@@ -2,6 +2,11 @@
 
 Backend-independent rendering support for frame validation, scene organization, and render planning.
 
+Frame validation builds ID lookup tables once per submission for mask availability,
+render-plan membership and offscreen parent checks. Immutable mesh topology can be
+reused while its allocation identity and vertex count match; dynamic values and
+reference validity are still checked on every submitted frame.
+
 `texture::area_average_rgba8` directly downsamples straight RGBA8 with alpha-weighted
 RGB and area-averaged alpha. The controlled variant checks cancellation before
 allocation and during source scanlines. Unchanged dimensions preserve all source

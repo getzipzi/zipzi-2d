@@ -127,7 +127,7 @@ impl WgpuRenderer {
             active_surfaces: self.scene.active_target_count(),
             masks: jobs.len(),
             attachment_bytes: budget,
-            mask_resolution_limit: mask_view.max_dimension,
+            mask_resolution_limit: mask_view.max_dimension(),
             ..Default::default()
         };
         let slots = prepare_atlas(self, &jobs, &mut cache, &mut pages, budget);

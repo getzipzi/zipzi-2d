@@ -3,10 +3,9 @@
 use crate::canvas_overlay::{CanvasDrawList, CanvasRenderStats};
 use crate::{OverlayPass, OverlayStyle, OverlayViewport, overlay_data::Key};
 use anyhow::{Context, Result, ensure};
-use std::{ffi::CString, sync::Arc};
+use std::sync::Arc;
 use windows::{
-    Win32::Graphics::{Direct3D::Fxc::*, Direct3D::*, Direct3D11::*, Dxgi::Common::*},
-    core::PCSTR,
+    Win32::Graphics::{Direct3D::*, Direct3D11::*, Dxgi::Common::*},
 };
 use zipzi_editor_core::OverlaySnapshot;
 
@@ -408,40 +407,5 @@ impl WindowsOverlayRenderer {
 }
 use windows::core::Interface;
 fn compile(entry: &str, target: &str) -> Result<Vec<u8>> {
-    let source = include_bytes!("overlay.hlsl");
-    let entry = CString::new(entry)?;
-    let target = CString::new(target)?;
-    let mut code = None;
-    let mut errors = None;
-    let result = unsafe {
-        D3DCompile(
-            source.as_ptr().cast(),
-            source.len(),
-            PCSTR::null(),
-            None,
-            None,
-            PCSTR(entry.as_ptr().cast()),
-            PCSTR(target.as_ptr().cast()),
-            D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3,
-            0,
-            &mut code,
-            Some(&mut errors),
-        )
-    };
-    if let Err(e) = result {
-        let diagnostic = errors
-            .map(|b| unsafe {
-                String::from_utf8_lossy(std::slice::from_raw_parts(
-                    b.GetBufferPointer().cast(),
-                    b.GetBufferSize(),
-                ))
-                .into_owned()
-            })
-            .unwrap_or_default();
-        anyhow::bail!("Overlay shader: {e}: {diagnostic}");
-    }
-    let code = code.context("overlay shader bytecode")?;
-    Ok(unsafe {
-        std::slice::from_raw_parts(code.GetBufferPointer().cast(), code.GetBufferSize()).to_vec()
-    })
+    zipzi_render_d3d11::compile_shader(include_bytes!("overlay.hlsl"), entry, target)
 }

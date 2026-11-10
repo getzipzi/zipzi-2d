@@ -1,0 +1,16 @@
+[package]
+name = "zipzi-render-d3d11"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Native Direct3D 11 renderer for Zipzi scenes"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+anyhow.workspace = true
+zipzi-core.workspace = true
+zipzi-render.workspace = true
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Direct3D11", "Win32_Graphics_Direct3D_Fxc", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common"] }
+
+[target.'cfg(target_os = "windows")'.dev-dependencies]
+zipzi-render-wgpu = { version = "=0.2.0-alpha.1", path = "../zipzi-render-wgpu" }

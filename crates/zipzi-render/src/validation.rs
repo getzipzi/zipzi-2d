@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Weak};
 
 use zipzi_core::evaluation::{Drawable, DrawableFrame, RenderCommand};
@@ -63,9 +63,15 @@ fn validate_frame_with(
     frame: &DrawableFrame,
     mut geometry: impl FnMut(usize, &Drawable) -> Status,
 ) -> Status {
-    let mut ids = HashSet::new();
+    // Resolve mask and render-plan references once. Scanning every drawable for
+    // every command makes validation quadratic during dense parameter updates.
+    let mut ids = HashMap::with_capacity(frame.drawables.len());
     for (slot, drawable) in frame.drawables.iter().enumerate() {
-        if drawable.id.is_empty() || !ids.insert(drawable.id.as_str()) {
+        if drawable.id.is_empty()
+            || ids
+                .insert(drawable.id.as_str(), drawable.renderable)
+                .is_some()
+        {
             return Status::error("INVALID_ID", "Drawable IDs must be non-empty and unique.");
         }
         let status = geometry(slot, drawable);
@@ -95,25 +101,30 @@ fn validate_frame_with(
         }
     }
     for drawable in &frame.drawables {
-        if drawable.masks.iter().any(|id| !ids.contains(id.as_str())) {
+        if drawable
+            .masks
+            .iter()
+            .any(|id| !ids.contains_key(id.as_str()))
+        {
             return Status::error("MISSING_MASK", &drawable.id);
         }
     }
     for drawable in frame.drawables.iter().filter(|d| d.renderable) {
-        if drawable.masks.iter().any(|id| {
-            frame
-                .drawables
-                .iter()
-                .any(|source| source.id == *id && !source.renderable)
-        }) {
+        if drawable
+            .masks
+            .iter()
+            .any(|id| ids.get(id.as_str()) == Some(&false))
+        {
             return Status::error("UNAVAILABLE_MASK", &drawable.id);
         }
     }
-    let mut offscreen_ids = HashSet::new();
+    let mut offscreen_ids = HashMap::with_capacity(frame.offscreens.len());
     for offscreen in &frame.offscreens {
         if offscreen.id.is_empty()
-            || ids.contains(offscreen.id.as_str())
-            || !offscreen_ids.insert(offscreen.id.as_str())
+            || ids.contains_key(offscreen.id.as_str())
+            || offscreen_ids
+                .insert(offscreen.id.as_str(), offscreen)
+                .is_some()
         {
             return Status::error(
                 "INVALID_ID",
@@ -130,12 +141,10 @@ fn validate_frame_with(
             return Status::error("NON_FINITE", format!("{}.appearance", offscreen.id));
         }
         if offscreen.renderable
-            && offscreen.masks.iter().any(|id| {
-                frame
-                    .drawables
-                    .iter()
-                    .any(|source| source.id == *id && !source.renderable)
-            })
+            && offscreen
+                .masks
+                .iter()
+                .any(|id| ids.get(id.as_str()) == Some(&false))
         {
             return Status::error("UNAVAILABLE_MASK", &offscreen.id);
         }
@@ -145,7 +154,11 @@ fn validate_frame_with(
                 format!("{}: {}", offscreen.id, offscreen.blend_mode),
             );
         }
-        if offscreen.masks.iter().any(|id| !ids.contains(id.as_str())) {
+        if offscreen
+            .masks
+            .iter()
+            .any(|id| !ids.contains_key(id.as_str()))
+        {
             return Status::error("MISSING_MASK", &offscreen.id);
         }
         if offscreen
@@ -160,7 +173,7 @@ fn validate_frame_with(
         if offscreen
             .parent_offscreen_id
             .as_ref()
-            .is_some_and(|id| !offscreen_ids.contains(id.as_str()))
+            .is_some_and(|id| !offscreen_ids.contains_key(id.as_str()))
         {
             return Status::error(
                 "INVALID_RENDER_PLAN",
@@ -175,19 +188,13 @@ fn validate_frame_with(
         for command in &frame.render_plan {
             match command {
                 RenderCommand::BeginOffscreen { offscreen_id } => {
-                    if !frame
-                        .offscreens
-                        .iter()
-                        .any(|o| o.id == *offscreen_id && o.renderable)
+                    let offscreen = offscreen_ids.get(offscreen_id.as_str());
+                    if !offscreen.is_some_and(|o| o.renderable)
                         || !begun.insert(offscreen_id.as_str())
                     {
                         return Status::error("INVALID_RENDER_PLAN", offscreen_id);
                     }
-                    let expected_parent = frame
-                        .offscreens
-                        .iter()
-                        .find(|o| o.id == *offscreen_id)
-                        .and_then(|o| o.parent_offscreen_id.as_deref());
+                    let expected_parent = offscreen.and_then(|o| o.parent_offscreen_id.as_deref());
                     if stack.last().copied() != expected_parent {
                         return Status::error(
                             "INVALID_RENDER_PLAN",
@@ -197,12 +204,7 @@ fn validate_frame_with(
                     stack.push(offscreen_id);
                 }
                 RenderCommand::DrawMesh { mesh_id } => {
-                    if !frame
-                        .drawables
-                        .iter()
-                        .any(|d| d.id == *mesh_id && d.renderable)
-                        || !drawn.insert(mesh_id.as_str())
-                    {
+                    if ids.get(mesh_id.as_str()) != Some(&true) || !drawn.insert(mesh_id.as_str()) {
                         return Status::error("INVALID_RENDER_PLAN", mesh_id);
                     }
                 }
@@ -386,6 +388,55 @@ mod tests {
         value.render_plan.push(RenderCommand::DrawMesh {
             mesh_id: "mesh".into(),
         });
+        assert_eq!(validate_frame(&value).code, "INVALID_RENDER_PLAN");
+    }
+
+    #[test]
+    fn indexed_references_preserve_availability_and_parent_validation() {
+        use zipzi_core::evaluation::OffscreenFrame;
+        let mut value = frame();
+        let mut source = value.drawables[0].clone();
+        source.id = "mask".into();
+        source.renderable = false;
+        value.drawables.push(source);
+        value.drawables[0].masks.push("mask".into());
+        assert_eq!(validate_frame(&value).code, "UNAVAILABLE_MASK");
+        value.drawables[0].masks.clear();
+        value.render_plan.push(RenderCommand::DrawMesh {
+            mesh_id: "mask".into(),
+        });
+        assert_eq!(validate_frame(&value).code, "INVALID_RENDER_PLAN");
+        value.render_plan.clear();
+        value.offscreens.push(OffscreenFrame {
+            id: "group".into(),
+            renderable: true,
+            enabled: true,
+            opacity: 1.,
+            ..Default::default()
+        });
+        value.render_plan = vec![
+            RenderCommand::BeginOffscreen {
+                offscreen_id: "group".into(),
+            },
+            RenderCommand::DrawMesh {
+                mesh_id: "mesh".into(),
+            },
+            RenderCommand::EndOffscreen {
+                offscreen_id: "group".into(),
+            },
+        ];
+        assert!(validate_frame(&value).is_ok());
+        value.offscreens[0].masks.push("mask".into());
+        assert_eq!(validate_frame(&value).code, "UNAVAILABLE_MASK");
+        value.offscreens[0].masks.clear();
+        value.offscreens[0].parent_offscreen_id = Some("missing".into());
+        assert_eq!(validate_frame(&value).code, "INVALID_RENDER_PLAN");
+        value.offscreens.push(OffscreenFrame {
+            id: "missing".into(),
+            renderable: true,
+            ..Default::default()
+        });
+        // Parent now exists, but the plan opens its child at the root.
         assert_eq!(validate_frame(&value).code, "INVALID_RENDER_PLAN");
     }
 }

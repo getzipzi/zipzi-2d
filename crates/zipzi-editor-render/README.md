@@ -1,8 +1,8 @@
 # zipzi-editor-render
 
-Metal and WGPU scene adapters for the Editor. They consume
+Metal, Direct3D 11, and wgpu scene adapters for the Editor. They consume
 [`zipzi-editor-core`](../zipzi-editor-core/README.md) scene snapshots and viewport transforms,
-and delegate model rendering to the shared Metal/WGPU backends.
+and delegate model rendering to the corresponding shared backends.
 Document editing and project I/O remain outside this crate.
 
 ## Rendering boundary
@@ -138,7 +138,17 @@ times. It drains the queue outside timing to bound in-flight resources. This
 headless measurement excludes model evaluation, OS input, display and readback;
 it does not establish input-to-display latency.
 
-Windows model images use the D3D12-to-D3D11 shared texture bridge in
+Windows model previews use `D3d11Preview` with GPUI's D3D11 device. The worker
+records model commands on a deferred context, and the UI executes the list on
+GPUI's immediate context before sampling the output texture. Each list
+establishes its own mask and offscreen contents so a coalesced frame can be
+dropped safely. Output slots remain immutable while retained by a GPUI scene
+or still in use by its consumer fence.
+
+Build the Editor with `--features wgpu-backend` to compare the two Windows
+preview paths in the same binary. This build selects the wgpu preview by
+default. Set `ZIPZI_PREVIEW_BACKEND=d3d11` to select native D3D11 in that build.
+The wgpu path uses the D3D12-to-D3D11 shared texture bridge in
 `src/wgpu_windows.rs`. The Editor selects
 the D3D12 adapter by the GPUI device's LUID, renders to a normal wgpu RGBA8 target,
 then submits one native GPU copy into a shared committed texture. The source's
@@ -182,8 +192,8 @@ bounded-pool exhaustion/reuse, real model output, retained consumer frames after
 producer teardown, and closing while a GPU copy is deliberately stalled. It does
 not measure DWM or display latency.
 
-On Windows, the Editor enables `wgpu-backend` automatically. To verify the
-scene adapter on a real GPU independently of GPUI:
+To verify the optional Windows wgpu scene adapter on a real GPU independently
+of GPUI:
 
 ```powershell
 cargo test --locked -p zipzi-editor-render --features wgpu-backend --test wgpu_readback -- --nocapture

@@ -15,7 +15,8 @@ newer, uv 0.10.7 or newer, and CPython 3.14. See the
 - **macOS:** Xcode Command Line Tools and a Metal-capable GPU are required.
   Model previews use Metal by default; wgpu is available as an optional backend.
 - **Windows:** The development editor requires MSVC C++ Build Tools, the Windows
-  SDK and a usable GPU. It uses wgpu and shared GPU textures for previews.
+  SDK and a usable GPU. Model previews use native D3D11 on GPUI's device.
+  Build with `--features wgpu-backend` to compare with the wgpu/DX12 preview.
   Desktop validation is still in progress.
 
 Start the editor with Cargo on either platform:

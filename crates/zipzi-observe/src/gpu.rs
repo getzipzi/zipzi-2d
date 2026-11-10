@@ -3,14 +3,24 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
 use sha2::{Digest, Sha256};
-use zipzi_core::Vec2;
+#[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+use std::sync::Arc;
+use zipzi_core::{DrawableFrame, Vec2};
+#[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+use zipzi_observe_backend::d3d11::{
+    upload_rgba8, D3d11Context, D3d11Renderer as BackendRenderer, D3d11Target, D3d11Texture,
+    D3d11TextureCatalog, D3d11ValidationError,
+};
 #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
 use zipzi_observe_backend::metal::{
     metal, read_rgba8, MetalContext, MetalOutputMode as BackendOutputMode,
     MetalRenderer as BackendRenderer, MetalTargetConfig as BackendTargetConfig,
     MetalTexture as BackendTexture, MetalTextureCatalog as BackendTextureCatalog,
 };
-#[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+#[cfg(any(
+    not(any(target_os = "macos", target_os = "windows")),
+    feature = "wgpu-backend"
+))]
 use zipzi_observe_backend::wgpu::{
     wgpu, WgpuContext, WgpuEncodeTarget, WgpuOutputMode as BackendOutputMode,
     WgpuRenderer as BackendRenderer, WgpuTargetConfig as BackendTargetConfig,
@@ -116,15 +126,24 @@ fn encode_rgba_png(width: u32, height: u32, rgba: &[u8]) -> Result<Vec<u8>, Obse
 }
 
 struct OwnedTexture {
-    #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+    #[cfg(any(
+        not(any(target_os = "macos", target_os = "windows")),
+        feature = "wgpu-backend"
+    ))]
     _texture: wgpu::Texture,
     #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
     view: metal::Texture,
-    #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+    #[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+    view: D3d11Texture,
+    #[cfg(any(
+        not(any(target_os = "macos", target_os = "windows")),
+        feature = "wgpu-backend"
+    ))]
     view: wgpu::TextureView,
     width: u32,
     height: u32,
     sha256: String,
+    #[cfg(any(not(target_os = "windows"), feature = "wgpu-backend"))]
     revision: u64,
 }
 
@@ -140,10 +159,16 @@ impl std::fmt::Write for DigestWriter<'_> {
 pub struct Observer {
     #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
     context: MetalContext,
-    #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+    #[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+    context: D3d11Context,
+    #[cfg(any(
+        not(any(target_os = "macos", target_os = "windows")),
+        feature = "wgpu-backend"
+    ))]
     context: WgpuContext,
     renderer: BackendRenderer,
     textures: HashMap<String, OwnedTexture>,
+    #[cfg(any(not(target_os = "windows"), feature = "wgpu-backend"))]
     next_texture_revision: u64,
     adapter_name: String,
     adapter_backend: String,
@@ -185,7 +210,10 @@ impl Observer {
             let adapter_name = context.name().to_owned();
             (context, renderer, adapter_name)
         };
-        #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+        #[cfg(any(
+            not(any(target_os = "macos", target_os = "windows")),
+            feature = "wgpu-backend"
+        ))]
         let (context, renderer, adapter_name, adapter_backend) = {
             let context =
                 WgpuContext::new().map_err(|status| error(&status.code, status.message))?;
@@ -209,24 +237,59 @@ impl Observer {
             let adapter_backend = context.adapter_backend().to_owned();
             (context, renderer, adapter_name, adapter_backend)
         };
+        #[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+        let (context, renderer, adapter_name) = {
+            let context = D3d11Context::new().map_err(|e| error("GPU_ADAPTER", e.to_string()))?;
+            let limit = context.max_texture_dimension();
+            if config.width > limit || config.height > limit {
+                return Err(error(
+                    "OUTPUT_SIZE_LIMIT",
+                    format!("Output size exceeds the device limit {limit}x{limit}"),
+                ));
+            }
+            let renderer = BackendRenderer::new(context.device().clone())
+                .map_err(|e| error("GPU_DEVICE", e.to_string()))?;
+            let name = context.name().to_owned();
+            (context, renderer, name)
+        };
         Ok(Self {
             context,
             renderer,
             textures: HashMap::new(),
+            #[cfg(any(not(target_os = "windows"), feature = "wgpu-backend"))]
             next_texture_revision: 1,
             adapter_name,
             #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
             adapter_backend: "Metal".into(),
-            #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+            #[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+            adapter_backend: "D3D11".into(),
+            #[cfg(any(
+                not(any(target_os = "macos", target_os = "windows")),
+                feature = "wgpu-backend"
+            ))]
             adapter_backend,
         })
     }
 
+    fn max_texture_dimension(&self) -> u32 {
+        #[cfg(any(
+            not(any(target_os = "macos", target_os = "windows")),
+            feature = "wgpu-backend"
+        ))]
+        {
+            self.context.device().limits().max_texture_dimension_2d
+        }
+        #[cfg(all(
+            any(target_os = "macos", target_os = "windows"),
+            not(feature = "wgpu-backend")
+        ))]
+        {
+            self.context.max_texture_dimension()
+        }
+    }
+
     fn upload_textures(&mut self, resolved: &[ResolvedTexture]) -> Result<(), ObservationError> {
-        #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
-        let limit = self.context.max_texture_dimension();
-        #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
-        let limit = self.context.device().limits().max_texture_dimension_2d;
+        let limit = self.max_texture_dimension();
         for texture in resolved {
             let width = texture.data.width;
             let height = texture.data.height;
@@ -266,7 +329,10 @@ impl Observer {
                     &mipmaps,
                 )
                 .map_err(|status| error(&status.code, status.message))?;
-            #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+            #[cfg(any(
+                not(any(target_os = "macos", target_os = "windows")),
+                feature = "wgpu-backend"
+            ))]
             let (source, view) = {
                 let source = self
                     .context
@@ -280,17 +346,34 @@ impl Observer {
                 let view = source.create_view(&wgpu::TextureViewDescriptor::default());
                 (source, view)
             };
-            let revision = self.next_texture_revision;
-            self.next_texture_revision += 1;
+            #[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+            let view = upload_rgba8(
+                self.context.device(),
+                texture.data.width,
+                texture.data.height,
+                &texture.data.rgba,
+                &mipmaps,
+            )
+            .map_err(|e| error("GPU_TEXTURE", e.to_string()))?;
+            #[cfg(any(not(target_os = "windows"), feature = "wgpu-backend"))]
+            let revision = {
+                let revision = self.next_texture_revision;
+                self.next_texture_revision += 1;
+                revision
+            };
             self.textures.insert(
                 id,
                 OwnedTexture {
-                    #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
+                    #[cfg(any(
+                        not(any(target_os = "macos", target_os = "windows")),
+                        feature = "wgpu-backend"
+                    ))]
                     _texture: source,
                     view,
                     width: texture.data.width,
                     height: texture.data.height,
                     sha256: texture.render_rgba_hash.clone(),
+                    #[cfg(any(not(target_os = "windows"), feature = "wgpu-backend"))]
                     revision,
                 },
             );
@@ -313,10 +396,7 @@ impl Observer {
             request.topology.as_ref(),
         )?;
         let (width, height) = (request.width, request.height);
-        #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
-        let limit = self.context.max_texture_dimension();
-        #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
-        let limit = self.context.device().limits().max_texture_dimension_2d;
+        let limit = self.max_texture_dimension();
         if width > limit || height > limit {
             return Err(error(
                 "OUTPUT_SIZE_LIMIT",
@@ -370,50 +450,6 @@ impl Observer {
             write!(&mut input_sha256, "{byte:02x}").unwrap();
         }
         self.upload_textures(resolved)?;
-        let target = BackendTargetConfig {
-            width,
-            height,
-            #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
-            format: metal::MTLPixelFormat::RGBA8Unorm,
-            #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
-            format: wgpu::TextureFormat::Rgba8Unorm,
-        };
-        #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
-        self.renderer
-            .resize(target)
-            .map_err(|status| error(&status.code, status.message))?;
-        #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
-        self.renderer
-            .resize(self.context.device(), target)
-            .map_err(|status| error(&status.code, status.message))?;
-        let mut catalog = BackendTextureCatalog::new(
-            self.textures
-                .iter()
-                .map(|(id, texture)| {
-                    (
-                        id.clone(),
-                        BackendTexture {
-                            view: &texture.view,
-                            width: texture.width,
-                            height: texture.height,
-                        },
-                    )
-                })
-                .collect(),
-        );
-        for (id, texture) in &self.textures {
-            catalog.set_revision(id.clone(), texture.revision);
-            catalog.set_repeat(id.clone(), true);
-        }
-        let status = |s: zipzi_core::Status| error(&s.code, s.message);
-        #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
-        self.renderer
-            .sync_model(&input.frame, &catalog)
-            .map_err(status)?;
-        #[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
-        self.renderer
-            .sync_model(self.context.device(), &input.frame, &catalog)
-            .map_err(status)?;
         let (scale, offset_x, offset_y) = (view.scale, view.offset.0, view.offset.1);
         let drawable_bounds = input
             .frame
@@ -449,15 +485,17 @@ impl Observer {
                 }
             })
             .collect();
-        let mut rgba = render_sample(
-            &mut self.renderer,
-            &self.context,
-            &catalog,
-            width,
-            height,
-            scale,
-            offset_x,
-            offset_y,
+        let mut rgba = self.render_sample(
+            &input.frame,
+            ViewportConfig {
+                transform: Affine2 {
+                    a: Vec2::new(scale, 0.0),
+                    b: Vec2::new(0.0, -scale),
+                    origin: Vec2::new(offset_x, offset_y),
+                },
+                target_extent: Vec2::new(width as f32, height as f32),
+                mask_scale: scale as f64,
+            },
         )?;
         let quality = captured.quality(&request)?;
         if let Some(overlay) = &request.topology {
@@ -505,102 +543,142 @@ impl Observer {
     }
 }
 
-#[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
-#[allow(clippy::too_many_arguments)]
-fn render_sample(
-    renderer: &mut BackendRenderer,
-    context: &MetalContext,
-    catalog: &BackendTextureCatalog<'_>,
-    width: u32,
-    height: u32,
-    scale: f32,
-    offset_x: f32,
-    offset_y: f32,
-) -> Result<Vec<u8>, ObservationError> {
-    // Drain native command buffers even on Python/Rust worker threads.
-    metal::objc::rc::autoreleasepool(|| {
-        let view = ViewportConfig {
-            transform: Affine2 {
-                a: Vec2::new(scale, 0.0),
-                b: Vec2::new(0.0, -scale),
-                origin: Vec2::new(offset_x, offset_y),
-            },
-            target_extent: Vec2::new(width as f32, height as f32),
-            mask_scale: scale as f64,
-        };
-        let status = |s: zipzi_core::Status| error(&s.code, s.message);
-        renderer.update_view(view).map_err(status)?;
-        let target = BackendTargetConfig {
-            width,
-            height,
-            format: metal::MTLPixelFormat::RGBA8Unorm,
-        };
-        let output = context.output_texture(target).map_err(status)?;
-        let command = context.queue().new_command_buffer();
-        renderer
-            .encode(command, &output, BackendOutputMode::Replace, catalog)
-            .map_err(status)?;
-        command.commit();
-        command.wait_until_completed();
-        if command.status() != metal::MTLCommandBufferStatus::Completed {
-            return Err(error("GPU_SUBMIT", "Metal command buffer failed"));
-        }
-        read_rgba8(&output).map_err(status)
-    })
+#[cfg(any(not(target_os = "windows"), feature = "wgpu-backend"))]
+fn texture_catalog(textures: &HashMap<String, OwnedTexture>) -> BackendTextureCatalog<'_> {
+    let mut catalog = BackendTextureCatalog::new(
+        textures
+            .iter()
+            .map(|(id, texture)| {
+                (
+                    id.clone(),
+                    BackendTexture {
+                        view: &texture.view,
+                        width: texture.width,
+                        height: texture.height,
+                    },
+                )
+            })
+            .collect(),
+    );
+    for (id, texture) in textures {
+        catalog.set_revision(id.clone(), texture.revision);
+        catalog.set_repeat(id.clone(), true);
+    }
+    catalog
 }
 
-#[cfg(any(not(target_os = "macos"), feature = "wgpu-backend"))]
-#[allow(clippy::too_many_arguments)]
-fn render_sample(
-    renderer: &mut BackendRenderer,
-    context: &WgpuContext,
-    catalog: &BackendTextureCatalog<'_>,
-    width: u32,
-    height: u32,
-    scale: f32,
-    offset_x: f32,
-    offset_y: f32,
-) -> Result<Vec<u8>, ObservationError> {
-    let view = ViewportConfig {
-        transform: Affine2 {
-            a: Vec2::new(scale, 0.0),
-            b: Vec2::new(0.0, -scale),
-            origin: Vec2::new(offset_x, offset_y),
-        },
-        target_extent: Vec2::new(width as f32, height as f32),
-        mask_scale: scale as f64,
-    };
-    let status = |s: zipzi_core::Status| error(&s.code, s.message);
-    renderer
-        .update_view(context.device(), view)
-        .map_err(status)?;
-    let output = context
-        .output_texture(BackendTargetConfig {
-            width,
-            height,
-            format: wgpu::TextureFormat::Rgba8Unorm,
+impl Observer {
+    #[cfg(all(target_os = "macos", not(feature = "wgpu-backend")))]
+    fn render_sample(
+        &mut self,
+        frame: &DrawableFrame,
+        view: ViewportConfig,
+    ) -> Result<Vec<u8>, ObservationError> {
+        let target = BackendTargetConfig {
+            width: view.target_extent.x as u32,
+            height: view.target_extent.y as u32,
+            format: metal::MTLPixelFormat::RGBA8Unorm,
+        };
+        let catalog = texture_catalog(&self.textures);
+        let status = |s: zipzi_core::Status| error(&s.code, s.message);
+        metal::objc::rc::autoreleasepool(|| {
+            let renderer = &mut self.renderer;
+            renderer.resize(target).map_err(status)?;
+            renderer.sync_model(frame, &catalog).map_err(status)?;
+            renderer.update_view(view).map_err(status)?;
+            let output = self.context.output_texture(target).map_err(status)?;
+            let command = self.context.queue().new_command_buffer();
+            renderer
+                .encode(command, &output, BackendOutputMode::Replace, &catalog)
+                .map_err(status)?;
+            command.commit();
+            command.wait_until_completed();
+            if command.status() != metal::MTLCommandBufferStatus::Completed {
+                return Err(error("GPU_SUBMIT", "Metal command buffer failed"));
+            }
+            read_rgba8(&output).map_err(status)
         })
-        .map_err(status)?;
-    let output_view = output.create_view(&wgpu::TextureViewDescriptor::default());
-    let mut encoder = context
-        .device()
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("observe.encode"),
-        });
-    renderer
-        .encode(
-            WgpuEncodeTarget {
-                device: context.device(),
-                queue: context.queue(),
-                encoder: &mut encoder,
-                output: &output_view,
-                output_mode: BackendOutputMode::Replace,
-            },
-            catalog,
+    }
+
+    #[cfg(any(
+        not(any(target_os = "macos", target_os = "windows")),
+        feature = "wgpu-backend"
+    ))]
+    fn render_sample(
+        &mut self,
+        frame: &DrawableFrame,
+        view: ViewportConfig,
+    ) -> Result<Vec<u8>, ObservationError> {
+        let target = BackendTargetConfig {
+            width: view.target_extent.x as u32,
+            height: view.target_extent.y as u32,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+        };
+        let catalog = texture_catalog(&self.textures);
+        let status = |s: zipzi_core::Status| error(&s.code, s.message);
+        let context = &self.context;
+        let renderer = &mut self.renderer;
+        renderer.resize(context.device(), target).map_err(status)?;
+        renderer
+            .sync_model(context.device(), frame, &catalog)
+            .map_err(status)?;
+        renderer
+            .update_view(context.device(), view)
+            .map_err(status)?;
+        let output = context.output_texture(target).map_err(status)?;
+        let output_view = output.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("observe.encode"),
+                });
+        renderer
+            .encode(
+                WgpuEncodeTarget {
+                    device: context.device(),
+                    queue: context.queue(),
+                    encoder: &mut encoder,
+                    output: &output_view,
+                    output_mode: BackendOutputMode::Replace,
+                },
+                &catalog,
+            )
+            .map_err(status)?;
+        context.queue().submit([encoder.finish()]);
+        context.read_rgba8(&output).map_err(status)
+    }
+
+    #[cfg(all(target_os = "windows", not(feature = "wgpu-backend")))]
+    fn render_sample(
+        &mut self,
+        frame: &DrawableFrame,
+        view: ViewportConfig,
+    ) -> Result<Vec<u8>, ObservationError> {
+        let catalog = D3d11TextureCatalog::new(
+            self.textures
+                .iter()
+                .map(|(id, texture)| (id.as_str(), &texture.view)),
+        );
+        let output = D3d11Target::new(
+            self.context.device(),
+            [view.target_extent.x as u32, view.target_extent.y as u32],
         )
-        .map_err(status)?;
-    context.queue().submit([encoder.finish()]);
-    context.read_rgba8(&output).map_err(status)
+        .map_err(|e| error("GPU_RENDER", e.to_string()))?;
+        let commands = self
+            .renderer
+            .record(&output, Arc::new(frame.clone()), view, &catalog, |_| {})
+            .map_err(|e| match e.downcast_ref::<D3d11ValidationError>() {
+                Some(status) => error(&status.0.code, &status.0.message),
+                None => error("GPU_RENDER", e.to_string()),
+            })?;
+        self.context
+            .submit(&commands)
+            .map_err(|e| error("GPU_SUBMIT", e.to_string()))?;
+        self.context
+            .read_rgba8(&output)
+            .map_err(|e| error("GPU_READBACK", e.to_string()))
+    }
 }
 
 #[cfg(test)]

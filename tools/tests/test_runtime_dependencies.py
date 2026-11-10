@@ -56,19 +56,27 @@ class RuntimeDependencies(unittest.TestCase):
                 self.assertNotIn('zipzi-render-wgpu', deps)
                 self.assertFalse({name for name in deps if name.startswith('wgpu')}, deps)
 
-    def test_explicit_macos_wgpu_and_other_platform_gpu_builds_enable_wgpu(self):
-        for package in ['zipzi-observe', 'zipzi-runtime', 'zipzi-editor', 'zipzi-python']:
-            with self.subTest(package=package, target='aarch64-apple-darwin'):
-                deps = self.dependencies(package, 'wgpu-backend', target='aarch64-apple-darwin')
-                self.assertIn('zipzi-render-wgpu', deps)
-                self.assertIn('wgpu', deps)
-        for target in ['x86_64-pc-windows-msvc', 'x86_64-unknown-linux-gnu']:
-            for features in [None, 'wgpu-backend']:
-                with self.subTest(target=target, features=features):
-                    deps = self.dependencies('zipzi-observe', features, target=target)
+    def test_default_windows_hosts_use_d3d11_without_wgpu(self):
+        for package, features in [('zipzi-observe', None), ('zipzi-runtime', 'gpu-observation'),
+                                  ('zipzi-editor', None), ('zipzi-python', None)]:
+            with self.subTest(package=package):
+                deps = self.dependencies(package, features, target='x86_64-pc-windows-msvc')
+                self.assertIn('zipzi-render-d3d11', deps)
+                self.assertNotIn('zipzi-render-wgpu', deps)
+                self.assertFalse({name for name in deps if name.startswith('wgpu')}, deps)
+
+    def test_explicit_wgpu_and_linux_gpu_builds_enable_wgpu(self):
+        for target in ['aarch64-apple-darwin', 'x86_64-pc-windows-msvc']:
+            for package in ['zipzi-observe', 'zipzi-runtime', 'zipzi-editor', 'zipzi-python']:
+                with self.subTest(package=package, target=target):
+                    deps = self.dependencies(package, 'wgpu-backend', target=target)
                     self.assertIn('zipzi-render-wgpu', deps)
                     self.assertIn('wgpu', deps)
-                    self.assertNotIn('zipzi-render-metal', deps)
+        deps = self.dependencies('zipzi-observe', target='x86_64-unknown-linux-gnu')
+        self.assertIn('zipzi-render-wgpu', deps)
+        self.assertIn('wgpu', deps)
+        self.assertNotIn('zipzi-render-d3d11', deps)
+        self.assertNotIn('zipzi-render-metal', deps)
 
 
 if __name__ == '__main__':

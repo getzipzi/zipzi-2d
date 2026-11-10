@@ -8,7 +8,7 @@ license = "GPL-3.0-only"
 publish = false
 
 [features]
-wgpu-backend = ["zipzi-editor-render/wgpu-backend", "zipzi-runtime/wgpu-backend"]
+wgpu-backend = ["dep:wgpu", "zipzi-editor-render/wgpu-backend", "zipzi-runtime/wgpu-backend"]
 debug-tools = ["dep:gpui-fps"]
 test-support = ["gpui-kit/test-support", "dep:tempfile", "image/png"]
 bench-instrumentation = ["zipzi-editor-core/bench-instrumentation", "zipzi-editor-render/bench-instrumentation"]
@@ -111,8 +111,7 @@ gpui-apple = { package = "gpui-fast-apple", version = "=0.1.7", features = ["tes
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = ["Win32_Graphics_Direct3D11"] }
-zipzi-editor-render = { workspace = true, features = ["wgpu-backend"] }
-wgpu.workspace = true
+wgpu = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.build-dependencies]
 embed-resource = "3.0"

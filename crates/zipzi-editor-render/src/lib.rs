@@ -25,6 +25,15 @@ mod wgpu_windows;
 #[cfg(all(feature = "wgpu-backend", target_os = "windows"))]
 pub use wgpu_windows::{WindowsPresenter, windows_context};
 
+#[cfg(target_os = "windows")]
+mod d3d11_preview;
+#[cfg(target_os = "windows")]
+pub use d3d11_preview::{D3d11Preview, RecordedD3d11Preview};
+#[cfg(target_os = "windows")]
+mod windows_preview;
+#[cfg(target_os = "windows")]
+pub use windows_preview::fit_windows_preview;
+
 /// Shared screen-space radius for filled and hollow editing markers.
 pub use zipzi_editor_core::canvas_style::POINT_RADIUS as OVERLAY_MARKER_RADIUS;
 
