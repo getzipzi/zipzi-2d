@@ -34,6 +34,7 @@ upstream README and files needed by relative test paths are also retained.
 | [windows-shared-texture.patch](windows-shared-texture.patch) | Adds Windows shared GPU surface composition. |
 | [native-metal.patch](native-metal.patch) | Exposes the window's Metal device and queue, composites native textures, and adds optional frame tracing and headless support. |
 | [drag-ownership.patch](drag-ownership.patch) | Adds drag identity and targeted cancellation so a stale token cannot stop a later drag. |
+| [file-drop-input-modality.patch](file-drop-input-modality.patch) | Treats native file drops as pointer input so drop targets work after keyboard navigation. |
 | [tool-cursors.patch](tool-cursors.patch) | Registers custom native cursors, targets cursor requests to their window, and adds Windows hand cursors, bounded DPI variants and immediate updates. |
 | [relative-pointer-capture.patch](relative-pointer-capture.patch) | Adds hidden cursor capture and relative movement for number dragging on macOS and Windows. Apply after `tool-cursors.patch`. |
 | [cache-boundary.patch](cache-boundary.patch) | Preserves explicit virtual-list cache boundaries across frame reuse and splicing. |

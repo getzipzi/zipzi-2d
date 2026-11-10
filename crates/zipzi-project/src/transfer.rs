@@ -228,7 +228,10 @@ impl TransferSnapshot {
 }
 
 pub fn resolve_model3_entry(path: &Path) -> Result<PathBuf, Status> {
-    if path.extension().and_then(|s| s.to_str()) != Some("moc3") {
+    if !path
+        .extension()
+        .is_some_and(|s| s.eq_ignore_ascii_case("moc3"))
+    {
         return Ok(path.to_path_buf());
     }
     let selected = fs::canonicalize(path).map_err(|e| Status::error("MODEL3_IO", e.to_string()))?;
@@ -239,10 +242,11 @@ pub fn resolve_model3_entry(path: &Path) -> Result<PathBuf, Status> {
     for entry in fs::read_dir(parent).map_err(|e| Status::error("MODEL3_IO", e.to_string()))? {
         let entry = entry.map_err(|e| Status::error("MODEL3_IO", e.to_string()))?;
         let candidate = entry.path();
-        if !candidate
-            .file_name()
-            .is_some_and(|n| n.to_string_lossy().ends_with(".model3.json"))
-        {
+        if !candidate.file_name().is_some_and(|n| {
+            n.to_string_lossy()
+                .to_ascii_lowercase()
+                .ends_with(".model3.json")
+        }) {
             continue;
         }
         if let Ok(bytes) = fs::read(&candidate) {
@@ -312,8 +316,8 @@ fn linked_project_with_budget(
     let parent = path
         .parent()
         .ok_or_else(|| Status::error("CUBISM_ENTRY", "Missing project directory"))?;
-    let extension = path.extension().and_then(|n| n.to_str());
-    if extension == Some("can3") {
+    let extension = path.extension().unwrap_or_default();
+    if extension.eq_ignore_ascii_case("can3") {
         let animation = read_cubism_animation(path, workspace)?;
         let paths =
             zipzi_cmo3::animation_model_paths_with_budget(&animation, workspace).map_err(codec)?;
@@ -326,7 +330,7 @@ fn linked_project_with_budget(
         let model = resolve_cubism_model(parent, &paths[0])?;
         return Ok((model, Some(animation)));
     }
-    if extension != Some("cmo3") {
+    if !extension.eq_ignore_ascii_case("cmo3") {
         return Err(Status::error("CUBISM_ENTRY", "Choose a CMO3 or CAN3 file"));
     }
     let selected = fs::canonicalize(path).map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
@@ -334,7 +338,10 @@ fn linked_project_with_budget(
     for entry in fs::read_dir(parent).map_err(|e| Status::error("CUBISM_IO", e.to_string()))? {
         let entry = entry.map_err(|e| Status::error("CUBISM_IO", e.to_string()))?;
         let candidate = entry.path();
-        if candidate.extension().and_then(|n| n.to_str()) != Some("can3") {
+        if !candidate
+            .extension()
+            .is_some_and(|s| s.eq_ignore_ascii_case("can3"))
+        {
             continue;
         }
         let bytes = read_cubism_animation(&candidate, workspace)?;
@@ -468,10 +475,10 @@ mod tests {
             std::env::temp_dir().join(format!("zipzi-linked-reference-{}", uuid::Uuid::new_v4()));
         fs::create_dir_all(root.join("models")).unwrap();
         let model = root.join("models/model.cmo3");
-        let sibling = root.join("model.cmo3");
+        let sibling = root.join("model.CMO3");
         fs::write(&model, b"nested").unwrap();
         fs::write(&sibling, b"sibling").unwrap();
-        let animation = root.join("animation.can3");
+        let animation = root.join("animation.CAN3");
         fs::write(&animation, animation_reference("models/model.cmo3")).unwrap();
         assert_eq!(
             linked_project(&animation).unwrap().0,
@@ -482,7 +489,7 @@ mod tests {
         // An absolute reference to the sibling is a real match.
         fs::write(&animation, animation_reference(sibling.to_str().unwrap())).unwrap();
         assert!(linked_project(&sibling).unwrap().1.is_some());
-        fs::write(root.join("second.can3"), animation_reference("model.cmo3")).unwrap();
+        fs::write(root.join("second.can3"), animation_reference("model.CMO3")).unwrap();
         assert!(linked_project(&sibling)
             .unwrap_err()
             .message

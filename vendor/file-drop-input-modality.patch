@@ -1,0 +1,18 @@
+diff --git a/vendor/gpui-fast/src/window.rs b/vendor/gpui-fast/src/window.rs
+index c2263376..f25640c3 100644
+--- a/vendor/gpui-fast/src/window.rs
++++ b/vendor/gpui-fast/src/window.rs
+@@ -5748,7 +5748,12 @@ impl Window {
+             PlatformInput::KeyDown(_) => InputModality::Keyboard,
+             PlatformInput::MouseMove(_)
+             | PlatformInput::RelativeMouseMove(_)
+-            | PlatformInput::MouseDown(_) => InputModality::Mouse,
++            | PlatformInput::MouseDown(_)
++            | PlatformInput::FileDrop(
++                FileDropEvent::Entered { .. }
++                | FileDropEvent::Pending { .. }
++                | FileDropEvent::Submit { .. },
++            ) => InputModality::Mouse,
+             PlatformInput::Touch(_) => InputModality::Touch,
+             _ => self.last_input_modality,
+         };

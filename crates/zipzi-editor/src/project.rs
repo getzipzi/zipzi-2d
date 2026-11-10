@@ -23,6 +23,39 @@ pub(super) enum ImportKind {
     Cubism,
 }
 
+impl ImportKind {
+    fn request(self, path: PathBuf) -> LoadRequest {
+        match self {
+            Self::Model3 => LoadRequest::Model3(path),
+            Self::Psd => LoadRequest::Psd(path),
+            Self::Cubism => LoadRequest::Cubism(path),
+        }
+    }
+}
+
+fn dropped_file_request(path: &Path) -> Option<LoadRequest> {
+    let extension = path.extension()?;
+    let kind = if extension.eq_ignore_ascii_case("zipzi") {
+        return Some(LoadRequest::Open(path.to_path_buf()));
+    } else if extension.eq_ignore_ascii_case("psd") {
+        ImportKind::Psd
+    } else if extension.eq_ignore_ascii_case("cmo3") || extension.eq_ignore_ascii_case("can3") {
+        ImportKind::Cubism
+    } else if extension.eq_ignore_ascii_case("moc3")
+        || (extension.eq_ignore_ascii_case("json")
+            && path
+                .file_name()?
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .ends_with(".model3.json"))
+    {
+        ImportKind::Model3
+    } else {
+        return None;
+    };
+    Some(kind.request(path.to_path_buf()))
+}
+
 impl EditorView {
     fn release_closed_preview_resources(&self, closed: DocumentId) {
         if let Some(requests) = &self.requests {
@@ -449,7 +482,7 @@ impl EditorView {
                 self.property_forms
                     .entries
                     .retain(|target, _| target.document != id);
-                self.run_load(task, path, false, None, window, cx);
+                self.run_load(task, path, false, window, cx);
             }
             Err(error) => self.set_operation_error(Some(id), error.to_string(), cx),
         }
@@ -463,6 +496,48 @@ impl EditorView {
     pub(super) fn open_recent(&mut self, path: &Path, window: &mut Window, cx: &mut Context<Self>) {
         self.enqueue_projects(vec![path.to_path_buf()], window, cx);
     }
+
+    pub(super) fn drop_files(
+        &mut self,
+        paths: &ExternalPaths,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.modal
+            || self.editor.exiting()
+            || (window.has_active_dialog(cx)
+                && !self.welcome.as_ref().is_some_and(|welcome| {
+                    welcome
+                        .read(cx)
+                        .focus_handle(cx)
+                        .contains_focused(window, cx)
+                }))
+        {
+            return;
+        }
+        const MAX_PENDING_DROPPED_FILES: usize = 128;
+        let remaining = MAX_PENDING_DROPPED_FILES - self.dropped_files.len();
+        let requests = paths
+            .paths()
+            .iter()
+            .filter_map(|path| dropped_file_request(path))
+            .take(remaining + 1)
+            .collect::<Vec<_>>();
+        if requests.len() > remaining {
+            self.set_edit_error(
+                t!("project.drop_queue_full", limit = MAX_PENDING_DROPPED_FILES).into_owned(),
+                cx,
+            );
+        } else if !requests.is_empty() {
+            self.dropped_files.extend(requests);
+            self.drain_project_queue(window, cx);
+        }
+    }
+
+    pub(super) fn has_queued_files(&self) -> bool {
+        !self.dropped_files.is_empty() || !self.project_queue.lock().unwrap().is_empty()
+    }
+
     pub(super) fn enqueue_projects(
         &mut self,
         paths: Vec<PathBuf>,
@@ -476,9 +551,10 @@ impl EditorView {
         self.drain_project_queue(window, cx);
     }
     pub(super) fn drain_project_queue(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if !self.project_queue.lock().unwrap().is_empty() {
-            self.dismiss_welcome(window, cx);
+        if !self.has_queued_files() {
+            return;
         }
+        self.dismiss_welcome(window, cx);
         if self.modal
             || self.editor.exiting()
             || window.has_active_dialog(cx)
@@ -486,26 +562,28 @@ impl EditorView {
         {
             return;
         }
-        if self.project_queue.lock().unwrap().is_empty() {
-            return;
-        }
         if let Some(id) = self.editor.active_id().filter(|_| !self.editor.is_busy()) {
             if !self.prepare_property_inputs(id, window, cx) {
                 return;
             }
         }
-        let path = self.project_queue.lock().unwrap().pop();
-        if let Some(path) = path {
-            if !path.exists() {
-                self.remove_recent_file(&path, cx);
+        let project = self.project_queue.lock().unwrap().pop();
+        let request = project
+            .map(LoadRequest::Open)
+            .or_else(|| self.dropped_files.pop_front());
+        if let Some(request) = request {
+            if let LoadRequest::Open(path) = &request
+                && !path.exists()
+            {
+                self.remove_recent_file(path, cx);
                 self.set_load_error(
-                    &path,
+                    path,
                     t!("project.file_not_found", path = path.display()).into_owned(),
                     cx,
                 );
                 return;
             }
-            self.execute_load(LoadRequest::Open(path), None, window, cx);
+            self.execute_load(request, window, cx);
         }
     }
     pub(super) fn record_recent_file(&mut self, path: PathBuf, cx: &mut Context<Self>) {
@@ -576,61 +654,35 @@ impl EditorView {
         self.animation_anchor = None;
         self.modal = true;
         self.redraw(cx);
-        cx.spawn_in(window, async move |this, cx| {
-            let result = picker.await;
-            let source = match result {
-                Ok(Ok(Some(paths))) => {
-                    if kind.is_none() {
-                        let _ = this.update_in(cx, |this, window, cx| {
-                            this.modal = false;
-                            this.enqueue_projects(paths, window, cx);
-                        });
-                        return;
-                    }
-                    paths.into_iter().next()
-                }
-                other => {
-                    let _ = this.update(cx, |this, cx| {
-                        this.modal = false;
-                        if !matches!(other, Ok(Ok(None))) {
-                            this.set_edit_error(format!("{other:?}"), cx);
+        cx.spawn_in(window, async move |this, cx| match picker.await {
+            Ok(Ok(Some(paths))) => {
+                let _ = this.update_in(cx, |this, window, cx| {
+                    this.modal = false;
+                    if let Some(kind) = kind {
+                        if let Some(source) = paths.into_iter().next() {
+                            this.execute_load(kind.request(source), window, cx);
                         } else {
                             cx.notify();
                         }
-                    });
-                    None
-                }
-            };
-            let Some(source) = source else {
+                    } else {
+                        this.enqueue_projects(paths, window, cx);
+                    }
+                });
+            }
+            other => {
                 let _ = this.update(cx, |this, cx| {
                     this.modal = false;
-                    cx.notify();
+                    if !matches!(other, Ok(Ok(None))) {
+                        this.set_edit_error(format!("{other:?}"), cx);
+                    } else {
+                        cx.notify();
+                    }
                 });
-                return;
-            };
-            let request = if kind == Some(ImportKind::Psd) {
-                LoadRequest::Psd(source)
-            } else if kind == Some(ImportKind::Cubism) {
-                LoadRequest::Cubism(source)
-            } else if kind == Some(ImportKind::Model3) {
-                LoadRequest::Model3(source)
-            } else {
-                LoadRequest::Open(source)
-            };
-            let _ = this.update_in(cx, |this, window, cx| {
-                this.modal = false;
-                this.execute_load(request, kind, window, cx);
-            });
+            }
         })
         .detach();
     }
-    fn execute_load(
-        &mut self,
-        request: LoadRequest,
-        kind: Option<ImportKind>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    fn execute_load(&mut self, request: LoadRequest, window: &mut Window, cx: &mut Context<Self>) {
         let (source, importing) = match &request {
             LoadRequest::Open(path) => (path.clone(), false),
             LoadRequest::Model3(path) | LoadRequest::Psd(path) | LoadRequest::Cubism(path) => {
@@ -659,14 +711,13 @@ impl EditorView {
                 return;
             }
         };
-        self.run_load(task, source, importing, kind, window, cx);
+        self.run_load(task, source, importing, window, cx);
     }
     fn run_load(
         &mut self,
         task: zipzi_editor_core::LoadTask,
         source: PathBuf,
         importing: bool,
-        kind: Option<ImportKind>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -691,10 +742,10 @@ impl EditorView {
                         let count = this.record_load_warnings(&source, importing, warnings, cx);
                         let msg = if count > 0 {
                             t!("project.load_warning_count", count = count).into_owned()
-                        } else if kind.is_none() {
-                            t!("project.opened").into_owned()
-                        } else {
+                        } else if importing {
                             t!("project.import_complete").into_owned()
+                        } else {
+                            t!("project.opened").into_owned()
                         };
                         this.set_status_message(msg, cx);
                         if let Some(path) = this

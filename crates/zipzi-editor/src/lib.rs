@@ -59,6 +59,7 @@ struct EditorView {
     host: Option<host::DesktopHost>,
     _runtime_events: Option<Task<()>>,
     project_queue: std::sync::Arc<std::sync::Mutex<zipzi_runtime::protocol::ProjectOpenQueue>>,
+    dropped_files: std::collections::VecDeque<LoadRequest>,
     _project_requests: Task<()>,
     input_router: input_routing::InputRouter,
     focus: FocusHandle,
@@ -127,6 +128,7 @@ impl EditorView {
                 .as_ref()
                 .map(|h| h.project_queue.clone())
                 .unwrap_or_default(),
+            dropped_files: Default::default(),
             _project_requests: cx.spawn_in(window, async move |this, cx| {
                 loop {
                     cx.background_executor()

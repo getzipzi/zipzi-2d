@@ -194,6 +194,16 @@ impl Render for EditorView {
             .children(workspace)
             .child(self.status_bar.clone())
             .child(self.pointer_observer(window, cx))
+            // Keep the file drop target above workspace hitboxes and the welcome dialog.
+            .child(
+                deferred(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .on_drop(cx.listener(Self::drop_files)),
+                )
+                .with_priority(gpui_kit::base::POPUP_PRIORITY),
+            )
             .into_any_element()
     }
 }

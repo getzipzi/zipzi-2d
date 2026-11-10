@@ -1,6 +1,145 @@
 use super::setup;
-use crate::{project::ImportKind, settings::Settings};
-use gpui_kit::{AppContext as _, TestAppContext};
+use crate::{project::ImportKind, settings::Settings, status::ProblemOrigin};
+use gpui_kit::{
+    App, AppContext as _, ExternalPaths, FileDropEvent, Keystroke, ParentElement as _, Pixels,
+    PlatformInput, Point, TestAppContext, Window, component::WindowExt, test::TestWindowExt,
+};
+use std::{path::PathBuf, time::Duration};
+
+fn drop_files(
+    window: &mut Window,
+    position: Point<Pixels>,
+    paths: impl IntoIterator<Item = PathBuf>,
+    cx: &mut App,
+) {
+    window.dispatch_event(
+        PlatformInput::FileDrop(FileDropEvent::Entered {
+            position,
+            paths: ExternalPaths(paths.into_iter().collect()),
+        }),
+        cx,
+    );
+    window.render_frame(cx);
+    window.dispatch_event(
+        PlatformInput::FileDrop(FileDropEvent::Submit { position }),
+        cx,
+    );
+}
+
+#[gpui_kit::test]
+fn file_drop_opens_and_imports_a_mixed_batch_in_order(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let directory = harness._config_dir.path();
+    let project = directory.join("角色.ZIPZI");
+    let mut session = crate::test_fixture::fixture_session(
+        &uuid::Uuid::new_v4().to_string(),
+        zipzi_core::Canvas::new(42., 42., Default::default(), 1.),
+    )
+    .unwrap();
+    crate::test_fixture::save_fixture(&mut session, &project).unwrap();
+    let broken = directory.join("broken.psd");
+    std::fs::write(&broken, b"bad").unwrap();
+    let source =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../zipzi-psd/tests/fixtures/layered.psd");
+    cx.update_window(harness.window, |_, window, cx| {
+        let position = window.find("canvas-body").bounds().center();
+        window.dispatch_keystroke(Keystroke::parse("f24").unwrap(), cx);
+        assert!(window.last_input_was_keyboard());
+        drop_files(
+            window,
+            position,
+            [
+                project.clone(),
+                broken.clone(),
+                directory.join("notes.json"),
+                source,
+            ],
+            cx,
+        );
+    })
+    .unwrap();
+    for _ in 0..3 {
+        cx.run_until_parked();
+        cx.background_executor
+            .advance_clock(Duration::from_millis(100));
+    }
+    cx.run_until_parked();
+    assert!(!cx.did_prompt_for_paths());
+    harness.view.read_with(cx, |view, cx| {
+        let documents = view.editor.documents();
+        assert_eq!(documents.len(), 3);
+        assert_eq!(documents[1].path, Some(project.canonicalize().unwrap()));
+        assert_eq!(view.editor.active_id(), Some(documents[2].id));
+        assert_eq!(documents[2].title.as_deref(), Some("layered"));
+        assert!(documents[2].path.is_none() && documents[2].modified);
+        assert_eq!(cx.global::<Settings>().recent_files.paths.len(), 1);
+        let problems = view.status_bar.read(cx).problems.read(cx);
+        let failed_sources: Vec<_> = problems
+            .reports()
+            .iter()
+            .filter_map(|report| match &report.origin {
+                ProblemOrigin::Load {
+                    document: None,
+                    source,
+                } => Some(source),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(failed_sources, [&broken]);
+        assert!(!view.has_queued_files());
+    });
+}
+
+#[gpui_kit::test]
+fn file_drop_on_welcome_resolves_a_moc3_when_welcome_is_frontmost(cx: &mut TestAppContext) {
+    let harness = setup(cx);
+    let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/external_v50");
+    let directory = harness._config_dir.path();
+    let source = directory.join("model.MOC3");
+    std::fs::copy(fixture.join("model.moc3"), &source).unwrap();
+    std::fs::copy(
+        fixture.join("texture_00.png"),
+        directory.join("texture_00.png"),
+    )
+    .unwrap();
+    let entry = std::fs::read_to_string(fixture.join("model.model3.json")).unwrap();
+    std::fs::write(
+        directory.join("model.model3.JSON"),
+        entry.replace("model.moc3", "model.MOC3"),
+    )
+    .unwrap();
+    cx.update_window(harness.window, |_, window, cx| {
+        harness.view.update(cx, |view, cx| {
+            view.replace_editor(zipzi_editor_core::Editor::empty(), cx);
+            view.show_welcome(window, cx);
+        });
+    })
+    .unwrap();
+    cx.run_until_parked();
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        let position = window.find("welcome-panel").bounds().center();
+        window.open_dialog(cx, |dialog, _, _| dialog.child("Blocking dialog"));
+        window.render_frame(cx);
+        drop_files(window, position, [source.clone()], cx);
+        assert!(harness.view.read(cx).welcome.is_some());
+        assert!(!harness.view.read(cx).has_queued_files());
+        assert_eq!(harness.view.read(cx).editor.pending_io_count(), 0);
+        window.close_dialog(cx);
+        window.render_frame(cx);
+        drop_files(window, position, [directory.join("notes.json")], cx);
+        assert!(window.has_active_dialog(cx));
+        drop_files(window, position, [source], cx);
+        assert!(!window.has_active_dialog(cx));
+    })
+    .unwrap();
+    cx.run_until_parked();
+    harness.view.read_with(cx, |view, _| {
+        assert_eq!(view.editor.document_count(), 1);
+        assert_eq!(view.editor.document().unwrap().import_name(), Some("model"));
+        assert!(view.edit_error.is_none(), "{:?}", view.edit_error);
+    });
+}
 
 #[gpui_kit::test]
 fn psd_picker_opens_an_unsaved_document_and_save_asks_for_a_path(cx: &mut TestAppContext) {
@@ -88,8 +227,6 @@ fn failed_or_cancelled_psd_picker_preserves_the_active_document(cx: &mut TestApp
 fn load_status_tracks_concurrent_jobs_and_status_priority_without_blocking_editor(
     cx: &mut TestAppContext,
 ) {
-    use gpui_kit::test::TestWindowExt;
-    use std::time::Duration;
     use zipzi_editor_core::{LoadRequest, LoadStage};
 
     let harness = setup(cx);

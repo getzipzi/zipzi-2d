@@ -60,7 +60,7 @@ impl EditorView {
 
     pub(crate) fn sync_welcome(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let has_documents = self.editor.document_count() != 0;
-        let queued = !self.project_queue.lock().unwrap().is_empty();
+        let queued = self.has_queued_files();
         let document_changed = self
             .welcome
             .as_ref()
@@ -78,7 +78,7 @@ impl EditorView {
             // Open outside render so Kit can update its window layer safely.
             cx.defer_in(window, |view, window, cx| {
                 if view.editor.document_count() == 0
-                    && view.project_queue.lock().unwrap().is_empty()
+                    && !view.has_queued_files()
                     && view.editor.pending_io_count() == 0
                 {
                     view.show_welcome(window, cx);
@@ -92,6 +92,12 @@ pub(crate) struct WelcomePanel {
     owner: WeakEntity<EditorView>,
     focus: FocusHandle,
     document: Option<zipzi_editor_core::DocumentId>,
+}
+
+impl Focusable for WelcomePanel {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus.clone()
+    }
 }
 
 impl Render for WelcomePanel {
