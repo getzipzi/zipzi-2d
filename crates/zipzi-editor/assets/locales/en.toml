@@ -33,6 +33,17 @@ hide_others = "Hide Others"
 show_all = "Show All"
 quit = "Quit Zipzi Editor"
 
+[background]
+idle = "Idle"
+resident = "Background mode"
+connected = "SDK connected"
+working = "Runtime jobs running"
+close_hint = "%{reason} · Closing the window keeps Zipzi running"
+tray_hint = "%{app} · Running in background · %{reason}"
+open = "Open Editor"
+force_quit = "Force Quit…"
+force_quit_confirm = "Force quit Zipzi Editor? Unsaved changes will be lost, and running jobs and SDK connections will be interrupted."
+
 [about]
 version = "Version %{version} · In development"
 report_issue = "Report an issue or request a feature"

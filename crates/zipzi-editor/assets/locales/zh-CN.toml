@@ -32,6 +32,17 @@ hide_others = "隐藏其他应用"
 show_all = "显示全部"
 quit = "退出 Zipzi 编辑器"
 
+[background]
+idle = "空闲"
+resident = "后台模式"
+connected = "SDK 已连接"
+working = "Runtime 任务进行中"
+close_hint = "%{reason} · 关闭窗口后将在后台运行"
+tray_hint = "%{app} · 正在后台运行 · %{reason}"
+open = "打开编辑器"
+force_quit = "强制退出…"
+force_quit_confirm = "强制退出 Zipzi 编辑器？未保存的更改将丢失，运行中的任务和 SDK 连接将中断。"
+
 [about]
 version = "版本 %{version} · 开发中"
 report_issue = "反馈问题或提出功能建议"

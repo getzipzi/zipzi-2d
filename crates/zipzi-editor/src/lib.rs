@@ -40,6 +40,8 @@ pub(crate) mod test_fixture;
 mod theme;
 mod tool_cursors;
 mod transfer;
+#[cfg(windows)]
+mod tray;
 mod ui;
 mod updates;
 mod viewports;
@@ -206,13 +208,6 @@ impl EditorView {
         editor.connect_runtime_events(cx);
         editor.connect_preview(window, cx);
         benchmark::start(&mut editor, window, cx);
-        if editor
-            .host
-            .as_ref()
-            .is_some_and(|host| host.pending_quit.replace(false))
-        {
-            editor.close(window, cx);
-        }
         editor
     }
 
@@ -464,7 +459,9 @@ pub fn run() {
     i18n::activate(None);
     let background_launch = std::env::var_os("ZIPZI_DEV_BACKGROUND").is_some();
     let no_window = options.no_window;
-    let application = gpui_kit::application().with_assets(gpui_kit::assets::AllAssets);
+    let application = gpui_kit::application()
+        .with_quit_mode(QuitMode::Explicit)
+        .with_assets(gpui_kit::assets::AllAssets);
     let file_events = project_queue.clone();
     application.on_open_urls(move |urls| {
         for url in urls {
@@ -489,6 +486,8 @@ pub fn run() {
         #[cfg(target_os = "windows")]
         preview::init(cx);
         cx.on_app_quit(|cx| {
+            #[cfg(windows)]
+            tray::hide(cx);
             updates::on_quit(cx);
             async {
                 benchmark::finish();
@@ -502,6 +501,7 @@ pub fn run() {
         actions::init(cx);
         theme::init(cx);
         let host = host::DesktopHost::with_projects(no_window, project_queue, cx);
+        host.sync_runtime_activity(cx);
         cx.set_global(host);
         #[cfg(windows)]
         dev_control::start(cx);
@@ -510,6 +510,8 @@ pub fn run() {
         if !no_window {
             host::open_window(cx, !background_launch);
         }
+        #[cfg(windows)]
+        tray::start(cx);
         if !background_launch && !no_window {
             cx.activate(true);
         }

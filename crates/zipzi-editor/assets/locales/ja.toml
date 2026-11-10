@@ -34,6 +34,17 @@ quit = "Zipzi Editorを終了"
 title = "Zipzi Editor"
 description = "2Dキャラクターのモデリングとアニメーション制作のためのネイティブデスクトップエディタ。"
 
+[background]
+idle = "待機中"
+resident = "バックグラウンドモード"
+connected = "SDK 接続中"
+working = "Runtime ジョブ実行中"
+close_hint = "%{reason} · ウィンドウを閉じてもバックグラウンドで実行されます"
+tray_hint = "%{app} · バックグラウンドで実行中 · %{reason}"
+open = "エディターを開く"
+force_quit = "強制終了…"
+force_quit_confirm = "Zipzi Editor を強制終了しますか？保存されていない変更は失われ、実行中のジョブと SDK 接続は中断されます。"
+
 [about]
 version = "バージョン %{version} · 開発中"
 report_issue = "問題の報告・機能のリクエスト"

@@ -2,11 +2,29 @@
 pub(crate) mod external_status;
 
 use super::*;
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
-};
+use std::{cell::RefCell, rc::Rc};
 use zipzi_editor_core::RuntimeHost;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum BackgroundStatus {
+    Idle,
+    Resident,
+    Connected,
+    Working,
+}
+
+impl Global for BackgroundStatus {}
+
+impl BackgroundStatus {
+    pub(super) fn label(self) -> &'static str {
+        match self {
+            Self::Idle => "background.idle",
+            Self::Resident => "background.resident",
+            Self::Connected => "background.connected",
+            Self::Working => "background.working",
+        }
+    }
+}
 
 #[derive(Clone)]
 pub(super) struct DesktopHost {
@@ -16,7 +34,6 @@ pub(super) struct DesktopHost {
         std::sync::Arc<std::sync::Mutex<zipzi_runtime::protocol::ProjectOpenQueue>>,
     resident: bool,
     parked: Rc<RefCell<Option<Editor>>>,
-    pub(super) pending_quit: Rc<Cell<bool>>,
     outcomes: Rc<RefCell<std::collections::VecDeque<zipzi_editor_core::RuntimeJobInfo>>>,
     notices: Rc<RefCell<Vec<String>>>,
     runtime_activity: Rc<RefCell<Option<ActivityGuard>>>,
@@ -64,7 +81,6 @@ impl DesktopHost {
             project_queue,
             resident,
             parked: Rc::new(RefCell::new(Some(editor))),
-            pending_quit: Default::default(),
             outcomes: Default::default(),
             notices: Default::default(),
             runtime_activity: Default::default(),
@@ -73,11 +89,16 @@ impl DesktopHost {
     /// A connected SDK client or admitted task is user-requested work even
     /// without a visible window. Prevent App Nap throttling until both finish;
     /// the platform activity still allows normal system idle sleep.
-    pub(super) fn sync_runtime_activity(&self, cx: &App) {
-        let active = self.protocol.borrow().has_connected_clients()
-            || self.runtime.read().outstanding_jobs() > 0;
+    pub(super) fn sync_runtime_activity(&self, cx: &mut App) {
+        let status = self.background_status();
+        if cx.try_global::<BackgroundStatus>() != Some(&status) {
+            cx.set_global(status);
+        }
         let mut activity = self.runtime_activity.borrow_mut();
-        if active {
+        if matches!(
+            status,
+            BackgroundStatus::Connected | BackgroundStatus::Working
+        ) {
             if activity.is_none() {
                 *activity = Some(
                     cx.background_executor()
@@ -93,9 +114,18 @@ impl DesktopHost {
         self.runtime_activity.borrow().is_some()
     }
     pub(super) fn keep_running_without_windows(&self) -> bool {
-        self.resident
-            || self.protocol.borrow().has_connected_clients()
-            || self.runtime.read().outstanding_jobs() > 0
+        self.background_status() != BackgroundStatus::Idle
+    }
+    fn background_status(&self) -> BackgroundStatus {
+        if self.protocol.borrow().has_connected_clients() {
+            BackgroundStatus::Connected
+        } else if self.runtime.read().outstanding_jobs() > 0 {
+            BackgroundStatus::Working
+        } else if self.resident {
+            BackgroundStatus::Resident
+        } else {
+            BackgroundStatus::Idle
+        }
     }
     pub(super) fn release_disconnected_clients(&self) {
         self.protocol
@@ -199,6 +229,8 @@ pub(super) fn open_window(
         |window, cx| cx.new(|cx| EditorView::new(window, cx)),
     )
     .expect("open Editor window");
+    #[cfg(windows)]
+    crate::tray::sync(cx);
     if activate {
         cx.activate(true);
         let _ = opened.0.update(cx, |_, window, _| window.activate_window());

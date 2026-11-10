@@ -144,6 +144,11 @@ documents are resolved. Use Quit to explicitly exit. See the
 [Python SDK guide](../zipzi-python/client/python/zipzi/docs/guide.md) for
 connection and session usage.
 
+The status bar shows why closing the window will leave the host running. On
+Windows, the notification-area icon appears while the host has no window. Its
+menu can reopen the Editor or use the normal Quit flow. Force Quit requires
+confirmation, discards unsaved work and interrupts Runtime jobs and SDK connections.
+
 While SDK clients are connected or jobs are outstanding, the host holds a
 platform activity to prevent macOS App Nap throttling background requests. It
 still allows normal system idle sleep. The activity is released once clients

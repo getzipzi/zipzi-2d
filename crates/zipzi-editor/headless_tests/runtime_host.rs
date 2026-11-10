@@ -1,6 +1,6 @@
 //! Window-independent host completion and native attach/detach regressions.
 use super::{Harness, setup};
-use crate::host::DesktopHost;
+use crate::host::{BackgroundStatus, DesktopHost};
 use gpui_kit::{AppContext as _, TestAppContext, test::TestWindowExt};
 
 #[gpui_kit::test]
@@ -35,11 +35,16 @@ fn runtime_activity_tracks_clients_and_jobs_but_not_idle_residency(cx: &mut Test
     cx.update(|cx| {
         let host = DesktopHost::new(true, cx);
         host.sync_runtime_activity(cx);
+        assert_eq!(*cx.global::<BackgroundStatus>(), BackgroundStatus::Resident);
         assert!(!host.has_runtime_activity(), "idle resident hosts may nap");
         let (first, first_connection) = connect_peer(&host);
         let (second, second_connection) = connect_peer(&host);
         host.sync_runtime_activity(cx);
         assert!(host.has_runtime_activity());
+        assert_eq!(
+            *cx.global::<BackgroundStatus>(),
+            BackgroundStatus::Connected
+        );
         host.protocol
             .borrow_mut()
             .disconnect(first, first_connection, std::time::Instant::now());
@@ -83,9 +88,11 @@ fn runtime_activity_tracks_clients_and_jobs_but_not_idle_residency(cx: &mut Test
             host.has_runtime_activity(),
             "admitted jobs outlive client connections"
         );
+        assert_eq!(*cx.global::<BackgroundStatus>(), BackgroundStatus::Working);
         let work = host.runtime.write().take_work(job).unwrap();
         host.runtime.write().complete(work.run()).unwrap();
         host.sync_runtime_activity(cx);
+        assert_eq!(*cx.global::<BackgroundStatus>(), BackgroundStatus::Resident);
         assert!(
             !host.has_runtime_activity(),
             "last task completed and both clients disconnected"
@@ -754,6 +761,28 @@ fn connected_sdk_keeps_host_and_unsaved_content_alive_without_attaching_a_sessio
 }
 
 #[gpui_kit::test]
+fn background_hint_appears_and_clears_with_sdk_connection(cx: &mut TestAppContext) {
+    let (harness, host) = hosted(cx);
+    let (peer, connection) = connect_peer(&host);
+    cx.update(|cx| host.sync_runtime_activity(cx));
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.find("app-status-background").visible());
+    })
+    .unwrap();
+
+    host.protocol
+        .borrow_mut()
+        .disconnect(peer, connection, std::time::Instant::now());
+    cx.update(|cx| host.sync_runtime_activity(cx));
+    cx.update_window(harness.window, |_, window, cx| {
+        window.render_frame(cx);
+        assert!(window.try_find("app-status-background").is_none());
+    })
+    .unwrap();
+}
+
+#[gpui_kit::test]
 fn disconnected_sdk_does_not_delay_close_for_reconnect_grace(cx: &mut TestAppContext) {
     let (harness, host) = hosted(cx);
     let session = harness.view.read_with(cx, |view, _| {
@@ -804,6 +833,36 @@ fn explicit_no_window_host_stays_resident_after_its_window_is_closed(cx: &mut Te
             .unwrap()
             .len(),
         1
+    );
+}
+
+#[gpui_kit::test]
+fn quit_from_background_reopens_and_prompts_for_unsaved_work(cx: &mut TestAppContext) {
+    let (harness, host) = hosted_with_residency(cx, true);
+    modify(&harness, cx);
+    cx.update_window(harness.window, |_, window, cx| {
+        harness
+            .view
+            .update(cx, |view, cx| view.close_window(window, cx));
+    })
+    .unwrap();
+    drop(harness.view);
+    cx.update(|cx| {
+        assert!(cx.windows().is_empty());
+        cx.dispatch_action(&crate::actions::RunCommand::new(
+            zipzi_editor_core::CommandId::Quit,
+        ));
+        assert_eq!(cx.windows().len(), 1);
+    });
+    cx.simulate_prompt_answer("Cancel");
+    cx.run_until_parked();
+    assert!(
+        host.runtime
+            .read()
+            .session_catalog(host.runtime.client_id())
+            .unwrap()
+            .iter()
+            .any(|session| session.dirty)
     );
 }
 

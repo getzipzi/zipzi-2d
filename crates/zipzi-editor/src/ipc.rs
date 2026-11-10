@@ -90,7 +90,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                     .expect("worker completion belongs to DesktopHost");
                 host.completed();
                 host.sync_runtime_activity(cx);
-                dispatch(host, &returning_workers);
+                dispatch(&host, &returning_workers);
             });
         }
     })
@@ -130,7 +130,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                     .borrow_mut()
                     .expire(&mut host.runtime.write(), Instant::now());
                 host.sync_runtime_activity(cx);
-                dispatch(host, &expiry_workers);
+                dispatch(&host, &expiry_workers);
             });
         }
     })
@@ -165,7 +165,7 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                         if let Some(session) = protocol.borrow_mut().take_window_request() {
                             show_session(session, cx);
                         }
-                        dispatch(host, &workers);
+                        dispatch(&host, &workers);
                     }
                     Inbound::Disconnected(auth) => protocol.borrow_mut().disconnect(
                         auth.client,
@@ -188,10 +188,10 @@ pub(super) fn start(owner: Owner, cx: &mut App) -> std::io::Result<()> {
                         );
                         result.transfer = Some(_transfer);
                         let _ = reply.send(result);
-                        dispatch(host, &workers);
+                        dispatch(&host, &workers);
                     }
                 }
-                cx.global::<host::DesktopHost>().sync_runtime_activity(cx);
+                host.sync_runtime_activity(cx);
             });
             yield_between_requests().await;
         }
@@ -248,6 +248,6 @@ fn show_session(session: Option<zipzi_runtime::SessionKey>, cx: &mut App) {
         });
     }
 }
-fn dispatch(host: host::DesktopHost, workers: &std::cell::RefCell<WorkerPool>) {
+fn dispatch(host: &host::DesktopHost, workers: &std::cell::RefCell<WorkerPool>) {
     host.runtime.write().dispatch(&mut *workers.borrow_mut());
 }
