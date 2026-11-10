@@ -2883,6 +2883,13 @@ impl Window {
         self.platform_window.bounds()
     }
 
+    /// Hides the cursor and delivers relative mouse moves during a left-button drag.
+    /// Dropping the handle, releasing the button, or losing window activation ends capture.
+    /// Returns `None` if the window cannot capture the native pointer.
+    pub fn capture_relative_pointer(&self) -> Option<Subscription> {
+        self.platform_window.capture_relative_pointer()
+    }
+
     /// Renders the current frame's scene to a texture and returns the pixel data as an RGBA image.
     /// This does not present the frame to screen - useful for visual testing where we want
     /// to capture what would be rendered without displaying it or requiring the window to be visible.
@@ -5723,7 +5730,7 @@ impl Window {
             _ => {}
         }
         let _trace_input = crate::frame_trace::InputScope::begin(match &event {
-            PlatformInput::MouseMove(_) => 1,
+            PlatformInput::MouseMove(_) | PlatformInput::RelativeMouseMove(_) => 1,
             PlatformInput::MouseDown(_) => 2,
             PlatformInput::MouseUp(_) => 3,
             PlatformInput::ScrollWheel(_) => 4,
@@ -5739,7 +5746,9 @@ impl Window {
         let old_modality = self.last_input_modality;
         self.last_input_modality = match &event {
             PlatformInput::KeyDown(_) => InputModality::Keyboard,
-            PlatformInput::MouseMove(_) | PlatformInput::MouseDown(_) => InputModality::Mouse,
+            PlatformInput::MouseMove(_)
+            | PlatformInput::RelativeMouseMove(_)
+            | PlatformInput::MouseDown(_) => InputModality::Mouse,
             PlatformInput::Touch(_) => InputModality::Touch,
             _ => self.last_input_modality,
         };
@@ -5760,6 +5769,10 @@ impl Window {
                 self.mouse_position = mouse_move.position;
                 self.modifiers = mouse_move.modifiers;
                 PlatformInput::MouseMove(mouse_move)
+            }
+            PlatformInput::RelativeMouseMove(relative_move) => {
+                self.modifiers = relative_move.modifiers;
+                PlatformInput::RelativeMouseMove(relative_move)
             }
             PlatformInput::MouseDown(mouse_down) => {
                 self.mouse_position = mouse_down.position;
@@ -6198,6 +6211,7 @@ impl Window {
                     cx.cursor_hide_mode,
                     CursorHideMode::OnTyping | CursorHideMode::OnTypingAndAction
                 )
+                && !self.platform_window.has_relative_pointer_capture()
             {
                 cx.platform.hide_cursor_until_mouse_moves();
             }
@@ -6620,9 +6634,12 @@ impl Window {
         action: &dyn Action,
         cx: &mut App,
     ) {
+        // A keyboard action may end relative capture and restore the cursor.
+        let was_captured = self.platform_window.has_relative_pointer_capture();
         self.dispatch_action_on_node_inner(node_id, action, cx);
 
         if !cx.propagate_event
+            && !was_captured
             && cx.cursor_hide_mode == CursorHideMode::OnTypingAndAction
             && self.last_input_was_keyboard()
         {

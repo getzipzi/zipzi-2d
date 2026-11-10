@@ -30,9 +30,10 @@ use gpui::{
     ExternalPaths, FileDropEvent, ForegroundExecutor, FrameRequestSource, KeyDownEvent, Keystroke,
     Modifiers, ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
     Pixels, PlatformAtlas, PlatformDisplay, PlatformFrameSignal, PlatformInput,
-    PlatformInputHandler, PlatformWindow, Point, PromptButton, PromptLevel, RequestFrameOptions,
-    SharedString, Size, SystemWindowTab, WindowAppearance, WindowBackgroundAppearance,
-    WindowBounds, WindowControlArea, WindowKind, WindowParams, WindowVisibility, point, px, size,
+    PlatformInputHandler, PlatformWindow, Point, PromptButton, PromptLevel, RelativeMouseMoveEvent,
+    RequestFrameOptions, SharedString, Size, Subscription, SystemWindowTab, WindowAppearance,
+    WindowBackgroundAppearance, WindowBounds, WindowControlArea, WindowKind, WindowParams,
+    WindowVisibility, point, px, size,
 };
 #[cfg(any(test, feature = "test-support"))]
 use image::RgbaImage;
@@ -40,7 +41,7 @@ use image::RgbaImage;
 use core_foundation::base::{CFRelease, CFTypeRef};
 use core_foundation_sys::base::CFEqual;
 use core_foundation_sys::number::{CFBooleanGetValue, CFBooleanRef};
-use core_graphics::display::{CGDirectDisplayID, CGRect};
+use core_graphics::display::{CGDirectDisplayID, CGDisplay, CGRect};
 use ctor::ctor;
 use futures::channel::oneshot;
 use gpui_util::ResultExt;
@@ -669,6 +670,7 @@ pub(crate) struct MacWindowState {
     cursor_style: CursorStyle,
     custom_cursors: crate::cursor::CustomCursors,
     cursor_visible: Arc<AtomicBool>,
+    relative_pointer: Option<Arc<RelativePointer>>,
     frame_source: Option<WindowFrameSource>,
     pub(crate) renderer: renderer::Renderer,
     request_frame_callback: Option<Box<dyn FnMut(RequestFrameOptions)>>,
@@ -716,6 +718,15 @@ pub(crate) struct MacWindowState {
     accesskit_adapter: Option<accesskit_macos::SubclassingAdapter>,
     // The parent window if this window is a sheet (Dialog kind)
     sheet_parent: Option<id>,
+}
+
+struct RelativePointer(CGDisplay);
+
+impl Drop for RelativePointer {
+    fn drop(&mut self) {
+        let _ = CGDisplay::associate_mouse_and_mouse_cursor_position(true);
+        let _ = self.0.show_cursor();
+    }
 }
 
 impl MacWindowState {
@@ -1106,6 +1117,7 @@ impl MacWindow {
                 blurred_view: None,
                 background_appearance: WindowBackgroundAppearance::Opaque,
                 cursor_style: CursorStyle::Arrow,
+                relative_pointer: None,
                 custom_cursors,
                 cursor_visible,
                 frame_source: None,
@@ -1387,6 +1399,7 @@ impl MacWindow {
 impl Drop for MacWindow {
     fn drop(&mut self) {
         let mut this = self.0.lock();
+        this.relative_pointer.take();
         // `accesskit_macos::SubclassingAdapter::for_window` strong-retains the
         // window's content view, and that content view keeps the `GPUIView` it
         // hosts alive. Together with the `Arc<Mutex<MacWindowState>>` parked in
@@ -1433,6 +1446,44 @@ fn if_window_not_closed(closed: Arc<AtomicBool>, f: impl FnOnce()) {
 }
 
 impl PlatformWindow for MacWindow {
+    fn has_relative_pointer_capture(&self) -> bool {
+        self.0.lock().relative_pointer.is_some()
+    }
+
+    fn capture_relative_pointer(&self) -> Option<Subscription> {
+        let mut state = self.0.lock();
+        let pressed: NSUInteger = unsafe { msg_send![class!(NSEvent), pressedMouseButtons] };
+        if state.relative_pointer.is_some()
+            || !synthetic_drag_button_is_pressed(Some(MouseButton::Left), pressed)
+            || unsafe { state.native_window.isKeyWindow() != YES }
+        {
+            return None;
+        }
+        let display = CGDisplay::main();
+        display.hide_cursor().ok()?;
+        if CGDisplay::associate_mouse_and_mouse_cursor_position(false).is_err() {
+            let _ = display.show_cursor();
+            return None;
+        }
+        let capture = Arc::new(RelativePointer(display));
+        let token = Arc::downgrade(&capture);
+        state.relative_pointer = Some(capture);
+        state.synthetic_drag_counter += 1;
+        let window = Arc::downgrade(&self.0);
+        Some(Subscription::new(move || {
+            if let Some(window) = window.upgrade() {
+                let mut state = window.lock();
+                if state
+                    .relative_pointer
+                    .as_ref()
+                    .is_some_and(|capture| Arc::as_ptr(capture) == token.as_ptr())
+                {
+                    state.relative_pointer.take();
+                }
+            }
+        }))
+    }
+
     fn set_cursor_style(&self, style: CursorStyle) -> bool {
         let (native_window, native_view) = {
             let mut state = self.0.lock();
@@ -2926,7 +2977,7 @@ pub(crate) extern "C" fn handle_view_event(this: &Object, _: Sel, native_event: 
                     modifiers: Modifiers { control: true, .. },
                     ..
                 },
-            ) => {
+            ) if lock.relative_pointer.is_none() => {
                 *event = MouseUpEvent {
                     button: MouseButton::Right,
                     modifiers: Modifiers {
@@ -2951,7 +3002,7 @@ pub(crate) extern "C" fn handle_view_event(this: &Object, _: Sel, native_event: 
                 lock = window_state.as_ref().lock();
             }
             PlatformInput::MouseMove(
-                event @ MouseMoveEvent {
+                movement @ MouseMoveEvent {
                     pressed_button: Some(_),
                     ..
                 },
@@ -2959,22 +3010,40 @@ pub(crate) extern "C" fn handle_view_event(this: &Object, _: Sel, native_event: 
                 // Synthetic drag is used for selecting long buffer contents while buffer is being scrolled.
                 // External file drag and drop is able to emit its own synthetic mouse events which will conflict
                 // with these ones.
-                if !lock.external_files_dragged {
+                if lock.relative_pointer.is_some() {
+                    event = PlatformInput::RelativeMouseMove(RelativeMouseMoveEvent {
+                        delta: unsafe {
+                            point(
+                                px(native_event.deltaX() as f32),
+                                px(native_event.deltaY() as f32),
+                            )
+                        },
+                        pressed_button: movement.pressed_button,
+                        modifiers: movement.modifiers,
+                    });
+                } else if !lock.external_files_dragged {
                     lock.synthetic_drag_counter += 1;
                     let executor = lock.foreground_executor.clone();
                     executor
                         .spawn(synthetic_drag(
                             weak_window_state,
                             lock.synthetic_drag_counter,
-                            event.clone(),
+                            movement.clone(),
                             lock.background_executor.clone(),
                         ))
                         .detach();
                 }
             }
 
-            PlatformInput::MouseUp(MouseUpEvent { .. }) => {
+            PlatformInput::MouseUp(MouseUpEvent { button, .. }) => {
                 lock.synthetic_drag_counter += 1;
+                if *button == MouseButton::Left {
+                    lock.relative_pointer.take();
+                }
+            }
+
+            PlatformInput::MouseMove(_) => {
+                lock.relative_pointer.take();
             }
 
             PlatformInput::ModifiersChanged(ModifiersChangedEvent {
@@ -3211,8 +3280,11 @@ fn report_display_change(window_state: &Arc<Mutex<MacWindowState>>) {
 extern "C" fn window_did_change_key_status(this: &Object, selector: Sel, _: id) {
     let signal_at = PlatformFrameSignal::capture(scheduler::Instant::now);
     let window_state = unsafe { get_window_state(this) };
-    let lock = window_state.lock();
+    let mut lock = window_state.lock();
     let is_active = unsafe { lock.native_window.isKeyWindow() == YES };
+    if !is_active {
+        lock.relative_pointer.take();
+    }
 
     // AppKit also unhides the cursor on activation changes, so mirror that here.
     lock.cursor_visible.store(true, Ordering::Relaxed);

@@ -55,13 +55,18 @@ pub(crate) enum SlideNumberGesture {
 }
 
 struct Drag {
-    origin: Point<Pixels>,
     last_x: Pixels,
     original: f64,
     anchor: f64,
     step: f64,
     value: f64,
     sliding: bool,
+    _pointer_capture: Option<Subscription>,
+}
+
+enum SlideMotion {
+    Absolute(Pixels),
+    Relative(Pixels),
 }
 
 /// The parameter panel's compact number editor, with relative horizontal scrubbing.
@@ -268,13 +273,13 @@ impl SlideNumberInput {
             return;
         }
         self.drag = Some(Drag {
-            origin: event.position,
             last_x: event.position.x,
             original: self.options.value,
             anchor: self.options.value,
             step: self.drag_scale(event.modifiers.shift).0,
             value: self.options.value,
             sliding: false,
+            _pointer_capture: None,
         });
         window.focus(&self.focus, cx);
         window.prevent_default();
@@ -282,26 +287,43 @@ impl SlideNumberInput {
         cx.notify();
     }
 
-    fn move_drag(&mut self, event: &MouseMoveEvent, cx: &mut Context<Self>) -> bool {
+    fn move_drag(
+        &mut self,
+        motion: SlideMotion,
+        pressed_button: Option<MouseButton>,
+        shift: bool,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if self.ignore_mouse_move.is_some_and(|ignore| ignore()) {
             return false;
         }
-        let (step, pixels_per_step) = self.drag_scale(event.modifiers.shift);
+        let (step, pixels_per_step) = self.drag_scale(shift);
         let Some(drag) = &mut self.drag else {
             return false;
         };
-        if self.options.disabled || event.pressed_button != Some(MouseButton::Left) {
+        if self.options.disabled || pressed_button != Some(MouseButton::Left) {
             self.drag = None;
             cx.emit(SlideNumberGesture::Cancel);
             cx.notify();
             return false;
         }
         let started = !drag.sliding;
-        if !drag.sliding {
-            if (event.position.x - drag.origin.x).abs() < px(DRAG_THRESHOLD) {
-                return true;
+        let delta = match motion {
+            SlideMotion::Absolute(x) => {
+                let delta = x - drag.last_x;
+                if started && delta.abs() < px(DRAG_THRESHOLD) {
+                    return true;
+                }
+                drag.last_x = x;
+                delta
             }
+            SlideMotion::Relative(_) if started => return false,
+            SlideMotion::Relative(delta) => delta,
+        };
+        if started {
             drag.sliding = true;
+            drag._pointer_capture = window.capture_relative_pointer();
         }
         if step != drag.step {
             // Changing precision starts at the current value rather than
@@ -310,11 +332,9 @@ impl SlideNumberInput {
             drag.value = self.options.value;
             drag.step = step;
         }
-        let delta = (event.position.x - drag.last_x).as_f32() as f64;
-        drag.last_x = event.position.x;
         // Clamp the accumulator too, so reversing at a limit responds immediately.
-        drag.value =
-            (drag.value + delta / pixels_per_step * step).clamp(self.options.min, self.options.max);
+        drag.value = (drag.value + f64::from(delta.as_f32()) / pixels_per_step * step)
+            .clamp(self.options.min, self.options.max);
         if drag.value == self.options.min || drag.value == self.options.max {
             drag.anchor = drag.value;
         }
@@ -529,15 +549,43 @@ impl Render for SlideNumberInput {
                     |_, _, _| (),
                     move |_, _, window, _| {
                         let moving = entity.clone();
-                        window.on_mouse_event(move |event: &MouseMoveEvent, phase, _, cx| {
+                        window.on_mouse_event(move |event: &MouseMoveEvent, phase, window, cx| {
                             if phase == DispatchPhase::Capture
                                 && moving
-                                    .update(cx, |this, cx| this.move_drag(event, cx))
+                                    .update(cx, |this, cx| {
+                                        this.move_drag(
+                                            SlideMotion::Absolute(event.position.x),
+                                            event.pressed_button,
+                                            event.modifiers.shift,
+                                            window,
+                                            cx,
+                                        )
+                                    })
                                     .unwrap_or(false)
                             {
                                 cx.stop_propagation();
                             }
                         });
+                        let moving = entity.clone();
+                        window.on_mouse_event(
+                            move |event: &RelativeMouseMoveEvent, phase, window, cx| {
+                                if phase == DispatchPhase::Capture
+                                    && moving
+                                        .update(cx, |this, cx| {
+                                            this.move_drag(
+                                                SlideMotion::Relative(event.delta.x),
+                                                event.pressed_button,
+                                                event.modifiers.shift,
+                                                window,
+                                                cx,
+                                            )
+                                        })
+                                        .unwrap_or(false)
+                                {
+                                    cx.stop_propagation();
+                                }
+                            },
+                        );
                         let releasing = entity.clone();
                         window.on_mouse_event(move |event: &MouseUpEvent, phase, window, cx| {
                             if phase == DispatchPhase::Capture
