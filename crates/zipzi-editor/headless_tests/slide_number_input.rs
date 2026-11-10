@@ -165,7 +165,7 @@ fn number_drag_keeps_escape_and_blocks_viewport_commands_outside_its_panel(
     assert_ne!(value(&harness, cx), original);
     cx.update_window(harness.window, |_, window, cx| {
         slide(window, destination, false, cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(harness.view.read(cx).editor.view(), view_before);
         window.press("escape", cx);
     })
