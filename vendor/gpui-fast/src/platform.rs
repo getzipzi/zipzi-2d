@@ -1225,6 +1225,14 @@ pub trait PlatformWindow: HasWindowHandle + HasDisplayHandle {
     fn set_cursor_style(&self, _style: CursorStyle) -> bool {
         false
     }
+    /// Hides the pointer and enables relative movement until the returned handle is dropped.
+    fn capture_relative_pointer(&self) -> Option<crate::Subscription> {
+        None
+    }
+    /// Whether this window currently owns relative pointer capture.
+    fn has_relative_pointer_capture(&self) -> bool {
+        false
+    }
     /// D3D11 device used by the window. The immediate context stays on the UI thread.
     #[cfg(target_os = "windows")]
     fn directx_device(&self) -> Option<windows::Win32::Graphics::Direct3D11::ID3D11Device> {

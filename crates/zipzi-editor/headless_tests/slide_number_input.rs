@@ -2,7 +2,7 @@ use super::{Harness, document_fixture, setup_with_document};
 use gpui_kit::test::TestWindowExt;
 use gpui_kit::{
     App, AppContext as _, InputEvent as _, Modifiers, MouseButton, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, Point, TestAppContext, Window, point, px,
+    MouseUpEvent, Pixels, Point, RelativeMouseMoveEvent, TestAppContext, Window, point, px,
 };
 
 pub(super) fn press(window: &mut Window, position: Point<Pixels>, cx: &mut App) {
@@ -165,7 +165,7 @@ fn number_drag_keeps_escape_and_blocks_viewport_commands_outside_its_panel(
     assert_ne!(value(&harness, cx), original);
     cx.update_window(harness.window, |_, window, cx| {
         slide(window, destination, false, cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(harness.view.read(cx).editor.view(), view_before);
         window.press("escape", cx);
     })
@@ -248,6 +248,59 @@ fn number_slide_is_relative_precise_clamped_and_stops_on_release(cx: &mut TestAp
     harness.view.read_with(cx, |view, _| {
         assert!(!view.editor.document().unwrap().modified())
     });
+}
+
+#[gpui_kit::test]
+fn number_slide_accumulates_relative_motion_with_a_stationary_pointer(cx: &mut TestAppContext) {
+    let (document, assets) = document_fixture::sample_document_with_parameters(1).unwrap();
+    let id = document.parameters()[0].id.clone();
+    let harness = setup_with_document(cx, document, assets);
+    let pointer = cx
+        .update_window(harness.window, |_, window, cx| {
+            let origin = window
+                .find(format!("parameter-value-{id}"))
+                .bounds()
+                .center();
+            press(window, origin, cx);
+            let pointer = origin + point(px(20.), px(0.));
+            slide(window, pointer, false, cx);
+            pointer
+        })
+        .unwrap();
+    let relative_move = |dx, window: &mut Window, cx: &mut App| {
+        window.dispatch_event(
+            RelativeMouseMoveEvent {
+                delta: point(px(dx), px(12.)),
+                pressed_button: Some(MouseButton::Left),
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+            }
+            .to_platform_input(),
+            cx,
+        );
+        assert_eq!(window.mouse_position(), pointer);
+    };
+
+    for expected in [0.15, 0.25, 0.35] {
+        cx.update_window(harness.window, |_, window, cx| {
+            relative_move(400., window, cx)
+        })
+        .unwrap();
+        assert_eq!(value(&harness, cx), expected);
+    }
+    cx.update_window(harness.window, |_, window, cx| {
+        relative_move(-200., window, cx);
+    })
+    .unwrap();
+    assert_eq!(value(&harness, cx), 0.30);
+    cx.update_window(harness.window, |_, window, cx| {
+        release(window, pointer, cx);
+        relative_move(400., window, cx);
+    })
+    .unwrap();
+    assert_eq!(value(&harness, cx), 0.30);
 }
 
 #[gpui_kit::test]

@@ -213,7 +213,7 @@ fn popover_keeps_keyboard_priority_when_pointer_returns_to_viewport(cx: &mut Tes
         assert!(window.context_stack().iter().any(|c| c.contains("Popover")));
         let before = h.view.read(cx).editor.view();
         window.hover("canvas-body", cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view(), before);
         window.press("escape", cx);
     })
@@ -230,7 +230,7 @@ fn viewport_toolbar_retains_local_shortcut_and_menu_target(cx: &mut TestAppConte
             h.view.read(cx).hovered_target(window, cx),
             Some(crate::input_routing::LocalTarget::Viewport(_))
         ));
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view().zoom, before + 0.25);
         assert!(
             h.view
@@ -276,7 +276,7 @@ fn hover_switches_instances_without_focus_and_exit_has_no_fallback(cx: &mut Test
             .to_platform_input(),
             cx,
         );
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert!(second.read(cx).focus_handle(cx).is_focused(window));
         assert_eq!(
             h.view
@@ -302,7 +302,7 @@ fn hover_switches_instances_without_focus_and_exit_has_no_fallback(cx: &mut Test
             .to_platform_input(),
             cx,
         );
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(
             h.view
                 .read(cx)
@@ -322,7 +322,7 @@ fn hover_switches_instances_without_focus_and_exit_has_no_fallback(cx: &mut Test
         );
         window.dispatch_event(
             KeyDownEvent {
-                keystroke: Keystroke::parse("cmd-=").unwrap(),
+                keystroke: Keystroke::parse("secondary-=").unwrap(),
                 is_held: true,
                 prefer_character_input: false,
             }
@@ -390,12 +390,12 @@ fn chrome_and_popups_do_not_reuse_the_previous_viewport(cx: &mut TestAppContext)
         let before = h.view.read(cx).editor.view();
         let tool = h.view.read(cx).editor.active_tool();
         window.hover("workspace-animation", cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         window.press("l", cx);
         assert_eq!(h.view.read(cx).editor.view(), before);
         assert_eq!(h.view.read(cx).editor.active_tool(), tool);
         window.hover("object-property-name", cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view(), before);
         assert_eq!(
             h.view
@@ -414,7 +414,7 @@ fn chrome_and_popups_do_not_reuse_the_previous_viewport(cx: &mut TestAppContext)
         let before = h.view.read(cx).editor.view();
         let tool = h.view.read(cx).editor.active_tool();
         window.press("l", cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view(), before);
         assert_eq!(h.view.read(cx).editor.active_tool(), tool);
         window.press("escape", cx);
@@ -543,11 +543,11 @@ fn undeclared_focus_keeps_keys_without_a_named_control_context(cx: &mut TestAppC
         window.focus(&control, cx);
         window.hover("canvas-body", cx);
         let before = h.view.read(cx).editor.view();
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view(), before);
         let focus = h.view.read(cx).focus.clone();
         window.focus(&focus, cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view().zoom, before.zoom + 0.25);
     })
     .unwrap();
@@ -567,7 +567,7 @@ fn popover_in_another_window_does_not_capture_this_windows_keyboard(cx: &mut Tes
         window.focus(&focus, cx);
         window.hover("canvas-body", cx);
         let before = second.view.read(cx).editor.view().zoom;
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(second.view.read(cx).editor.view().zoom, before + 0.25);
     })
     .unwrap();
@@ -627,14 +627,14 @@ fn closing_blocking_ui_keeps_the_current_pointer_location(cx: &mut TestAppContex
             view.redraw(cx);
         });
         window.render_frame(cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view().zoom, before);
         h.view.update(cx, |view, cx| {
             view.modal = false;
             view.redraw(cx);
         });
         window.render_frame(cx);
-        window.press("cmd-=", cx);
+        window.press("secondary-=", cx);
         assert_eq!(h.view.read(cx).editor.view().zoom, before + 0.25);
     })
     .unwrap();

@@ -110,6 +110,7 @@ impl WindowsWindowInner {
             WM_CLOSE => self.handle_close_msg(),
             WM_DESTROY => self.handle_destroy_msg(handle),
             WM_MOUSEMOVE => self.handle_mouse_move_msg(handle, lparam, wparam),
+            WM_CAPTURECHANGED => self.handle_mouse_capture_changed(),
             WM_MOUSELEAVE | WM_NCMOUSELEAVE => self.handle_mouse_leave_msg(),
             WM_NCMOUSEMOVE => self.handle_nc_mouse_move_msg(handle, lparam),
             // Treat double click as a second single click, since we track the double clicks ourselves.
@@ -352,9 +353,6 @@ impl WindowsWindowInner {
         self.start_tracking_mouse(handle, TME_LEAVE);
         self.restore_cursor_after_hide();
 
-        let Some(mut func) = self.state.callbacks.input.take() else {
-            return Some(1);
-        };
         let scale_factor = self.state.scale_factor.get();
 
         let pressed_button = match MODIFIERKEYS_FLAGS(wparam.loword() as u32) {
@@ -369,17 +367,66 @@ impl WindowsWindowInner {
             }
             _ => None,
         };
-        let x = lparam.signed_loword() as f32;
-        let y = lparam.signed_hiword() as f32;
-        let input = PlatformInput::MouseMove(MouseMoveEvent {
-            position: logical_point(x, y, scale_factor),
-            pressed_button,
-            modifiers: current_modifiers(),
-        });
+        let capture = self.state.relative_pointer.borrow().clone();
+        let input = if let Some(pointer) = capture {
+            let mut position = POINT::default();
+            if pressed_button != Some(MouseButton::Left)
+                || unsafe { GetCursorPos(&mut position) }.is_err()
+            {
+                self.finish_relative_pointer(true);
+                return self.dispatch_relative_mouse_cancel();
+            }
+            let dx = position.x - pointer.center.x;
+            let dy = position.y - pointer.center.y;
+            // The move posted by SetCursorPos itself contributes no displacement.
+            if dx == 0 && dy == 0 {
+                return Some(0);
+            }
+            if unsafe { SetCursorPos(pointer.center.x, pointer.center.y) }.is_err() {
+                self.finish_relative_pointer(false);
+                return self.dispatch_relative_mouse_cancel();
+            }
+            PlatformInput::RelativeMouseMove(RelativeMouseMoveEvent {
+                delta: logical_point(dx as f32, dy as f32, scale_factor),
+                pressed_button,
+                modifiers: current_modifiers(),
+            })
+        } else {
+            PlatformInput::MouseMove(MouseMoveEvent {
+                position: logical_point(
+                    lparam.signed_loword() as f32,
+                    lparam.signed_hiword() as f32,
+                    scale_factor,
+                ),
+                pressed_button,
+                modifiers: current_modifiers(),
+            })
+        };
+        let Some(mut func) = self.state.callbacks.input.take() else {
+            return Some(1);
+        };
         let handled = !func(input).propagate;
         self.state.callbacks.input.set(Some(func));
 
         if handled { Some(0) } else { Some(1) }
+    }
+
+    fn handle_mouse_capture_changed(&self) -> Option<isize> {
+        if self.finish_relative_pointer(false) {
+            self.dispatch_relative_mouse_cancel();
+        }
+        None
+    }
+
+    fn dispatch_relative_mouse_cancel(&self) -> Option<isize> {
+        let mut callback = self.state.callbacks.input.take()?;
+        callback(PlatformInput::RelativeMouseMove(RelativeMouseMoveEvent {
+            delta: Point::default(),
+            pressed_button: None,
+            modifiers: current_modifiers(),
+        }));
+        self.state.callbacks.input.set(Some(callback));
+        Some(0)
     }
 
     fn handle_mouse_leave_msg(&self) -> Option<isize> {
@@ -502,6 +549,9 @@ impl WindowsWindowInner {
         button: MouseButton,
         lparam: LPARAM,
     ) -> Option<isize> {
+        if button == MouseButton::Left {
+            self.finish_relative_pointer(true);
+        }
         unsafe { ReleaseCapture().log_err() };
 
         let Some(mut func) = self.state.callbacks.input.take() else {
@@ -799,6 +849,7 @@ impl WindowsWindowInner {
         let this = self.clone();
 
         if !activated {
+            this.finish_relative_pointer(false);
             this.state.cursor_visible.store(true, Ordering::Relaxed);
         }
 
@@ -1164,13 +1215,8 @@ impl WindowsWindowInner {
         {
             return None;
         }
-        let cursor = if self.state.cursor_visible.load(Ordering::Relaxed) {
-            self.state.current_cursor.borrow().handle
-        } else {
-            None
-        };
         unsafe {
-            SetCursor(cursor);
+            SetCursor(self.effective_cursor());
         };
         Some(1)
     }
