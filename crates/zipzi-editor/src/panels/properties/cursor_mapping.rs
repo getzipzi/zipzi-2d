@@ -1,7 +1,7 @@
 //! Parameter mappings for motion effects and mouse input.
 use super::*;
 use crate::properties::Choice;
-use crate::properties::cursor_mapping::{MOTION_EFFECT_FIELDS, field_keys};
+use crate::properties::cursor_mapping::{MOTION_EFFECT_FIELDS, field_keys, parameter_choices};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::select::{SearchableVec, Select, SelectEvent, SelectState};
 use gpui_kit::component::tooltip::Tooltip;
@@ -151,17 +151,12 @@ impl PropertiesPanel {
         };
         let bindings = doc.cursor_preview_bindings();
         let customized = doc.has_custom_cursor_preview_bindings();
-        let choices: Vec<_> = doc
-            .parameters()
+        let choices: Vec<_> = parameter_choices(doc)
             .into_iter()
-            .filter(|parameter| {
+            .filter(|choice| {
                 bindings
-                    .get(&parameter.id)
+                    .get(&choice.value)
                     .is_none_or(|binding| binding.axis == CursorPreviewAxis::Disabled)
-            })
-            .map(|parameter| Choice {
-                value: parameter.id,
-                label: parameter.name.into(),
             })
             .collect();
         let disabled = !self.allowed(self.epoch, window, cx);
@@ -223,11 +218,13 @@ impl PropertiesPanel {
             .gap(compact::rem(compact::GAP))
             .child(compact::property_row(
                 t!("physics.cursor_add"),
-                compact::select(Select::new(&picker.add))
-                    .id("cursor-mapping-add")
-                    .w_full()
-                    .accessibility_label(t!("physics.cursor_add"))
-                    .disabled(disabled || picker.choices.is_empty()),
+                controls::property_select(
+                    Select::new(&picker.add)
+                        .id("cursor-mapping-add")
+                        .accessibility_label(t!("physics.cursor_add"))
+                        .placeholder(t!("properties.add_effect_parameter"))
+                        .disabled(disabled || picker.choices.is_empty()),
+                ),
                 cx,
             ))
             .child(

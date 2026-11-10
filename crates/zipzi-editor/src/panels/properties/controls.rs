@@ -30,6 +30,21 @@ impl SelectItem for Choice {
         &self.value
     }
 }
+
+pub(super) fn property_select(select: Select<SearchableVec<Choice>>) -> Div {
+    // Select's root fills its parent; constrain both the root and trigger.
+    div()
+        .w_full()
+        .h(compact::rem(compact::NUMBER_CONTROL))
+        .child(
+            compact::select(select)
+                .h(compact::rem(compact::NUMBER_CONTROL))
+                .py(compact::rem(0.))
+                .line_height(compact::rem(14.))
+                .w_full(),
+        )
+}
+
 #[derive(PartialEq, Eq)]
 struct ChoiceKey {
     revision: u64,
@@ -1110,33 +1125,25 @@ impl PropertiesPanel {
                 .state
                 .update(cx, |state, cx| state.set_selected_value(&value, window, cx));
         }
-        // Select's root fills its parent; constrain both the root and trigger.
-        div()
-            .w_full()
-            .h(compact::rem(compact::NUMBER_CONTROL))
-            .child(
-                compact::select(Select::new(&control.state))
-                    .h(compact::rem(compact::NUMBER_CONTROL))
-                    .py(compact::rem(0.))
-                    .line_height(compact::rem(14.))
-                    .id(SharedString::from(format!(
-                        "property-select-{}",
-                        id.identity()
-                    )))
-                    .accessibility_label(t!(self.field_spec(id).label))
-                    .disabled(disabled)
-                    .when(references, |select| {
-                        let label =
-                            if zipzi_editor_core::property::document::is_motion_effect_field(id) {
-                                "properties.add_effect_parameter"
-                            } else {
-                                "properties.add_mask"
-                            };
-                        select.placeholder(t!(label))
-                    })
-                    .w_full(),
-            )
-            .into_any_element()
+        property_select(
+            Select::new(&control.state)
+                .id(SharedString::from(format!(
+                    "property-select-{}",
+                    id.identity()
+                )))
+                .accessibility_label(t!(self.field_spec(id).label))
+                .disabled(disabled)
+                .when(references, |select| {
+                    let label = if zipzi_editor_core::property::document::is_motion_effect_field(id)
+                    {
+                        "properties.add_effect_parameter"
+                    } else {
+                        "properties.add_mask"
+                    };
+                    select.placeholder(t!(label))
+                }),
+        )
+        .into_any_element()
     }
 
     fn number_options(&self, id: PropertyKey) -> SlideNumberOptions {

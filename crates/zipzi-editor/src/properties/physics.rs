@@ -139,13 +139,12 @@ fn choices(document: &Document, object: &ObjectRef, key: PropertyKey) -> Option<
             ("Angle".into(), t!("physics.angle").into_owned()),
         ]
     } else if key.name() == "output_node" {
-        (1..rig.vertices.len())
-            .map(|i| {
-                (
-                    rig.vertices[i].id.clone(),
-                    format!("{} {i}", t!("physics.segment")),
-                )
-            })
+        let output_id = key.entity_id()?;
+        let output = rig.outputs.iter().find(|output| output.id == output_id)?;
+        // Keep an existing root binding visible without offering it to other outputs.
+        let first = usize::from(output.node_id != rig.vertices.first()?.id);
+        (first..rig.vertices.len())
+            .map(|i| (rig.vertices[i].id.clone(), i.to_string()))
             .collect()
     } else {
         return None;

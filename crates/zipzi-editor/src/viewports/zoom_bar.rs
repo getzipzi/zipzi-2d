@@ -7,7 +7,9 @@ use gpui_kit::component::{
 };
 use gpui_kit::{prelude::*, *};
 use std::rc::Rc;
-use zipzi_editor_core::{CommandId, ControlKind, DocumentId, ViewportKind};
+use zipzi_editor_core::{CommandId, ControlKind, ViewportKind};
+
+use super::cursor_preview;
 
 const ZOOM_ACTIONS: [(&str, CommandId, IconName); 3] = [
     ("btn_zoom_out", CommandId::ZoomOut, IconName::Minus),
@@ -20,7 +22,7 @@ type ZoomAction = Rc<dyn Fn(CommandId, &mut Window, &mut App)>;
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct HeaderState {
     isolation: Option<super::isolation::IsolationHeaderState>,
-    preview: Option<PreviewControls>,
+    preview: Option<cursor_preview::PreviewControls>,
     percentage: i32,
     zoom_enabled: [bool; 3],
     show_transparency_grid: bool,
@@ -32,13 +34,6 @@ pub(crate) struct HeaderState {
     origin_crosshair_enabled: bool,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-struct PreviewControls {
-    document: DocumentId,
-    active: bool,
-    disabled: bool,
-}
-
 pub(super) fn state(
     owner: &EditorView,
     canvas: &super::ViewportSurface,
@@ -46,17 +41,14 @@ pub(super) fn state(
 ) -> HeaderState {
     HeaderState {
         isolation: super::isolation::state(owner, canvas, modal),
-        preview: owner
-            .editor
-            .active_id()
-            .filter(|_| canvas.kind == ViewportKind::Animation)
-            .map(|document| PreviewControls {
-                document,
-                active: owner.editor.cursor_physics_active(),
-                disabled: modal
-                    || owner.editor.is_busy()
-                    || canvas.binding(&owner.editor).is_none(),
-            }),
+        preview: if canvas.kind == ViewportKind::Animation {
+            cursor_preview::state(
+                &owner.editor,
+                modal || owner.editor.is_busy() || canvas.binding(&owner.editor).is_none(),
+            )
+        } else {
+            None
+        },
         percentage: (canvas
             .binding(&owner.editor)
             .and_then(|binding| owner.editor.viewport_view(binding))
@@ -237,28 +229,28 @@ impl RenderOnce for CanvasZoomBar {
         let isolation = header.isolation.map(|header| {
             super::isolation::controls(self.owner.clone(), self.canvas.clone(), header)
         });
-        let preview = header.preview.map(|preview| {
-            super::cursor_preview::controls(
-                self.owner.downgrade(),
-                preview.document,
-                preview.active,
-                preview.disabled,
-            )
-        });
+        let preview = header
+            .preview
+            .map(|preview| cursor_preview::controls(self.owner.downgrade(), preview));
         let background_canvas = self.canvas.clone();
         let origin_canvas = self.canvas.clone();
-        let warp_toggle = deformer_toggle(
-            self.canvas.clone(),
-            ControlKind::Warp,
-            header.show_warp_deformers,
-            header.deformers_enabled,
-        );
-        let rotation_toggle = deformer_toggle(
-            self.canvas.clone(),
-            ControlKind::Rotation,
-            header.show_rotation_deformers,
-            header.deformers_enabled,
-        );
+        let modeling = self.canvas.read(cx).kind == ViewportKind::Modeling;
+        let warp_toggle = modeling.then(|| {
+            deformer_toggle(
+                self.canvas.clone(),
+                ControlKind::Warp,
+                header.show_warp_deformers,
+                header.deformers_enabled,
+            )
+        });
+        let rotation_toggle = modeling.then(|| {
+            deformer_toggle(
+                self.canvas.clone(),
+                ControlKind::Rotation,
+                header.show_rotation_deformers,
+                header.deformers_enabled,
+            )
+        });
         let commands = ZOOM_ACTIONS.map(|(_, id, _)| {
             self.canvas.read(cx).command(
                 &state.editor,
@@ -306,66 +298,73 @@ impl RenderOnce for CanvasZoomBar {
                 "canvas-display-controls",
                 t!("dock.canvas_display"),
                 Axis::Horizontal,
-                vec![
+                [
                     warp_toggle,
                     rotation_toggle,
-                    compact::header_button(compact::toggle(
-                        Button::new("btn_transparency_grid"),
-                        header.show_transparency_grid,
-                    ))
-                    .icon(IconName::Grid2x2)
-                    .accessibility_label(t!("dock.transparency_grid").into_owned())
-                    .tooltip(t!("dock.transparency_grid"))
-                    .disabled(!header.background_enabled)
-                    .on_click(move |_, window, cx| {
-                        if window.has_active_dialog(cx) {
-                            return;
-                        }
-                        let surface = background_canvas.read(cx);
-                        if surface
-                            .owner
-                            .upgrade()
-                            .is_none_or(|owner| owner.read(cx).modal)
-                        {
-                            return;
-                        }
-                        let focus = surface.focus.clone();
-                        window.focus(&focus, cx);
-                        background_canvas.update(cx, |surface, cx| {
-                            surface.show_transparency_grid = !surface.show_transparency_grid;
-                            cx.notify();
-                        });
+                    Some(
+                        compact::header_button(compact::toggle(
+                            Button::new("btn_transparency_grid"),
+                            header.show_transparency_grid,
+                        ))
+                        .icon(IconName::Grid2x2)
+                        .accessibility_label(t!("dock.transparency_grid").into_owned())
+                        .tooltip(t!("dock.transparency_grid"))
+                        .disabled(!header.background_enabled)
+                        .on_click(move |_, window, cx| {
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            let surface = background_canvas.read(cx);
+                            if surface
+                                .owner
+                                .upgrade()
+                                .is_none_or(|owner| owner.read(cx).modal)
+                            {
+                                return;
+                            }
+                            let focus = surface.focus.clone();
+                            window.focus(&focus, cx);
+                            background_canvas.update(cx, |surface, cx| {
+                                surface.show_transparency_grid = !surface.show_transparency_grid;
+                                cx.notify();
+                            });
+                        }),
+                    ),
+                    modeling.then(|| {
+                        compact::header_button(compact::toggle(
+                            Button::new("btn_origin_crosshair"),
+                            header.show_origin_crosshair,
+                        ))
+                        .icon(
+                            Icon::default()
+                                .data(include_bytes!("../../assets/icons/origin-crosshair.svg")),
+                        )
+                        .accessibility_label(t!("dock.origin_crosshair").into_owned())
+                        .tooltip(t!("dock.origin_crosshair"))
+                        .disabled(!header.origin_crosshair_enabled)
+                        .on_click(move |_, window, cx| {
+                            if window.has_active_dialog(cx) {
+                                return;
+                            }
+                            let surface = origin_canvas.read(cx);
+                            if surface.owner.upgrade().is_none_or(|owner| {
+                                let owner = owner.read(cx);
+                                owner.modal || !surface.origin_crosshair_available(owner)
+                            }) {
+                                return;
+                            }
+                            let focus = surface.focus.clone();
+                            window.focus(&focus, cx);
+                            origin_canvas.update(cx, |surface, cx| {
+                                surface.show_origin_crosshair = !surface.show_origin_crosshair;
+                                cx.notify();
+                            });
+                        })
                     }),
-                    compact::header_button(compact::toggle(
-                        Button::new("btn_origin_crosshair"),
-                        header.show_origin_crosshair,
-                    ))
-                    .icon(
-                        Icon::default()
-                            .data(include_bytes!("../../assets/icons/origin-crosshair.svg")),
-                    )
-                    .accessibility_label(t!("dock.origin_crosshair").into_owned())
-                    .tooltip(t!("dock.origin_crosshair"))
-                    .disabled(!header.origin_crosshair_enabled)
-                    .on_click(move |_, window, cx| {
-                        if window.has_active_dialog(cx) {
-                            return;
-                        }
-                        let surface = origin_canvas.read(cx);
-                        if surface.owner.upgrade().is_none_or(|owner| {
-                            let owner = owner.read(cx);
-                            owner.modal || !surface.origin_crosshair_available(owner)
-                        }) {
-                            return;
-                        }
-                        let focus = surface.focus.clone();
-                        window.focus(&focus, cx);
-                        origin_canvas.update(cx, |surface, cx| {
-                            surface.show_origin_crosshair = !surface.show_origin_crosshair;
-                            cx.notify();
-                        });
-                    }),
-                ],
+                ]
+                .into_iter()
+                .flatten()
+                .collect(),
             )))
             .children(isolation)
             .children(preview)

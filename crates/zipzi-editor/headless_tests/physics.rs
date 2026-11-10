@@ -117,6 +117,13 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
         assert!(window.find("object-property-lip_sync_parameters").visible());
         assert!(window.find("object-property-breath_parameters").visible());
         assert!(window.find("cursor-mapping-actions").visible());
+        let effect_select = window
+            .within("property-select-eye_blink_parameters")
+            .find("input")
+            .bounds();
+        let mouse_select = window.within("cursor-mapping-add").find("input").bounds();
+        assert_eq!(mouse_select.left(), effect_select.left());
+        assert_eq!(mouse_select.size, effect_select.size);
         assert_eq!(
             window.find("cursor-mapping-table").role(),
             Some(gpui::Role::Table)
@@ -232,7 +239,7 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
         });
         window.render_frame(cx);
         window.within("cursor-mapping-add").click("input", cx);
-        window.input("Physics output", cx);
+        window.input("ParamY", cx);
     })
     .unwrap();
     cx.run_until_parked();
@@ -412,7 +419,9 @@ fn physics_list_and_properties_are_visible_together_and_numbers_commit_once_or_c
             assert!(window.try_find("physics-play").is_none());
             assert!(window.try_find("physics-reset-inputs").is_none());
             assert!(window.try_find("physics-stabilize").is_none());
-            window.click("physics-manual", cx);
+            window
+                .within("canvas-zoom-toolbar")
+                .click("physics-manual", cx);
             window.render_frame(cx);
             let origin = window
                 .within("physics-number-InputWeight(0)")
@@ -474,11 +483,27 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
         harness.view.update(cx, |view, cx| {
             view.run_command(CommandId::AnimationWorkspace, window, cx);
             view.run_command(CommandId::ResetLayout, window, cx);
+            view.editor
+                .set_animation_preview_mode(
+                    view.editor.active_id().unwrap(),
+                    zipzi_editor_core::AnimationPreviewMode::Editing,
+                )
+                .unwrap();
             view.dock
                 .as_ref()
                 .unwrap()
                 .show(PanelKind::AnimationPhysics, None, window, cx);
         });
+        window.render_frame(cx);
+        let mut toolbar = window.within("canvas-zoom-toolbar");
+        assert_eq!(toolbar.find("physics-manual").checked(), Some(false));
+        toolbar.click("physics-bypass", cx);
+        assert_eq!(toolbar.find("physics-bypass").checked(), Some(false));
+        toolbar.click("physics-manual", cx);
+        window.render_frame(cx);
+        let mut toolbar = window.within("canvas-zoom-toolbar");
+        assert_eq!(toolbar.find("physics-manual").checked(), Some(true));
+        toolbar.click("physics-manual", cx);
         window.render_frame(cx);
         window.click(("physics-group-row", 0usize), cx);
         window.render_frame(cx);
@@ -533,7 +558,9 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
                 1
             )
         });
-        window.click("physics-manual", cx);
+        window
+            .within("canvas-zoom-toolbar")
+            .click("physics-manual", cx);
         window.render_frame(cx);
         window.click("physics-reset-inputs", cx);
         window.render_frame(cx);
@@ -549,8 +576,17 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
         assert!(settle.top() >= canvas.top() && settle.top() <= canvas.top() + px(6.));
         window.click("physics-stabilize", cx);
         window.render_frame(cx);
-        window.click("physics-bypass", cx);
+        window
+            .within("canvas-zoom-toolbar")
+            .click("physics-bypass", cx);
         window.render_frame(cx);
+        assert_eq!(
+            window
+                .within("canvas-zoom-toolbar")
+                .find("physics-bypass")
+                .checked(),
+            Some(true)
+        );
         harness.view.read_with(cx, |view, _| {
             let animation = view.editor.animation().unwrap();
             assert!(animation.physics_preview.manual);
@@ -559,7 +595,9 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
             assert!(animation.playing);
             assert_eq!(view.editor.document().unwrap().history_lengths(), (2, 0));
         });
-        window.click("physics-manual", cx);
+        window
+            .within("canvas-zoom-toolbar")
+            .click("physics-manual", cx);
         window.render_frame(cx);
         harness.view.read_with(cx, |view, _| {
             assert!(!view.editor.animation().unwrap().physics_preview.manual)
@@ -572,7 +610,10 @@ fn physics_group_actions_and_manual_controls_keep_preview_out_of_history(cx: &mu
 fn physics_table_cells_keep_their_mapping_and_paired_fields_stay_inline(cx: &mut TestAppContext) {
     use super::slide_number_input::{press, release, slide};
     let (document, assets) = document_fixture::combined_animation_document().unwrap();
-    let first = document.physics_definition().unwrap().data.settings[0].inputs[0].weight;
+    let physics = document.physics_definition().unwrap();
+    let rig = &physics.data.settings[0];
+    let first = rig.inputs[0].weight;
+    let node = crate::properties::physics::field_key("output_node", 0, rig);
     let harness = setup_with_document(cx, document, assets);
     let origin = cx
         .update_window(harness.window, |_, window, cx| {
@@ -592,14 +633,16 @@ fn physics_table_cells_keep_their_mapping_and_paired_fields_stay_inline(cx: &mut
             window.render_frame(cx);
             assert!(window.try_find("physics-input-table").is_some());
             assert!(window.try_find("physics-output-table").is_some());
+            assert_eq!(
+                window
+                    .find(format!("property-select-{}", node.identity()))
+                    .value(),
+                Some("1")
+            );
             assert!(window.try_find("physics-fit-chain").is_none());
             let limit =
                 crate::ui::compact::scaled(crate::ui::compact::HEADER_CONTROL, cx) + px(0.5);
-            for button in [
-                "physics-manual",
-                "physics-channel-false-0",
-                "physics-add-node",
-            ] {
+            for button in ["physics-channel-false-0", "physics-add-node"] {
                 assert!(
                     window.find(button).bounds().size.height <= limit,
                     "{button} is not compact"

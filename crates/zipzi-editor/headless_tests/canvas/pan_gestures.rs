@@ -363,8 +363,19 @@ fn origin_crosshair_toggle_requires_a_ready_modeling_viewport(cx: &mut TestAppCo
         assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
 
         window.click("workspace-animation", cx);
-        assert_eq!(window.find("btn_origin_crosshair").checked(), Some(false));
-        window.click("btn_origin_crosshair", cx);
+        window.render_frame(cx);
+        let toolbar = window.within("canvas-zoom-toolbar");
+        assert!(toolbar.find("btn_transparency_grid").visible());
+        for button in [
+            "btn_warp_deformers",
+            "btn_rotation_deformers",
+            "btn_origin_crosshair",
+        ] {
+            assert!(
+                window.try_find(button).is_none(),
+                "{button} is Modeling-only"
+            );
+        }
         window.click("workspace-modeling", cx);
     })
     .unwrap();

@@ -1,5 +1,5 @@
 //! Compact mapping tables; cells share the inspector's field and edit lifecycle.
-use super::super::table::{cell, header, row};
+use super::super::table::{FLEX_MIN_WIDTH, cell, header, row};
 use super::*;
 use crate::ui::slide_number_input::format_one_decimal;
 use gpui_kit::component::menu::ContextMenuExt;
@@ -19,13 +19,13 @@ fn columns(output: bool, manual: bool) -> Vec<Column> {
     }];
     if output {
         columns.push(Column {
-            width: Some(32.),
+            width: Some(48.),
             label: "#".into(),
             help: t!("physics.sample_node").into_owned(),
         });
     }
     columns.push(Column {
-        width: Some(48.),
+        width: Some(68.),
         label: t!("physics.axis_short").into_owned(),
         help: t!("physics.axis").into_owned(),
     });
@@ -42,12 +42,12 @@ fn columns(output: bool, manual: bool) -> Vec<Column> {
         help: t!("physics.weight").into_owned(),
     });
     columns.push(Column {
-        width: Some(26.),
+        width: Some(17.),
         label: "±".into(),
         help: t!("physics.reflect").into_owned(),
     });
     columns.push(Column {
-        width: Some(64.),
+            width: Some(60.),
         label: t!(if manual {
             "physics.input_value"
         } else {
@@ -79,6 +79,10 @@ impl PropertiesPanel {
     ) -> AnyElement {
         let rig = &asset.data.settings[rig_index];
         let columns = columns(output, manual.is_some());
+        let min_width: f32 = columns
+            .iter()
+            .map(|column| column.width.unwrap_or(FLEX_MIN_WIDTH))
+            .sum();
         let mut header = header(cx);
         for (index, column) in columns.iter().enumerate() {
             let help = column.help.clone();
@@ -96,7 +100,7 @@ impl PropertiesPanel {
         }
         let mut table = div()
             .w_full()
-            .min_w(compact::rem(if output { 352. } else { 280. }))
+            .min_w(compact::rem(min_width))
             .flex()
             .flex_col()
             .child(header);

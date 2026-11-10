@@ -63,19 +63,19 @@ pub(super) fn definition(doc: &Document) -> FormDefinition {
                 "properties.eye_blink_parameters",
                 FieldEditor::References,
             )
-            .choices(true, parameters),
+            .choices(true, parameter_choices),
             FieldSpec::new(
                 LIP_SYNC_PARAMETERS,
                 "properties.lip_sync_parameters",
                 FieldEditor::References,
             )
-            .choices(true, parameters),
+            .choices(true, parameter_choices),
             FieldSpec::new(
                 BREATH_PARAMETERS,
                 "properties.breath_parameters",
                 FieldEditor::References,
             )
-            .choices(true, parameters),
+            .choices(true, parameter_choices),
         ],
         ..Default::default()
     };
@@ -99,7 +99,7 @@ pub(super) fn definition(doc: &Document) -> FormDefinition {
     form
 }
 
-fn parameters(document: &Document) -> Vec<Choice> {
+pub(crate) fn parameter_choices(document: &Document) -> Vec<Choice> {
     document
         .object_index()
         .objects

@@ -9,11 +9,10 @@ use crate::ui::compact;
 use controls::{NumberControl, SelectControl, SelectField};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::{
-    ActiveTheme, Disableable, Sizable, WindowExt,
+    ActiveTheme, Disableable, WindowExt,
     button::{Button, ButtonVariants},
 };
 use gpui_kit::component::{
-    checkbox::Checkbox,
     input::{InputEvent, InputState},
     select::{SearchableVec, SelectState},
 };
@@ -313,19 +312,6 @@ impl PropertiesPanel {
             .filter(|_| current)
             .map(|s| s.parameters.clone())
             .unwrap_or_default();
-        body = body.child(
-            Checkbox::new("physics-manual")
-                .xsmall()
-                .label(t!("physics.manual").into_owned())
-                .checked(manual)
-                .disabled(disabled)
-                .on_click(cx.listener(|this, value, window, cx| {
-                    let manual = *value;
-                    this.physics_session(window, cx, |editor, id| {
-                        editor.set_physics_manual(id, manual)
-                    });
-                })),
-        );
         if editing {
             body = body
                 .child(self.physics_note(t!("physics.editing_hint").into_owned(), cx))
@@ -340,20 +326,6 @@ impl PropertiesPanel {
                         })
                     })),
                 );
-        } else {
-            body = body.child(
-                Checkbox::new("physics-bypass")
-                    .xsmall()
-                    .label(t!("physics.bypass").into_owned())
-                    .checked(bypass)
-                    .disabled(disabled)
-                    .on_click(cx.listener(|this, value, window, cx| {
-                        let bypass = *value;
-                        this.physics_session(window, cx, |editor, id| {
-                            editor.set_physics_bypass(id, bypass)
-                        });
-                    })),
-            );
         }
         body = body.child(
             div()
