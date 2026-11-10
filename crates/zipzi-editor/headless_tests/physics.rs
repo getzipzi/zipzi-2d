@@ -66,7 +66,7 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
                 .last()
                 .unwrap();
             assert_eq!(sample.parameter, input);
-            assert!(sample.value > default);
+            assert!(sample.value.is_some_and(|value| value > default));
             time
         });
         release(window, end, cx);
@@ -82,7 +82,7 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
                     .last()
                     .unwrap()
                     .value,
-                default
+                None
             );
             assert_eq!(view.editor.document().unwrap().history_lengths(), history);
         });
@@ -171,7 +171,7 @@ fn interactive_preview_routes_left_drag_to_standard_parameters(cx: &mut TestAppC
             .center();
         press(window, influence, cx);
         release(window, influence, cx);
-        window.press("cmd-a", cx);
+        window.press("secondary-a", cx);
         window.input("65.25", cx);
         window.press("enter", cx);
         window.render_frame(cx);
@@ -712,6 +712,7 @@ fn manual_input_drag_updates_before_release_and_uses_one_decimal_display(cx: &mu
             .last()
             .unwrap()
             .value
+            .unwrap()
     });
     assert!(first < 0.723, "input must update before pointer release");
     cx.update_window(harness.window, |_, window, cx| {
@@ -729,6 +730,7 @@ fn manual_input_drag_updates_before_release_and_uses_one_decimal_display(cx: &mu
                 .last()
                 .unwrap()
                 .value
+                .unwrap()
                 < first
         );
         assert!(view.editor.animation().unwrap().playing);

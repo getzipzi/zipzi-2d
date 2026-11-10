@@ -221,7 +221,7 @@ impl PropertiesPanel {
                                 .copied()
                                 .unwrap_or(parameter.default_value)
                         },
-                        |input| input.value,
+                        |input| input.value.unwrap_or(parameter.default_value),
                     );
                 value = value.child(self.physics_number_control(
                     NumberField::Manual(parameter.id.clone()),
