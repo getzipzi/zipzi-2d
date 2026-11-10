@@ -15,6 +15,7 @@ pub(super) enum BackgroundStatus {
 
 impl Global for BackgroundStatus {}
 
+#[cfg(windows)]
 impl BackgroundStatus {
     pub(super) fn label(self) -> &'static str {
         match self {

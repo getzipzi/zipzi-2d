@@ -761,28 +761,6 @@ fn connected_sdk_keeps_host_and_unsaved_content_alive_without_attaching_a_sessio
 }
 
 #[gpui_kit::test]
-fn background_hint_appears_and_clears_with_sdk_connection(cx: &mut TestAppContext) {
-    let (harness, host) = hosted(cx);
-    let (peer, connection) = connect_peer(&host);
-    cx.update(|cx| host.sync_runtime_activity(cx));
-    cx.update_window(harness.window, |_, window, cx| {
-        window.render_frame(cx);
-        assert!(window.find("app-status-background").visible());
-    })
-    .unwrap();
-
-    host.protocol
-        .borrow_mut()
-        .disconnect(peer, connection, std::time::Instant::now());
-    cx.update(|cx| host.sync_runtime_activity(cx));
-    cx.update_window(harness.window, |_, window, cx| {
-        window.render_frame(cx);
-        assert!(window.try_find("app-status-background").is_none());
-    })
-    .unwrap();
-}
-
-#[gpui_kit::test]
 fn disconnected_sdk_does_not_delay_close_for_reconnect_grace(cx: &mut TestAppContext) {
     let (harness, host) = hosted(cx);
     let session = harness.view.read_with(cx, |view, _| {

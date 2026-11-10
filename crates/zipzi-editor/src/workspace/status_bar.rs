@@ -1,7 +1,5 @@
-use crate::{
-    EditorView, host::BackgroundStatus, settings::Settings, status::Problems, t, ui::compact,
-};
-use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable, kbd::Kbd, tooltip::Tooltip};
+use crate::{EditorView, settings::Settings, status::Problems, t, ui::compact};
+use gpui_kit::component::{ActiveTheme, Icon, IconName, Sizable, kbd::Kbd};
 use gpui_kit::{prelude::*, *};
 use zipzi_editor_core::{CommandId, EditingContext, HintAction, InteractionHint};
 
@@ -19,7 +17,6 @@ struct StatusBarState {
     message: String,
     locale: String,
     bindings_digest: Vec<(CommandId, String)>,
-    pending_io: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -36,7 +33,6 @@ pub struct StatusBar {
     #[cfg(any(test, feature = "test-support"))]
     renders: u64,
     _observe: Subscription,
-    _observe_background: Subscription,
 }
 
 impl StatusBar {
@@ -52,7 +48,6 @@ impl StatusBar {
                     let next = snapshot_state(owner.read(cx), cx);
                     this.apply_snapshot(next, cx);
                 }),
-                _observe_background: cx.observe_global::<BackgroundStatus>(|_, cx| cx.notify()),
                 owner,
                 state: None,
                 tasks: Vec::new(),
@@ -232,7 +227,6 @@ fn snapshot_state(view: &EditorView, cx: &App) -> StatusBarState {
         message,
         locale: rust_i18n::locale().to_string(),
         bindings_digest,
-        pending_io: view.editor.pending_io_count() != 0,
     }
 }
 
@@ -362,13 +356,6 @@ fn render_status_bar(
 ) -> impl IntoElement {
     let theme = cx.theme();
     let is_error = state.error.is_some();
-    let background = if state.pending_io {
-        BackgroundStatus::Working
-    } else {
-        cx.try_global::<BackgroundStatus>()
-            .copied()
-            .unwrap_or(BackgroundStatus::Idle)
-    };
     let content = div()
         .id("app-status-center")
         .test_support()
@@ -415,26 +402,7 @@ fn render_status_bar(
         .text_size(compact::rem(compact::CAPTION))
         .line_height(compact::rem(STATUS_LINE_HEIGHT))
         // Equal side lanes center feedback and progress independently of the problem badge.
-        .child(div().flex_1().min_w(compact::rem(80.)).when(
-            background != BackgroundStatus::Idle,
-            |lane| {
-                let reason = t!(background.label());
-                let hint: SharedString = t!("background.close_hint", reason = reason)
-                    .into_owned()
-                    .into();
-                lane.child(
-                    div()
-                        .id("app-status-background")
-                        .test_support()
-                        .text_color(theme.muted_foreground)
-                        .tooltip({
-                            let hint = hint.clone();
-                            move |window, cx| Tooltip::new(hint.clone()).build(window, cx)
-                        })
-                        .child(div().truncate().child(hint)),
-                )
-            },
-        ))
+        .child(div().flex_1().min_w(compact::rem(80.)))
         .child(content)
         .child(
             div()
