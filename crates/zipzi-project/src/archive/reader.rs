@@ -191,6 +191,8 @@ pub(super) fn open_content(
     }
     let mut asset_bytes = 0;
     let mut images = BTreeMap::new();
+    let budget = resources.budget();
+    let shared_budget = memory.is_some_and(|memory| memory.shares_budget(budget));
     for (name, references) in &assets {
         check(&mut keep_going)?;
         let mut report = |code: &str, message: &str| {
@@ -213,8 +215,8 @@ pub(super) fn open_content(
             report("ENCODED_READ_LIMIT", "Image exceeds encoded PNG limit");
             continue;
         }
-        let budget = resources.budget();
-        let encoded = budget.reserve(size as usize * 2)?;
+        let encoded_bytes = size as usize * 2;
+        let encoded = budget.reserve(encoded_bytes)?;
         let mut bytes = Vec::with_capacity(size as usize);
         let actual = match stream::copy_exact(&mut entry, &mut bytes, size, &mut keep_going) {
             Ok(actual) => actual,
@@ -294,15 +296,22 @@ pub(super) fn open_content(
                     continue;
                 }
             };
+            let pixel_bytes = crate::store::rgba_size(content.width, content.height)? * 2;
             if let Some(memory) = memory {
+                // The PNG peak already covers both buffer reservations. Charge
+                // only the remainder when they draw from the same host budget.
+                let workspace = if shared_budget {
+                    required - encoded_bytes - pixel_bytes
+                } else {
+                    required
+                };
                 memory.ensure_at_least(
                     model_workspace
-                        .checked_add(required)
+                        .checked_add(workspace)
                         .ok_or(ArchiveError::Limit("PNG workspace overflow"))?,
                 )?;
             }
-            let pixels =
-                budget.reserve(crate::store::rgba_size(content.width, content.height)? * 2)?;
+            let pixels = budget.reserve(pixel_bytes)?;
             match decode_png_bounded(&bytes, expected, png_limits) {
                 Ok(image) => decoded = Some((image, pixels)),
                 Err(status) => diagnostics.push(crate::ResourceDiagnostic {

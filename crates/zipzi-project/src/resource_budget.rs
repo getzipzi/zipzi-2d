@@ -346,6 +346,10 @@ impl TransferReservation {
         self.bytes.load(Ordering::Relaxed)
     }
 
+    pub(crate) fn shares_budget(&self, budget: &ImageMemoryBudget) -> bool {
+        self.budget.same_pool(budget)
+    }
+
     pub(crate) fn shrink_to(&self, bytes: usize) {
         let mut state = self.budget.0.lock().unwrap_or_else(|p| p.into_inner());
         let previous = self.bytes.load(Ordering::Relaxed);

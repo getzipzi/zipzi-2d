@@ -116,6 +116,10 @@ fn optional_preview_is_omitted_when_entry_size_or_disk_admission_is_full() {
 }
 
 pub(super) fn fixture(root: &Path) -> crate::ImportedProject {
+    fixture_with_image_size(root, 8)
+}
+
+fn fixture_with_image_size(root: &Path, size: u32) -> crate::ImportedProject {
     let mut b = zipzi_core::state::DocumentState::new(
         uuid::Uuid::from_u128(1).to_string(),
         zipzi_core::Canvas::new(640., 480., zipzi_core::Vec2::new(320., 240.), 100.).into(),
@@ -123,7 +127,13 @@ pub(super) fn fixture(root: &Path) -> crate::ImportedProject {
     .unwrap()
     .builder();
     let store = crate::ResourceStore::default();
-    let image = store.prepare_rgba(8, 8, vec![123; 256].into()).unwrap();
+    let image = store
+        .prepare_rgba(
+            size,
+            size,
+            vec![123; size as usize * size as usize * 4].into(),
+        )
+        .unwrap();
     fs::create_dir_all(root.join("assets")).unwrap();
     fs::write(
         root.join("assets/old.png"),
@@ -139,8 +149,8 @@ pub(super) fn fixture(root: &Path) -> crate::ImportedProject {
             } else {
                 zipzi_core::state::AssetContent::Image {
                     resource: image.key(),
-                    width: 8,
-                    height: 8,
+                    width: size,
+                    height: size,
                 }
             },
         })
@@ -787,6 +797,39 @@ fn shared_png_validation_checks_each_reference_before_and_after_a_valid_one() {
             .unwrap();
         let texture = opened.resources.read_asset(good).unwrap();
         assert_eq!((texture.width, texture.height), (8, 8));
+    }
+}
+
+#[test]
+fn png_workspace_and_buffers_share_one_host_reservation_bound() {
+    let root = tempfile::tempdir().unwrap();
+    let document = fixture_with_image_size(root.path(), 512);
+    let path = root.path().join("large-image.zipzi");
+    fs::write(&path, native_bytes(&document, root.path())).unwrap();
+
+    // The PNG peak is about 6 MiB plus 2 MiB for the ZIP index. Charging
+    // the same pixel buffers twice adds another 2 MiB.
+    for (limit, should_open) in [(7 << 20, false), (9 << 20, true)] {
+        let budget = crate::ImageMemoryBudget::with_system_headroom(move || limit);
+        let resources = crate::ResourceStore::new(budget.clone());
+        let mut store = ProjectIo::new(root.path().join("private"), resources);
+        store.set_open_memory(Some(Arc::new(budget.reserve_transfer(0).unwrap())));
+        let loaded = store.load(&path, || true);
+        drop(store);
+        if should_open {
+            let loaded = loaded.unwrap();
+            assert!(equivalent(
+                &document.document,
+                &document.resources,
+                &loaded.document,
+                &loaded.resources
+            ));
+        } else {
+            let error = loaded.err().unwrap();
+            assert!(matches!(error, ArchiveError::Document { ref code, .. }
+                if code == "BUDGET_EXCEEDED" || code == "RESOURCE_BUDGET_EXCEEDED"));
+        }
+        assert_eq!(budget.usage().total_bytes(), 0);
     }
 }
 
